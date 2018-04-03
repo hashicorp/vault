@@ -36,9 +36,9 @@ func TestCalculateTTL(t *testing.T) {
 		},
 
 		"lease increment is zero, uses backend default": {
-			BackendDefault: 29 * time.Hour,
+			BackendDefault: 30 * time.Hour,
 			Increment:      0,
-			Result:         29 * time.Hour,
+			Result:         30 * time.Hour,
 		},
 
 		"lease increment and default are zero, uses systemview": {

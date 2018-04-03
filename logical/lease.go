@@ -24,7 +24,7 @@ type LeaseOptions struct {
 
 	// IssueTime is the time of issue for the original lease. This is
 	// only available on a Renew operation and has no effect when returning
-	// a response. It can be used to enforce maximum lease periods b
+	// a response. It can be used to enforce maximum lease periods by
 	// a logical backend.
 	IssueTime time.Time `json:"-"`
 }
