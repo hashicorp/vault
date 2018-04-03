@@ -1,0 +1,32 @@
+<header class="page-header">
+  <div class="level">
+    <div class="level-left">
+      <h1 class="title is-3">
+        Replication
+      </h1>
+    </div>
+  </div>
+</header>
+
+<div class="box is-sideless is-fullwidth is-marginless">
+  <h3 class="title is-flex-center is-5 is-marginless">
+    {{i-con class="has-text-grey is-medium" glyph="replication" size=20}}
+    Disaster Recovery (DR)
+  </h3>
+  {{replication-mode-summary
+    mode="dr"
+    cluster=cluster
+    tagName=(if cluster.dr.replicationEnabled 'a' 'div')
+  }}
+</div>
+<div class="box is-bottomless is-fullwidth is-marginless">
+  <h3 class="title is-flex-center is-5 is-marginless">
+    {{i-con class="has-text-grey is-medium" glyph="perf-replication" size=20}}
+    Performance
+  </h3>
+  {{replication-mode-summary
+    mode="performance"
+    cluster=cluster
+    tagName=(if cluster.performance.replicationEnabled 'a' 'div')
+  }}
+</div>

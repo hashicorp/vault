@@ -452,6 +452,7 @@ func (c *ServerCommand) Run(args []string) int {
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
 		PluginDirectory:    config.PluginDirectory,
+		EnableUI:           config.EnableUI,
 		EnableRaw:          config.EnableRawEndpoint,
 	}
 	if c.flagDev {
@@ -605,6 +606,16 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 		u.Scheme = "https"
 		coreConfig.ClusterAddr = u.String()
+	}
+
+	// Override the UI enabling config by the environment variable
+	if enableUI := os.Getenv("VAULT_UI"); enableUI != "" {
+		var err error
+		coreConfig.EnableUI, err = strconv.ParseBool(enableUI)
+		if err != nil {
+			c.UI.Output("Error parsing the environment variable VAULT_UI")
+			return 1
+		}
 	}
 
 	// Initialize the core

@@ -1,0 +1,40 @@
+<div class="box is-fullwidth is-shadowless is-marginless">
+  <h4 class="title is-5">
+    Revoke a secondary token
+  </h4>
+</div>
+{{message-error errors=errors}}
+<div class="field">
+  <label for="activation-token-id" class="is-label">
+    Secondary ID
+  </label>
+  <div class="control">
+    {{input class="input" name="activation-token-id" id="activation-token-id" value=id }}
+  </div>
+  <p class="help has-text-grey">
+    The secondary id to revoke; given initially to generate a secondary token.
+  </p>
+</div>
+<div class="field is-grouped box is-fullwidth is-bottomless">
+  <div class="control">
+    {{#confirm-action
+      onConfirmAction=(action "onSubmit" "revoke-secondary" "primary" (hash id=id))
+      confirmMessage=(concat "Are you sure you want to revoke " id "?")
+      disabledMessage="A secondary ID is required perform revocation."
+      buttonClasses="is-primary button"
+      confirmButtonText="Revoke"
+      cancelButtonText="Cancel"
+      showConfirm=isRevoking
+      disabled=(not id)
+    }}
+      Revoke
+    {{/confirm-action}}
+  </div>
+  <div class="control">
+    {{#unless isRevoking}}
+      {{#link-to "vault.cluster.replication.mode.secondaries" model.name replicationMode class="button"}}
+        Cancel
+      {{/link-to}}
+    {{/unless}}
+  </div>
+</div>

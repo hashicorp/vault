@@ -363,8 +363,8 @@ type Core struct {
 	replicationState           *uint32
 	activeNodeReplicationState *uint32
 
-	// uiEnabled indicates whether Vault Web UI is enabled or not
-	uiEnabled bool
+	// uiConfig contains UI configuration
+	uiConfig *UIConfig
 
 	// rawEnabled indicates whether the Raw endpoint is enabled
 	rawEnabled bool
@@ -619,6 +619,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		auditBackends[k] = f
 	}
 	c.auditBackends = auditBackends
+
+	uiStoragePrefix := systemBarrierPrefix + "ui"
+	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
 
 	return c, nil
 }
@@ -1508,6 +1511,16 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	}
 
 	return retErr
+}
+
+// UIEnabled returns if the UI is enabled
+func (c *Core) UIEnabled() bool {
+	return c.uiConfig.Enabled()
+}
+
+// UIHeaders returns configured UI headers
+func (c *Core) UIHeaders() (http.Header, error) {
+	return c.uiConfig.Headers(context.Background())
 }
 
 // sealInternal is an internal method used to seal the vault.  It does not do

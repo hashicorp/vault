@@ -1,0 +1,26 @@
+{{#if (eq selectedAction 'rotate')}}
+  {{#if key.canRotate}}
+    <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
+      <div class="level-right is-fullwidth">
+        {{#confirm-action
+            buttonClasses="button"
+            onConfirmAction=(action "doSubmit")
+            confirmMessage=(concat 'Are you sure you want to rotate "' key.id '"?')
+            confirmButtonText="Confirm rotation"
+            cancelButtonText="Cancel"
+            messageClasses="is-block-mobile has-text-grey"
+            data-test-transit-key-rotate=true
+          }}
+          Rotate encryption key
+        {{/confirm-action}}
+      </div>
+    </div>
+  {{/if}}
+{{else}}
+  {{message-error errors=errors}}
+  {{#if selectedAction}}
+    <div data-test-transit-action={{selectedAction}}>
+    {{partial (concat 'components/transit-key-action/' selectedAction)}}
+    </div>
+   {{/if}}
+{{/if}}

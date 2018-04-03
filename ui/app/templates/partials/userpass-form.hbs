@@ -1,0 +1,28 @@
+<form
+  id="auth-form"
+  {{action (action onSubmit (hash username=username password=password)) on="submit"}}
+>
+  <div class="field">
+    <label for="username" class="is-label">Username</label>
+    <div class="control">
+      {{input
+        value=username
+        name="username"
+        id="username"
+        class="input"
+      }}
+    </div>
+  </div>
+  <div class="field">
+    <label for="password" class="is-label">Password</label>
+    <div class="control">
+      {{input
+        value=password
+        name="password"
+        id="password"
+        type="password"
+        class="input"
+      }}
+    </div>
+  </div>
+</form>

@@ -1,0 +1,272 @@
+label {
+  cursor: pointer;
+  &.is-select-list {
+    padding: 10px 0px;
+    &:hover {
+      color: $blue;
+    }
+  }
+}
+
+.label {
+  color: $grey-darker;
+  text-transform: uppercase;
+  font-size: $size-small;
+}
+
+.is-label,
+.b-checkbox .is-label {
+  color: $grey-darker;
+  display: inline-block;
+  font-size: $size-small;
+  font-weight: $font-weight-bold;
+
+  &:not(:last-child) {
+    margin-bottom: 0.25rem;
+  }
+  // Sizes
+  &.is-small {
+    font-size: $size-small;
+  }
+  &.is-medium {
+    font-size: $size-medium;
+  }
+  &.is-large {
+    font-size: $size-large;
+  }
+
+  &::before,
+  &::after {
+    transform: translateY(0.2em);
+  }
+
+  &::before {
+    border-color: $grey-light;
+  }
+}
+
+.b-checkbox .is-label {
+  display: inline;
+  margin-left: $size-10;
+}
+
+.help {
+  &.is-danger {
+    font-weight: $weight-bold;
+  }
+}
+
+.is-help {
+  font-size: $size-small;
+  margin-top: 0.25rem;
+  @each $name, $pair in $colors {
+    $color: nth($pair, 1);
+    &.is-#{$name} {
+      color: $color;
+    }
+  }
+}
+
+.input,
+.textarea,
+.select select {
+  @include until($desktop) {
+    font-size: 16px;
+  }
+  &::placeholder {
+    opacity: 0.5;
+  }
+  border-color: $grey-light;
+  color: $grey-dark;
+  padding-left: $size-8;
+  padding-right: $size-8;
+
+  .has-background-grey-lighter & {
+    background-color: $white;
+  }
+}
+
+.input,
+.select select,
+.control.has-icons-left .icon,
+.control.has-icons-right .icon {
+  height: 2.5rem;
+}
+
+.input.variable {
+  font-family: $family-monospace;
+}
+.input[disabled],
+.textarea[disabled] {
+  border-color: $grey-lighter;
+  background-color: $white-ter;
+  color: $grey-light;
+}
+
+.control {
+  max-width: 100%;
+
+  // Modifiers
+  &.has-icons-left,
+  &.has-icons-right {
+    .input,
+    .select select {
+      padding-left: 2rem;
+
+      &:focus,
+      &.is-focused,
+      &:active,
+      &.is-active {
+        & ~ .icon {
+          color: currentColor;
+        }
+      }
+    }
+  }
+  &.has-checkbox-right {
+    label.checkbox {
+      display: inline-flex;
+      height: 2.5em;
+      position: absolute;
+      top: 0;
+      right: 0;
+      justify-content: flex-end;
+      margin-left: auto;
+    }
+    .input,
+    .select select {
+      padding-right: 10em;
+    }
+  }
+}
+
+.input,
+.textarea {
+  box-shadow: none;
+
+  @each $name, $pair in $colors {
+    $color: nth($pair, 1);
+    $color-invert: findColorInvert($color);
+    $color-bg: nth($pair, 2);
+    &.is-#{$name} {
+      border-color: $color;
+      background-color: $color-bg;
+      &.is-inverted {
+        border-color: rgba($color-invert, 0.3);
+        background-color: $color-bg;
+        &::placeholder {
+          color: rgba($color-invert, 0.3);
+        }
+        &:focus,
+        &.is-focused,
+        &:active,
+        &.is-active {
+          border-color: rgba($color-invert, 1);
+          background-color: $color-bg;
+          color: $color-invert;
+          &::placeholder {
+            color: rgba($color-invert, 0.7);
+          }
+        }
+      }
+    }
+  }
+  &:focus,
+  &.is-focused,
+  &:active,
+  &.is-active {
+    background-color: $input-focus-background-color;
+  }
+}
+
+.select {
+  &:not(.is-multiple)::after {
+    border-width: 2px;
+    margin-top: 0;
+    transform: rotate(-45deg) translateY(-50%);
+  }
+}
+
+.field:not(:last-child) {
+  margin-bottom: 1.5rem;
+}
+.field-body .field {
+  margin-bottom: 0;
+}
+.field.has-addons {
+  flex-wrap: wrap;
+  .control {
+    .button,
+    .checkbox,
+    .input,
+    .select select {
+      border-radius: 0;
+      &:hover,
+      &.is-hovered {
+        z-index: 2;
+      }
+      &:focus,
+      &.is-focused,
+      &:active,
+      &.is-active {
+        z-index: 3;
+        &:hover {
+          z-index: 4;
+        }
+      }
+    }
+    &:first-of-type {
+      flex-grow: 1;
+      .button,
+      .checkbox,
+      .input,
+      .select select {
+        border-bottom-left-radius: $input-radius;
+        border-top-left-radius: $input-radius;
+      }
+    }
+    &:last-child {
+      .button,
+      .checkbox,
+      .input,
+      .select select {
+        border-bottom-right-radius: $input-radius;
+        border-top-right-radius: $input-radius;
+      }
+    }
+  }
+  & > .label {
+    flex-grow: 1;
+    flex-shrink: 0;
+    width: 100%;
+  }
+  .checkbox {
+    @include input;
+    background-color: $dark-white;
+    @each $name, $pair in $colors {
+      $color: nth($pair, 1);
+      &.is-#{$name} {
+        border-color: $color;
+      }
+    }
+    input {
+      margin-right: 0.5em;
+    }
+  }
+}
+
+.file-icon,
+.file-label {
+  color: $grey-dark;
+}
+.file-cta {
+  background: $white-bis;
+  position: relative;
+}
+.file-delete-button {
+  @extend .button;
+  @extend .is-transparent;
+  color: $grey;
+  position: absolute;
+  right: 5px;
+}

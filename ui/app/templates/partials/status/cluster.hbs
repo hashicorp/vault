@@ -1,0 +1,12 @@
+<div class="card has-arrow">
+  <header class="card-header is-grey">
+    <p class="card-header-title is-uppercase has-background-grey-lighter has-text-grey-dark is-size-7">
+    In case of emergency
+    </p>
+  </header>
+  <div class="card-content">
+    <div class="content">
+      <p class="is-size-7">If you suspect your data has been compromised, you can <a href="{{href-to 'vault.cluster.settings.seal' cluster.name}}" onclick={{action d.actions.close}} class="link">seal your vault</a> to prevent access to your secrets.</p>
+    </div>
+  </div>
+</div>

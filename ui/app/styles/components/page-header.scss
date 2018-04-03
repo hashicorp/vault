@@ -1,0 +1,24 @@
+.page-header {
+  padding-bottom: $size-10;
+  padding-top: $size-4;
+
+  .level {
+    align-items: flex-end;
+  }
+  .level-left,
+  .level-right {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+  .level-right {
+    justify-content: flex-end;
+  }
+
+  .title {
+    margin-top: $size-1;
+  }
+
+  .breadcrumb + .level .title {
+    margin-top: $size-4;
+  }
+}

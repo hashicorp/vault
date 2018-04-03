@@ -1,0 +1,104 @@
+.status-menu-content {
+  max-width: 360px;
+  min-width: 280px;
+  border-radius: 3px;
+  margin: 0 -17px 0 0;
+  will-change: transform, opacity;
+
+  .card {
+    position: relative;
+    border-radius: 2px;
+    border: $base-border;
+    box-shadow: 0 0 4px rgba($black, 0.21);
+    color: $black;
+    @include css-top-arrow(8px, $grey-lighter, 1px, $grey, 100%, -25px);
+    .card-content {
+      padding: $size-6 $size-3;
+    }
+  }
+
+  .card-header-title,
+  .menu-label {
+    background: $grey-lighter;
+    color: $grey-dark;
+    font-size: $size-7;
+    font-weight: normal;
+    letter-spacing: 0;
+    margin: 0;
+    padding: 8px $size-3;
+    text-transform: uppercase;
+  }
+
+  .replication-card {
+    @include css-top-arrow(8px, $grey-lighter, 1px, $grey, 100%, -98px);
+    .box-label {
+      box-shadow: none;
+    }
+    a.is-active,
+    a:hover {
+      box-shadow: 0 0 0 1px $blue;
+    }
+  }
+
+  &.ember-basic-dropdown-content--below.ember-basic-dropdown--transitioning-in {
+    animation: drop-fade-above .15s;
+  }
+  &.ember-basic-dropdown-content--below.ember-basic-dropdown--transitioning-out {
+    animation: drop-fade-above .15s reverse;
+  }
+  &.ember-basic-dropdown-content--above.ember-basic-dropdown--transitioning-in {
+    animation: drop-fade-below .15s;
+  }
+  &.ember-basic-dropdown-content--above.ember-basic-dropdown--transitioning-out {
+    animation: drop-fade-below .15s reverse;
+  }
+}
+.status-menu-content-replication {
+  margin-top: 5px;
+}
+
+.is-status-chevron {
+  line-height: 0;
+  padding: 0.25em 0 0.25em 0.25em;
+}
+
+.status-menu-user-trigger {
+  height: 1.25em;
+  width: 1.25em;
+  background: $white-bis;
+  box-shadow: 0 0 0 2px $dark-grey, 0 0 0 3px $grey-light;
+  margin-right: 0.25rem;
+
+  .icon {
+    min-width: 0;
+  }
+}
+
+.status-menu-content .menu {
+  button.link,
+  a {
+    font-size: $size-6;
+    font-weight: 500;
+    padding: $size-9 $size-3;
+    border-radius: $menu-item-radius;
+    color: $menu-item-color;
+    display: block;
+    padding: $size-9 $size-3;
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    height: auto;
+    width: 100%;
+    text-align: left;
+
+    &:hover {
+      background-color: $menu-item-hover-background-color;
+      color: $menu-item-hover-color;
+    }
+
+    &.is-active {
+      background-color: $menu-item-active-background-color;
+      color: $menu-item-active-color;
+    }
+  }
+}

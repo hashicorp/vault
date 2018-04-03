@@ -1,0 +1,21 @@
+<div class="box is-bottomless is-fullwidth is-paddingless">
+  <nav class="tabs sub-nav">
+    <ul>
+      {{#each (array 'cert' 'urls' 'crl' 'tidy') as |section|}}
+        {{#link-to 'vault.cluster.settings.configure-secret-backend.section' section tagName="li" activeClass="is-active"}}
+          {{#link-to 'vault.cluster.settings.configure-secret-backend.section' section}}
+            {{#if (eq section 'cert')}}
+              CA Certificate
+            {{else if (eq section 'urls')}}
+              URLs
+            {{else if (eq section 'crl')}}
+              CRL
+            {{else if (eq section 'tidy')}}
+              Tidy
+            {{/if}}
+          {{/link-to}}
+        {{/link-to}}
+      {{/each}}
+    </ul>
+  </nav>
+</div>

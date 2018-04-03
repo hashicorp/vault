@@ -1,0 +1,103 @@
+{{message-error model=key}}
+<form onsubmit={{action "createOrUpdateKey" "create"}} onchange={{action "handleChange"}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="field">
+      <div class="b-checkbox">
+        <input
+          id="key-allows-delete"
+          type="checkbox"
+          checked={{key.deletionAllowed}}
+          class="styled"
+          onchange={{action "setValueOnKey" "deletionAllowed"}}
+        />
+        <label for="key-allows-delete" class="is-label">
+          Allow deletion
+        </label>
+      </div>
+    </div>
+    <div class="field">
+      <label for="key-min-version" class="is-label">Minimum decryption version</label>
+      <div class="control is-expanded">
+        <div class="select is-fullwidth">
+          <select
+            name="key-min-version"
+            id="key-min-version"
+            onchange={{action (mut key.minDecryptionVersion) value="target.value"}}
+          >
+            {{#each key.keyVersions as |version|}}
+              <option selected={{eq key.minDecryptionVersion version}} value={{version}}>
+                <code>{{version}}</code>
+              </option>
+            {{/each}}
+          </select>
+        </div>
+      </div>
+      <p class="help">
+      The minimum decryption version required to reverse transformations performed with the encryption key. Results from lower key versions
+      may be rewrapped with the new key version using the <code>rewrap</code> action.
+      </p>
+    </div>
+    <div class="field">
+      <label for="key-min-version" class="is-label">Minimum encryption version</label>
+      <div class="control is-expanded">
+        <div class="select is-fullwidth">
+          <select
+            name="key-min-version"
+            id="key-min-version"
+            onchange={{action (mut key.minEncryptionVersion) value="target.value"}}
+          >
+             <option
+               selected={{eq key.minEncryptionVersion 0 }}
+               value=0
+             >
+               <code>Latest</code> (currently {{key.latestVersion}})
+            </option>
+            {{#each key.encryptionKeyVersions as |version|}}
+              <option selected={{eq key.minEncryptionVersion version}} value={{version}}>
+                <code>{{version}}</code>
+              </option>
+            {{/each}}
+          </select>
+        </div>
+      </div>
+      <p class="help">
+      The minimum version of the key that can be used to encrypt plaintext, sign payloads, or generate HMACs.
+      You will be able to specify which version of the key to use for each of these actions. The value specified here must be greater than or equal to that specified in the <b>Minimum Decryption Version</b> selection above.
+      </p>
+    </div>
+  </div>
+    <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
+      <div class="field is-grouped">
+        {{#if capabilities.canUpdate}}
+          <div class="control">
+            <button
+              type="submit"
+              disabled={{requestInFlight}}
+              class="button is-primary {{if requestInFlight 'is-loading'}}"
+            >
+              Update encryption key
+            </button>
+          </div>
+        {{/if}}
+        <div class="control">
+          {{#secret-link
+            mode="show"
+            secret=key.id
+            class="button"
+          }}
+            Cancel
+          {{/secret-link}}
+        </div>
+      </div>
+      {{#if (and key.canDelete capabilities.canDelete)}}
+        {{#confirm-action
+          buttonClasses="button"
+          onConfirmAction=(action "deleteKey")
+          confirmMessage=(concat "Are you sure you want to delete " key.id "?")
+          cancelButtonText="Cancel"
+        }}
+          Delete encryption key
+        {{/confirm-action}}
+      {{/if}}
+    </div>
+</form>

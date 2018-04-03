@@ -1,0 +1,23 @@
+<h4 class="title is-5 is-marginless">
+  Recover
+</h4>
+<div class="content">
+  <p>
+    Attempt recovery if replication is in a bad state, for instance if an error
+    has caused replication to stop syncing.
+  </p>
+</div>
+<div class="field">
+  <div class="control">
+    {{#confirm-action
+      buttonClasses="button is-primary"
+      onConfirmAction=(action "onSubmit" "recover")
+      confirmMessage="Are you sure you want to initiate cluster recovery?"
+      confirmButtonText="Begin recovery"
+      cancelButtonText="Cancel"
+      }}
+      Recover
+    {{/confirm-action}}
+  </div>
+</div>
+

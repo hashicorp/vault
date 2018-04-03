@@ -1,0 +1,77 @@
+<div class="level is-mobile">
+  <div class="level-left">
+    <label class="is-label" data-test-pgp-label=true>
+      {{#if label}}
+        {{label}}
+      {{else}}
+        PGP KEY {{if (not-eq index '') (inc index)}}
+      {{/if}}
+    </label>
+  </div>
+  <div class="level-right">
+    <div class="control is-flex">
+      <input
+        data-test-text-toggle=true
+        id={{concat "useText-" elementId}}
+        type="checkbox"
+        name={{concat "useText-" elementId}}
+        class="switch is-rounded is-success is-small"
+        checked={{key.enterAsText}}
+        onchange={{action (toggle "enterAsText" key)}}
+      />
+      <label for={{concat "useText-" elementId}}>
+        Enter as text
+      </label>
+    </div>
+  </div>
+</div>
+<div class="field">
+  {{#if key.enterAsText}}
+    <div class="control">
+      <textarea
+        class="textarea"
+        oninput={{action "updateData"}}
+        data-test-pgp-file-textarea=true
+      >{{key.value}}</textarea>
+    </div>
+    <p class="help has-text-grey">
+      {{#if textareaHelpText}}
+        {{textareaHelpText}}
+      {{else}}
+        Enter a base64-encoded key
+      {{/if}}
+    </p>
+  {{else}}
+    <div class="control is-expanded">
+      <div class="file">
+        <label class="file-label is-fullwidth">
+          <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-pgp-file-input=true>
+          <span class="file-cta is-fullwidth">
+            <span class="file-icon has-text-grey-dark">
+              {{i-con glyph="document" size=16}}
+            </span>
+            <span class="file-label has-text-grey-dark" data-test-pgp-file-input-label=true>
+              {{#if key.fileName}}
+                {{key.fileName}}
+              {{else}}
+                Choose a file&hellip;
+              {{/if}}
+            </span>
+            {{#if key.fileName}}
+              <button type="button" class="file-delete-button" {{action 'clearKey'}} data-test-pgp-clear=true>
+                {{i-con glyph="close" size=16}}
+              </button>
+            {{/if}}
+          </span>
+        </label>
+      </div>
+    </div>
+    <p class="help has-text-grey">
+      {{#if fileHelpText}}
+        {{fileHelpText}}
+      {{else}}
+        Select a PGP key from your computer
+      {{/if}}
+    </p>
+  {{/if}}
+</div>

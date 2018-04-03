@@ -1,0 +1,79 @@
+<label for="filter-mode" class="is-label">
+  Mount filter mode
+</label>
+<div class="field is-expanded">
+  <div class="select is-fullwidth">
+    <select
+      id="filter-mode"
+      onchange={{action (mut config.mode) value="target.value"}}
+      data-test-replication-filter-mount-mode=true
+    >
+      {{#each (reduce-to-array "whitelist" "blacklist") as |mode|}}
+        <option selected={{eq config.mode mode}} value="{{mode}}">
+        {{capitalize mode}}
+        </option>
+      {{/each}}
+    </select>
+  </div>
+  <p class="help has-text-grey">
+    {{#if (eq config.mode "blacklist")}}
+      Selected mounts will be excluded when replicating to the secondary <code>{{or id config.id}}</code>.
+    {{else}}
+      <em>Only</em> the selected mounts will be replicated to the secondary <code>{{or id config.id}}</code>.
+    {{/if}}
+  </p>
+</div>
+<label class="is-label">
+  Filtered Mounts
+</label>
+<div class="columns is-mobile is-gapless is-marginless table">
+  <div class="column is-narrow thead">
+    <div class="th"></div>
+  </div>
+  <div class="column is-5 thead">
+    <div class="th">
+      Mount Path
+    </div>
+  </div>
+  <div class="column thead">
+    <div class="th">
+      Mount Type
+    </div>
+  </div>
+</div>
+{{#each mounts as |mount|}}
+  {{#unless (or mount.local (includes singletonMountTypes mount.type))}}
+    {{!-- auth mounts have apiPath, secret mounts use path --}}
+    {{#with (or mount.apiPath mount.path) as |path| }}
+      <label for="filter-{{mount.accessor}}" class="columns is-mobile is-gapless is-marginless table">
+        <div class="column is-narrow td">
+          <div class="td is-borderless">
+            <div class="field">
+              <div class="b-checkbox no-label">
+              <input
+                id="filter-{{mount.accessor}}"
+                type="checkbox"
+                class="styled"
+                checked={{includes config.paths path}}
+                onChange={{action 'addOrRemovePath' path}}
+                data-test-mount-filter="{{mount.type}}"
+              />
+              <label for="filter-{{mount.accessor}}" class="is-label"></label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <code class="column is-5 td">
+          <div class="td is-borderless" data-test-mount-filter-path-for-type="{{mount.type}}">
+            {{path}}
+          </div>
+        </code>
+        <div class="column td">
+          <div class="td is-borderless">
+            {{mount.type}}
+          </div>
+        </div>
+      </label>
+    {{/with}}
+  {{/unless}}
+{{/each}}

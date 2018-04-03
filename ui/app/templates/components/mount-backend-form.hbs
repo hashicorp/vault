@@ -1,0 +1,30 @@
+<header class="page-header">
+  <div class="level">
+<h1 class="title is-3" data-test-mount-form-header=true>
+  {{#if (eq mountType "auth")}}
+    Enable an authentication method
+  {{else}}
+    Enable a secrets engine
+  {{/if}}
+</h1>
+</div>
+</header>
+<form {{action (perform mountBackend) on="submit"}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    {{message-error model=mountModel}}
+    {{form-field-groups model=mountModel onChange=(action "onTypeChange") renderGroup="default"}}
+    {{#if mountModel.authConfigs.firstObject}}
+      {{form-field-groups model=mountModel.authConfigs.firstObject}}
+    {{/if}}
+    {{form-field-groups model=mountModel onChange=(action "onTypeChange") renderGroup="Method Options"}}
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <button type="submit" data-test-mount-submit=true class="button is-primary {{if mountBackend.isRunning 'loading'}}" disabled={{mountBackend.isRunning}}>
+      {{#if (eq mountType "auth")}}
+        Enable Method
+      {{else}}
+        Enable Engine
+      {{/if}}
+    </button>
+  </div>
+</form>

@@ -1,0 +1,17 @@
+{{#with (tabs-for-auth-section model.type tabType) as |tabs|}}
+  {{#if tabs.length}}
+    <div class="box is-sideless is-fullwidth is-paddingless is-marginless">
+      <nav class="tabs sub-nav">
+        <ul>
+        {{#each tabs as |tab|}}
+          {{#link-to params=tab.routeParams tagName="li"}}
+            <a href={{href-to params=tab.routeParams}}>
+              {{tab.label}}
+            </a>
+          {{/link-to}}
+        {{/each}}
+        </ul>
+      </nav>
+    </div>
+  {{/if}}
+{{/with}}

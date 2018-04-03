@@ -1,0 +1,38 @@
+<header data-test-header-without-nav>
+  <nav class="navbar has-dark-grey-gradient is-grouped-split">
+    <div class="navbar-brand">
+      {{#home-link class="navbar-item has-text-white has-current-color-fill"}}
+        {{partial 'svg/vault-logo'}}
+      {{/home-link}}
+    </div>
+  </nav>
+</header>
+<section class="section">
+  <div class="container">
+    {{#if (eq model.httpStatus 404)}}
+      {{not-found model=model}}
+    {{else}}
+      <header class="page-header">
+        <div class="level">
+          <div class="level-left">
+            <h1 class="title is-3 has-text-grey">
+              {{#if (eq model.httpStatus 403)}}
+                Not authorized
+              {{else}}
+                Error
+              {{/if}}
+            </h1>
+          </div>
+        </div>
+      </header>
+      <div class="box is-sideless has-background-white-bis has-text-grey has-text-centered">
+        {{#if model.message}}
+          <p>{{model.message}}</p>
+        {{/if}}
+        {{#each model.errors as |error|}}
+          <p>{{error}}</p>
+        {{/each}}
+      </div>
+    {{/if}}
+  </div>
+</section>
