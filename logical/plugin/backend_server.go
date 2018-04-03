@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/rpc"
-	"os"
 
 	"github.com/hashicorp/go-hclog"
 
@@ -29,12 +28,8 @@ type backendPluginServer struct {
 	storageClient *rpc.Client
 }
 
-func inMetadataMode() bool {
-	return os.Getenv(pluginutil.PluginMetadataModeEnv) == "true"
-}
-
 func (b *backendPluginServer) HandleRequest(args *HandleRequestArgs, reply *HandleRequestReply) error {
-	if inMetadataMode() {
+	if pluginutil.InMetadataMode() {
 		return ErrServerInMetadataMode
 	}
 
@@ -58,7 +53,7 @@ func (b *backendPluginServer) SpecialPaths(_ interface{}, reply *SpecialPathsRep
 }
 
 func (b *backendPluginServer) HandleExistenceCheck(args *HandleExistenceCheckArgs, reply *HandleExistenceCheckReply) error {
-	if inMetadataMode() {
+	if pluginutil.InMetadataMode() {
 		return ErrServerInMetadataMode
 	}
 
@@ -85,7 +80,7 @@ func (b *backendPluginServer) Cleanup(_ interface{}, _ *struct{}) error {
 }
 
 func (b *backendPluginServer) InvalidateKey(args string, _ *struct{}) error {
-	if inMetadataMode() {
+	if pluginutil.InMetadataMode() {
 		return ErrServerInMetadataMode
 	}
 
