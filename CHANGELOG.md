@@ -15,6 +15,11 @@ DEPRECATIONS/CHANGES:
    accommodate this as best as possible, and users of other tools may have to
    make adjustments, but in the end we felt that the ends did not justify the
    means and we needed to prioritize security over operational convenience.
+ * LDAP auth method case sensitivity: We now treat usernames and groups
+   configured locally for policy assignment in a case insensitive fashion by
+   default. Existing configurations will continue to work as they do now;
+   however, the next time a configuration is written `case_sensitive_names`
+   will need to be explicitly set to `true`.
 
 FEATURES:
 

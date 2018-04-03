@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 	"text/template"
 
 	"github.com/go-ldap/ldap"
@@ -173,8 +174,13 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 
 	var allGroups []string
+	canonicalUsername := username
+	cs := *cfg.CaseSensitiveNames
+	if !cs {
+		canonicalUsername = strings.ToLower(username)
+	}
 	// Import the custom added groups from ldap backend
-	user, err := b.User(ctx, req.Storage, username)
+	user, err := b.User(ctx, req.Storage, canonicalUsername)
 	if err == nil && user != nil && user.Groups != nil {
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("adding local groups", "num_local_groups", len(user.Groups), "local_groups", user.Groups)
@@ -184,9 +190,18 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	// Merge local and LDAP groups
 	allGroups = append(allGroups, ldapGroups...)
 
+	canonicalGroups := allGroups
+	// If not case sensitive, lowercase all
+	if !cs {
+		canonicalGroups = make([]string, len(allGroups))
+		for i, v := range allGroups {
+			canonicalGroups[i] = strings.ToLower(v)
+		}
+	}
+
 	// Retrieve policies
 	var policies []string
-	for _, groupName := range allGroups {
+	for _, groupName := range canonicalGroups {
 		group, err := b.Group(ctx, req.Storage, groupName)
 		if err == nil && group != nil {
 			policies = append(policies, group.Policies...)
