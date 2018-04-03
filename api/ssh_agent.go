@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-rootcerts"
@@ -141,7 +142,7 @@ func LoadSSHHelperConfig(path string) (*SSHHelperConfig, error) {
 func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
 	root, err := hcl.Parse(string(contents))
 	if err != nil {
-		return nil, fmt.Errorf("ssh_helper: error parsing config: %s", err)
+		return nil, errwrap.Wrapf("ssh_helper: error parsing config: {{err}}", err)
 	}
 
 	list, ok := root.Node.(*ast.ObjectList)
@@ -249,7 +250,7 @@ func checkHCLKeys(node ast.Node, valid []string) error {
 		key := item.Keys[0].Token.Value().(string)
 		if _, ok := validMap[key]; !ok {
 			result = multierror.Append(result, fmt.Errorf(
-				"invalid key '%s' on line %d", key, item.Assign.Line))
+				"invalid key %q on line %d", key, item.Assign.Line))
 		}
 	}
 
