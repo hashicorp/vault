@@ -108,7 +108,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		httpResp := &logical.HTTPResponse{}
 		err := jsonutil.DecodeJSON(resp.Data[logical.HTTPRawBody].([]byte), httpResp)
 		if err != nil {
-			c.logger.Error("core: failed to unmarshal wrapped HTTP response for audit logging", "error", err)
+			c.logger.Error("failed to unmarshal wrapped HTTP response for audit logging", "error", err)
 			return nil, ErrInternalError
 		}
 
@@ -142,7 +142,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		NonHMACRespDataKeys: nonHMACRespDataKeys,
 	}
 	if auditErr := c.auditBroker.LogResponse(ctx, logInput, c.auditedHeaders); auditErr != nil {
-		c.logger.Error("core: failed to audit response", "request_path", req.Path, "error", auditErr)
+		c.logger.Error("failed to audit response", "request_path", req.Path, "error", auditErr)
 		return nil, ErrInternalError
 	}
 
@@ -169,7 +169,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		var err error
 		te, err = c.tokenStore.UseToken(ctx, te)
 		if err != nil {
-			c.logger.Error("core: failed to use token", "error", err)
+			c.logger.Error("failed to use token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, nil, retErr
 		}
@@ -185,7 +185,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			defer func(id string) {
 				err = c.tokenStore.Revoke(ctx, id)
 				if err != nil {
-					c.logger.Error("core: failed to revoke token", "error", err)
+					c.logger.Error("failed to revoke token", "error", err)
 					retResp = nil
 					retAuth = nil
 					retErr = multierror.Append(retErr, ErrInternalError)
@@ -215,7 +215,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
 		}
 		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
-			c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
+			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 		}
 
 		if errType != nil {
@@ -237,7 +237,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		NonHMACReqDataKeys: nonHMACReqDataKeys,
 	}
 	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
-		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
+		c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, ErrInternalError)
 		return nil, auth, retErr
 	}
@@ -297,7 +297,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 		matchingMountEntry := c.router.MatchingMountEntry(req.Path)
 		if matchingMountEntry == nil {
-			c.logger.Error("core: unable to retrieve kv mount entry from router")
+			c.logger.Error("unable to retrieve kv mount entry from router")
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
@@ -308,7 +308,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			// backend, and otherwise check the mount entry options.
 			matchingBackend := c.router.MatchingBackend(req.Path)
 			if matchingBackend == nil {
-				c.logger.Error("core: unable to retrieve kv backend from router")
+				c.logger.Error("unable to retrieve kv backend from router")
 				retErr = multierror.Append(retErr, ErrInternalError)
 				return nil, auth, retErr
 			}
@@ -350,7 +350,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 			leaseID, err := c.expiration.Register(req, resp)
 			if err != nil {
-				c.logger.Error("core: failed to register lease", "request_path", req.Path, "error", err)
+				c.logger.Error("failed to register lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
 				return nil, auth, retErr
 			}
@@ -367,7 +367,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		resp.Auth.GroupAliases != nil {
 		err := c.identityStore.refreshExternalGroupMembershipsByEntityID(resp.Auth.EntityID, resp.Auth.GroupAliases)
 		if err != nil {
-			c.logger.Error("core: failed to refresh external group memberships", "error", err)
+			c.logger.Error("failed to refresh external group memberships", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
@@ -378,7 +378,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// since it does not need to be re-registered
 	if resp != nil && resp.Auth != nil && !strings.HasPrefix(req.Path, "auth/token/renew") {
 		if !strings.HasPrefix(req.Path, "auth/token/") {
-			c.logger.Error("core: unexpected Auth response for non-token backend", "request_path", req.Path)
+			c.logger.Error("unexpected Auth response for non-token backend", "request_path", req.Path)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
@@ -387,14 +387,14 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// here because roles allow suffixes.
 		te, err := c.tokenStore.Lookup(ctx, resp.Auth.ClientToken)
 		if err != nil {
-			c.logger.Error("core: failed to look up token", "error", err)
+			c.logger.Error("failed to look up token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
 
 		if err := c.expiration.RegisterAuth(te.Path, resp.Auth); err != nil {
 			c.tokenStore.Revoke(ctx, te.ID)
-			c.logger.Error("core: failed to register token lease", "request_path", req.Path, "error", err)
+			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
@@ -431,14 +431,14 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		Request: req,
 	}
 	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
-		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
+		c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 		return nil, nil, ErrInternalError
 	}
 
 	// The token store uses authentication even when creating a new token,
 	// so it's handled in handleRequest. It should not be reached here.
 	if strings.HasPrefix(req.Path, "auth/token/") {
-		c.logger.Error("core: unexpected login request for token backend", "request_path", req.Path)
+		c.logger.Error("unexpected login request for token backend", "request_path", req.Path)
 		return nil, nil, ErrInternalError
 	}
 
@@ -487,7 +487,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 	// A login request should never return a secret!
 	if resp != nil && resp.Secret != nil {
-		c.logger.Error("core: unexpected Secret response for login path", "request_path", req.Path)
+		c.logger.Error("unexpected Secret response for login path", "request_path", req.Path)
 		return nil, nil, ErrInternalError
 	}
 
@@ -542,7 +542,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		sysView := c.router.MatchingSystemView(req.Path)
 		if sysView == nil {
-			c.logger.Error("core: unable to look up sys view for login path", "request_path", req.Path)
+			c.logger.Error("unable to look up sys view for login path", "request_path", req.Path)
 			return nil, nil, ErrInternalError
 		}
 
@@ -576,7 +576,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		}
 
 		if err := c.tokenStore.create(ctx, &te); err != nil {
-			c.logger.Error("core: failed to create token", "error", err)
+			c.logger.Error("failed to create token", "error", err)
 			return nil, auth, ErrInternalError
 		}
 
@@ -589,7 +589,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
 			c.tokenStore.Revoke(ctx, te.ID)
-			c.logger.Error("core: failed to register token lease", "request_path", req.Path, "error", err)
+			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			return nil, auth, ErrInternalError
 		}
 

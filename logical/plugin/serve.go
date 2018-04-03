@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"os"
 
-	hclog "github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
@@ -19,7 +19,7 @@ type TLSProviderFunc func() (*tls.Config, error)
 type ServeOpts struct {
 	BackendFactoryFunc logical.Factory
 	TLSProviderFunc    TLSProviderFunc
-	Logger             hclog.Logger
+	Logger             log.Logger
 }
 
 // Serve is a helper function used to serve a backend plugin. This
@@ -27,8 +27,8 @@ type ServeOpts struct {
 func Serve(opts *ServeOpts) error {
 	logger := opts.Logger
 	if logger == nil {
-		logger = hclog.New(&hclog.LoggerOptions{
-			Level:      hclog.Trace,
+		logger = log.New(&log.LoggerOptions{
+			Level:      log.Trace,
 			Output:     os.Stderr,
 			JSONFormat: true,
 		})

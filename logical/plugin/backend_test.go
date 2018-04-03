@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	gplugin "github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/mock"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func TestBackendPlugin_impl(t *testing.T) {
@@ -156,7 +156,7 @@ func testBackend(t *testing.T) (logical.Backend, func()) {
 	b := raw.(logical.Backend)
 
 	err = b.Setup(context.Background(), &logical.BackendConfig{
-		Logger: logformat.NewVaultLogger(log.LevelTrace),
+		Logger: logging.NewVaultLogger(log.Debug),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 300 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,

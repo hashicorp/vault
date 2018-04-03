@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func TestCache(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	inm, err := NewInmem(nil, logger)
 	if err != nil {
@@ -22,7 +22,7 @@ func TestCache(t *testing.T) {
 }
 
 func TestCache_Purge(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	inm, err := NewInmem(nil, logger)
 	if err != nil {
@@ -69,7 +69,7 @@ func TestCache_Purge(t *testing.T) {
 }
 
 func TestCache_Disable(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	inm, err := NewInmem(nil, logger)
 	if err != nil {

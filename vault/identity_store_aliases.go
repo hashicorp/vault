@@ -229,7 +229,7 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 		return logical.ErrorResponse("missing mount_accessor"), nil
 	}
 
-	mountValidationResp := i.validateMountAccessorFunc(mountAccessor)
+	mountValidationResp := i.core.router.validateMountByAccessor(mountAccessor)
 	if mountValidationResp == nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
 	}

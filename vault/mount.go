@@ -337,7 +337,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 	newTable := c.mounts.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
 	if err := c.persistMounts(ctx, newTable, entry.Local); err != nil {
-		c.logger.Error("core: failed to update mount table", "error", err)
+		c.logger.Error("failed to update mount table", "error", err)
 		return logical.CodedError(500, "failed to update mount table")
 	}
 	c.mounts = newTable
@@ -347,7 +347,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("core: successful mount", "path", entry.Path, "type", entry.Type)
+		c.logger.Info("successful mount", "path", entry.Path, "type", entry.Type)
 	}
 	return nil
 }
@@ -386,7 +386,7 @@ func (c *Core) unmountInternal(ctx context.Context, path string) error {
 
 	// Mark the entry as tainted
 	if err := c.taintMountEntry(ctx, path); err != nil {
-		c.logger.Error("core: failed to taint mount entry for path being unmounted", "error", err, "path", path)
+		c.logger.Error("failed to taint mount entry for path being unmounted", "error", err, "path", path)
 		return err
 	}
 
@@ -420,19 +420,19 @@ func (c *Core) unmountInternal(ctx context.Context, path string) error {
 	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
 		// Have writable storage, remove the whole thing
 		if err := logical.ClearView(ctx, view); err != nil {
-			c.logger.Error("core: failed to clear view for path being unmounted", "error", err, "path", path)
+			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
 			return err
 		}
 	}
 
 	// Remove the mount table entry
 	if err := c.removeMountEntry(ctx, path); err != nil {
-		c.logger.Error("core: failed to remove mount entry for path being unmounted", "error", err, "path", path)
+		c.logger.Error("failed to remove mount entry for path being unmounted", "error", err, "path", path)
 		return err
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("core: successfully unmounted", "path", path)
+		c.logger.Info("successfully unmounted", "path", path)
 	}
 	return nil
 }
@@ -446,7 +446,7 @@ func (c *Core) removeMountEntry(ctx context.Context, path string) error {
 	newTable := c.mounts.shallowClone()
 	entry := newTable.remove(path)
 	if entry == nil {
-		c.logger.Error("core: nil entry found removing entry in mounts table", "path", path)
+		c.logger.Error("nil entry found removing entry in mounts table", "path", path)
 		return logical.CodedError(500, "failed to remove entry in mounts table")
 	}
 
@@ -458,7 +458,7 @@ func (c *Core) removeMountEntry(ctx context.Context, path string) error {
 
 	// Update the mount table
 	if err := c.persistMounts(ctx, newTable, entry.Local); err != nil {
-		c.logger.Error("core: failed to remove entry from mounts table", "error", err)
+		c.logger.Error("failed to remove entry from mounts table", "error", err)
 		return logical.CodedError(500, "failed to remove entry from mounts table")
 	}
 
@@ -475,13 +475,13 @@ func (c *Core) taintMountEntry(ctx context.Context, path string) error {
 	// we simply use the original
 	entry := c.mounts.setTaint(path, true)
 	if entry == nil {
-		c.logger.Error("core: nil entry found tainting entry in mounts table", "path", path)
+		c.logger.Error("nil entry found tainting entry in mounts table", "path", path)
 		return logical.CodedError(500, "failed to taint entry in mounts table")
 	}
 
 	// Update the mount table
 	if err := c.persistMounts(ctx, c.mounts, entry.Local); err != nil {
-		c.logger.Error("core: failed to taint entry in mounts table", "error", err)
+		c.logger.Error("failed to taint entry in mounts table", "error", err)
 		return logical.CodedError(500, "failed to taint entry in mounts table")
 	}
 
@@ -566,7 +566,7 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 
 	if entry == nil {
 		c.mountsLock.Unlock()
-		c.logger.Error("core: failed to find entry in mounts table")
+		c.logger.Error("failed to find entry in mounts table")
 		return logical.CodedError(500, "failed to find entry in mounts table")
 	}
 
@@ -575,7 +575,7 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 		entry.Path = src
 		entry.Tainted = true
 		c.mountsLock.Unlock()
-		c.logger.Error("core: failed to update mounts table", "error", err)
+		c.logger.Error("failed to update mounts table", "error", err)
 		return logical.CodedError(500, "failed to update mounts table")
 	}
 	c.mountsLock.Unlock()
@@ -591,7 +591,7 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("core: successful remount", "old_path", src, "new_path", dst)
+		c.logger.Info("successful remount", "old_path", src, "new_path", dst)
 	}
 	return nil
 }
@@ -603,12 +603,12 @@ func (c *Core) loadMounts(ctx context.Context) error {
 	// Load the existing mount table
 	raw, err := c.barrier.Get(ctx, coreMountConfigPath)
 	if err != nil {
-		c.logger.Error("core: failed to read mount table", "error", err)
+		c.logger.Error("failed to read mount table", "error", err)
 		return errLoadMountsFailed
 	}
 	rawLocal, err := c.barrier.Get(ctx, coreLocalMountConfigPath)
 	if err != nil {
-		c.logger.Error("core: failed to read local mount table", "error", err)
+		c.logger.Error("failed to read local mount table", "error", err)
 		return errLoadMountsFailed
 	}
 
@@ -620,7 +620,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 		// yes, decompress the table and then JSON decode it. If not,
 		// simply JSON decode it.
 		if err := jsonutil.DecodeJSON(raw.Value, mountTable); err != nil {
-			c.logger.Error("core: failed to decompress and/or decode the mount table", "error", err)
+			c.logger.Error("failed to decompress and/or decode the mount table", "error", err)
 			return err
 		}
 		c.mounts = mountTable
@@ -634,7 +634,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 
 	if rawLocal != nil {
 		if err := jsonutil.DecodeJSON(rawLocal.Value, localMountTable); err != nil {
-			c.logger.Error("core: failed to decompress and/or decode the local mount table", "error", err)
+			c.logger.Error("failed to decompress and/or decode the local mount table", "error", err)
 			return err
 		}
 		if localMountTable != nil && len(localMountTable.Entries) > 0 {
@@ -711,7 +711,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 	}
 
 	if err := c.persistMounts(ctx, c.mounts, false); err != nil {
-		c.logger.Error("core: failed to persist mount table", "error", err)
+		c.logger.Error("failed to persist mount table", "error", err)
 		return errLoadMountsFailed
 	}
 	return nil
@@ -720,13 +720,13 @@ func (c *Core) loadMounts(ctx context.Context) error {
 // persistMounts is used to persist the mount table after modification
 func (c *Core) persistMounts(ctx context.Context, table *MountTable, localOnly bool) error {
 	if table.Type != mountTableType {
-		c.logger.Error("core: given table to persist has wrong type", "actual_type", table.Type, "expected_type", mountTableType)
+		c.logger.Error("given table to persist has wrong type", "actual_type", table.Type, "expected_type", mountTableType)
 		return fmt.Errorf("invalid table type given, not persisting")
 	}
 
 	for _, entry := range table.Entries {
 		if entry.Table != table.Type {
-			c.logger.Error("core: given entry to persist in mount table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
+			c.logger.Error("given entry to persist in mount table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
 			return fmt.Errorf("invalid mount entry found, not persisting")
 		}
 	}
@@ -751,7 +751,7 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, localOnly b
 		// Encode the mount table into JSON and compress it (lzw).
 		compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalMounts, nil)
 		if err != nil {
-			c.logger.Error("core: failed to encode and/or compress the mount table", "error", err)
+			c.logger.Error("failed to encode and/or compress the mount table", "error", err)
 			return err
 		}
 
@@ -763,7 +763,7 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, localOnly b
 
 		// Write to the physical backend
 		if err := c.barrier.Put(ctx, entry); err != nil {
-			c.logger.Error("core: failed to persist mount table", "error", err)
+			c.logger.Error("failed to persist mount table", "error", err)
 			return err
 		}
 	}
@@ -771,7 +771,7 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, localOnly b
 	// Repeat with local mounts
 	compressedBytes, err := jsonutil.EncodeJSONAndCompress(localMounts, nil)
 	if err != nil {
-		c.logger.Error("core: failed to encode and/or compress the local mount table", "error", err)
+		c.logger.Error("failed to encode and/or compress the local mount table", "error", err)
 		return err
 	}
 
@@ -781,7 +781,7 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, localOnly b
 	}
 
 	if err := c.barrier.Put(ctx, entry); err != nil {
-		c.logger.Error("core: failed to persist local mount table", "error", err)
+		c.logger.Error("failed to persist local mount table", "error", err)
 		return err
 	}
 
@@ -820,12 +820,12 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Create the new backend
 		backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
 		if err != nil {
-			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
+			c.logger.Error("failed to create mount entry", "path", entry.Path, "error", err)
 			if entry.Type == "plugin" {
 				// If we encounter an error instantiating the backend due to an error,
 				// skip backend initialization but register the entry to the mount table
 				// to preserve storage and path.
-				c.logger.Warn("core: skipping plugin-based mount entry", "path", entry.Path)
+				c.logger.Warn("skipping plugin-based mount entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
 			return errLoadMountsFailed
@@ -846,12 +846,12 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Mount the backend
 		err = c.router.Mount(backend, entry.Path, entry, view)
 		if err != nil {
-			c.logger.Error("core: failed to mount entry", "path", entry.Path, "error", err)
+			c.logger.Error("failed to mount entry", "path", entry.Path, "error", err)
 			return errLoadMountsFailed
 		}
 
 		if c.logger.IsInfo() {
-			c.logger.Info("core: successfully mounted backend", "type", entry.Type, "path", entry.Path)
+			c.logger.Info("successfully mounted backend", "type", entry.Type, "path", entry.Path)
 		}
 
 		// Ensure the path is tainted if set in the mount table
@@ -906,7 +906,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 
 	config := &logical.BackendConfig{
 		StorageView: view,
-		Logger:      c.logger,
+		Logger:      c.logger.ResetNamed(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor)),
 		Config:      conf,
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,

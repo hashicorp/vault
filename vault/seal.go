@@ -147,13 +147,13 @@ func (d *defaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 	// Fetch the core configuration
 	pe, err := d.core.physical.Get(ctx, barrierSealConfigPath)
 	if err != nil {
-		d.core.logger.Error("core: failed to read seal configuration", "error", err)
+		d.core.logger.Error("failed to read seal configuration", "error", err)
 		return nil, fmt.Errorf("failed to check seal configuration: %v", err)
 	}
 
 	// If the seal configuration is missing, we are not initialized
 	if pe == nil {
-		d.core.logger.Info("core: seal configuration missing, not initialized")
+		d.core.logger.Info("seal configuration missing, not initialized")
 		return nil, nil
 	}
 
@@ -161,7 +161,7 @@ func (d *defaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 
 	// Decode the barrier entry
 	if err := jsonutil.DecodeJSON(pe.Value, &conf); err != nil {
-		d.core.logger.Error("core: failed to decode seal configuration", "error", err)
+		d.core.logger.Error("failed to decode seal configuration", "error", err)
 		return nil, fmt.Errorf("failed to decode seal configuration: %v", err)
 	}
 
@@ -171,13 +171,13 @@ func (d *defaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 		conf.Type = d.BarrierType()
 	case d.BarrierType():
 	default:
-		d.core.logger.Error("core: barrier seal type does not match loaded type", "barrier_seal_type", conf.Type, "loaded_seal_type", d.BarrierType())
+		d.core.logger.Error("barrier seal type does not match loaded type", "barrier_seal_type", conf.Type, "loaded_seal_type", d.BarrierType())
 		return nil, fmt.Errorf("barrier seal type of %s does not match loaded type of %s", conf.Type, d.BarrierType())
 	}
 
 	// Check for a valid seal configuration
 	if err := conf.Validate(); err != nil {
-		d.core.logger.Error("core: invalid seal configuration", "error", err)
+		d.core.logger.Error("invalid seal configuration", "error", err)
 		return nil, fmt.Errorf("seal validation failed: %v", err)
 	}
 
@@ -212,7 +212,7 @@ func (d *defaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 	}
 
 	if err := d.core.physical.Put(ctx, pe); err != nil {
-		d.core.logger.Error("core: failed to write seal configuration", "error", err)
+		d.core.logger.Error("failed to write seal configuration", "error", err)
 		return fmt.Errorf("failed to write seal configuration: %v", err)
 	}
 

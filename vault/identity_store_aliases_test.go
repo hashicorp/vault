@@ -107,7 +107,7 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		t.Fatal("failed to create test identity store")
 	}
 
-	validateMountResp := is.validateMountAccessorFunc(githubAccessor)
+	validateMountResp := is.core.router.validateMountByAccessor(githubAccessor)
 	if validateMountResp == nil {
 		t.Fatal("failed to validate github auth mount")
 	}

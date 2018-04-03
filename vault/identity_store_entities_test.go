@@ -192,7 +192,7 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 	var err error
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(t)
 
-	validateMountResp := is.validateMountAccessorFunc(githubAccessor)
+	validateMountResp := is.core.router.validateMountByAccessor(githubAccessor)
 	if validateMountResp == nil {
 		t.Fatal("failed to validate github auth mount")
 	}
@@ -435,7 +435,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(t)
 
-	validateMountResp := is.validateMountAccessorFunc(githubAccessor)
+	validateMountResp := is.core.router.validateMountByAccessor(githubAccessor)
 	if validateMountResp == nil {
 		t.Fatal("failed to validate github auth mount")
 	}

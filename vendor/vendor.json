@@ -1087,10 +1087,10 @@
 			"revisionTime": "2018-02-23T19:15:17Z"
 		},
 		{
-			"checksumSHA1": "xTdKLI1gAJOTqswvr15a/fI8ucA=",
+			"checksumSHA1": "qhjAx0nMYBeQqRTaf7sQYpfUIq0=",
 			"path": "github.com/hashicorp/go-hclog",
-			"revision": "5bcb0f17e36442247290887cc914a6e507afa5c4",
-			"revisionTime": "2018-01-22T23:24:01Z"
+			"revision": "69ff559dc25f3b435631604f573a5fa1efdb6433",
+			"revisionTime": "2018-04-02T20:04:05Z"
 		},
 		{
 			"checksumSHA1": "y+AeKVZoX0gB+DZW4Arzkb3tTVc=",
@@ -1117,10 +1117,10 @@
 			"revisionTime": "2017-12-04T18:29:08Z"
 		},
 		{
-			"checksumSHA1": "7SheX5w6+xGsTMxPI3LiJx0iz7s=",
+			"checksumSHA1": "lbG9uwM7qJlTIBg+8mjCC88sCPc=",
 			"path": "github.com/hashicorp/go-plugin",
-			"revision": "baa83ead6ff956b3f99bcd609ae3499c028e019e",
-			"revisionTime": "2018-02-16T15:44:16Z"
+			"revision": "e8d22c780116115ae5624720c9af0c97afe4f551",
+			"revisionTime": "2018-03-31T00:25:53Z"
 		},
 		{
 			"checksumSHA1": "yzoWV7yrS/TvOrKy5ZrdUjsYaOA=",
@@ -1493,12 +1493,6 @@
 			"path": "github.com/mgutz/ansi",
 			"revision": "9520e82c474b0a04dd04f8a40959027271bab992",
 			"revisionTime": "2017-02-06T15:57:36Z"
-		},
-		{
-			"checksumSHA1": "DUdWW5gRHBk2zTxGQZoH1KLxFtc=",
-			"path": "github.com/mgutz/logxi/v1",
-			"revision": "aebf8a7d67ab4625e0fd4a665766fef9a709161b",
-			"revisionTime": "2016-10-27T14:08:23Z"
 		},
 		{
 			"checksumSHA1": "0sodX5Pa1TxO+QslATEY81VGklc=",

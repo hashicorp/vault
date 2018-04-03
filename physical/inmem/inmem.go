@@ -7,8 +7,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 
 	"github.com/armon/go-radix"
 )

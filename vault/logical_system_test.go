@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/salt"
@@ -1271,7 +1272,7 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b := NewSystemBackend(core)
+	b := NewSystemBackend(core, hclog.New(&hclog.LoggerOptions{}))
 	err := b.Backend.Setup(context.Background(), bc)
 	if err != nil {
 		t.Fatal(err)
@@ -1335,7 +1336,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b := NewSystemBackend(core)
+	b := NewSystemBackend(core, hclog.New(&hclog.LoggerOptions{}))
 	err := b.Backend.Setup(context.Background(), bc)
 	if err != nil {
 		t.Fatal(err)
@@ -1956,7 +1957,7 @@ func testSystemBackendInternal(t *testing.T, c *Core) logical.Backend {
 		},
 	}
 
-	b := NewSystemBackend(c)
+	b := NewSystemBackend(c, hclog.New(&hclog.LoggerOptions{}))
 	err := b.Backend.Setup(context.Background(), bc)
 	if err != nil {
 		t.Fatal(err)

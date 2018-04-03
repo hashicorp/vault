@@ -110,7 +110,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry) error {
 	// Register the backend
 	c.auditBroker.Register(entry.Path, backend, view)
 	if c.logger.IsInfo() {
-		c.logger.Info("core: enabled audit backend", "path", entry.Path, "type", entry.Type)
+		c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
 	}
 	return nil
 }
@@ -152,7 +152,7 @@ func (c *Core) disableAudit(ctx context.Context, path string) (bool, error) {
 	// Unmount the backend
 	c.auditBroker.Deregister(path)
 	if c.logger.IsInfo() {
-		c.logger.Info("core: disabled audit backend", "path", path)
+		c.logger.Info("disabled audit backend", "path", path)
 	}
 
 	return true, nil
@@ -166,12 +166,12 @@ func (c *Core) loadAudits(ctx context.Context) error {
 	// Load the existing audit table
 	raw, err := c.barrier.Get(ctx, coreAuditConfigPath)
 	if err != nil {
-		c.logger.Error("core: failed to read audit table", "error", err)
+		c.logger.Error("failed to read audit table", "error", err)
 		return errLoadAuditFailed
 	}
 	rawLocal, err := c.barrier.Get(ctx, coreLocalAuditConfigPath)
 	if err != nil {
-		c.logger.Error("core: failed to read local audit table", "error", err)
+		c.logger.Error("failed to read local audit table", "error", err)
 		return errLoadAuditFailed
 	}
 
@@ -180,7 +180,7 @@ func (c *Core) loadAudits(ctx context.Context) error {
 
 	if raw != nil {
 		if err := jsonutil.DecodeJSON(raw.Value, auditTable); err != nil {
-			c.logger.Error("core: failed to decode audit table", "error", err)
+			c.logger.Error("failed to decode audit table", "error", err)
 			return errLoadAuditFailed
 		}
 		c.audit = auditTable
@@ -194,7 +194,7 @@ func (c *Core) loadAudits(ctx context.Context) error {
 
 	if rawLocal != nil {
 		if err := jsonutil.DecodeJSON(rawLocal.Value, localAuditTable); err != nil {
-			c.logger.Error("core: failed to decode local audit table", "error", err)
+			c.logger.Error("failed to decode local audit table", "error", err)
 			return errLoadAuditFailed
 		}
 		if localAuditTable != nil && len(localAuditTable.Entries) > 0 {
@@ -237,13 +237,13 @@ func (c *Core) loadAudits(ctx context.Context) error {
 // persistAudit is used to persist the audit table after modification
 func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bool) error {
 	if table.Type != auditTableType {
-		c.logger.Error("core: given table to persist has wrong type", "actual_type", table.Type, "expected_type", auditTableType)
+		c.logger.Error("given table to persist has wrong type", "actual_type", table.Type, "expected_type", auditTableType)
 		return fmt.Errorf("invalid table type given, not persisting")
 	}
 
 	for _, entry := range table.Entries {
 		if entry.Table != table.Type {
-			c.logger.Error("core: given entry to persist in audit table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
+			c.logger.Error("given entry to persist in audit table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
 			return fmt.Errorf("invalid audit entry found, not persisting")
 		}
 	}
@@ -268,7 +268,7 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 		// Marshal the table
 		compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalAudit, nil)
 		if err != nil {
-			c.logger.Error("core: failed to encode and/or compress audit table", "error", err)
+			c.logger.Error("failed to encode and/or compress audit table", "error", err)
 			return err
 		}
 
@@ -280,7 +280,7 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 
 		// Write to the physical backend
 		if err := c.barrier.Put(ctx, entry); err != nil {
-			c.logger.Error("core: failed to persist audit table", "error", err)
+			c.logger.Error("failed to persist audit table", "error", err)
 			return err
 		}
 	}
@@ -288,7 +288,7 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 	// Repeat with local audit
 	compressedBytes, err := jsonutil.EncodeJSONAndCompress(localAudit, nil)
 	if err != nil {
-		c.logger.Error("core: failed to encode and/or compress local audit table", "error", err)
+		c.logger.Error("failed to encode and/or compress local audit table", "error", err)
 		return err
 	}
 
@@ -298,7 +298,7 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 	}
 
 	if err := c.barrier.Put(ctx, entry); err != nil {
-		c.logger.Error("core: failed to persist local audit table", "error", err)
+		c.logger.Error("failed to persist local audit table", "error", err)
 		return err
 	}
 
@@ -308,7 +308,7 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 // setupAudit is invoked after we've loaded the audit able to
 // initialize the audit backends
 func (c *Core) setupAudits(ctx context.Context) error {
-	broker := NewAuditBroker(c.logger)
+	broker := NewAuditBroker(c.logger.ResetNamed("audit"))
 
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
@@ -329,11 +329,11 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		// Initialize the backend
 		backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
 		if err != nil {
-			c.logger.Error("core: failed to create audit entry", "path", entry.Path, "error", err)
+			c.logger.Error("failed to create audit entry", "path", entry.Path, "error", err)
 			continue
 		}
 		if backend == nil {
-			c.logger.Error("core: created audit entry was nil", "path", entry.Path, "type", entry.Type)
+			c.logger.Error("created audit entry was nil", "path", entry.Path, "type", entry.Type)
 			continue
 		}
 
@@ -377,7 +377,7 @@ func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 		c.reloadFuncsLock.Lock()
 
 		if c.logger.IsDebug() {
-			c.logger.Debug("audit: removing reload function", "path", entry.Path)
+			c.logger.ResetNamed("audit").Debug("removing reload function", "path", entry.Path)
 		}
 
 		delete(c.reloadFuncs, key)
@@ -410,37 +410,39 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)
 	}
 
+	auditLogger := c.logger.ResetNamed("audit")
+
 	switch entry.Type {
 	case "file":
 		key := "audit_file|" + entry.Path
 
 		c.reloadFuncsLock.Lock()
 
-		if c.logger.IsDebug() {
-			c.logger.Debug("audit: adding reload function", "path", entry.Path)
+		if auditLogger.IsDebug() {
+			auditLogger.Debug("adding reload function", "path", entry.Path)
 			if entry.Options != nil {
-				c.logger.Debug("audit: file backend options", "path", entry.Path, "file_path", entry.Options["file_path"])
+				auditLogger.Debug("file backend options", "path", entry.Path, "file_path", entry.Options["file_path"])
 			}
 		}
 
 		c.reloadFuncs[key] = append(c.reloadFuncs[key], func(map[string]interface{}) error {
-			if c.logger.IsInfo() {
-				c.logger.Info("audit: reloading file audit backend", "path", entry.Path)
+			if auditLogger.IsInfo() {
+				auditLogger.Info("reloading file audit backend", "path", entry.Path)
 			}
 			return be.Reload(ctx)
 		})
 
 		c.reloadFuncsLock.Unlock()
 	case "socket":
-		if c.logger.IsDebug() {
+		if auditLogger.IsDebug() {
 			if entry.Options != nil {
-				c.logger.Debug("audit: socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
+				auditLogger.Debug("socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
 			}
 		}
 	case "syslog":
-		if c.logger.IsDebug() {
+		if auditLogger.IsDebug() {
 			if entry.Options != nil {
-				c.logger.Debug("audit: syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
+				auditLogger.Debug("syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
 			}
 		}
 	}

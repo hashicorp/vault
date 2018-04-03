@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
@@ -131,7 +131,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("s3: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 

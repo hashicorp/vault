@@ -167,7 +167,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 
 		if r.Header.Get(NoRequestForwardingHeaderName) != "" {
 			// Forwarding explicitly disabled, fall back to previous behavior
-			core.Logger().Trace("http/handleRequestForwarding: forwarding disabled by client request")
+			core.Logger().Debug("handleRequestForwarding: forwarding disabled by client request")
 			handler.ServeHTTP(w, r)
 			return
 		}
@@ -202,9 +202,9 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 		statusCode, header, retBytes, err := core.ForwardRequest(r)
 		if err != nil {
 			if err == vault.ErrCannotForward {
-				core.Logger().Trace("http/handleRequestForwarding: cannot forward (possibly disabled on active node), falling back")
+				core.Logger().Debug("handleRequestForwarding: cannot forward (possibly disabled on active node), falling back")
 			} else {
-				core.Logger().Error("http/handleRequestForwarding: error forwarding request", "error", err)
+				core.Logger().Error("handleRequestForwarding: error forwarding request", "error", err)
 			}
 
 			// Fall back to redirection

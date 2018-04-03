@@ -312,7 +312,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 	trustedNonCAs = make([]*ParsedCert, 0)
 	names, err := storage.List(ctx, "cert/")
 	if err != nil {
-		b.Logger().Error("cert: failed to list trusted certs", "error", err)
+		b.Logger().Error("failed to list trusted certs", "error", err)
 		return
 	}
 	for _, name := range names {
@@ -322,12 +322,12 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 		}
 		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, "cert/"))
 		if err != nil {
-			b.Logger().Error("cert: failed to load trusted cert", "name", name, "error", err)
+			b.Logger().Error("failed to load trusted cert", "name", name, "error", err)
 			continue
 		}
 		parsed := parsePEM([]byte(entry.Certificate))
 		if len(parsed) == 0 {
-			b.Logger().Error("cert: failed to parse certificate", "name", name)
+			b.Logger().Error("failed to parse certificate", "name", name)
 			continue
 		}
 		if !parsed[0].IsCA {

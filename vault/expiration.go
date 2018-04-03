@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
@@ -81,13 +81,13 @@ type ExpirationManager struct {
 
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
-func NewExpirationManager(c *Core, view *BarrierView) *ExpirationManager {
+func NewExpirationManager(c *Core, view *BarrierView, logger log.Logger) *ExpirationManager {
 	exp := &ExpirationManager{
 		router:     c.router,
 		idView:     view.SubView(leaseViewPrefix),
 		tokenView:  view.SubView(tokenViewPrefix),
 		tokenStore: c.tokenStore,
-		logger:     c.logger,
+		logger:     logger,
 		pending:    make(map[string]*time.Timer),
 
 		// new instances of the expiration manager will go immediately into
@@ -102,7 +102,8 @@ func NewExpirationManager(c *Core, view *BarrierView) *ExpirationManager {
 	}
 
 	if exp.logger == nil {
-		exp.logger = log.New("expiration_manager")
+		opts := log.LoggerOptions{Name: "expiration_manager"}
+		exp.logger = log.New(&opts)
 	}
 
 	return exp
@@ -117,18 +118,18 @@ func (c *Core) setupExpiration() error {
 	view := c.systemBarrierView.SubView(expirationSubPath)
 
 	// Create the manager
-	mgr := NewExpirationManager(c, view)
+	mgr := NewExpirationManager(c, view, c.logger.ResetNamed("expiration"))
 	c.expiration = mgr
 
 	// Link the token store to this
 	c.tokenStore.SetExpirationManager(mgr)
 
 	// Restore the existing state
-	c.logger.Info("expiration: restoring leases")
+	c.logger.Info("restoring leases")
 	errorFunc := func() {
-		c.logger.Error("expiration: shutting down")
+		c.logger.Error("shutting down")
 		if err := c.Shutdown(); err != nil {
-			c.logger.Error("expiration: error shutting down core: %v", err)
+			c.logger.Error("error shutting down core: %v", err)
 		}
 	}
 	go c.expiration.Restore(errorFunc)
@@ -179,14 +180,14 @@ func (m *ExpirationManager) Tidy() error {
 	var tidyErrors *multierror.Error
 
 	if !atomic.CompareAndSwapInt32(&m.tidyLock, 0, 1) {
-		m.logger.Warn("expiration: tidy operation on leases is already in progress")
+		m.logger.Warn("tidy operation on leases is already in progress")
 		return fmt.Errorf("tidy operation on leases is already in progress")
 	}
 
 	defer atomic.CompareAndSwapInt32(&m.tidyLock, 1, 0)
 
-	m.logger.Info("expiration: beginning tidy operation on leases")
-	defer m.logger.Info("expiration: finished tidy operation on leases")
+	m.logger.Info("beginning tidy operation on leases")
+	defer m.logger.Info("finished tidy operation on leases")
 
 	// Create a cache to keep track of looked up tokens
 	tokenCache := make(map[string]bool)
@@ -195,7 +196,7 @@ func (m *ExpirationManager) Tidy() error {
 	tidyFunc := func(leaseID string) {
 		countLease++
 		if countLease%500 == 0 {
-			m.logger.Info("expiration: tidying leases", "progress", countLease)
+			m.logger.Info("tidying leases", "progress", countLease)
 		}
 
 		le, err := m.loadEntry(leaseID)
@@ -212,7 +213,7 @@ func (m *ExpirationManager) Tidy() error {
 		var isValid, ok bool
 		revokeLease := false
 		if le.ClientToken == "" {
-			m.logger.Trace("expiration: revoking lease which has an empty token", "lease_id", leaseID)
+			m.logger.Debug("revoking lease which has an empty token", "lease_id", leaseID)
 			revokeLease = true
 			deletedCountEmptyToken++
 			goto REVOKE_CHECK
@@ -236,7 +237,7 @@ func (m *ExpirationManager) Tidy() error {
 			}
 
 			if te == nil {
-				m.logger.Trace("expiration: revoking lease which holds an invalid token", "lease_id", leaseID)
+				m.logger.Debug("revoking lease which holds an invalid token", "lease_id", leaseID)
 				revokeLease = true
 				deletedCountInvalidToken++
 				tokenCache[le.ClientToken] = false
@@ -249,7 +250,7 @@ func (m *ExpirationManager) Tidy() error {
 				return
 			}
 
-			m.logger.Trace("expiration: revoking lease which contains an invalid token", "lease_id", leaseID)
+			m.logger.Debug("revoking lease which contains an invalid token", "lease_id", leaseID)
 			revokeLease = true
 			deletedCountInvalidToken++
 			goto REVOKE_CHECK
@@ -272,10 +273,10 @@ func (m *ExpirationManager) Tidy() error {
 		return err
 	}
 
-	m.logger.Debug("expiration: number of leases scanned", "count", countLease)
-	m.logger.Debug("expiration: number of leases which had empty tokens", "count", deletedCountEmptyToken)
-	m.logger.Debug("expiration: number of leases which had invalid tokens", "count", deletedCountInvalidToken)
-	m.logger.Debug("expiration: number of leases successfully revoked", "count", revokedCount)
+	m.logger.Info("number of leases scanned", "count", countLease)
+	m.logger.Info("number of leases which had empty tokens", "count", deletedCountEmptyToken)
+	m.logger.Info("number of leases which had invalid tokens", "count", deletedCountInvalidToken)
+	m.logger.Info("number of leases successfully revoked", "count", revokedCount)
 
 	return tidyErrors.ErrorOrNil()
 }
@@ -294,10 +295,10 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 		case retErr == nil:
 		case errwrap.Contains(retErr, ErrBarrierSealed.Error()):
 			// Don't run error func because we're likely already shutting down
-			m.logger.Warn("expiration: barrier sealed while restoring leases, stopping lease loading")
+			m.logger.Warn("barrier sealed while restoring leases, stopping lease loading")
 			retErr = nil
 		default:
-			m.logger.Error("expiration: error restoring leases", "error", retErr)
+			m.logger.Error("error restoring leases", "error", retErr)
 			if errorFunc != nil {
 				errorFunc()
 			}
@@ -305,12 +306,12 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	}()
 
 	// Accumulate existing leases
-	m.logger.Debug("expiration: collecting leases")
+	m.logger.Debug("collecting leases")
 	existing, err := logical.CollectKeys(m.quitContext, m.idView)
 	if err != nil {
 		return errwrap.Wrapf("failed to scan for leases: {{err}}", err)
 	}
-	m.logger.Debug("expiration: leases collected", "num_existing", len(existing))
+	m.logger.Debug("leases collected", "num_existing", len(existing))
 
 	// Make the channels used for the worker pool
 	broker := make(chan string)
@@ -362,7 +363,7 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 		defer wg.Done()
 		for i, leaseID := range existing {
 			if i > 0 && i%500 == 0 {
-				m.logger.Trace("expiration: leases loading", "progress", i)
+				m.logger.Debug("leases loading", "progress", i)
 			}
 
 			select {
@@ -406,7 +407,7 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	atomic.StoreInt32(&m.restoreMode, 0)
 	m.restoreModeLock.Unlock()
 
-	m.logger.Info("expiration: lease restore complete")
+	m.logger.Info("lease restore complete")
 	return nil
 }
 
@@ -441,8 +442,8 @@ func (m *ExpirationManager) processRestore(leaseID string) error {
 // This must be called before sealing the view.
 func (m *ExpirationManager) Stop() error {
 	// Stop all the pending expiration timers
-	m.logger.Debug("expiration: stop triggered")
-	defer m.logger.Debug("expiration: finished stopping")
+	m.logger.Debug("stop triggered")
+	defer m.logger.Debug("finished stopping")
 
 	// Do this before stopping pending timers to avoid potential races with
 	// expiring timers
@@ -524,7 +525,7 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 	m.pendingLock.Unlock()
 
 	if m.logger.IsInfo() {
-		m.logger.Info("expiration: revoked lease", "lease_id", leaseID)
+		m.logger.Info("revoked lease", "lease_id", leaseID)
 	}
 
 	return nil
@@ -1011,14 +1012,14 @@ func (m *ExpirationManager) expireID(leaseID string) {
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
 		select {
 		case <-m.quitCh:
-			m.logger.Error("expiration: shutting down, not attempting further revocation of lease", "lease_id", leaseID)
+			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", leaseID)
 			return
 		default:
 		}
 
 		m.coreStateLock.RLock()
 		if m.quitContext.Err() == context.Canceled {
-			m.logger.Error("expiration: core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
+			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
 			m.coreStateLock.RUnlock()
 			return
 		}
@@ -1030,10 +1031,10 @@ func (m *ExpirationManager) expireID(leaseID string) {
 		}
 
 		m.coreStateLock.RUnlock()
-		m.logger.Error("expiration: failed to revoke lease", "lease_id", leaseID, "error", err)
+		m.logger.Error("failed to revoke lease", "lease_id", leaseID, "error", err)
 		time.Sleep((1 << attempt) * revokeRetryBase)
 	}
-	m.logger.Error("expiration: maximum revoke attempts reached", "lease_id", leaseID)
+	m.logger.Error("maximum revoke attempts reached", "lease_id", leaseID)
 }
 
 // revokeEntry is used to attempt revocation of an internal entry
@@ -1272,7 +1273,7 @@ func (m *ExpirationManager) emitMetrics() {
 	// Check if lease count is greater than the threshold
 	if num > maxLeaseThreshold {
 		if atomic.LoadUint32(&m.leaseCheckCounter) > 59 {
-			m.logger.Warn("expiration: lease count exceeds warning lease threshold")
+			m.logger.Warn("lease count exceeds warning lease threshold")
 			atomic.StoreUint32(&m.leaseCheckCounter, 0)
 		} else {
 			atomic.AddUint32(&m.leaseCheckCounter, 1)

@@ -5,14 +5,14 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes"
+	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func BenchmarkStoragePacker(b *testing.B) {
-	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New("storagepackertest"), "")
+	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New(&log.LoggerOptions{Name: "storagepackertest"}), "")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func BenchmarkStoragePacker(b *testing.B) {
 }
 
 func TestStoragePacker(t *testing.T) {
-	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New("storagepackertest"), "")
+	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New(&log.LoggerOptions{Name: "storagepackertest"}), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestStoragePacker(t *testing.T) {
 }
 
 func TestStoragePacker_SerializeDeserializeComplexItem(t *testing.T) {
-	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New("storagepackertest"), "")
+	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New(&log.LoggerOptions{Name: "storagepackertest"}), "")
 	if err != nil {
 		t.Fatal(err)
 	}

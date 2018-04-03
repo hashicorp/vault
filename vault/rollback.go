@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/logical"
@@ -92,7 +92,7 @@ func (m *RollbackManager) Stop() {
 
 // run is a long running routine to periodically invoke rollback
 func (m *RollbackManager) run() {
-	m.logger.Info("rollback: starting rollback manager")
+	m.logger.Info("starting rollback manager")
 	tick := time.NewTicker(m.period)
 	defer tick.Stop()
 	defer close(m.doneCh)
@@ -102,7 +102,7 @@ func (m *RollbackManager) run() {
 			m.triggerRollbacks()
 
 		case <-m.shutdownCh:
-			m.logger.Info("rollback: stopping rollback manager")
+			m.logger.Info("stopping rollback manager")
 			return
 		}
 	}
@@ -150,8 +150,8 @@ func (m *RollbackManager) startRollback(path string) *rollbackState {
 // attemptRollback invokes a RollbackOperation for the given path
 func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *rollbackState) (err error) {
 	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(path, "/", "-", -1)}, time.Now())
-	if m.logger.IsTrace() {
-		m.logger.Trace("rollback: attempting rollback", "path", path)
+	if m.logger.IsDebug() {
+		m.logger.Debug("attempting rollback", "path", path)
 	}
 
 	defer func() {
@@ -180,7 +180,7 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *
 		err = nil
 	}
 	if err != nil {
-		m.logger.Error("rollback: error rolling back", "path", path, "error", err)
+		m.logger.Error("error rolling back", "path", path, "error", err)
 	}
 	return
 }
@@ -229,7 +229,7 @@ func (c *Core) startRollback() error {
 		}
 		return ret
 	}
-	c.rollback = NewRollbackManager(c.logger, backendsFunc, c.router, c.activeContext)
+	c.rollback = NewRollbackManager(c.logger.ResetNamed("rollback"), backendsFunc, c.router, c.activeContext)
 	c.rollback.Start()
 	return nil
 }

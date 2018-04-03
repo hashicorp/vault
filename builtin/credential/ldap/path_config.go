@@ -12,11 +12,11 @@ import (
 	"text/template"
 
 	"github.com/go-ldap/ldap"
+	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -427,7 +427,7 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 		if err == nil {
 			if retErr != nil {
 				if c.logger.IsDebug() {
-					c.logger.Debug("ldap: errors connecting to some hosts: %s", retErr.Error())
+					c.logger.Debug("errors connecting to some hosts: %s", retErr.Error())
 				}
 			}
 			retErr = nil
