@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 
+	"github.com/hashicorp/vault/builtin/logical/ad"
 	"github.com/hashicorp/vault/builtin/logical/aws"
 	"github.com/hashicorp/vault/builtin/logical/cassandra"
 	"github.com/hashicorp/vault/builtin/logical/consul"
@@ -110,6 +111,7 @@ var (
 	}
 
 	logicalBackends = map[string]logical.Factory{
+		"ad":         ad.Factory,
 		"aws":        aws.Factory,
 		"cassandra":  cassandra.Factory,
 		"consul":     consul.Factory,
