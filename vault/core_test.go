@@ -381,7 +381,7 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 	if resp.Secret.TTL != c.maxLeaseTTL {
-		t.Fatalf("bad: %#v", resp.Secret)
+		t.Fatalf("bad: %#v, %d", resp.Secret, c.maxLeaseTTL)
 	}
 	if resp.Secret.LeaseID == "" {
 		t.Fatalf("bad: %#v", resp.Secret)
@@ -422,7 +422,7 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 	if resp.Secret.TTL != c.defaultLeaseTTL {
-		t.Fatalf("bad: %#v", resp.Secret)
+		t.Fatalf("bad: %#v, %d", resp.Secret, c.defaultLeaseTTL)
 	}
 	if resp.Secret.LeaseID == "" {
 		t.Fatalf("bad: %#v", resp.Secret)

@@ -212,6 +212,8 @@ message LeaseOptions {
 	int64 increment = 3;
 
 	google.protobuf.Timestamp issue_time = 4;
+
+	int64 MaxTTL = 5;
 }
 
 message Secret {

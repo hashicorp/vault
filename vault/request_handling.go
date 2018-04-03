@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 )
 
 const (
@@ -290,25 +291,6 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// We exclude renewal of a lease, since it does not need to be re-registered
 	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew") &&
 		!strings.HasPrefix(req.Path, "sys/leases/renew") {
-		// Get the SystemView for the mount
-		sysView := c.router.MatchingSystemView(req.Path)
-		if sysView == nil {
-			c.logger.Error("unable to retrieve system view from router")
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, auth, retErr
-		}
-
-		// Apply the default lease if none given
-		if resp.Secret.TTL == 0 {
-			resp.Secret.TTL = sysView.DefaultLeaseTTL()
-		}
-
-		// Limit the lease duration
-		maxTTL := sysView.MaxLeaseTTL()
-		if resp.Secret.TTL > maxTTL {
-			resp.Secret.TTL = maxTTL
-		}
-
 		// KV mounts should return the TTL but not register
 		// for a lease as this provides a massive slowdown
 		registerLease := true
@@ -351,6 +333,21 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		if registerLease {
+			sysView := c.router.MatchingSystemView(req.Path)
+			if sysView == nil {
+				c.logger.Error("core: unable to look up sys view for login path", "request_path", req.Path)
+				return nil, nil, ErrInternalError
+			}
+
+			ttl, warnings, err := framework.CalculateTTL(sysView, 0, resp.Secret.TTL, 0, resp.Secret.MaxTTL, 0, time.Time{})
+			if err != nil {
+				return nil, nil, err
+			}
+			for _, warning := range warnings {
+				resp.AddWarning(warning)
+			}
+			resp.Secret.TTL = ttl
+
 			leaseID, err := c.expiration.Register(req, resp)
 			if err != nil {
 				c.logger.Error("failed to register lease", "request_path", req.Path, "error", err)
@@ -549,27 +546,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, ErrInternalError
 		}
 
-		// Start off with the sys default value, and update according to period/TTL
-		// from resp.Auth
-		tokenTTL := sysView.DefaultLeaseTTL()
-
-		switch {
-		case auth.Period > time.Duration(0):
-			// Cap the period value to the sys max_ttl value. The auth backend should
-			// have checked for it on its login path, but we check here again for
-			// sanity.
-			if auth.Period > sysView.MaxLeaseTTL() {
-				auth.Period = sysView.MaxLeaseTTL()
-			}
-			tokenTTL = auth.Period
-		case auth.TTL > time.Duration(0):
-			// Cap the TTL value. The auth backend should have checked for it on its
-			// login path (e.g. a call to b.SanitizeTTL), but we check here again for
-			// sanity.
-			if auth.TTL > sysView.MaxLeaseTTL() {
-				auth.TTL = sysView.MaxLeaseTTL()
-			}
-			tokenTTL = auth.TTL
+		tokenTTL, warnings, err := framework.CalculateTTL(sysView, 0, auth.TTL, auth.Period, auth.MaxTTL, auth.ExplicitMaxTTL, time.Time{})
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, warning := range warnings {
+			resp.AddWarning(warning)
 		}
 
 		// Generate a token

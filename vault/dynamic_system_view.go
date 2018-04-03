@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
