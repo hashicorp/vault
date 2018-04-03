@@ -59,6 +59,9 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		}
 		if ttl > 0 {
 			expireTime := time.Now().Add(ttl)
+			// Adding a small buffer since the TTL will be calculated again afeter this call
+			// to ensure the database credential does not expire before the lease
+			expireTime = expireTime.Add(5 * time.Second)
 			err := db.RenewUser(ctx, role.Statements, username, expireTime)
 			if err != nil {
 				b.CloseIfShutdown(db, err)

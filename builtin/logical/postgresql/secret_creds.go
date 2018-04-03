@@ -67,6 +67,9 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 	}
 	if ttl > 0 {
 		expireTime := time.Now().Add(ttl)
+		// Adding a small buffer since the TTL will be calculated again afeter this call
+		// to ensure the database credential does not expire before the lease
+		expireTime = expireTime.Add(5 * time.Second)
 		expiration := expireTime.Format("2006-01-02 15:04:05-0700")
 
 		query := fmt.Sprintf(

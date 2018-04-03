@@ -111,6 +111,8 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
+	resp.Auth = req.Auth
+
 	// Remove old aliases
 	resp.Auth.GroupAliases = nil
 

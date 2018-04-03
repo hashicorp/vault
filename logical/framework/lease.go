@@ -27,7 +27,7 @@ func LeaseExtend(backendIncrement, backendMax time.Duration, systemView logical.
 	}
 }
 
-// CalculateTTL takes all the user-specifie, backend, and system inputs and calculates
+// CalculateTTL takes all the user-specified, backend, and system inputs and calculates
 // a TTL for a lease
 func CalculateTTL(sysView logical.SystemView, increment, backendTTL, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (ttl time.Duration, warnings []string, errors error) {
 	// Truncate all times to the second since that is the lowest precision for

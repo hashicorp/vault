@@ -127,6 +127,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
+	resp.Auth = req.Auth
 	resp.Auth.TTL = cfg.TTL
 	resp.Auth.MaxTTL = cfg.MaxTTL
 
