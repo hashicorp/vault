@@ -94,8 +94,7 @@ func CalculateTTL(sysView logical.SystemView, increment, backendTTL, period, bac
 		}
 
 		// If the proposed expiration is after the maximum TTL of the lease,
-		// cap the increment to whatever is left, with a small buffer due to
-		// time elapsed
+		// cap the increment to whatever is left
 		if maxValidTTL-ttl < 0 {
 			warnings = append(warnings,
 				fmt.Sprintf("TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly", ttl, maxValidTTL))

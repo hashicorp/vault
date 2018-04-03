@@ -755,11 +755,6 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	sysView := m.router.MatchingSystemView(le.Path)
-	if sysView == nil {
-		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
-	}
-
 	// Attempt to renew the auth entry
 	resp, err := m.renewAuthEntry(req, le, increment)
 	if err != nil {
@@ -775,6 +770,11 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	}
 	if resp.Auth == nil {
 		return nil, nil
+	}
+
+	sysView := m.router.MatchingSystemView(le.Path)
+	if sysView == nil {
+		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
 	}
 
 	ttl, warnings, err := framework.CalculateTTL(sysView, increment, resp.Auth.TTL, resp.Auth.Period, resp.Auth.MaxTTL, resp.Auth.ExplicitMaxTTL, le.IssueTime)
