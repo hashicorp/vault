@@ -17,7 +17,7 @@ RUN apt-get install -y nodejs
 
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g bower yarn@0.17.10
+RUN npm install -g bower yarn@1.5.0
 
 ENV GOVERSION 1.10.1
 RUN mkdir /goroot && mkdir /gopath
