@@ -60,6 +60,7 @@ FEATURES:
  * UI (Enterprise) - View and edit Sentinel policies.
 
 IMPROVEMENTS:
+
  * core: Centralize TTL generation for leases in core [GH-4230]
  * identity: API to update group-alias by ID [GH-4237]
  * secret/cassandra: Update Cassandra storage delete function to not use batch
