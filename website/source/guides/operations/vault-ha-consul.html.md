@@ -490,18 +490,21 @@ server configuration based on the example:
 
 - **$CLUSTER_ADDRESS**: this should be set to address that you prefer the Vault
 servers perform intra-server communications on; this needs to be routable
-between Vault servers and in our example will be `10.1.42.201:8201` and
-`10.1.42.202:8201` respectively.
+between Vault servers and in our example will be `10.1.42.201:8200` and
+`10.1.42.202:8200` respectively.
 
 - **$API_ADDR**: this should be set to the address which client (API)
-requests are to be redirected to. In our example, we want `vault_s1` to be the
-_active_ node, so this will be `http://10.1.42.201:8200`.
+requests are to be redirected to. There are two common scenarios: Vault servers
+accessed directly by clients, and Vault servers accessed via a load balancer.
+Since this example accesses the [Vault servers directly](/docs/concepts/ha.html#direct-access), the `api_addr` for each node
+should be that node's address. Therefore, it will be `https://10.1.42.201:8200`
+and `https://10.1.42.202:8200` respectively.
 
 - **$CLUSTER_ADDR**: Not to be confused with the **CLUSTER_ADDRESS** parameter,
 this parameter is specifically for HA request forwarding between Vault servers
 and needs to be a address routable between all Vault servers in a full URL
-format with port. In this case it will be `https://10.1.42.201:8200` and
-`https://10.1.42.202:8200` respectively.
+format with port. In this case it will be `https://10.1.42.201:8201` and
+`https://10.1.42.202:8201` respectively.
 
 > Note that the scheme here (https) is ignored; all cluster members will always
 use TLS with a private key/certificate.
@@ -520,8 +523,9 @@ use TLS with a private key/certificate.
       path    = "vault/"
     }
 
-    api_addr = "http://10.1.42.201:8200"
+    api_addr = "https://10.1.42.201:8200"
     cluster_addr = "https://10.1.42.201:8201"
+
 
 #### `vault_s2.hcl` Example
 
@@ -536,7 +540,7 @@ use TLS with a private key/certificate.
       path    = "vault/"
     }
 
-    api_addr = "http://10.1.42.201:8200"
+    api_addr = "https://10.1.42.202:8200"
     cluster_addr = "https://10.1.42.202:8201"
 
 
