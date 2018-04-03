@@ -219,9 +219,12 @@ Vault Enterprise.
 
 ~> **Enterprise Only:** Vault replication feature is a part of _Vault Enterprise_.
 
-HashiCorp Vault Enterprise provides two modes of replication, performance
-and disaster recovery. The [Vault documentation](/docs/enterprise/replication/index.html)
-provides more detailed information on the replication capabilities within Vault Enterprise.
+HashiCorp Vault Enterprise provides two modes of replication, **performance**
+and **disaster recovery**. The [Vault
+documentation](/docs/enterprise/replication/index.html) provides more detailed
+information on the replication capabilities within Vault Enterprise.
+
+![Replication Pattern](/assets/images/vault-ref-arch-8.png)
 
 #### Performance Replication
 
@@ -237,10 +240,28 @@ data such as ephemeral authentication tokens, time-based token information as
 well as token usage data. This provides for aggressive recovery point objective
 in environments where high availability is of the utmost concern.
 
-#### Diagrams
+#### Cross-Region Disaster Recovery
 
-The following diagrams illustrate some possible replication scenarios.
-![Replication Pattern|40%](/assets/images/vault-ref-arch-4.png)
+If your disaster recovery strategy is to plan for a loss of an entire data
+center, the following diagram illustrates a possible replication scenario.
+
+![Replication Pattern](/assets/images/vault-ref-arch-4.png)
+
+In this scenario, if the Vault cluster in Region A fails over to a DR cluster in
+Region B, your applications will need to read and write secrets from the Vault
+cluster in Region B.  This may or may not raise an issue for your applications,
+but you need to take that into a consideration during the planning.
+
+
+#### In-Region Disaster Recovery
+
+If your disaster recovery strategy is to plan for a loss of a cluster but not the
+entire data center, the following diagram illustrates a possible replication
+scenario.
+
+![Replication Pattern](/assets/images/vault-ref-arch-7.png)
+
+
 
 #### Replication Notes
 
