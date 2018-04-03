@@ -1,0 +1,49 @@
+<header class="page-header">
+  <div class="level">
+    <div class="level-left">
+      <h1 class="title is-3">
+        {{#link-to "vault.cluster.access.leases"}}Leases{{/link-to}}
+      </h1>
+    </div>
+  </div>
+</header>
+
+{{#unless (or (eq model.httpStatus 400) (eq model.httpStatus 404))}}
+  {{model.message}}
+{{/unless}}
+
+<div class="box is-sideless is-fullwidth is-marginless">
+  <div class="box">
+    <div class="columns is-centered">
+      <div class="column is-half has-text-centered">
+        {{#if (eq model.httpStatus 400)}}
+          <p class="box is-shadowless has-text-danger" data-test-lease-error="true">
+            {{i-con glyph='close'}}
+            <code class="has-text-danger">{{model.keyId}}</code> is not a valid lease ID
+          </p>
+        {{else if (eq model.httpStatus 404)}}
+          <p class="message">
+          Unable to find lease for the <code>id</code>: <code>{{model.keyId}}</code>. Try going back to the
+            {{#link-to "vault.cluster.access.leases"}}lookup{{/link-to}}
+            and re-entering the <code>id</code>.
+          </p>
+        {{else if (eq model.httpStatus 403)}}
+          <p class="message">
+            You don't have access to <code>{{model.keyId}}</code>. If you think you've reached this page in error, please contact your administrator.
+          </p>
+        {{else}}
+          {{#each model.errors as |error|}}
+            <p class="message">
+              {{error}}
+            </p>
+          {{/each}}
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
+<div class="field is-grouped box is-fullwidth is-bottomless">
+  {{#link-to "vault.cluster.access.leases" class="button"}}
+    Back
+  {{/link-to}}
+</div>

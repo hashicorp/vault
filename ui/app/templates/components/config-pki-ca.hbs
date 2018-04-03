@@ -1,0 +1,174 @@
+{{#if replaceCA}}
+  {{message-error model=model}}
+  <h2 data-test-title class="title is-3">
+    {{#if needsConfig}}
+      Configure CA Certificate
+    {{else}}
+      Replace CA Certificate
+    {{/if}}
+  </h2>
+  {{#if (or model.certificate model.csr)}}
+    {{#each model.attrs as |attr|}}
+      {{info-table-row data-test-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+    {{/each}}
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        {{#copy-button
+          clipboardText=(or model.certificate model.csr)
+          class="button"
+          buttonType="button"
+          success=(action (set-flash-message (concat (if model.certificate "Certificate" "CSR") " copied!")))
+        }}
+          Copy {{if model.certificate "Certificate" "CSR"}}
+        {{/copy-button}}
+      </div>
+      <div class="control">
+        <button data-test-back-button {{action "refresh"}} type="button" class="button">
+          Back
+        </button>
+      </div>
+    </div>
+  {{else}}
+    <form {{action "saveCA" on="submit"}} data-test-generate-root-cert="true">
+      {{#if model.uploadPemBundle}}
+        {{#message-in-page type="warning" data-test-warning=true}}
+          <em>If you have already set a certificate and key, they will be overridden with the successful saving of a new <code>PEM bundle</code>.</em>
+        {{/message-in-page}}
+      {{/if}}
+      {{partial "partials/form-field-groups-loop"}}
+      <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
+        <div class="field is-grouped">
+          <div class="control">
+            <button data-test-submit type="submit" class="button is-primary {{if loading 'is-loading'}}" disabled={{loading}}>
+              Save
+            </button>
+          </div>
+          <div class="control">
+            <button data-test-back-button {{action "toggleReplaceCA"}} type="button" class="button">
+              Cancel
+            </button>
+          </div>
+        </div>
+        <div class="control">
+          {{#if model.canDeleteRoot}}
+            {{#confirm-action
+              buttonClasses="button"
+              onConfirmAction=(action "deleteCA")
+              confirmMessage="Are you sure you want to delete the root CA key?"
+              cancelButtonText="Cancel"
+            }}
+            Delete
+            {{/confirm-action}}
+          {{/if}}
+        </div>
+      </div>
+    </form>
+  {{/if}}
+{{else if signIntermediate}}
+  {{#if (or model.certificate)}}
+    {{#message-in-page data-test-warning type="warning"}}
+      If using this for an Intermediate CA in Vault, copy the certificate below and write it to the PKI mount being used as an intermediate using the `Set signed Intermediate` endpoint.
+    {{/message-in-page}}
+    {{#each model.attrs as |attr|}}
+      {{info-table-row data-test-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+    {{/each}}
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        {{#copy-button
+          clipboardText=model.certificate
+          class="button"
+          buttonType="button"
+          success=(action (set-flash-message "Certificate copied!"))
+        }}
+          Copy Certificate
+        {{/copy-button}}
+      </div>
+      <div class="control">
+        <button data-test-back-button {{action "refresh"}} type="button" class="button">
+          Back
+        </button>
+      </div>
+    </div>
+  {{else}}
+    {{message-error model=model}}
+    <h2 data-test-title class="title is-3">Sign intermediate</h2>
+    <form {{action "saveCA" on="submit"}} data-test-sign-intermediate-form="true">
+      {{partial "partials/form-field-groups-loop"}}
+      <div class="field is-grouped box is-fullwidth is-bottomless">
+        <div class="control">
+          <button data-test-submit type="submit" class="button is-primary {{if loading 'is-loading'}}" disabled={{loading}}>
+            Save
+          </button>
+        </div>
+        <div class="control">
+          <button {{action "toggleVal" "signIntermediate" false}} type="button" class="button">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </form>
+  {{/if}}
+{{else if setSignedIntermediate}}
+  {{message-error model=model}}
+  <h2 data-test-title class="title is-3">Set signed intermediate</h2>
+    <p class="has-text-grey-dark">
+      Submit a signed CA certificate corresponding to a generated private key.
+    </p>
+  <form {{action "saveCA" "setSignedIntermediate" on="submit"}} data-test-set-signed-intermediate-form="true">
+    <div class="field">
+      <label for="certificate" class="is-label">
+        Signed Intermediate Certificate
+      </label>
+      <div class="control">
+        {{textarea data-test-signed-intermediate class="textarea" id="certificate" name="certificate" value=model.certificate}}
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button data-test-submit type="submit" class="button is-primary {{if loading 'is-loading'}}" disabled={{loading}}>
+          Save
+        </button>
+      </div>
+      <div class="control">
+        <button data-test-back-button {{action "toggleVal" "setSignedIntermediate" false}} type="button" class="button">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </form>
+{{else}}
+  <p class="has-text-grey-dark">
+    This is the default CA certificate used in Vault. It is not used for self-signed certificates or if you have a signed intermediate CA certificate with a generated key.
+  </p>
+  {{#each downloadHrefs as |dl|}}
+    <div class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
+      <a data-test-ca-download-link href={{dl.url}} download={{dl.name}}>
+        {{dl.display}}
+      </a>
+    </div>
+  {{/each}}
+
+  <div class="field is-grouped box is-fullwidth is-shadowless">
+    <div class="control">
+      <button data-test-go-replace-ca type="button" {{action "toggleReplaceCA"}} class="button">
+        {{#if needsConfig}}
+          Configure CA
+        {{else}}
+          Replace CA
+        {{/if}}
+      </button>
+    </div>
+    {{#if config.pem}}
+      <div class="control">
+        <button data-test-go-sign-intermediate type="button" {{action "toggleVal" "signIntermediate"}} class="button">
+          Sign intermediate
+        </button>
+      </div>
+    {{/if}}
+    <div class="control">
+      <button data-test-go-set-signed-intermediate type="button" {{action "toggleVal" "setSignedIntermediate"}} class="button">
+        Set signed intermediate
+      </button>
+    </div>
+  </div>
+{{/if}}

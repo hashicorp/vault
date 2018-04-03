@@ -1,0 +1,41 @@
+{{#if label}}
+  <label for="{{name}}" class="is-label">
+    {{label}}
+    {{#if helpText}}
+      {{#info-tooltip}}
+        <span data-test-help-text>{{helpText}}</span>
+      {{/info-tooltip}}
+    {{/if}}
+  </label>
+{{/if}}
+{{#if authMethods.isRunning}}
+  <div>
+    <span class="loader is-inline-block"></span>
+  </div>
+{{else if authMethods.last.value}}
+  <div class="control is-expanded" >
+    <div class="select is-fullwidth">
+      <select
+        name={{name}}
+        id={{name}}
+        onchange={{action "change" value="target.value"}}
+      >
+        {{#each authMethods.last.value as |method|}}
+          <option selected={{eq value method.accessor}} value={{method.accessor}}>
+          {{method.path}} ({{method.type}})
+          </option>
+        {{/each}}
+      </select>
+    </div>
+  </div>
+{{else}}
+  <input
+    name={{name}}
+    id={{name}}
+    class="input"
+    value={{value}}
+    placeholder="Mount accessor"
+    onchange={{action "change" value="target.value"}}
+    />
+{{/if}}
+

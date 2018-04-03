@@ -1,0 +1,27 @@
+.switch[type="checkbox"] {
+  &.is-small {
+    + label {
+      font-size: $size-9;
+      font-weight: bold;
+      padding-left: $size-9 * 2.5;
+      margin: 0 0.25rem;
+      &::before {
+        top: $size-9 / 5;
+        height: $size-9;
+        width: $size-9 * 2;
+      }
+      &::after {
+        width: $size-9 * 0.68;
+        height: $size-9 * 0.68;
+        left: .15rem;
+        top: $size-9 / 2.5;
+      }
+    }
+    &:checked + label::after {
+      left: ($size-9 * 2) - ($size-9 * 0.9);
+    }
+  }
+}
+.switch[type="checkbox"]:focus + label {
+  box-shadow: 0 0 1px $blue;
+}

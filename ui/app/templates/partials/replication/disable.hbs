@@ -1,0 +1,66 @@
+<h4 class="title is-5 is-marginless">
+  Disable replication
+</h4>
+<div class="content">
+  <p>
+    Disable {{replicationMode}} replication entirely on the cluster.
+    {{#if model.replicationAttrs.isPrimary}}
+      Any secondaries will no longer be able to connect.
+    {{else if (eq model.replicationAttrs.modeForUrl 'bootstrapping')}}
+      <br>
+      Since the cluster is currently bootstrapping, we need to know which mode to disable.
+      Be sure to choose it below.
+      <label for="replication-mode" class="is-label">
+        Replication cluster mode
+      </label>
+      <div class="field is-expanded">
+        <div class="control select is-fullwidth">
+          <select onchange={{action (mut mode) value="target.value"}} id="replication-mode" name="replication-mode">
+            {{#each (reduce-to-array 'primary' 'secondary') as |modeOption|}}
+              <option
+                selected={{if mode (eq mode modeOption) (eq modeOption 'primary')}}
+                value={{modeOption}}
+              >
+                {{modeOption}}
+              </option>
+            {{/each}}
+          </select>
+        </div>
+      </div>
+    {{else}}
+      The cluster will no longer be able to connect to the primary.
+    {{/if}}
+  </p>
+  <p>
+    <em class="has-text-danger">Caution</em>: re-enabling this node as a primary or secondary will
+    change its cluster ID.
+  </p>
+  <p>
+    In the secondary case this means a wipe of the
+    underlying storage when connected to a primary, and in the primary case,
+    secondaries connecting back to the cluster (even if they have connected
+    before) will require a wipe of the underlying storage.
+  </p>
+</div>
+<div class="field">
+  <div class="control">
+    {{#confirm-action
+      onConfirmAction=(action
+        "onSubmit"
+        "disable"
+        (if
+          (eq model.replicationAttrs.modeForUrl 'bootstrapping')
+          mode
+          model.replicationAttrs.modeForUrl
+        )
+      )
+      buttonClasses="button is-primary"
+      confirmMessage=(concat "Are you sure you want to disable replication on this cluster?")
+      confirmButtonText="Disable"
+      cancelButtonText="Cancel"
+      data-test-disable-replication=true
+      }}
+      Disable replication
+    {{/confirm-action}}
+  </div>
+</div>

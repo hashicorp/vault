@@ -1,0 +1,103 @@
+<form {{action 'doSubmit' 
+       (hash param=(reduce-to-array exportKeyType (if exportVersion exportKeyVersion)))
+       (hash wrapTTL=wrapTTL)
+       on="submit" }} 
+>
+  {{#if (or keys wrappedToken) }}
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <div class="field">
+        {{#if wrapTTL}}
+          <label for="export" class="is-label">Wrapped Key</label>
+          <div class="control">
+            <textarea readonly nowrap wrap="off" class="textarea" id="export">{{wrappedToken}}</textarea>
+          </div>
+        {{else}}
+          <label class="is-label">Exported Key</label>
+          {{json-editor
+            value=(stringify keys)
+            options=(hash
+              readOnly=true
+            )
+          }}
+        {{/if}}
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        {{#copy-button
+          clipboardText=(if wrapTTL wrappedToken (stringify keys))
+          class="button is-primary"
+          buttonType="button"
+          success=(action (set-flash-message (if wrapTTL 'Wrapped key copied!' 'Exported key copied!')))
+        }}
+          Copy
+        {{/copy-button}}
+      </div>
+      <div class="control">
+        <button {{action 'onClear'}} type="button" class="button">
+          Back
+        </button>
+      </div>
+    </div>
+  {{else}}
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <div class="field">
+        <label for="type" class="is-label">Key type</label>
+        <div class="control is-expanded">
+          <div class="select is-fullwidth">
+            <select
+               name="type"
+               id="type"
+               onchange={{action (mut exportKeyType) value="target.value"}}
+            >
+              {{#each key.exportKeyTypes as |currOption|}}
+                <option selected={{eq exportKeyType currOption}} value={{currOption}}>
+                  <code>{{currOption}}</code>
+                </option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="b-checkbox">
+          {{input type="checkbox" name="exportVersion" id="exportVersion" class="styled" checked=exportVersion}}
+          <label for="exportVersion" class="is-label">
+            Export a single version
+          </label>
+        </div>
+        {{#if exportVersion}}
+          <div class="field">
+            <label for="version" class="is-label">Version</label>
+            <div class="control is-expanded">
+              <div class="select is-fullwidth">
+                <select
+                 name="version"
+                 id="version"
+                 onchange={{action (mut exportKeyVersion) value="target.value"}}
+                >
+                  {{#each key.validKeyVersions as |versionOption|}}
+                    <option selected={{eq exportKeyVersion versionOption}} value={{versionOption}}>
+                      <code>{{versionOption}}</code>
+                      {{#if (eq key.validKeyVersions.lastObject versionOption)}}
+                        <span> (latest) </span>
+                      {{/if}}
+                    </option>
+                  {{/each}}
+                </select>
+              </div>
+            </div>
+          </div>
+        {{/if}}
+      </div>
+      {{wrap-ttl onChange=(action (mut wrapTTL))}}
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="submit" class="button is-primary">
+          Export key
+        </button>
+      </div>
+    </div>
+  {{/if}}
+</form>

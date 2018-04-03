@@ -1,0 +1,22 @@
+<h4 class="title is-5 is-marginless">
+  Reindex
+</h4>
+<div class="content">
+  <p>
+    Reindex the local data storage. This can cause a very long delay depending
+    on the number and size of objects in the data store.
+  </p>
+</div>
+<div class="field">
+  <div class="control">
+    {{#confirm-action
+      buttonClasses="button is-primary"
+      onConfirmAction=(action "onSubmit" "reindex")
+      confirmMessage="Are you sure you want to initiate cluster reindex?"
+      confirmButtonText="Begin reindex"
+      cancelButtonText="Cancel"
+      }}
+      Reindex
+    {{/confirm-action}}
+  </div>
+</div>

@@ -6,9 +6,11 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/consts"
@@ -54,6 +56,9 @@ const (
 
 var (
 	ReplicationStaleReadTimeout = 2 * time.Second
+
+	// Set to false by stub_asset if the ui build tag isn't enabled
+	uiBuiltIn = true
 )
 
 // Handler returns an http.Handler for the API. This can be used on
@@ -82,6 +87,14 @@ func Handler(core *vault.Core) http.Handler {
 	}
 	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
+	if core.UIEnabled() == true {
+		if uiBuiltIn {
+			mux.Handle("/ui/", http.StripPrefix("/ui/", handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
+		} else {
+			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
+		}
+		mux.Handle("/", handleRootRedirect())
+	}
 
 	// Wrap the handler in another handler to trigger all help paths.
 	helpWrappedHandler := wrapHelpHandler(mux, core)
@@ -143,6 +156,72 @@ func stripPrefix(prefix, path string) (string, bool) {
 	}
 
 	return path, true
+}
+
+func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		header := w.Header()
+
+		userHeaders, err := core.UIHeaders()
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if userHeaders != nil {
+			for k := range userHeaders {
+				v := userHeaders.Get(k)
+				header.Set(k, v)
+			}
+		}
+		h.ServeHTTP(w, req)
+	})
+}
+
+func handleUI(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		h.ServeHTTP(w, req)
+		return
+	})
+}
+
+func handleUIStub() http.Handler {
+	stubHTML := `
+	<!DOCTYPE html>
+	<html>
+	<p>Vault UI is not available in this binary. To get Vault UI do one of the following:</p>
+	<ul>
+	<li><a href="https://www.vaultproject.io/downloads.html">Download an official release</a></li>
+	<li>Run <code>make release</code> to create your own release binaries.
+	<li>Run <code>make dev-ui</code> to create a development binary with the UI.
+	</ul>
+	</html>
+	`
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Write([]byte(stubHTML))
+	})
+}
+
+func handleRootRedirect() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		http.Redirect(w, req, "/ui/", 307)
+		return
+	})
+}
+
+type UIAssetWrapper struct {
+	FileSystem *assetfs.AssetFS
+}
+
+func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
+	file, err := fs.FileSystem.Open(name)
+	if err == nil {
+		return file, nil
+	}
+	// serve index.html instead of 404ing
+	if err == os.ErrNotExist {
+		return fs.FileSystem.Open("index.html")
+	}
+	return nil, err
 }
 
 func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error {
