@@ -214,14 +214,33 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			Result:           &result,
 			WeaklyTypedInput: true,
 			DecodeHook:       mapstructure.StringToSliceHookFunc(","),
+			ZeroFields:       true,
 		}
 		decoder, err := mapstructure.NewDecoder(config)
 		if err != nil {
 			return nil, true, err
 		}
-		if err := decoder.Decode(raw); err != nil {
-			return nil, true, err
+
+		switch inp := raw.(type) {
+		case []interface{}:
+			var accumulated []int
+			for _, v := range inp {
+				if err := decoder.Decode(v); err != nil {
+					return nil, true, err
+				}
+				accumulated = append(accumulated, result...)
+			}
+			result = accumulated
+			if result == nil {
+				result = []int{}
+			}
+
+		default:
+			if err := decoder.Decode(raw); err != nil {
+				return nil, true, err
+			}
 		}
+
 		return result, true, nil
 
 	case TypeSlice:
