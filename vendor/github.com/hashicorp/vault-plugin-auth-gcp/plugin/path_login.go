@@ -95,14 +95,11 @@ func (b *GcpAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Reques
 		return nil, fmt.Errorf("unexpected role type '%s' for login renewal", role.RoleType)
 	}
 
-	// If 'Period' is set on the Role, the token should never expire.
-	if role.Period > 0 {
-		// Replenish the TTL with current role's Period.
-		req.Auth.TTL = role.Period
-		return &logical.Response{Auth: req.Auth}, nil
-	} else {
-		return framework.LeaseExtend(role.TTL, role.MaxTTL, b.System())(ctx, req, data)
-	}
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.Period = role.Period
+	resp.Auth.TTL = role.TTL
+	resp.Auth.MaxTTL = role.MaxTTL
+	return resp, nil
 }
 
 // gcpLoginInfo represents the data given to Vault for logging in using the IAM method.
@@ -317,22 +314,9 @@ func (b *GcpAuthBackend) pathIamLogin(ctx context.Context, req *logical.Request,
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				TTL:       role.TTL,
+				MaxTTL:    role.MaxTTL,
 			},
 		},
-	}
-
-	if role.MaxTTL > time.Duration(0) {
-		// Cap maxTTL to the sysview's max TTL
-		maxTTL := role.MaxTTL
-		if maxTTL > b.System().MaxLeaseTTL() {
-			maxTTL = b.System().MaxLeaseTTL()
-		}
-
-		// Cap TTL to MaxTTL
-		if resp.Auth.TTL > maxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
-			resp.Auth.TTL = maxTTL
-		}
 	}
 
 	return resp, nil
@@ -447,22 +431,9 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				TTL:       role.TTL,
+				MaxTTL:    role.MaxTTL,
 			},
 		},
-	}
-
-	if role.MaxTTL > time.Duration(0) {
-		// Cap maxTTL to the sysview's max TTL
-		maxTTL := role.MaxTTL
-		if maxTTL > b.System().MaxLeaseTTL() {
-			maxTTL = b.System().MaxLeaseTTL()
-		}
-
-		// Cap TTL to MaxTTL
-		if resp.Auth.TTL > maxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
-			resp.Auth.TTL = maxTTL
-		}
 	}
 
 	return resp, nil

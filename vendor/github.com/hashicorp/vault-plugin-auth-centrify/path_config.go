@@ -164,12 +164,11 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"client_id":     config.ClientID,
-			"client_secret": config.ClientSecret,
-			"service_url":   config.ServiceURL,
-			"app_id":        config.AppID,
-			"scope":         config.Scope,
-			"policies":      config.Policies,
+			"client_id":   config.ClientID,
+			"service_url": config.ServiceURL,
+			"app_id":      config.AppID,
+			"scope":       config.Scope,
+			"policies":    config.Policies,
 		},
 	}
 	return resp, nil

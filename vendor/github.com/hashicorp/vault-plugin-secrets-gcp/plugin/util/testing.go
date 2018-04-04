@@ -1,9 +1,10 @@
 package util
 
 import (
-	"github.com/hashicorp/go-gcp-common/gcputil"
 	"os"
 	"testing"
+
+	"github.com/hashicorp/go-gcp-common/gcputil"
 )
 
 const googleCredentialsEnv = "TEST_GOOGLE_CREDENTIALS"

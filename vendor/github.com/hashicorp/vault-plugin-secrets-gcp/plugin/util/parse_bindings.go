@@ -5,13 +5,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"strings"
+	"text/template"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"io/ioutil"
-	"strings"
-	"text/template"
 )
 
 const bindingTemplate = "util/bindings_template"
