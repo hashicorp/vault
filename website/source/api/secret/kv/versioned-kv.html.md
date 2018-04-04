@@ -27,7 +27,6 @@ key-value store.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `POST`   | `/secret/config`             | `204 (empty body)`     |
-| `PUT`    | `/secret/config`             | `204 (empty body)`     |
 
 ### Parameters
 
@@ -112,7 +111,6 @@ have an ACL policy granting the `update` capability.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `POST`   | `/secret/data/:path`         | `204 (empty body)`     |
-| `PUT`    | `/secret/data/:path`         | `204 (empty body)`     |
 
 ### Parameters
 
@@ -396,7 +394,6 @@ have an ACL policy granting the `update` capability.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `POST`   | `/secret/metadata/:path`     | `204 (empty body)`     |
-| `PUT`    | `/secret/metadata/:path`     | `204 (empty body)`     |
 
 ### Parameters
 

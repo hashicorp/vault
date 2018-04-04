@@ -50,7 +50,9 @@ or via the API:
 ```
 $ cat payload.json
 {
-  "options": "versioned=true"
+  "options": {
+      "versioned": "true"
+  }
 }
 
 $ curl \
@@ -100,7 +102,7 @@ To allow the policy to delete any version of a key:
 
 ```
 path "secret/delete/dev/team-1/*" {
-  capabilities = ["create"]
+  capabilities = ["update"]
 }
 ```
 
@@ -108,7 +110,7 @@ To allow a policy to undelete data:
 
 ```
 path "secret/undelete/dev/team-1/*" {
-  capabilities = ["create"]
+  capabilities = ["update"]
 }
 ```
 
@@ -116,7 +118,7 @@ To allow a policy to destroy versions:
 
 ```
 path "secret/destroy/dev/team-1/*" {
-  capabilities = ["create"]
+  capabilities = ["update"]
 }
 ```
 
@@ -243,12 +245,12 @@ allows for writing keys with arbitrary values.
 ### Deleting and Destroying Data
 
 When deleting data the standard `vault kv delete` command will perform a
-soft-delete. It will mark the version as deleted and populate a `deletion_time`
-timestamp. Soft-deletes do not remove the underlying version data from storage,
-this allows the version to be undeleted. The `vault kv undelete` commmand
+soft delete. It will mark the version as deleted and populate a `deletion_time`
+timestamp. Soft deletes do not remove the underlying version data from storage,
+which allows the version to be undeleted. The `vault kv undelete` commmand
 handles undeleting versions. 
 
-Version's data is permanently deleted only when the key has more versions than
+A version's data is permanently deleted only when the key has more versions than
 are allowed by the max-versions setting, or when using `vault kv destroy`. When
 the destroy command is used the underlying version data will be removed and the
 key metadata will be marked as destroyed. If a version is cleaned up by going

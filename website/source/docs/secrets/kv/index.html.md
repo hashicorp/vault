@@ -18,9 +18,9 @@ will be stored.
 
 When running the `kv` secrets backend non-versioned only the most recently
 written value for a key will be preserved. The benefits of non-versioned `kv`
-is a reduced storage size for each key since no additional metadata or histroy
+is a reduced storage size for each key since no additional metadata or history
 is stored. Additionally, requests going to a backend configured this way will be
-more performant because for any given requests there will be fewer storage calls
+more performant because for any given request there will be fewer storage calls
 and no locking.
 
 More information about running in this mode can be found in the [K/V
