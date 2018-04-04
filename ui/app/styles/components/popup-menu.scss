@@ -1,0 +1,75 @@
+.popup-menu-content {
+  border-radius: 2px;
+  margin: -2px 0 0 0;
+  & > .box {
+    border-radius: 2px;
+    padding: 0;
+    position: relative;
+    width: 175px;
+    @include css-top-arrow(8px, $white, 1px, $blue, 155px);
+  }
+  &.is-wide > .box {
+    width: 200px;
+    @include css-top-arrow(8px, $white, 1px, $blue, 178px);
+  }
+
+  .confirm-action span .button {
+    display: block;
+    margin: .25rem auto;
+    width: 95%;
+  }
+}
+.popup-menu-trigger {
+  width: 3rem;
+  height: 2rem;
+}
+.popup-menu-trigger.is-active {
+  &,
+  &:active,
+  &:focus {
+    box-shadow: 0 0 0 1px $blue;
+  }
+}
+
+.ember-basic-dropdown-content--left.popup-menu {
+  margin: 0px 0 0 -8px;
+}
+
+.popup-menu-content .menu {
+  button.link,
+  a {
+    border-radius: $menu-item-radius;
+    color: $menu-item-color;
+    font-size: $size-7;
+    font-weight: $font-weight-semibold;
+    display: block;
+    padding: $size-9 $size-6;
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    height: auto;
+    width: 100%;
+    text-align: left;
+
+    &:hover {
+      background-color: $menu-item-hover-background-color;
+      color: $menu-item-hover-color;
+    }
+
+    &.is-active {
+      background-color: $menu-item-active-background-color;
+      color: $menu-item-active-color;
+    }
+  }
+}
+.popup-menu-content .menu-list {
+  margin: 0.1rem;
+}
+.popup-menu-content .menu-label {
+  background: $grey-lighter;
+  font-size: $size-8;
+  letter-spacing: 0;
+  margin: 0;
+  padding: $size-10 calc(#{$size-6} + .1rem);
+  text-transform: none;
+}

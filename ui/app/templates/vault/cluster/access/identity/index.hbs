@@ -1,0 +1,41 @@
+{{identity/entity-nav identityType=identityType}}
+{{#if model.meta.total}}
+  {{#each model as |item|}}
+    <a href={{href-to
+      "vault.cluster.access.identity.show"
+      item.id
+      "details"
+      }}
+      class="is-flex box is-sideless is-marginless"
+      data-test-lease-link={{item.id}}
+    >
+      {{i-con
+        glyph="role"
+        size=14
+        class="has-text-grey-light"
+      }}
+      <span class="has-text-weight-semibold">
+        {{item.id}}
+      </span>
+    </a>
+  {{/each}}
+{{else}}
+  <div class="box is-bottomless has-background-white-bis">
+    <div class="columns is-centered">
+      <div class="column is-half has-text-centered">
+        <div class="box is-shadowless has-background-white-bis">
+          <p class="has-text-grey">
+            There are currently no {{pluralize identityType}}.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+{{/if}}
+{{#if (gt model.meta.lastPage 1) }}
+  {{list-pagination
+    page=model.meta.currentPage
+    lastPage=model.meta.lastPage
+    link="vault.cluster.access.identity.index"
+  }}
+{{/if}}

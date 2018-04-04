@@ -3,12 +3,14 @@ package command
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"path"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/strutil"
 )
 
 func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {
@@ -26,6 +28,17 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
+		secret, err := api.ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
 		return nil, nil
 	}
 	if err != nil {
@@ -51,6 +64,17 @@ func kvListRequest(client *api.Client, path string) (*api.Secret, error) {
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
+		secret, err := api.ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
 		return nil, nil
 	}
 	if err != nil {
@@ -74,6 +98,20 @@ func kvWriteRequest(client *api.Client, path string, data map[string]interface{}
 	if resp != nil {
 		defer resp.Body.Close()
 	}
+	if resp != nil && resp.StatusCode == 404 {
+		secret, err := api.ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +132,20 @@ func kvDeleteRequest(client *api.Client, path string) (*api.Secret, error) {
 	resp, err := client.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
+	}
+	if resp != nil && resp.StatusCode == 404 {
+		secret, err := api.ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
+		return nil, nil
 	}
 	if err != nil {
 		return nil, err
@@ -140,4 +192,13 @@ func getHeaderForMap(header string, data map[string]interface{}) string {
 	}
 
 	return fmt.Sprintf("%s %s %s", strings.Repeat("=", equalSigns/2), header, strings.Repeat("=", equalSigns/2))
+}
+
+func kvParseVersionsFlags(versions []string) []string {
+	versionsOut := make([]string, 0, len(versions))
+	for _, v := range versions {
+		versionsOut = append(versionsOut, strutil.ParseStringSlice(v, ",")...)
+	}
+
+	return versionsOut
 }

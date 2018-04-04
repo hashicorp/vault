@@ -1,0 +1,49 @@
+<header class="page-header">
+  <div class="level">
+    <div class="level-left">
+      <h3 class="title is-3">
+        Lookup Token
+      </h3>
+    </div>
+  </div>
+</header>
+
+{{#if (or creation_time creation_ttl)}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{info-table-row label="Creation time" value=creation_time data-test-tools="token-lookup-row"}}
+    {{info-table-row label="Creation TTL" value=creation_ttl data-test-tools="token-lookup-row"}}
+    {{#if expirationDate}}
+      {{info-table-row label="Expiration date" value=expirationDate data-test-tools="token-lookup-row"}}
+      {{info-table-row label="Expires in" value=(moment-from-now expirationDate interval=1000 hideSuffix=true) data-test-tools="token-lookup-row"}}
+    {{/if}}
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button {{action 'onClear'}} type="button" class="button">
+        Back
+      </button>
+    </div>
+  </div>
+{{else}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="field">
+      <label for="token" class="is-label">Wrapping token</label>
+      <div class="control">
+        {{input
+          value=token
+          class="input"
+          id="token"
+          name="token"
+          data-test-tools-input="wrapping-token"
+        }}
+      </div>
+    </div>
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button type="submit" data-test-tools-submit="true" class="button is-primary">
+        Lookup Token
+      </button>
+    </div>
+  </div>
+{{/if}}

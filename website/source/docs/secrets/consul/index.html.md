@@ -73,17 +73,17 @@ When users generate credentials, they are generated against this role:
 After the secrets engine is configured and a user/machine has a Vault token with
 the proper permission, it can generate credentials.
 
-1. Generate a new credential by reading from the `/creds` endpoint with the name
+Generate a new credential by reading from the `/creds` endpoint with the name
 of the role:
 
-    ```text
-    $ vault read consul/creds/readonly
-    Key                Value
-    ---                -----
-    lease_id           consul/creds/my-role/b2469121-f55f-53c5-89af-a3ba52b1d6d8
-    lease_duration     768h
-    lease_renewable    true
-    token              642783bf-1540-526f-d4de-fe1ac1aed6f0
+```text
+$ vault read consul/creds/my-role
+Key                Value
+---                -----
+lease_id           consul/creds/my-role/b2469121-f55f-53c5-89af-a3ba52b1d6d8
+lease_duration     768h
+lease_renewable    true
+token              642783bf-1540-526f-d4de-fe1ac1aed6f0
     ```
 
 ## API

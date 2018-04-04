@@ -1,0 +1,32 @@
+{{#if model.hasMembers}}
+  {{#each model.memberGroupIds as |gid|}}
+    <a href={{href-to "vault.cluster.access.identity.show" "groups" gid "details" }}
+      class="box is-sideless is-marginless"
+      >{{i-con
+        glyph='folder'
+        size=14
+        class="has-text-grey-light"
+        }}{{gid}}</a>
+  {{/each}}
+  {{#each model.memberEntityIds as |gid|}}
+    <a href={{href-to "vault.cluster.access.identity.show" "entities" gid "details" }}
+      class="box is-sideless is-marginless"
+      >{{i-con
+        glyph='role'
+        size=14
+        class="has-text-grey-light"
+        }}{{gid}}</a>
+  {{/each}}
+{{else}}
+  <div class="box is-bottomless has-background-white-bis">
+    <div class="columns is-centered">
+      <div class="column is-half has-text-centered">
+        <div class="box is-shadowless has-background-white-bis">
+          <p class="has-text-grey">
+            There are no members in this group.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+{{/if}}

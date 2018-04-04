@@ -1,7 +1,31 @@
 ## 0.10.0 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * Removal of returned secret information: For a long time Vault has returned
+   configuration given to various secret engines and auth methods with secret
+   values (such as secret API keys or passwords) still intact, and with a
+   warning to the user on write that anyone with read access could see the
+   secret. This was mostly done to make it easy for tools like Terraform to
+   judge whether state had drifted. However, it also feels quite un-Vault-y to
+   do this and we've never felt very comfortable doing so. In 0.10 we have gone
+   through and removed this bevhavior from the various backends; fields which
+   contained secret values are simply no longer returned on read. We are
+   working with the Terraform team to make changes to their provider to
+   accommodate this as best as possible, and users of other tools may have to
+   make adjustments, but in the end we felt that the ends did not justify the
+   means and we needed to prioritize security over operational convenience.
+ * LDAP auth method case sensitivity: We now treat usernames and groups
+   configured locally for policy assignment in a case insensitive fashion by
+   default. Existing configurations will continue to work as they do now;
+   however, the next time a configuration is written `case_sensitive_names`
+   will need to be explicitly set to `true`.
+
 FEATURES:
 
+ * OSS UI: The Vault UI is now fully open-source. Similarly to the CLI, some
+   features are only available with a supporting version of Vault, but the code
+   base is entirely open.
  * Versioned K/V: The `kv` backend has been completely revamped, featuring
    flexible versioning of values, check-and-set protections, and more. A new
    `vault kv` subcommand allows friendly interactions with it. Existing mounts
@@ -31,13 +55,23 @@ FEATURES:
  * Passthrough Request Headers: Request headers can now be selectively passed
    through to backends on a per-mount basis. This is useful in various cases
    when plugins are interacting with external services.
+ * HA for Google Cloud Storage: The GCS storage type now supports HA.
+ * UI support for identity - add and edit entities, groups, and their associated
+   aliases.
+ * UI auth method support - enable, disable, and configure all of the built-in 
+   authentication methods.
+ * UI (Enterprise) - View and edit Sentinel policies.
 
 IMPROVEMENTS:
 
+ * core: Centralize TTL generation for leases in core [GH-4230]
+ * identity: API to update group-alias by ID [GH-4237]
  * secret/cassandra: Update Cassandra storage delete function to not use batch
    operations [GH-4054]
  * storage/mysql: Allow setting max idle connections and connection lifetime
    [GH-4211]
+ * storage/gcs: Add HA support [GH-4226]
+ * ui - add Nomad to the list of available secret engines
 
 BUG FIXES:
 
@@ -45,6 +79,7 @@ BUG FIXES:
    parent prefix entry in the underlying storage backend. These operations also
    mark corresponding child tokens as orphans by removing the parent/secondary
    index from the entries. [GH-4193]
+ * command: Re-add `-mfa` flag and migrate to OSS binary [GH-4223]
  * core: Fix issue occurring from mounting two auth backends with the same path
    with one mount having `auth/` in front [GH-4206]
  * mfa: Invalidation of MFA configurations (Enterprise)
@@ -52,6 +87,15 @@ BUG FIXES:
  * replication: Fix invalidation of policies on performance secondaries
  * secret/pki: When tidying if a value is unexpectedly nil, delete it and move
    on [GH-4214]
+ * storage/s3: Fix panic if S3 returns no Content-Length header [GH-4222]
+ * ui: Fixed an issue where the UI was checking incorrect paths when operating 
+   on transit keys. Capabilities are now checked when attempting to encrypt / 
+   decrypt, etc.
+ * ui: Fixed IE 11 layout issues and JS errors that would stop the application
+   from running.
+ * ui: Fixed the link that gets rendered when a user doesn't have permissions 
+   to view the root of a secret engine. The link now sends them back to the list
+   of secret engines.
 
 ## 0.9.6 (March 20th, 2018)
 
@@ -466,7 +510,8 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * Fix an upgrade issue with some physical backends when migrating from legacy
-   HSM stored key support to the new Seal Wrap mechanism
+   HSM stored key support to the new Seal Wrap mechanism (Enterprise)
+ * mfa: Add the 'mfa' flag that was removed by mistake [GH-4223]
 
 ## 0.9.0 (November 14th, 2017)
 

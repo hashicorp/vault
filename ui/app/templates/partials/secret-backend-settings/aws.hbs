@@ -1,0 +1,120 @@
+<div class="box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs sub-nav">
+    <ul>
+      {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='') tagName="li"}}
+        <a href="{{href-to  "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='') }}" data-test-aws-link="root-creds">
+          Dynamic IAM Root Credentials
+        </a>
+      {{/link-to}}
+
+      {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='leases') tagName="li"}}
+        <a href="{{href-to  "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='leases') }}" data-test-aws-link="leases">
+          Leases
+        </a>
+      {{/link-to}}
+    </ul>
+  </nav>
+</div>
+{{#if (eq tab "leases")}}
+  <form
+    {{action "save" "saveAWSLease" (hash lease=model.lease lease_max=model.leaseMax) on="submit"}}
+    data-test-aws-leases-form="true"
+  >
+    <div class="box is-fullwidth is-shadowless is-marginless">
+      {{message-error model=model}}
+      <p class="has-text-grey-dark">
+        If you do not supply lease settings, we will use the default values in AWS.
+      </p>
+    </div>
+    {{ttl-picker labelText="Lease" initialValue=model.lease onChange=(action (mut model.lease))}}
+    {{ttl-picker labelText="Maximum Lease" initialValue=model.leaseMax onChange=(action (mut model.leaseMax))}}
+    <div class="box is-bottomless is-fullwidth">
+      <button data-test-aws-input="lease-save" type="submit" class="button is-primary">
+        Save
+      </button>
+    </div>
+  </form>
+{{else}}
+  <form
+    {{action "save" "saveAWSRoot" (hash access_key=accessKey iam_endpoint=iamEndpoint sts_endpoint=stsEndpoint secret_key=secretKey region=region) on="submit"}}
+    data-test-aws-root-creds-form="true"
+  >
+    <div class="box is-fullwidth is-shadowless is-marginless">
+      <p class="has-text-grey-dark">
+      Note: the client uses the official AWS SDK and will use the specified credentials, environment credentials, shared file credentials, or IAM role/ECS task credentials in that order.
+      </p>
+    </div>
+
+    <div class="field">
+      <label for="access" class="is-label">
+        Access Key
+      </label>
+      <div class="control">
+        {{input type="text" id="access" name="access" class="input" value=accessKey data-test-aws-input="accessKey"}}
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="secret" class="is-label">
+        Secret Key
+      </label>
+      <div class="control">
+        {{input type="text" id="secret" name="secret" class="input" value=secretKey data-test-aws-input="secretKey"}}
+      </div>
+    </div>
+
+    {{toggle-button
+      toggleAttr="showOptions"
+      toggleTarget=this
+      openLabel="Hide options"
+      closedLabel="More options"
+    }}
+    {{#if showOptions}}
+      <div class="box is-marginless">
+        <div class="field">
+          <label for="region" class="is-label">
+            Region
+          </label>
+          <div class="control is-expanded" >
+            <div class="select is-fullwidth">
+              <select
+                name="region"
+                id="region"
+                onchange={{action (mut region) value="target.value"}}
+                data-test-input="region"
+              >
+                <option value=""></option>
+                {{#each (aws-regions) as |val|}}
+                  <option>{{val}}</option>
+                {{/each}}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="iam" class="is-label">
+            IAM Endpoint
+          </label>
+          <div class="control">
+            {{input type="text" id="iam" name="iam" class="input" value=iamEndpoint}}
+          </div>
+        </div>
+        <div class="field">
+          <label for="sts" class="is-label">
+            STS Endpoint
+          </label>
+          <div class="control">
+            {{input type="text" id="sts" name="sts" class="input" value=stsEndpoint}}
+          </div>
+        </div>
+      </div>
+    {{/if}}
+
+    <div class="box  is-bottomless is-fullwidth">
+      <button data-test-aws-input="root-save" type="submit" class="button is-primary">
+        Save
+      </button>
+    </div>
+  </form>
+{{/if}}
+

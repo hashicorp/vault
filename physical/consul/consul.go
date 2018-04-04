@@ -17,7 +17,7 @@ import (
 
 	"golang.org/x/net/http2"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"crypto/tls"
 	"crypto/x509"
@@ -110,16 +110,16 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		path = "vault/"
 	}
 	if logger.IsDebug() {
-		logger.Debug("physical/consul: config path set", "path", path)
+		logger.Debug("config path set", "path", path)
 	}
 
 	// Ensure path is suffixed but not prefixed
 	if !strings.HasSuffix(path, "/") {
-		logger.Warn("physical/consul: appending trailing forward slash to path")
+		logger.Warn("appending trailing forward slash to path")
 		path += "/"
 	}
 	if strings.HasPrefix(path, "/") {
-		logger.Warn("physical/consul: trimming path of its forward slash")
+		logger.Warn("trimming path of its forward slash")
 		path = strings.TrimPrefix(path, "/")
 	}
 
@@ -134,7 +134,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		disableRegistration = b
 	}
 	if logger.IsDebug() {
-		logger.Debug("physical/consul: config disable_registration set", "disable_registration", disableRegistration)
+		logger.Debug("config disable_registration set", "disable_registration", disableRegistration)
 	}
 
 	// Get the service name to advertise in Consul
@@ -146,13 +146,13 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		return nil, errors.New("service name must be valid per RFC 1123 and can contain only alphanumeric characters or dashes")
 	}
 	if logger.IsDebug() {
-		logger.Debug("physical/consul: config service set", "service", service)
+		logger.Debug("config service set", "service", service)
 	}
 
 	// Get the additional tags to attach to the registered service name
 	tags := conf["service_tags"]
 	if logger.IsDebug() {
-		logger.Debug("physical/consul: config service_tags set", "service_tags", tags)
+		logger.Debug("config service_tags set", "service_tags", tags)
 	}
 
 	// Get the service-specific address to override the use of the HA redirect address
@@ -162,7 +162,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		serviceAddr = &serviceAddrStr
 	}
 	if logger.IsDebug() {
-		logger.Debug("physical/consul: config service_address set", "service_address", serviceAddr)
+		logger.Debug("config service_address set", "service_address", serviceAddr)
 	}
 
 	checkTimeout := defaultCheckTimeout
@@ -180,7 +180,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 
 		checkTimeout = d
 		if logger.IsDebug() {
-			logger.Debug("physical/consul: config check_timeout set", "check_timeout", d)
+			logger.Debug("config check_timeout set", "check_timeout", d)
 		}
 	}
 
@@ -192,18 +192,18 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
 		if logger.IsDebug() {
-			logger.Debug("physical/consul: config address set", "address", addr)
+			logger.Debug("config address set", "address", addr)
 		}
 	}
 	if scheme, ok := conf["scheme"]; ok {
 		consulConf.Scheme = scheme
 		if logger.IsDebug() {
-			logger.Debug("physical/consul: config scheme set", "scheme", scheme)
+			logger.Debug("config scheme set", "scheme", scheme)
 		}
 	}
 	if token, ok := conf["token"]; ok {
 		consulConf.Token = token
-		logger.Debug("physical/consul: config token set")
+		logger.Debug("config token set")
 	}
 
 	if consulConf.Scheme == "https" {
@@ -216,7 +216,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		if err := http2.ConfigureTransport(consulConf.Transport); err != nil {
 			return nil, err
 		}
-		logger.Debug("physical/consul: configured TLS")
+		logger.Debug("configured TLS")
 	}
 
 	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
@@ -233,7 +233,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("physical/consul: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
@@ -544,7 +544,7 @@ func (c *ConsulBackend) NotifyActiveStateChange() error {
 	default:
 		// NOTE: If this occurs Vault's active status could be out of
 		// sync with Consul until reconcileTimer expires.
-		c.logger.Warn("physical/consul: Concurrent state change notify dropped")
+		c.logger.Warn("concurrent state change notify dropped")
 	}
 
 	return nil
@@ -556,7 +556,7 @@ func (c *ConsulBackend) NotifySealedStateChange() error {
 	default:
 		// NOTE: If this occurs Vault's sealed status could be out of
 		// sync with Consul until checkTimer expires.
-		c.logger.Warn("physical/consul: Concurrent sealed state change notify dropped")
+		c.logger.Warn("concurrent sealed state change notify dropped")
 	}
 
 	return nil
@@ -629,7 +629,7 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 						serviceID, err := c.reconcileConsul(registeredServiceID, activeFunc, sealedFunc)
 						if err != nil {
 							if c.logger.IsWarn() {
-								c.logger.Warn("physical/consul: reconcile unable to talk with Consul backend", "error", err)
+								c.logger.Warn("reconcile unable to talk with Consul backend", "error", err)
 							}
 							time.Sleep(consulRetryInterval)
 							continue
@@ -655,7 +655,7 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 						sealed := sealedFunc()
 						if err := c.runCheck(sealed); err != nil {
 							if c.logger.IsWarn() {
-								c.logger.Warn("physical/consul: check unable to talk with Consul backend", "error", err)
+								c.logger.Warn("check unable to talk with Consul backend", "error", err)
 							}
 							time.Sleep(consulRetryInterval)
 							continue
@@ -665,7 +665,7 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 				}()
 			}
 		case <-shutdownCh:
-			c.logger.Info("physical/consul: Shutting down consul backend")
+			c.logger.Info("shutting down consul backend")
 			shutdown = true
 		}
 	}
@@ -674,7 +674,7 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 	defer c.serviceLock.RUnlock()
 	if err := c.client.Agent().ServiceDeregister(registeredServiceID); err != nil {
 		if c.logger.IsWarn() {
-			c.logger.Warn("physical/consul: service deregistration failed", "error", err)
+			c.logger.Warn("service deregistration failed", "error", err)
 		}
 	}
 }

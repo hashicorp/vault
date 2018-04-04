@@ -1,0 +1,21 @@
+<aside class="menu">
+  {{#if title}}
+    <p class="menu-label">
+      {{title}}
+    </p>
+  {{/if}}
+  <ul class="menu-list">
+    {{yield}}
+  </ul>
+  <div class="menu-toggle">
+    {{#if isActive}}
+      <button type="button" class="button is-ghost" aria-label="close menu" {{action "closeMenu"}}>
+        {{i-con glyph="close" size=16}}
+      </button>
+    {{else}}
+      <button type="button" class="button is-ghost" aria-label="open menu" {{action "openMenu"}}>
+        {{i-con glyph="list" size=12}}
+      </button>
+    {{/if}}
+  </div>
+</aside>

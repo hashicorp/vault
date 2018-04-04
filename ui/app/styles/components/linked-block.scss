@@ -1,0 +1,16 @@
+.linked-block {
+  cursor: pointer;
+  &:hover,
+  &:focus {
+    position: relative;
+    box-shadow: $box-link-hover-shadow;
+  }
+  &:active {
+    position: relative;
+    box-shadow: $box-link-active-shadow;
+  }
+}
+
+.linked-block .columns {
+  @extend .is-flex-center;
+}

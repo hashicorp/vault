@@ -1,0 +1,11 @@
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  {{#each model.attrs as |attr|}}
+    {{#if (eq attr.name "policy")}}
+      {{#info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=model.policy}}
+      <pre><code class="is-paddingless">{{stringify (jsonify model.policy)}}</code></pre>
+      {{/info-table-row}}
+    {{else}}
+      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+    {{/if}}
+  {{/each}}
+</div>

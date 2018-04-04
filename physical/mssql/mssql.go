@@ -12,9 +12,9 @@ import (
 	"github.com/armon/go-metrics"
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 // Verify MSSQLBackend satisfies the correct interfaces
@@ -53,7 +53,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("mysql: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	} else {
 		maxParInt = physical.DefaultParallelOperations

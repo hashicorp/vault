@@ -1,0 +1,17 @@
+<form
+  id="auth-form"
+  {{action (action onSubmit (hash token=token)) on="submit"}}
+>
+  <div class="field">
+    <label for="token" class="is-label">GitHub Token</label>
+    <div class="control">
+      {{input
+        type="password"
+        value=token
+        name="token"
+        id="token"
+        class="input"
+      }}
+    </div>
+  </div>
+</form>

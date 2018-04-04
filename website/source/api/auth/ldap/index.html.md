@@ -28,6 +28,11 @@ This endpoint configures the LDAP auth method.
 
 - `url` `(string: <required>)` – The LDAP server to connect to. Examples:
   `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`
+- `case_sensitive_names` `(bool: false)` – If set, user and group names
+  assigned to policies within the backend will be case sensitive. Otherwise,
+  names will be normalized to lower case. Case will still be preserved when
+  sending the username to the LDAP server at login time; this is only for
+  matching local user/group definitions.
 - `starttls` `(bool: false)` – If true, issues a `StartTLS` command after
   establishing an unencrypted connection.
 - `tls_min_version` `(string: tls12)` – Minimum TLS version to use. Accepted

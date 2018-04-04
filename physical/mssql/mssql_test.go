@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 
 	_ "github.com/denisenkom/go-mssqldb"
 )
@@ -31,7 +31,7 @@ func TestMSSQLBackend(t *testing.T) {
 	password := os.Getenv("MSSQL_PASSWORD")
 
 	// Run vault tests
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewMSSQLBackend(map[string]string{
 		"server":   server,

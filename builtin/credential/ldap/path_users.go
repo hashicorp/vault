@@ -81,7 +81,20 @@ func (b *backend) pathUserDelete(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	user, err := b.User(ctx, req.Storage, d.Get("name").(string))
+	username := d.Get("name").(string)
+
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("ldap backend not configured"), nil
+	}
+	if !*cfg.CaseSensitiveNames {
+		username = strings.ToLower(username)
+	}
+
+	user, err := b.User(ctx, req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
@@ -98,15 +111,29 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	name := d.Get("name").(string)
-	groups := strutil.RemoveDuplicates(strutil.ParseStringSlice(d.Get("groups").(string), ","), false)
+	lowercaseGroups := false
+	username := d.Get("name").(string)
+
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("ldap backend not configured"), nil
+	}
+	if !*cfg.CaseSensitiveNames {
+		username = strings.ToLower(username)
+		lowercaseGroups = true
+	}
+
+	groups := strutil.RemoveDuplicates(strutil.ParseStringSlice(d.Get("groups").(string), ","), lowercaseGroups)
 	policies := policyutil.ParsePolicies(d.Get("policies"))
 	for i, g := range groups {
 		groups[i] = strings.TrimSpace(g)
 	}
 
 	// Store it
-	entry, err := logical.StorageEntryJSON("user/"+name, &UserEntry{
+	entry, err := logical.StorageEntryJSON("user/"+username, &UserEntry{
 		Groups:   groups,
 		Policies: policies,
 	})

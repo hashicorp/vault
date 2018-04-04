@@ -63,19 +63,14 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		db.RLock()
 		defer db.RUnlock()
 
-		ttl := b.System().DefaultLeaseTTL()
-		if role.DefaultTTL != 0 {
-			ttl = role.DefaultTTL
+		ttl, _, err := framework.CalculateTTL(b.System(), 0, role.DefaultTTL, 0, role.MaxTTL, 0, time.Time{})
+		if err != nil {
+			return nil, err
 		}
-		maxTTL := b.System().MaxLeaseTTL()
-		if role.MaxTTL != 0 && role.MaxTTL < maxTTL {
-			maxTTL = role.MaxTTL
-		}
-		if ttl > maxTTL {
-			ttl = maxTTL
-		}
-
 		expiration := time.Now().Add(ttl)
+		// Adding a small buffer since the TTL will be calculated again after this call
+		// to ensure the database credential does not expire before the lease
+		expiration = expiration.Add(5 * time.Second)
 
 		usernameConfig := dbplugin.UsernameConfig{
 			DisplayName: req.DisplayName,
@@ -96,7 +91,8 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			"username": username,
 			"role":     name,
 		})
-		resp.Secret.TTL = ttl
+		resp.Secret.TTL = role.DefaultTTL
+		resp.Secret.MaxTTL = role.MaxTTL
 		return resp, nil
 	}
 }

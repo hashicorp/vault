@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/salt"
@@ -35,6 +36,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"rotate",
 		"config/cors",
 		"config/auditing/*",
+		"config/ui/headers/*",
 		"plugins/catalog/*",
 		"revoke-prefix/*",
 		"revoke-force/*",
@@ -46,7 +48,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 	b := testSystemBackend(t)
 	actual := b.SpecialPaths().Root
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: mismatch\nexpected:\n%#v\ngot:\n%#v", expected, actual)
 	}
 }
 
@@ -1271,7 +1273,7 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b := NewSystemBackend(core)
+	b := NewSystemBackend(core, hclog.New(&hclog.LoggerOptions{}))
 	err := b.Backend.Setup(context.Background(), bc)
 	if err != nil {
 		t.Fatal(err)
@@ -1335,7 +1337,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b := NewSystemBackend(core)
+	b := NewSystemBackend(core, hclog.New(&hclog.LoggerOptions{}))
 	err := b.Backend.Setup(context.Background(), bc)
 	if err != nil {
 		t.Fatal(err)
@@ -1956,7 +1958,7 @@ func testSystemBackendInternal(t *testing.T, c *Core) logical.Backend {
 		},
 	}
 
-	b := NewSystemBackend(c)
+	b := NewSystemBackend(c, hclog.New(&hclog.LoggerOptions{}))
 	err := b.Backend.Setup(context.Background(), bc)
 	if err != nil {
 		t.Fatal(err)

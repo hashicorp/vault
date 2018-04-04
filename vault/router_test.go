@@ -3,17 +3,15 @@ package vault
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 type NoopBackend struct {
@@ -84,7 +82,7 @@ func (n *NoopBackend) Setup(ctx context.Context, config *logical.BackendConfig) 
 }
 
 func (n *NoopBackend) Logger() log.Logger {
-	return logformat.NewVaultLoggerWithWriter(ioutil.Discard, log.LevelOff)
+	return log.NewNullLogger()
 }
 
 func (n *NoopBackend) Initialize(ctx context.Context) error {

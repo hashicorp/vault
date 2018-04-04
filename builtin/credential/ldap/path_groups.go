@@ -2,6 +2,7 @@ package ldap
 
 import (
 	"context"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
@@ -74,7 +75,20 @@ func (b *backend) pathGroupDelete(ctx context.Context, req *logical.Request, d *
 }
 
 func (b *backend) pathGroupRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	group, err := b.Group(ctx, req.Storage, d.Get("name").(string))
+	groupname := d.Get("name").(string)
+
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("ldap backend not configured"), nil
+	}
+	if !*cfg.CaseSensitiveNames {
+		groupname = strings.ToLower(groupname)
+	}
+
+	group, err := b.Group(ctx, req.Storage, groupname)
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +104,21 @@ func (b *backend) pathGroupRead(ctx context.Context, req *logical.Request, d *fr
 }
 
 func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	groupname := d.Get("name").(string)
+
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("ldap backend not configured"), nil
+	}
+	if !*cfg.CaseSensitiveNames {
+		groupname = strings.ToLower(groupname)
+	}
+
 	// Store it
-	entry, err := logical.StorageEntryJSON("group/"+d.Get("name").(string), &GroupEntry{
+	entry, err := logical.StorageEntryJSON("group/"+groupname, &GroupEntry{
 		Policies: policyutil.ParsePolicies(d.Get("policies")),
 	})
 	if err != nil {

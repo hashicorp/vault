@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
+	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -23,7 +24,7 @@ func (c *Core) IdentityStore() *IdentityStore {
 }
 
 // NewIdentityStore creates a new identity store
-func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig) (*IdentityStore, error) {
+func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
 	var err error
 
 	// Create a new in-memory database for the identity store
@@ -36,8 +37,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		view:        config.StorageView,
 		db:          db,
 		entityLocks: locksutil.CreateLocks(),
-		logger:      core.logger,
-		validateMountAccessorFunc: core.router.validateMountByAccessor,
+		logger:      logger,
+		core:        core,
 	}
 
 	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, iStore.logger, "")
@@ -76,7 +77,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 // storage entries that get updated. The value needs to be read and MemDB needs
 // to be updated accordingly.
 func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
-	i.logger.Debug("identity: invalidate notification received", "key", key)
+	i.logger.Debug("invalidate notification received", "key", key)
 
 	switch {
 	// Check if the key is a storage entry key for an entity bucket
@@ -135,7 +136,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// MemDB.
 		if bucket != nil {
 			for _, item := range bucket.Items {
-				entity, err := i.parseEntityFromBucketItem(item)
+				entity, err := i.parseEntityFromBucketItem(ctx, item)
 				if err != nil {
 					i.logger.Error("failed to parse entity from bucket entry item", "error", err)
 					return
@@ -196,6 +197,33 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 					return
 				}
 
+				// Before updating the group, check if the group exists. If it
+				// does, then delete the group alias from memdb, for the
+				// invalidation would have sent an update.
+				groupFetched, err := i.MemDBGroupByIDInTxn(txn, group.ID, true)
+				if err != nil {
+					i.logger.Error("failed to fetch group from MemDB", "error", err)
+					return
+				}
+
+				// If the group has an alias remove it from memdb
+				if groupFetched != nil && groupFetched.Alias != nil {
+					err := i.MemDBDeleteAliasByIDInTxn(txn, groupFetched.Alias.ID, true)
+					if err != nil {
+						i.logger.Error("failed to delete old group alias from MemDB", "error", err)
+						return
+					}
+				}
+
+				// Update MemDB with new group alias information
+				if group.Alias != nil {
+					err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
+					if err != nil {
+						i.logger.Error("failed to update group alias in MemDB", "error", err)
+						return
+					}
+				}
+
 				// Only update MemDB and don't touch the storage
 				err = i.upsertGroupInTxn(txn, group, false)
 				if err != nil {
@@ -210,7 +238,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	}
 }
 
-func (i *IdentityStore) parseEntityFromBucketItem(item *storagepacker.Item) (*identity.Entity, error) {
+func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *storagepacker.Item) (*identity.Entity, error) {
 	if item == nil {
 		return nil, fmt.Errorf("nil item")
 	}
@@ -295,7 +323,7 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 		return nil, fmt.Errorf("empty alias name")
 	}
 
-	mountValidationResp := i.validateMountAccessorFunc(alias.MountAccessor)
+	mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor)
 	if mountValidationResp == nil {
 		return nil, fmt.Errorf("invalid mount accessor %q", alias.MountAccessor)
 	}
@@ -326,7 +354,7 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 		return entity, nil
 	}
 
-	i.logger.Debug("identity: creating a new entity", "alias", alias)
+	i.logger.Debug("creating a new entity", "alias", alias)
 
 	entity = &identity.Entity{}
 

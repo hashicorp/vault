@@ -243,6 +243,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	resp.Secret.TTL = lease.Lease
+	resp.Secret.MaxTTL = lease.LeaseMax
 
 	if usernameWarning != "" {
 		resp.AddWarning(usernameWarning)
@@ -271,8 +272,10 @@ func (b *backend) secretAccessKeysRenew(ctx context.Context, req *logical.Reques
 		lease = &configLease{}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
-	return f(ctx, req, d)
+	resp := &logical.Response{Secret: req.Secret}
+	resp.Secret.TTL = lease.Lease
+	resp.Secret.MaxTTL = lease.LeaseMax
+	return resp, nil
 }
 
 func secretAccessKeysRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

@@ -1,0 +1,149 @@
+<header class="page-header">
+  {{key-value-header
+    baseKey=baseKey
+    path="vault.cluster.access.leases.list"
+    model=clusterController.model.name
+    root=backendCrumb
+    showCurrent=true
+  }}
+  <div class="level">
+    <div class="level-left">
+      <h1 class="title is-3">
+        {{#link-to "vault.cluster.access.leases.list-root"}}
+          Leases
+        {{/link-to}}
+      </h1>
+    </div>
+    <div class="level-right">
+      <div class="field is-grouped">
+        {{#if (not-eq baseKey.id '')}}
+          <div class="control">
+            {{#if (and capabilities.forceRevokePrefix.canUpdate (not confirmingRevoke))}}
+              {{#confirm-action
+                buttonClasses="button is-ghost is-compact"
+                onConfirmAction=(action "revokePrefix" baseKey.id true)
+                confirmMessage= (concat
+                  "Confirming removes all leases under "
+                  baseKey.id
+                  " and disregards any errors encountered."
+                )
+                confirmButtonText=(concat "Revoke " baseKey.id)
+                confirmButtonClasses="button is-danger is-outlined is-compact"
+                cancelButtonText="Cancel"
+                cancelButtonClasses="button is-outlined is-compact"
+                showConfirm=confirmingForceRevoke
+              }}
+                Force revoke prefix
+              {{/confirm-action}}
+            {{/if}}
+          </div>
+          <div class="control">
+            {{#if (and capabilities.revokePrefix.canUpdate (not confirmingForceRevoke))}}
+              {{#confirm-action
+                buttonClasses="button is-ghost is-compact"
+                onConfirmAction=(action "revokePrefix" baseKey.id)
+                confirmMessage= (concat "Confirming will remove all leases under " baseKey.id)
+                confirmButtonText=(concat "Revoke " baseKey.id)
+                confirmButtonClasses="button is-danger is-outlined is-compact"
+                cancelButtonText="Cancel"
+                cancelButtonClasses="button is-outlined is-compact"
+                showConfirm=confirmingRevoke
+                data-test-lease-revoke-prefix=true
+              }}
+                Revoke prefix
+              {{/confirm-action}}
+            {{/if}}
+          </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</header>
+<div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
+  <div class="level">
+    <div class="level-left">
+    {{navigate-input
+       filterFocusDidChange=(action "setFilterFocus")
+       filterDidChange=(action "setFilter")
+       filter=filter
+       filterMatchesKey=filterMatchesKey
+       firstPartialMatch=firstPartialMatch
+       baseKey=(get baseKey "id")
+       shouldNavigateTree=true
+       mode='leases'
+       placeholder='Filter leases'
+     }}
+     {{#if filterFocused}}
+       &nbsp;
+       &nbsp;
+       {{#if filterMatchesKey}}
+         {{#unless filterIsFolder}}
+           <p class="help has-text-grey is-size-8">
+             <kbd>ENTER</kbd> to go to see details
+           </p>
+         {{/unless}}
+       {{/if}}
+       {{#if firstPartialMatch}}
+         <p class="help has-text-grey is-size-8">
+           <kbd>TAB</kbd> to complete
+         </p>
+       {{/if}}
+     {{/if}}
+    </div>
+  </div>
+</div>
+
+{{#if model.meta.total}}
+  {{#each model as |item|}}
+    <a href="{{href-to
+      (if item.isFolder "vault.cluster.access.leases.list" "vault.cluster.access.leases.show")
+      item.id
+      }}"
+      class="is-flex box is-sideless is-marginless"
+      data-test-lease-link={{item.id}}
+    >
+      {{i-con
+        glyph=(if item.isFolder 'folder' 'document')
+        size=14
+        class="has-text-grey-light"
+      }}
+      <span class="has-text-weight-semibold">
+        {{or item.keyWithoutParent item.id}}
+      </span>
+    </a>
+  {{else}}
+    <div class="box is-sideless">
+      There are no leases matching <code>{{filter}}</code>
+    </div>
+  {{/each}}
+{{else}}
+  <div class="box is-bottomless has-background-white-bis">
+    <div class="columns is-centered">
+      <div class="column is-half has-text-centered">
+        <div class="box is-shadowless has-background-white-bis">
+          <p class="has-text-grey">
+            {{#if (eq baseKey.id '')}}
+              There are currently no leases.
+            {{else}}
+              {{#if filterIsFolder}}
+                {{#if (eq filter baseKey.id)}}
+                  There are no leases under <code>{{filter}}</code>.
+                {{else}}
+                  We couldn't find a prefix matching <code>{{filter}}</code>.
+                {{/if}}
+              {{/if}}
+            {{/if}}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+{{/if}}
+{{#if (gt model.meta.lastPage 1) }}
+  {{list-pagination
+    page=model.meta.currentPage
+    lastPage=model.meta.lastPage
+    link=(concat "vault.cluster.access.leases.list" (if (not baseKey.id) "-root"))
+    model=(compact (array (if baseKey.id baseKey.id)))
+  }}
+{{/if}}

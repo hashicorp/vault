@@ -1,0 +1,177 @@
+<div class="box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs sub-nav">
+    <ul>
+      <li class="{{if (eq tab '') 'is-active'}}">
+        {{#secret-link
+          secret=key.id
+          mode="show"
+          replace=true
+          data-test-transit-link="details"
+          }}
+            Details
+        {{/secret-link}}
+      </li>
+
+      <li class="{{if (eq tab 'versions') 'is-active'}}">
+        {{#secret-link
+          secret=key.id
+          mode="show"
+          replace=true
+          queryParams=(query-params tab='versions')
+          data-test-transit-link="versions"
+          }}
+            Versions
+        {{/secret-link}}
+      </li>
+    </ul>
+  </nav>
+</div>
+
+{{#if (eq tab 'versions')}}
+  {{#if (or
+      (eq key.type "aes256-gcm96")
+      (eq key.type "chacha20-poly1305")
+    )
+  }}
+    <div class="columns is-mobile is-gapless is-marginless table">
+      <div class="column is-half thead">
+        <div class="th">
+          Version
+        </div>
+      </div>
+      <div class="column is-half thead">
+        <div class="th">
+          Created at
+        </div>
+      </div>
+    </div>
+    {{#each-in key.keys as |version creationTimestamp|}}
+      <div class="columns is-mobile is-gapless is-marginless table" data-test-transit-key-version-row={{version}}>
+        <div class="column is-half td">
+          <div class="td is-borderless">
+            {{version}}
+            {{#if (coerce-eq key.minDecryptionVersion version)}}
+            <p class="help has-text-grey">(current minimum decryption version)</p>
+            {{/if}}
+          </div>
+        </div>
+        <div class="column is-half td">
+          <div class="td is-borderless">
+            {{moment-format (unix creationTimestamp) 'MMM DD, YYYY hh:mm:ss A'}}
+            <br/>
+            <small class="is-font-mono has-text-grey">
+              {{moment-format (unix creationTimestamp) }}
+            </small>
+          </div>
+        </div>
+      </div>
+    {{/each-in}}
+  {{else}}
+    <div class="columns is-gapless is-marginless table">
+      <div class="column is-11 thead">
+        <div class="columns is-marginless is-gapless">
+          <div class="column is-one-third">
+            <div class="th">
+              Version
+            </div>
+          </div>
+          <div class="column  is-one-third">
+            <div class="th">
+              Name
+            </div>
+          </div>
+          <div class="column  is-one-third">
+            <div class="th">
+              Created at
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="column is-1 thead is-hidden-mobile">
+        <div class="column thead is-narrow">
+          <div class="th"></div>
+        </div>
+      </div>
+    </div>
+    {{#each-in key.keys as |version meta|}}
+      <div class="columns is-gapless is-marginless table {{if (get this (concat version '-open')) 'has-background-grey-lighter' }}" data-test-transit-key-version-row={{version}}>
+        <div class="column {{if (get this (concat version '-open')) '' 'td' }}">
+          <div class="columns is-marginless is-gapless">
+            <div class="column is-11">
+              <div class="columns is-marginless is-gapless">
+                <div class="column is-one-third">
+                  <div class="td is-borderless">
+                    {{version}}
+                    {{#if (coerce-eq key.minDecryptionVersion version)}}
+                      <p class="help has-text-grey">(current minimum decryption version)</p>
+                    {{/if}}
+                  </div>
+                </div>
+                <div class="column is-one-third">
+                  <div class="td is-borderless">
+                    {{meta.name}}
+                  </div>
+                </div>
+                <div class="column is-one-third">
+                  <div class="td is-borderless">
+                    <div>
+                      {{moment-format meta.creation_time 'MMM DD, YYYY hh:mm:ss A'}}
+                      <br/>
+                      <small class="is-font-mono has-text-grey">
+                        {{moment-format meta.creation_time}}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="column is-1 has-text-centered is-flex-v-centered">
+              <button class="button is-transparent" type="button" {{action (toggle (concat version '-open') this)}}>
+                {{i-con glyph="more" size=18 aria-label=(concat backend.path ' details')}}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {{#if (get this (concat version '-open'))}}
+        <div class="table has-background-grey-lighter is-paddingless is-marginless">
+        <div class="td">
+          <div>
+            <span class="is-label">
+              Public Key
+            </span>
+            <pre class="has-background-transparent"><code class="is-paddingless">{{meta.public_key}}</code></pre>
+            <div class="box is-fullwidth has-background-transparent is-shadowless">
+              <div class="control">
+                {{#copy-button
+                  clipboardText=meta.public_key
+                  class="button"
+                  buttonType="button"
+                  success=(action (set-flash-message (concat 'Public key for version ' version ' copied!')))
+                  }}
+                  Copy
+                {{/copy-button}}
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+      {{/if}}
+    {{/each-in}}
+  {{/if}}
+  <p>
+    {{transit-key-actions
+      key=key
+      selectedAction='rotate'
+      capabilities=capabilities
+    }}
+  </p>
+{{else}}
+  {{info-table-row label="Type" value=key.type}}
+  {{info-table-row label="Deletion allowed" value=(stringify key.deletionAllowed)}}
+
+  {{#if key.derived}}
+    {{info-table-row label="Derived" value=key.derived}}
+    {{info-table-row label="Convergent encryption" value=key.convergentEncryption}}
+  {{/if}}
+{{/if}}

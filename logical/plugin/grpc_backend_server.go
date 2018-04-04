@@ -3,10 +3,11 @@ package plugin
 import (
 	"context"
 
+	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
-	log "github.com/mgutz/logxi/v1"
 	"google.golang.org/grpc"
 )
 
@@ -56,7 +57,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 }
 
 func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.HandleRequestArgs) (*pb.HandleRequestReply, error) {
-	if inMetadataMode() {
+	if pluginutil.InMetadataMode() {
 		return &pb.HandleRequestReply{}, ErrServerInMetadataMode
 	}
 
@@ -99,7 +100,7 @@ func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Emp
 }
 
 func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args *pb.HandleExistenceCheckArgs) (*pb.HandleExistenceCheckReply, error) {
-	if inMetadataMode() {
+	if pluginutil.InMetadataMode() {
 		return &pb.HandleExistenceCheckReply{}, ErrServerInMetadataMode
 	}
 
@@ -126,7 +127,7 @@ func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb
 }
 
 func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.InvalidateKeyArgs) (*pb.Empty, error) {
-	if inMetadataMode() {
+	if pluginutil.InMetadataMode() {
 		return &pb.Empty{}, ErrServerInMetadataMode
 	}
 

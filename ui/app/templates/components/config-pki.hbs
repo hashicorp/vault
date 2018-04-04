@@ -1,0 +1,26 @@
+{{#if (eq section "tidy")}}
+  <p class="has-text-grey-dark" data-test-text="true">
+    You can tidy up the backend storage and/or CRL by removing certificates that have expired and are past a certain buffer period beyond their expiration time.
+  </p>
+{{else if (eq section "crl")}}
+  <h2 class="title is-5" data-test-title="true">
+    Certificate Revocation List (CRL) Config
+  </h2>
+  <p class="has-text-grey-dark" data-test-text="true">
+    Set the duration for which the generated CRL should be marked valid.
+  </p>
+{{/if}}
+
+{{message-error model=config}}
+<form {{action "save" section on="submit"}}  class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
+  {{#each (get config (concat section "Attrs")) as |attr|}}
+    {{form-field attr=attr model=config data-test-field=attr.name}}
+  {{/each}}
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button data-test-submit type="submit" class="button is-primary {{if loading 'is-loading'}}" disabled={{loading}}>
+        Save
+      </button>
+    </div>
+  </div>
+</form>

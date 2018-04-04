@@ -67,11 +67,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		return nil, err
 	}
 
-	ttl, _, err := b.SanitizeTTLStr(config.TTL.String(), config.MaxTTL.String())
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error sanitizing TTLs: %s", err)), nil
-	}
-
 	resp := &logical.Response{
 		Auth: &logical.Auth{
 			InternalData: map[string]interface{}{
@@ -84,7 +79,8 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			},
 			DisplayName: *verifyResp.User.Login,
 			LeaseOptions: logical.LeaseOptions{
-				TTL:       ttl,
+				TTL:       config.TTL,
+				MaxTTL:    config.MaxTTL,
 				Renewable: true,
 			},
 			Alias: &logical.Alias{
@@ -133,10 +129,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
-	resp, err := framework.LeaseExtend(config.TTL, config.MaxTTL, b.System())(ctx, req, d)
-	if err != nil {
-		return nil, err
-	}
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.TTL = config.TTL
+	resp.Auth.MaxTTL = config.MaxTTL
 
 	// Remove old aliases
 	resp.Auth.GroupAliases = nil

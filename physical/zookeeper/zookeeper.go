@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/samuel/go-zookeeper/zk"

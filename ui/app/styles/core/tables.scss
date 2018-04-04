@@ -1,0 +1,41 @@
+.table {
+  thead,
+  .thead {
+    background: $grey-lighter;
+    box-shadow: 0 1px 0 0 $grey-light, 0 -1px 0 0 $grey-light;
+
+    th,
+    .th {
+      text-transform: uppercase;
+      font-size: $size-8;
+      color: $grey-dark;
+      font-weight: normal;
+      padding: 0.5rem 1.5rem;
+      border-width: 0 0 1px 0;
+      border-color: $grey-light;
+    }
+  }
+
+  .thead {
+    box-shadow: 0 -1px 0 0 $grey-light;
+  }
+  td,
+  .td {
+    font-size: $size-6;
+    color: $black;
+    padding: 1rem 1.5rem;
+    border-width: 0 0 1px 0;
+    border-color: $grey-light;
+    border-style: solid;
+  }
+  tr:hover {
+    background: rgba($grey-lighter, .4);
+  }
+}
+.table tbody tr:last-child td,
+.table tbody tr:last-child th {
+  border-bottom-width: inherit;
+}
+.table.has-expanded-borders {
+  border-collapse: inherit;
+}

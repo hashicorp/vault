@@ -136,6 +136,7 @@ func ProtoLeaseOptionsToLogicalLeaseOptions(l *LeaseOptions) (logical.LeaseOptio
 		Renewable: l.Renewable,
 		Increment: time.Duration(l.Increment),
 		IssueTime: t,
+		MaxTTL:    time.Duration(l.MaxTTL),
 	}, err
 }
 
@@ -150,6 +151,7 @@ func LogicalLeaseOptionsToProtoLeaseOptions(l logical.LeaseOptions) (*LeaseOptio
 		Renewable: l.Renewable,
 		Increment: int64(l.Increment),
 		IssueTime: t,
+		MaxTTL:    int64(l.MaxTTL),
 	}, err
 }
 

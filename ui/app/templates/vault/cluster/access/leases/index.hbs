@@ -1,0 +1,28 @@
+<header class="page-header">
+  <div class="level">
+    <div class="level-left">
+      <h1 class="title is-3">
+        Lookup a Lease
+      </h1>
+    </div>
+  </div>
+</header>
+
+<form {{action "lookupLease" leaseId on="submit"}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="field">
+      <label for="lease-id" class="is-label">Lease ID</label>
+      <div class="control">
+        {{input value=leaseId id="lease-id" class="input"}}
+      </div>
+      <p class="help has-text-grey">
+        If you know the <code>id</code> of a lease, enter it above to lookup details of the lease.
+      </p>
+    </div>
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button type="submit" class="button is-primary">Lookup</button>
+    </div>
+  </div>
+</form>

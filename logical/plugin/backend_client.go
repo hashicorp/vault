@@ -5,9 +5,9 @@ import (
 	"errors"
 	"net/rpc"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 var (
@@ -204,16 +204,6 @@ func (b *backendPluginClient) Setup(ctx context.Context, config *logical.Backend
 		impl: storageImpl,
 	})
 
-	// Shim log.Logger
-	loggerImpl := config.Logger
-	if b.metadataMode {
-		loggerImpl = log.NullLog
-	}
-	loggerID := b.broker.NextId()
-	go b.broker.AcceptAndServe(loggerID, &LoggerServer{
-		logger: loggerImpl,
-	})
-
 	// Shim logical.SystemView
 	sysViewImpl := config.System
 	if b.metadataMode {
@@ -226,7 +216,6 @@ func (b *backendPluginClient) Setup(ctx context.Context, config *logical.Backend
 
 	args := &SetupArgs{
 		StorageID:   storageID,
-		LoggerID:    loggerID,
 		SysViewID:   sysViewID,
 		Config:      config.Config,
 		BackendUUID: config.BackendUUID,

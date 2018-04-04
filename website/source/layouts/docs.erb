@@ -133,7 +133,10 @@
                 <a href="/docs/configuration/storage/filesystem.html">Filesystem</a>
               </li>
               <li<%= sidebar_current("docs-configuration-storage-google-cloud")%>>
-                <a href="/docs/configuration/storage/google-cloud.html">Google Cloud</a>
+                <a href="/docs/configuration/storage/google-cloud-storage.html">Google Cloud Storage</a>
+              </li>
+              <li<%= sidebar_current("docs-configuration-storage-spanner")%>>
+                <a href="/docs/configuration/storage/google-cloud-spanner.html">Google Cloud Spanner</a>
               </li>
               <li<%= sidebar_current("docs-configuration-storage-in-memory")%>>
                 <a href="/docs/configuration/storage/in-memory.html">In-Memory</a>
@@ -146,9 +149,6 @@
               </li>
               <li<%= sidebar_current("docs-configuration-storage-postgresql")%>>
                 <a href="/docs/configuration/storage/postgresql.html">PostgreSQL</a>
-              </li>
-              <li<%= sidebar_current("docs-configuration-storage-spanner")%>>
-                <a href="/docs/configuration/storage/spanner.html">Spanner</a>
               </li>
               <li<%= sidebar_current("docs-configuration-storage-cassandra")%>>
                 <a href="/docs/configuration/storage/cassandra.html">Cassandra</a>
@@ -396,6 +396,14 @@
 
           <li<%= sidebar_current("docs-secrets-kv") %>>
             <a href="/docs/secrets/kv/index.html">Key/Value</a>
+            <ul class="nav">
+              <li<%= sidebar_current("docs-secrets-kv-nonversioned") %>>
+                <a href="/docs/secrets/kv/kv.html">K/V</a>
+              </li>
+              <li<%= sidebar_current("docs-secrets-kv-versioned") %>>
+                <a href="/docs/secrets/kv/versioned-kv.html">Versioned K/V</a>
+              </li>
+            </ul>
           </li>
 
           <li<%= sidebar_current("docs-secrets-identity") %>>
@@ -573,9 +581,6 @@
           </li>
           <li<%= sidebar_current("docs-vault-enterprise-ui") %>>
             <a href="/docs/enterprise/ui/index.html">UI (Web Interface)</a>
-          </li>
-          <li<%= sidebar_current("docs-vault-enterprise-identity") %>>
-            <a href="/docs/enterprise/identity/index.html">Identity</a>
           </li>
           <li<%= sidebar_current("docs-vault-enterprise-control-groups") %>>
             <a href="/docs/enterprise/control-groups/index.html">Control Groups</a>

@@ -209,10 +209,8 @@ func TestBackend_config_connection(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"plugin_name": "postgresql-database-plugin",
-		"connection_details": map[string]interface{}{
-			"connection_url": "sample_connection_url",
-		},
+		"plugin_name":                        "postgresql-database-plugin",
+		"connection_details":                 map[string]interface{}{},
 		"allowed_roles":                      []string{"*"},
 		"root_credentials_rotate_statements": []string{},
 	}
@@ -351,10 +349,6 @@ func TestBackend_basic(t *testing.T) {
 	credsResp, err := b.HandleRequest(context.Background(), req)
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
-	}
-	// Test for #3812
-	if credsResp.Secret.TTL != 10*time.Minute {
-		t.Fatalf("unexpected TTL of %d", credsResp.Secret.TTL)
 	}
 	// Update the role with no max ttl
 	data = map[string]interface{}{
@@ -519,10 +513,8 @@ func TestBackend_connectionCrud(t *testing.T) {
 
 	// Read connection
 	expected := map[string]interface{}{
-		"plugin_name": "postgresql-database-plugin",
-		"connection_details": map[string]interface{}{
-			"connection_url": connURL,
-		},
+		"plugin_name":                        "postgresql-database-plugin",
+		"connection_details":                 map[string]interface{}{},
 		"allowed_roles":                      []string{"plugin-role-test"},
 		"root_credentials_rotate_statements": []string{},
 	}

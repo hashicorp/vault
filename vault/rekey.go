@@ -150,12 +150,12 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) error {
 	}
 
 	if c.seal.RecoveryKeySupported() && c.seal.RecoveryType() == config.Type {
-		c.logger.Debug("core: using recovery seal configuration to rekey barrier key")
+		c.logger.Debug("using recovery seal configuration to rekey barrier key")
 	}
 
 	// Check if the seal configuration is valid
 	if err := config.Validate(); err != nil {
-		c.logger.Error("core: invalid rekey seal configuration", "error", err)
+		c.logger.Error("invalid rekey seal configuration", "error", err)
 		return fmt.Errorf("invalid rekey seal configuration: %v", err)
 	}
 
@@ -188,7 +188,7 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) error {
 	c.barrierRekeyConfig.Nonce = nonce
 
 	if c.logger.IsInfo() {
-		c.logger.Info("core: rekey initialized", "nonce", c.barrierRekeyConfig.Nonce, "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold)
+		c.logger.Info("rekey initialized", "nonce", c.barrierRekeyConfig.Nonce, "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold)
 	}
 	return nil
 }
@@ -201,7 +201,7 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) error {
 
 	// Check if the seal configuration is valid
 	if err := config.Validate(); err != nil {
-		c.logger.Error("core: invalid recovery configuration", "error", err)
+		c.logger.Error("invalid recovery configuration", "error", err)
 		return fmt.Errorf("invalid recovery configuration: %v", err)
 	}
 
@@ -238,7 +238,7 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) error {
 	c.recoveryRekeyConfig.Nonce = nonce
 
 	if c.logger.IsInfo() {
-		c.logger.Info("core: rekey initialized", "nonce", c.recoveryRekeyConfig.Nonce, "shares", c.recoveryRekeyConfig.SecretShares, "threshold", c.recoveryRekeyConfig.SecretThreshold)
+		c.logger.Info("rekey initialized", "nonce", c.recoveryRekeyConfig.Nonce, "shares", c.recoveryRekeyConfig.SecretShares, "threshold", c.recoveryRekeyConfig.SecretThreshold)
 	}
 	return nil
 }
@@ -321,7 +321,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	// Check if we don't have enough keys to unlock
 	if len(c.barrierRekeyProgress) < existingConfig.SecretThreshold {
 		if c.logger.IsDebug() {
-			c.logger.Debug("core: cannot rekey yet, not enough keys", "keys", len(c.barrierRekeyProgress), "threshold", existingConfig.SecretThreshold)
+			c.logger.Debug("cannot rekey yet, not enough keys", "keys", len(c.barrierRekeyProgress), "threshold", existingConfig.SecretThreshold)
 		}
 		return nil, nil
 	}
@@ -341,12 +341,12 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 
 	if useRecovery {
 		if err := c.seal.VerifyRecoveryKey(ctx, recoveredKey); err != nil {
-			c.logger.Error("core: rekey aborted, recovery key verification failed", "error", err)
+			c.logger.Error("rekey aborted, recovery key verification failed", "error", err)
 			return nil, err
 		}
 	} else {
 		if err := c.barrier.VerifyMaster(recoveredKey); err != nil {
-			c.logger.Error("core: rekey aborted, master key verification failed", "error", err)
+			c.logger.Error("rekey aborted, master key verification failed", "error", err)
 			return nil, err
 		}
 	}
@@ -354,7 +354,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	// Generate a new master key
 	newMasterKey, err := c.barrier.GenerateKey()
 	if err != nil {
-		c.logger.Error("core: failed to generate master key", "error", err)
+		c.logger.Error("failed to generate master key", "error", err)
 		return nil, fmt.Errorf("master key generation failed: %v", err)
 	}
 
@@ -369,7 +369,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		// Split the master key using the Shamir algorithm
 		shares, err := shamir.Split(newMasterKey, c.barrierRekeyConfig.SecretShares, c.barrierRekeyConfig.SecretThreshold)
 		if err != nil {
-			c.logger.Error("core: failed to generate shares", "error", err)
+			c.logger.Error("failed to generate shares", "error", err)
 			return nil, fmt.Errorf("failed to generate shares: %v", err)
 		}
 		results.SecretShares = shares
@@ -414,7 +414,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 			}
 			buf, err := json.Marshal(backupVals)
 			if err != nil {
-				c.logger.Error("core: failed to marshal unseal key backup", "error", err)
+				c.logger.Error("failed to marshal unseal key backup", "error", err)
 				return nil, fmt.Errorf("failed to marshal unseal key backup: %v", err)
 			}
 			pe := &physical.Entry{
@@ -422,7 +422,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 				Value: buf,
 			}
 			if err = c.physical.Put(ctx, pe); err != nil {
-				c.logger.Error("core: failed to save unseal key backup", "error", err)
+				c.logger.Error("failed to save unseal key backup", "error", err)
 				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
 			}
 		}
@@ -430,21 +430,21 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 
 	if keysToStore != nil {
 		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
-			c.logger.Error("core: failed to store keys", "error", err)
+			c.logger.Error("failed to store keys", "error", err)
 			return nil, fmt.Errorf("failed to store keys: %v", err)
 		}
 	}
 
 	// Rekey the barrier
 	if err := c.barrier.Rekey(ctx, newMasterKey); err != nil {
-		c.logger.Error("core: failed to rekey barrier", "error", err)
+		c.logger.Error("failed to rekey barrier", "error", err)
 		return nil, fmt.Errorf("failed to rekey barrier: %v", err)
 	}
 	if c.logger.IsInfo() {
-		c.logger.Info("core: security barrier rekeyed", "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold)
+		c.logger.Info("security barrier rekeyed", "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold)
 	}
 	if err := c.seal.SetBarrierConfig(ctx, c.barrierRekeyConfig); err != nil {
-		c.logger.Error("core: error saving rekey seal configuration", "error", err)
+		c.logger.Error("error saving rekey seal configuration", "error", err)
 		return nil, fmt.Errorf("failed to save rekey seal configuration: %v", err)
 	}
 
@@ -454,7 +454,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(c.barrierRekeyConfig.Nonce),
 	}); err != nil {
-		c.logger.Error("core: error saving keyring canary", "error", err)
+		c.logger.Error("error saving keyring canary", "error", err)
 		return nil, fmt.Errorf("failed to save keyring canary: %v", err)
 	}
 
@@ -522,7 +522,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	// Check if we don't have enough keys to unlock
 	if len(c.recoveryRekeyProgress) < existingConfig.SecretThreshold {
 		if c.logger.IsDebug() {
-			c.logger.Debug("core: cannot rekey yet, not enough keys", "keys", len(c.recoveryRekeyProgress), "threshold", existingConfig.SecretThreshold)
+			c.logger.Debug("cannot rekey yet, not enough keys", "keys", len(c.recoveryRekeyProgress), "threshold", existingConfig.SecretThreshold)
 		}
 		return nil, nil
 	}
@@ -542,14 +542,14 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 
 	// Verify the recovery key
 	if err := c.seal.VerifyRecoveryKey(ctx, recoveryKey); err != nil {
-		c.logger.Error("core: rekey aborted, recovery key verification failed", "error", err)
+		c.logger.Error("rekey aborted, recovery key verification failed", "error", err)
 		return nil, err
 	}
 
 	// Generate a new master key
 	newMasterKey, err := c.barrier.GenerateKey()
 	if err != nil {
-		c.logger.Error("core: failed to generate recovery key", "error", err)
+		c.logger.Error("failed to generate recovery key", "error", err)
 		return nil, fmt.Errorf("recovery key generation failed: %v", err)
 	}
 
@@ -564,7 +564,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		// Split the master key using the Shamir algorithm
 		shares, err := shamir.Split(newMasterKey, c.recoveryRekeyConfig.SecretShares, c.recoveryRekeyConfig.SecretThreshold)
 		if err != nil {
-			c.logger.Error("core: failed to generate shares", "error", err)
+			c.logger.Error("failed to generate shares", "error", err)
 			return nil, fmt.Errorf("failed to generate shares: %v", err)
 		}
 		results.SecretShares = shares
@@ -597,7 +597,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 			}
 			buf, err := json.Marshal(backupVals)
 			if err != nil {
-				c.logger.Error("core: failed to marshal recovery key backup", "error", err)
+				c.logger.Error("failed to marshal recovery key backup", "error", err)
 				return nil, fmt.Errorf("failed to marshal recovery key backup: %v", err)
 			}
 			pe := &physical.Entry{
@@ -605,19 +605,19 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 				Value: buf,
 			}
 			if err = c.physical.Put(ctx, pe); err != nil {
-				c.logger.Error("core: failed to save unseal key backup", "error", err)
+				c.logger.Error("failed to save unseal key backup", "error", err)
 				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
 			}
 		}
 	}
 
 	if err := c.seal.SetRecoveryKey(ctx, newMasterKey); err != nil {
-		c.logger.Error("core: failed to set recovery key", "error", err)
+		c.logger.Error("failed to set recovery key", "error", err)
 		return nil, fmt.Errorf("failed to set recovery key: %v", err)
 	}
 
 	if err := c.seal.SetRecoveryConfig(ctx, c.recoveryRekeyConfig); err != nil {
-		c.logger.Error("core: error saving rekey seal configuration", "error", err)
+		c.logger.Error("error saving rekey seal configuration", "error", err)
 		return nil, fmt.Errorf("failed to save rekey seal configuration: %v", err)
 	}
 
@@ -627,7 +627,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(c.recoveryRekeyConfig.Nonce),
 	}); err != nil {
-		c.logger.Error("core: error saving keyring canary", "error", err)
+		c.logger.Error("error saving keyring canary", "error", err)
 		return nil, fmt.Errorf("failed to save keyring canary: %v", err)
 	}
 

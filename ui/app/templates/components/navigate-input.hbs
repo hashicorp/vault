@@ -1,0 +1,17 @@
+<div class="field">
+  <p class="control has-icons-left has-icons-right">
+  {{input
+    value=filter
+    placeholder=(or placeholder "Filter keys")
+    class="filter input"
+    disabled=disabled
+    key-up=(action "handleKeyUp")
+    key-down=(action "handleKeyPress")
+    input=(action "handleInput")
+    focus-in=(action "setFilterFocused" true)
+    focus-out=(action "setFilterFocused" false)
+    }}
+
+    {{i-con glyph="ios-search-strong" class="is-left has-text-grey" size=18}}
+  </p>
+</div>

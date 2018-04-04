@@ -1,0 +1,38 @@
+{{#if model.groupIds}}
+  {{#each model.directGroupIds as |gid|}}
+    <a href={{href-to "vault.cluster.access.identity.show" "groups" gid "details" }}
+      class="box is-sideless is-marginless"
+      >{{i-con
+        glyph='folder'
+        size=14
+        class="has-text-grey-light"
+        }}{{gid}}</a>
+  {{/each}}
+  {{#each model.inheritedGroupIds as |gid|}}
+  {{#linked-block
+     "vault.cluster.access.identity.show" "groups" gid "details"
+      class="box is-sideless is-marginless"
+  }}
+    <a href={{href-to "vault.cluster.access.identity.show" "groups" gid "details" }}
+       class="has-text-black"
+      >{{i-con
+        glyph='folder'
+        size=14
+        class="has-text-grey-light"
+        }}{{gid}}</a>
+      <span class="tag has-text-grey is-size-8">inherited</span>
+      {{/linked-block}}
+  {{/each}}
+{{else}}
+  <div class="box is-bottomless has-background-white-bis">
+    <div class="columns is-centered">
+      <div class="column is-half has-text-centered">
+        <div class="box is-shadowless has-background-white-bis">
+          <p class="has-text-grey">
+            {{model.name}} is not a member of any groups.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+{{/if}}

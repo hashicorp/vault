@@ -28,14 +28,15 @@ func secretToken(b *backend) *framework.Secret {
 }
 
 func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	resp := &logical.Response{Secret: req.Secret}
 	roleRaw, ok := req.Secret.InternalData["role"]
 	if !ok || roleRaw == nil {
-		return framework.LeaseExtend(0, 0, b.System())(ctx, req, d)
+		return resp, nil
 	}
 
 	role, ok := roleRaw.(string)
 	if !ok {
-		return framework.LeaseExtend(0, 0, b.System())(ctx, req, d)
+		return resp, nil
 	}
 
 	entry, err := req.Storage.Get(ctx, "policy/"+role)
@@ -50,8 +51,8 @@ func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d 
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
-
-	return framework.LeaseExtend(result.Lease, 0, b.System())(ctx, req, d)
+	resp.Secret.TTL = result.Lease
+	return resp, nil
 }
 
 func secretTokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

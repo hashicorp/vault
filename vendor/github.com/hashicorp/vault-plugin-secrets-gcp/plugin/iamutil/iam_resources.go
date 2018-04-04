@@ -5,12 +5,13 @@ package iamutil
 import (
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-gcp-common/gcputil"
-	"google.golang.org/api/googleapi"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/hashicorp/go-gcp-common/gcputil"
+	"google.golang.org/api/googleapi"
 )
 
 const (

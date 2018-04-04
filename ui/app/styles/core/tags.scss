@@ -1,0 +1,28 @@
+.tag:not(body) {
+  background-color: lighten($grey-light, 17%);
+  border-radius: 2px;
+  height: auto;
+  padding: 0 0.75em;
+  margin-right: 0.5rem;
+  font-weight: normal;
+  code {
+    color: $grey;
+  }
+}
+.tag.is-outlined {
+  border: 1px solid currentColor;
+}
+.tag.is-inverted {
+  border-color: $grey;
+  background: none;
+  code {
+    color: $grey-dark;
+  }
+}
+.tag.is-bold {
+  font-weight: bold;
+}
+
+.tag.is-small {
+  height: auto;
+}

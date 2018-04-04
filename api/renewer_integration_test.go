@@ -169,8 +169,8 @@ func TestRenewer_Renew(t *testing.T) {
 
 			secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 				Policies:       []string{"default"},
-				TTL:            "1s",
-				ExplicitMaxTTL: "3s",
+				TTL:            "2s",
+				ExplicitMaxTTL: "10s",
 			})
 			if err != nil {
 				t.Fatal(err)

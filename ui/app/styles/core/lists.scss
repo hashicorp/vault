@@ -1,0 +1,10 @@
+.sep {
+  display: inline-flex;
+  align-items: center;
+  &:before {
+    font-size: $size-5;
+    color: $white-ter;
+    content: '|';
+    position: relative;
+  }
+}
