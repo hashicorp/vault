@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/logical"
@@ -258,7 +259,7 @@ func (i *IdentityStore) pathGroupAliasIDList() framework.OperationFunc {
 		ws := memdb.NewWatchSet()
 		iter, err := i.MemDBAliases(ws, true)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch iterator for group aliases in memdb: %v", err)
+			return nil, errwrap.Wrapf("failed to fetch iterator for group aliases in memdb: {{err}}", err)
 		}
 
 		var groupAliasIDs []string
