@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/golang/snappy"
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -107,7 +108,7 @@ func Compress(data []byte, config *CompressionConfig) ([]byte, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create a compression writer; err: %v", err)
+		return nil, errwrap.Wrapf("failed to create a compression writer: {{err}}", err)
 	}
 
 	if writer == nil {
@@ -117,7 +118,7 @@ func Compress(data []byte, config *CompressionConfig) ([]byte, error) {
 	// Compress the input and place it in the same buffer containing the
 	// canary byte.
 	if _, err = writer.Write(data); err != nil {
-		return nil, fmt.Errorf("failed to compress input data; err: %v", err)
+		return nil, errwrap.Wrapf("failed to compress input data: err: {{err}}", err)
 	}
 
 	// Close the io.WriteCloser
@@ -172,7 +173,7 @@ func Decompress(data []byte) ([]byte, bool, error) {
 		return nil, true, nil
 	}
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to create a compression reader; err: %v", err)
+		return nil, false, errwrap.Wrapf("failed to create a compression reader: {{err}}", err)
 	}
 	if reader == nil {
 		return nil, false, fmt.Errorf("failed to create a compression reader")

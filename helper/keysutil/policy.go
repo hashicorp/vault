@@ -30,6 +30,7 @@ import (
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/hkdf"
 
+	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -1227,7 +1228,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) (retErr er
 		entry.EC_Y = privKey.Y
 		derBytes, err := x509.MarshalPKIXPublicKey(privKey.Public())
 		if err != nil {
-			return fmt.Errorf("error marshaling public key: %s", err)
+			return errwrap.Wrapf("error marshaling public key: {{err}}", err)
 		}
 		pemBlock := &pem.Block{
 			Type:  "PUBLIC KEY",
@@ -1308,7 +1309,7 @@ func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (out strin
 	}
 	err := p.Persist(ctx, storage)
 	if err != nil {
-		return "", fmt.Errorf("failed to persist policy with backup info: %v", err)
+		return "", errwrap.Wrapf("failed to persist policy with backup info: {{err}}", err)
 	}
 
 	// Load the archive only after persisting the policy as the archive can get
