@@ -142,7 +142,7 @@ func LoadSSHHelperConfig(path string) (*SSHHelperConfig, error) {
 func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
 	root, err := hcl.Parse(string(contents))
 	if err != nil {
-		return nil, errwrap.Wrapf("ssh_helper: error parsing config: {{err}}", err)
+		return nil, errwrap.Wrapf("error parsing config: {{err}}", err)
 	}
 
 	list, ok := root.Node.(*ast.ObjectList)
@@ -249,8 +249,7 @@ func checkHCLKeys(node ast.Node, valid []string) error {
 	for _, item := range list.Items {
 		key := item.Keys[0].Token.Value().(string)
 		if _, ok := validMap[key]; !ok {
-			result = multierror.Append(result, fmt.Errorf(
-				"invalid key %q on line %d", key, item.Assign.Line))
+			result = multierror.Append(result, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
 		}
 	}
 
