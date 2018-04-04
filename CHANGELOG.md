@@ -23,6 +23,9 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * OSS UI: The Vault UI is now fully open-source. Similarly to the CLI, some
+   features are only available with a supporting version of Vault, but the code
+   base is entirely open.
  * Versioned K/V: The `kv` backend has been completely revamped, featuring
    flexible versioning of values, check-and-set protections, and more. A new
    `vault kv` subcommand allows friendly interactions with it. Existing mounts
