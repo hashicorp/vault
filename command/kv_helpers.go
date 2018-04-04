@@ -28,8 +28,8 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
-		secret, err := api.ParseSecret(resp.Body)
-		switch err {
+		secret, parseErr := api.ParseSecret(resp.Body)
+		switch parseErr {
 		case nil:
 		case io.EOF:
 			return nil, nil
@@ -64,8 +64,8 @@ func kvListRequest(client *api.Client, path string) (*api.Secret, error) {
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
-		secret, err := api.ParseSecret(resp.Body)
-		switch err {
+		secret, parseErr := api.ParseSecret(resp.Body)
+		switch parseErr {
 		case nil:
 		case io.EOF:
 			return nil, nil
@@ -99,8 +99,8 @@ func kvWriteRequest(client *api.Client, path string, data map[string]interface{}
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
-		secret, err := api.ParseSecret(resp.Body)
-		switch err {
+		secret, parseErr := api.ParseSecret(resp.Body)
+		switch parseErr {
 		case nil:
 		case io.EOF:
 			return nil, nil
@@ -108,9 +108,8 @@ func kvWriteRequest(client *api.Client, path string, data map[string]interface{}
 			return nil, err
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
-			return secret, nil
+			return secret, err
 		}
-		return nil, nil
 	}
 	if err != nil {
 		return nil, err
@@ -134,8 +133,8 @@ func kvDeleteRequest(client *api.Client, path string) (*api.Secret, error) {
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
-		secret, err := api.ParseSecret(resp.Body)
-		switch err {
+		secret, parseErr := api.ParseSecret(resp.Body)
+		switch parseErr {
 		case nil:
 		case io.EOF:
 			return nil, nil
@@ -143,9 +142,8 @@ func kvDeleteRequest(client *api.Client, path string) (*api.Secret, error) {
 			return nil, err
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
-			return secret, nil
+			return secret, err
 		}
-		return nil, nil
 	}
 	if err != nil {
 		return nil, err
