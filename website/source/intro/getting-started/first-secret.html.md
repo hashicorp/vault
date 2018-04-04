@@ -30,11 +30,11 @@ Let's start by writing a secret. This is done very simply with the
 `vault write` command, as shown below:
 
 ```text
-$ vault kv put secret/hello value=world
+$ vault kv put secret/hello foo=world
 Success! Data written to: secret/hello
 ```
 
-This writes the pair `value=world` to the path `secret/hello`. We'll
+This writes the pair `foo=world` to the path `secret/hello`. We'll
 cover paths in more detail later, but for now it is important that the
 path is prefixed with `secret/`, otherwise this example won't work. The
 `secret/` prefix is where arbitrary secrets can be read and written.
@@ -42,7 +42,7 @@ path is prefixed with `secret/`, otherwise this example won't work. The
 You can even write multiple pieces of data, if you want:
 
 ```text
-$ vault kv put secret/hello value=world excited=yes
+$ vault kv put secret/hello foo=world excited=yes
 Success! Data written to: secret/hello
 ```
 
@@ -66,7 +66,7 @@ Key                 Value
 ---                 -----
 refresh_interval    768h
 excited             yes
-value               world
+foo                world
 ```
 
 As you can see, the values we wrote are given back to us. Vault reads
