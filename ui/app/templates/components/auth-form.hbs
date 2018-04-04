@@ -10,7 +10,7 @@
   </ul>
 </nav>
 <div class="box is-marginless is-shadowless">
-  {{message-error errorMessage=error}}
+  {{message-error errorMessage=error data-test-auth-error=true}}
   {{component providerComponentName onSubmit=(action 'doSubmit') }}
   <div class="box has-slim-padding is-shadowless">
     {{#unless (eq selectedAuthBackend.type "token")}}

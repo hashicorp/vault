@@ -9,6 +9,7 @@ export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
   },
 
   pushPayload(store, payload) {
+    debugger;
     const transformedPayload = this.normalizeResponse(
       store,
       store.modelFor('node'),
@@ -28,9 +29,6 @@ export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    // payload looks like:
-    // { "nodes": { "name": { "sealed": "true" }}}
-
     const nodes = payload.nodes
       ? Object.keys(payload.nodes).map(name => this.nodeFromObject(name, payload))
       : [Ember.assign(payload, { id: '1' })];
