@@ -1,0 +1,37 @@
+<form {{action (perform lookup) on="submit"}}>
+  <div class="field has-addons">
+    <div class="control">
+      <div class="select is-fullwidth">
+        <select
+          name="param"
+          id="param"
+          onchange={{action (mut param) value="target.value"}}
+        >
+          {{#each (array "alias name" "name" "id" "alias id") as |paramOption|}}
+            <option selected={{eq param paramOption}} value={{paramOption}}>
+             Lookup by {{paramOption}}
+            </option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+    <div class="control">
+      {{#if (eq param "alias name")}}
+        {{mount-accessor-select
+          value=aliasMountAccessor
+          onChange=(action (mut aliasMountAccessor))
+        }}
+      {{/if}}
+    </div>
+    <div class="control is-expanded">
+      {{input
+        class="input"
+        value=paramValue
+        placeholder=(capitalize param)
+      }}
+    </div>
+    <div class="control">
+      <button type="submit" class="button is-hidden">Lookup</button>
+    </div>
+  </div>
+</form>

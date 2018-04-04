@@ -21,7 +21,6 @@ import (
 	"time"
 
 	colorable "github.com/mattn/go-colorable"
-	log "github.com/mgutz/logxi/v1"
 	"github.com/mitchellh/cli"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
@@ -32,13 +31,12 @@ import (
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
 	"github.com/hashicorp/errwrap"
-	hclog "github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/gated-writer"
-	"github.com/hashicorp/vault/helper/logbridge"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/reload"
@@ -288,21 +286,19 @@ func (c *ServerCommand) Run(args []string) int {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logGate = &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
-	var level int
+	var level log.Level
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
 	case "trace":
-		level = log.LevelTrace
+		level = log.Trace
 	case "debug":
-		level = log.LevelDebug
-	case "info", "":
-		level = log.LevelInfo
-	case "notice":
-		level = log.LevelNotice
+		level = log.Debug
+	case "notice", "info", "":
+		level = log.Info
 	case "warn", "warning":
-		level = log.LevelWarn
+		level = log.Warn
 	case "err", "error":
-		level = log.LevelError
+		level = log.Error
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
 		return 1
@@ -315,20 +311,20 @@ func (c *ServerCommand) Run(args []string) int {
 	switch strings.ToLower(logFormat) {
 	case "vault", "vault_json", "vault-json", "vaultjson", "json", "":
 		if c.flagDevThreeNode || c.flagDevFourCluster {
-			c.logger = logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
+			c.logger = log.New(&log.LoggerOptions{
 				Mutex:  &sync.Mutex{},
 				Output: c.logGate,
-				Level:  hclog.Trace,
-			})).LogxiLogger()
+				Level:  log.Trace,
+			})
 		} else {
-			c.logger = logformat.NewVaultLoggerWithWriter(c.logGate, level)
+			c.logger = logging.NewVaultLoggerWithWriter(c.logGate, level)
 		}
 	default:
-		c.logger = log.NewLogger(c.logGate, "vault")
-		c.logger.SetLevel(level)
+		c.logger = logging.NewVaultLoggerWithWriter(c.logGate, level)
 	}
+
 	grpclog.SetLogger(&grpclogFaker{
-		logger: c.logger,
+		logger: c.logger.Named("grpclogfaker"),
 		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
 	})
 
@@ -412,7 +408,7 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-	backend, err := factory(config.Storage.Config, c.logger)
+	backend, err := factory(config.Storage.Config, c.logger.ResetNamed("storage."+config.Storage.Type))
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
 		return 1
@@ -456,6 +452,7 @@ func (c *ServerCommand) Run(args []string) int {
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
 		PluginDirectory:    config.PluginDirectory,
+		EnableUI:           config.EnableUI,
 		EnableRaw:          config.EnableRawEndpoint,
 	}
 	if c.flagDev {
@@ -611,6 +608,16 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		coreConfig.ClusterAddr = u.String()
 	}
 
+	// Override the UI enabling config by the environment variable
+	if enableUI := os.Getenv("VAULT_UI"); enableUI != "" {
+		var err error
+		coreConfig.EnableUI, err = strconv.ParseBool(enableUI)
+		if err != nil {
+			c.UI.Output("Error parsing the environment variable VAULT_UI")
+			return 1
+		}
+	}
+
 	// Initialize the core
 	core, newCoreError := vault.NewCore(coreConfig)
 	if newCoreError != nil {
@@ -718,8 +725,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 	c.reloadFuncsLock.Unlock()
 	if !disableClustering {
-		if c.logger.IsTrace() {
-			c.logger.Trace("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
+		if c.logger.IsDebug() {
+			c.logger.Debug("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
 		}
 	}
 
@@ -1095,7 +1102,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: c.flagDevListenAddr,
-		RawLogger:         c.logger,
+		Logger:            c.logger,
 		TempDir:           tempDir,
 	})
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
@@ -1577,19 +1584,19 @@ func (g *grpclogFaker) Fatalln(args ...interface{}) {
 }
 
 func (g *grpclogFaker) Print(args ...interface{}) {
-	if g.log && g.logger.IsTrace() {
-		g.logger.Trace(fmt.Sprint(args...))
+	if g.log && g.logger.IsDebug() {
+		g.logger.Debug(fmt.Sprint(args...))
 	}
 }
 
 func (g *grpclogFaker) Printf(format string, args ...interface{}) {
-	if g.log && g.logger.IsTrace() {
-		g.logger.Trace(fmt.Sprintf(format, args...))
+	if g.log && g.logger.IsDebug() {
+		g.logger.Debug(fmt.Sprintf(format, args...))
 	}
 }
 
 func (g *grpclogFaker) Println(args ...interface{}) {
-	if g.log && g.logger.IsTrace() {
-		g.logger.Trace(fmt.Sprintln(args...))
+	if g.log && g.logger.IsDebug() {
+		g.logger.Debug(fmt.Sprintln(args...))
 	}
 }

@@ -1,0 +1,40 @@
+{{#linked-block
+  (concat
+    "vault.cluster.secrets.backend."
+    "credentials"
+    (if (not item.id) "-root")
+  )
+  item.backend
+  item.id
+  queryParams=(hash action="issue")
+  class="box is-sideless is-marginless"
+  data-test-secret-link=item.id
+  tagName="div"
+}}
+  <div class="columns is-mobile">
+    <div class="column is-10">
+      {{#link-to
+        (concat
+          "vault.cluster.secrets.backend."
+           "credentials"
+          (if (not item.id) "-root")
+        )
+        item.id
+        (query-params action="issue")
+        class="has-text-black has-text-weight-semibold"
+      }}
+      {{i-con
+        glyph="role"
+        size=14
+        class="has-text-grey-light is-pulled-left"
+      }}
+      <div class="role-item-details">
+        <span class="is-underline">{{if (eq item.id " ") "(self)" (or item.keyWithoutParent item.id)}}</span>
+      </div>
+      {{/link-to}}
+    </div>
+    <div class="column has-text-right">
+      {{partial "partials/role-pki/popup-menu"}}
+    </div>
+  </div>
+{{/linked-block}}

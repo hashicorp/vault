@@ -8,80 +8,99 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-// LeaseExtend returns an OperationFunc that can be used to simply extend the
-// lease of the auth/secret for the duration that was requested. The parameters
-// provided are used to determine the lease's new TTL value.
-//
-// backendIncrement is the backend's requested increment -- perhaps from a user
-// request, perhaps from a role/config value. If not set, uses the mount/system
-// value.
-//
-// backendMax is the backend's requested increment -- this can be more
-// restrictive than the mount/system value but not less.
-//
-// systemView is the system view from the calling backend, used to determine
-// and/or correct default/max times.
+// LeaseExtend is left for backwards compatibility for plugins. This function
+// now just passes back the data that was passed into it to be processed in core.
+// DEPRECATED
 func LeaseExtend(backendIncrement, backendMax time.Duration, systemView logical.SystemView) OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
-		var leaseOpts *logical.LeaseOptions
 		switch {
 		case req.Auth != nil:
-			leaseOpts = &req.Auth.LeaseOptions
+			req.Auth.TTL = backendIncrement
+			req.Auth.MaxTTL = backendMax
+			return &logical.Response{Auth: req.Auth}, nil
 		case req.Secret != nil:
-			leaseOpts = &req.Secret.LeaseOptions
+			req.Secret.TTL = backendIncrement
+			req.Secret.MaxTTL = backendMax
+			return &logical.Response{Secret: req.Secret}, nil
+		}
+		return nil, fmt.Errorf("no lease options for request")
+	}
+}
+
+// CalculateTTL takes all the user-specified, backend, and system inputs and calculates
+// a TTL for a lease
+func CalculateTTL(sysView logical.SystemView, increment, backendTTL, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (ttl time.Duration, warnings []string, errors error) {
+	// Truncate all times to the second since that is the lowest precision for
+	// TTLs
+	now := time.Now().Truncate(time.Second)
+	if startTime.IsZero() {
+		startTime = now
+	} else {
+		startTime = startTime.Truncate(time.Second)
+	}
+
+	// Use the mount's configured max unless the backend specifies
+	// something more restrictive (perhaps from a role configuration
+	// parameter)
+	maxTTL := sysView.MaxLeaseTTL()
+	if backendMaxTTL > 0 && backendMaxTTL < maxTTL {
+		maxTTL = backendMaxTTL
+	}
+	if explicitMaxTTL > 0 && explicitMaxTTL < maxTTL {
+		maxTTL = explicitMaxTTL
+	}
+
+	// Should never happen, but guard anyways
+	if maxTTL <= 0 {
+		return 0, nil, fmt.Errorf("max TTL must be greater than zero")
+	}
+
+	var maxValidTime time.Time
+	switch {
+	case period > 0:
+		// Cap the period value to the sys max_ttl value
+		if period > maxTTL {
+			warnings = append(warnings,
+				fmt.Sprintf("period of %q exceeded the effective max_ttl of %q; period value is capped accordingly", period, maxTTL))
+			period = maxTTL
+		}
+		ttl = period
+
+		if explicitMaxTTL > 0 {
+			maxValidTime = startTime.Add(explicitMaxTTL)
+		}
+	default:
+		switch {
+		case increment > 0:
+			ttl = increment
+		case backendTTL > 0:
+			ttl = backendTTL
 		default:
-			return nil, fmt.Errorf("no lease options for request")
-		}
-
-		// Use the mount's configured max unless the backend specifies
-		// something more restrictive (perhaps from a role configuration
-		// parameter)
-		max := systemView.MaxLeaseTTL()
-		if backendMax > 0 && backendMax < max {
-			max = backendMax
-		}
-
-		// Should never happen, but guard anyways
-		if max < 0 {
-			return nil, fmt.Errorf("max TTL is negative")
+			ttl = sysView.DefaultLeaseTTL()
 		}
 
 		// We cannot go past this time
-		maxValidTime := leaseOpts.IssueTime.Add(max)
+		maxValidTime = startTime.Add(maxTTL)
+	}
 
-		// Get the current time
-		now := time.Now()
+	if !maxValidTime.IsZero() {
+		// Determine the max valid TTL
+		maxValidTTL := maxValidTime.Sub(now)
 
 		// If we are past the max TTL, we shouldn't be in this function...but
 		// fast path out if we are
-		if maxValidTime.Before(now) {
-			return nil, fmt.Errorf("past the max TTL, cannot renew")
+		if maxValidTTL < 0 {
+			return 0, nil, fmt.Errorf("past the max TTL, cannot renew")
 		}
-
-		// Basic max safety checks have passed, now let's figure out our
-		// increment. We'll use the user-supplied value first, then backend-provided default if possible, or the
-		// mount/system default if not.
-		increment := leaseOpts.Increment
-		if increment <= 0 {
-			if backendIncrement > 0 {
-				increment = backendIncrement
-			} else {
-				increment = systemView.DefaultLeaseTTL()
-			}
-		}
-
-		// We are proposing a time of the current time plus the increment
-		proposedExpiration := now.Add(increment)
 
 		// If the proposed expiration is after the maximum TTL of the lease,
 		// cap the increment to whatever is left
-		if maxValidTime.Before(proposedExpiration) {
-			increment = maxValidTime.Sub(now)
+		if maxValidTTL-ttl < 0 {
+			warnings = append(warnings,
+				fmt.Sprintf("TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly", ttl, maxValidTTL))
+			ttl = maxValidTTL
 		}
-
-		// Set the lease
-		leaseOpts.TTL = increment
-
-		return &logical.Response{Auth: req.Auth, Secret: req.Secret}, nil
 	}
+
+	return ttl, warnings, nil
 }

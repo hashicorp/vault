@@ -1,0 +1,9 @@
+.footer {
+  border-top: $base-border;
+  padding: $size-3 1.5rem;
+
+  span:not(:first-child) {
+    display: inline-block;
+    padding: 0 0.5rem;
+  }
+}

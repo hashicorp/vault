@@ -1,0 +1,7 @@
+{{#if (eq  model.backendType "pki")}}
+  {{#if (eq model.section "cert")}}
+     {{config-pki-ca config=model onRefresh=onRefresh}}
+   {{else}}
+     {{config-pki config=model onRefresh=onRefresh section=model.section}}
+  {{/if}}
+{{/if}}

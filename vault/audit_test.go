@@ -12,13 +12,13 @@ import (
 	"errors"
 
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -432,7 +432,7 @@ func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 }
 
 func TestAuditBroker_LogRequest(t *testing.T) {
-	l := logformat.NewVaultLogger(log.LevelTrace)
+	l := logging.NewVaultLogger(log.Trace)
 	b := NewAuditBroker(l)
 	a1 := &NoopAudit{}
 	a2 := &NoopAudit{}
@@ -518,7 +518,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 }
 
 func TestAuditBroker_LogResponse(t *testing.T) {
-	l := logformat.NewVaultLogger(log.LevelTrace)
+	l := logging.NewVaultLogger(log.Trace)
 	b := NewAuditBroker(l)
 	a1 := &NoopAudit{}
 	a2 := &NoopAudit{}
@@ -622,7 +622,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 }
 
 func TestAuditBroker_AuditHeaders(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 	b := NewAuditBroker(logger)
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "headers/")

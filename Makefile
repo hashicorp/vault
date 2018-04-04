@@ -5,13 +5,15 @@ THIS_FILE := $(lastword $(MAKEFILE_LIST))
 TEST?=$$(go list ./... | grep -v /vendor/ | grep -v /integ)
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
+	github.com/elazarl/go-bindata-assetfs/... \
+	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
 	github.com/kardianos/govendor \
 	github.com/client9/misspell/cmd/misspell
 BUILD_TAGS?=vault
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
-GO_VERSION_MIN=1.9
+GO_VERSION_MIN=1.10
 
 default: dev
 
@@ -26,6 +28,8 @@ quickdev: prep
 	@CGO_ENABLED=0 go build -i -tags='$(BUILD_TAGS)' -o bin/vault
 dev: prep
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+dev-ui: prep
+	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS) ui' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
@@ -88,6 +92,29 @@ bootstrap:
 		go get -u $$tool; \
 	done
 
+static-assets:
+	@echo "--> Generating static assets"
+	@go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 ./pkg/web_ui/...
+	@mv bindata_assetfs.go http
+	@$(MAKE) -f $(THIS_FILE) fmt
+
+test-ember:
+	@echo "--> Installing JavaScript assets"
+	@cd ui && yarn install && bower install && yarn install phantomjs-prebuilt
+	@echo "--> Running ember tests"
+	@cd ui && node_modules/phantomjs-prebuilt/bin/phantomjs --version
+	@cd ui && npm test
+
+ember-dist:
+	@echo "--> Installing JavaScript assets"
+	@cd ui && yarn install && bower install --allow-root
+	@cd ui && npm rebuild node-sass
+	@echo "--> Building Ember application"
+	@cd ui && npm run build
+	@rm -rf ui/if-you-need-to-delete-this-open-an-issue-async-disk-cache
+
+static-dist: ember-dist static-assets
+
 proto:
 	protoc -I helper/forwarding -I vault -I ../../.. vault/*.proto --go_out=plugins=grpc:vault
 	protoc -I helper/storagepacker helper/storagepacker/types.proto --go_out=plugins=grpc:helper/storagepacker
@@ -130,4 +157,4 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin
+.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist static-dist

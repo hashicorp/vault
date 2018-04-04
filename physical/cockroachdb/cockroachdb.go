@@ -12,9 +12,9 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/cockroachdb/cockroach-go/crdb"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 
 	// CockroachDB uses the Postgres SQL driver
 	_ "github.com/lib/pq"
@@ -58,7 +58,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("cockroachdb: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 

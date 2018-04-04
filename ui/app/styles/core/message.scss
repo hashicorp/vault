@@ -1,0 +1,38 @@
+.message {
+  &.is-list {
+    margin: $size-10 0;
+  }
+
+  &.is-warning {
+    .message-body {
+      color: $dark-yellow;
+      padding: 0.75rem 1.25rem;
+    }
+  }
+
+  &.is-highlight {
+    background: $light-yellow;
+    .message-body {
+      border: none;
+      box-shadow: 0 0 0 1px $orange;
+      color: $dark-yellow;
+    }
+    .has-text-highlight,
+    .close-button {
+      color: $orange;
+    }
+    .title,
+    code {
+      background: none;
+      color: inherit;
+    }
+    .content .button {
+      border-color: $orange;
+      color: $dark-yellow;
+    }
+  }
+
+  .content {
+    margin-bottom: 0;
+  }
+}

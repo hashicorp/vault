@@ -30,10 +30,6 @@ var (
 	// PluginCACertPEMEnv is an ENV name used for holding a CA PEM-encoded
 	// string. Used for testing.
 	PluginCACertPEMEnv = "VAULT_TESTING_PLUGIN_CA_PEM"
-
-	// PluginMetadataModeEnv is an ENV name used to disable TLS communication
-	// to bootstrap mounting plugins.
-	PluginMetadataModeEnv = "VAULT_PLUGIN_METADATA_MODE"
 )
 
 // generateCert is used internally to create certificates for the plugin

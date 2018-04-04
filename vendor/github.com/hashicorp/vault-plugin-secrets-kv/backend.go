@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"path"
 	"sync"
 
@@ -116,6 +117,10 @@ func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logic
 				pathDestroy(b),
 			},
 			pathsDelete(b),
+
+			// Make sure this stays at the end so that the valid paths are
+			// processed first.
+			pathInvalid(b),
 		),
 	}
 
@@ -125,7 +130,20 @@ func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logic
 		return nil, err
 	}
 
-	if _, ok := conf.Config["upgrade"]; ok {
+	upgradeEntry, err := conf.StorageView.Get(ctx, path.Join(b.storagePrefix, "upgrading"))
+	if err != nil {
+		return nil, err
+	}
+
+	var upgradeInfo UpgradeInfo
+	if upgradeEntry != nil {
+		err := proto.Unmarshal(upgradeEntry.Value, &upgradeInfo)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if !upgradeInfo.Done {
 		err := b.Upgrade(ctx, conf.StorageView)
 		if err != nil {
 			return nil, err
@@ -133,6 +151,27 @@ func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logic
 	}
 
 	return b, nil
+}
+
+func pathInvalid(b *versionedKVBackend) []*framework.Path {
+	handler := func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		resp := &logical.Response{}
+		resp.AddWarning("Invalid path for a versioned K/V secrets engine. See the API docs for the appropriate API endpoints to use. If using the Vault CLI, try using 'vault kv' for operations on K/V secrets engine mounts.")
+		return logical.RespondWithStatusCode(resp, req, http.StatusNotFound)
+	}
+
+	return []*framework.Path{
+		&framework.Path{
+			Pattern: ".*",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: handler,
+				logical.CreateOperation: handler,
+				logical.ReadOperation:   handler,
+				logical.DeleteOperation: handler,
+				logical.ListOperation:   handler,
+			},
+		},
+	}
 }
 
 // Invalidate invalidates the salt and the policy so replication secondaries can

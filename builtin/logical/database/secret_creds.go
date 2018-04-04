@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -42,12 +43,6 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			return nil, fmt.Errorf("error during renew: could not find role with name %s", req.Secret.InternalData["role"])
 		}
 
-		f := framework.LeaseExtend(role.DefaultTTL, role.MaxTTL, b.System())
-		resp, err := f(ctx, req, data)
-		if err != nil {
-			return nil, err
-		}
-
 		// Get the Database object
 		db, err := b.GetConnection(ctx, req.Storage, role.DBName)
 		if err != nil {
@@ -58,13 +53,24 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		defer db.RUnlock()
 
 		// Make sure we increase the VALID UNTIL endpoint for this user.
-		if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
+		ttl, _, err := framework.CalculateTTL(b.System(), req.Secret.Increment, role.DefaultTTL, 0, role.MaxTTL, 0, req.Secret.IssueTime)
+		if err != nil {
+			return nil, err
+		}
+		if ttl > 0 {
+			expireTime := time.Now().Add(ttl)
+			// Adding a small buffer since the TTL will be calculated again after this call
+			// to ensure the database credential does not expire before the lease
+			expireTime = expireTime.Add(5 * time.Second)
 			err := db.RenewUser(ctx, role.Statements, username, expireTime)
 			if err != nil {
 				b.CloseIfShutdown(db, err)
 				return nil, err
 			}
 		}
+		resp := &logical.Response{Secret: req.Secret}
+		resp.Secret.TTL = role.DefaultTTL
+		resp.Secret.MaxTTL = role.MaxTTL
 		return resp, nil
 	}
 }

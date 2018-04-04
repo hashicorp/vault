@@ -89,26 +89,12 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		DisplayName: username,
 		LeaseOptions: logical.LeaseOptions{
 			TTL:       cfg.TTL,
+			MaxTTL:    cfg.MaxTTL,
 			Renewable: true,
 		},
 		Alias: &logical.Alias{
 			Name: username,
 		},
-	}
-
-	if resp.Auth.TTL == 0 {
-		resp.Auth.TTL = b.System().DefaultLeaseTTL()
-	}
-	if cfg.MaxTTL > 0 {
-		maxTTL := cfg.MaxTTL
-		if maxTTL > b.System().MaxLeaseTTL() {
-			maxTTL = b.System().MaxLeaseTTL()
-		}
-
-		if resp.Auth.TTL > maxTTL {
-			resp.Auth.TTL = maxTTL
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", resp.Auth.TTL, maxTTL))
-		}
 	}
 
 	for _, groupName := range groupNames {
@@ -141,10 +127,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
-	resp, err = framework.LeaseExtend(cfg.TTL, cfg.MaxTTL, b.System())(ctx, req, d)
-	if err != nil {
-		return nil, err
-	}
+	resp.Auth = req.Auth
+	resp.Auth.TTL = cfg.TTL
+	resp.Auth.MaxTTL = cfg.MaxTTL
 
 	// Remove old aliases
 	resp.Auth.GroupAliases = nil

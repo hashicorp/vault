@@ -105,6 +105,23 @@ func TestIdentityStore_GroupAliases_CRUD(t *testing.T) {
 		t.Fatalf("bad: group alias: %#v\n", resp.Data)
 	}
 
+	resp, err = i.HandleRequest(context.Background(), &logical.Request{
+		Path:      "group-alias/id/" + groupAliasID,
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":           "testupdatedgroupaliasname",
+			"mount_accessor": accessor,
+			"canonical_id":   groupID,
+			"mount_type":     "ldap",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v; resp: %#v", err, resp)
+	}
+	if resp.Data["id"].(string) != groupAliasID {
+		t.Fatalf("bad: group alias: %#v\n", resp.Data)
+	}
+
 	groupAliasReq.Operation = logical.DeleteOperation
 	resp, err = i.HandleRequest(context.Background(), groupAliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {

@@ -1,0 +1,28 @@
+{{#linked-block
+  (concat
+    "vault.cluster.secrets.backend."
+    (if item.isFolder "list" "show")
+    (if (not item.id) "-root")
+  )
+  item.id
+  class="box is-sideless is-marginless"
+  data-test-secret-link=item.id
+}}
+  <div class="columns is-mobile">
+    <div class="column is-10">
+      {{#secret-link
+        mode=(if item.isFolder "list" "show")
+        secret=item.id
+        class="has-text-black has-text-weight-semibold"
+      }}
+        {{i-con
+          glyph=(if item.isFolder 'folder' 'file')
+          size=14
+          class="has-text-grey-light"
+        }}{{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}
+      {{/secret-link}}
+    </div>
+    <div class="column has-text-right">
+    </div>
+  </div>
+{{/linked-block}}

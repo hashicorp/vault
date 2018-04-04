@@ -1,0 +1,64 @@
+<header class="page-header">
+  <div class="level">
+    <div class="level-left">
+      <h3 class="title is-3">
+        Wrap Data
+      </h3>
+    </div>
+  </div>
+</header>
+
+{{#if token}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="field">
+      <label for="wrap-info" class="is-label">Wrapping token</label>
+      <div class="control">
+        {{textarea
+          value=token
+          readonly=true
+          class="textarea"
+          id="wrap-info"
+          name="wrap-info"
+          data-test-tools-input="wrapping-token"
+        }}
+      </div>
+    </div>
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+     <div class="control">
+      {{#copy-button
+        clipboardText=token
+        class="button is-primary"
+        buttonType="button"
+        success=(action (set-flash-message 'Token copied!'))
+      }}
+        Copy
+      {{/copy-button}}
+    </div>
+    <div class="control">
+      <button {{action 'onClear'}} type="button" class="button">
+        Back
+      </button>
+    </div>
+  </div>
+{{else}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="field">
+      <label for="data" class="is-label">Data to wrap <span class="is-size-9 is-lowercase has-text-grey">(json-formatted)</span></label>
+      <div class="control">
+        {{json-editor
+          value=data
+          valueUpdated=(action "codemirrorUpdated")
+        }}
+      </div>
+    </div>
+  {{ttl-picker labelText='Wrap TTL' onChange=(action (mut wrapTTL))}}
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button type="submit" class="button is-primary" data-test-tools-submit="true" disabled={{buttonDisabled}}>
+        Wrap Data
+      </button>
+    </div>
+  </div>
+{{/if}}

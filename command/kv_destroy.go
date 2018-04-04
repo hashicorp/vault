@@ -93,7 +93,7 @@ func (c *KVDestroyCommand) Run(args []string) int {
 	}
 
 	data := map[string]interface{}{
-		"versions": c.flagVersions,
+		"versions": kvParseVersionsFlags(c.flagVersions),
 	}
 
 	client, err := c.Client()

@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync/atomic"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/helper/locksutil"
-	log "github.com/mgutz/logxi/v1"
 )
 
 const (
@@ -41,8 +41,8 @@ var _ Transactional = (*TransactionalCache)(nil)
 // NewCache returns a physical cache of the given size.
 // If no size is provided, the default size is used.
 func NewCache(b Backend, size int, logger log.Logger) *Cache {
-	if logger.IsTrace() {
-		logger.Trace("physical/cache: creating LRU cache", "size", size)
+	if logger.IsDebug() {
+		logger.Debug("creating LRU cache", "size", size)
 	}
 	if size <= 0 {
 		size = DefaultCacheSize

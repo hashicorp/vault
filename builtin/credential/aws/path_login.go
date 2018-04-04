@@ -809,6 +809,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				TTL:       roleEntry.TTL,
+				MaxTTL:    shortestMaxTTL,
 			},
 			Alias: &logical.Alias{
 				Name: identityDocParsed.InstanceID,
@@ -824,16 +825,6 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		// qualify here), callers should extract out the nonce from
 		// this field for reauthentication requests.
 		resp.Auth.Metadata["nonce"] = clientNonce
-	}
-
-	// In this case no role value was set so pull in what will be assigned by
-	// Core for comparison
-	if resp.Auth.TTL == 0 {
-		resp.Auth.TTL = b.System().DefaultLeaseTTL()
-	}
-	if resp.Auth.TTL > shortestMaxTTL {
-		resp.Auth.TTL = shortestMaxTTL
-		resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", resp.Auth.TTL, shortestMaxTTL))
 	}
 
 	return resp, nil
@@ -1025,17 +1016,11 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	// If a period is provided, set that as part of resp.Auth.Period and return a
-	// response immediately. Let expiration manager handle renewal from there on.
-	if roleEntry.Period > time.Duration(0) {
-		resp := &logical.Response{
-			Auth: req.Auth,
-		}
-		resp.Auth.Period = roleEntry.Period
-		return resp, nil
-	}
-
-	return framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(ctx, req, data)
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.TTL = roleEntry.TTL
+	resp.Auth.MaxTTL = roleEntry.MaxTTL
+	resp.Auth.Period = roleEntry.Period
+	return resp, nil
 }
 
 func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1115,17 +1100,11 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, d
 		return nil, err
 	}
 
-	// If a period is provided, set that as part of resp.Auth.Period and return a
-	// response immediately. Let expiration manager handle renewal from there on.
-	if roleEntry.Period > time.Duration(0) {
-		resp := &logical.Response{
-			Auth: req.Auth,
-		}
-		resp.Auth.Period = roleEntry.Period
-		return resp, nil
-	}
-
-	return framework.LeaseExtend(roleEntry.TTL, shortestMaxTTL, b.System())(ctx, req, data)
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.TTL = roleEntry.TTL
+	resp.Auth.MaxTTL = shortestMaxTTL
+	resp.Auth.Period = roleEntry.Period
+	return resp, nil
 }
 
 func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

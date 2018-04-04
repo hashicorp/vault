@@ -7,9 +7,12 @@ import (
 // LeaseOptions is an embeddable struct to capture common lease
 // settings between a Secret and Auth
 type LeaseOptions struct {
-	// Lease is the duration that this secret is valid for. Vault
+	// TTL is the duration that this secret is valid for. Vault
 	// will automatically revoke it after the duration.
 	TTL time.Duration `json:"lease"`
+
+	// MaxTTL is the maximum duration that this secret is valid for.
+	MaxTTL time.Duration `json:"max_ttl"`
 
 	// Renewable, if true, means that this secret can be renewed.
 	Renewable bool `json:"renewable"`

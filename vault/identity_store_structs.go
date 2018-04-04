@@ -4,13 +4,13 @@ import (
 	"regexp"
 	"sync"
 
+	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	log "github.com/mgutz/logxi/v1"
 )
 
 const (
@@ -52,10 +52,6 @@ type IdentityStore struct {
 	// to enable richer queries based on multiple indexes.
 	db *memdb.MemDB
 
-	// validateMountAccessorFunc is a utility from router which returns the
-	// properties of the mount given the mount accessor.
-	validateMountAccessorFunc func(string) *validateMountResponse
-
 	// entityLocks are a set of 256 locks to which all the entities will be
 	// categorized to while performing storage modifications.
 	entityLocks []*locksutil.LockEntry
@@ -73,6 +69,9 @@ type IdentityStore struct {
 	// groupPacker is used to pack multiple group storage entries into 256
 	// buckets
 	groupPacker *storagepacker.StoragePacker
+
+	// core is the pointer to Vault's core
+	core *Core
 }
 
 type groupDiff struct {

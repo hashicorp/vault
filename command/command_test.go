@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/logical/pki"
@@ -22,11 +23,10 @@ import (
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
-	logxi "github.com/mgutz/logxi/v1"
 )
 
 var (
-	defaultVaultLogger = logxi.NullLog
+	defaultVaultLogger = log.NewNullLogger()
 
 	defaultVaultCredentialBackends = map[string]logical.Factory{
 		"userpass": credUserpass.Factory,

@@ -1,0 +1,51 @@
+{{#if (eq model.httpStatus 404)}}
+  {{not-found model=model}}
+{{else}}
+  <header class="page-header">
+    <div class="level">
+      <div class="level-left">
+        <h1 class="title is-3 has-text-grey">
+          {{#if (eq model.httpStatus 403)}}
+            Not authorized
+          {{else}}
+            Error
+          {{/if}}
+        </h1>
+      </div>
+    </div>
+  </header>
+  <div class="box is-sideless has-background-white-bis has-text-grey has-text-centered">
+    {{#if (and
+      (eq model.httpStatus 403)
+      (eq model.policyPath 'sys/capabilities-self')
+      )
+    }}
+      <p>
+        Your auth token does not have access to <code>{{model.policyPath}}</code>. Vault Enterprise uses this endpoint to determine what actions are allowed in the interface.
+      </p>
+      <p>
+      Make sure the policy for the path <code>{{model.policyPath}}</code> includes <code>capabilities = ['update']</code>.
+      </p>
+    {{else if (and
+        (eq model.httpStatus 403)
+        (eq model.policyPath 'sys/mounts')
+      )
+    }}
+      <p data-test-sys-mounts-warning>
+      Your auth token does not have access to {{model.policyPath}}. This is necessary in order to browse secret backends.
+      </p>
+      <p>
+      Make sure the policy for the path <code>{{model.policyPath}}</code> has <code>capabilities = ['list', 'read']</code>.
+      </p>
+    {{else}}
+      {{#if model.message}}
+        <p>{{model.message}}</p>
+      {{/if}}
+      {{#each model.errors as |error|}}
+        <p>
+          {{error}}
+        </p>
+      {{/each}}
+    {{/if}}
+  </div>
+{{/if}}

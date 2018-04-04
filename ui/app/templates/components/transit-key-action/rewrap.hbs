@@ -1,0 +1,55 @@
+<form {{action 'doSubmit' (hash ciphertext=ciphertext context=context nonce=nonce key_version=key_version) on="submit"}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    {{key-version-select
+      key=key
+      onVersionChange=(action (mut key_version))
+      key_version=key_version
+    }}
+    <div class="field">
+      <label for="ciphertext" class="is-label">Ciphertext</label>
+      <div class="control is-expanded">
+        {{textarea name="ciphertext" class="textarea" id="ciphertext" value=ciphertext}}
+      </div>
+    </div>
+    {{#if key.derived}}
+      <div class="field">
+        <label for="context" class="is-label">
+          Context
+        </label>
+        <div class="field has-addons">
+          <div class="control">
+            {{input type="text" id="context" value=context class="input" data-test-transit-input="context"}}
+          </div>
+          <div class="control">
+            {{b64-toggle value=context data-test-transit-b64-toggle="context"}}
+          </div>
+        </div>
+      </div>
+    {{/if}}
+    {{#if (eq key.convergentEncryptionVersion 1)}}
+      <div class="field">
+        <label for="nonce" class="is-label">Nonce</label>
+        <div class="field has-addons">
+          <div class="control">
+            {{input type="text" id="nonce" value=nonce class="input" data-test-transit-input="nonce"}}
+          </div>
+          <div class="control">
+            {{b64-toggle value=nonce data-test-transit-b64-toggle="nonce"}}
+          </div>
+        </div>
+      </div>
+    {{/if}}
+  </div>
+  <div class="field box is-fullwidth is-bottomless">
+    <div class="content">
+      <p class="help">
+        Submitting this form will update the <code>ciphertext</code> in-place.
+      </p>
+    </div>
+    <div class="control">
+      <button type="submit" class="button is-primary">
+        Rewrap
+      </button>
+    </div>
+  </div>
+</form>

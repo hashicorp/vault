@@ -71,6 +71,10 @@ message Version {
 message UpgradeInfo {
 	// Started time is when the upgrade was started.
 	google.protobuf.Timestamp started_time = 1;
+
+	// done is set to true once the backend has been successfully
+	// upgraded. 
+	bool done = 2;
 }
 
 

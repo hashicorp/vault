@@ -1,0 +1,45 @@
+@mixin css-top-arrow($size, $color, $border-width, $border-color, $left: 50%, $left-offset: 0px) {
+  & {
+    border: 1px solid $border-color;
+  }
+
+  &:after,
+  &:before {
+    bottom: 100%;
+    border: solid transparent;
+    content: " ";
+    height: 0;
+    width: 0;
+    position: absolute;
+    pointer-events: none;
+  }
+
+  &:after {
+    border-color: rgba($color, 0);
+    border-bottom-color: $color;
+    border-width: $size;
+    left: calc(#{$left} + #{$left-offset});
+    margin-left: -$size;
+  }
+  &:before {
+    border-color: rgba($border-color, 0);
+    border-bottom-color: $border-color;
+    border-width: $size + round(1.41421356 * $border-width);
+    left: calc(#{$left} + #{$left-offset});
+    margin-left: -($size + round(1.41421356 * $border-width));
+  }
+
+  @at-root .ember-basic-dropdown-content--left#{&} {
+    &:after,
+    &:before {
+      left: auto;
+      right: calc(#{$left} + #{$left-offset} - #{$size});
+    }
+  }
+}
+
+@mixin vault-block {
+  &:not(:last-child) {
+    margin-bottom: (5/14) + 0rem;
+  }
+}
