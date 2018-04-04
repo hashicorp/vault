@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/go-multierror"
@@ -278,7 +279,7 @@ func (b *Backend) SanitizeTTLStr(ttlStr, maxTTLStr string) (ttl, maxTTL time.Dur
 	} else {
 		ttl, err = time.ParseDuration(ttlStr)
 		if err != nil {
-			return 0, 0, fmt.Errorf("Invalid ttl: %s", err)
+			return 0, 0, errwrap.Wrapf("invalid ttl: {{err}}", err)
 		}
 	}
 
@@ -287,7 +288,7 @@ func (b *Backend) SanitizeTTLStr(ttlStr, maxTTLStr string) (ttl, maxTTL time.Dur
 	} else {
 		maxTTL, err = time.ParseDuration(maxTTLStr)
 		if err != nil {
-			return 0, 0, fmt.Errorf("Invalid max_ttl: %s", err)
+			return 0, 0, errwrap.Wrapf("invalid max_ttl: {{err}}", err)
 		}
 	}
 
@@ -301,10 +302,10 @@ func (b *Backend) SanitizeTTLStr(ttlStr, maxTTLStr string) (ttl, maxTTL time.Dur
 func (b *Backend) SanitizeTTL(ttl, maxTTL time.Duration) (time.Duration, time.Duration, error) {
 	sysMaxTTL := b.System().MaxLeaseTTL()
 	if ttl > sysMaxTTL {
-		return 0, 0, fmt.Errorf("\"ttl\" value must be less than allowed max lease TTL value '%s'", sysMaxTTL.String())
+		return 0, 0, fmt.Errorf("ttl value must be less than allowed max lease TTL value %q", sysMaxTTL.String())
 	}
 	if maxTTL > sysMaxTTL {
-		return 0, 0, fmt.Errorf("\"max_ttl\" value must be less than allowed max lease TTL value '%s'", sysMaxTTL.String())
+		return 0, 0, fmt.Errorf("max_ttl value must be less than allowed max lease TTL value %q", sysMaxTTL.String())
 	}
 	if ttl > maxTTL && maxTTL != 0 {
 		ttl = maxTTL
@@ -436,8 +437,7 @@ func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (
 	case logical.RevokeOperation:
 		return secret.HandleRevoke(ctx, req)
 	default:
-		return nil, fmt.Errorf(
-			"invalid operation for revoke/renew: %s", req.Operation)
+		return nil, fmt.Errorf("invalid operation for revoke/renew: %q", req.Operation)
 	}
 }
 
@@ -504,8 +504,7 @@ func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (
 		// Attempt a WAL rollback
 		err = b.WALRollback(ctx, req, entry.Kind, entry.Data)
 		if err != nil {
-			err = fmt.Errorf(
-				"Error rolling back '%s' entry: %s", entry.Kind, err)
+			err = errwrap.Wrapf(fmt.Sprintf("error rolling back %q entry: {{err}}", entry.Kind), err)
 		}
 		if err == nil {
 			err = DeleteWAL(ctx, req.Storage, k)
