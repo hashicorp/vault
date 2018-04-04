@@ -29,7 +29,7 @@ export default Ember.Component.extend({
 
   hasCSPError: computed.alias('csp.connectionViolations.firstObject'),
 
-  cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the the active node to use the Vault UI.`,
+  cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`,
 
   handleError(e) {
     this.set('loading', false);

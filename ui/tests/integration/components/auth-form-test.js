@@ -28,7 +28,7 @@ moduleForComponent('auth-form', 'Integration | Component | auth form', {
   },
 });
 
-const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the the active node to use the Vault UI.`;
+const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
 test('it renders error on CSP violation', function(assert) {
   this.register('service:auth', authService);
   this.inject.service('auth');
