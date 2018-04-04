@@ -58,11 +58,6 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 		}
 	}
 
-	ttl := lease.Lease
-	if ttl == 0 || (lease.LeaseMax > 0 && ttl > lease.LeaseMax) {
-		ttl = lease.LeaseMax
-	}
-
 	// Generate the username, password and expiration. PG limits user to 63 characters
 	displayName := req.DisplayName
 	if len(displayName) > 26 {
@@ -77,6 +72,11 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 		username = username[:63]
 	}
 	password, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+
+	ttl, _, err := framework.CalculateTTL(b.System(), 0, lease.Lease, 0, lease.LeaseMax, 0, time.Time{})
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,8 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 		"username": username,
 		"role":     name,
 	})
-	resp.Secret.TTL = ttl
+	resp.Secret.TTL = lease.Lease
+	resp.Secret.MaxTTL = lease.LeaseMax
 	return resp, nil
 }
 

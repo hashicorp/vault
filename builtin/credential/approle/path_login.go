@@ -75,6 +75,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		LeaseOptions: logical.LeaseOptions{
 			Renewable: true,
 			TTL:       role.TokenTTL,
+			MaxTTL:    role.TokenMaxTTL,
 		},
 		Alias: &logical.Alias{
 			Name: role.RoleID,

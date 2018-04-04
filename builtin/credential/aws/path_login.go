@@ -1308,28 +1308,12 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				TTL:       roleEntry.TTL,
+				MaxTTL:    roleEntry.MaxTTL,
 			},
 			Alias: &logical.Alias{
 				Name: callerUniqueId,
 			},
 		},
-	}
-
-	if resp.Auth.TTL == 0 {
-		resp.Auth.TTL = b.System().DefaultLeaseTTL()
-	}
-	if roleEntry.MaxTTL > time.Duration(0) {
-		// Cap maxTTL to the sysview's max TTL
-		maxTTL := roleEntry.MaxTTL
-		if maxTTL > b.System().MaxLeaseTTL() {
-			maxTTL = b.System().MaxLeaseTTL()
-		}
-
-		// Cap TTL to MaxTTL
-		if resp.Auth.TTL > maxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", resp.Auth.TTL, maxTTL))
-			resp.Auth.TTL = maxTTL
-		}
 	}
 
 	return resp, nil
