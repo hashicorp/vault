@@ -42,15 +42,15 @@ func pathUsers(b *backend) *framework.Path {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies",
 			},
+
 			"ttl": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Default:     "",
-				Description: "The lease duration which decides login expiration",
+				Type:        framework.TypeDurationSecond,
+				Description: "Duration after which authentication will be expired",
 			},
+
 			"max_ttl": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Default:     "",
-				Description: "Maximum duration after which login should expire",
+				Type:        framework.TypeDurationSecond,
+				Description: "Maximum duration after which authentication will be expired",
 			},
 		},
 
@@ -167,19 +167,18 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 		userEntry.Policies = policyutil.ParsePolicies(policiesRaw)
 	}
 
-	ttlStr := userEntry.TTL.String()
-	if ttlStrRaw, ok := d.GetOk("ttl"); ok {
-		ttlStr = ttlStrRaw.(string)
+	ttl, ok := d.GetOk("ttl")
+	if ok {
+		userEntry.TTL = time.Duration(ttl.(int)) * time.Second
+	} else if req.Operation == logical.CreateOperation {
+		userEntry.TTL = time.Duration(d.Get("ttl").(int)) * time.Second
 	}
 
-	maxTTLStr := userEntry.MaxTTL.String()
-	if maxTTLStrRaw, ok := d.GetOk("max_ttl"); ok {
-		maxTTLStr = maxTTLStrRaw.(string)
-	}
-
-	userEntry.TTL, userEntry.MaxTTL, err = b.SanitizeTTLStr(ttlStr, maxTTLStr)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
+	maxTTL, ok := d.GetOk("max_ttl")
+	if ok {
+		userEntry.MaxTTL = time.Duration(maxTTL.(int)) * time.Second
+	} else if req.Operation == logical.CreateOperation {
+		userEntry.MaxTTL = time.Duration(d.Get("max_ttl").(int)) * time.Second
 	}
 
 	return nil, b.setUser(ctx, req.Storage, username, userEntry)
