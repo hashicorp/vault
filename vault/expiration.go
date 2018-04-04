@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 	"sync"
@@ -77,6 +78,8 @@ type ExpirationManager struct {
 	coreStateLock     *sync.RWMutex
 	quitContext       context.Context
 	leaseCheckCounter uint32
+
+	logLeaseExpirations bool
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -99,6 +102,8 @@ func NewExpirationManager(c *Core, view *BarrierView, logger log.Logger) *Expira
 		coreStateLock:     &c.stateLock,
 		quitContext:       c.activeContext,
 		leaseCheckCounter: 0,
+
+		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
 	}
 
 	if exp.logger == nil {
@@ -524,7 +529,7 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 	}
 	m.pendingLock.Unlock()
 
-	if m.logger.IsInfo() {
+	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
 		m.logger.Info("revoked lease", "lease_id", leaseID)
 	}
 
