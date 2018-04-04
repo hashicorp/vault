@@ -170,15 +170,11 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 	ttl, ok := d.GetOk("ttl")
 	if ok {
 		userEntry.TTL = time.Duration(ttl.(int)) * time.Second
-	} else if req.Operation == logical.CreateOperation {
-		userEntry.TTL = time.Duration(d.Get("ttl").(int)) * time.Second
 	}
 
 	maxTTL, ok := d.GetOk("max_ttl")
 	if ok {
 		userEntry.MaxTTL = time.Duration(maxTTL.(int)) * time.Second
-	} else if req.Operation == logical.CreateOperation {
-		userEntry.MaxTTL = time.Duration(d.Get("max_ttl").(int)) * time.Second
 	}
 
 	return nil, b.setUser(ctx, req.Storage, username, userEntry)
