@@ -96,6 +96,8 @@ BUG FIXES:
  * ui: Fixed the link that gets rendered when a user doesn't have permissions 
    to view the root of a secret engine. The link now sends them back to the list
    of secret engines.
+ * replication: Fix issue with DR secondaries when using mount specified local 
+   paths.
 
 ## 0.9.6 (March 20th, 2018)
 
