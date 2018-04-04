@@ -262,7 +262,7 @@ func (c *ZooKeeperBackend) Delete(ctx context.Context, key string) error {
 
 	// Mask if the node does not exist
 	if err != nil && err != zk.ErrNoNode {
-		return fmt.Errorf("Failed to remove %q: %v", fullPath, err)
+		return errwrap.Wrapf(fmt.Sprintf("failed to remove %q: {{err}}", fullPath), err)
 	}
 
 	err = c.cleanupLogicalPath(key)
@@ -378,7 +378,7 @@ func (i *ZooKeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 	// Watch for Events which could result in loss of our zkLock and close(i.leaderCh)
 	currentVal, _, lockeventCh, err := i.in.client.GetW(lockpath)
 	if err != nil {
-		return nil, fmt.Errorf("unable to watch HA lock: %v", err)
+		return nil, errwrap.Wrapf("unable to watch HA lock: {{err}}", err)
 	}
 	if i.value != string(currentVal) {
 		return nil, fmt.Errorf("lost HA lock immediately before watch")

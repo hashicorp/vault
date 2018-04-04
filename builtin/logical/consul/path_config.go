@@ -47,7 +47,7 @@ func readConfigAccess(ctx context.Context, storage logical.Storage) (*accessConf
 		return nil, nil, err
 	}
 	if entry == nil {
-		return nil, fmt.Errorf("access credentials for the backend itself haven't been configured. Please configure them at the '/config/access' endpoint"), nil
+		return nil, fmt.Errorf("access credentials for the backend itself haven't been configured; please configure them at the '/config/access' endpoint"), nil
 	}
 
 	conf := &accessConfig{}

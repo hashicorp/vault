@@ -140,7 +140,7 @@ func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request
 
 func (b *CubbyholeBackend) handleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if req.ClientToken == "" {
-		return nil, fmt.Errorf("cubbyhole delete: client token empty")
+		return nil, fmt.Errorf("client token empty")
 	}
 	// Delete the key at the request path
 	if err := req.Storage.Delete(ctx, req.ClientToken+"/"+req.Path); err != nil {
@@ -152,7 +152,7 @@ func (b *CubbyholeBackend) handleDelete(ctx context.Context, req *logical.Reques
 
 func (b *CubbyholeBackend) handleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if req.ClientToken == "" {
-		return nil, fmt.Errorf("cubbyhole list: client token empty")
+		return nil, fmt.Errorf("client token empty")
 	}
 
 	// Right now we only handle directories, so ensure it ends with / We also

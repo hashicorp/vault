@@ -641,7 +641,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 
 	sysView := m.router.MatchingSystemView(le.Path)
 	if sysView == nil {
-		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
+		return nil, fmt.Errorf("unable to retrieve system view from router")
 	}
 
 	// Attempt to renew the entry
@@ -772,7 +772,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 
 	sysView := m.router.MatchingSystemView(le.Path)
 	if sysView == nil {
-		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
+		return nil, fmt.Errorf("unable to retrieve system view from router")
 	}
 
 	ttl, warnings, err := framework.CalculateTTL(sysView, increment, resp.Auth.TTL, resp.Auth.Period, resp.Auth.MaxTTL, resp.Auth.ExplicitMaxTTL, le.IssueTime)
@@ -810,7 +810,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	defer metrics.MeasureSince([]string{"expire", "register"}, time.Now())
 
 	if req.ClientToken == "" {
-		return "", fmt.Errorf("expiration: cannot register a lease with an empty client token")
+		return "", fmt.Errorf("cannot register a lease with an empty client token")
 	}
 
 	// Ignore if there is no leased secret
@@ -888,11 +888,11 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
 
 	if auth.ClientToken == "" {
-		return fmt.Errorf("expiration: cannot register an auth lease with an empty token")
+		return fmt.Errorf("cannot register an auth lease with an empty token")
 	}
 
 	if strings.Contains(source, "..") {
-		return fmt.Errorf("expiration: %q", consts.ErrPathContainsParentReferences)
+		return consts.ErrPathContainsParentReferences
 	}
 
 	saltedID, err := m.tokenStore.SaltID(m.quitContext, auth.ClientToken)

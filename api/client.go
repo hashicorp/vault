@@ -232,7 +232,7 @@ func (c *Config) ReadEnvironment() error {
 	if t := os.Getenv(EnvVaultClientTimeout); t != "" {
 		clientTimeout, err := parseutil.ParseDurationSecond(t)
 		if err != nil {
-			return fmt.Errorf("could not parse %s", EnvVaultClientTimeout)
+			return fmt.Errorf("could not parse %q", EnvVaultClientTimeout)
 		}
 		envClientTimeout = clientTimeout
 	}

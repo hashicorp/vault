@@ -147,7 +147,7 @@ func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
 
 	list, ok := root.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("ssh_helper: error parsing config: file doesn't contain a root object")
+		return nil, fmt.Errorf("error parsing config: file doesn't contain a root object")
 	}
 
 	valid := []string{
@@ -171,7 +171,7 @@ func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
 	}
 
 	if c.VaultAddr == "" {
-		return nil, fmt.Errorf("ssh_helper: missing config 'vault_addr'")
+		return nil, fmt.Errorf("missing config 'vault_addr'")
 	}
 	return &c, nil
 }

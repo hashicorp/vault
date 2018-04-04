@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/password"
@@ -256,7 +257,7 @@ func (c *OperatorGenerateRootCommand) verifyOTP(otp string) error {
 	}
 	otpBytes, err := base64.StdEncoding.DecodeString(otp)
 	if err != nil {
-		return fmt.Errorf("error decoding base64 OTP value: %s", err)
+		return errwrap.Wrapf("error decoding base64 OTP value: {{err}}", err)
 	}
 	if otpBytes == nil || len(otpBytes) != 16 {
 		return fmt.Errorf("decoded OTP value is invalid or wrong length")
