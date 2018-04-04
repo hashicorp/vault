@@ -101,12 +101,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/hashicorp/golang-math-big"
-  packages = ["big"]
-  revision = "561262b71329a2a771294d66accacab6b598b37b"
-
-[[projects]]
-  branch = "master"
   name = "github.com/hashicorp/hcl"
   packages = [
     ".",
@@ -122,7 +116,7 @@
   revision = "f40e974e75af4e271d97ce0fc917af5898ae7bda"
 
 [[projects]]
-  branch = "0.10-beta"
+  branch = "master"
   name = "github.com/hashicorp/vault"
   packages = [
     "api",
@@ -134,8 +128,7 @@
     "helper/kdf",
     "helper/keysutil",
     "helper/locksutil",
-    "helper/logbridge",
-    "helper/logformat",
+    "helper/logging",
     "helper/mlock",
     "helper/parseutil",
     "helper/pluginutil",
@@ -150,37 +143,13 @@
     "physical/inmem",
     "version"
   ]
-  revision = "44aa151b78976c6da41dc63d93b40d2070b23277"
+  revision = "205c40489422f350b58e3d57b242fe8e6e36134a"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/yamux"
   packages = ["."]
   revision = "2658be15c5f05e76244154714161f17e3e77de2e"
-
-[[projects]]
-  name = "github.com/mattn/go-colorable"
-  packages = ["."]
-  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
-  version = "v0.0.9"
-
-[[projects]]
-  name = "github.com/mattn/go-isatty"
-  packages = ["."]
-  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
-  version = "v0.0.3"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/mgutz/ansi"
-  packages = ["."]
-  revision = "9520e82c474b0a04dd04f8a40959027271bab992"
-
-[[projects]]
-  name = "github.com/mgutz/logxi"
-  packages = ["v1"]
-  revision = "aebf8a7d67ab4625e0fd4a665766fef9a709161b"
-  version = "v1"
 
 [[projects]]
   branch = "master"
@@ -313,6 +282,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "591b8e75e4f2b6f6f2ea3ae177e4947e604378404813fa5046c7d3b47c3fb05c"
+  inputs-digest = "b931a497c04b2b7fccc2f3962172d83debc80221239075635e829449f433fdd0"
   solver-name = "gps-cdcl"
   solver-version = 1

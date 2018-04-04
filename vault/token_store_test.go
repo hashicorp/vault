@@ -59,11 +59,11 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	saltedId, err := ts.SaltID(context.Background(), entry.ID)
+	saltedID, err := ts.SaltID(context.Background(), entry.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := lookupPrefix + saltedId
+	path := lookupPrefix + saltedID
 	le := &logical.StorageEntry{
 		Key:   path,
 		Value: enc,
@@ -2381,7 +2381,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		}
 		ttl = resp.Data["ttl"].(int64)
 		if ttl > 8 {
-			t.Fatalf("TTL too large")
+			t.Fatalf("TTL too large: %d", ttl)
 		}
 
 		// Renewing should not have the increment increase since we've hit the
@@ -2596,9 +2596,10 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		if ttl > 10 {
 			t.Fatalf("TTL too big")
 		}
+		// explicit max ttl is stored in the role so not returned here
 		maxTTL := resp.Data["explicit_max_ttl"].(int64)
-		if maxTTL != 10 {
-			t.Fatalf("expected 6 for explicit max TTL, got %d", maxTTL)
+		if maxTTL != 0 {
+			t.Fatalf("expected 0 for explicit max TTL, got %d", maxTTL)
 		}
 
 		// Let the TTL go down a bit to ~7 seconds (8 against explicit max)
@@ -2622,7 +2623,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		}
 		ttl = resp.Data["ttl"].(int64)
 		if ttl > 8 {
-			t.Fatalf("TTL too big")
+			t.Fatalf("TTL too big: %d", ttl)
 		}
 
 		// Let the TTL go down a bit more to ~5 seconds (6 against explicit max)
@@ -2755,7 +2756,92 @@ func TestTokenStore_Periodic(t *testing.T) {
 		}
 	}
 
-	// Do the same with an explicit max TTL
+	// Now we create a token against the role and also set the te value
+	// directly. We should use the smaller of the two and be able to renew;
+	// increment should be ignored as well.
+	{
+		req.ClientToken = root
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/create/test"
+		req.Data = map[string]interface{}{
+			"period": 5,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+		if resp == nil {
+			t.Fatal("response was nil")
+		}
+		if resp.Auth == nil {
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+		}
+		if resp.Auth.ClientToken == "" {
+			t.Fatalf("bad: %#v", resp)
+		}
+
+		req.ClientToken = resp.Auth.ClientToken
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl := resp.Data["ttl"].(int64)
+		if ttl < 4 || ttl > 5 {
+			t.Fatalf("TTL bad (expected %d, got %d)", 4, ttl)
+		}
+
+		// Let the TTL go down a bit
+		time.Sleep(2 * time.Second)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		req.Data = map[string]interface{}{
+			"increment": 1,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl = resp.Data["ttl"].(int64)
+		if ttl > 5 {
+			t.Fatalf("TTL bad (expected less than %d, got %d)", 5, ttl)
+		}
+	}
+}
+
+func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
+	core, _, _, root := TestCoreWithTokenStore(t)
+
+	core.defaultLeaseTTL = 10 * time.Second
+	core.maxLeaseTTL = 10 * time.Second
+
+	// Note: these requests are sent to Core since Core handles registration
+	// with the expiration manager and we need the storage to be consistent
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"period": 5,
+	}
+
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	// First make one directly and verify on renew it uses the period.
 	{
 		req.ClientToken = root
 		req.Operation = logical.UpdateOperation
@@ -2818,65 +2904,6 @@ func TestTokenStore_Periodic(t *testing.T) {
 	// Now we create a token against the role and also set the te value
 	// directly. We should use the smaller of the two and be able to renew;
 	// increment should be ignored as well.
-	{
-		req.ClientToken = root
-		req.Operation = logical.UpdateOperation
-		req.Path = "auth/token/create/test"
-		req.Data = map[string]interface{}{
-			"period": 5,
-		}
-		resp, err = core.HandleRequest(req)
-		if err != nil {
-			t.Fatalf("err: %v %v", err, resp)
-		}
-		if resp == nil {
-			t.Fatal("response was nil")
-		}
-		if resp.Auth == nil {
-			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
-		}
-		if resp.Auth.ClientToken == "" {
-			t.Fatalf("bad: %#v", resp)
-		}
-
-		req.ClientToken = resp.Auth.ClientToken
-		req.Operation = logical.ReadOperation
-		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		ttl := resp.Data["ttl"].(int64)
-		if ttl < 4 || ttl > 5 {
-			t.Fatalf("TTL bad (expected %d, got %d)", 4, ttl)
-		}
-
-		// Let the TTL go down a bit
-		time.Sleep(2 * time.Second)
-
-		req.Operation = logical.UpdateOperation
-		req.Path = "auth/token/renew-self"
-		req.Data = map[string]interface{}{
-			"increment": 1,
-		}
-		resp, err = core.HandleRequest(req)
-		if err != nil {
-			t.Fatalf("err: %v %v", err, resp)
-		}
-
-		req.Operation = logical.ReadOperation
-		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		ttl = resp.Data["ttl"].(int64)
-		if ttl > 5 {
-			t.Fatalf("TTL bad (expected less than %d, got %d)", 5, ttl)
-		}
-	}
-
-	// Now do the same, also using an explicit max in the role
 	{
 		req.Path = "auth/token/roles/test"
 		req.ClientToken = root

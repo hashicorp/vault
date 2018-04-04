@@ -48,7 +48,9 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 		return nil, errwrap.Wrapf("unable to load role: {{err}}", err)
 	}
 
-	return framework.LeaseExtend(role.Lease, 0, b.System())(ctx, req, d)
+	resp := &logical.Response{Secret: req.Secret}
+	resp.Secret.TTL = role.Lease
+	return resp, nil
 }
 
 func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

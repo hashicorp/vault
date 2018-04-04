@@ -3,14 +3,11 @@ package gcpsecrets
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"time"
-)
-
-const (
-	cfgReadWarning = "omitted sensitive credentials from read output"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -55,7 +52,6 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 			"ttl":     int64(cfg.TTL / time.Second),
 			"max_ttl": int64(cfg.MaxTTL / time.Second),
 		},
-		Warnings: []string{cfgReadWarning},
 	}, nil
 }
 

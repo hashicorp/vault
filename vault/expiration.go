@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 )
 
 const (
@@ -638,21 +639,36 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 		return logical.ErrorResponse("lease does not correspond to a secret"), nil
 	}
 
+	sysView := m.router.MatchingSystemView(le.Path)
+	if sysView == nil {
+		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
+	}
+
 	// Attempt to renew the entry
 	resp, err := m.renewEntry(le, increment)
 	if err != nil {
 		return nil, err
 	}
-
-	// Fast-path if there is no lease
-	if resp == nil || resp.Secret == nil || !resp.Secret.LeaseEnabled() {
-		return resp, nil
+	if resp == nil {
+		return nil, nil
+	}
+	if resp.IsError() {
+		return &logical.Response{
+			Data: resp.Data,
+		}, nil
+	}
+	if resp.Secret == nil {
+		return nil, nil
 	}
 
-	// Validate the lease
-	if err := resp.Secret.Validate(); err != nil {
+	ttl, warnings, err := framework.CalculateTTL(sysView, increment, resp.Secret.TTL, 0, resp.Secret.MaxTTL, 0, le.IssueTime)
+	if err != nil {
 		return nil, err
 	}
+	for _, warning := range warnings {
+		resp.AddWarning(warning)
+	}
+	resp.Secret.TTL = ttl
 
 	// Attach the LeaseID
 	resp.Secret.LeaseID = leaseID
@@ -742,21 +758,16 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	if err != nil {
 		return nil, err
 	}
-
 	if resp == nil {
 		return nil, nil
 	}
-
 	if resp.IsError() {
 		return &logical.Response{
 			Data: resp.Data,
 		}, nil
 	}
-
-	if resp.Auth == nil || !resp.Auth.LeaseEnabled() {
-		return &logical.Response{
-			Auth: resp.Auth,
-		}, nil
+	if resp.Auth == nil {
+		return nil, nil
 	}
 
 	sysView := m.router.MatchingSystemView(le.Path)
@@ -764,29 +775,18 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
 	}
 
-	retResp := &logical.Response{}
-	switch {
-	case resp.Auth.Period > time.Duration(0):
-		// If it resp.Period is non-zero, use that as the TTL and override backend's
-		// call on TTL modification, such as a TTL value determined by
-		// framework.LeaseExtend call against the request. Also, cap period value to
-		// the sys/mount max value.
-		if resp.Auth.Period > sysView.MaxLeaseTTL() {
-			retResp.AddWarning(fmt.Sprintf("Period of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", int64(resp.Auth.TTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
-			resp.Auth.Period = sysView.MaxLeaseTTL()
-		}
-		resp.Auth.TTL = resp.Auth.Period
-	case resp.Auth.TTL > time.Duration(0):
-		// Cap TTL value to the sys/mount max value
-		if resp.Auth.TTL > sysView.MaxLeaseTTL() {
-			retResp.AddWarning(fmt.Sprintf("TTL of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", int64(resp.Auth.TTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
-			resp.Auth.TTL = sysView.MaxLeaseTTL()
-		}
+	ttl, warnings, err := framework.CalculateTTL(sysView, increment, resp.Auth.TTL, resp.Auth.Period, resp.Auth.MaxTTL, resp.Auth.ExplicitMaxTTL, le.IssueTime)
+	if err != nil {
+		return nil, err
 	}
+	retResp := &logical.Response{}
+	for _, warning := range warnings {
+		retResp.AddWarning(warning)
+	}
+	resp.Auth.TTL = ttl
 
 	// Attach the ClientToken
 	resp.Auth.ClientToken = token
-	resp.Auth.Increment = 0
 
 	// Update the lease entry
 	le.Auth = resp.Auth
@@ -898,12 +898,6 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 	saltedID, err := m.tokenStore.SaltID(m.quitContext, auth.ClientToken)
 	if err != nil {
 		return err
-	}
-
-	// If it resp.Period is non-zero, override the TTL value determined
-	// by the backend.
-	if auth.Period > time.Duration(0) {
-		auth.TTL = auth.Period
 	}
 
 	// Create a lease entry
@@ -1067,7 +1061,6 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 	secret.IssueTime = le.IssueTime
 	secret.Increment = increment
 	secret.LeaseID = ""
-
 	req := logical.RenewRequest(le.Path, &secret, le.Data)
 	resp, err := m.router.Route(m.quitContext, req)
 	if err != nil || (resp != nil && resp.IsError()) {

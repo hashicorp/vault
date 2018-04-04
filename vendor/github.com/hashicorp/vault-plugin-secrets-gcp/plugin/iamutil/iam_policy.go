@@ -2,6 +2,7 @@ package iamutil
 
 import (
 	"fmt"
+
 	"github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util"
 )
 

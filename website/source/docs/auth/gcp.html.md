@@ -127,7 +127,7 @@ management tool.
     ```text
     $ vault write auth/gcp/role/dev-role \
         type="iam" \
-        project="project-123456" \
+        project_id="project-123456" \
         policies="prod,dev" \
         service_accounts="serviceaccount1@project1234.iam.gserviceaccount.com,uuid123,..."
     ```
@@ -167,7 +167,7 @@ management tool.
     $ curl \
         --header "X-Vault-Token: ..." \
         --request POST \
-        --data '{"type": "iam", "project": "project-123456", ...}' \
+        --data '{"type": "iam", "project_id": "project-123456", ...}' \
         http://127.0.0.1:8200/v1/auth/gcp/role/dev-role
     ```
 

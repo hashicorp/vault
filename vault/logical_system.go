@@ -2125,8 +2125,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			return handleError(err)
 		}
 
-		// Another special case to trigger the upgrade path if we are enabling
-		// versioning for the first time.
+		// Another special case to add a warning if we are going to be
+		// upgrading.
 		oldVersioned, err := parseutil.ParseBool(oldVal["versioned"])
 		if err != nil {
 			return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
@@ -2134,12 +2134,10 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		if !oldVersioned && optVersioned {
 			resp = &logical.Response{}
 			resp.AddWarning("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly.")
-			mountEntry.Options["upgrade"] = "true"
 		}
 
+		// Reload the backend to kick off the upgrade process.
 		b.Core.reloadBackendCommon(ctx, mountEntry, strings.HasPrefix(path, credentialRoutePrefix))
-
-		delete(mountEntry.Options, "upgrade")
 	}
 
 	return resp, nil

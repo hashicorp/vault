@@ -147,7 +147,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, fmt.Errorf("policies do not match")
 	}
 
-	return framework.LeaseExtend(0, 0, b.System())(ctx, req, d)
+	return &logical.Response{Auth: req.Auth}, nil
 }
 
 func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, appId, userId string) (string, *logical.Response, error) {

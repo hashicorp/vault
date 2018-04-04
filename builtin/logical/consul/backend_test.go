@@ -206,7 +206,6 @@ func TestBackend_renew_revoke(t *testing.T) {
 	}
 
 	generatedSecret := resp.Secret
-	generatedSecret.IssueTime = time.Now()
 	generatedSecret.TTL = 6 * time.Hour
 
 	var d struct {

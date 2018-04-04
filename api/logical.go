@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 
@@ -51,6 +52,17 @@ func (c *Logical) Read(path string) (*Secret, error) {
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
+		secret, err := ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
 		return nil, nil
 	}
 	if err != nil {
@@ -71,6 +83,17 @@ func (c *Logical) List(path string) (*Secret, error) {
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
+		secret, err := ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
 		return nil, nil
 	}
 	if err != nil {
@@ -90,6 +113,20 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 	if resp != nil {
 		defer resp.Body.Close()
 	}
+	if resp != nil && resp.StatusCode == 404 {
+		secret, err := ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -106,6 +143,20 @@ func (c *Logical) Delete(path string) (*Secret, error) {
 	resp, err := c.c.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
+	}
+	if resp != nil && resp.StatusCode == 404 {
+		secret, err := ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
+		return nil, nil
 	}
 	if err != nil {
 		return nil, err
@@ -139,10 +190,11 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if err != nil {
-		if resp != nil && resp.StatusCode != 404 {
-			return nil, err
-		}
+
+	// Return all errors except those that are from a 404 as we handle the not
+	// found error as a special case.
+	if err != nil && (resp == nil || resp.StatusCode != 404) {
+		return nil, err
 	}
 	if resp == nil {
 		return nil, nil

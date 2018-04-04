@@ -52,8 +52,10 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 		lease = &configLease{}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
-	return f(ctx, req, d)
+	resp := &logical.Response{Secret: req.Secret}
+	resp.Secret.TTL = lease.Lease
+	resp.Secret.MaxTTL = lease.LeaseMax
+	return resp, nil
 }
 
 func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

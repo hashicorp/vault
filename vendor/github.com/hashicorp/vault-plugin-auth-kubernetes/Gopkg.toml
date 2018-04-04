@@ -42,10 +42,6 @@
   branch = "master"
 
 [[constraint]]
-  name = "github.com/mgutz/logxi"
-  version = "1.0.0"
-
-[[constraint]]
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
 

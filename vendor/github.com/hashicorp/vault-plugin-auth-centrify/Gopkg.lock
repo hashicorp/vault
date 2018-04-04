@@ -67,7 +67,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-hclog"
   packages = ["."]
-  revision = "5bcb0f17e36442247290887cc914a6e507afa5c4"
+  revision = "69ff559dc25f3b435631604f573a5fa1efdb6433"
 
 [[projects]]
   branch = "master"
@@ -79,7 +79,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-plugin"
   packages = ["."]
-  revision = "8068b0bdcfb702b4ab69d0e42c6023b4996c3026"
+  revision = "e8d22c780116115ae5624720c9af0c97afe4f551"
 
 [[projects]]
   branch = "master"
@@ -97,7 +97,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-version"
   packages = ["."]
-  revision = "4fe82ae3040f80a03d04d2cccb5606a626b8e1ee"
+  revision = "23480c0665776210b5fbbac6eaaee40e3e6a96b7"
 
 [[projects]]
   branch = "master"
@@ -122,7 +122,7 @@
     "json/scanner",
     "json/token"
   ]
-  revision = "23c074d0eceb2b8a5bfdbb271ab780cde70f05a8"
+  revision = "061bf373e402ebb186988085a71ac748949594a9"
 
 [[projects]]
   branch = "master"
@@ -135,8 +135,7 @@
     "helper/errutil",
     "helper/jsonutil",
     "helper/locksutil",
-    "helper/logbridge",
-    "helper/logformat",
+    "helper/logging",
     "helper/mlock",
     "helper/parseutil",
     "helper/password",
@@ -153,37 +152,13 @@
     "physical/inmem",
     "version"
   ]
-  revision = "f90c4c9c12a5c25d9eb79a4e0a6b3bd89c7b2c01"
+  revision = "26487ae3d34a4d9d2c021ef19f5a8b4d08783d8d"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/yamux"
   packages = ["."]
   revision = "2658be15c5f05e76244154714161f17e3e77de2e"
-
-[[projects]]
-  name = "github.com/mattn/go-colorable"
-  packages = ["."]
-  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
-  version = "v0.0.9"
-
-[[projects]]
-  name = "github.com/mattn/go-isatty"
-  packages = ["."]
-  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
-  version = "v0.0.3"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/mgutz/ansi"
-  packages = ["."]
-  revision = "9520e82c474b0a04dd04f8a40959027271bab992"
-
-[[projects]]
-  name = "github.com/mgutz/logxi"
-  packages = ["v1"]
-  revision = "aebf8a7d67ab4625e0fd4a665766fef9a709161b"
-  version = "v1"
 
 [[projects]]
   branch = "master"
@@ -225,7 +200,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "c3a3ad6d03f7a915c0f7e194b7152974bb73d287"
+  revision = "b2aa35443fbc700ab74c586ae79b81c171851023"
 
 [[projects]]
   branch = "master"
@@ -239,7 +214,7 @@
     "lex/httplex",
     "trace"
   ]
-  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
+  revision = "b68f30494add4df6bd8ef5e82803f308e7f7c59c"
 
 [[projects]]
   branch = "master"
@@ -248,7 +223,7 @@
     "unix",
     "windows"
   ]
-  revision = "7ceb54c8418b8f9cdf0177b511d5cbb06e9fae39"
+  revision = "378d26f46672a356c46195c28f61bdb4c0a781dd"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -275,7 +250,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "f8c8703595236ae70fdf8789ecb656ea0bcdcf46"
+  revision = "35de2414665fc36f56b72d982c5af480d86de5ab"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -306,12 +281,12 @@
     "tap",
     "transport"
   ]
-  revision = "8e4536a86ab602859c20df5ebfd0bd4228d08655"
-  version = "v1.10.0"
+  revision = "1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34"
+  version = "v1.11.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2eff6761499c3523a5e35b28372261854d82ff51a6b5cc3aead2d373e7a2a7cd"
+  inputs-digest = "3ecee3c628919dbb9661e17bc01e8a786a3eb5c615c5e3b4d979f9a90944a734"
   solver-name = "gps-cdcl"
   solver-version = 1

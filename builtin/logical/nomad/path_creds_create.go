@@ -81,6 +81,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		"accessor_id": token.AccessorID,
 	})
 	resp.Secret.TTL = leaseConfig.TTL
+	resp.Secret.MaxTTL = leaseConfig.MaxTTL
 
 	return resp, nil
 }
