@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -33,10 +34,13 @@ func (r *Response) Error() error {
 
 	// We have an error. Let's copy the body into our own buffer first,
 	// so that if we can't decode JSON, we can at least copy it raw.
-	var bodyBuf bytes.Buffer
-	if _, err := io.Copy(&bodyBuf, r.Body); err != nil {
+	bodyBuf := &bytes.Buffer{}
+	if _, err := io.Copy(bodyBuf, r.Body); err != nil {
 		return err
 	}
+
+	r.Body.Close()
+	r.Body = ioutil.NopCloser(bodyBuf)
 
 	// Decode the error response if we can. Note that we wrap the bodyBuf
 	// in a bytes.Reader here so that the JSON decoder doesn't move the
