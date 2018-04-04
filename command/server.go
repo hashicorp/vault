@@ -539,9 +539,9 @@ func (c *ServerCommand) Run(args []string) int {
 	if ok && coreConfig.RedirectAddr == "" {
 		redirect, err := c.detectRedirect(detect, config)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error detecting redirect address: %s", err))
+			c.UI.Error(fmt.Sprintf("Error detecting api address: %s", err))
 		} else if redirect == "" {
-			c.UI.Error("Failed to detect redirect address.")
+			c.UI.Error("Failed to detect api address")
 		} else {
 			coreConfig.RedirectAddr = redirect
 		}
@@ -579,7 +579,7 @@ func (c *ServerCommand) Run(args []string) int {
 				host = u.Host
 				port = "443"
 			} else {
-				c.UI.Error(fmt.Sprintf("Error parsing redirect address: %v", err))
+				c.UI.Error(fmt.Sprintf("Error parsing api address: %v", err))
 				return 1
 			}
 		}
@@ -596,6 +596,12 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 CLUSTER_SYNTHESIS_COMPLETE:
+
+	if coreConfig.RedirectAddr == coreConfig.ClusterAddr {
+		c.UI.Error(fmt.Sprintf(
+			"Address %q used for both API and cluster addresses", coreConfig.RedirectAddr))
+		return 1
+	}
 
 	if coreConfig.ClusterAddr != "" {
 		// Force https as we'll always be TLS-secured
@@ -644,8 +650,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		infoKeys = append(infoKeys, "cluster address")
 	}
 	if coreConfig.RedirectAddr != "" {
-		info["redirect address"] = coreConfig.RedirectAddr
-		infoKeys = append(infoKeys, "redirect address")
+		info["api address"] = coreConfig.RedirectAddr
+		infoKeys = append(infoKeys, "api address")
 	}
 
 	if config.HAStorage != nil {
@@ -1111,8 +1117,8 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	infoKeys = append(infoKeys, "cluster parameters path")
 
 	for i, core := range testCluster.Cores {
-		info[fmt.Sprintf("node %d redirect address", i)] = fmt.Sprintf("https://%s", core.Listeners[0].Address.String())
-		infoKeys = append(infoKeys, fmt.Sprintf("node %d redirect address", i))
+		info[fmt.Sprintf("node %d api address", i)] = fmt.Sprintf("https://%s", core.Listeners[0].Address.String())
+		infoKeys = append(infoKeys, fmt.Sprintf("node %d api address", i))
 	}
 
 	infoKeys = append(infoKeys, "version")
