@@ -9,7 +9,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -148,7 +147,7 @@ func (b *azureAuthBackend) verifyClaims(claims *additionalClaims, role *azureRol
 	switch {
 	case len(role.BoundServicePrincipalIDs) == 1 && role.BoundServicePrincipalIDs[0] == "*":
 	case len(role.BoundServicePrincipalIDs) > 0:
-		if !strutil.StrListContains(role.BoundServicePrincipalIDs, claims.ObjectID) {
+		if !strListContains(role.BoundServicePrincipalIDs, claims.ObjectID) {
 			return fmt.Errorf("service principal not authorized: %s", claims.ObjectID)
 		}
 	}
@@ -156,7 +155,7 @@ func (b *azureAuthBackend) verifyClaims(claims *additionalClaims, role *azureRol
 	if len(role.BoundGroupIDs) > 0 {
 		var found bool
 		for _, group := range claims.GroupIDs {
-			if strutil.StrListContains(role.BoundGroupIDs, group) {
+			if strListContains(role.BoundGroupIDs, group) {
 				found = true
 				break
 			}
@@ -197,12 +196,12 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 	}
 
 	// Check bound subscriptions
-	if len(role.BoundSubscriptionsIDs) > 0 && !strutil.StrListContains(role.BoundSubscriptionsIDs, subscriptionID) {
+	if len(role.BoundSubscriptionsIDs) > 0 && !strListContains(role.BoundSubscriptionsIDs, subscriptionID) {
 		return errors.New("subscription not authorized")
 	}
 
 	// Check bound resource groups
-	if len(role.BoundResourceGroups) > 0 && !strutil.StrListContains(role.BoundResourceGroups, resourceGroupName) {
+	if len(role.BoundResourceGroups) > 0 && !strListContains(role.BoundResourceGroups, resourceGroupName) {
 		return errors.New("resource group not authorized")
 	}
 
@@ -211,7 +210,7 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 		if vm.Location == nil {
 			return errors.New("vm location is empty")
 		}
-		if !strutil.StrListContains(role.BoundLocations, to.String(vm.Location)) {
+		if !strListContains(role.BoundLocations, to.String(vm.Location)) {
 			return errors.New("location not authorized")
 		}
 	}
