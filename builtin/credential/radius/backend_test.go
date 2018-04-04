@@ -59,8 +59,9 @@ func prepareRadiusTestContainer(t *testing.T) (func(), string, int) {
 
 	// exponential backoff-retry
 	if err = pool.Retry(func() error {
-		time.Sleep(3 * time.Second)
-
+		// There's no straightfoward way to check the state, but the server starts
+		// up quick so a 2 second sleep should be enough.
+		time.Sleep(2 * time.Second)
 		return nil
 	}); err != nil {
 		cleanup()
@@ -218,7 +219,7 @@ func TestBackend_acceptance(t *testing.T) {
 			testAccUserLogin(t, username, dataRealpassword, true),
 			// Once the user is registered auth will succeed
 			testStepUpdateUser(t, username, ""),
-			// testAccUserLoginPolicy(t, username, dataRealpassword, []string{"default"}, false),
+			testAccUserLoginPolicy(t, username, dataRealpassword, []string{"default"}, false),
 
 			testStepUpdateUser(t, username, "foopolicy"),
 			testAccUserLoginPolicy(t, username, dataRealpassword, []string{"default", "foopolicy"}, false),
