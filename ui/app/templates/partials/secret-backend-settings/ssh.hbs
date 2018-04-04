@@ -1,0 +1,84 @@
+{{#if configured}}
+  <div class="box is-fullwidth is-sideless is-marginless">
+    <div class="field">
+      <label for="publicKey" class="is-label">
+        Public Key
+      </label>
+      <div class="control">
+        {{textarea
+          name="publicKey"
+          id="publicKey"
+          class="textarea"
+          value=model.publicKey
+          readonly=true
+          data-test-ssh-input="public-key"
+        }}
+      </div>
+    </div>
+  </div>
+  <div class="field is-grouped-split box is-fullwidth is-bottomless">
+    <div class="control">
+      {{#copy-button
+        clipboardTarget="#publicKey"
+        class="button is-primary"
+        buttonType="button"
+        success=(action (set-flash-message "Public Key copied!"))
+      }}
+        Copy
+      {{/copy-button}}
+    </div>
+    <div class="control">
+      {{#confirm-action
+        buttonClasses="button"
+        onConfirmAction=(action "saveConfig" (hash delete=true))
+        confirmMessage=(concat "This will delete the current CA keys associated with this backend. Are you sure you want to delete them?")
+        cancelButtonText="Cancel"
+      }}
+        Delete
+      {{/confirm-action}}
+    </div>
+  </div>
+{{else}}
+  <form {{action "saveConfig" on="submit"}} data-test-ssh-configure-form="true">
+    <div class="box is-fullwidth is-sideless is-marginless">
+      <div class="field">
+        <label for="privateKey" class="is-label">
+          Private Key
+        </label>
+        <div class="control">
+          {{textarea name="privateKey" id="privateKey" class="input" value=model.privateKey}}
+        </div>
+      </div>
+      <div class="field">
+        <label for="publicKey" class="is-label">
+          Public Key
+        </label>
+        <div class="control">
+          {{textarea name="publicKey" id="publicKey" class="input" value=model.publicKey}}
+        </div>
+      </div>
+      <div class="b-checkbox">
+        <input type="checkbox"
+         id="generateSigningKey"
+         class="styled"
+         checked={{model.generateSigningKey}}
+         onchange={{action (mut model.generateSigningKey) value="target.checked"}}
+         data-test-ssh-input={{generateSigningKey}}
+        />
+        <label for="generateSigningKey" class="is-label">
+          Generate Signing Key
+          {{#info-tooltip}}
+            Specifies if Vault should generate the signing key pair internally
+          {{/info-tooltip}}
+        </label>
+      </div>
+    </div>
+    <div class="field box is-fullwidth is-bottomless is-marginless">
+      <div class="control">
+        <button type="submit" class="button is-primary {{if loading 'is-loading'}}" disabled={{loading}} data-test-ssh-input="configure-submit">
+          Save
+        </button>
+      </div>
+    </div>
+  </form>
+{{/if}}

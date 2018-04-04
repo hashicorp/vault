@@ -92,6 +92,7 @@ func TestTranslation_Request(t *testing.T) {
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
 					TTL:       time.Second,
+					MaxTTL:    time.Second,
 					Renewable: true,
 					Increment: time.Second,
 					IssueTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
@@ -104,6 +105,7 @@ func TestTranslation_Request(t *testing.T) {
 			Auth: &logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
 					TTL:       time.Second,
+					MaxTTL:    time.Second,
 					Renewable: true,
 					Increment: time.Second,
 					IssueTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
@@ -192,6 +194,7 @@ func TestTranslation_Response(t *testing.T) {
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
 					TTL:       time.Second,
+					MaxTTL:    time.Second,
 					Renewable: true,
 					Increment: time.Second,
 					IssueTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
@@ -204,6 +207,7 @@ func TestTranslation_Response(t *testing.T) {
 			Auth: &logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
 					TTL:       time.Second,
+					MaxTTL:    time.Second,
 					Renewable: true,
 					Increment: time.Second,
 					IssueTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),

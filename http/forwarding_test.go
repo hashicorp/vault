@@ -290,7 +290,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint64) 
 		waitCond.L.Unlock()
 		waitCond.Broadcast()
 
-		core.Logger().Trace("Starting goroutine", "id", id)
+		core.Logger().Debug("Starting goroutine", "id", id)
 
 		startTime := time.Now()
 		for {

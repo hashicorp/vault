@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -32,7 +31,7 @@ func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token
 	// Resolve the token policy
 	te, err := d.core.tokenStore.Lookup(ctx, token)
 	if err != nil {
-		d.core.logger.Error("core: failed to lookup token", "error", err)
+		d.core.logger.Error("failed to lookup token", "error", err)
 		return false
 	}
 

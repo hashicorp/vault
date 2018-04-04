@@ -168,6 +168,11 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		if err := entry.DecodeJSON(&config); err != nil {
 			return nil, err
 		}
+
+		if _, ok := config.ConnectionDetails["connection_url"]; ok {
+			delete(config.ConnectionDetails, "connection_url")
+		}
+
 		return &logical.Response{
 			Data: structs.New(config).Map(),
 		}, nil

@@ -1,114 +1,9 @@
 package plugin
 
-import (
-	"net/rpc"
-
-	log "github.com/mgutz/logxi/v1"
-)
-
-type LoggerClient struct {
-	client *rpc.Client
-}
-
-func (l *LoggerClient) Trace(msg string, args ...interface{}) {
-	cArgs := &LoggerArgs{
-		Msg:  msg,
-		Args: args,
-	}
-	l.client.Call("Plugin.Trace", cArgs, &struct{}{})
-}
-
-func (l *LoggerClient) Debug(msg string, args ...interface{}) {
-	cArgs := &LoggerArgs{
-		Msg:  msg,
-		Args: args,
-	}
-	l.client.Call("Plugin.Debug", cArgs, &struct{}{})
-}
-
-func (l *LoggerClient) Info(msg string, args ...interface{}) {
-	cArgs := &LoggerArgs{
-		Msg:  msg,
-		Args: args,
-	}
-	l.client.Call("Plugin.Info", cArgs, &struct{}{})
-}
-func (l *LoggerClient) Warn(msg string, args ...interface{}) error {
-	var reply LoggerReply
-	cArgs := &LoggerArgs{
-		Msg:  msg,
-		Args: args,
-	}
-	err := l.client.Call("Plugin.Warn", cArgs, &reply)
-	if err != nil {
-		return err
-	}
-	if reply.Error != nil {
-		return reply.Error
-	}
-
-	return nil
-}
-func (l *LoggerClient) Error(msg string, args ...interface{}) error {
-	var reply LoggerReply
-	cArgs := &LoggerArgs{
-		Msg:  msg,
-		Args: args,
-	}
-	err := l.client.Call("Plugin.Error", cArgs, &reply)
-	if err != nil {
-		return err
-	}
-	if reply.Error != nil {
-		return reply.Error
-	}
-
-	return nil
-}
-
-func (l *LoggerClient) Fatal(msg string, args ...interface{}) {
-	// NOOP since it's not actually used within vault
-	return
-}
-
-func (l *LoggerClient) Log(level int, msg string, args []interface{}) {
-	cArgs := &LoggerArgs{
-		Level: level,
-		Msg:   msg,
-		Args:  args,
-	}
-	l.client.Call("Plugin.Log", cArgs, &struct{}{})
-}
-
-func (l *LoggerClient) SetLevel(level int) {
-	l.client.Call("Plugin.SetLevel", level, &struct{}{})
-}
-
-func (l *LoggerClient) IsTrace() bool {
-	var reply LoggerReply
-	l.client.Call("Plugin.IsTrace", new(interface{}), &reply)
-	return reply.IsTrue
-}
-func (l *LoggerClient) IsDebug() bool {
-	var reply LoggerReply
-	l.client.Call("Plugin.IsDebug", new(interface{}), &reply)
-	return reply.IsTrue
-}
-
-func (l *LoggerClient) IsInfo() bool {
-	var reply LoggerReply
-	l.client.Call("Plugin.IsInfo", new(interface{}), &reply)
-	return reply.IsTrue
-}
-
-func (l *LoggerClient) IsWarn() bool {
-	var reply LoggerReply
-	l.client.Call("Plugin.IsWarn", new(interface{}), &reply)
-	return reply.IsTrue
-}
+import hclog "github.com/hashicorp/go-hclog"
 
 type LoggerServer struct {
-	logger log.Logger
+	logger hclog.Logger
 }
 
 func (l *LoggerServer) Trace(args *LoggerArgs, _ *struct{}) error {
@@ -127,34 +22,42 @@ func (l *LoggerServer) Info(args *LoggerArgs, _ *struct{}) error {
 }
 
 func (l *LoggerServer) Warn(args *LoggerArgs, reply *LoggerReply) error {
-	err := l.logger.Warn(args.Msg, args.Args...)
-	if err != nil {
-		*reply = LoggerReply{
-			Error: wrapError(err),
-		}
-		return nil
-	}
+	l.logger.Warn(args.Msg, args.Args...)
 	return nil
 }
 
 func (l *LoggerServer) Error(args *LoggerArgs, reply *LoggerReply) error {
-	err := l.logger.Error(args.Msg, args.Args...)
-	if err != nil {
-		*reply = LoggerReply{
-			Error: wrapError(err),
-		}
-		return nil
-	}
+	l.logger.Error(args.Msg, args.Args...)
 	return nil
 }
 
 func (l *LoggerServer) Log(args *LoggerArgs, _ *struct{}) error {
-	l.logger.Log(args.Level, args.Msg, args.Args)
+
+	switch translateLevel(args.Level) {
+
+	case hclog.Trace:
+		l.logger.Trace(args.Msg, args.Args...)
+
+	case hclog.Debug:
+		l.logger.Debug(args.Msg, args.Args...)
+
+	case hclog.Info:
+		l.logger.Info(args.Msg, args.Args...)
+
+	case hclog.Warn:
+		l.logger.Warn(args.Msg, args.Args...)
+
+	case hclog.Error:
+		l.logger.Error(args.Msg, args.Args...)
+
+	case hclog.NoLevel:
+	}
 	return nil
 }
 
 func (l *LoggerServer) SetLevel(args int, _ *struct{}) error {
-	l.logger.SetLevel(args)
+	level := translateLevel(args)
+	l.logger = hclog.New(&hclog.LoggerOptions{Level: level})
 	return nil
 }
 
@@ -201,4 +104,31 @@ type LoggerArgs struct {
 type LoggerReply struct {
 	IsTrue bool
 	Error  error
+}
+
+func translateLevel(logxiLevel int) hclog.Level {
+
+	switch logxiLevel {
+
+	case 1000, 10:
+		// logxi.LevelAll, logxi.LevelTrace:
+		return hclog.Trace
+
+	case 7:
+		// logxi.LevelDebug:
+		return hclog.Debug
+
+	case 6, 5:
+		// logxi.LevelInfo, logxi.LevelNotice:
+		return hclog.Info
+
+	case 4:
+		// logxi.LevelWarn:
+		return hclog.Warn
+
+	case 3, 2, 1, -1:
+		// logxi.LevelError, logxi.LevelFatal, logxi.LevelAlert, logxi.LevelEmergency:
+		return hclog.Error
+	}
+	return hclog.NoLevel
 }

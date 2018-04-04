@@ -42,7 +42,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to scan for groups: %v", err)
 	}
-	i.logger.Debug("identity: groups collected", "num_existing", len(existing))
+	i.logger.Debug("groups collected", "num_existing", len(existing))
 
 	i.groupLock.Lock()
 	defer i.groupLock.Unlock()
@@ -66,8 +66,8 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				continue
 			}
 
-			if i.logger.IsTrace() {
-				i.logger.Trace("loading group", "name", group.Name, "id", group.ID)
+			if i.logger.IsDebug() {
+				i.logger.Debug("loading group", "name", group.Name, "id", group.ID)
 			}
 
 			txn := i.db.Txn(true)
@@ -83,7 +83,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	}
 
 	if i.logger.IsInfo() {
-		i.logger.Info("identity: groups restored")
+		i.logger.Info("groups restored")
 	}
 
 	return nil
@@ -91,12 +91,12 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 
 func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	// Accumulate existing entities
-	i.logger.Debug("identity: loading entities")
+	i.logger.Debug("loading entities")
 	existing, err := i.entityPacker.View().List(ctx, storagepacker.StoragePackerBucketsPrefix)
 	if err != nil {
 		return fmt.Errorf("failed to scan for entities: %v", err)
 	}
-	i.logger.Debug("identity: entities collected", "num_existing", len(existing))
+	i.logger.Debug("entities collected", "num_existing", len(existing))
 
 	// Make the channels used for the worker pool
 	broker := make(chan string)
@@ -146,7 +146,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 		defer wg.Done()
 		for j, bucketKey := range existing {
 			if j%500 == 0 {
-				i.logger.Trace("identity: entities loading", "progress", j)
+				i.logger.Debug("entities loading", "progress", j)
 			}
 
 			select {
@@ -178,7 +178,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 			}
 
 			for _, item := range bucket.Items {
-				entity, err := i.parseEntityFromBucketItem(item)
+				entity, err := i.parseEntityFromBucketItem(ctx, item)
 				if err != nil {
 					return err
 				}
@@ -200,7 +200,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	wg.Wait()
 
 	if i.logger.IsInfo() {
-		i.logger.Info("identity: entities restored")
+		i.logger.Info("entities restored")
 	}
 
 	return nil

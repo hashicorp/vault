@@ -1,0 +1,20 @@
+.progress[value]::-webkit-progress-bar,
+.progress[value]::-webkit-progress-value {
+  border-radius: 2px;
+}
+.progress {
+  border-radius: 0;
+  margin-bottom: 0;
+  &.is-small {
+    height: 0.5rem;
+  }
+  &.is-narrow {
+    width: 30px;
+  }
+}
+.progress.is-rounded {
+  border-radius: 2px;
+}
+.progress.is-bordered {
+  box-shadow: 0 0 0 4px $progress-bar-background-color;
+}

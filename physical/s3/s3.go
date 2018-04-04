@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
@@ -131,7 +131,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("s3: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
@@ -175,6 +175,9 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
 	if awsErr, ok := err.(awserr.RequestFailure); ok {
 		// Return nil on 404s, error on anything else
 		if awsErr.StatusCode() == 404 {
@@ -189,15 +192,18 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 		return nil, fmt.Errorf("got nil response from S3 but no error")
 	}
 
-	data := make([]byte, *resp.ContentLength)
-	_, err = io.ReadFull(resp.Body, data)
+	data := bytes.NewBuffer(nil)
+	if resp.ContentLength != nil {
+		data = bytes.NewBuffer(make([]byte, 0, *resp.ContentLength))
+	}
+	_, err = io.Copy(data, resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	ent := &physical.Entry{
 		Key:   key,
-		Value: data,
+		Value: data.Bytes(),
 	}
 
 	return ent, nil

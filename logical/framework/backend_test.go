@@ -245,37 +245,6 @@ func TestBackendHandleRequest_renew(t *testing.T) {
 	}
 }
 
-func TestBackendHandleRequest_renewExtend(t *testing.T) {
-	sysView := logical.StaticSystemView{
-		DefaultLeaseTTLVal: 5 * time.Minute,
-		MaxLeaseTTLVal:     30 * time.Hour,
-	}
-
-	secret := &Secret{
-		Type:            "foo",
-		Renew:           LeaseExtend(0, 0, sysView),
-		DefaultDuration: 5 * time.Minute,
-	}
-	b := &Backend{
-		Secrets: []*Secret{secret},
-	}
-
-	req := logical.RenewRequest("/foo", secret.Response(nil, nil).Secret, nil)
-	req.Secret.IssueTime = time.Now()
-	req.Secret.Increment = 1 * time.Hour
-	resp, err := b.HandleRequest(context.Background(), req)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if resp == nil || resp.Secret == nil {
-		t.Fatal("should have secret")
-	}
-
-	if resp.Secret.TTL < 59*time.Minute || resp.Secret.TTL > 61*time.Minute {
-		t.Fatalf("bad: %s", resp.Secret.TTL)
-	}
-}
-
 func TestBackendHandleRequest_revoke(t *testing.T) {
 	var called uint32
 	callback := func(context.Context, *logical.Request, *FieldData) (*logical.Response, error) {

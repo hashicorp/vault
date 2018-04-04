@@ -36,7 +36,7 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 				errors = multierror.Append(errors, fmt.Errorf("cannot reload plugin on %s: %v", mount, err))
 				continue
 			}
-			c.logger.Info("core: successfully reloaded plugin", "plugin", entry.Config.PluginName, "path", entry.Path)
+			c.logger.Info("successfully reloaded plugin", "plugin", entry.Config.PluginName, "path", entry.Path)
 		}
 	}
 	return errors
@@ -56,7 +56,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) erro
 			if err != nil {
 				return err
 			}
-			c.logger.Info("core: successfully reloaded plugin", "plugin", pluginName, "path", entry.Path)
+			c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "path", entry.Path)
 		}
 	}
 
@@ -67,7 +67,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) erro
 			if err != nil {
 				return err
 			}
-			c.logger.Info("core: successfully reloaded plugin", "plugin", pluginName, "path", entry.Path)
+			c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "path", entry.Path)
 		}
 	}
 

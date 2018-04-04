@@ -3,12 +3,12 @@ package command
 import (
 	"testing"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/ldap"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
-	logxi "github.com/mgutz/logxi/v1"
 )
 
 func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
@@ -16,7 +16,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       logxi.NullLog,
+		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"ldap": ldap.Factory,
 		},

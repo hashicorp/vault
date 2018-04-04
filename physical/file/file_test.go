@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func TestFileBackend_Base64URLEncoding(t *testing.T) {
@@ -21,7 +21,7 @@ func TestFileBackend_Base64URLEncoding(t *testing.T) {
 	}
 	defer os.RemoveAll(backendPath)
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewFileBackend(map[string]string{
 		"path": backendPath,
@@ -140,7 +140,7 @@ func TestFileBackend_ValidatePath(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewFileBackend(map[string]string{
 		"path": dir,
@@ -164,7 +164,7 @@ func TestFileBackend(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewFileBackend(map[string]string{
 		"path": dir,

@@ -10,7 +10,6 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -234,7 +233,6 @@ func CleanupClients() {
 	}
 	managedClientsLock.Unlock()
 
-	log.Println("[DEBUG] plugin: waiting for all plugin processes to complete...")
 	wg.Wait()
 }
 
@@ -753,13 +751,13 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 
 func (c *Client) logStderr(r io.Reader) {
 	bufR := bufio.NewReader(r)
+	l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
+
 	for {
 		line, err := bufR.ReadString('\n')
 		if line != "" {
 			c.config.Stderr.Write([]byte(line))
 			line = strings.TrimRightFunc(line, unicode.IsSpace)
-
-			l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
 
 			entry, err := parseJSON(line)
 			// If output is not JSON format, print directly to Debug
@@ -768,7 +766,7 @@ func (c *Client) logStderr(r io.Reader) {
 			} else {
 				out := flattenKVPairs(entry.KVPairs)
 
-				l = l.With("timestamp", entry.Timestamp.Format(hclog.TimeFormat))
+				out = append(out, "timestamp", entry.Timestamp.Format(hclog.TimeFormat))
 				switch hclog.LevelFromString(entry.Level) {
 				case hclog.Trace:
 					l.Trace(entry.Message, out...)

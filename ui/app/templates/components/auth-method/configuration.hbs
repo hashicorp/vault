@@ -1,0 +1,9 @@
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  {{#each model.attrs as |attr|}}
+    {{#if (eq attr.type "object")}}
+      {{info-table-row alwaysRender=true label=(or attr.options.label (to-label attr.name)) value=(stringify (get model attr.name))}}
+    {{else}}
+      {{info-table-row alwaysRender=true label=(or attr.options.label (to-label attr.name)) value=(get model attr.name)}}
+    {{/if}}
+  {{/each}}
+</div>

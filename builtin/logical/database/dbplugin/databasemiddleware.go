@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/errwrap"
 
 	metrics "github.com/armon/go-metrics"
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 )
 
 // ---- Tracing Middleware Domain ----
@@ -21,9 +21,6 @@ import (
 type databaseTracingMiddleware struct {
 	next   Database
 	logger log.Logger
-
-	typeStr   string
-	transport string
 }
 
 func (mw *databaseTracingMiddleware) Type() (string, error) {
@@ -32,37 +29,37 @@ func (mw *databaseTracingMiddleware) Type() (string, error) {
 
 func (mw *databaseTracingMiddleware) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "CreateUser", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "err", err, "took", time.Since(then))
+		mw.logger.Trace("create user", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "CreateUser", "status", "started", "type", mw.typeStr, "transport", mw.transport)
+	mw.logger.Trace("create user", "status", "started")
 	return mw.next.CreateUser(ctx, statements, usernameConfig, expiration)
 }
 
 func (mw *databaseTracingMiddleware) RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) (err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "RenewUser", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "err", err, "took", time.Since(then))
+		mw.logger.Trace("renew user", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "RenewUser", "status", "started", mw.typeStr, "transport", mw.transport)
+	mw.logger.Trace("renew user", "status", "started")
 	return mw.next.RenewUser(ctx, statements, username, expiration)
 }
 
 func (mw *databaseTracingMiddleware) RevokeUser(ctx context.Context, statements Statements, username string) (err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "RevokeUser", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "err", err, "took", time.Since(then))
+		mw.logger.Trace("revoke user", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "RevokeUser", "status", "started", "type", mw.typeStr, "transport", mw.transport)
+	mw.logger.Trace("revoke user", "status", "started")
 	return mw.next.RevokeUser(ctx, statements, username)
 }
 
 func (mw *databaseTracingMiddleware) RotateRootCredentials(ctx context.Context, statements []string) (conf map[string]interface{}, err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "RotateRootCredentials", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "err", err, "took", time.Since(then))
+		mw.logger.Trace("rotate root credentials", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "RotateRootCredentials", "status", "started", "type", mw.typeStr, "transport", mw.transport)
+	mw.logger.Trace("rotate root credentials", "status", "started")
 	return mw.next.RotateRootCredentials(ctx, statements)
 }
 
@@ -73,19 +70,19 @@ func (mw *databaseTracingMiddleware) Initialize(ctx context.Context, conf map[st
 
 func (mw *databaseTracingMiddleware) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "Initialize", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "verify", verifyConnection, "err", err, "took", time.Since(then))
+		mw.logger.Trace("initialize", "status", "finished", "verify", verifyConnection, "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "Initialize", "status", "started", "type", mw.typeStr, "transport", mw.transport)
+	mw.logger.Trace("initialize", "status", "started")
 	return mw.next.Init(ctx, conf, verifyConnection)
 }
 
 func (mw *databaseTracingMiddleware) Close() (err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "Close", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "err", err, "took", time.Since(then))
+		mw.logger.Trace("close", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "Close", "status", "started", "type", mw.typeStr, "transport", mw.transport)
+	mw.logger.Trace("close", "status", "started")
 	return mw.next.Close()
 }
 

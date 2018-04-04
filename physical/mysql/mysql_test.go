@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -31,7 +31,7 @@ func TestMySQLBackend(t *testing.T) {
 	password := os.Getenv("MYSQL_PASSWORD")
 
 	// Run vault tests
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewMySQLBackend(map[string]string{
 		"address":  address,

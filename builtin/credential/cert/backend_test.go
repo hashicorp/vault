@@ -21,9 +21,8 @@ import (
 	"testing"
 	"time"
 
-	logxi "github.com/mgutz/logxi/v1"
-
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 
@@ -159,7 +158,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       logxi.NullLog,
+		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"cert": Factory,
 		},
@@ -1417,7 +1416,6 @@ func Test_Renew(t *testing.T) {
 	req.Auth.Metadata = resp.Auth.Metadata
 	req.Auth.LeaseOptions = resp.Auth.LeaseOptions
 	req.Auth.Policies = resp.Auth.Policies
-	req.Auth.IssueTime = time.Now()
 	req.Auth.Period = resp.Auth.Period
 
 	// Normal renewal

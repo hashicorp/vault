@@ -61,6 +61,7 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: i.pathGroupAliasIDUpdate(),
 				logical.ReadOperation:   i.pathGroupAliasIDRead(),
 				logical.DeleteOperation: i.pathGroupAliasIDDelete(),
 			},
@@ -151,7 +152,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(req *logical.Request, d *fr
 		return logical.ErrorResponse("missing mount_accessor"), nil
 	}
 
-	mountValidationResp := i.validateMountAccessorFunc(mountAccessor)
+	mountValidationResp := i.core.router.validateMountByAccessor(mountAccessor)
 	if mountValidationResp == nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
 	}

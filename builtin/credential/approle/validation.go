@@ -112,11 +112,6 @@ func (b *backend) validateCredentials(ctx context.Context, req *logical.Request,
 		return nil, "", metadata, "", fmt.Errorf("failed to validate role_id"), nil
 	}
 
-	// Calculate the TTL boundaries since this reflects the properties of the token issued
-	if role.TokenTTL, role.TokenMaxTTL, err = b.SanitizeTTL(role.TokenTTL, role.TokenMaxTTL); err != nil {
-		return nil, "", metadata, "", nil, err
-	}
-
 	var secretID string
 	if role.BindSecretID {
 		// If 'bind_secret_id' was set on role, look for the field 'secret_id'

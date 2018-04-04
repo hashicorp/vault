@@ -1,0 +1,58 @@
+.notification {
+  padding: 1rem 2.5rem 1rem 1.5rem;
+  .title {
+    font-weight: $weight-bold;
+  }
+  &.has-border {
+    border: 1px solid currentColor;
+    border-left-width: 10px;
+  }
+
+  @each $name, $pair in $colors {
+    $color: nth($pair, 1);
+    $color-invert: nth($pair, 2);
+    $color-lightning: max((100% - lightness($color)) - 2%, 0%);
+    $color-luminance: colorLuminance($color);
+    $darken-percentage: $color-luminance * 70%;
+    $desaturate-percentage: $color-luminance * 30%;
+    &.is-#{$name} {
+      background-color: lighten($color, $color-lightning);
+      border-color: $color;
+      color: desaturate(
+        darken($color, $darken-percentage),
+        $desaturate-percentage
+      );
+      .delete {
+        color: $color;
+      }
+      .title {
+        color: $color-invert;
+        margin-bottom: .5rem;
+      }
+    }
+  }
+
+  &.is-warning {
+    .title,
+    .delete {
+      color: $dark-yellow;
+    }
+    border-color: $orange;
+    color: $dark-yellow;
+  }
+
+  & > .delete {
+    &:before,
+    &:after {
+      content: none;
+    }
+    position: absolute;
+    background-color: transparent;
+    border: none;
+    color: currentColor;
+    right: 0.5rem;
+    top: 0.5rem;
+    height: 1.5rem;
+    width: 1.5rem;
+  }
+}

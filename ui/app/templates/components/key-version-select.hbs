@@ -1,0 +1,26 @@
+{{#if (gt key.keysForEncryption.length 1)}}
+  <div class="field" data-test-transit-key-version-select=true>
+    <label for="key_version" class="is-label">Key version</label>
+    <div class="control is-expanded">
+      <div class="select is-fullwidth">
+        <select
+          name="key_version"
+          id="key_version"
+          onchange={{action onVersionChange value="target.value"}}
+        >
+        {{#each key.keysForEncryption as |version|}}
+          {{#if (eq version key.latestVersion)}}
+            <option selected={{if key_version (eq version key_version) (eq version key.latestVersion)}} value=0>
+              {{version}} (latest)
+            </option>
+          {{else}}
+            <option selected={{if key_version (eq version key_version) (eq version key.latestVersion)}} value={{version}}>
+              {{version}}
+            </option>
+          {{/if}}
+        {{/each}}
+        </select>
+      </div>
+    </div>
+  </div>
+{{/if}}

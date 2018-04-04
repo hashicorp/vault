@@ -1,0 +1,66 @@
+<header class="page-header">
+  <div class="level">
+    <div class="level-left">
+      <h3 class="title is-3">
+        Rewrap Token
+      </h3>
+    </div>
+  </div>
+</header>
+
+{{#if rewrap_token}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="field">
+      <label for="wrap-info" class="is-label">Rewrapped token</label>
+      <div class="control">
+        {{textarea
+          value=rewrap_token
+          readonly=true
+          class="textarea"
+          id="wrap-info"
+          name="wrap-info"
+          data-test-tools-input="rewrapped-token"
+        }}
+      </div>
+    </div>
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      {{#copy-button
+        clipboardText=rewrap_token
+        class="button is-primary"
+        buttonType="button"
+        success=(action (set-flash-message 'Token copied!'))
+      }}
+        Copy
+      {{/copy-button}}
+    </div>
+    <div class="control">
+      <button {{action 'onClear'}} type="button" class="button">
+        Back
+      </button>
+    </div>
+  </div>
+{{else}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="field">
+      <label for="token" class="is-label">Wrapping token</label>
+      <div class="control">
+        {{input
+          value=token
+          class="input"
+          id="token"
+          name="token"
+          data-test-tools-input="wrapping-token"
+        }}
+      </div>
+    </div>
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button type="submit" data-test-tools-submit="true" class="button is-primary">
+        Rewrap Token
+      </button>
+    </div>
+  </div>
+{{/if}}

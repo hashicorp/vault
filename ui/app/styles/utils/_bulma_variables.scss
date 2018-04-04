@@ -1,0 +1,83 @@
+$vault-grey: #6a7786;
+// ui colors
+$grey-light: #bbc4d1;
+$grey-lighter: #f9f9f9;
+$grey: #929dab;
+$grey-dark: $vault-grey;
+$blue: #1563ff;
+
+//
+$orange: #f9bb2d;
+$light-orange: rgb(255, 254, 218);
+$light-yellow: #fffbee;
+$dark-yellow: #614903;
+$light-red: #fff5f8;
+$dark-red: #c84034;
+$light-blue: #e2eafa;
+$dark-blue: #1563ff;
+$light-blue: rgb(218, 234, 247);
+$dark-green: #36ae40;
+$light-green: rgb(244, 250, 236);
+$light-white: #f9f8fe;
+$dark-white: #f9f9f9;
+$white-ter: rgba($white, .5);
+$white-bis: $dark-white;
+
+// Primary colors
+$success: $dark-green;
+$danger: $dark-red;
+$warning: $light-yellow;
+$primary: $grey-dark;
+$code: $grey-dark;
+$code-background: transparent;
+$info: $dark-blue;
+$light: $grey-lighter;
+$border: $grey-light;
+
+$hr-margin: 1rem 0;
+
+//typography
+$family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+$family-primary: $family-sans;
+$body-size: 14px;
+$size-3: (24/14) + 0rem;
+$size-7: (13/14) + 0rem;
+$size-8: (12/14) + 0rem;
+$size-9: 0.75rem;
+$size-10: 0.5rem;
+$size-11: 0.25rem;
+$size-small: $size-8;
+$font-weight-normal: 400;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+//input
+$input-background-color: $dark-white;
+$input-focus-background-color: $white;
+$input-border-color: $grey;
+
+$radius: 2px;
+
+//box
+$box-radius: 0;
+$box-shadow: 0 0 0 1px rgba($black, 0.1);
+
+$link: $blue;
+$text: $black;
+
+$breadcrumb-item-color: $blue;
+$breadcrumb-item-separator-color: rgba($blue, 0.5);
+$breadcrumb-item-active-color: $black;
+
+$navbar-background-color: transparent;
+
+$menu-item-hover-background-color: $blue;
+$menu-item-hover-color: $white;
+
+$progress-bar-background-color: lighten($grey-light, 15%);
+
+$base-border: 1px solid $grey-light;
+
+// animations
+$speed: 150ms;
+$speed-slow: $speed * 2;

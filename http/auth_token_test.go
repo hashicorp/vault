@@ -70,7 +70,7 @@ func TestAuthTokenCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if secret.Auth.LeaseDuration != 1800 {
-		t.Errorf("expected 1800 seconds, got %q", secret.Auth.LeaseDuration)
+		t.Errorf("expected 1800 seconds, got %d", secret.Auth.LeaseDuration)
 	}
 
 	explicitMaxCreateRequest.ExplicitMaxTTL = "2h"

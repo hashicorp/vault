@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"gopkg.in/mgo.v2"
@@ -43,13 +42,7 @@ func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, 
 		return nil, nil
 	}
 
-	var config connectionConfig
-	if err := entry.DecodeJSON(&config); err != nil {
-		return nil, err
-	}
-	return &logical.Response{
-		Data: structs.New(config).Map(),
-	}, nil
+	return nil, nil
 }
 
 func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

@@ -34,11 +34,11 @@ type generateStandardRootToken struct{}
 func (g generateStandardRootToken) generate(ctx context.Context, c *Core) (string, func(), error) {
 	te, err := c.tokenStore.rootToken(ctx)
 	if err != nil {
-		c.logger.Error("core: root token generation failed", "error", err)
+		c.logger.Error("root token generation failed", "error", err)
 		return "", nil, err
 	}
 	if te == nil {
-		c.logger.Error("core: got nil token entry back from root generation")
+		c.logger.Error("got nil token entry back from root generation")
 		return "", nil, fmt.Errorf("got nil token entry back from root generation")
 	}
 
@@ -170,7 +170,7 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("core: root generation initialized", "nonce", c.generateRootConfig.Nonce)
+		c.logger.Info("root generation initialized", "nonce", c.generateRootConfig.Nonce)
 	}
 	return nil
 }
@@ -247,7 +247,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	// Check if we don't have enough keys to unlock
 	if len(c.generateRootProgress) < config.SecretThreshold {
 		if c.logger.IsDebug() {
-			c.logger.Debug("core: cannot generate root, not enough keys", "keys", progress, "threshold", config.SecretThreshold)
+			c.logger.Debug("cannot generate root, not enough keys", "keys", progress, "threshold", config.SecretThreshold)
 		}
 		return &GenerateRootResult{
 			Progress:       progress,
@@ -272,12 +272,12 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	// Verify the master key
 	if c.seal.RecoveryKeySupported() {
 		if err := c.seal.VerifyRecoveryKey(ctx, masterKey); err != nil {
-			c.logger.Error("core: root generation aborted, recovery key verification failed", "error", err)
+			c.logger.Error("root generation aborted, recovery key verification failed", "error", err)
 			return nil, err
 		}
 	} else {
 		if err := c.barrier.VerifyMaster(masterKey); err != nil {
-			c.logger.Error("core: root generation aborted, master key verification failed", "error", err)
+			c.logger.Error("root generation aborted, master key verification failed", "error", err)
 			return nil, err
 		}
 	}
@@ -291,12 +291,12 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	uuidBytes, err := uuid.ParseUUID(tokenUUID)
 	if err != nil {
 		cleanupFunc()
-		c.logger.Error("core: error getting generated token bytes", "error", err)
+		c.logger.Error("error getting generated token bytes", "error", err)
 		return nil, err
 	}
 	if uuidBytes == nil {
 		cleanupFunc()
-		c.logger.Error("core: got nil parsed UUID bytes")
+		c.logger.Error("got nil parsed UUID bytes")
 		return nil, fmt.Errorf("got nil parsed UUID bytes")
 	}
 
@@ -310,7 +310,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		tokenBytes, err = xor.XORBase64(c.generateRootConfig.OTP, base64.StdEncoding.EncodeToString(uuidBytes))
 		if err != nil {
 			cleanupFunc()
-			c.logger.Error("core: xor of root token failed", "error", err)
+			c.logger.Error("xor of root token failed", "error", err)
 			return nil, err
 		}
 
@@ -318,7 +318,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		_, tokenBytesArr, err := pgpkeys.EncryptShares([][]byte{[]byte(tokenUUID)}, []string{c.generateRootConfig.PGPKey})
 		if err != nil {
 			cleanupFunc()
-			c.logger.Error("core: error encrypting new root token", "error", err)
+			c.logger.Error("error encrypting new root token", "error", err)
 			return nil, err
 		}
 		tokenBytes = tokenBytesArr[0]
@@ -336,7 +336,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("core: root generation finished", "nonce", c.generateRootConfig.Nonce)
+		c.logger.Info("root generation finished", "nonce", c.generateRootConfig.Nonce)
 	}
 
 	c.generateRootProgress = nil

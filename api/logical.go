@@ -138,10 +138,11 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if err != nil {
-		if resp != nil && resp.StatusCode != 404 {
-			return nil, err
-		}
+
+	// Return all errors except those that are from a 404 as we handle the not
+	// found error as a special case.
+	if err != nil && (resp == nil || resp.StatusCode != 404) {
+		return nil, err
 	}
 	if resp == nil {
 		return nil, nil

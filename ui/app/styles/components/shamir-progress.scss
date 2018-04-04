@@ -1,0 +1,11 @@
+.shamir-progress {
+  .shamir-progress-progress {
+    display: inline-block;
+    margin-right: $size-8;
+  }
+  .progress {
+    box-shadow: 0 0 0 4px $progress-bar-background-color;
+    display: inline;
+    width: 150px;
+  }
+}
