@@ -3,6 +3,7 @@ package command
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"path"
 	"strings"
@@ -27,6 +28,17 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
+		secret, err := api.ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
 		return nil, nil
 	}
 	if err != nil {
@@ -52,6 +64,17 @@ func kvListRequest(client *api.Client, path string) (*api.Secret, error) {
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
+		secret, err := api.ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
 		return nil, nil
 	}
 	if err != nil {
@@ -75,6 +98,20 @@ func kvWriteRequest(client *api.Client, path string, data map[string]interface{}
 	if resp != nil {
 		defer resp.Body.Close()
 	}
+	if resp != nil && resp.StatusCode == 404 {
+		secret, err := api.ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +132,20 @@ func kvDeleteRequest(client *api.Client, path string) (*api.Secret, error) {
 	resp, err := client.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
+	}
+	if resp != nil && resp.StatusCode == 404 {
+		secret, err := api.ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
+		return nil, nil
 	}
 	if err != nil {
 		return nil, err

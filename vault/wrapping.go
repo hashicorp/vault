@@ -77,13 +77,20 @@ func (c *Core) wrapInCubbyhole(ctx context.Context, req *logical.Request, resp *
 	// Before wrapping, obey special rules for listing: if no entries are
 	// found, 404. This prevents unwrapping only to find empty data.
 	if req.Operation == logical.ListOperation {
-		if resp == nil || len(resp.Data) == 0 {
+		if resp == nil || (len(resp.Data) == 0 && len(resp.Warnings) == 0) {
 			return nil, logical.ErrUnsupportedPath
 		}
+
 		keysRaw, ok := resp.Data["keys"]
 		if !ok || keysRaw == nil {
+			if len(resp.Data) > 0 || len(resp.Warnings) > 0 {
+				// We could be returning extra metadata on a list, or returning
+				// warnings with no data, so handle these cases
+				goto DONELISTHANDLING
+			}
 			return nil, logical.ErrUnsupportedPath
 		}
+
 		keys, ok := keysRaw.([]string)
 		if !ok {
 			return nil, logical.ErrUnsupportedPath
@@ -93,6 +100,7 @@ func (c *Core) wrapInCubbyhole(ctx context.Context, req *logical.Request, resp *
 		}
 	}
 
+DONELISTHANDLING:
 	var err error
 	sealWrap := resp.WrapInfo.SealWrap
 
@@ -151,6 +159,7 @@ func (c *Core) wrapInCubbyhole(ctx context.Context, req *logical.Request, resp *
 		jwt := jws.NewJWT(claims, crypto.SigningMethodES512)
 		serWebToken, err := jwt.Serialize(c.wrappingJWTKey)
 		if err != nil {
+			c.tokenStore.Revoke(ctx, te.ID)
 			c.logger.Error("failed to serialize JWT", "error", err)
 			return nil, ErrInternalError
 		}
@@ -191,6 +200,7 @@ func (c *Core) wrapInCubbyhole(ctx context.Context, req *logical.Request, resp *
 
 		marshaledResponse, err := json.Marshal(httpResponse)
 		if err != nil {
+			c.tokenStore.Revoke(ctx, te.ID)
 			c.logger.Error("failed to marshal wrapped response", "error", err)
 			return nil, ErrInternalError
 		}
