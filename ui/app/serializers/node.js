@@ -9,7 +9,6 @@ export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
   },
 
   pushPayload(store, payload) {
-    debugger;
     const transformedPayload = this.normalizeResponse(
       store,
       store.modelFor('node'),

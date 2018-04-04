@@ -11,9 +11,7 @@ const component = create(authForm);
 
 const authService = Ember.Service.extend({
   authenticate() {
-    return new Ember.RSVP.Promise(function(resolve, reject) {
-      Ember.$.getJSON('http://localhost:2000').then(resolve, reject);
-    });
+    return Ember.$.getJSON('http://localhost:2000');
   },
 });
 
@@ -30,7 +28,7 @@ moduleForComponent('auth-form', 'Integration | Component | auth form', {
   },
 });
 
-const CSP_ERR_TEXT = `Error This is a standby Vault node and it appears that request forwarding is not properly configured. To use the UI for anything other than unsealing this node, you will have to navigate to the active Vault node and authenticate there.`;
+const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the the active node to use the Vault UI.`;
 test('it renders error on CSP violation', function(assert) {
   this.register('service:auth', authService);
   this.inject.service('auth');
@@ -57,7 +55,7 @@ test('it renders with vault style errors', function(assert) {
 
   this.set('cluster', Ember.Object.create({}));
   this.render(hbs`{{auth-form cluster=cluster}}`);
-  return component.login().then(() => wait()).then(() => {
+  return component.login().then(() => {
     assert.equal(component.errorText, 'Error Authentication failed: Not allowed');
     server.shutdown();
   });
@@ -72,7 +70,7 @@ test('it renders AdapterError style errors', function(assert) {
 
   this.set('cluster', Ember.Object.create({}));
   this.render(hbs`{{auth-form cluster=cluster}}`);
-  return component.login().then(() => wait()).then(() => {
+  return component.login().then(() => {
     assert.equal(component.errorText, 'Error Authentication failed: Bad Request');
     server.shutdown();
   });

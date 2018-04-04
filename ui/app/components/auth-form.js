@@ -1,7 +1,7 @@
 import Ember from 'ember';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 const BACKENDS = supportedAuthBackends();
-const { inject } = Ember;
+const { computed, inject } = Ember;
 
 export default Ember.Component.extend({
   classNames: ['auth-form'],
@@ -27,20 +27,12 @@ export default Ember.Component.extend({
     return `auth-form/${type}`;
   }),
 
+  hasCSPError: computed.alias('csp.connectionViolations.firstObject'),
+
+  cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the the active node to use the Vault UI.`,
+
   handleError(e) {
-    let cluster = this.get('cluster');
     this.set('loading', false);
-    if (this.get('csp.connectionViolations.firstObject') && cluster.get('standby')) {
-      // this is a CSP error to a disallowed connect-src domain - having the API redirect will cause this;
-      this.set(
-        'error',
-        `This is a standby Vault node and it appears that request forwarding is
-        not properly configured. To use the UI for anything other than unsealing
-        this node, you will have to navigate to the active Vault node and authenticate
-        there.`
-      );
-      return;
-    }
 
     let errors = e.errors.map(error => {
       if (error.detail) {
