@@ -84,8 +84,12 @@ func (c *DeleteCommand) Run(args []string) int {
 
 	path := sanitizePath(args[0])
 
-	if _, err := client.Logical().Delete(path); err != nil {
+	secret, err := client.Logical().Delete(path)
+	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
+		if secret != nil {
+			OutputSecret(c.UI, secret)
+		}
 		return 2
 	}
 
