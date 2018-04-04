@@ -8,7 +8,7 @@ description: |-
   offers transactional consistency at global scale.
 ---
 
-# Spanner Storage Backend
+# Google Cloud Spanner Storage Backend
 
 The Google Cloud Spanner storage backend is used to persist Vault's data in
 [Spanner][spanner-docs], a fully managed, mission-critical, relational database
@@ -84,7 +84,7 @@ To use this storage backend, the service account must have the following
 minimum scope(s):
 
 ```text
-https://www.googleapis.com/auth/spanner.data
+https://www.googleapis.com/auth/google-cloud-spanner.data
 ```
 
 ## `spanner` Parameters
