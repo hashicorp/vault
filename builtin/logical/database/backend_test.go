@@ -350,10 +350,6 @@ func TestBackend_basic(t *testing.T) {
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
-	// Test for #3812
-	if credsResp.Secret.TTL != 10*time.Minute {
-		t.Fatalf("unexpected TTL of %d", credsResp.Secret.TTL)
-	}
 	// Update the role with no max ttl
 	data = map[string]interface{}{
 		"db_name":             "plugin-test",

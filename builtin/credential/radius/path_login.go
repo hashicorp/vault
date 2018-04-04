@@ -88,7 +88,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		}
 	}
 
-	resp.Auth = req.Auth
 	resp.Auth = &logical.Auth{
 		Policies: policies,
 		Metadata: map[string]string{
