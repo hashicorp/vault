@@ -73,7 +73,7 @@ func TestParseSSHHelperConfig_missingVaultAddr(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	if !strings.Contains(err.Error(), `ssh_helper: missing config "vault_addr"`) {
+	if !strings.Contains(err.Error(), `missing config "vault_addr"`) {
 		t.Errorf("bad error: %s", err)
 	}
 }
