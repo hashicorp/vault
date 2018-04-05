@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -27,4 +28,15 @@ func (j *jsonTime) UnmarshalJSON(b []byte) error {
 	}
 	*j = jsonTime(time.Unix(unix, 0))
 	return nil
+}
+
+// strListContains does a case-insensitive search of the string
+// list for the value
+func strListContains(haystack []string, needle string) bool {
+	for _, item := range haystack {
+		if strings.ToLower(item) == strings.ToLower(needle) {
+			return true
+		}
+	}
+	return false
 }

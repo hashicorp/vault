@@ -103,7 +103,7 @@
 /guides/configuration/lease.html                   /guides/identity/lease.html
 /guides/configuration/generate-root.html           /guides/operations/generate-root.html
 /guides/configuration/rekeying-and-rotating.html   /guides/operations/rekeying-and-rotating.html
-/guides/configuration/plugin-backends.html         /guides/operations/plugin-backends.html 
+/guides/configuration/plugin-backends.html         /guides/operations/plugin-backends.html
 
 /docs/vault-enterprise/index.html               /docs/enterprise/index.html
 /docs/vault-enterprise/replication/index.html   /docs/enterprise/replication/index.html
@@ -124,3 +124,5 @@
 /docs/commands/help.html               /docs/commands/path-help.html
 
 /docs/enterprise/hsm/configuration.html /docs/configuration/seal/pkcs11.html
+/docs/configuration/storage/google-cloud.html /docs/configuration/storage/google-cloud-storage.html
+/docs/configuration/storage/spanner.html /docs/configuration/storage/google-cloud-spanner.html

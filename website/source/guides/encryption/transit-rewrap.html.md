@@ -1,6 +1,6 @@
 ---
 layout: "guides"
-page_title: "Transit Secrets Re-rapping - Guides"
+page_title: "Transit Secrets Re-wrapping - Guides"
 sidebar_current: "guides-encryption-rewrap"
 description: |-
   The goal of this guide is to demonstrate one possible way to re-wrap data after

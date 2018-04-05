@@ -269,32 +269,6 @@ func (b *Backend) Type() logical.BackendType {
 	return b.BackendType
 }
 
-// SanitizeTTLStr takes in the TTL and MaxTTL values provided by the user,
-// compares those with the SystemView values. If they are empty a value of 0 is
-// set, which will cause initial secret or LeaseExtend operations to use the
-// mount/system defaults.  If they are set, their boundaries are validated.
-func (b *Backend) SanitizeTTLStr(ttlStr, maxTTLStr string) (ttl, maxTTL time.Duration, err error) {
-	if len(ttlStr) == 0 || ttlStr == "0" {
-		ttl = 0
-	} else {
-		ttl, err = time.ParseDuration(ttlStr)
-		if err != nil {
-			return 0, 0, errwrap.Wrapf("invalid ttl: {{err}}", err)
-		}
-	}
-
-	if len(maxTTLStr) == 0 || maxTTLStr == "0" {
-		maxTTL = 0
-	} else {
-		maxTTL, err = time.ParseDuration(maxTTLStr)
-		if err != nil {
-			return 0, 0, errwrap.Wrapf("invalid max_ttl: {{err}}", err)
-		}
-	}
-
-	return ttl, maxTTL, nil
-}
-
 // Route looks up the path that would be used for a given path string.
 func (b *Backend) Route(path string) *Path {
 	result, _ := b.route(path)

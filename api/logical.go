@@ -58,12 +58,12 @@ func (c *Logical) Read(path string) (*Secret, error) {
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, parseErr
+			return nil, err
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, nil
 		}
-		return nil, err
+		return nil, nil
 	}
 	if err != nil {
 		return nil, err
@@ -89,12 +89,12 @@ func (c *Logical) List(path string) (*Secret, error) {
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, parseErr
+			return nil, err
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, nil
 		}
-		return nil, err
+		return nil, nil
 	}
 	if err != nil {
 		return nil, err
@@ -120,12 +120,11 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, parseErr
+			return nil, err
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
-			return secret, nil
+			return secret, err
 		}
-		return nil, err
 	}
 	if err != nil {
 		return nil, err
@@ -151,12 +150,11 @@ func (c *Logical) Delete(path string) (*Secret, error) {
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, parseErr
+			return nil, err
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
-			return secret, nil
+			return secret, err
 		}
-		return nil, err
 	}
 	if err != nil {
 		return nil, err
