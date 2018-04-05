@@ -1037,7 +1037,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 
 	isLeader, _, _, err := core.Leader()
 	if err != nil && err != vault.ErrHANotEnabled {
-		return nil, fmt.Errorf("failed to check active status: %v", err)
+		return nil, errwrap.Wrapf("failed to check active status: {{err}}", err)
 	}
 	if err == nil {
 		leaderCount := 5
@@ -1050,7 +1050,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 			time.Sleep(1 * time.Second)
 			isLeader, _, _, err = core.Leader()
 			if err != nil {
-				return nil, fmt.Errorf("failed to check active status: %v", err)
+				return nil, errwrap.Wrapf("failed to check active status: {{err}}", err)
 			}
 			leaderCount--
 		}
@@ -1072,13 +1072,13 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 		resp, err := core.HandleRequest(req)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create root token with ID %s: %s", coreConfig.DevToken, err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create root token with ID %q: {{err}}", coreConfig.DevToken), err)
 		}
 		if resp == nil {
-			return nil, fmt.Errorf("nil response when creating root token with ID %s", coreConfig.DevToken)
+			return nil, fmt.Errorf("nil response when creating root token with ID %q", coreConfig.DevToken)
 		}
 		if resp.Auth == nil {
-			return nil, fmt.Errorf("nil auth when creating root token with ID %s", coreConfig.DevToken)
+			return nil, fmt.Errorf("nil auth when creating root token with ID %q", coreConfig.DevToken)
 		}
 
 		init.RootToken = resp.Auth.ClientToken
@@ -1088,7 +1088,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.Data = nil
 		resp, err = core.HandleRequest(req)
 		if err != nil {
-			return nil, fmt.Errorf("failed to revoke initial root token: %s", err)
+			return nil, errwrap.Wrapf("failed to revoke initial root token: {{err}}", err)
 		}
 	}
 
@@ -1355,7 +1355,7 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 		if val, ok := list.Config["tls_disable"]; ok {
 			disable, err := parseutil.ParseBool(val)
 			if err != nil {
-				return "", fmt.Errorf("tls_disable: %s", err)
+				return "", errwrap.Wrapf("tls_disable: {{err}}", err)
 			}
 
 			if disable {
@@ -1483,7 +1483,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 		sink, err := datadog.NewDogStatsdSink(telConfig.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return fmt.Errorf("failed to start DogStatsD sink. Got: %s", err)
+			return errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)
@@ -1512,7 +1512,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
 					if err := relFunc(nil); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading listener: %v", err))
+						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf("error encountered reloading listener: {{err}}", err))
 					}
 				}
 			}
@@ -1521,7 +1521,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
 					if err := relFunc(nil); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading file audit device at path %s: %v", strings.TrimPrefix(k, "audit_file|"), err))
+						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf(fmt.Sprintf("error encountered reloading file audit device at path %q: {{err}}", strings.TrimPrefix(k, "audit_file|")), err))
 					}
 				}
 			}
@@ -1548,7 +1548,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	// Open the PID file
 	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("could not open pid file: %v", err)
+		return errwrap.Wrapf("could not open pid file: {{err}}", err)
 	}
 	defer pidFile.Close()
 
@@ -1556,7 +1556,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	pid := os.Getpid()
 	_, err = pidFile.WriteString(fmt.Sprintf("%d", pid))
 	if err != nil {
-		return fmt.Errorf("could not write to pid file: %v", err)
+		return errwrap.Wrapf("could not write to pid file: {{err}}", err)
 	}
 	return nil
 }

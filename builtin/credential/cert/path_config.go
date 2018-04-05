@@ -2,8 +2,8 @@ package cert
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -52,7 +52,7 @@ func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error
 	var result config
 	if entry != nil {
 		if err := entry.DecodeJSON(&result); err != nil {
-			return nil, fmt.Errorf("error reading configuration: %s", err)
+			return nil, errwrap.Wrapf("error reading configuration: {{err}}", err)
 		}
 	}
 	return &result, nil

@@ -1442,7 +1442,7 @@ func (b *SystemBackend) handleRekeyRetrieve(
 	recovery bool) (*logical.Response, error) {
 	backup, err := b.Core.RekeyRetrieveBackup(ctx, recovery)
 	if err != nil {
-		return nil, fmt.Errorf("unable to look up backed-up keys: %v", err)
+		return nil, errwrap.Wrapf("unable to look up backed-up keys: {{err}}", err)
 	}
 	if backup == nil {
 		return logical.ErrorResponse("no backed-up keys found"), nil
@@ -1457,7 +1457,7 @@ func (b *SystemBackend) handleRekeyRetrieve(
 			}
 			key, err := hex.DecodeString(j)
 			if err != nil {
-				return nil, fmt.Errorf("error decoding hex-encoded backup key: %v", err)
+				return nil, errwrap.Wrapf("error decoding hex-encoded backup key: {{err}}", err)
 			}
 			currB64Keys = append(currB64Keys, base64.StdEncoding.EncodeToString(key))
 			keysB64[k] = currB64Keys
@@ -1493,7 +1493,7 @@ func (b *SystemBackend) handleRekeyDelete(
 	recovery bool) (*logical.Response, error) {
 	err := b.Core.RekeyDeleteBackup(ctx, recovery)
 	if err != nil {
-		return nil, fmt.Errorf("error during deletion of backed-up keys: %v", err)
+		return nil, errwrap.Wrapf("error during deletion of backed-up keys: {{err}}", err)
 	}
 
 	return nil, nil
@@ -1814,13 +1814,13 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 	sysView := b.Core.router.MatchingSystemView(path)
 	if sysView == nil {
 		b.Backend.Logger().Error("cannot fetch sysview", "path", path)
-		return handleError(fmt.Errorf("sys: cannot fetch sysview for path %s", path))
+		return handleError(fmt.Errorf("sys: cannot fetch sysview for path %q", path))
 	}
 
 	mountEntry := b.Core.router.MatchingMountEntry(path)
 	if mountEntry == nil {
 		b.Backend.Logger().Error("cannot fetch mount entry", "path", path)
-		return handleError(fmt.Errorf("sys: cannot fetch mount entry for path %s", path))
+		return handleError(fmt.Errorf("sys: cannot fetch mount entry for path %q", path))
 	}
 
 	resp := &logical.Response{
@@ -1887,14 +1887,14 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	for _, p := range untunableMounts {
 		if strings.HasPrefix(path, p) {
 			b.Backend.Logger().Error("cannot tune this mount", "path", path)
-			return handleError(fmt.Errorf("sys: cannot tune '%s'", path))
+			return handleError(fmt.Errorf("cannot tune %q", path))
 		}
 	}
 
 	mountEntry := b.Core.router.MatchingMountEntry(path)
 	if mountEntry == nil {
 		b.Backend.Logger().Error("tune failed: no mount entry found", "path", path)
-		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
+		return handleError(fmt.Errorf("tune of path %q failed: no mount entry found", path))
 	}
 	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
@@ -1915,7 +1915,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	mountEntry = b.Core.router.MatchingMountEntry(path)
 	if mountEntry == nil {
 		b.Backend.Logger().Error("tune failed: no mount entry found", "path", path)
-		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
+		return handleError(fmt.Errorf("tune of path %q failed: no mount entry found", path))
 	}
 	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
@@ -2963,7 +2963,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
 	}); err != nil {
 		b.Core.logger.Error("core: error saving keyring canary", "error", err)
-		return nil, fmt.Errorf("failed to save keyring canary: %v", err)
+		return nil, errwrap.Wrapf("failed to save keyring canary: {{err}}", err)
 	}
 
 	return nil, nil
@@ -3064,7 +3064,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, token string
 		// Use the token to decrement the use count to avoid a second operation on the token.
 		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
-			return "", fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
+			return "", errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
 		}
 
 		defer b.Core.tokenStore.Revoke(ctx, token)
@@ -3077,7 +3077,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, token string
 	}
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return "", fmt.Errorf("error looking up wrapping information: %v", err)
+		return "", errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
 	}
 	if cubbyResp == nil {
 		return "no information found; wrapping token may be from a previous Vault version", ErrInternalError
@@ -3119,7 +3119,7 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 	}
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
+		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -3141,7 +3141,7 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 	if creationTTLRaw != nil {
 		creationTTL, err := creationTTLRaw.(json.Number).Int64()
 		if err != nil {
-			return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
+			return nil, errwrap.Wrapf("error reading creation_ttl value from wrapping information: {{err}}", err)
 		}
 		resp.Data["creation_ttl"] = time.Duration(creationTTL).Seconds()
 	}
@@ -3175,7 +3175,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		// Use the token to decrement the use count to avoid a second operation on the token.
 		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
-			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
+			return nil, errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
 		}
 		defer b.Core.tokenStore.Revoke(ctx, token)
 	}
@@ -3188,7 +3188,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	}
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
+		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -3207,7 +3207,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	}
 	creationTTL, err := cubbyResp.Data["creation_ttl"].(json.Number).Int64()
 	if err != nil {
-		return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
+		return nil, errwrap.Wrapf("error reading creation_ttl value from wrapping information: {{err}}", err)
 	}
 
 	// Get creation_path to return as the response later
@@ -3225,7 +3225,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	}
 	cubbyResp, err = b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, fmt.Errorf("error looking up response: %v", err)
+		return nil, errwrap.Wrapf("error looking up response: {{err}}", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil

@@ -390,7 +390,7 @@ func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, error) {
 	f, ok := c.auditBackends[entry.Type]
 	if !ok {
-		return nil, fmt.Errorf("unknown backend type: %s", entry.Type)
+		return nil, fmt.Errorf("unknown backend type: %q", entry.Type)
 	}
 	saltConfig := &salt.Config{
 		HMAC:     sha256.New,

@@ -134,7 +134,7 @@ func wrappingVerificationFunc(core *vault.Core, req *logical.Request) error {
 
 	valid, err := core.ValidateWrappingToken(req)
 	if err != nil {
-		return fmt.Errorf("error validating wrapping token: %v", err)
+		return errwrap.Wrapf("error validating wrapping token: {{err}}", err)
 	}
 	if !valid {
 		return fmt.Errorf("wrapping token is not valid or does not exist")

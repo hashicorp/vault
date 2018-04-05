@@ -11,6 +11,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/mitchellh/cli"
@@ -697,15 +698,14 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 	}
 	secret, err := c.client.Logical().Write(mountPoint+"/lookup", data)
 	if err != nil {
-		return "", fmt.Errorf("Error finding roles for IP %q: %q", ip, err)
-
+		return "", errwrap.Wrapf(fmt.Sprintf("error finding roles for IP %q: {{err}}", ip), err)
 	}
 	if secret == nil || secret.Data == nil {
-		return "", fmt.Errorf("Error finding roles for IP %q: %q", ip, err)
+		return "", errwrap.Wrapf(fmt.Sprintf("error finding roles for IP %q: {{err}}", ip), err)
 	}
 
 	if secret.Data["roles"] == nil {
-		return "", fmt.Errorf("No matching roles found for IP %q", ip)
+		return "", fmt.Errorf("no matching roles found for IP %q", ip)
 	}
 
 	if len(secret.Data["roles"].([]interface{})) == 1 {
@@ -716,7 +716,7 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 			roleNames += item.(string) + ", "
 		}
 		roleNames = strings.TrimRight(roleNames, ", ")
-		return "", fmt.Errorf("Roles:%q. "+`
+		return "", fmt.Errorf("Roles: %q. "+`
 			Multiple roles are registered for this IP.
 			Select a role using '-role' option.
 			Note that all roles may not be permitted, based on ACLs.`, roleNames)

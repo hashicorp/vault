@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/keybase/go-crypto/openpgp"
 )
 
@@ -115,16 +116,16 @@ func ReadPGPFile(path string) (string, error) {
 	entityList, err := openpgp.ReadArmoredKeyRing(keyReader)
 	if err == nil {
 		if len(entityList) != 1 {
-			return "", fmt.Errorf("more than one key found in file %s", path)
+			return "", fmt.Errorf("more than one key found in file %q", path)
 		}
 		if entityList[0] == nil {
-			return "", fmt.Errorf("primary key was nil for file %s", path)
+			return "", fmt.Errorf("primary key was nil for file %q", path)
 		}
 
 		serializedEntity := bytes.NewBuffer(nil)
 		err = entityList[0].Serialize(serializedEntity)
 		if err != nil {
-			return "", fmt.Errorf("error serializing entity for file %s: %s", path, err)
+			return "", errwrap.Wrapf(fmt.Sprintf("error serializing entity for file %q: {{err}}", path), err)
 		}
 
 		return base64.StdEncoding.EncodeToString(serializedEntity.Bytes()), nil

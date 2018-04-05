@@ -160,7 +160,7 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 		}
 		foundClientCert = true
 	case t.ClientCert != "" || t.ClientKey != "":
-		return fmt.Errorf("Both client cert and client key must be provided")
+		return fmt.Errorf("both client cert and client key must be provided")
 	}
 
 	if t.CACert != "" || t.CAPath != "" {
@@ -232,7 +232,7 @@ func (c *Config) ReadEnvironment() error {
 	if t := os.Getenv(EnvVaultClientTimeout); t != "" {
 		clientTimeout, err := parseutil.ParseDurationSecond(t)
 		if err != nil {
-			return fmt.Errorf("Could not parse %s", EnvVaultClientTimeout)
+			return fmt.Errorf("could not parse %q", EnvVaultClientTimeout)
 		}
 		envClientTimeout = clientTimeout
 	}
@@ -240,7 +240,7 @@ func (c *Config) ReadEnvironment() error {
 		var err error
 		envInsecure, err = strconv.ParseBool(v)
 		if err != nil {
-			return fmt.Errorf("Could not parse VAULT_SKIP_VERIFY")
+			return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
 		}
 	}
 	if v := os.Getenv(EnvVaultTLSServerName); v != "" {
@@ -348,7 +348,7 @@ func (c *Client) SetAddress(addr string) error {
 
 	var err error
 	if c.addr, err = url.Parse(addr); err != nil {
-		return fmt.Errorf("failed to set address: %v", err)
+		return errwrap.Wrapf("failed to set address: {{err}}", err)
 	}
 
 	return nil
@@ -539,7 +539,7 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 		return !unicode.IsPrint(c)
 	})
 	if idx != -1 {
-		return nil, fmt.Errorf("Configured Vault token contains non-printable characters and cannot be used.")
+		return nil, fmt.Errorf("configured Vault token contains non-printable characters and cannot be used")
 	}
 
 	redirectCount := 0
@@ -560,8 +560,8 @@ START:
 	}
 	if err != nil {
 		if strings.Contains(err.Error(), "tls: oversized") {
-			err = fmt.Errorf(
-				"%s\n\n"+
+			err = errwrap.Wrapf(
+				"{{err}}\n\n"+
 					"This error usually means that the server is running with TLS disabled\n"+
 					"but the client is configured to use TLS. Please either enable TLS\n"+
 					"on the server or run the client with -address set to an address\n"+

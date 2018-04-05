@@ -11,6 +11,7 @@ import (
 
 	"sync"
 
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -73,13 +74,13 @@ func NewBackend(ctx context.Context, pluginName string, sys pluginutil.LookRunne
 		// from the pluginRunner. Then cast it to logical.Backend.
 		backendRaw, err := pluginRunner.BuiltinFactory()
 		if err != nil {
-			return nil, fmt.Errorf("error getting plugin type: %s", err)
+			return nil, errwrap.Wrapf("error getting plugin type: {{err}}", err)
 		}
 
 		var ok bool
 		backend, ok = backendRaw.(logical.Backend)
 		if !ok {
-			return nil, fmt.Errorf("unsupported backend type: %s", pluginName)
+			return nil, fmt.Errorf("unsupported backend type: %q", pluginName)
 		}
 
 	} else {

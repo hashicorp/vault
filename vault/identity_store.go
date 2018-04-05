@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
@@ -30,7 +31,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	// Create a new in-memory database for the identity store
 	db, err := memdb.NewMemDB(identityStoreSchema())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create memdb for identity store: %v", err)
+		return nil, errwrap.Wrapf("failed to create memdb for identity store: {{err}}", err)
 	}
 
 	iStore := &IdentityStore{
@@ -43,12 +44,12 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 
 	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, iStore.logger, "")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create entity packer: %v", err)
+		return nil, errwrap.Wrapf("failed to create entity packer: {{err}}", err)
 	}
 
 	iStore.groupPacker, err = storagepacker.NewStoragePacker(iStore.view, iStore.logger, groupBucketsPrefix)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create group packer: %v", err)
+		return nil, errwrap.Wrapf("failed to create group packer: {{err}}", err)
 	}
 
 	iStore.Backend = &framework.Backend{
@@ -246,7 +247,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 	var entity identity.Entity
 	err := ptypes.UnmarshalAny(item.Message, &entity)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode entity from storage bucket item: %v", err)
+		return nil, errwrap.Wrapf("failed to decode entity from storage bucket item: {{err}}", err)
 	}
 
 	return &entity, nil
@@ -260,7 +261,7 @@ func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*ide
 	var group identity.Group
 	err := ptypes.UnmarshalAny(item.Message, &group)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode group from storage bucket item: %v", err)
+		return nil, errwrap.Wrapf("failed to decode group from storage bucket item: {{err}}", err)
 	}
 
 	return &group, nil

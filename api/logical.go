@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
@@ -213,10 +214,10 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 
 	secret, err := c.Read(wrappedResponseLocation)
 	if err != nil {
-		return nil, fmt.Errorf("error reading %s: %s", wrappedResponseLocation, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("error reading %q: {{err}}", wrappedResponseLocation), err)
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("no value found at %s", wrappedResponseLocation)
+		return nil, fmt.Errorf("no value found at %q", wrappedResponseLocation)
 	}
 	if secret.Data == nil {
 		return nil, fmt.Errorf("\"data\" not found in wrapping response")
@@ -228,7 +229,7 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	wrappedSecret := new(Secret)
 	buf := bytes.NewBufferString(secret.Data["response"].(string))
 	if err := jsonutil.DecodeJSONFromReader(buf, wrappedSecret); err != nil {
-		return nil, fmt.Errorf("error unmarshalling wrapped secret: %s", err)
+		return nil, errwrap.Wrapf("error unmarshalling wrapped secret: {{err}}", err)
 	}
 
 	return wrappedSecret, nil

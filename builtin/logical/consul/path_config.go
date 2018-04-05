@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -46,14 +47,12 @@ func readConfigAccess(ctx context.Context, storage logical.Storage) (*accessConf
 		return nil, nil, err
 	}
 	if entry == nil {
-		return nil, fmt.Errorf(
-				"Access credentials for the backend itself haven't been configured. Please configure them at the '/config/access' endpoint"),
-			nil
+		return nil, fmt.Errorf("access credentials for the backend itself haven't been configured; please configure them at the '/config/access' endpoint"), nil
 	}
 
 	conf := &accessConfig{}
 	if err := entry.DecodeJSON(conf); err != nil {
-		return nil, nil, fmt.Errorf("error reading consul access configuration: %s", err)
+		return nil, nil, errwrap.Wrapf("error reading consul access configuration: {{err}}", err)
 	}
 
 	return conf, nil, nil

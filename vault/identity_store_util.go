@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
@@ -40,7 +41,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	i.logger.Debug("identity loading groups")
 	existing, err := i.groupPacker.View().List(ctx, groupBucketsPrefix)
 	if err != nil {
-		return fmt.Errorf("failed to scan for groups: %v", err)
+		return errwrap.Wrapf("failed to scan for groups: {{err}}", err)
 	}
 	i.logger.Debug("groups collected", "num_existing", len(existing))
 
@@ -75,7 +76,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			err = i.upsertGroupInTxn(txn, group, false)
 			if err != nil {
 				txn.Abort()
-				return fmt.Errorf("failed to update group in memdb: %v", err)
+				return errwrap.Wrapf("failed to update group in memdb: {{err}}", err)
 			}
 
 			txn.Commit()
@@ -94,7 +95,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	i.logger.Debug("loading entities")
 	existing, err := i.entityPacker.View().List(ctx, storagepacker.StoragePackerBucketsPrefix)
 	if err != nil {
-		return fmt.Errorf("failed to scan for entities: %v", err)
+		return errwrap.Wrapf("failed to scan for entities: {{err}}", err)
 	}
 	i.logger.Debug("entities collected", "num_existing", len(existing))
 
@@ -190,7 +191,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				// Only update MemDB and don't hit the storage again
 				err = i.upsertEntity(entity, nil, false)
 				if err != nil {
-					return fmt.Errorf("failed to update entity in MemDB: %v", err)
+					return errwrap.Wrapf("failed to update entity in MemDB: {{err}}", err)
 				}
 			}
 		}
@@ -532,18 +533,18 @@ func (i *IdentityStore) MemDBUpsertAliasInTxn(txn *memdb.Txn, alias *identity.Al
 
 	aliasRaw, err := txn.First(tableName, "id", alias.ID)
 	if err != nil {
-		return fmt.Errorf("failed to lookup alias from memdb using alias ID: %v", err)
+		return errwrap.Wrapf("failed to lookup alias from memdb using alias ID: {{err}}", err)
 	}
 
 	if aliasRaw != nil {
 		err = txn.Delete(tableName, aliasRaw)
 		if err != nil {
-			return fmt.Errorf("failed to delete alias from memdb: %v", err)
+			return errwrap.Wrapf("failed to delete alias from memdb: {{err}}", err)
 		}
 	}
 
 	if err := txn.Insert(tableName, alias); err != nil {
-		return fmt.Errorf("failed to update alias into memdb: %v", err)
+		return errwrap.Wrapf("failed to update alias into memdb: {{err}}", err)
 	}
 
 	return nil
@@ -583,7 +584,7 @@ func (i *IdentityStore) MemDBAliasByCanonicalIDInTxn(txn *memdb.Txn, canonicalID
 
 	aliasRaw, err := txn.First(tableName, "canonical_id", canonicalID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch alias from memdb using canonical ID: %v", err)
+		return nil, errwrap.Wrapf("failed to fetch alias from memdb using canonical ID: {{err}}", err)
 	}
 
 	if aliasRaw == nil {
@@ -628,7 +629,7 @@ func (i *IdentityStore) MemDBAliasByIDInTxn(txn *memdb.Txn, aliasID string, clon
 
 	aliasRaw, err := txn.First(tableName, "id", aliasID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch alias from memdb using alias ID: %v", err)
+		return nil, errwrap.Wrapf("failed to fetch alias from memdb using alias ID: {{err}}", err)
 	}
 
 	if aliasRaw == nil {
@@ -691,7 +692,7 @@ func (i *IdentityStore) MemDBAliasByFactorsInTxn(txn *memdb.Txn, mountAccessor, 
 
 	aliasRaw, err := txn.First(tableName, "factors", mountAccessor, aliasName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch alias from memdb using factors: %v", err)
+		return nil, errwrap.Wrapf("failed to fetch alias from memdb using factors: {{err}}", err)
 	}
 
 	if aliasRaw == nil {
@@ -731,7 +732,7 @@ func (i *IdentityStore) MemDBAliasesByMetadata(filters map[string]string, clone 
 
 	aliasesIter, err := txn.Get(tableName, "metadata", args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to lookup aliases using metadata: %v", err)
+		return nil, errwrap.Wrapf("failed to lookup aliases using metadata: {{err}}", err)
 	}
 
 	var aliases []*identity.Alias
@@ -793,7 +794,7 @@ func (i *IdentityStore) MemDBDeleteAliasByIDInTxn(txn *memdb.Txn, aliasID string
 
 	err = txn.Delete(tableName, alias)
 	if err != nil {
-		return fmt.Errorf("failed to delete alias from memdb: %v", err)
+		return errwrap.Wrapf("failed to delete alias from memdb: {{err}}", err)
 	}
 
 	return nil
@@ -828,18 +829,18 @@ func (i *IdentityStore) MemDBUpsertEntityInTxn(txn *memdb.Txn, entity *identity.
 
 	entityRaw, err := txn.First(entitiesTable, "id", entity.ID)
 	if err != nil {
-		return fmt.Errorf("failed to lookup entity from memdb using entity id: %v", err)
+		return errwrap.Wrapf("failed to lookup entity from memdb using entity id: {{err}}", err)
 	}
 
 	if entityRaw != nil {
 		err = txn.Delete(entitiesTable, entityRaw)
 		if err != nil {
-			return fmt.Errorf("failed to delete entity from memdb: %v", err)
+			return errwrap.Wrapf("failed to delete entity from memdb: {{err}}", err)
 		}
 	}
 
 	if err := txn.Insert(entitiesTable, entity); err != nil {
-		return fmt.Errorf("failed to update entity into memdb: %v", err)
+		return errwrap.Wrapf("failed to update entity into memdb: {{err}}", err)
 	}
 
 	return nil
@@ -874,7 +875,7 @@ func (i *IdentityStore) MemDBEntityByIDInTxn(txn *memdb.Txn, entityID string, cl
 
 	entityRaw, err := txn.First(entitiesTable, "id", entityID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch entity from memdb using entity id: %v", err)
+		return nil, errwrap.Wrapf("failed to fetch entity from memdb using entity id: {{err}}", err)
 	}
 
 	if entityRaw == nil {
@@ -914,7 +915,7 @@ func (i *IdentityStore) MemDBEntityByNameInTxn(txn *memdb.Txn, entityName string
 
 	entityRaw, err := txn.First(entitiesTable, "name", entityName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch entity from memdb using entity name: %v", err)
+		return nil, errwrap.Wrapf("failed to fetch entity from memdb using entity name: {{err}}", err)
 	}
 
 	if entityRaw == nil {
@@ -959,7 +960,7 @@ func (i *IdentityStore) MemDBEntitiesByMetadata(filters map[string]string, clone
 
 	entitiesIter, err := txn.Get(entitiesTable, "metadata", args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to lookup entities using metadata: %v", err)
+		return nil, errwrap.Wrapf("failed to lookup entities using metadata: {{err}}", err)
 	}
 
 	var entities []*identity.Entity
@@ -1000,7 +1001,7 @@ func (i *IdentityStore) MemDBEntitiesByBucketEntryKeyHashInTxn(txn *memdb.Txn, h
 
 	entitiesIter, err := txn.Get(entitiesTable, "bucket_key_hash", hashValue)
 	if err != nil {
-		return nil, fmt.Errorf("failed to lookup entities using bucket entry key hash: %v", err)
+		return nil, errwrap.Wrapf("failed to lookup entities using bucket entry key hash: {{err}}", err)
 	}
 
 	var entities []*identity.Entity
@@ -1022,7 +1023,7 @@ func (i *IdentityStore) MemDBEntityByMergedEntityIDInTxn(txn *memdb.Txn, mergedE
 
 	entityRaw, err := txn.First(entitiesTable, "merged_entity_ids", mergedEntityID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch entity from memdb using merged entity id: %v", err)
+		return nil, errwrap.Wrapf("failed to fetch entity from memdb using merged entity id: {{err}}", err)
 	}
 
 	if entityRaw == nil {
@@ -1120,7 +1121,7 @@ func (i *IdentityStore) MemDBDeleteEntityByIDInTxn(txn *memdb.Txn, entityID stri
 
 	err = txn.Delete(entitiesTable, entity)
 	if err != nil {
-		return fmt.Errorf("failed to delete entity from memdb: %v", err)
+		return errwrap.Wrapf("failed to delete entity from memdb: {{err}}", err)
 	}
 
 	return nil
@@ -1159,7 +1160,7 @@ func (i *IdentityStore) sanitizeAlias(alias *identity.Alias) error {
 	// Alias metadata should always be map[string]string
 	err = validateMetadata(alias.Metadata)
 	if err != nil {
-		return fmt.Errorf("invalid alias metadata: %v", err)
+		return errwrap.Wrapf("invalid alias metadata: {{err}}", err)
 	}
 
 	// Create an ID if there isn't one already
@@ -1210,7 +1211,7 @@ func (i *IdentityStore) sanitizeEntity(entity *identity.Entity) error {
 	// Entity metadata should always be map[string]string
 	err = validateMetadata(entity.Metadata)
 	if err != nil {
-		return fmt.Errorf("invalid entity metadata: %v", err)
+		return errwrap.Wrapf("invalid entity metadata: {{err}}", err)
 	}
 
 	// Set the creation and last update times
@@ -1253,7 +1254,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 	// Entity metadata should always be map[string]string
 	err = validateMetadata(group.Metadata)
 	if err != nil {
-		return fmt.Errorf("invalid group metadata: %v", err)
+		return errwrap.Wrapf("invalid group metadata: {{err}}", err)
 	}
 
 	// Set the creation and last update times
@@ -1375,7 +1376,7 @@ func (i *IdentityStore) validateMemberGroupID(groupID string, memberGroupID stri
 func (i *IdentityStore) validateEntityID(entityID string) error {
 	entity, err := i.MemDBEntityByID(entityID, false)
 	if err != nil {
-		return fmt.Errorf("failed to validate entity ID %q: %v", entityID, err)
+		return errwrap.Wrapf(fmt.Sprintf("failed to validate entity ID %q: {{err}}", entityID), err)
 	}
 	if entity == nil {
 		return fmt.Errorf("invalid entity ID %q", entityID)
@@ -1386,7 +1387,7 @@ func (i *IdentityStore) validateEntityID(entityID string) error {
 func (i *IdentityStore) validateGroupID(groupID string) error {
 	group, err := i.MemDBGroupByID(groupID, false)
 	if err != nil {
-		return fmt.Errorf("failed to validate group ID %q: %v", groupID, err)
+		return errwrap.Wrapf(fmt.Sprintf("failed to validate group ID %q: {{err}}", groupID), err)
 	}
 	if group == nil {
 		return fmt.Errorf("invalid group ID %q", groupID)
@@ -1489,7 +1490,7 @@ func validateMetadata(meta map[string]string) error {
 
 	for key, value := range meta {
 		if err := validateMetaPair(key, value); err != nil {
-			return fmt.Errorf("failed to load metadata pair (%q, %q): %v", key, value, err)
+			return errwrap.Wrapf(fmt.Sprintf("failed to load metadata pair (%q, %q): {{err}}", key, value), err)
 		}
 	}
 
@@ -1537,7 +1538,7 @@ func (i *IdentityStore) MemDBGroupByNameInTxn(txn *memdb.Txn, groupName string, 
 
 	groupRaw, err := txn.First(groupsTable, "name", groupName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch group from memdb using group name: %v", err)
+		return nil, errwrap.Wrapf("failed to fetch group from memdb using group name: {{err}}", err)
 	}
 
 	if groupRaw == nil {
@@ -1644,18 +1645,18 @@ func (i *IdentityStore) MemDBUpsertGroupInTxn(txn *memdb.Txn, group *identity.Gr
 
 	groupRaw, err := txn.First(groupsTable, "id", group.ID)
 	if err != nil {
-		return fmt.Errorf("failed to lookup group from memdb using group id: %v", err)
+		return errwrap.Wrapf("failed to lookup group from memdb using group id: {{err}}", err)
 	}
 
 	if groupRaw != nil {
 		err = txn.Delete(groupsTable, groupRaw)
 		if err != nil {
-			return fmt.Errorf("failed to delete group from memdb: %v", err)
+			return errwrap.Wrapf("failed to delete group from memdb: {{err}}", err)
 		}
 	}
 
 	if err := txn.Insert(groupsTable, group); err != nil {
-		return fmt.Errorf("failed to update group into memdb: %v", err)
+		return errwrap.Wrapf("failed to update group into memdb: {{err}}", err)
 	}
 
 	return nil
@@ -1733,7 +1734,7 @@ func (i *IdentityStore) MemDBDeleteGroupByIDInTxn(txn *memdb.Txn, groupID string
 
 	err = txn.Delete("groups", group)
 	if err != nil {
-		return fmt.Errorf("failed to delete group from memdb: %v", err)
+		return errwrap.Wrapf("failed to delete group from memdb: {{err}}", err)
 	}
 
 	return nil
@@ -1804,7 +1805,7 @@ func (i *IdentityStore) MemDBDeleteGroupByNameInTxn(txn *memdb.Txn, groupName st
 
 	err = txn.Delete(groupsTable, group)
 	if err != nil {
-		return fmt.Errorf("failed to delete group from memdb: %v", err)
+		return errwrap.Wrapf("failed to delete group from memdb: {{err}}", err)
 	}
 
 	return nil
@@ -1821,7 +1822,7 @@ func (i *IdentityStore) MemDBGroupByIDInTxn(txn *memdb.Txn, groupID string, clon
 
 	groupRaw, err := txn.First(groupsTable, "id", groupID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch group from memdb using group ID: %v", err)
+		return nil, errwrap.Wrapf("failed to fetch group from memdb using group ID: {{err}}", err)
 	}
 
 	if groupRaw == nil {
@@ -1857,7 +1858,7 @@ func (i *IdentityStore) MemDBGroupsByPolicyInTxn(txn *memdb.Txn, policyName stri
 
 	groupsIter, err := txn.Get(groupsTable, "policies", policyName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to lookup groups using policy name: %v", err)
+		return nil, errwrap.Wrapf("failed to lookup groups using policy name: {{err}}", err)
 	}
 
 	var groups []*identity.Group
@@ -1892,7 +1893,7 @@ func (i *IdentityStore) MemDBGroupsByParentGroupIDInTxn(txn *memdb.Txn, memberGr
 
 	groupsIter, err := txn.Get(groupsTable, "parent_group_ids", memberGroupID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to lookup groups using member group ID: %v", err)
+		return nil, errwrap.Wrapf("failed to lookup groups using member group ID: {{err}}", err)
 	}
 
 	var groups []*identity.Group
@@ -1934,7 +1935,7 @@ func (i *IdentityStore) MemDBGroupsByMemberEntityIDInTxn(txn *memdb.Txn, entityI
 
 	groupsIter, err := txn.Get(groupsTable, "member_entity_ids", entityID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to lookup groups using entity ID: %v", err)
+		return nil, errwrap.Wrapf("failed to lookup groups using entity ID: {{err}}", err)
 	}
 
 	var groups []*identity.Group
@@ -2201,7 +2202,7 @@ func (i *IdentityStore) MemDBGroupsByBucketEntryKeyHashInTxn(txn *memdb.Txn, has
 
 	groupsIter, err := txn.Get(groupsTable, "bucket_key_hash", hashValue)
 	if err != nil {
-		return nil, fmt.Errorf("failed to lookup groups using bucket entry key hash: %v", err)
+		return nil, errwrap.Wrapf("failed to lookup groups using bucket entry key hash: {{err}}", err)
 	}
 
 	var groups []*identity.Group

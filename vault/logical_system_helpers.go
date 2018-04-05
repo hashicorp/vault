@@ -23,8 +23,7 @@ func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *Moun
 
 	case newDefault != zero && newMax != zero:
 		if newMax < newDefault {
-			return fmt.Errorf("backend max lease TTL of %d would be less than backend default lease TTL of %d",
-				int(newMax.Seconds()), int(newDefault.Seconds()))
+			return fmt.Errorf("backend max lease TTL of %d would be less than backend default lease TTL of %d", int(newMax.Seconds()), int(newDefault.Seconds()))
 		}
 	}
 

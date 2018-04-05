@@ -161,7 +161,7 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 		for i, v := range list {
 			typed, ok := v.(string)
 			if !ok {
-				return fmt.Errorf("Error: %v is not a string", v)
+				return fmt.Errorf("%v is not a string", v)
 			}
 			keys[i] = typed
 		}

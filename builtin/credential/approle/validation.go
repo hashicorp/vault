@@ -76,7 +76,7 @@ func (b *backend) validateRoleID(ctx context.Context, s logical.Storage, roleID 
 		return nil, "", err
 	}
 	if roleIDIndex == nil {
-		return nil, "", fmt.Errorf("invalid role_id %q\n", roleID)
+		return nil, "", fmt.Errorf("invalid role_id %q", roleID)
 	}
 
 	lock := b.roleLock(roleIDIndex.Name)
@@ -160,12 +160,12 @@ func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request
 	hmacKey string, roleBoundCIDRList []string) (bool, map[string]string, error) {
 	secretIDHMAC, err := createHMAC(hmacKey, secretID)
 	if err != nil {
-		return false, nil, fmt.Errorf("failed to create HMAC of secret_id: %v", err)
+		return false, nil, errwrap.Wrapf("failed to create HMAC of secret_id: {{err}}", err)
 	}
 
 	roleNameHMAC, err := createHMAC(hmacKey, roleName)
 	if err != nil {
-		return false, nil, fmt.Errorf("failed to create HMAC of role_name: %v", err)
+		return false, nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
 	}
 
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
@@ -204,7 +204,7 @@ func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request
 			}
 
 			if belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, result.CIDRList); !belongs || err != nil {
-				return false, nil, fmt.Errorf("source address %q unauthorized through CIDR restrictions on the secret ID: %v", req.Connection.RemoteAddr, err)
+				return false, nil, errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized through CIDR restrictions on the secret ID: {{err}}", req.Connection.RemoteAddr), err)
 			}
 		}
 
@@ -238,16 +238,16 @@ func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request
 			return false, nil, err
 		}
 		if err := req.Storage.Delete(ctx, entryIndex); err != nil {
-			return false, nil, fmt.Errorf("failed to delete secret ID: %v", err)
+			return false, nil, errwrap.Wrapf("failed to delete secret ID: {{err}}", err)
 		}
 	} else {
 		// If the use count is greater than one, decrement it and update the last updated time.
 		result.SecretIDNumUses -= 1
 		result.LastUpdatedTime = time.Now()
 		if entry, err := logical.StorageEntryJSON(entryIndex, &result); err != nil {
-			return false, nil, fmt.Errorf("failed to create storage entry while decrementing the secret ID use count: %v", err)
+			return false, nil, errwrap.Wrapf("failed to create storage entry while decrementing the secret ID use count: {{err}}", err)
 		} else if err = req.Storage.Put(ctx, entry); err != nil {
-			return false, nil, fmt.Errorf("failed to decrement the secret ID use count: %v", err)
+			return false, nil, errwrap.Wrapf("failed to decrement the secret ID use count: {{err}}", err)
 		}
 	}
 
@@ -266,7 +266,7 @@ func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request
 		}
 
 		if belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, result.CIDRList); !belongs || err != nil {
-			return false, nil, fmt.Errorf("source address %q unauthorized through CIDR restrictions on the secret ID: %v", req.Connection.RemoteAddr, err)
+			return false, nil, errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized through CIDR restrictions on the secret ID: {{err}}", req.Connection.RemoteAddr), err)
 		}
 	}
 
@@ -282,7 +282,7 @@ func verifyCIDRRoleSecretIDSubset(secretIDCIDRs []string, roleBoundCIDRList []st
 		if len(roleBoundCIDRList) != 0 {
 			subset, err := cidrutil.SubsetBlocks(roleBoundCIDRList, secretIDCIDRs)
 			if !subset || err != nil {
-				return fmt.Errorf("failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: %v", roleBoundCIDRList, secretIDCIDRs, err)
+				return errwrap.Wrapf(fmt.Sprintf("failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: {{err}}", roleBoundCIDRList, secretIDCIDRs), err)
 			}
 		}
 	}
@@ -354,7 +354,7 @@ func (b *backend) nonLockedSecretIDStorageEntry(ctx context.Context, s logical.S
 
 	if persistNeeded {
 		if err := b.nonLockedSetSecretIDStorageEntry(ctx, s, roleNameHMAC, secretIDHMAC, &result); err != nil {
-			return nil, fmt.Errorf("failed to upgrade role storage entry %s", err)
+			return nil, errwrap.Wrapf("failed to upgrade role storage entry {{err}}", err)
 		}
 	}
 
@@ -394,11 +394,11 @@ func (b *backend) nonLockedSetSecretIDStorageEntry(ctx context.Context, s logica
 func (b *backend) registerSecretIDEntry(ctx context.Context, s logical.Storage, roleName, secretID, hmacKey string, secretEntry *secretIDStorageEntry) (*secretIDStorageEntry, error) {
 	secretIDHMAC, err := createHMAC(hmacKey, secretID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HMAC of secret ID: %v", err)
+		return nil, errwrap.Wrapf("failed to create HMAC of secret ID: {{err}}", err)
 	}
 	roleNameHMAC, err := createHMAC(hmacKey, roleName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HMAC of role_name: %v", err)
+		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
 	}
 
 	lock := b.secretIDLock(secretIDHMAC)
@@ -519,7 +519,7 @@ func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 	}); err != nil {
 		return err
 	} else if err = s.Put(ctx, entry); err != nil {
-		return fmt.Errorf("failed to persist accessor index entry: %v", err)
+		return errwrap.Wrapf("failed to persist accessor index entry: {{err}}", err)
 	}
 
 	return nil
@@ -539,7 +539,7 @@ func (b *backend) deleteSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 
 	// Delete the accessor of the SecretID first
 	if err := s.Delete(ctx, accessorEntryIndex); err != nil {
-		return fmt.Errorf("failed to delete accessor storage entry: %v", err)
+		return errwrap.Wrapf("failed to delete accessor storage entry: {{err}}", err)
 	}
 
 	return nil
@@ -550,7 +550,7 @@ func (b *backend) deleteSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 func (b *backend) flushRoleSecrets(ctx context.Context, s logical.Storage, roleName, hmacKey string) error {
 	roleNameHMAC, err := createHMAC(hmacKey, roleName)
 	if err != nil {
-		return fmt.Errorf("failed to create HMAC of role_name: %v", err)
+		return errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
 	}
 
 	// Acquire the custom lock to perform listing of SecretIDs
@@ -568,7 +568,7 @@ func (b *backend) flushRoleSecrets(ctx context.Context, s logical.Storage, roleN
 		entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
 		if err := s.Delete(ctx, entryIndex); err != nil {
 			lock.Unlock()
-			return fmt.Errorf("error deleting SecretID %q from storage: %v", secretIDHMAC, err)
+			return errwrap.Wrapf(fmt.Sprintf("error deleting SecretID %q from storage: {{err}}", secretIDHMAC), err)
 		}
 		lock.Unlock()
 	}
