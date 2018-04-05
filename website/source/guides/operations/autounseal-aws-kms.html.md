@@ -1,6 +1,6 @@
 ---
 layout: "guides"
-page_title: "Vault Auto Unseal using AWS KMS - Guides"
+page_title: "Vault Auto-unseal using AWS KMS - Guides"
 sidebar_current: "guides-autounseal-aws-kms"
 description: |-
   In this guide, we'll show an example of how to use Terraform to provision an
@@ -9,9 +9,9 @@ description: |-
 ---
 
 
-# Vault Auto Unseal using AWS Key Management Service
+# Vault Auto-unseal using AWS Key Management Service
 
-~> **Enterprise Only:** Vault auto unsealing feature is a part of _Vault Enterprise_.
+~> **Enterprise Only:** Vault auto-unseal feature is a part of _Vault Enterprise Pro_.
 
 When a Vault server is started, it starts in a
 [***sealed***](/docs/concepts/seal.html) state and it does not know how to
@@ -55,7 +55,7 @@ Amazon KMS or Google Cloud KMS. This feature enables operators to delegate the
 unsealing process to trusted cloud providers to ease operations in the event of
 partial failure and to aid in the creation of new or ephemeral clusters.
 
-![Unseal with Shamir's Secret Sharing](/assets/images/vault-autounseal-2.png)
+![Unseal with AWS KMS](/assets/images/vault-autounseal-2.png)
 
 ## Prerequisites
 
@@ -76,17 +76,21 @@ GitHub repository to perform the steps described in this guide.
 
 ## Steps
 
-This guide demonstrates how to implement and use the Auto Unseal feature using
+This guide demonstrates how to implement and use the Auto-unseal feature using
 AWS KMS. Included is a Terraform configuration that has the following:   
 
 * Ubuntu 16.04 LTS with Vault Enterprise    
 * An instance profile granting the Amazon EC2 instance to an AWS KMS key
 * Vault configured with access to an AWS KMS key   
 
-In this guide, you are going to perform the following steps:
+
+[![YouTube](/assets/images/vault-autounseal-4.png)](https://youtu.be/iRyqOEDFIiY)
+
+
+You are going to perform the following steps:
 
 1. [Provision the Cloud Resources](#step-1-provision-the-cloud-resources)
-1. [Test the Auto Unseal Feature](#step-2-test-the-auto-unseal-feature)
+1. [Test the Auto-unseal Feature](#step-2-test-the-auto-unseal-feature)
 1. [Clean Up](#step-3-clean-up)
 
 
@@ -157,7 +161,7 @@ Vault Enterprise web interface  http://192.0.2.1:8200/ui
 your server as well as the Vault Enterprise web interface address.
 
 
-### Step 2: Test the Auto Unseal Feature
+### Step 2: Test the Auto-unseal Feature
 
 SSH into the provisioned EC2 instance.
 
