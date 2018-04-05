@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/logical"
@@ -103,12 +104,12 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 		if b.defaultAWSAccountID == "" {
 			client := sts.New(session.New(stsConfig))
 			if client == nil {
-				return nil, fmt.Errorf("could not obtain sts client: %v", err)
+				return nil, errwrap.Wrapf("could not obtain sts client: {{err}}", err)
 			}
 			inputParams := &sts.GetCallerIdentityInput{}
 			identity, err := client.GetCallerIdentity(inputParams)
 			if err != nil {
-				return nil, fmt.Errorf("unable to fetch current caller: %v", err)
+				return nil, errwrap.Wrapf("unable to fetch current caller: {{err}}", err)
 			}
 			if identity == nil {
 				return nil, fmt.Errorf("got nil result from GetCallerIdentity")
@@ -116,7 +117,7 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 			b.defaultAWSAccountID = *identity.Account
 		}
 		if b.defaultAWSAccountID != accountID {
-			return nil, fmt.Errorf("unable to fetch client for account ID %s -- default client is for account %s", accountID, b.defaultAWSAccountID)
+			return nil, fmt.Errorf("unable to fetch client for account ID %q -- default client is for account %q", accountID, b.defaultAWSAccountID)
 		}
 	}
 
@@ -168,7 +169,7 @@ func (b *backend) stsRoleForAccount(ctx context.Context, s logical.Storage, acco
 	// Check if an STS configuration exists for the AWS account
 	sts, err := b.lockedAwsStsEntry(ctx, s, accountID)
 	if err != nil {
-		return "", fmt.Errorf("error fetching STS config for account ID %q: %q\n", accountID, err)
+		return "", errwrap.Wrapf(fmt.Sprintf("error fetching STS config for account ID %q: {{err}}", accountID), err)
 	}
 	// An empty STS role signifies the master account
 	if sts != nil {

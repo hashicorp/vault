@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -68,7 +69,7 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, d
 	case errutil.UserError:
 		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
 	case errutil.InternalError:
-		return nil, fmt.Errorf("Error encountered during CRL building: %s", crlErr)
+		return nil, errwrap.Wrapf("error encountered during CRL building: {{err}}", crlErr)
 	default:
 		return &logical.Response{
 			Data: map[string]interface{}{

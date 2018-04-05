@@ -128,7 +128,7 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 	// Check for the correct backend type
 	backendType := backend.Type()
 	if entry.Type == "plugin" && backendType != logical.TypeCredential {
-		return fmt.Errorf("cannot mount '%s' of type '%s' as an auth method", entry.Config.PluginName, backendType)
+		return fmt.Errorf("cannot mount %q of type %q as an auth method", entry.Config.PluginName, backendType)
 	}
 
 	// Update the auth table
@@ -168,7 +168,7 @@ func (c *Core) disableCredential(ctx context.Context, path string) error {
 	fullPath := credentialRoutePrefix + path
 	view := c.router.MatchingStorageByAPIPath(fullPath)
 	if view == nil {
-		return fmt.Errorf("no matching backend %s", fullPath)
+		return fmt.Errorf("no matching backend %q", fullPath)
 	}
 
 	// Get the backend/mount entry for this path, used to remove ignored
@@ -251,7 +251,7 @@ func (c *Core) remountCredEntryForce(ctx context.Context, path string) error {
 	fullPath := credentialRoutePrefix + path
 	me := c.router.MatchingMountEntry(fullPath)
 	if me == nil {
-		return fmt.Errorf("cannot find mount for path '%s'", path)
+		return fmt.Errorf("cannot find mount for path %q", path)
 	}
 
 	me, err := me.Clone()
@@ -492,7 +492,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// Check for the correct backend type
 		backendType = backend.Type()
 		if entry.Type == "plugin" && backendType != logical.TypeCredential {
-			return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
+			return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Config.PluginName, backendType)
 		}
 
 	ROUTER_MOUNT:
@@ -555,7 +555,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	}
 	f, ok := c.credentialBackends[t]
 	if !ok {
-		return nil, fmt.Errorf("unknown backend type: %s", t)
+		return nil, fmt.Errorf("unknown backend type: %q", t)
 	}
 
 	// Set up conf to pass in plugin_name

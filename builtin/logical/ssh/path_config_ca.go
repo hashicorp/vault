@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -65,7 +66,7 @@ Read operations will return the public key, if already stored/generated.`,
 func (b *backend) pathConfigCARead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	publicKeyEntry, err := caKey(ctx, req.Storage, caPublicKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read CA public key: %v", err)
+		return nil, errwrap.Wrapf("failed to read CA public key: {{err}}", err)
 	}
 
 	if publicKeyEntry == nil {
@@ -106,7 +107,7 @@ func caKey(ctx context.Context, storage logical.Storage, keyType string) (*keySt
 
 	entry, err := storage.Get(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read CA key of type %q: %v", keyType, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read CA key of type %q: {{err}}", keyType), err)
 	}
 
 	if entry == nil {
@@ -202,12 +203,12 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 
 	publicKeyEntry, err := caKey(ctx, req.Storage, caPublicKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read CA public key: %v", err)
+		return nil, errwrap.Wrapf("failed to read CA public key: {{err}}", err)
 	}
 
 	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read CA private key: %v", err)
+		return nil, errwrap.Wrapf("failed to read CA private key: {{err}}", err)
 	}
 
 	if (publicKeyEntry != nil && publicKeyEntry.Key != "") || (privateKeyEntry != nil && privateKeyEntry.Key != "") {
@@ -239,12 +240,12 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		var mErr *multierror.Error
 
-		mErr = multierror.Append(mErr, fmt.Errorf("failed to store CA private key: %v", err))
+		mErr = multierror.Append(mErr, errwrap.Wrapf("failed to store CA private key: {{err}}", err))
 
 		// If storing private key fails, the corresponding public key should be
 		// removed
 		if delErr := req.Storage.Delete(ctx, caPublicKeyStoragePath); delErr != nil {
-			mErr = multierror.Append(mErr, fmt.Errorf("failed to cleanup CA public key: %v", delErr))
+			mErr = multierror.Append(mErr, errwrap.Wrapf("failed to cleanup CA public key: {{err}}", delErr))
 			return nil, mErr
 		}
 

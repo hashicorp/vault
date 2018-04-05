@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/go-ldap/ldap"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/mfa"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -270,7 +271,7 @@ func (b *backend) getUserBindDN(cfg *ConfigEntry, c *ldap.Conn, username string)
 			err = c.UnauthenticatedBind(cfg.BindDN)
 		}
 		if err != nil {
-			return bindDN, fmt.Errorf("LDAP bind (service) failed: %v", err)
+			return bindDN, errwrap.Wrapf("LDAP bind (service) failed: {{err}}", err)
 		}
 
 		filter := fmt.Sprintf("(%s=%s)", cfg.UserAttr, ldap.EscapeFilter(username))
@@ -284,7 +285,7 @@ func (b *backend) getUserBindDN(cfg *ConfigEntry, c *ldap.Conn, username string)
 			SizeLimit: math.MaxInt32,
 		})
 		if err != nil {
-			return bindDN, fmt.Errorf("LDAP search for binddn failed: %v", err)
+			return bindDN, errwrap.Wrapf("LDAP search for binddn failed: {{err}}", err)
 		}
 		if len(result.Entries) != 1 {
 			return bindDN, fmt.Errorf("LDAP search for binddn 0 or not unique")
@@ -319,7 +320,7 @@ func (b *backend) getUserDN(cfg *ConfigEntry, c *ldap.Conn, bindDN string) (stri
 			SizeLimit: math.MaxInt32,
 		})
 		if err != nil {
-			return userDN, fmt.Errorf("LDAP search failed for detecting user: %v", err)
+			return userDN, errwrap.Wrapf("LDAP search failed for detecting user: {{err}}", err)
 		}
 		for _, e := range result.Entries {
 			userDN = e.DN
@@ -373,7 +374,7 @@ func (b *backend) getLdapGroups(cfg *ConfigEntry, c *ldap.Conn, userDN string, u
 	// Example template "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
 	t, err := template.New("queryTemplate").Parse(cfg.GroupFilter)
 	if err != nil {
-		return nil, fmt.Errorf("LDAP search failed due to template compilation error: %v", err)
+		return nil, errwrap.Wrapf("LDAP search failed due to template compilation error: {{err}}", err)
 	}
 
 	// Build context to pass to template - we will be exposing UserDn and Username.
@@ -402,7 +403,7 @@ func (b *backend) getLdapGroups(cfg *ConfigEntry, c *ldap.Conn, userDN string, u
 		SizeLimit: math.MaxInt32,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("LDAP search failed: %v", err)
+		return nil, errwrap.Wrapf("LDAP search failed: {{err}}", err)
 	}
 
 	for _, e := range result.Entries {

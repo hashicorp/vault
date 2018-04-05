@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical"
 
@@ -120,14 +121,14 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	// We have all of the configuration in hand - let's try and connect to ZK
 	client, _, err := zk.Connect(strings.Split(machines, ","), time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("client setup failed: %v", err)
+		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
 	}
 
 	// ZK AddAuth API if the user asked for it
 	if useAddAuth {
 		err = client.AddAuth(schema, []byte(owner))
 		if err != nil {
-			return nil, fmt.Errorf("ZooKeeper rejected authentication information provided at auth_info: %v", err)
+			return nil, errwrap.Wrapf("ZooKeeper rejected authentication information provided at auth_info: {{err}}", err)
 		}
 	}
 
@@ -181,23 +182,19 @@ func (c *ZooKeeperBackend) cleanupLogicalPath(path string) error {
 
 		_, stat, err := c.client.Exists(fullPath)
 		if err != nil {
-			return fmt.Errorf("Failed to acquire node data: %s", err)
+			return errwrap.Wrapf("failed to acquire node data: {{err}}", err)
 		}
 
 		if stat.DataLength > 0 && stat.NumChildren > 0 {
-			msgFmt := "Node %s is both of data and leaf type ??"
-			panic(fmt.Sprintf(msgFmt, fullPath))
+			panic(fmt.Sprintf("node %q is both of data and leaf type", fullPath))
 		} else if stat.DataLength > 0 {
-			msgFmt := "Node %s is a data node, this is either a bug or " +
-				"backend data is corrupted"
-			panic(fmt.Sprintf(msgFmt, fullPath))
+			panic(fmt.Sprintf("node %q is a data node, this is either a bug or backend data is corrupted", fullPath))
 		} else if stat.NumChildren > 0 {
 			return nil
 		} else {
 			// Empty node, lets clean it up!
 			if err := c.client.Delete(fullPath, -1); err != nil && err != zk.ErrNoNode {
-				msgFmt := "Removal of node `%s` failed: `%v`"
-				return fmt.Errorf(msgFmt, fullPath, err)
+				return errwrap.Wrapf(fmt.Sprintf("removal of node %q failed: {{err}}", fullPath), err)
 			}
 		}
 	}
@@ -265,7 +262,7 @@ func (c *ZooKeeperBackend) Delete(ctx context.Context, key string) error {
 
 	// Mask if the node does not exist
 	if err != nil && err != zk.ErrNoNode {
-		return fmt.Errorf("Failed to remove %q: %v", fullPath, err)
+		return errwrap.Wrapf(fmt.Sprintf("failed to remove %q: {{err}}", fullPath), err)
 	}
 
 	err = c.cleanupLogicalPath(key)
@@ -307,8 +304,7 @@ func (c *ZooKeeperBackend) List(ctx context.Context, prefix string) ([]string, e
 				// under the lock file; just treat it like the file Vault expects
 				children = append(children, key[1:])
 			} else {
-				msgFmt := "Node %q is both of data and leaf type ??"
-				panic(fmt.Sprintf(msgFmt, childPath))
+				panic(fmt.Sprintf("node %q is both of data and leaf type", childPath))
 			}
 		} else if stat.DataLength == 0 {
 			// No, we cannot differentiate here on number of children as node
@@ -382,7 +378,7 @@ func (i *ZooKeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 	// Watch for Events which could result in loss of our zkLock and close(i.leaderCh)
 	currentVal, _, lockeventCh, err := i.in.client.GetW(lockpath)
 	if err != nil {
-		return nil, fmt.Errorf("unable to watch HA lock: %v", err)
+		return nil, errwrap.Wrapf("unable to watch HA lock: {{err}}", err)
 	}
 	if i.value != string(currentVal) {
 		return nil, fmt.Errorf("lost HA lock immediately before watch")

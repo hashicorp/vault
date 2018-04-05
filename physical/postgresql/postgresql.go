@@ -66,7 +66,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	// Create PostgreSQL handle for the database.
 	db, err := sql.Open("postgres", connURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to postgres: %v", err)
+		return nil, errwrap.Wrapf("failed to connect to postgres: {{err}}", err)
 	}
 	db.SetMaxOpenConns(maxParInt)
 
@@ -74,7 +74,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	var upsert_required bool
 	upsert_required_query := "SELECT current_setting('server_version_num')::int < 90500"
 	if err := db.QueryRow(upsert_required_query).Scan(&upsert_required); err != nil {
-		return nil, fmt.Errorf("failed to check for native upsert: %v", err)
+		return nil, errwrap.Wrapf("failed to check for native upsert: {{err}}", err)
 	}
 
 	// Setup our put strategy based on the presence or absence of a native
@@ -205,7 +205,7 @@ func (m *PostgreSQLBackend) List(ctx context.Context, prefix string) ([]string, 
 		var key string
 		err = rows.Scan(&key)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan rows: %v", err)
+			return nil, errwrap.Wrapf("failed to scan rows: {{err}}", err)
 		}
 
 		keys = append(keys, key)

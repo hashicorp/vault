@@ -154,13 +154,13 @@ func ParseACLPolicy(rules string) (*Policy, error) {
 	// Parse the rules
 	root, err := hcl.Parse(rules)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse policy: %s", err)
+		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
 	}
 
 	// Top-level item should be the object list
 	list, ok := root.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("Failed to parse policy: does not contain a root object")
+		return nil, fmt.Errorf("failed to parse policy: does not contain a root object")
 	}
 
 	// Check for invalid top-level keys
@@ -169,7 +169,7 @@ func ParseACLPolicy(rules string) (*Policy, error) {
 		"path",
 	}
 	if err := checkHCLKeys(list, valid); err != nil {
-		return nil, fmt.Errorf("Failed to parse policy: %s", err)
+		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
 	}
 
 	// Create the initial policy and store the raw text of the rules
@@ -177,12 +177,12 @@ func ParseACLPolicy(rules string) (*Policy, error) {
 	p.Raw = rules
 	p.Type = PolicyTypeACL
 	if err := hcl.DecodeObject(&p, list); err != nil {
-		return nil, fmt.Errorf("Failed to parse policy: %s", err)
+		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
 	}
 
 	if o := list.Filter("path"); len(o.Items) > 0 {
 		if err := parsePaths(&p, o); err != nil {
-			return nil, fmt.Errorf("Failed to parse policy: %s", err)
+			return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
 		}
 	}
 
@@ -242,7 +242,7 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			case OldSudoPathPolicy:
 				pc.Capabilities = append(pc.Capabilities, []string{CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability}...)
 			default:
-				return fmt.Errorf("path %q: invalid policy '%s'", key, pc.Policy)
+				return fmt.Errorf("path %q: invalid policy %q", key, pc.Policy)
 			}
 		}
 
@@ -258,7 +258,7 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability:
 				pc.Permissions.CapabilitiesBitmap |= cap2Int[cap]
 			default:
-				return fmt.Errorf("path %q: invalid capability '%s'", key, cap)
+				return fmt.Errorf("path %q: invalid capability %q", key, cap)
 			}
 		}
 
@@ -326,8 +326,7 @@ func checkHCLKeys(node ast.Node, valid []string) error {
 	for _, item := range list.Items {
 		key := item.Keys[0].Token.Value().(string)
 		if _, ok := validMap[key]; !ok {
-			result = multierror.Append(result, fmt.Errorf(
-				"invalid key '%s' on line %d", key, item.Assign.Line))
+			result = multierror.Append(result, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
 		}
 	}
 
