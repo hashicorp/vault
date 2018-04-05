@@ -10,7 +10,11 @@
   </ul>
 </nav>
 <div class="box is-marginless is-shadowless">
-  {{message-error errorMessage=error}}
+  {{#if (and cluster.standby hasCSPError)}}
+    {{message-error errorMessage=cspErrorText data-test-auth-error=true}}
+  {{else}}
+    {{message-error errorMessage=error data-test-auth-error=true}}
+  {{/if}}
   {{component providerComponentName onSubmit=(action 'doSubmit') }}
   <div class="box has-slim-padding is-shadowless">
     {{#unless (eq selectedAuthBackend.type "token")}}
