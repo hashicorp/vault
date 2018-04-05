@@ -49,7 +49,7 @@ func TestPolicyStore_Root(t *testing.T) {
 
 	// Delete should fail
 	err = ps.DeletePolicy(context.Background(), "root", PolicyTypeACL)
-	if err.Error() != "cannot delete root policy" {
+	if err.Error() != `cannot delete "root" policy` {
 		t.Fatalf("err: %v", err)
 	}
 }
