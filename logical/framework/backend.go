@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/go-multierror"
@@ -268,32 +269,6 @@ func (b *Backend) Type() logical.BackendType {
 	return b.BackendType
 }
 
-// SanitizeTTLStr takes in the TTL and MaxTTL values provided by the user,
-// compares those with the SystemView values. If they are empty a value of 0 is
-// set, which will cause initial secret or LeaseExtend operations to use the
-// mount/system defaults.  If they are set, their boundaries are validated.
-func (b *Backend) SanitizeTTLStr(ttlStr, maxTTLStr string) (ttl, maxTTL time.Duration, err error) {
-	if len(ttlStr) == 0 || ttlStr == "0" {
-		ttl = 0
-	} else {
-		ttl, err = time.ParseDuration(ttlStr)
-		if err != nil {
-			return 0, 0, fmt.Errorf("Invalid ttl: %s", err)
-		}
-	}
-
-	if len(maxTTLStr) == 0 || maxTTLStr == "0" {
-		maxTTL = 0
-	} else {
-		maxTTL, err = time.ParseDuration(maxTTLStr)
-		if err != nil {
-			return 0, 0, fmt.Errorf("Invalid max_ttl: %s", err)
-		}
-	}
-
-	return ttl, maxTTL, nil
-}
-
 // Route looks up the path that would be used for a given path string.
 func (b *Backend) Route(path string) *Path {
 	result, _ := b.route(path)
@@ -418,8 +393,7 @@ func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (
 	case logical.RevokeOperation:
 		return secret.HandleRevoke(ctx, req)
 	default:
-		return nil, fmt.Errorf(
-			"invalid operation for revoke/renew: %s", req.Operation)
+		return nil, fmt.Errorf("invalid operation for revoke/renew: %q", req.Operation)
 	}
 }
 
@@ -486,8 +460,7 @@ func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (
 		// Attempt a WAL rollback
 		err = b.WALRollback(ctx, req, entry.Kind, entry.Data)
 		if err != nil {
-			err = fmt.Errorf(
-				"Error rolling back '%s' entry: %s", entry.Kind, err)
+			err = errwrap.Wrapf(fmt.Sprintf("error rolling back %q entry: {{err}}", entry.Kind), err)
 		}
 		if err == nil {
 			err = DeleteWAL(ctx, req.Storage, k)

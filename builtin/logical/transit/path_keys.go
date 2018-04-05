@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -277,7 +278,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 					} else {
 						ver, err := strconv.Atoi(k)
 						if err != nil {
-							return nil, fmt.Errorf("invalid version %q: %v", k, err)
+							return nil, errwrap.Wrapf(fmt.Sprintf("invalid version %q: {{err}}", k), err)
 						}
 						derived, err := p.DeriveKey(context, ver)
 						if err != nil {
@@ -298,7 +299,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 				// API
 				derBytes, err := x509.MarshalPKIXPublicKey(v.RSAKey.Public())
 				if err != nil {
-					return nil, fmt.Errorf("error marshaling RSA public key: %v", err)
+					return nil, errwrap.Wrapf("error marshaling RSA public key: {{err}}", err)
 				}
 				pemBlock := &pem.Block{
 					Type:  "PUBLIC KEY",

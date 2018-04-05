@@ -65,14 +65,14 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 	// Create CockroachDB handle for the database.
 	db, err := sql.Open("postgres", connURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to cockroachdb: %v", err)
+		return nil, errwrap.Wrapf("failed to connect to cockroachdb: {{err}}", err)
 	}
 
 	// Create the required table if it doesn't exists.
 	createQuery := "CREATE TABLE IF NOT EXISTS " + dbTable +
 		" (path STRING, value BYTES, PRIMARY KEY (path))"
 	if _, err := db.Exec(createQuery); err != nil {
-		return nil, fmt.Errorf("failed to create mysql table: %v", err)
+		return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
 	}
 
 	// Setup the backend
@@ -105,7 +105,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 func (c *CockroachDBBackend) prepare(name, query string) error {
 	stmt, err := c.client.Prepare(query)
 	if err != nil {
-		return fmt.Errorf("failed to prepare '%s': %v", name, err)
+		return errwrap.Wrapf(fmt.Sprintf("failed to prepare %q: {{err}}", name), err)
 	}
 	c.statements[name] = stmt
 	return nil
@@ -182,7 +182,7 @@ func (c *CockroachDBBackend) List(ctx context.Context, prefix string) ([]string,
 		var key string
 		err = rows.Scan(&key)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan rows: %v", err)
+			return nil, errwrap.Wrapf("failed to scan rows: {{err}}", err)
 		}
 
 		key = strings.TrimPrefix(key, prefix)

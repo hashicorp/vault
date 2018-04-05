@@ -18,6 +18,75 @@ const (
 	testSysMaxTTL = time.Hour * 20
 )
 
+func TestBackend_TTL(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	storage := &logical.InmemStorage{}
+
+	config := logical.TestBackendConfig()
+	config.StorageView = storage
+
+	ctx := context.Background()
+
+	b, err := Factory(ctx, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b == nil {
+		t.Fatalf("failed to create backend")
+	}
+
+	resp, err = b.HandleRequest(ctx, &logical.Request{
+		Path:      "users/testuser",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"password": "testpassword",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
+	}
+
+	resp, err = b.HandleRequest(ctx, &logical.Request{
+		Path:      "users/testuser",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
+	}
+	if resp.Data["ttl"].(float64) != 0 && resp.Data["max_ttl"].(float64) != 0 {
+		t.Fatalf("bad: ttl and max_ttl are not set correctly")
+	}
+
+	resp, err = b.HandleRequest(ctx, &logical.Request{
+		Path:      "users/testuser",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"ttl":     "5m",
+			"max_ttl": "10m",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
+	}
+
+	resp, err = b.HandleRequest(ctx, &logical.Request{
+		Path:      "users/testuser",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
+	}
+	if resp.Data["ttl"].(float64) != 300 && resp.Data["max_ttl"].(float64) != 600 {
+		t.Fatalf("bad: ttl and max_ttl are not set correctly")
+	}
+}
+
 func TestBackend_basic(t *testing.T) {
 	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,

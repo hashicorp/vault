@@ -22,6 +22,8 @@ export default Service.extend({
 
   hasDRReplication: hasFeature('DR Replication'),
 
+  hasSentinel: hasFeature('Sentinel'),
+
   isEnterprise: computed.match('version', /\+\w+$/),
 
   isOSS: computed.not('isEnterprise'),

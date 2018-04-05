@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -146,7 +147,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	if batchInputRaw != nil {
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse batch input: %v", err)
+			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
 		}
 
 		if len(batchInputItems) == 0 {

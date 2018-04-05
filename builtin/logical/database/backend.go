@@ -96,7 +96,7 @@ func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage,
 		return nil, errwrap.Wrapf("failed to read connection configuration: {{err}}", err)
 	}
 	if entry == nil {
-		return nil, fmt.Errorf("failed to find entry for connection with name: %s", name)
+		return nil, fmt.Errorf("failed to find entry for connection with name: %q", name)
 	}
 
 	var config DatabaseConfig

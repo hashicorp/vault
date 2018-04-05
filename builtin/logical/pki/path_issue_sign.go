@@ -297,7 +297,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			Value: parsedBundle.CertificateBytes,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("unable to store certificate locally: %v", err)
+			return nil, errwrap.Wrapf("unable to store certificate locally: {{err}}", err)
 		}
 	}
 

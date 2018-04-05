@@ -23,12 +23,12 @@
   <nav class="tabs sub-nav">
     <ul>
       {{#link-to "vault.cluster.access.identity.index" tagName="li"}}
-        <a href={{href-to "vault.cluster.access.identity.index"}}>
+        <a href={{href-to "vault.cluster.access.identity.index" (pluralize identityType)}}>
           {{capitalize (pluralize identityType)}}
         </a>
       {{/link-to}}
       {{#link-to "vault.cluster.access.identity.aliases.index" tagName="li"}}
-        <a href={{href-to "vault.cluster.access.identity.aliases.index"}}>
+        <a href={{href-to "vault.cluster.access.identity.aliases.index" (pluralize identityType)}}>
           Aliases
         </a>
       {{/link-to}}

@@ -102,7 +102,7 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	_, _, err = c.Container(container)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to access container '%s': %v", container, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("Unable to access container %q: {{err}}", container), err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]

@@ -113,7 +113,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	tlsCaFile, ok := conf["tls_ca_file"]
 	if ok {
 		if err := setupMySQLTLSConfig(tlsCaFile); err != nil {
-			return nil, fmt.Errorf("failed register TLS config: %v", err)
+			return nil, errwrap.Wrapf("failed register TLS config: {{err}}", err)
 		}
 
 		dsnParams.Add("tls", mysqlTLSKey)
@@ -123,7 +123,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	dsn := username + ":" + password + "@tcp(" + address + ")/?" + dsnParams.Encode()
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to mysql: %v", err)
+		return nil, errwrap.Wrapf("failed to connect to mysql: {{err}}", err)
 	}
 	db.SetMaxOpenConns(maxParInt)
 	if maxIdleConnInt != 0 {
@@ -136,7 +136,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	var schemaExist bool
 	schemaRows, err := db.Query("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?", database)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check mysql schema exist: %v", err)
+		return nil, errwrap.Wrapf("failed to check mysql schema exist: {{err}}", err)
 	}
 	defer schemaRows.Close()
 	schemaExist = schemaRows.Next()
@@ -146,7 +146,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	tableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", table, database)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to check mysql table exist: %v", err)
+		return nil, errwrap.Wrapf("failed to check mysql table exist: {{err}}", err)
 	}
 	defer tableRows.Close()
 	tableExist = tableRows.Next()
@@ -154,7 +154,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	// Create the required database if it doesn't exists.
 	if !schemaExist {
 		if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS " + database); err != nil {
-			return nil, fmt.Errorf("failed to create mysql database: %v", err)
+			return nil, errwrap.Wrapf("failed to create mysql database: {{err}}", err)
 		}
 	}
 
@@ -163,7 +163,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		create_query := "CREATE TABLE IF NOT EXISTS " + dbTable +
 			" (vault_key varbinary(512), vault_value mediumblob, PRIMARY KEY (vault_key))"
 		if _, err := db.Exec(create_query); err != nil {
-			return nil, fmt.Errorf("failed to create mysql table: %v", err)
+			return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
 		}
 	}
 
@@ -197,7 +197,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 func (m *MySQLBackend) prepare(name, query string) error {
 	stmt, err := m.client.Prepare(query)
 	if err != nil {
-		return fmt.Errorf("failed to prepare '%s': %v", name, err)
+		return errwrap.Wrapf(fmt.Sprintf("failed to prepare %q: {{err}}", name), err)
 	}
 	m.statements[name] = stmt
 	return nil
@@ -266,7 +266,7 @@ func (m *MySQLBackend) List(ctx context.Context, prefix string) ([]string, error
 	likePrefix := prefix + "%"
 	rows, err := m.statements["list"].Query(likePrefix)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute statement: %v", err)
+		return nil, errwrap.Wrapf("failed to execute statement: {{err}}", err)
 	}
 
 	var keys []string
@@ -274,7 +274,7 @@ func (m *MySQLBackend) List(ctx context.Context, prefix string) ([]string, error
 		var key string
 		err = rows.Scan(&key)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan rows: %v", err)
+			return nil, errwrap.Wrapf("failed to scan rows: {{err}}", err)
 		}
 
 		key = strings.TrimPrefix(key, prefix)

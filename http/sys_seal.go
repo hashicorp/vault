@@ -182,8 +182,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	}
 
 	if sealConfig == nil {
-		respondError(w, http.StatusBadRequest, fmt.Errorf(
-			"server is not yet initialized"))
+		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"))
 		return
 	}
 

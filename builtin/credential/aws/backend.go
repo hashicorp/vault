@@ -227,7 +227,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	// Sigh
 	region := getAnyRegionForAwsPartition(entity.Partition)
 	if region == nil {
-		return "", fmt.Errorf("Unable to resolve partition %q to a region", entity.Partition)
+		return "", fmt.Errorf("unable to resolve partition %q to a region", entity.Partition)
 	}
 	iamClient, err := b.clientIAM(ctx, s, region.ID(), entity.AccountNumber)
 	if err != nil {
