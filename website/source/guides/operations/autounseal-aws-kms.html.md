@@ -167,9 +167,7 @@ SSH into the provisioned EC2 instance.
 
 ```plaintext
 $ ssh ubuntu@192.0.2.1 -i private.key
-
-The authenticity of host '34.201.166.196 (34.201.166.196)' can't be established.
-ECDSA key fingerprint is SHA256:B3FBKHAxBP/oW84GN74EOV+XPeVC00juipfgMPgo5Kc.
+...
 Are you sure you want to continue connecting (yes/no)? yes
 ```
 When you are prompted, enter "yes" to continue.
@@ -266,7 +264,7 @@ At this point, you should be able to launch the Vault Enterprise UI by entering
 the address provided in the `terraform apply` outputs (e.g. http://192.0.2.1:8200/ui)
 and log in with your initial root token.
 
-![Unseal with Shamir's Secret Sharing](/assets/images/vault-autounseal-3.png)
+![Vault Enterprise UI Login](/assets/images/vault-autounseal-3.png)
 
 
 ### Step 3: Clean Up
