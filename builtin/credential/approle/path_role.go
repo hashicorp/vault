@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/consts"
@@ -579,7 +580,7 @@ func (b *backend) pathRoleSecretIDList(ctx context.Context, req *logical.Request
 
 	roleNameHMAC, err := createHMAC(role.HMACKey, roleName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HMAC of role_name: %v", err)
+		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
 	}
 
 	// Listing works one level at a time. Get the first level of data
@@ -673,7 +674,7 @@ func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName 
 	// Check if the index from the role_id to role already exists
 	roleIDIndex, err := b.roleIDEntry(ctx, s, role.RoleID)
 	if err != nil {
-		return fmt.Errorf("failed to read role_id index: %v", err)
+		return errwrap.Wrapf("failed to read role_id index: {{err}}", err)
 	}
 
 	// If the entry exists, make sure that it belongs to the current role
@@ -768,7 +769,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	if role == nil && req.Operation == logical.CreateOperation {
 		hmacKey, err := uuid.GenerateUUID()
 		if err != nil {
-			return nil, fmt.Errorf("failed to create role_id: %v\n", err)
+			return nil, errwrap.Wrapf("failed to create role_id: {{err}}", err)
 		}
 		role = &roleStorageEntry{
 			HMACKey:           hmacKey,
@@ -784,7 +785,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	} else if req.Operation == logical.CreateOperation {
 		roleID, err := uuid.GenerateUUID()
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate role_id: %v\n", err)
+			return nil, errwrap.Wrapf("failed to generate role_id: {{err}}", err)
 		}
 		role.RoleID = roleID
 	}
@@ -807,7 +808,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	if len(role.BoundCIDRList) != 0 {
 		valid, err := cidrutil.ValidateCIDRListSlice(role.BoundCIDRList)
 		if err != nil {
-			return nil, fmt.Errorf("failed to validate CIDR blocks: %v", err)
+			return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
 		}
 		if !valid {
 			return logical.ErrorResponse("invalid CIDR blocks"), nil
@@ -953,7 +954,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 			})
 			if err != nil {
 				lockRelease()
-				return nil, fmt.Errorf("failed to create secondary index for role_id %q: %v", role.RoleID, err)
+				return nil, errwrap.Wrapf(fmt.Sprintf("failed to create secondary index for role_id %q: {{err}}", role.RoleID), err)
 			}
 			resp.AddWarning("Role identifier was missing an index back to role name. A new index has been added. Please report this observation.")
 		}
@@ -985,12 +986,12 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 
 	// Just before the role is deleted, remove all the SecretIDs issued as part of the role.
 	if err = b.flushRoleSecrets(ctx, req.Storage, roleName, role.HMACKey); err != nil {
-		return nil, fmt.Errorf("failed to invalidate the secrets belonging to role %q: %v", roleName, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to invalidate the secrets belonging to role %q: {{err}}", roleName), err)
 	}
 
 	// Delete the reverse mapping from RoleID to the role
 	if err = b.roleIDEntryDelete(ctx, req.Storage, role.RoleID); err != nil {
-		return nil, fmt.Errorf("failed to delete the mapping from RoleID to role %q: %v", roleName, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to delete the mapping from RoleID to role %q: {{err}}", roleName), err)
 	}
 
 	// After deleting the SecretIDs and the RoleID, delete the role itself
@@ -1033,13 +1034,13 @@ func (b *backend) pathRoleSecretIDLookupUpdate(ctx context.Context, req *logical
 	// Create the HMAC of the secret ID using the per-role HMAC key
 	secretIDHMAC, err := createHMAC(role.HMACKey, secretID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HMAC of secret_id: %v", err)
+		return nil, errwrap.Wrapf("failed to create HMAC of secret_id: {{err}}", err)
 	}
 
 	// Create the HMAC of the roleName using the per-role HMAC key
 	roleNameHMAC, err := createHMAC(role.HMACKey, roleName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HMAC of role_name: %v", err)
+		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
 	}
 
 	// Create the index at which the secret_id would've been stored
@@ -1110,12 +1111,12 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *
 
 	secretIDHMAC, err := createHMAC(role.HMACKey, secretID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HMAC of secret_id: %v", err)
+		return nil, errwrap.Wrapf("failed to create HMAC of secret_id: {{err}}", err)
 	}
 
 	roleNameHMAC, err := createHMAC(role.HMACKey, roleName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HMAC of role_name: %v", err)
+		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
 	}
 
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
@@ -1140,7 +1141,7 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *
 
 	// Delete the storage entry that corresponds to the SecretID
 	if err := req.Storage.Delete(ctx, entryIndex); err != nil {
-		return nil, fmt.Errorf("failed to delete secret_id: %v", err)
+		return nil, errwrap.Wrapf("failed to delete secret_id: {{err}}", err)
 	}
 
 	return nil, nil
@@ -1180,12 +1181,12 @@ func (b *backend) pathRoleSecretIDAccessorLookupUpdate(ctx context.Context, req 
 		return nil, err
 	}
 	if accessorEntry == nil {
-		return nil, fmt.Errorf("failed to find accessor entry for secret_id_accessor: %q\n", secretIDAccessor)
+		return nil, fmt.Errorf("failed to find accessor entry for secret_id_accessor: %q", secretIDAccessor)
 	}
 
 	roleNameHMAC, err := createHMAC(role.HMACKey, roleName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HMAC of role_name: %v", err)
+		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
 	}
 
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, accessorEntry.SecretIDHMAC)
@@ -1221,12 +1222,12 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 		return nil, err
 	}
 	if accessorEntry == nil {
-		return nil, fmt.Errorf("failed to find accessor entry for secret_id_accessor: %q\n", secretIDAccessor)
+		return nil, fmt.Errorf("failed to find accessor entry for secret_id_accessor: %q", secretIDAccessor)
 	}
 
 	roleNameHMAC, err := createHMAC(role.HMACKey, roleName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HMAC of role_name: %v", err)
+		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
 	}
 
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, accessorEntry.SecretIDHMAC)
@@ -1242,7 +1243,7 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 
 	// Delete the storage entry that corresponds to the SecretID
 	if err := req.Storage.Delete(ctx, entryIndex); err != nil {
-		return nil, fmt.Errorf("failed to delete secret_id: %v", err)
+		return nil, errwrap.Wrapf("failed to delete secret_id: {{err}}", err)
 	}
 
 	return nil, nil
@@ -1274,7 +1275,7 @@ func (b *backend) pathRoleBoundCIDRListUpdate(ctx context.Context, req *logical.
 
 	valid, err := cidrutil.ValidateCIDRListSlice(role.BoundCIDRList)
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate CIDR blocks: %v", err)
+		return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
 	}
 	if !valid {
 		return logical.ErrorResponse("failed to validate CIDR blocks"), nil
@@ -1978,7 +1979,7 @@ func (b *backend) pathRoleTokenMaxTTLDelete(ctx context.Context, req *logical.Re
 func (b *backend) pathRoleSecretIDUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	secretID, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate secret_id: %v", err)
+		return nil, errwrap.Wrapf("failed to generate secret_id: {{err}}", err)
 	}
 	return b.handleRoleSecretIDCommon(ctx, req, data, secretID)
 }
@@ -2019,7 +2020,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 	if len(secretIDCIDRs) != 0 {
 		valid, err := cidrutil.ValidateCIDRListSlice(secretIDCIDRs)
 		if err != nil {
-			return nil, fmt.Errorf("failed to validate CIDR blocks: %v", err)
+			return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
 		}
 		if !valid {
 			return logical.ErrorResponse("failed to validate CIDR blocks"), nil
@@ -2047,7 +2048,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 	}
 
 	if secretIDStorage, err = b.registerSecretIDEntry(ctx, req.Storage, roleName, secretID, role.HMACKey, secretIDStorage); err != nil {
-		return nil, fmt.Errorf("failed to store secret_id: %v", err)
+		return nil, errwrap.Wrapf("failed to store secret_id: {{err}}", err)
 	}
 
 	return &logical.Response{
@@ -2091,7 +2092,7 @@ func (b *backend) setRoleIDEntry(ctx context.Context, s logical.Storage, roleID 
 // roleIDEntry is used to read the storage entry that maps RoleID to Role
 func (b *backend) roleIDEntry(ctx context.Context, s logical.Storage, roleID string) (*roleIDStorageEntry, error) {
 	if roleID == "" {
-		return nil, fmt.Errorf("missing roleID")
+		return nil, fmt.Errorf("missing role id")
 	}
 
 	lock := b.roleIDLock(roleID)
@@ -2121,7 +2122,7 @@ func (b *backend) roleIDEntry(ctx context.Context, s logical.Storage, roleID str
 // RoleID to the Role itself.
 func (b *backend) roleIDEntryDelete(ctx context.Context, s logical.Storage, roleID string) error {
 	if roleID == "" {
-		return fmt.Errorf("missing roleID")
+		return fmt.Errorf("missing role id")
 	}
 
 	lock := b.roleIDLock(roleID)

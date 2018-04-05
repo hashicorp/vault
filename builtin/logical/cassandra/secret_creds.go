@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -44,7 +45,7 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 
 	role, err := getRole(ctx, req.Storage, roleName)
 	if err != nil {
-		return nil, fmt.Errorf("unable to load role: %s", err)
+		return nil, errwrap.Wrapf("unable to load role: {{err}}", err)
 	}
 
 	resp := &logical.Response{Secret: req.Secret}
@@ -70,7 +71,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 
 	err = session.Query(fmt.Sprintf("DROP USER '%s'", username)).Exec()
 	if err != nil {
-		return nil, fmt.Errorf("error removing user %s", username)
+		return nil, fmt.Errorf("error removing user %q", username)
 	}
 
 	return nil, nil

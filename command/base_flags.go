@@ -648,7 +648,7 @@ func newStringMapValue(def map[string]string, target *map[string]string, hidden 
 func (s *stringMapValue) Set(val string) error {
 	idx := strings.Index(val, "=")
 	if idx == -1 {
-		return fmt.Errorf("Missing = in KV pair: %s", val)
+		return fmt.Errorf("missing = in KV pair: %q", val)
 	}
 
 	if *s.target == nil {

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
@@ -169,11 +170,11 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 	if pemBundlePath, ok := conf["pem_bundle_file"]; ok {
 		pemBundleData, err := ioutil.ReadFile(pemBundlePath)
 		if err != nil {
-			return fmt.Errorf("Error reading pem bundle from %s: %v", pemBundlePath, err)
+			return errwrap.Wrapf(fmt.Sprintf("error reading pem bundle from %q: {{err}}", pemBundlePath), err)
 		}
 		pemBundle, err := certutil.ParsePEMBundle(string(pemBundleData))
 		if err != nil {
-			return fmt.Errorf("Error parsing 'pem_bundle': %v", err)
+			return errwrap.Wrapf("error parsing 'pem_bundle': {{err}}", err)
 		}
 		tlsConfig, err = pemBundle.GetTLSConfig(certutil.TLSClient)
 		if err != nil {
@@ -183,7 +184,7 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 		if pemJSONPath, ok := conf["pem_json_file"]; ok {
 			pemJSONData, err := ioutil.ReadFile(pemJSONPath)
 			if err != nil {
-				return fmt.Errorf("Error reading json bundle from %s: %v", pemJSONPath, err)
+				return errwrap.Wrapf(fmt.Sprintf("error reading json bundle from %q: {{err}}", pemJSONPath), err)
 			}
 			pemJSON, err := certutil.ParsePKIJSON([]byte(pemJSONData))
 			if err != nil {

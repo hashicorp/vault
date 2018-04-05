@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -49,15 +50,15 @@ func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, s
 	for _, tag := range tags {
 		tagEntry, err := s.Get(ctx, "blacklist/roletag/"+tag)
 		if err != nil {
-			return fmt.Errorf("error fetching tag %s: %s", tag, err)
+			return errwrap.Wrapf(fmt.Sprintf("error fetching tag %q: {{err}}", tag), err)
 		}
 
 		if tagEntry == nil {
-			return fmt.Errorf("tag entry for tag %s is nil", tag)
+			return fmt.Errorf("tag entry for tag %q is nil", tag)
 		}
 
 		if tagEntry.Value == nil || len(tagEntry.Value) == 0 {
-			return fmt.Errorf("found entry for tag %s but actual tag is empty", tag)
+			return fmt.Errorf("found entry for tag %q but actual tag is empty", tag)
 		}
 
 		var result roleTagBlacklistEntry
@@ -67,7 +68,7 @@ func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, s
 
 		if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
 			if err := s.Delete(ctx, "blacklist/roletag"+tag); err != nil {
-				return fmt.Errorf("error deleting tag %s from storage: %s", tag, err)
+				return errwrap.Wrapf(fmt.Sprintf("error deleting tag %q from storage: {{err}}", tag), err)
 			}
 		}
 	}

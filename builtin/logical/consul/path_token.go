@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -31,7 +32,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 
 	entry, err := req.Storage.Get(ctx, "policy/"+role)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving role: %s", err)
+		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
 	}
 	if entry == nil {
 		return logical.ErrorResponse(fmt.Sprintf("role %q not found", role)), nil

@@ -15,6 +15,7 @@ import (
 	"github.com/coreos/etcd/client"
 	"github.com/coreos/etcd/pkg/transport"
 	log "github.com/hashicorp/go-hclog"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/physical"
 )
 
@@ -103,7 +104,7 @@ func newEtcd2Backend(conf map[string]string, logger log.Logger) (physical.Backen
 		syncErr := c.Sync(ctx)
 		cancel()
 		if syncErr != nil {
-			return nil, fmt.Errorf("%s: %s", EtcdSyncClusterError, syncErr)
+			return nil, multierror.Append(EtcdSyncClusterError, syncErr)
 		}
 	case "no", "false", "n", "0":
 	default:

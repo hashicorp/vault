@@ -83,7 +83,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	}
 	s3ForcePathStyleBool, err := parseutil.ParseBool(s3ForcePathStyleStr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid boolean set for s3_force_path_style: '%s'", s3ForcePathStyleStr)
+		return nil, fmt.Errorf("invalid boolean set for s3_force_path_style: %q", s3ForcePathStyleStr)
 	}
 	disableSSLStr, ok := conf["disable_ssl"]
 	if !ok {
@@ -91,7 +91,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	}
 	disableSSLBool, err := parseutil.ParseBool(disableSSLStr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid boolean set for disable_ssl: '%s'", disableSSLStr)
+		return nil, fmt.Errorf("invalid boolean set for disable_ssl: %q", disableSSLStr)
 	}
 
 	credsConfig := &awsutil.CredentialsConfig{
@@ -120,7 +120,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 
 	_, err = s3conn.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
 	if err != nil {
-		return nil, fmt.Errorf("unable to access bucket '%s' in region %s: %v", bucket, region, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("unable to access bucket %q in region %q: {{err}}", bucket, region), err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]

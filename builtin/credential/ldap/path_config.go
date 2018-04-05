@@ -12,6 +12,7 @@ import (
 	"text/template"
 
 	"github.com/go-ldap/ldap"
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/consts"
@@ -253,7 +254,7 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 		// Validate the template before proceeding
 		_, err := template.New("queryTemplate").Parse(groupfilter)
 		if err != nil {
-			return nil, fmt.Errorf("invalid groupfilter (%v)", err)
+			return nil, errwrap.Wrapf("invalid groupfilter: {{err}}", err)
 		}
 
 		cfg.GroupFilter = groupfilter
@@ -275,7 +276,7 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 		}
 		_, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse certificate %s", err.Error())
+			return nil, errwrap.Wrapf("failed to parse certificate: {{err}}", err)
 		}
 		cfg.Certificate = certificate
 	}
@@ -429,7 +430,7 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 	for _, uut := range urls {
 		u, err := url.Parse(uut)
 		if err != nil {
-			retErr = multierror.Append(retErr, fmt.Errorf("error parsing url %q: %s", uut, err.Error()))
+			retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("error parsing url %q: {{err}}", uut), err))
 			continue
 		}
 		host, port, err := net.SplitHostPort(u.Host)
@@ -480,7 +481,7 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 			retErr = nil
 			break
 		}
-		retErr = multierror.Append(retErr, fmt.Errorf("error connecting to host %q: %s", uut, err.Error()))
+		retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("error connecting to host %q: {{err}}", uut), err))
 	}
 
 	return conn, retErr.ErrorOrNil()

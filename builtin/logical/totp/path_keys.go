@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	otplib "github.com/pquerna/otp"
@@ -355,7 +356,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			} else {
 				barcode, err := keyObject.Image(qrSize, qrSize)
 				if err != nil {
-					return nil, fmt.Errorf("failed to generate QR code image: %v", err)
+					return nil, errwrap.Wrapf("failed to generate QR code image: {{err}}", err)
 				}
 
 				var buff bytes.Buffer

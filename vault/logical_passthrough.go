@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -69,7 +70,7 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 	}
 
 	if conf == nil {
-		return nil, fmt.Errorf("Configuration passed into backend is nil")
+		return nil, fmt.Errorf("configuration passed into backend is nil")
 	}
 	b.Backend.Setup(ctx, conf)
 
@@ -93,7 +94,7 @@ func (b *PassthroughBackend) handleRevoke(ctx context.Context, req *logical.Requ
 func (b *PassthroughBackend) handleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	out, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
-		return false, fmt.Errorf("existence check failed: %v", err)
+		return false, errwrap.Wrapf("existence check failed: {{err}}", err)
 	}
 
 	return out != nil, nil
@@ -103,7 +104,7 @@ func (b *PassthroughBackend) handleRead(ctx context.Context, req *logical.Reques
 	// Read the path
 	out, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
-		return nil, fmt.Errorf("read failed: %v", err)
+		return nil, errwrap.Wrapf("read failed: {{err}}", err)
 	}
 
 	// Fast-path the no data case
@@ -115,7 +116,7 @@ func (b *PassthroughBackend) handleRead(ctx context.Context, req *logical.Reques
 	var rawData map[string]interface{}
 
 	if err := jsonutil.DecodeJSON(out.Value, &rawData); err != nil {
-		return nil, fmt.Errorf("json decoding failed: %v", err)
+		return nil, errwrap.Wrapf("json decoding failed: {{err}}", err)
 	}
 
 	var resp *logical.Response
@@ -174,7 +175,7 @@ func (b *PassthroughBackend) handleWrite(ctx context.Context, req *logical.Reque
 	// JSON encode the data
 	buf, err := json.Marshal(req.Data)
 	if err != nil {
-		return nil, fmt.Errorf("json encoding failed: %v", err)
+		return nil, errwrap.Wrapf("json encoding failed: {{err}}", err)
 	}
 
 	// Write out a new key
@@ -183,7 +184,7 @@ func (b *PassthroughBackend) handleWrite(ctx context.Context, req *logical.Reque
 		Value: buf,
 	}
 	if err := req.Storage.Put(ctx, entry); err != nil {
-		return nil, fmt.Errorf("failed to write: %v", err)
+		return nil, errwrap.Wrapf("failed to write: {{err}}", err)
 	}
 
 	return nil, nil
