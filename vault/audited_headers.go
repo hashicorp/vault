@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -49,11 +50,11 @@ func (a *AuditedHeadersConfig) add(ctx context.Context, header string, hmac bool
 	a.Headers[strings.ToLower(header)] = &auditedHeaderSettings{hmac}
 	entry, err := logical.StorageEntryJSON(auditedHeadersEntry, a.Headers)
 	if err != nil {
-		return fmt.Errorf("failed to persist audited headers config: %v", err)
+		return errwrap.Wrapf("failed to persist audited headers config: {{err}}", err)
 	}
 
 	if err := a.view.Put(ctx, entry); err != nil {
-		return fmt.Errorf("failed to persist audited headers config: %v", err)
+		return errwrap.Wrapf("failed to persist audited headers config: {{err}}", err)
 	}
 
 	return nil
@@ -77,11 +78,11 @@ func (a *AuditedHeadersConfig) remove(ctx context.Context, header string) error 
 	delete(a.Headers, strings.ToLower(header))
 	entry, err := logical.StorageEntryJSON(auditedHeadersEntry, a.Headers)
 	if err != nil {
-		return fmt.Errorf("failed to persist audited headers config: %v", err)
+		return errwrap.Wrapf("failed to persist audited headers config: {{err}}", err)
 	}
 
 	if err := a.view.Put(ctx, entry); err != nil {
-		return fmt.Errorf("failed to persist audited headers config: %v", err)
+		return errwrap.Wrapf("failed to persist audited headers config: {{err}}", err)
 	}
 
 	return nil
@@ -134,7 +135,7 @@ func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
 	// Create the config
 	out, err := view.Get(ctx, auditedHeadersEntry)
 	if err != nil {
-		return fmt.Errorf("failed to read config: %v", err)
+		return errwrap.Wrapf("failed to read config: {{err}}", err)
 	}
 
 	headers := make(map[string]*auditedHeaderSettings)

@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
@@ -134,7 +134,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	}
 	readCapacity, err := strconv.Atoi(readCapacityString)
 	if err != nil {
-		return nil, fmt.Errorf("invalid read capacity: %s", readCapacityString)
+		return nil, fmt.Errorf("invalid read capacity: %q", readCapacityString)
 	}
 	if readCapacity == 0 {
 		readCapacity = DefaultDynamoDBReadCapacity
@@ -149,7 +149,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	}
 	writeCapacity, err := strconv.Atoi(writeCapacityString)
 	if err != nil {
-		return nil, fmt.Errorf("invalid write capacity: %s", writeCapacityString)
+		return nil, fmt.Errorf("invalid write capacity: %q", writeCapacityString)
 	}
 	if writeCapacity == 0 {
 		writeCapacity = DefaultDynamoDBWriteCapacity
@@ -192,7 +192,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		var err error
 		dynamodbMaxRetry, err = strconv.Atoi(dynamodbMaxRetryString)
 		if err != nil {
-			return nil, fmt.Errorf("invalid max retry: %s", dynamodbMaxRetryString)
+			return nil, fmt.Errorf("invalid max retry: %q", dynamodbMaxRetryString)
 		}
 	}
 
@@ -261,7 +261,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 	}
 	item, err := dynamodbattribute.ConvertToMap(record)
 	if err != nil {
-		return fmt.Errorf("could not convert prefix record to DynamoDB item: %s", err)
+		return errwrap.Wrapf("could not convert prefix record to DynamoDB item: {{err}}", err)
 	}
 	requests := []*dynamodb.WriteRequest{{
 		PutRequest: &dynamodb.PutRequest{
@@ -276,7 +276,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 		}
 		item, err := dynamodbattribute.ConvertToMap(record)
 		if err != nil {
-			return fmt.Errorf("could not convert prefix record to DynamoDB item: %s", err)
+			return errwrap.Wrapf("could not convert prefix record to DynamoDB item: {{err}}", err)
 		}
 		requests = append(requests, &dynamodb.WriteRequest{
 			PutRequest: &dynamodb.PutRequest{

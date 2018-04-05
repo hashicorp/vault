@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"math/big"
 	paths "path"
 	"strings"
-
-	big "github.com/hashicorp/golang-math-big/big"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/logical"
@@ -134,6 +133,13 @@ type encryptedKeyStorage struct {
 	prefix string
 }
 
+func ensureTailingSlash(path string) string {
+	if !strings.HasSuffix(path, "/") {
+		return path + "/"
+	}
+	return path
+}
+
 // List implements the logical.Storage List method, and decrypts all the items
 // in a path prefix. This can only operate on full folder structures so the
 // prefix should end in a "/".
@@ -143,7 +149,7 @@ func (s *encryptedKeyStorage) List(ctx context.Context, prefix string) ([]string
 		return nil, err
 	}
 
-	keys, err := s.s.List(ctx, encPrefix+"/")
+	keys, err := s.s.List(ctx, ensureTailingSlash(encPrefix))
 	if err != nil {
 		return keys, err
 	}
@@ -244,6 +250,10 @@ func (s *encryptedKeyStorage) Delete(ctx context.Context, path string) error {
 // by "/") with the object's key policy. The context for each encryption is the
 // plaintext path prefix for the key.
 func (s *encryptedKeyStorage) encryptPath(path string) (string, error) {
+	if path == "" || path == "/" {
+		return s.prefix, nil
+	}
+
 	path = paths.Clean(path)
 
 	// Trim the prefix if it starts with a "/"
@@ -252,7 +262,7 @@ func (s *encryptedKeyStorage) encryptPath(path string) (string, error) {
 	parts := strings.Split(path, "/")
 
 	encPath := s.prefix
-	context := s.prefix
+	context := strings.TrimSuffix(s.prefix, "/")
 	for _, p := range parts {
 		encoded := base64.StdEncoding.EncodeToString([]byte(p))
 		ciphertext, err := s.policy.Encrypt(0, []byte(context), nil, encoded)

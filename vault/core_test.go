@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
-	log "github.com/mgutz/logxi/v1"
 )
 
 var (
@@ -23,7 +23,7 @@ var (
 )
 
 func TestNewCore_badRedirectAddr(t *testing.T) {
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {
@@ -381,7 +381,7 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 	if resp.Secret.TTL != c.maxLeaseTTL {
-		t.Fatalf("bad: %#v", resp.Secret)
+		t.Fatalf("bad: %#v, %d", resp.Secret, c.maxLeaseTTL)
 	}
 	if resp.Secret.LeaseID == "" {
 		t.Fatalf("bad: %#v", resp.Secret)
@@ -422,7 +422,7 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 	if resp.Secret.TTL != c.defaultLeaseTTL {
-		t.Fatalf("bad: %#v", resp.Secret)
+		t.Fatalf("bad: %#v, %d", resp.Secret, c.defaultLeaseTTL)
 	}
 	if resp.Secret.LeaseID == "" {
 		t.Fatalf("bad: %#v", resp.Secret)
@@ -1117,7 +1117,7 @@ func TestCore_LimitedUseToken(t *testing.T) {
 
 func TestCore_Standby_Seal(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -1235,7 +1235,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 
 func TestCore_StepDown(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -1433,7 +1433,7 @@ func TestCore_StepDown(t *testing.T) {
 
 func TestCore_CleanLeaderPrefix(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -1602,7 +1602,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 }
 
 func TestCore_Standby(t *testing.T) {
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inmha, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -1613,7 +1613,7 @@ func TestCore_Standby(t *testing.T) {
 }
 
 func TestCore_Standby_SeparateHA(t *testing.T) {
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inmha, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -2192,7 +2192,7 @@ func TestCore_HandleRequest_MountPointType(t *testing.T) {
 
 func TestCore_Standby_Rotate(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -2274,5 +2274,90 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	// Verify the response
 	if resp.Data["term"] != 2 {
 		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+// Ensure that InternalData is never returned
+func TestCore_HandleRequest_Headers(t *testing.T) {
+	noop := &NoopBackend{
+		Response: &logical.Response{
+			Data: map[string]interface{}{},
+		},
+	}
+
+	c, _, root := TestCoreUnsealed(t)
+	c.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the backend
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	_, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Mount tune
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo/tune")
+	req.Data["passthrough_request_headers"] = []string{"Should-Passthrough", "should-passthrough-case-insensitive"}
+	req.ClientToken = root
+	_, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to read
+	lreq := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "foo/test",
+		ClientToken: root,
+		Headers: map[string][]string{
+			"X-Vault-Kv-Client":                   []string{"foo"},
+			"Should-Passthrough":                  []string{"foo"},
+			"Should-Passthrough-Case-Insensitive": []string{"baz"},
+			"Should-Not-Passthrough":              []string{"bar"},
+		},
+	}
+	_, err = c.HandleRequest(lreq)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Check the headers
+	headers := noop.Requests[0].Headers
+
+	// Test whitelisted values
+	if val, ok := headers["X-Vault-Kv-Client"]; ok {
+		expected := []string{"foo"}
+		if !reflect.DeepEqual(val, expected) {
+			t.Fatalf("expected: %v, got: %v", expected, val)
+		}
+	} else {
+		t.Fatalf("expected 'X-Vault-Kv-Client' to be present in the headers map")
+	}
+
+	// Test passthrough values
+	if val, ok := headers["Should-Passthrough"]; ok {
+		expected := []string{"foo"}
+		if !reflect.DeepEqual(val, expected) {
+			t.Fatalf("expected: %v, got: %v", expected, val)
+		}
+	} else {
+		t.Fatalf("expected 'Should-Passthrough' to be present in the headers map")
+	}
+
+	if val, ok := headers["Should-Passthrough-Case-Insensitive"]; ok {
+		expected := []string{"baz"}
+		if !reflect.DeepEqual(val, expected) {
+			t.Fatalf("expected: %v, got: %v", expected, val)
+		}
+	} else {
+		t.Fatalf("expected 'Should-Passthrough-Case-Insensitive' to be present in the headers map")
+	}
+
+	if _, ok := headers["Should-Not-Passthrough"]; ok {
+		t.Fatalf("did not expect 'Should-Not-Passthrough' to be in the headers map")
 	}
 }

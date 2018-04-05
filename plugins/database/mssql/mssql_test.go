@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 )
 
 var (
@@ -28,16 +27,13 @@ func TestMSSQL_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*MSSQL)
-
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	connProducer := db.ConnectionProducer.(*connutil.SQLConnectionProducer)
-	if !connProducer.Initialized {
+	if !db.Initialized {
 		t.Fatal("Database should be initalized")
 	}
 
@@ -52,7 +48,7 @@ func TestMSSQL_Initialize(t *testing.T) {
 		"max_open_connections": "5",
 	}
 
-	err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -68,9 +64,8 @@ func TestMSSQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*MSSQL)
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -87,7 +82,7 @@ func TestMSSQL_CreateUser(t *testing.T) {
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testMSSQLRole,
+		Creation: []string{testMSSQLRole},
 	}
 
 	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
@@ -110,15 +105,14 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*MSSQL)
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testMSSQLRole,
+		Creation: []string{testMSSQLRole},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
@@ -155,7 +149,7 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 	}
 
 	// Test custom revoke statement
-	statements.RevocationStatements = testMSSQLDrop
+	statements.Revocation = []string{testMSSQLDrop}
 	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)

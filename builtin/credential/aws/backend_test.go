@@ -1733,7 +1733,6 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 	renewReq.Auth.Metadata = auth.Metadata
 	renewReq.Auth.LeaseOptions = auth.LeaseOptions
 	renewReq.Auth.Policies = auth.Policies
-	renewReq.Auth.IssueTime = time.Now()
 	renewReq.Auth.Period = auth.Period
 
 	return renewReq

@@ -1,0 +1,10 @@
+.message-in-page {
+  margin-bottom: 2rem;
+  position: relative;
+
+  .close-button {
+    position: absolute;
+    right: 1rem;
+    top: $size-10;
+  }
+}

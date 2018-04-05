@@ -33,13 +33,9 @@ func pathRoleCreate(b *backend) *framework.Path {
 }
 
 func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.logger.Trace("postgres/pathRoleCreateRead: enter")
-	defer b.logger.Trace("postgres/pathRoleCreateRead: exit")
-
 	name := data.Get("name").(string)
 
 	// Get the role
-	b.logger.Trace("postgres/pathRoleCreateRead: getting role")
 	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
@@ -49,7 +45,6 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 	}
 
 	// Determine if we have a lease
-	b.logger.Trace("postgres/pathRoleCreateRead: getting lease")
 	lease, err := b.Lease(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -61,11 +56,6 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 		lease = &configLease{
 			Lease: b.System().DefaultLeaseTTL(),
 		}
-	}
-
-	ttl := lease.Lease
-	if ttl == 0 || (lease.LeaseMax > 0 && ttl > lease.LeaseMax) {
-		ttl = lease.LeaseMax
 	}
 
 	// Generate the username, password and expiration. PG limits user to 63 characters
@@ -85,25 +75,27 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, err
 	}
+
+	ttl, _, err := framework.CalculateTTL(b.System(), 0, lease.Lease, 0, lease.LeaseMax, 0, time.Time{})
+	if err != nil {
+		return nil, err
+	}
 	expiration := time.Now().
 		Add(ttl).
 		Format("2006-01-02 15:04:05-0700")
 
 	// Get our handle
-	b.logger.Trace("postgres/pathRoleCreateRead: getting database handle")
 	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	// Start a transaction
-	b.logger.Trace("postgres/pathRoleCreateRead: starting transaction")
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		b.logger.Trace("postgres/pathRoleCreateRead: rolling back transaction")
 		tx.Rollback()
 	}()
 
@@ -114,7 +106,6 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 			continue
 		}
 
-		b.logger.Trace("postgres/pathRoleCreateRead: preparing statement")
 		stmt, err := tx.Prepare(Query(query, map[string]string{
 			"name":       username,
 			"password":   password,
@@ -124,7 +115,6 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 			return nil, err
 		}
 		defer stmt.Close()
-		b.logger.Trace("postgres/pathRoleCreateRead: executing statement")
 		if _, err := stmt.Exec(); err != nil {
 			return nil, err
 		}
@@ -132,14 +122,12 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 
 	// Commit the transaction
 
-	b.logger.Trace("postgres/pathRoleCreateRead: committing transaction")
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
 	// Return the secret
 
-	b.logger.Trace("postgres/pathRoleCreateRead: generating secret")
 	resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
 		"username": username,
 		"password": password,
@@ -147,7 +135,8 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 		"username": username,
 		"role":     name,
 	})
-	resp.Secret.TTL = ttl
+	resp.Secret.TTL = lease.Lease
+	resp.Secret.MaxTTL = lease.LeaseMax
 	return resp, nil
 }
 

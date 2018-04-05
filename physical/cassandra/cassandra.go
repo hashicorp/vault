@@ -10,7 +10,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/gocql/gocql"
@@ -145,7 +146,8 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	impl := &CassandraBackend{
 		sess:   sess,
 		table:  table,
-		logger: logger}
+		logger: logger,
+	}
 	return impl, nil
 }
 
@@ -168,11 +170,11 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 	if pemBundlePath, ok := conf["pem_bundle_file"]; ok {
 		pemBundleData, err := ioutil.ReadFile(pemBundlePath)
 		if err != nil {
-			return fmt.Errorf("Error reading pem bundle from %s: %v", pemBundlePath, err)
+			return errwrap.Wrapf(fmt.Sprintf("error reading pem bundle from %q: {{err}}", pemBundlePath), err)
 		}
 		pemBundle, err := certutil.ParsePEMBundle(string(pemBundleData))
 		if err != nil {
-			return fmt.Errorf("Error parsing 'pem_bundle': %v", err)
+			return errwrap.Wrapf("error parsing 'pem_bundle': {{err}}", err)
 		}
 		tlsConfig, err = pemBundle.GetTLSConfig(certutil.TLSClient)
 		if err != nil {
@@ -182,7 +184,7 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 		if pemJSONPath, ok := conf["pem_json_file"]; ok {
 			pemJSONData, err := ioutil.ReadFile(pemJSONPath)
 			if err != nil {
-				return fmt.Errorf("Error reading json bundle from %s: %v", pemJSONPath, err)
+				return errwrap.Wrapf(fmt.Sprintf("error reading json bundle from %q: {{err}}", pemJSONPath), err)
 			}
 			pemJSON, err := certutil.ParsePKIJSON([]byte(pemJSONData))
 			if err != nil {
@@ -294,13 +296,21 @@ func (c *CassandraBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"cassandra", "delete"}, time.Now())
 
 	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE bucket = ? AND key = ?`, c.table)
-	batch := gocql.NewBatch(gocql.LoggedBatch)
-	for _, bucket := range c.buckets(key) {
-		batch.Entries = append(batch.Entries, gocql.BatchEntry{
-			Stmt: stmt,
-			Args: []interface{}{bucket, key}})
+	results := make(chan error)
+	buckets := c.buckets(key)
+
+	for _, bucket := range buckets {
+		go func(bucket string) {
+			results <- c.sess.Query(stmt, bucket, key).Exec()
+		}(bucket)
 	}
-	return c.sess.ExecuteBatch(batch)
+
+	for i := 0; i < len(buckets); i++ {
+		if err := <-results; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // List is used ot list all the keys under a given

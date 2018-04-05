@@ -3,10 +3,11 @@ package vault
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
 
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -26,6 +27,7 @@ var StdAllowedHeaders = []string{
 	"X-Vault-Wrap-Format",
 	"X-Vault-Wrap-TTL",
 	"X-Vault-Policy-Override",
+	consts.VaultKVCLIClientHeader,
 }
 
 // CORSConfig stores the state of the CORS configuration.
@@ -50,11 +52,11 @@ func (c *Core) saveCORSConfig(ctx context.Context) error {
 
 	entry, err := logical.StorageEntryJSON("cors", localConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create CORS config entry: %v", err)
+		return errwrap.Wrapf("failed to create CORS config entry: {{err}}", err)
 	}
 
 	if err := view.Put(ctx, entry); err != nil {
-		return fmt.Errorf("failed to save CORS config: %v", err)
+		return errwrap.Wrapf("failed to save CORS config: {{err}}", err)
 	}
 
 	return nil
@@ -67,7 +69,7 @@ func (c *Core) loadCORSConfig(ctx context.Context) error {
 	// Load the config in
 	out, err := view.Get(ctx, "cors")
 	if err != nil {
-		return fmt.Errorf("failed to read CORS config: %v", err)
+		return errwrap.Wrapf("failed to read CORS config: {{err}}", err)
 	}
 	if out == nil {
 		return nil

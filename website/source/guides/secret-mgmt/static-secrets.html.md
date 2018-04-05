@@ -145,7 +145,7 @@ have an API key for New Relic owned by the DevOps team, the path would look like
 To create key/value secrets:
 
 ```shell
-$ vault write secret/<PATH> <KEY>=VALUE>
+$ vault kv put secret/<PATH> <KEY>=VALUE>
 ```
 
 The `<PATH>` can be anything you want it to be, and your organization should
@@ -154,7 +154,7 @@ decide on the naming convention that makes most sense.
 **Example:**
 
 ```shell
-$ vault write secret/eng/apikey/Google key=AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI
+$ vault kv put secret/eng/apikey/Google key=AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI
 Success! Data written to: secret/eng/apikey/Google
 ```
 
@@ -169,18 +169,18 @@ Use `/secret/<PATH>` endpoint to create secrets:
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request POST \
        --data <SECRETS> \
-       <VAULT_ADDRESS>/v1/secret/<PATH>
+       <VAULT_ADDRESS>/v1/secret/data/<PATH>
 ```
 
 Where `<TOKEN>` is your valid token, `<SECRETS>` is the key-value pair(s) of your
-secrets, and `secret/<PATH>` is the path to your secrets.
+secrets, and `secret/data/<PATH>` is the path to your secrets.
 
 **Example:**
 
 ```shell
 $ curl --header "X-Vault-Token: ..." --request POST \
        --data '{"key": "AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI"}' \
-       https://vault.rocks/v1/secret/eng/apikey/Google
+       http://127.0.0.1:8200/v1/secret/data/eng/apikey/Google
 ```
 
 The secret key is "key" and its value is
@@ -236,7 +236,7 @@ store the root certificate for production MySQL, the path becomes
 **Example:**
 
 ```shell
-$ vault write secret/prod/cert/mysql cert=@cert.pem
+$ vault kv put secret/prod/cert/mysql cert=@cert.pem
 ```
 
 This example reads the root certificate from a PEM file from the disk, and store
@@ -254,7 +254,7 @@ To perform the same task using the Vault API, pass the token in the request head
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data @cert.pem \
-       https://vault.rocks/v1/secret/prod/cert/mysql
+       http://127.0.0.1:8200/v1/secret/data/prod/cert/mysql
 ```
 > **NOTE:** Any value begins with "@" is loaded from a file.
 
@@ -269,12 +269,12 @@ paths. In this scenario, the `apps` policy must include the following:
 
 ```shell
 # Read-only permit
-path "secret/eng/apikey/Google" {
+path "secret/data/eng/apikey/Google" {
   capabilities = [ "read" ]  
 }
 
 # Read-only permit
-path "secret/prod/cert/mysql" {
+path "secret/data/prod/cert/mysql" {
   capabilities = [ "read" ]
 }
 ```
@@ -315,18 +315,18 @@ as an `app` persona.
 # Payload to pass in the API call
 $ cat payload.json
 {
-  "policy": "path \"secret/eng/apikey/Google\" { capabilities = [ \"read\" ] ...}"
+  "policy": "path \"secret/data/eng/apikey/Google\" { capabilities = [ \"read\" ] ...}"
 }
 
 # Create "apps" policy
 $ curl --header "X-Vault-Token: ..." --request PUT \
        --data @payload.json \
-       https://vault.rocks/v1/sys/policy/apps
+       http://127.0.0.1:8200/v1/sys/policy/apps
 
 # Generate a new token with apps policy
 $ curl --header "X-Vault-Token: ..." --request POST \
        --data '{"policies": ["apps"]}' \
-       https://vault.rocks/v1/auth/token/create | jq
+       http://127.0.0.1:8200/v1/auth/token/create | jq
 {
  "request_id": "e1737bc8-7e51-3943-42a0-2dbd6cb40e3e",
  "lease_id": "",
@@ -375,7 +375,7 @@ MySQL.
 The command to read secret is:
 
 ```shell
-$ vault read secret/<PATH>
+$ vault kv get secret/<PATH>
 ```
 
 **Example:**
@@ -389,7 +389,7 @@ token_duration: 2764277
 token_policies: [apps default]
 
 # Read the API key
-$ vault read secret/eng/apikey/Google
+$ vault kv get secret/eng/apikey/Google
 Key             	Value
 ---             	-----
 refresh_interval	768h0m0s
@@ -399,7 +399,7 @@ key             	AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI
 To return the key value alone, pass `-field=key` as an argument.
 
 ```shell
-$ vault read -field=key secret/eng/apikey/Google
+$ vault kv get -field=key secret/eng/apikey/Google
 AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI
 ```
 
@@ -408,7 +408,7 @@ AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI
 The command is basically the same:
 
 ```shell
-$ vault read -field=cert secret/prod/cert/mysql
+$ vault kv get -field=cert secret/prod/cert/mysql
 -----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA6E2Uq0XqreZISgVMUu9pnoMsq+OoK1PI54rsA9vtDE6wiRk0GWhf5vD4DGf1
 ...
@@ -421,7 +421,7 @@ Use `secret/` endpoint to retrieve secrets from key/value secret engine:
 ```shell
 $ curl --header "X-Vault-Token: <TOKEN_FROM_STEP3>" \
        --request Get \
-       <VAULT_ADDRESS>/v1/secret/<PATH>
+       <VAULT_ADDRESS>/v1/secret/data/<PATH>
 ```
 
 **Example:**
@@ -431,7 +431,7 @@ Read the Google API key.
 ```shell
 $ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
        --request GET \
-       https://vault.rocks/v1/secret/eng/apikey/Google | jq
+       http://127.0.0.1:8200/v1/secret/data/eng/apikey/Google | jq
 {
 "request_id": "5a2005ac-1149-2275-cab3-76cee71bf524",
 "lease_id": "",
@@ -453,7 +453,7 @@ Retrieve the key value with `jq`:
 ```shell
 $ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
        --request GET \
-       https://vault.rocks/v1/secret/eng/apikey/Google | jq ".data.key"
+       http://127.0.0.1:8200/v1/secret/data/eng/apikey/Google | jq ".data.key"
 ```
 
 #### Root certificate example:
@@ -461,7 +461,7 @@ $ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
 ```shell
 $ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
        --request GET \
-       https://vault.rocks/v1/secret/prod/cert/mysql | jq ".data.cert"
+       http://127.0.0.1:8200/v1/secret/data/prod/cert/mysql | jq ".data.cert"
 ```
 
 ## Additional Discussion
@@ -479,7 +479,7 @@ enter the secret in a new line. After entering the secret, press **`Ctrl+d`** to
 end the pipe and write the secret to the Vault.
 
 ```shell
-$ vault write secret/eng/apikey/Google key=-
+$ vault kv put secret/eng/apikey/Google key=-
 
 AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI
 <Ctrl+d>
@@ -498,14 +498,14 @@ Using the Google API key example, you can create a file containing the key (apik
 The CLI command would look like:
 
 ```shell
-$ vault write secret/eng/apikey/Google @apikey.txt
+$ vault kv put secret/eng/apikey/Google @apikey.txt
 ```
 
 #### Option 3: Disable all vault command history
 
 Sometimes, you may not even want the vault command itself to appear in history
 at all.  The Option 1 and Option 2 prevents the secret to appear in the history;
-however, the vault command, `vault write secret/eng/apikey/Google` will appear
+however, the vault command, `vault kv put secret/eng/apikey/Google` will appear
 in history.
 
 In bash:
@@ -523,14 +523,14 @@ The two examples introduced in this guide only had a single key-value pair.  You
 can pass multiple values in the command.
 
 ```shell
-$ vault write secret/dev/config/mongodb url=foo.example.com:35533 db_name=users \
+$ vault kv put secret/dev/config/mongodb url=foo.example.com:35533 db_name=users \
  username=admin password=pa$$w0rd
 ```
 
 Or, read the secret from a file:
 
 ```shell
-$ vault write secret/dev/config/mongodb @mongodb.txt
+$ vault kv put secret/dev/config/mongodb @mongodb.txt
 
 $ cat mongodb.txt
 {

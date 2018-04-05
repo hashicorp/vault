@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
@@ -83,7 +83,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	}
 	s3ForcePathStyleBool, err := parseutil.ParseBool(s3ForcePathStyleStr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid boolean set for s3_force_path_style: '%s'", s3ForcePathStyleStr)
+		return nil, fmt.Errorf("invalid boolean set for s3_force_path_style: %q", s3ForcePathStyleStr)
 	}
 	disableSSLStr, ok := conf["disable_ssl"]
 	if !ok {
@@ -91,7 +91,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	}
 	disableSSLBool, err := parseutil.ParseBool(disableSSLStr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid boolean set for disable_ssl: '%s'", disableSSLStr)
+		return nil, fmt.Errorf("invalid boolean set for disable_ssl: %q", disableSSLStr)
 	}
 
 	credsConfig := &awsutil.CredentialsConfig{
@@ -120,7 +120,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 
 	_, err = s3conn.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
 	if err != nil {
-		return nil, fmt.Errorf("unable to access bucket '%s' in region %s: %v", bucket, region, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("unable to access bucket %q in region %q: {{err}}", bucket, region), err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -131,7 +131,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("s3: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
@@ -175,6 +175,9 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
 	if awsErr, ok := err.(awserr.RequestFailure); ok {
 		// Return nil on 404s, error on anything else
 		if awsErr.StatusCode() == 404 {
@@ -189,15 +192,18 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 		return nil, fmt.Errorf("got nil response from S3 but no error")
 	}
 
-	data := make([]byte, *resp.ContentLength)
-	_, err = io.ReadFull(resp.Body, data)
+	data := bytes.NewBuffer(nil)
+	if resp.ContentLength != nil {
+		data = bytes.NewBuffer(make([]byte, 0, *resp.ContentLength))
+	}
+	_, err = io.Copy(data, resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	ent := &physical.Entry{
 		Key:   key,
-		Value: data,
+		Value: data.Bytes(),
 	}
 
 	return ent, nil

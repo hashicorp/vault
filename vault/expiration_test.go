@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
-	log "github.com/mgutz/logxi/v1"
 )
 
 var (
@@ -252,7 +252,7 @@ func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
 	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
 	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 	physicalBackend, err := physEtcd.NewEtcdBackend(map[string]string{
 		"address":      addr,
 		"path":         randPath,
@@ -269,7 +269,7 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
 	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 	physicalBackend, err := physConsul.NewConsulBackend(map[string]string{
 		"address":      addr,
 		"path":         randPath,
@@ -284,7 +284,7 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 */
 
 func BenchmarkExpiration_Restore_InMem(b *testing.B) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {
 		b.Fatal(err)
@@ -796,8 +796,14 @@ func TestExpiration_RenewToken(t *testing.T) {
 
 func TestExpiration_RenewToken_period(t *testing.T) {
 	exp := mockExpiration(t)
-	root, err := exp.tokenStore.rootToken(context.Background())
-	if err != nil {
+	root := &TokenEntry{
+		Policies:     []string{"root"},
+		Path:         "auth/token/root",
+		DisplayName:  "root",
+		CreationTime: time.Now().Unix(),
+		Period:       time.Minute,
+	}
+	if err := exp.tokenStore.create(context.Background(), root); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -810,7 +816,7 @@ func TestExpiration_RenewToken_period(t *testing.T) {
 		},
 		Period: time.Minute,
 	}
-	err = exp.RegisterAuth("auth/token/login", auth)
+	err := exp.RegisterAuth("auth/token/login", auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -869,7 +875,6 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 		LeaseOptions: logical.LeaseOptions{
 			TTL:       10 * time.Second,
 			Renewable: true,
-			IssueTime: time.Now(),
 		},
 		Period: 5 * time.Second,
 	}
@@ -888,8 +893,8 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 	if resp == nil {
 		t.Fatal("expected a response")
 	}
-	if resp.Auth.TTL > 5*time.Second {
-		t.Fatalf("expected TTL to be less than or equal to period, got: %s", resp.Auth.TTL)
+	if resp.Auth.TTL == 0 || resp.Auth.TTL > 5*time.Second {
+		t.Fatalf("expected TTL to be greater than zero and less than or equal to period, got: %s", resp.Auth.TTL)
 	}
 
 	// Wait another 3 seconds. If period works correctly, this should not fail
@@ -1293,7 +1298,7 @@ func TestExpiration_renewEntry(t *testing.T) {
 		ExpireTime: time.Now(),
 	}
 
-	resp, err := exp.renewEntry(le, time.Second)
+	resp, err := exp.renewEntry(le, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1310,12 +1315,6 @@ func TestExpiration_renewEntry(t *testing.T) {
 		t.Fatalf("Bad: %v", req)
 	}
 	if !reflect.DeepEqual(req.Data, le.Data) {
-		t.Fatalf("Bad: %v", req)
-	}
-	if req.Secret.Increment != time.Second {
-		t.Fatalf("Bad: %v", req)
-	}
-	if req.Secret.IssueTime.IsZero() {
 		t.Fatalf("Bad: %v", req)
 	}
 }
@@ -1360,7 +1359,7 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 		ExpireTime: time.Now().Add(time.Minute),
 	}
 
-	resp, err := exp.renewAuthEntry(&logical.Request{}, le, time.Second)
+	resp, err := exp.renewAuthEntry(&logical.Request{}, le, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1377,12 +1376,6 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 		t.Fatalf("Bad: %v", req)
 	}
 	if req.Path != "login" {
-		t.Fatalf("Bad: %v", req)
-	}
-	if req.Auth.Increment != time.Second {
-		t.Fatalf("Bad: %v", req)
-	}
-	if req.Auth.IssueTime.IsZero() {
 		t.Fatalf("Bad: %v", req)
 	}
 	if req.Auth.InternalData["MySecret"] != "secret" {

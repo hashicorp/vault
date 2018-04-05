@@ -1,0 +1,17 @@
+<form {{action (perform saveModel) on="submit"}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    {{message-error model=model}}
+    {{#if model.attrs}}
+      {{#each model.attrs as |attr|}}
+        {{form-field data-test-field attr=attr model=model}}
+      {{/each}}
+    {{else if model.fieldGroups}}
+      {{form-field-groups model=model}}
+    {{/if}}
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <button type="submit" data-test-save-config=true class="button is-primary {{if saveModel.isRunning 'loading'}}" disabled={{saveModel.isRunning}}>
+      Save
+    </button>
+  </div>
+</form>

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -46,7 +47,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		alreadyRevoked = true
 		err = revEntry.DecodeJSON(&revInfo)
 		if err != nil {
-			return nil, fmt.Errorf("Error decoding existing revocation info")
+			return nil, fmt.Errorf("error decoding existing revocation info")
 		}
 	}
 
@@ -66,10 +67,10 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 
 		cert, err := x509.ParseCertificate(certEntry.Value)
 		if err != nil {
-			return nil, fmt.Errorf("Error parsing certificate: %s", err)
+			return nil, errwrap.Wrapf("error parsing certificate: {{err}}", err)
 		}
 		if cert == nil {
-			return nil, fmt.Errorf("Got a nil certificate")
+			return nil, fmt.Errorf("got a nil certificate")
 		}
 
 		if cert.NotAfter.Before(time.Now()) {
@@ -89,12 +90,12 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 
 		revEntry, err = logical.StorageEntryJSON("revoked/"+normalizeSerial(serial), revInfo)
 		if err != nil {
-			return nil, fmt.Errorf("Error creating revocation entry")
+			return nil, fmt.Errorf("error creating revocation entry")
 		}
 
 		err = req.Storage.Put(ctx, revEntry)
 		if err != nil {
-			return nil, fmt.Errorf("Error saving revoked certificate to new location")
+			return nil, fmt.Errorf("error saving revoked certificate to new location")
 		}
 
 	}
@@ -104,7 +105,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	case errutil.UserError:
 		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
 	case errutil.InternalError:
-		return nil, fmt.Errorf("Error encountered during CRL building: %s", crlErr)
+		return nil, errwrap.Wrapf("error encountered during CRL building: {{err}}", crlErr)
 	}
 
 	resp := &logical.Response{
@@ -123,7 +124,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 func buildCRL(ctx context.Context, b *backend, req *logical.Request) error {
 	revokedSerials, err := req.Storage.List(ctx, "revoked/")
 	if err != nil {
-		return errutil.InternalError{Err: fmt.Sprintf("Error fetching list of revoked certs: %s", err)}
+		return errutil.InternalError{Err: fmt.Sprintf("error fetching list of revoked certs: %s", err)}
 	}
 
 	revokedCerts := []pkix.RevokedCertificate{}
@@ -131,26 +132,26 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request) error {
 	for _, serial := range revokedSerials {
 		revokedEntry, err := req.Storage.Get(ctx, "revoked/"+serial)
 		if err != nil {
-			return errutil.InternalError{Err: fmt.Sprintf("Unable to fetch revoked cert with serial %s: %s", serial, err)}
+			return errutil.InternalError{Err: fmt.Sprintf("unable to fetch revoked cert with serial %s: %s", serial, err)}
 		}
 		if revokedEntry == nil {
-			return errutil.InternalError{Err: fmt.Sprintf("Revoked certificate entry for serial %s is nil", serial)}
+			return errutil.InternalError{Err: fmt.Sprintf("revoked certificate entry for serial %s is nil", serial)}
 		}
 		if revokedEntry.Value == nil || len(revokedEntry.Value) == 0 {
 			// TODO: In this case, remove it and continue? How likely is this to
 			// happen? Alternately, could skip it entirely, or could implement a
 			// delete function so that there is a way to remove these
-			return errutil.InternalError{Err: fmt.Sprintf("Found revoked serial but actual certificate is empty")}
+			return errutil.InternalError{Err: fmt.Sprintf("found revoked serial but actual certificate is empty")}
 		}
 
 		err = revokedEntry.DecodeJSON(&revInfo)
 		if err != nil {
-			return errutil.InternalError{Err: fmt.Sprintf("Error decoding revocation entry for serial %s: %s", serial, err)}
+			return errutil.InternalError{Err: fmt.Sprintf("error decoding revocation entry for serial %s: %s", serial, err)}
 		}
 
 		revokedCert, err := x509.ParseCertificate(revInfo.CertificateBytes)
 		if err != nil {
-			return errutil.InternalError{Err: fmt.Sprintf("Unable to parse stored revoked certificate with serial %s: %s", serial, err)}
+			return errutil.InternalError{Err: fmt.Sprintf("unable to parse stored revoked certificate with serial %s: %s", serial, err)}
 		}
 
 		// NOTE: We have to change this to UTC time because the CRL standard
@@ -169,27 +170,27 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request) error {
 	signingBundle, caErr := fetchCAInfo(ctx, req)
 	switch caErr.(type) {
 	case errutil.UserError:
-		return errutil.UserError{Err: fmt.Sprintf("Could not fetch the CA certificate: %s", caErr)}
+		return errutil.UserError{Err: fmt.Sprintf("could not fetch the CA certificate: %s", caErr)}
 	case errutil.InternalError:
-		return errutil.InternalError{Err: fmt.Sprintf("Error fetching CA certificate: %s", caErr)}
+		return errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
 	}
 
 	crlLifetime := b.crlLifetime
 	crlInfo, err := b.CRL(ctx, req.Storage)
 	if err != nil {
-		return errutil.InternalError{Err: fmt.Sprintf("Error fetching CRL config information: %s", err)}
+		return errutil.InternalError{Err: fmt.Sprintf("error fetching CRL config information: %s", err)}
 	}
 	if crlInfo != nil {
 		crlDur, err := time.ParseDuration(crlInfo.Expiry)
 		if err != nil {
-			return errutil.InternalError{Err: fmt.Sprintf("Error parsing CRL duration of %s", crlInfo.Expiry)}
+			return errutil.InternalError{Err: fmt.Sprintf("error parsing CRL duration of %s", crlInfo.Expiry)}
 		}
 		crlLifetime = crlDur
 	}
 
 	crlBytes, err := signingBundle.Certificate.CreateCRL(rand.Reader, signingBundle.PrivateKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))
 	if err != nil {
-		return errutil.InternalError{Err: fmt.Sprintf("Error creating new CRL: %s", err)}
+		return errutil.InternalError{Err: fmt.Sprintf("error creating new CRL: %s", err)}
 	}
 
 	err = req.Storage.Put(ctx, &logical.StorageEntry{
@@ -197,7 +198,7 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request) error {
 		Value: crlBytes,
 	})
 	if err != nil {
-		return errutil.InternalError{Err: fmt.Sprintf("Error storing CRL: %s", err)}
+		return errutil.InternalError{Err: fmt.Sprintf("error storing CRL: %s", err)}
 	}
 
 	return nil

@@ -102,10 +102,6 @@ func TestBackend_config_connection(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
-
-	if resp.Data["uri"] != configData["uri"] {
-		t.Fatalf("bad: %#v", resp)
-	}
 }
 
 func TestBackend_basic(t *testing.T) {

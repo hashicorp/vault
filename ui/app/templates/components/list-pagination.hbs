@@ -1,0 +1,107 @@
+{{#with (compact (flatten (array link model))) as |params|}}
+<nav class="pagination is-centered" role="navigation" aria-label="pagination">
+  {{#if hasPrevious}}
+    {{#link-to
+      params=(append
+        params
+        (query-params page=(dec page))
+      )
+      class="pagination-previous"
+    }}
+      {{i-con glyph="chevron-left" size=10}}
+      <span class="pagination-previous-label">
+        Previous
+      </span>
+    {{/link-to}}
+  {{else}}
+    <button type="button" disabled=true class="pagination-previous is-invisible" aria-hidden=true>
+      {{i-con glyph="chevron-left" size=10}}
+      <span class="pagination-previous-label">
+        Previous
+      </span>
+    </button>
+  {{/if}}
+  {{#if hasNext}}
+    {{#link-to
+      params=(append
+        params
+        (query-params page=(inc page))
+      )
+      class="pagination-next"
+    }}
+      <span class="pagination-next-label">
+        Next
+      </span>
+      {{i-con glyph="chevron-right" size=11}}
+    {{/link-to}}
+  {{else}}
+    <button type="button" disabled=true class="pagination-next is-invisible" aria-hidden=true>
+      <span class="pagination-next-label">
+        Next
+      </span>
+      {{i-con glyph="chevron-right" size=11}}
+    </button>
+  {{/if}}
+  {{#if segmentLinks }}
+    <ul class="pagination-list">
+      <li>
+        {{#link-to
+          params=(append
+            params
+            (query-params page=1)
+          )
+          class=(concat (if (eq page 1) "is-current ") "pagination-link")
+          aria-label=(concat "Go to page " 1)
+        }}
+          1
+        {{/link-to}}
+      </li>
+      <li><span class="pagination-ellipsis">&hellip;</span></li>
+      {{#each pageRange as |p|}}
+        <li>
+          {{#link-to
+            params=(append
+              params
+              (query-params page=p)
+            )
+            class=(concat (if (eq page p) "is-current ") "pagination-link")
+            aria-label=(concat "Go to page " p)
+          }}
+            {{p}}
+          {{/link-to}}
+        </li>
+      {{/each}}
+      <li><span class="pagination-ellipsis">&hellip;</span></li>
+      <li>
+        {{#link-to
+          params=(append
+            params
+            (query-params page=lastPage)
+          )
+          class=(concat (if (eq page lastPage) "is-current ") "pagination-link")
+          aria-label=(concat "Go to page " lastPage)
+        }}
+          {{lastPage}}
+        {{/link-to}}
+      </li>
+    </ul>
+  {{else}}
+    <ul class="pagination-list">
+      {{#each pageRange as |p|}}
+        <li>
+          {{#link-to
+            params=(append
+              params
+              (query-params page=p)
+            )
+            class=(concat (if (eq page p) "is-current ") "pagination-link")
+            aria-label=(concat "Go to page " p)
+          }}
+            {{p}}
+          {{/link-to}}
+        </li>
+      {{/each}}
+    </ul>
+  {{/if}}
+</nav>
+{{/with}}

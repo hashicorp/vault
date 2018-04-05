@@ -1,0 +1,84 @@
+<header class="page-header">
+  <div class="level">
+    <div class="level-left">
+      <h1 class="title is-3">
+        Authentication Methods
+      </h1>
+    </div>
+    <div class="level-right">
+      {{#link-to 'vault.cluster.settings.auth.enable' class="button has-icon-right is-ghost is-compact"}}
+        Enable new method
+        {{i-con glyph="chevron-right" size=11}}
+      {{/link-to}}
+    </div>
+  </div>
+</header>
+
+{{#each (sort-by "path" model) as |method|}}
+  {{#linked-block
+    "vault.cluster.access.methods"
+    class="box is-sideless is-marginless has-pointer "
+    data-test-auth-backend-link=method.id
+  }}
+    <div class="level is-mobile">
+      <div class="level-left">
+        <div>
+          {{i-con glyph="folder" size=14 class="has-text-grey-light"}} <span data-test-path data-test-id={{method.id}}>{{method.path}}</span>
+          <br />
+          <span class="tag">
+            <code>
+              {{#if (eq method.type 'plugin')}}
+                {{method.type}}: {{method.config.plugin_name}}
+              {{else}}
+                {{method.type}}
+              {{/if}}
+            </code>
+          </span>
+          <code class="has-text-grey is-size-8">
+            {{method.accessor}}
+          </code>
+        </div>
+      </div>
+      <div class="level-right is-flex is-paddingless is-marginless">
+        <div class="level-item">
+          {{#popup-menu name="auth-backend-nav" contentClass="is-wide"}}
+            <nav class="menu">
+              <ul class="menu-list">
+                <li>
+                  <a href={{href-to "vault.cluster.access.method.section" method.id "configuration"}}>
+                  View Configuration
+                  </a>
+                </li>
+                {{#if method.canEdit}}
+                  <li>
+                    <a href={{href-to "vault.cluster.settings.auth.configure" method.id}}>
+                      Edit Configuration
+                    </a>
+                  </li>
+                {{/if}}
+
+                {{#if (and (not-eq method.type 'token') method.canDisable)}}
+                  <li class="action">
+                    {{#confirm-action
+                      confirmButtonClasses="button is-primary"
+                      buttonClasses="link"
+                      onConfirmAction=(perform disableMethod method)
+                      confirmMessage=(concat "Are you sure you want to disable auth via " method.id "?")
+                      showConfirm=(get this (concat "shouldDelete-" method.id))
+                      class=(if (get this (concat "shouldDelete-" method.id)) "message is-block is-warning is-outline")
+                      containerClasses="message-body is-block"
+                      messageClasses="is-block"
+                      confirmButtonText="Disable"
+                    }}
+                      Disable
+                    {{/confirm-action}}
+                  </li>
+                {{/if}}
+              </ul>
+            </nav>
+          {{/popup-menu}}
+        </div>
+      </div>
+    </div>
+  {{/linked-block}}
+{{/each}}

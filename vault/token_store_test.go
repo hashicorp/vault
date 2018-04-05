@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
@@ -58,11 +59,11 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	saltedId, err := ts.SaltID(context.Background(), entry.ID)
+	saltedID, err := ts.SaltID(context.Background(), entry.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := lookupPrefix + saltedId
+	path := lookupPrefix + saltedID
 	le := &logical.StorageEntry{
 		Key:   path,
 		Value: enc,
@@ -310,7 +311,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	}
 	ts.revokeSalted(context.Background(), salted)
 
-	req := logical.TestRequest(t, logical.ListOperation, "accessors")
+	req := logical.TestRequest(t, logical.ListOperation, "accessors/")
 
 	resp, err := ts.HandleRequest(context.Background(), req)
 	if err != nil {
@@ -451,7 +452,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(context.Background(), c, getBackendConfig(c))
+	ts2, err := NewTokenStore(context.Background(), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -494,7 +495,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(context.Background(), c, getBackendConfig(c))
+	ts2, err := NewTokenStore(context.Background(), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -758,6 +759,10 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// Unset the expected token parent's ID
+	ent2.Parent = ""
+
 	if !reflect.DeepEqual(out, ent2) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", ent2, out)
 	}
@@ -1415,6 +1420,19 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	}
 	if out != nil {
 		t.Fatalf("bad: %v", out)
+	}
+
+	// Check that the parent entry is properly cleaned up
+	saltedID, err := ts.SaltID(context.Background(), "child")
+	if err != nil {
+		t.Fatal(err)
+	}
+	children, err := ts.view.List(context.Background(), parentPrefix+saltedID+"/")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(children) != 0 {
+		t.Fatalf("bad: %v", children)
 	}
 
 	// Sub-child should exist!
@@ -2363,7 +2381,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		}
 		ttl = resp.Data["ttl"].(int64)
 		if ttl > 8 {
-			t.Fatalf("TTL too large")
+			t.Fatalf("TTL too large: %d", ttl)
 		}
 
 		// Renewing should not have the increment increase since we've hit the
@@ -2578,9 +2596,10 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		if ttl > 10 {
 			t.Fatalf("TTL too big")
 		}
+		// explicit max ttl is stored in the role so not returned here
 		maxTTL := resp.Data["explicit_max_ttl"].(int64)
-		if maxTTL != 10 {
-			t.Fatalf("expected 6 for explicit max TTL, got %d", maxTTL)
+		if maxTTL != 0 {
+			t.Fatalf("expected 0 for explicit max TTL, got %d", maxTTL)
 		}
 
 		// Let the TTL go down a bit to ~7 seconds (8 against explicit max)
@@ -2604,7 +2623,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		}
 		ttl = resp.Data["ttl"].(int64)
 		if ttl > 8 {
-			t.Fatalf("TTL too big")
+			t.Fatalf("TTL too big: %d", ttl)
 		}
 
 		// Let the TTL go down a bit more to ~5 seconds (6 against explicit max)
@@ -2737,7 +2756,92 @@ func TestTokenStore_Periodic(t *testing.T) {
 		}
 	}
 
-	// Do the same with an explicit max TTL
+	// Now we create a token against the role and also set the te value
+	// directly. We should use the smaller of the two and be able to renew;
+	// increment should be ignored as well.
+	{
+		req.ClientToken = root
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/create/test"
+		req.Data = map[string]interface{}{
+			"period": 5,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+		if resp == nil {
+			t.Fatal("response was nil")
+		}
+		if resp.Auth == nil {
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+		}
+		if resp.Auth.ClientToken == "" {
+			t.Fatalf("bad: %#v", resp)
+		}
+
+		req.ClientToken = resp.Auth.ClientToken
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl := resp.Data["ttl"].(int64)
+		if ttl < 4 || ttl > 5 {
+			t.Fatalf("TTL bad (expected %d, got %d)", 4, ttl)
+		}
+
+		// Let the TTL go down a bit
+		time.Sleep(2 * time.Second)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		req.Data = map[string]interface{}{
+			"increment": 1,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl = resp.Data["ttl"].(int64)
+		if ttl > 5 {
+			t.Fatalf("TTL bad (expected less than %d, got %d)", 5, ttl)
+		}
+	}
+}
+
+func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
+	core, _, _, root := TestCoreWithTokenStore(t)
+
+	core.defaultLeaseTTL = 10 * time.Second
+	core.maxLeaseTTL = 10 * time.Second
+
+	// Note: these requests are sent to Core since Core handles registration
+	// with the expiration manager and we need the storage to be consistent
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"period": 5,
+	}
+
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	// First make one directly and verify on renew it uses the period.
 	{
 		req.ClientToken = root
 		req.Operation = logical.UpdateOperation
@@ -2800,65 +2904,6 @@ func TestTokenStore_Periodic(t *testing.T) {
 	// Now we create a token against the role and also set the te value
 	// directly. We should use the smaller of the two and be able to renew;
 	// increment should be ignored as well.
-	{
-		req.ClientToken = root
-		req.Operation = logical.UpdateOperation
-		req.Path = "auth/token/create/test"
-		req.Data = map[string]interface{}{
-			"period": 5,
-		}
-		resp, err = core.HandleRequest(req)
-		if err != nil {
-			t.Fatalf("err: %v %v", err, resp)
-		}
-		if resp == nil {
-			t.Fatal("response was nil")
-		}
-		if resp.Auth == nil {
-			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
-		}
-		if resp.Auth.ClientToken == "" {
-			t.Fatalf("bad: %#v", resp)
-		}
-
-		req.ClientToken = resp.Auth.ClientToken
-		req.Operation = logical.ReadOperation
-		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		ttl := resp.Data["ttl"].(int64)
-		if ttl < 4 || ttl > 5 {
-			t.Fatalf("TTL bad (expected %d, got %d)", 4, ttl)
-		}
-
-		// Let the TTL go down a bit
-		time.Sleep(2 * time.Second)
-
-		req.Operation = logical.UpdateOperation
-		req.Path = "auth/token/renew-self"
-		req.Data = map[string]interface{}{
-			"increment": 1,
-		}
-		resp, err = core.HandleRequest(req)
-		if err != nil {
-			t.Fatalf("err: %v %v", err, resp)
-		}
-
-		req.Operation = logical.ReadOperation
-		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		ttl = resp.Data["ttl"].(int64)
-		if ttl > 5 {
-			t.Fatalf("TTL bad (expected less than %d, got %d)", 5, ttl)
-		}
-	}
-
-	// Now do the same, also using an explicit max in the role
 	{
 		req.Path = "auth/token/roles/test"
 		req.ClientToken = root
@@ -3404,7 +3449,7 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 	// present, the list operation should return only one key.
 	accessorListReq := &logical.Request{
 		Operation:   logical.ListOperation,
-		Path:        "accessors",
+		Path:        "accessors/",
 		ClientToken: root,
 	}
 	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
@@ -3511,6 +3556,166 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 	numberOfAccessors = len(resp.Data["keys"].([]string))
 	if numberOfAccessors != 1 {
 		t.Fatalf("bad: number of accessors. Expected: 1, Actual: %d", numberOfAccessors)
+	}
+}
+
+// Create a set of tokens along with a child token for each of them, delete the
+// token entry while leaking accessors, invoke tidy and check if the dangling
+// accessor entry is getting removed and check if child tokens are still present
+// and turned into orphan tokens.
+func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	// List the number of accessors. Since there is only root token
+	// present, the list operation should return only one key.
+	accessorListReq := &logical.Request{
+		Operation:   logical.ListOperation,
+		Path:        "accessors/",
+		ClientToken: root,
+	}
+	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	numberOfAccessors := len(resp.Data["keys"].([]string))
+	if numberOfAccessors != 1 {
+		t.Fatalf("bad: number of accessors. Expected: 1, Actual: %d", numberOfAccessors)
+	}
+
+	for i := 1; i <= 100; i++ {
+		// Create a token
+		tokenReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			Path:        "create",
+			ClientToken: root,
+			Data: map[string]interface{}{
+				"policies": []string{"policy1"},
+			},
+		}
+		resp, err = ts.HandleRequest(context.Background(), tokenReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%v", err, resp)
+		}
+		tut := resp.Auth.ClientToken
+
+		// Create a child token
+		tokenReq = &logical.Request{
+			Operation:   logical.UpdateOperation,
+			Path:        "create",
+			ClientToken: tut,
+			Data: map[string]interface{}{
+				"policies": []string{"policy1"},
+			},
+		}
+		resp, err = ts.HandleRequest(context.Background(), tokenReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%v", err, resp)
+		}
+
+		// Creation of another token should end up with incrementing the number of
+		// accessors the storage
+		resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%v", err, resp)
+		}
+
+		numberOfAccessors = len(resp.Data["keys"].([]string))
+		if numberOfAccessors != (i*2)+1 {
+			t.Fatalf("bad: number of accessors. Expected: %d, Actual: %d", i+1, numberOfAccessors)
+		}
+
+		// Revoke the token while leaking other items associated with the
+		// token. Do this by doing what revokeSalted used to do before it was
+		// fixed, i.e., by deleting the storage entry for token and its
+		// cubbyhole and by not deleting its secondary index, its accessor and
+		// associated leases.
+
+		saltedTut, err := ts.SaltID(context.Background(), tut)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = ts.lookupSalted(context.Background(), saltedTut, true)
+		if err != nil {
+			t.Fatalf("failed to lookup token: %v", err)
+		}
+
+		// Destroy the token index
+		path := lookupPrefix + saltedTut
+		if ts.view.Delete(context.Background(), path); err != nil {
+			t.Fatalf("failed to delete token entry: %v", err)
+		}
+
+		// Destroy the cubby space
+		err = ts.destroyCubbyhole(context.Background(), saltedTut)
+		if err != nil {
+			t.Fatalf("failed to destroyCubbyhole: %v", err)
+		}
+
+		// Leaking of accessor should have resulted in no change to the number
+		// of accessors
+		resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%v", err, resp)
+		}
+
+		numberOfAccessors = len(resp.Data["keys"].([]string))
+		if numberOfAccessors != (i*2)+1 {
+			t.Fatalf("bad: number of accessors. Expected: %d, Actual: %d", (i*2)+1, numberOfAccessors)
+		}
+	}
+
+	tidyReq := &logical.Request{
+		Path:        "tidy",
+		Operation:   logical.UpdateOperation,
+		ClientToken: root,
+	}
+	resp, err = ts.HandleRequest(context.Background(), tidyReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("resp: %#v", resp)
+	}
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	// Tidy should have removed all the dangling accessor entries
+	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	// The number of accessors should be equal to number of valid child tokens
+	// (100) + the root token (1)
+	keys := resp.Data["keys"].([]string)
+	numberOfAccessors = len(keys)
+	if numberOfAccessors != 101 {
+		t.Fatalf("bad: number of accessors. Expected: 1, Actual: %d", numberOfAccessors)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "lookup-accessor")
+
+	for _, accessor := range keys {
+		req.Data = map[string]interface{}{
+			"accessor": accessor,
+		}
+
+		resp, err := ts.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if resp.Data == nil {
+			t.Fatalf("response should contain data")
+		}
+		// These tokens should now be orphaned
+		if resp.Data["orphan"] != true {
+			t.Fatalf("token should be orphan")
+		}
 	}
 }
 

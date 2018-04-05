@@ -46,7 +46,7 @@ Either the `key` or `reset` parameter must be provided; if both are provided,
 $ curl \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/unseal
+    http://127.0.0.1:8200/v1/sys/unseal
 ```
 
 ### Sample Response

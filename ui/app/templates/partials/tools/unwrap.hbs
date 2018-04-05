@@ -1,0 +1,66 @@
+<header class="page-header">
+  <div class="level">
+    <div class="level-left">
+      <h3 class="title is-3">
+        Unwrap Data
+      </h3>
+    </div>
+  </div>
+</header>
+
+{{#if unwrap_data}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="field">
+      <label class="is-label">
+        Unwrapped data
+      </label>
+      <div class="control">
+        {{json-editor
+          value=(stringify unwrap_data)
+          options=(hash
+            readOnly=true
+          )
+        }}
+      </div>
+    </div>
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      {{#copy-button
+        clipboardText=(stringify unwrap_data)
+        class="button is-primary"
+        buttonType="button"
+        success=(action (set-flash-message 'Data copied!'))
+      }}
+        Copy
+      {{/copy-button}}
+    </div>
+    <div class="control">
+      <button {{action 'onClear'}} type="button" class="button">
+        Back
+      </button>
+    </div>
+  </div>
+{{else}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="field">
+      <label for="token" class="is-label">Wrapping token</label>
+      <div class="control">
+        {{input
+          value=token
+          class="input"
+          id="token"
+          name="token"
+          data-test-tools-input="wrapping-token"
+        }}
+      </div>
+    </div>
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button type="submit" data-test-tools-submit="true" class="button is-primary">
+        Unwrap Data
+      </button>
+    </div>
+  </div>
+{{/if}}

@@ -13,8 +13,6 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-const warningACLReadAccess string = "Read access to this endpoint should be controlled via ACLs as it will return the configuration information as-is, including any passwords."
-
 // pathConfig returns the path configuration for CRUD operations on the backend
 // configuration.
 func pathConfig(b *kubeAuthBackend) *framework.Path {
@@ -67,7 +65,6 @@ func (b *kubeAuthBackend) pathConfigRead() framework.OperationFunc {
 				Data: map[string]interface{}{
 					"kubernetes_host":    config.Host,
 					"kubernetes_ca_cert": config.CACert,
-					"token_reviewer_jwt": config.TokenReviewerJWT,
 					"pem_keys":           config.PEMKeys,
 				},
 			}

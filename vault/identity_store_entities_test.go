@@ -192,7 +192,7 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 	var err error
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(t)
 
-	validateMountResp := is.validateMountAccessorFunc(githubAccessor)
+	validateMountResp := is.core.router.validateMountByAccessor(githubAccessor)
 	if validateMountResp == nil {
 		t.Fatal("failed to validate github auth mount")
 	}
@@ -337,7 +337,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 	ghSysview := c.mountEntrySysView(meGH)
 
 	// Create new github auth credential backend
-	ghAuth, err := c.newCredentialBackend(context.Background(), meGH.Type, ghSysview, ghView, nil)
+	ghAuth, err := c.newCredentialBackend(context.Background(), meGH, ghSysview, ghView)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -435,7 +435,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(t)
 
-	validateMountResp := is.validateMountAccessorFunc(githubAccessor)
+	validateMountResp := is.core.router.validateMountByAccessor(githubAccessor)
 	if validateMountResp == nil {
 		t.Fatal("failed to validate github auth mount")
 	}

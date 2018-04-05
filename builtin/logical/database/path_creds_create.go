@@ -54,39 +54,23 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return nil, logical.ErrPermissionDenied
 		}
 
-		// Grab the read lock
-		b.RLock()
-		unlockFunc := b.RUnlock
-
 		// Get the Database object
-		db, ok := b.getDBObj(role.DBName)
-		if !ok {
-			// Upgrade lock
-			b.RUnlock()
-			b.Lock()
-			unlockFunc = b.Unlock
-
-			// Create a new DB object
-			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
-			if err != nil {
-				unlockFunc()
-				return nil, fmt.Errorf("could not retrieve db with name: %s, got error: %s", role.DBName, err)
-			}
+		db, err := b.GetConnection(ctx, req.Storage, role.DBName)
+		if err != nil {
+			return nil, err
 		}
 
-		ttl := b.System().DefaultLeaseTTL()
-		if role.DefaultTTL != 0 {
-			ttl = role.DefaultTTL
-		}
-		maxTTL := b.System().MaxLeaseTTL()
-		if role.MaxTTL != 0 && role.MaxTTL < maxTTL {
-			maxTTL = role.MaxTTL
-		}
-		if ttl > maxTTL {
-			ttl = maxTTL
-		}
+		db.RLock()
+		defer db.RUnlock()
 
+		ttl, _, err := framework.CalculateTTL(b.System(), 0, role.DefaultTTL, 0, role.MaxTTL, 0, time.Time{})
+		if err != nil {
+			return nil, err
+		}
 		expiration := time.Now().Add(ttl)
+		// Adding a small buffer since the TTL will be calculated again after this call
+		// to ensure the database credential does not expire before the lease
+		expiration = expiration.Add(5 * time.Second)
 
 		usernameConfig := dbplugin.UsernameConfig{
 			DisplayName: req.DisplayName,
@@ -96,8 +80,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// Create the user
 		username, password, err := db.CreateUser(ctx, role.Statements, usernameConfig, expiration)
 		if err != nil {
-			unlockFunc()
-			b.closeIfShutdown(role.DBName, err)
+			b.CloseIfShutdown(db, err)
 			return nil, err
 		}
 
@@ -108,9 +91,8 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			"username": username,
 			"role":     name,
 		})
-		resp.Secret.TTL = ttl
-
-		unlockFunc()
+		resp.Secret.TTL = role.DefaultTTL
+		resp.Secret.MaxTTL = role.MaxTTL
 		return resp, nil
 	}
 }

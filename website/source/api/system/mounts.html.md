@@ -23,7 +23,7 @@ This endpoints lists all the mounted secrets engines.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/mounts
+    http://127.0.0.1:8200/v1/sys/mounts
 ```
 
 ### Sample Response
@@ -97,6 +97,12 @@ This endpoint enables a new secrets engine at the given path.
   - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
      that will not be HMAC'd by audit devices in the response data object.
 
+  - `listing_visibility` `(string: "")` - Speficies whether to show this mount
+     in the UI-specific listing endpoint.
+
+  - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
+     to whitelist and pass from the request to the backend.
+
     These control the default and maximum lease time-to-live, force
     disabling backend caching, and option plugin name for plugin backends
     respectively. The first three options override the global defaults if
@@ -139,7 +145,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/mounts/my-mount
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount
 ```
 
 ## Disable Secrets Engine
@@ -156,7 +162,7 @@ This endpoint disables the mount point specified in the URL.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/mounts/my-mount
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount
 ```
 
 ## Read Mount Configuration
@@ -174,7 +180,7 @@ be the system default or a mount-specific value.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/mounts/my-mount/tune
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount/tune
 ```
 
 ### Sample Response
@@ -216,6 +222,12 @@ This endpoint tunes configuration parameters for a given mount point.
   list of keys that will not be HMAC'd by audit devices in the response data
   object.
 
+- `listing_visibility` `(string: "")` - Speficies whether to show this mount
+    in the UI-specific listing endpoint.
+
+- `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
+    to whitelist and pass from the request to the backend.
+
 ### Sample Payload
 
 ```json
@@ -232,5 +244,5 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/mounts/my-mount/tune
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount/tune
 ```

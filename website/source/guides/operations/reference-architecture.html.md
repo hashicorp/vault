@@ -32,7 +32,7 @@ storage backend for production deployments.
 ## <a name="one-dc"></a>Deployment Topology within One Datacenter
 
 This section explains how to deploy a Vault open source cluster in one datacenter.
-Once a Vault cluster is running succesfully within one datacenter,
+Once a Vault cluster is running successfully within one datacenter,
 move on to deploying Vault Enterprise across [multiple datacenters](#multi-dc).
 
 ### Reference Diagram
@@ -203,9 +203,9 @@ to support this functionality.
 A Vault cluster is the high-available unit of deployment within one datacenter.
 A recommended approach is three Vault servers with a Consul storage backend.
 With this configuration, during a Vault server outage, failover is handled
-immediately without human intervention. For more information on this topic,
-please see the [Vault site documentation about HA
-concepts](/docs/concepts/ha.html).
+immediately without human intervention. To learn more about setting up your
+Vault servers in HA mode, read [_Vault HA with
+Consul_](/guides/operations/vault-ha-consul.html) guide.
 
 High-availability and data locality across datacenters requires
 Vault Enterprise.
@@ -219,9 +219,12 @@ Vault Enterprise.
 
 ~> **Enterprise Only:** Vault replication feature is a part of _Vault Enterprise_.
 
-HashiCorp Vault Enterprise provides two modes of replication, performance
-and disaster recovery. The [Vault documentation](/docs/enterprise/replication/index.html)
-provides more detailed information on the replication capabilities within Vault Enterprise.
+HashiCorp Vault Enterprise provides two modes of replication, **performance**
+and **disaster recovery**. The [Vault
+documentation](/docs/enterprise/replication/index.html) provides more detailed
+information on the replication capabilities within Vault Enterprise.
+
+![Replication Pattern](/assets/images/vault-ref-arch-8.png)
 
 #### Performance Replication
 
@@ -237,10 +240,29 @@ data such as ephemeral authentication tokens, time-based token information as
 well as token usage data. This provides for aggressive recovery point objective
 in environments where high availability is of the utmost concern.
 
-#### Diagrams
+#### Cross-Region Disaster Recovery
 
-The following diagrams illustrate some possible replication scenarios.
-![Replication Pattern|40%](/assets/images/vault-ref-arch-4.png)
+If your disaster recovery strategy is to plan for a loss of an entire data
+center, the following diagram illustrates a possible replication scenario.
+
+![Replication Pattern](/assets/images/vault-ref-arch-4.png)
+
+In this scenario, if the Vault cluster in Region A fails and you promote the DR
+cluster in Region B to be the new primary, your applications will need to read
+and write secrets from the Vault cluster in Region B. This may or may not raise
+an issue for your applications, but you need to take that into a consideration
+during the planning.
+
+
+#### In-Region Disaster Recovery
+
+If your disaster recovery strategy is to plan for a loss of a cluster but not the
+entire data center, the following diagram illustrates a possible replication
+scenario.
+
+![Replication Pattern](/assets/images/vault-ref-arch-7.png)
+
+
 
 #### Replication Notes
 

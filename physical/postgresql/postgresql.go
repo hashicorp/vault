@@ -10,7 +10,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
+	//log "github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/lib/pq"
@@ -56,7 +57,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("postgres: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	} else {
 		maxParInt = physical.DefaultParallelOperations
@@ -65,7 +66,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	// Create PostgreSQL handle for the database.
 	db, err := sql.Open("postgres", connURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to postgres: %v", err)
+		return nil, errwrap.Wrapf("failed to connect to postgres: {{err}}", err)
 	}
 	db.SetMaxOpenConns(maxParInt)
 
@@ -73,7 +74,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	var upsert_required bool
 	upsert_required_query := "SELECT current_setting('server_version_num')::int < 90500"
 	if err := db.QueryRow(upsert_required_query).Scan(&upsert_required); err != nil {
-		return nil, fmt.Errorf("failed to check for native upsert: %v", err)
+		return nil, errwrap.Wrapf("failed to check for native upsert: {{err}}", err)
 	}
 
 	// Setup our put strategy based on the presence or absence of a native
@@ -204,7 +205,7 @@ func (m *PostgreSQLBackend) List(ctx context.Context, prefix string) ([]string, 
 		var key string
 		err = rows.Scan(&key)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan rows: %v", err)
+			return nil, errwrap.Wrapf("failed to scan rows: {{err}}", err)
 		}
 
 		keys = append(keys, key)

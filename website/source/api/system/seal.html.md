@@ -26,5 +26,5 @@ Standby nodes should be restarted to get the same effect. Requires a token with
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
-    https://vault.rocks/v1/sys/seal
+    http://127.0.0.1:8200/v1/sys/seal
 ```

@@ -188,7 +188,7 @@ path, and passed the secret engine type ("database") in the request payload.
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"type":"database"}' \
-       https://$ vault.rocks/v1/sys/mounts/database
+       https://127.0.0.1:8200/v1/sys/mounts/database
 ```
 
 **NOTE:** It is possible to mount your database secret engines at any location.
@@ -229,7 +229,7 @@ $ vault write database/config/postgresql plugin_name=postgresql-database-plugin 
 
 ```shell
 $ curl --header "X-Vault-Token: ..." --request POST --data @payload.json \
-    https://vault.rocks/v1/database/config/postgresql
+    http://127.0.0.1:8200/v1/database/config/postgresql
 
 $ cat payload.json
 {
@@ -280,7 +280,7 @@ statement is passed as the role creation statement.
 
 ```shell
 $ curl --header "X-Vault-Token: ..." --request POST --data @payload.json \
-    https://vault.rocks/v1/database/roles/readonly
+    http://127.0.0.1:8200/v1/database/roles/readonly
 
 $ cat payload.json
 {
@@ -381,12 +381,12 @@ $ cat payload.json
 # Create "apps" policy
 $ curl --header "X-Vault-Token: ..." --request PUT \
        --data @payload.json \
-       https://vault.rocks/v1/sys/policy/apps
+       http://127.0.0.1:8200/v1/sys/policy/apps
 
 # Generate a new token with apps policy
 $ curl --header "X-Vault-Token: ..." --request POST \
        --data '{"policies": ["apps"]}' \
-       https://vault.rocks/v1/auth/token/create | jq
+       http://127.0.0.1:8200/v1/auth/token/create | jq
 {
  "request_id": "e1737bc8-7e51-3943-42a0-2dbd6cb40e3e",
  "lease_id": "",
@@ -418,7 +418,7 @@ demonstrates more sophisticated way of generating a token for your apps.
 ```shell
 $ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
        --request GET \
-       https://vault.rocks/v1/database/creds/readonly | jq
+       http://127.0.0.1:8200/v1/database/creds/readonly | jq
 {
   "request_id": "e0e5a6c1-5e69-5cf3-c9d2-020af192de36",
   "lease_id": "database/creds/readonly/7aa462ab-98cb-fdcb-b226-f0a0d37644cc",

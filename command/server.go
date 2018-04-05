@@ -2,8 +2,11 @@ package command
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -17,8 +20,6 @@ import (
 	"sync"
 	"time"
 
-	colorable "github.com/mattn/go-colorable"
-	log "github.com/mgutz/logxi/v1"
 	"github.com/mitchellh/cli"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
@@ -29,13 +30,12 @@ import (
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
 	"github.com/hashicorp/errwrap"
-	hclog "github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/gated-writer"
-	"github.com/hashicorp/vault/helper/logbridge"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/reload"
@@ -80,6 +80,7 @@ type ServerCommand struct {
 	flagDevListenAddr  string
 
 	flagDevPluginDir     string
+	flagDevPluginInit    bool
 	flagDevHA            bool
 	flagDevLatency       int
 	flagDevLatencyJitter int
@@ -192,6 +193,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.BoolVar(&BoolVar{
+		Name:    "dev-plugin-init",
+		Target:  &c.flagDevPluginInit,
+		Default: true,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
 		Name:    "dev-ha",
 		Target:  &c.flagDevHA,
 		Default: false,
@@ -276,22 +284,20 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
-	c.logGate = &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
-	var level int
+	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
+	var level log.Level
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
 	case "trace":
-		level = log.LevelTrace
+		level = log.Trace
 	case "debug":
-		level = log.LevelDebug
-	case "info", "":
-		level = log.LevelInfo
-	case "notice":
-		level = log.LevelNotice
+		level = log.Debug
+	case "notice", "info", "":
+		level = log.Info
 	case "warn", "warning":
-		level = log.LevelWarn
+		level = log.Warn
 	case "err", "error":
-		level = log.LevelError
+		level = log.Error
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
 		return 1
@@ -304,20 +310,20 @@ func (c *ServerCommand) Run(args []string) int {
 	switch strings.ToLower(logFormat) {
 	case "vault", "vault_json", "vault-json", "vaultjson", "json", "":
 		if c.flagDevThreeNode || c.flagDevFourCluster {
-			c.logger = logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
+			c.logger = log.New(&log.LoggerOptions{
 				Mutex:  &sync.Mutex{},
 				Output: c.logGate,
-				Level:  hclog.Trace,
-			})).LogxiLogger()
+				Level:  log.Trace,
+			})
 		} else {
-			c.logger = logformat.NewVaultLoggerWithWriter(c.logGate, level)
+			c.logger = logging.NewVaultLoggerWithWriter(c.logGate, level)
 		}
 	default:
-		c.logger = log.NewLogger(c.logGate, "vault")
-		c.logger.SetLevel(level)
+		c.logger = logging.NewVaultLoggerWithWriter(c.logGate, level)
 	}
+
 	grpclog.SetLogger(&grpclogFaker{
-		logger: c.logger,
+		logger: c.logger.Named("grpclogfaker"),
 		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
 	})
 
@@ -401,7 +407,7 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-	backend, err := factory(config.Storage.Config, c.logger)
+	backend, err := factory(config.Storage.Config, c.logger.ResetNamed("storage."+config.Storage.Type))
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
 		return 1
@@ -445,6 +451,7 @@ func (c *ServerCommand) Run(args []string) int {
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
 		PluginDirectory:    config.PluginDirectory,
+		EnableUI:           config.EnableUI,
 		EnableRaw:          config.EnableRawEndpoint,
 	}
 	if c.flagDev {
@@ -531,9 +538,9 @@ func (c *ServerCommand) Run(args []string) int {
 	if ok && coreConfig.RedirectAddr == "" {
 		redirect, err := c.detectRedirect(detect, config)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error detecting redirect address: %s", err))
+			c.UI.Error(fmt.Sprintf("Error detecting api address: %s", err))
 		} else if redirect == "" {
-			c.UI.Error("Failed to detect redirect address.")
+			c.UI.Error("Failed to detect api address")
 		} else {
 			coreConfig.RedirectAddr = redirect
 		}
@@ -571,7 +578,7 @@ func (c *ServerCommand) Run(args []string) int {
 				host = u.Host
 				port = "443"
 			} else {
-				c.UI.Error(fmt.Sprintf("Error parsing redirect address: %v", err))
+				c.UI.Error(fmt.Sprintf("Error parsing api address: %v", err))
 				return 1
 			}
 		}
@@ -589,6 +596,12 @@ func (c *ServerCommand) Run(args []string) int {
 
 CLUSTER_SYNTHESIS_COMPLETE:
 
+	if coreConfig.RedirectAddr == coreConfig.ClusterAddr && len(coreConfig.RedirectAddr) != 0 {
+		c.UI.Error(fmt.Sprintf(
+			"Address %q used for both API and cluster addresses", coreConfig.RedirectAddr))
+		return 1
+	}
+
 	if coreConfig.ClusterAddr != "" {
 		// Force https as we'll always be TLS-secured
 		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
@@ -598,6 +611,16 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 		u.Scheme = "https"
 		coreConfig.ClusterAddr = u.String()
+	}
+
+	// Override the UI enabling config by the environment variable
+	if enableUI := os.Getenv("VAULT_UI"); enableUI != "" {
+		var err error
+		coreConfig.EnableUI, err = strconv.ParseBool(enableUI)
+		if err != nil {
+			c.UI.Output("Error parsing the environment variable VAULT_UI")
+			return 1
+		}
 	}
 
 	// Initialize the core
@@ -626,8 +649,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		infoKeys = append(infoKeys, "cluster address")
 	}
 	if coreConfig.RedirectAddr != "" {
-		info["redirect address"] = coreConfig.RedirectAddr
-		infoKeys = append(infoKeys, "redirect address")
+		info["api address"] = coreConfig.RedirectAddr
+		infoKeys = append(infoKeys, "api address")
 	}
 
 	if config.HAStorage != nil {
@@ -707,8 +730,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 	c.reloadFuncsLock.Unlock()
 	if !disableClustering {
-		if c.logger.IsTrace() {
-			c.logger.Trace("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
+		if c.logger.IsDebug() {
+			c.logger.Debug("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
 		}
 	}
 
@@ -807,6 +830,33 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			return 1
 		}
 
+		var plugins []string
+		if c.flagDevPluginDir != "" && c.flagDevPluginInit {
+			f, err := os.Open(c.flagDevPluginDir)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error reading plugin dir: %s", err))
+				return 1
+			}
+
+			list, err := f.Readdirnames(0)
+			f.Close()
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error listing plugins: %s", err))
+				return 1
+			}
+
+			for _, name := range list {
+				path := filepath.Join(f.Name(), name)
+				if err := c.addPlugin(path, init.RootToken, core); err != nil {
+					c.UI.Error(fmt.Sprintf("Error enabling plugin %s: %s", name, err))
+					return 1
+				}
+				plugins = append(plugins, name)
+			}
+
+			sort.Strings(plugins)
+		}
+
 		export := "export"
 		quote := "'"
 		if runtime.GOOS == "windows" {
@@ -846,6 +896,15 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
+
+		if len(plugins) > 0 {
+			c.UI.Warn("")
+			c.UI.Warn(wrapAtLength(
+				"The following dev plugins are registered in the catalog:"))
+			for _, p := range plugins {
+				c.UI.Warn(fmt.Sprintf("    - %s", p))
+			}
+		}
 
 		c.UI.Warn("")
 		c.UI.Warn(wrapAtLength(
@@ -977,7 +1036,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 
 	isLeader, _, _, err := core.Leader()
 	if err != nil && err != vault.ErrHANotEnabled {
-		return nil, fmt.Errorf("failed to check active status: %v", err)
+		return nil, errwrap.Wrapf("failed to check active status: {{err}}", err)
 	}
 	if err == nil {
 		leaderCount := 5
@@ -990,7 +1049,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 			time.Sleep(1 * time.Second)
 			isLeader, _, _, err = core.Leader()
 			if err != nil {
-				return nil, fmt.Errorf("failed to check active status: %v", err)
+				return nil, errwrap.Wrapf("failed to check active status: {{err}}", err)
 			}
 			leaderCount--
 		}
@@ -1012,13 +1071,13 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 		resp, err := core.HandleRequest(req)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create root token with ID %s: %s", coreConfig.DevToken, err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create root token with ID %q: {{err}}", coreConfig.DevToken), err)
 		}
 		if resp == nil {
-			return nil, fmt.Errorf("nil response when creating root token with ID %s", coreConfig.DevToken)
+			return nil, fmt.Errorf("nil response when creating root token with ID %q", coreConfig.DevToken)
 		}
 		if resp.Auth == nil {
-			return nil, fmt.Errorf("nil auth when creating root token with ID %s", coreConfig.DevToken)
+			return nil, fmt.Errorf("nil auth when creating root token with ID %q", coreConfig.DevToken)
 		}
 
 		init.RootToken = resp.Auth.ClientToken
@@ -1028,7 +1087,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.Data = nil
 		resp, err = core.HandleRequest(req)
 		if err != nil {
-			return nil, fmt.Errorf("failed to revoke initial root token: %s", err)
+			return nil, errwrap.Wrapf("failed to revoke initial root token: {{err}}", err)
 		}
 	}
 
@@ -1048,7 +1107,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: c.flagDevListenAddr,
-		RawLogger:         c.logger,
+		Logger:            c.logger,
 		TempDir:           tempDir,
 	})
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
@@ -1057,8 +1116,8 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	infoKeys = append(infoKeys, "cluster parameters path")
 
 	for i, core := range testCluster.Cores {
-		info[fmt.Sprintf("node %d redirect address", i)] = fmt.Sprintf("https://%s", core.Listeners[0].Address.String())
-		infoKeys = append(infoKeys, fmt.Sprintf("node %d redirect address", i))
+		info[fmt.Sprintf("node %d api address", i)] = fmt.Sprintf("https://%s", core.Listeners[0].Address.String())
+		infoKeys = append(infoKeys, fmt.Sprintf("node %d api address", i))
 	}
 
 	infoKeys = append(infoKeys, "version")
@@ -1223,6 +1282,49 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	return 0
 }
 
+// addPlugin adds any plugins to the catalog
+func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
+	// Get the sha256 of the file at the given path.
+	pluginSum := func(p string) (string, error) {
+		hasher := sha256.New()
+		f, err := os.Open(p)
+		if err != nil {
+			return "", err
+		}
+		defer f.Close()
+		if _, err := io.Copy(hasher, f); err != nil {
+			return "", err
+		}
+		return hex.EncodeToString(hasher.Sum(nil)), nil
+	}
+
+	// Mount any test plugins. We do this explicitly before we inform tests of
+	// a completely booted server intentionally.
+	sha256sum, err := pluginSum(path)
+	if err != nil {
+		return err
+	}
+
+	// Default the name to the basename of the binary
+	name := filepath.Base(path)
+
+	// File a request against core to enable the plugin
+	req := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: token,
+		Path:        "sys/plugins/catalog/" + name,
+		Data: map[string]interface{}{
+			"sha256":  sha256sum,
+			"command": name,
+		},
+	}
+	if _, err := core.HandleRequest(req); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // detectRedirect is used to attempt redirect address detection
 func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 	config *server.Config) (string, error) {
@@ -1252,7 +1354,7 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 		if val, ok := list.Config["tls_disable"]; ok {
 			disable, err := parseutil.ParseBool(val)
 			if err != nil {
-				return "", fmt.Errorf("tls_disable: %s", err)
+				return "", errwrap.Wrapf("tls_disable: {{err}}", err)
 			}
 
 			if disable {
@@ -1380,7 +1482,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 		sink, err := datadog.NewDogStatsdSink(telConfig.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return fmt.Errorf("failed to start DogStatsD sink. Got: %s", err)
+			return errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)
@@ -1409,7 +1511,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
 					if err := relFunc(nil); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading listener: %v", err))
+						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf("error encountered reloading listener: {{err}}", err))
 					}
 				}
 			}
@@ -1418,7 +1520,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
 					if err := relFunc(nil); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading file audit device at path %s: %v", strings.TrimPrefix(k, "audit_file|"), err))
+						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf(fmt.Sprintf("error encountered reloading file audit device at path %q: {{err}}", strings.TrimPrefix(k, "audit_file|")), err))
 					}
 				}
 			}
@@ -1445,7 +1547,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	// Open the PID file
 	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("could not open pid file: %v", err)
+		return errwrap.Wrapf("could not open pid file: {{err}}", err)
 	}
 	defer pidFile.Close()
 
@@ -1453,7 +1555,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	pid := os.Getpid()
 	_, err = pidFile.WriteString(fmt.Sprintf("%d", pid))
 	if err != nil {
-		return fmt.Errorf("could not write to pid file: %v", err)
+		return errwrap.Wrapf("could not write to pid file: {{err}}", err)
 	}
 	return nil
 }
@@ -1487,19 +1589,19 @@ func (g *grpclogFaker) Fatalln(args ...interface{}) {
 }
 
 func (g *grpclogFaker) Print(args ...interface{}) {
-	if g.log && g.logger.IsTrace() {
-		g.logger.Trace(fmt.Sprint(args...))
+	if g.log && g.logger.IsDebug() {
+		g.logger.Debug(fmt.Sprint(args...))
 	}
 }
 
 func (g *grpclogFaker) Printf(format string, args ...interface{}) {
-	if g.log && g.logger.IsTrace() {
-		g.logger.Trace(fmt.Sprintf(format, args...))
+	if g.log && g.logger.IsDebug() {
+		g.logger.Debug(fmt.Sprintf(format, args...))
 	}
 }
 
 func (g *grpclogFaker) Println(args ...interface{}) {
-	if g.log && g.logger.IsTrace() {
-		g.logger.Trace(fmt.Sprintln(args...))
+	if g.log && g.logger.IsDebug() {
+		g.logger.Debug(fmt.Sprintln(args...))
 	}
 }

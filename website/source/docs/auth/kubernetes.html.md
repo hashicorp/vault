@@ -34,7 +34,7 @@ at a different path, use that value instead of `kubernetes`.
 $ curl \
     --request POST \
     --data '{"jwt": "your_service_account_jwt", "role": "demo"}' \
-    https://vault.rocks/v1/auth/kubernetes/login
+    http://127.0.0.1:8200/v1/auth/kubernetes/login
 ```
 
 The response will contain a token at `auth.client_token`:

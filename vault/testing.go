@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/copystructure"
 
 	"golang.org/x/crypto/ssh"
@@ -35,8 +35,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/logbridge"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -106,7 +105,7 @@ func TestCoreNewSeal(t testing.T) *Core {
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
 func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -274,7 +273,7 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
 	t.Helper()
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = NewTestSeal(t, nil)
 
@@ -322,7 +321,7 @@ func testTokenStore(t testing.T, c *Core) *TokenStore {
 	view := NewBarrierView(c.barrier, credentialBarrierPrefix+me.UUID+"/")
 	sysView := c.mountEntrySysView(me)
 
-	tokenstore, _ := c.newCredentialBackend(context.Background(), "token", sysView, view, nil)
+	tokenstore, _ := c.newCredentialBackend(context.Background(), me, sysView, view)
 	ts := tokenstore.(*TokenStore)
 
 	err = c.router.Unmount(context.Background(), "auth/token/")
@@ -677,7 +676,7 @@ func (n *rawHTTP) System() logical.SystemView {
 }
 
 func (n *rawHTTP) Logger() log.Logger {
-	return logformat.NewVaultLogger(log.LevelTrace)
+	return logging.NewVaultLogger(log.Trace)
 }
 
 func (n *rawHTTP) Cleanup(ctx context.Context) {
@@ -764,6 +763,53 @@ func (c *TestCluster) Start() {
 			for _, ln := range core.Listeners {
 				go core.Server.Serve(ln)
 			}
+		}
+	}
+}
+
+// UnsealCores uses the cluster barrier keys to unseal the test cluster cores
+func (c *TestCluster) UnsealCores(t testing.T) {
+	numCores := len(c.Cores)
+
+	// Unseal first core
+	for _, key := range c.BarrierKeys {
+		if _, err := c.Cores[0].Unseal(TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+	}
+
+	// Verify unsealed
+	sealed, err := c.Cores[0].Sealed()
+	if err != nil {
+		t.Fatalf("err checking seal status: %s", err)
+	}
+	if sealed {
+		t.Fatal("should not be sealed")
+	}
+
+	TestWaitActive(t, c.Cores[0].Core)
+
+	// Unseal other cores
+	for i := 1; i < numCores; i++ {
+		for _, key := range c.BarrierKeys {
+			if _, err := c.Cores[i].Core.Unseal(TestKeyCopy(key)); err != nil {
+				t.Fatalf("unseal err: %s", err)
+			}
+		}
+	}
+
+	// Let them come fully up to standby
+	time.Sleep(2 * time.Second)
+
+	// Ensure cluster connection info is populated.
+	// Other cores should not come up as leaders.
+	for i := 1; i < numCores; i++ {
+		isLeader, _, _, err := c.Cores[i].Leader()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if isLeader {
+			t.Fatalf("core[%d] should not be leader", i)
 		}
 	}
 }
@@ -873,7 +919,7 @@ type TestClusterOptions struct {
 	BaseListenAddress  string
 	NumCores           int
 	SealFunc           func() Seal
-	RawLogger          interface{}
+	Logger             log.Logger
 	TempDir            string
 	CACert             []byte
 	CAKey              *ecdsa.PrivateKey
@@ -1060,7 +1106,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	//
 	// Listener setup
 	//
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 	ports := make([]int, numCores)
 	if baseAddr != nil {
 		for i := 0; i < numCores; i++ {
@@ -1226,13 +1272,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			coreConfig.Seal = opts.SealFunc()
 		}
 
-		if opts != nil && opts.RawLogger != nil {
-			switch opts.RawLogger.(type) {
-			case *logbridge.Logger:
-				coreConfig.Logger = opts.RawLogger.(*logbridge.Logger).Named(fmt.Sprintf("core%d", i)).LogxiLogger()
-			case *logbridge.LogxiLogger:
-				coreConfig.Logger = opts.RawLogger.(*logbridge.LogxiLogger).Named(fmt.Sprintf("core%d", i))
-			}
+		if opts != nil && opts.Logger != nil {
+			coreConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
 		}
 
 		c, err := NewCore(coreConfig)

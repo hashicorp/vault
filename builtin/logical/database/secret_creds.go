@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -31,7 +32,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 
 		roleNameRaw, ok := req.Secret.InternalData["role"]
 		if !ok {
-			return nil, fmt.Errorf("could not find role with name: %s", req.Secret.InternalData["role"])
+			return nil, fmt.Errorf("could not find role with name: %q", req.Secret.InternalData["role"])
 		}
 
 		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
@@ -39,46 +40,37 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			return nil, err
 		}
 		if role == nil {
-			return nil, fmt.Errorf("error during renew: could not find role with name %s", req.Secret.InternalData["role"])
+			return nil, fmt.Errorf("error during renew: could not find role with name %q", req.Secret.InternalData["role"])
 		}
 
-		f := framework.LeaseExtend(role.DefaultTTL, role.MaxTTL, b.System())
-		resp, err := f(ctx, req, data)
+		// Get the Database object
+		db, err := b.GetConnection(ctx, req.Storage, role.DBName)
 		if err != nil {
 			return nil, err
 		}
 
-		// Grab the read lock
-		b.RLock()
-		unlockFunc := b.RUnlock
-
-		// Get the Database object
-		db, ok := b.getDBObj(role.DBName)
-		if !ok {
-			// Upgrade lock
-			b.RUnlock()
-			b.Lock()
-			unlockFunc = b.Unlock
-
-			// Create a new DB object
-			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
-			if err != nil {
-				unlockFunc()
-				return nil, fmt.Errorf("could not retrieve db with name: %s, got error: %s", role.DBName, err)
-			}
-		}
+		db.RLock()
+		defer db.RUnlock()
 
 		// Make sure we increase the VALID UNTIL endpoint for this user.
-		if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
+		ttl, _, err := framework.CalculateTTL(b.System(), req.Secret.Increment, role.DefaultTTL, 0, role.MaxTTL, 0, req.Secret.IssueTime)
+		if err != nil {
+			return nil, err
+		}
+		if ttl > 0 {
+			expireTime := time.Now().Add(ttl)
+			// Adding a small buffer since the TTL will be calculated again after this call
+			// to ensure the database credential does not expire before the lease
+			expireTime = expireTime.Add(5 * time.Second)
 			err := db.RenewUser(ctx, role.Statements, username, expireTime)
 			if err != nil {
-				unlockFunc()
-				b.closeIfShutdown(role.DBName, err)
+				b.CloseIfShutdown(db, err)
 				return nil, err
 			}
 		}
-
-		unlockFunc()
+		resp := &logical.Response{Secret: req.Secret}
+		resp.Secret.TTL = role.DefaultTTL
+		resp.Secret.MaxTTL = role.MaxTTL
 		return resp, nil
 	}
 }
@@ -104,36 +96,22 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			return nil, err
 		}
 		if role == nil {
-			return nil, fmt.Errorf("error during revoke: could not find role with name %s", req.Secret.InternalData["role"])
+			return nil, fmt.Errorf("error during revoke: could not find role with name %q", req.Secret.InternalData["role"])
 		}
-
-		// Grab the read lock
-		b.RLock()
-		unlockFunc := b.RUnlock
 
 		// Get our connection
-		db, ok := b.getDBObj(role.DBName)
-		if !ok {
-			// Upgrade lock
-			b.RUnlock()
-			b.Lock()
-			unlockFunc = b.Unlock
-
-			// Create a new DB object
-			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
-			if err != nil {
-				unlockFunc()
-				return nil, fmt.Errorf("could not retrieve db with name: %s, got error: %s", role.DBName, err)
-			}
-		}
-
-		if err := db.RevokeUser(ctx, role.Statements, username); err != nil {
-			unlockFunc()
-			b.closeIfShutdown(role.DBName, err)
+		db, err := b.GetConnection(ctx, req.Storage, role.DBName)
+		if err != nil {
 			return nil, err
 		}
 
-		unlockFunc()
+		db.RLock()
+		defer db.RUnlock()
+
+		if err := db.RevokeUser(ctx, role.Statements, username); err != nil {
+			b.CloseIfShutdown(db, err)
+			return nil, err
+		}
 		return resp, nil
 	}
 }

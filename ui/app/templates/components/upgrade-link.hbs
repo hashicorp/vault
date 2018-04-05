@@ -1,0 +1,7 @@
+<button class="link {{linkClass}}" {{action "openOverlay"}}>
+  {{yield}}
+</button>
+
+{{#ember-wormhole to="modal-wormhole"}}
+  {{partial "partials/upgrade-overlay"}}
+{{/ember-wormhole}}

@@ -92,8 +92,7 @@ func (b *backend) DB(ctx context.Context, s logical.Storage) (*gocql.Session, er
 		return nil, err
 	}
 	if entry == nil {
-		return nil,
-			fmt.Errorf("Configure the DB connection with config/connection first")
+		return nil, fmt.Errorf("configure the DB connection with config/connection first")
 	}
 
 	config := &sessionConfig{}

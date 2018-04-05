@@ -66,7 +66,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data '{"role": "dev-role", "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}' \
-    https://vault.rocks/v1/auth/gcp/login
+    http://127.0.0.1:8200/v1/auth/gcp/login
 ```
 
 The response will contain the token at `auth.client_token`:
@@ -127,7 +127,7 @@ management tool.
     ```text
     $ vault write auth/gcp/role/dev-role \
         type="iam" \
-        project="project-123456" \
+        project_id="project-123456" \
         policies="prod,dev" \
         service_accounts="serviceaccount1@project1234.iam.gserviceaccount.com,uuid123,..."
     ```
@@ -148,7 +148,7 @@ management tool.
         --header "X-Vault-Token: ..." \
         --request POST \
         --data '{"type": "gcp"}' \
-        https://vault.rocks/v1/sys/auth/gcp
+        http://127.0.0.1:8200/v1/sys/auth/gcp
     ```
 
 1. Configure the GCP auth method:
@@ -158,7 +158,7 @@ management tool.
         --header "X-Vault-Token: ..." \
         --request POST \
         --data '{"credentials": "{...}"}' \
-        https://vault.rocks/v1/auth/gcp/config
+        http://127.0.0.1:8200/v1/auth/gcp/config
     ```
 
 1. Create a role:
@@ -167,8 +167,8 @@ management tool.
     $ curl \
         --header "X-Vault-Token: ..." \
         --request POST \
-        --data '{"type": "iam", "project": "project-123456", ...}' \
-        https://vault.rocks/v1/auth/gcp/role/dev-role
+        --data '{"type": "iam", "project_id": "project-123456", ...}' \
+        http://127.0.0.1:8200/v1/auth/gcp/role/dev-role
     ```
 
 ### Plugin Setup

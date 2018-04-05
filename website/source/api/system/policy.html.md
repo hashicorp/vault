@@ -23,7 +23,7 @@ This endpoint lists all configured policies.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/policy
+    http://127.0.0.1:8200/v1/sys/policy
 ```
 
 ### Sample Response
@@ -52,7 +52,7 @@ This endpoint retrieve the policy body for the named policy.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/policy/my-policy
+    http://127.0.0.1:8200/v1/sys/policy/my-policy
 ```
 
 ### Sample Response
@@ -94,7 +94,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/policy/my-policy
+    http://127.0.0.1:8200/v1/sys/policy/my-policy
 ```
 
 ## Delete Policy
@@ -117,5 +117,5 @@ affect all users associated with this policy.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/policy/my-policy
+    http://127.0.0.1:8200/v1/sys/policy/my-policy
 ```

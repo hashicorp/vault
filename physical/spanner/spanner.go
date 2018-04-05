@@ -10,10 +10,10 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
@@ -94,7 +94,7 @@ type Backend struct {
 // configuration. This uses the official Golang Cloud SDK and therefore supports
 // specifying credentials via envvars, credential files, etc.
 func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error) {
-	logger.Debug("physical/spanner: configuring backend")
+	logger.Debug("configuring backend")
 
 	// Database name
 	database := os.Getenv(envDatabase)
@@ -143,14 +143,14 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		return nil, errwrap.Wrapf("failed to parse max_parallel: {{err}}", err)
 	}
 
-	logger.Debug("physical/spanner: configuration",
+	logger.Debug("configuration",
 		"database", database,
 		"table", table,
 		"haEnabled", haEnabled,
 		"haTable", haTable,
 		"maxParallel", maxParallel,
 	)
-	logger.Debug("physical/spanner: creating client")
+	logger.Debug("creating client")
 
 	ctx := context.Background()
 	client, err := spanner.NewClient(ctx, database,

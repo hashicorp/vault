@@ -3,7 +3,7 @@ package logical
 import (
 	"context"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 )
 
 // BackendType is the type of backend that is being implemented
@@ -95,6 +95,10 @@ type BackendConfig struct {
 	// System provides a view into a subset of safe system information that
 	// is useful for backends, such as the default/max lease TTLs
 	System SystemView
+
+	// BackendUUID is a unique identifier provided to this backend. It's useful
+	// when a backend needs a consistent and unique string without using storage.
+	BackendUUID string
 
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string

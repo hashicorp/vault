@@ -1,0 +1,16 @@
+{{#tool-tip renderInPlace=true as |d|}}
+  {{#d.trigger tagName="button" type="button" class=(concat "tool-tip-trigger button") data-test-tool-tip-trigger=true}}
+    {{i-con
+      glyph="information-reversed"
+      class="auto-width"
+      size=16
+      aria-label="help"
+      excludeIconClass=true
+    }}
+  {{/d.trigger}}
+  {{#d.content class="tool-tip"}}
+    <div class="box">
+      {{yield}}
+    </div>
+  {{/d.content}}
+{{/tool-tip}}

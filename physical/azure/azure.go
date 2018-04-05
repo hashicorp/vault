@@ -12,7 +12,7 @@ import (
 	"time"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
@@ -65,7 +65,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	client, err := storage.NewBasicClient(accountName, accountKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Azure client: %v", err)
+		return nil, errwrap.Wrapf("failed to create Azure client: {{err}}", err)
 	}
 	client.HTTPClient = cleanhttp.DefaultPooledClient()
 
@@ -75,7 +75,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		Access: storage.ContainerAccessTypePrivate,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create %q container: %v", name, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to create %q container: {{err}}", name), err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -86,7 +86,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("azure: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 

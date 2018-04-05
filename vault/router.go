@@ -10,8 +10,15 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-radix"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
+)
+
+var (
+	whitelistedHeaders = []string{
+		consts.VaultKVCLIClientHeader,
+	}
 )
 
 // Router is used to do prefix based routing of a request to a logical backend
@@ -47,6 +54,7 @@ type routeEntry struct {
 	storagePrefix string
 	rootPaths     atomic.Value
 	loginPaths    atomic.Value
+	l             sync.RWMutex
 }
 
 type validateMountResponse struct {
@@ -92,7 +100,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 
 	// Check if this is a nested mount
 	if existing, _, ok := r.root.LongestPrefix(prefix); ok && existing != "" {
-		return fmt.Errorf("cannot mount under existing mount '%s'", existing)
+		return fmt.Errorf("cannot mount under existing mount %q", existing)
 	}
 
 	// Build the paths
@@ -168,7 +176,7 @@ func (r *Router) Remount(src, dst string) error {
 	// Check for existing mount
 	raw, ok := r.root.Get(src)
 	if !ok {
-		return fmt.Errorf("no mount at '%s'", src)
+		return fmt.Errorf("no mount at %q", src)
 	}
 
 	// Update the mount point
@@ -400,6 +408,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		strings.Replace(mount, "/", "-", -1)}, time.Now())
 	re := raw.(*routeEntry)
 
+	// Grab a read lock on the route entry, this protects against the backend
+	// being reloaded during a request.
+	re.l.RLock()
+	defer re.l.RUnlock()
+
 	// Filtered mounts will have a nil backend
 	if re.backend == nil {
 		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
@@ -466,9 +479,15 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	originalClientTokenRemainingUses := req.ClientTokenRemainingUses
 	req.ClientTokenRemainingUses = 0
 
-	// Cache the headers and hide them from backends
+	// Cache the headers
 	headers := req.Headers
-	req.Headers = nil
+
+	// Filter and add passthrough headers to the backend
+	var passthroughRequestHeaders []string
+	if rawVal, ok := re.mountEntry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
+		passthroughRequestHeaders = rawVal.([]string)
+	}
+	req.Headers = filteredPassthroughHeaders(headers, passthroughRequestHeaders)
 
 	// Cache the wrap info of the request
 	var wrapInfo *logical.RequestWrapInfo
@@ -609,4 +628,49 @@ func pathsToRadix(paths []string) *radix.Tree {
 	}
 
 	return tree
+}
+
+// filteredPassthroughHeaders returns a headers map[string][]string that
+// contains the filtered values contained in passthroughHeaders, as well as the
+// values in whitelistedHeaders. Filtering of passthroughHeaders from the
+// origHeaders is done is a case-insensitive manner.
+func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHeaders []string) map[string][]string {
+	retHeaders := make(map[string][]string)
+
+	// Handle whitelisted values
+	for _, header := range whitelistedHeaders {
+		if val, ok := origHeaders[header]; ok {
+			retHeaders[header] = val
+		} else {
+			// Try to check if a lowercased version of the header exists in the
+			// originating request. The header key that gets used is the one from the
+			// whitelist.
+			if val, ok := origHeaders[strings.ToLower(header)]; ok {
+				retHeaders[header] = val
+			}
+		}
+	}
+
+	// Short-circuit if there's nothing to filter
+	if len(passthroughHeaders) == 0 {
+		return retHeaders
+	}
+
+	// Create a map that uses lowercased header values as the key and the original
+	// header naming as the value for comparison down below.
+	lowerHeadersRef := make(map[string]string, len(origHeaders))
+	for key := range origHeaders {
+		lowerHeadersRef[strings.ToLower(key)] = key
+	}
+
+	// Case-insensitive compare of passthrough headers against originating
+	// headers. The returned headers will be the same casing as the originating
+	// header name.
+	for _, ph := range passthroughHeaders {
+		if header, ok := lowerHeadersRef[strings.ToLower(ph)]; ok {
+			retHeaders[header] = origHeaders[header]
+		}
+	}
+
+	return retHeaders
 }

@@ -35,7 +35,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/control-group/authorize
+    http://127.0.0.1:8200/v1/sys/control-group/authorize
 ```
 
 ### Sample Response
@@ -75,7 +75,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/control-group/request
+    http://127.0.0.1:8200/v1/sys/control-group/request
 ```
 
 ### Sample Response

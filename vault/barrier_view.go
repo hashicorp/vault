@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -16,9 +17,10 @@ import (
 // BarrierView implements logical.Storage so it can be passed in as the
 // durable storage mechanism for logical views.
 type BarrierView struct {
-	barrier     BarrierStorage
-	prefix      string
-	readOnlyErr error
+	barrier         BarrierStorage
+	prefix          string
+	readOnlyErr     error
+	readOnlyErrLock sync.RWMutex
 }
 
 var (
@@ -35,7 +37,15 @@ func NewBarrierView(barrier BarrierStorage, prefix string) *BarrierView {
 }
 
 func (v *BarrierView) setReadOnlyErr(readOnlyErr error) {
+	v.readOnlyErrLock.Lock()
+	defer v.readOnlyErrLock.Unlock()
 	v.readOnlyErr = readOnlyErr
+}
+
+func (v *BarrierView) getReadOnlyErr() error {
+	v.readOnlyErrLock.RLock()
+	defer v.readOnlyErrLock.RUnlock()
+	return v.readOnlyErr
 }
 
 // sanityCheck is used to perform a sanity check on a key
@@ -85,8 +95,9 @@ func (v *BarrierView) Put(ctx context.Context, entry *logical.StorageEntry) erro
 
 	expandedKey := v.expandKey(entry.Key)
 
-	if v.readOnlyErr != nil {
-		return v.readOnlyErr
+	roErr := v.getReadOnlyErr()
+	if roErr != nil {
+		return roErr
 	}
 
 	nested := &Entry{
@@ -105,8 +116,9 @@ func (v *BarrierView) Delete(ctx context.Context, key string) error {
 
 	expandedKey := v.expandKey(key)
 
-	if v.readOnlyErr != nil {
-		return v.readOnlyErr
+	roErr := v.getReadOnlyErr()
+	if roErr != nil {
+		return roErr
 	}
 
 	return v.barrier.Delete(ctx, expandedKey)
@@ -115,7 +127,7 @@ func (v *BarrierView) Delete(ctx context.Context, key string) error {
 // SubView constructs a nested sub-view using the given prefix
 func (v *BarrierView) SubView(prefix string) *BarrierView {
 	sub := v.expandKey(prefix)
-	return &BarrierView{barrier: v.barrier, prefix: sub, readOnlyErr: v.readOnlyErr}
+	return &BarrierView{barrier: v.barrier, prefix: sub, readOnlyErr: v.getReadOnlyErr()}
 }
 
 // expandKey is used to expand to the full key path with the prefix

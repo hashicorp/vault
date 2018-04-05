@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/go-github/github"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -67,11 +68,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		return nil, err
 	}
 
-	ttl, _, err := b.SanitizeTTLStr(config.TTL.String(), config.MaxTTL.String())
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error sanitizing TTLs: %s", err)), nil
-	}
-
 	resp := &logical.Response{
 		Auth: &logical.Auth{
 			InternalData: map[string]interface{}{
@@ -84,7 +80,8 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			},
 			DisplayName: *verifyResp.User.Login,
 			LeaseOptions: logical.LeaseOptions{
-				TTL:       ttl,
+				TTL:       config.TTL,
+				MaxTTL:    config.MaxTTL,
 				Renewable: true,
 			},
 			Alias: &logical.Alias{
@@ -133,10 +130,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
-	resp, err := framework.LeaseExtend(config.TTL, config.MaxTTL, b.System())(ctx, req, d)
-	if err != nil {
-		return nil, err
-	}
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.TTL = config.TTL
+	resp.Auth.MaxTTL = config.MaxTTL
 
 	// Remove old aliases
 	resp.Auth.GroupAliases = nil
@@ -168,7 +164,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	if config.BaseURL != "" {
 		parsedURL, err := url.Parse(config.BaseURL)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Successfully parsed base_url when set but failing to parse now: %s", err)
+			return nil, nil, errwrap.Wrapf("successfully parsed base_url when set but failing to parse now: {{err}}", err)
 		}
 		client.BaseURL = parsedURL
 	}

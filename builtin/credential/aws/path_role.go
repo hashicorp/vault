@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -244,7 +245,7 @@ func (b *backend) lockedAWSRole(ctx context.Context, s logical.Storage, roleName
 	}
 	needUpgrade, err := b.upgradeRoleEntry(ctx, s, roleEntry)
 	if err != nil {
-		return nil, fmt.Errorf("error upgrading roleEntry: %v", err)
+		return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
 	}
 	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
 		b.roleMutex.Lock()
@@ -261,11 +262,11 @@ func (b *backend) lockedAWSRole(ctx context.Context, s logical.Storage, roleName
 		}
 		// now re-check to see if we need to upgrade
 		if needUpgrade, err = b.upgradeRoleEntry(ctx, s, roleEntry); err != nil {
-			return nil, fmt.Errorf("error upgrading roleEntry: %v", err)
+			return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
 		}
 		if needUpgrade {
 			if err = b.nonLockedSetAWSRole(ctx, s, roleName, roleEntry); err != nil {
-				return nil, fmt.Errorf("error saving upgraded roleEntry: %v", err)
+				return nil, errwrap.Wrapf("error saving upgraded roleEntry: {{err}}", err)
 			}
 		}
 	}
@@ -789,7 +790,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	if roleEntry.HMACKey == "" {
 		roleEntry.HMACKey, err = uuid.GenerateUUID()
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate role HMAC key: %v", err)
+			return nil, errwrap.Wrapf("failed to generate role HMAC key: {{err}}", err)
 		}
 	}
 

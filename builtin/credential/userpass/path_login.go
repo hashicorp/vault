@@ -91,6 +91,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 			DisplayName: username,
 			LeaseOptions: logical.LeaseOptions{
 				TTL:       user.TTL,
+				MaxTTL:    user.MaxTTL,
 				Renewable: true,
 			},
 			Alias: &logical.Alias{
@@ -115,7 +116,10 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	return framework.LeaseExtend(user.TTL, user.MaxTTL, b.System())(ctx, req, d)
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.TTL = user.TTL
+	resp.Auth.MaxTTL = user.MaxTTL
+	return resp, nil
 }
 
 const pathLoginSyn = `

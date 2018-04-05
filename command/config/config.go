@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -56,7 +57,7 @@ func LoadConfig(path string) (*DefaultConfig, error) {
 	// NOTE: requires HOME env var to be set
 	path, err := homedir.Expand(path)
 	if err != nil {
-		return nil, fmt.Errorf("Error expanding config path %s: %s", path, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("error expanding config path %q: {{err}}", path), err)
 	}
 
 	contents, err := ioutil.ReadFile(path)
@@ -66,7 +67,7 @@ func LoadConfig(path string) (*DefaultConfig, error) {
 
 	conf, err := ParseConfig(string(contents))
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing config file at %s: %q. Ensure that the file is valid; Ansible Vault is known to conflict with it.", path, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("error parsing config file at %q: {{err}}; ensure that the file is valid; Ansible Vault is known to conflict with it.", path), err)
 	}
 
 	return conf, nil
@@ -82,7 +83,7 @@ func ParseConfig(contents string) (*DefaultConfig, error) {
 	// Top-level item should be the object list
 	list, ok := root.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("Failed to parse config: does not contain a root object")
+		return nil, fmt.Errorf("failed to parse config; does not contain a root object")
 	}
 
 	valid := []string{
@@ -119,8 +120,7 @@ func checkHCLKeys(node ast.Node, valid []string) error {
 	for _, item := range list.Items {
 		key := item.Keys[0].Token.Value().(string)
 		if _, ok := validMap[key]; !ok {
-			result = multierror.Append(result, fmt.Errorf(
-				"invalid key '%s' on line %d", key, item.Assign.Line))
+			result = multierror.Append(result, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
 		}
 	}
 

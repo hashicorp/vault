@@ -187,7 +187,7 @@ parameters](/api/system/auth.html#enable-auth-method) of the method.
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"type": "approle"}' \
-       https://vault.rocks/v1/sys/auth/approle
+       http://127.0.0.1:8200/v1/sys/auth/approle
 ```
 
 The above example passes the **type** (`approle`) in the request payload
@@ -276,7 +276,7 @@ Before creating a role, create `jenkins` policy:
 
 ```shell
 $ curl --header "X-Vault-Token: ..." --request PUT --data @payload.json \
-     https://vault.rocks/v1/sys/policy/jenkins
+     http://127.0.0.1:8200/v1/sys/policy/jenkins
 
 $ cat payload.json
 {
@@ -295,7 +295,7 @@ mode](/docs/auth/approle.html).)
 ```shell
 $ curl --header "X-Vault-Token: ..." --request POST \
        --data '{"policies":"jenkins"}' \
-       https://vault.rocks/v1/auth/approle/role/jenkins
+       http://127.0.0.1:8200/v1/auth/approle/role/jenkins
 ```
 
 > There are a number of
@@ -315,14 +315,14 @@ separated string.
 $ curl --header "X-Vault-Token:..."
        --request POST \
        --data '{"policies":"jenkins,anotherpolicy"}' \
-       https://vault.rocks/v1/auth/approle/role/jenkins
+       http://127.0.0.1:8200/v1/auth/approle/role/jenkins
 ````
 
 To read the jenkins role you just created:
 
 ```shell
 $ curl --header "X-Vault-Token: ..." --request GET \
-        https://vault.rocks/v1/auth/approle/role/jenkins | jq
+        http://127.0.0.1:8200/v1/auth/approle/role/jenkins | jq
 {
   "request_id": "b18054ad-1ab5-8d83-eeed-193d97026ee7",
   "lease_id": "",
@@ -425,10 +425,10 @@ payload, or invoke the API with an empty payload.
 
 ```shell
 $ curl --header "X-Vault-Token:..." --request GET \
-       https://vault.rocks/v1/auth/approle/role/jenkins/role-id | jq
+       http://127.0.0.1:8200/v1/auth/approle/role/jenkins/role-id | jq
 
 $ curl --header "X-Vault-Token:..." --request POST \
-       https://vault.rocks/v1/auth/approle/role/jenkins/secret-id | jq
+       http://127.0.0.1:8200/v1/auth/approle/role/jenkins/secret-id | jq
 ```
 
 If you specified `secret_id_ttl`, `secret_id_num_uses`, or `bound_cidr_list` on
@@ -484,7 +484,7 @@ $ cat payload.json
     "secret_id": "ed0a642f-2acf-c2da-232f-1b21300d5f29"
   }
 
-$ curl --request POST --data @payload.json https://vault.rocks/v1/auth/approle/login | jq
+$ curl --request POST --data @payload.json http://127.0.0.1:8200/v1/auth/approle/login | jq
 {
   "request_id": "fccae32b-1e6a-9a9c-7666-f5cb07805c1e",
   "lease_id": "",
@@ -527,7 +527,7 @@ You can pass the `client_token` returned in [Step 4](#step4) as a part of the
 CLI command.
 
 ```shell
-$ VAULT_TOKEN=3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e vault read secret/mysql/webapp
+$ VAULT_TOKEN=3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e vault kv get secret/mysql/webapp
 No value found at secret/mysql/webapp
 ```
 
@@ -540,7 +540,7 @@ token: 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e
 token_duration: 2762013
 token_policies: [default jenkins]
 
-$ vault read secret/mysql/webapp
+$ vault kv get secret/mysql/webapp
 No value found at secret/mysql/webapp
 ```
 
@@ -551,7 +551,7 @@ found" message.
 `secret/mysql/webapp` path.
 
 ```shell
-$ vault write secret/dev/config/mongodb @mysqldb.txt
+$ vault kv put secret/dev/config/mongodb @mysqldb.txt
 
 $ cat mysqldb.txt
 {
@@ -576,7 +576,7 @@ You can now pass the `client_token` returned in [Step 4](#step4) in the
 ```plaintext
 $ curl --header "X-Vault-Token: 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e" \
        --request GET \
-       https://vault.rocks/v1/secret/mysql/webapp | jq
+       http://127.0.0.1:8200/v1/secret/data/mysql/webapp | jq
 {
   "errors": []
 }

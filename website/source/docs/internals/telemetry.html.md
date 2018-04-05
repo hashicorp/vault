@@ -576,6 +576,18 @@ These metrics relate to the supported [storage backends][storage-backends].
 
 **[S]** Summary (Milliseconds):  Duration of a LIST operation against the [Google Cloud Storage storage backend][gcs-storage-backend]
 
+### vault.gcs.lock.unlock
+
+**[S]** Summary (Milliseconds): Duration of an UNLOCK operation against the [Google Cloud Storage storage backend][gcs-storage-backend] in HA mode
+
+### vault.gcs.lock.lock
+
+**[S]** Summary (Milliseconds): Duration of a LOCK operation against the [Google Cloud Storage storage backend][gcs-storage-backend] in HA mode
+
+### vault.gcs.lock.value
+
+**[S]** Summary (Milliseconds): Duration of a VALUE operation against the [Google Cloud Storage storage backend][gcs-storage-backend] in HA mode
+
 ### vault.mssql.put
 
 **[S]** Summary (Milliseconds): Duration of a PUT operation against the [MS-SQL storage backend][mssql-storage-backend]
@@ -640,6 +652,34 @@ These metrics relate to the supported [storage backends][storage-backends].
 
 **[S]** Summary (Milliseconds):  Duration of a LIST operation against the [Amazon S3 storage backend][s3-storage-backend]
 
+### vault.spanner.put
+
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [Google Cloud Spanner storage backend][spanner-storage-backend]
+
+### vault.spanner.get
+
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [Google Cloud Spanner storage backend][spanner-storage-backend]
+
+### vault.spanner.delete
+
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [Google Cloud Spanner storage backend][spanner-storage-backend]
+
+### vault.spanner.list
+
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [Google Cloud Spanner storage backend][spanner-storage-backend]
+
+### vault.spanner.lock.unlock
+
+**[S]** Summary (Milliseconds): Duration of an UNLOCK operation against the [Google Cloud Spanner storage backend][spanner-storage-backend] in HA mode
+
+### vault.spanner.lock.lock
+
+**[S]** Summary (Milliseconds): Duration of a LOCK operation against the [Google Cloud Spanner storage backend][spanner-storage-backend] in HA mode
+
+### vault.spanner.lock.value
+
+**[S]** Summary (Milliseconds): Duration of a VALUE operation against the [Google Cloud Spanner storage backend][gcs-storage-backend] in HA mode
+
 ### vault.swift.put
 
 **[S]** Summary (Milliseconds): Duration of a PUT operation against the [Swift storage backend][swift-storage-backend]
@@ -686,7 +726,8 @@ These metrics relate to the supported [storage backends][storage-backends].
 [couchdb-storage-backend]: /docs/configuration/storage/couchdb.html
 [dynamodb-storage-backend]: /docs/configuration/storage/dynamodb.html
 [etcd-storage-backend]: /docs/configuration/storage/etcd.html
-[gcs-storage-backend]: /docs/configuration/storage/google-cloud.html
+[gcs-storage-backend]: /docs/configuration/storage/google-cloud-storage.html
+[spanner-storage-backend]: /docs/configuration/storage/google-cloud-spanner.html
 [mssql-storage-backend]: /docs/configuration/storage/mssql.html
 [mysql-storage-backend]: /docs/configuration/storage/mysql.html
 [postgresql-storage-backend]: /docs/configuration/storage/postgresql.html

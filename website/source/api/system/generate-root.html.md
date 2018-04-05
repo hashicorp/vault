@@ -24,7 +24,7 @@ attempt.
 
 ```
 $ curl \
-    https://vault.rocks/v1/sys/generate-root/attempt
+    http://127.0.0.1:8200/v1/sys/generate-root/attempt
 ```
 
 ### Sample Response
@@ -82,7 +82,7 @@ generation attempt can take place at a time. One (and only one) of `otp` or
 $ curl \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/generate-root/attempt    
+    http://127.0.0.1:8200/v1/sys/generate-root/attempt    
 ```
 
 ### Sample Response
@@ -113,7 +113,7 @@ progress made. This must be called to change the OTP or PGP key being used.
 ```
 $ curl \
     --request DELETE \
-    https://vault.rocks/v1/sys/generate-root/attempt
+    http://127.0.0.1:8200/v1/sys/generate-root/attempt
 ```
 
 ## Provide Key Share to Generate Root
@@ -149,7 +149,7 @@ nonce must be provided with each call.
 $ curl \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/generate-root/update
+    http://127.0.0.1:8200/v1/sys/generate-root/update
 ```
 
 ### Sample Response

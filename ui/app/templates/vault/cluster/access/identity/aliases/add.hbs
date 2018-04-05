@@ -1,0 +1,11 @@
+<header class="page-header">
+  <div class="level">
+    <div class="level-left">
+      <h1 class="title is-3">
+        Add {{lowercase (humanize model.identityType)}} for {{model.canonicalId}}
+      </h1>
+    </div>
+  </div>
+</header>
+
+{{identity/edit-form model=model onSave=(perform navToShow)}}

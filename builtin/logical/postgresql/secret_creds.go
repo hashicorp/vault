@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -59,14 +61,16 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 		lease = &configLease{}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
-	resp, err := f(ctx, req, d)
+	// Make sure we increase the VALID UNTIL endpoint for this user.
+	ttl, _, err := framework.CalculateTTL(b.System(), req.Secret.Increment, lease.Lease, 0, lease.LeaseMax, 0, req.Secret.IssueTime)
 	if err != nil {
 		return nil, err
 	}
-
-	// Make sure we increase the VALID UNTIL endpoint for this user.
-	if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
+	if ttl > 0 {
+		expireTime := time.Now().Add(ttl)
+		// Adding a small buffer since the TTL will be calculated again afeter this call
+		// to ensure the database credential does not expire before the lease
+		expireTime = expireTime.Add(5 * time.Second)
 		expiration := expireTime.Format("2006-01-02 15:04:05-0700")
 
 		query := fmt.Sprintf(
@@ -83,6 +87,9 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
+	resp := &logical.Response{Secret: req.Secret}
+	resp.Secret.TTL = lease.Lease
+	resp.Secret.MaxTTL = lease.LeaseMax
 	return resp, nil
 }
 
@@ -218,10 +225,10 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 
 		// can't drop if not all privileges are revoked
 		if rows.Err() != nil {
-			return nil, fmt.Errorf("could not generate revocation statements for all rows: %s", rows.Err())
+			return nil, errwrap.Wrapf("could not generate revocation statements for all rows: {{err}}", rows.Err())
 		}
 		if lastStmtError != nil {
-			return nil, fmt.Errorf("could not perform all revocation statements: %s", lastStmtError)
+			return nil, errwrap.Wrapf("could not perform all revocation statements: {{err}}", lastStmtError)
 		}
 
 		// Drop this user

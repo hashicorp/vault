@@ -10,8 +10,8 @@ description: |-
 
 It is generally considered a best practice to not persist
 [root tokens][root-tokens]. Instead a root token should be generated using
-Vault's `generate-root` command only when absolutely necessary. This guide
-demonstrates regenerating a root token.
+Vault's `operator generate-root` command only when absolutely necessary. This
+guide demonstrates regenerating a root token.
 
 1. Unseal the vault using the existing quorum of unseal keys. You do not need to
   be authenticated to generate a new root token, but the Vault must be unsealed
@@ -120,7 +120,7 @@ In this method, an OTP is XORed with the generated token on final output.
     operation.
 
     ```text
-    $ echo $UNSEAL_KEY | vault generate-root -nonce=f67f4da3... -
+    $ echo $UNSEAL_KEY | vault operator generate-root -nonce=f67f4da3... -
     ```
 
 1. When the quorum of unseal keys are supplied, the final user will also get

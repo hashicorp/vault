@@ -23,8 +23,7 @@ func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *Moun
 
 	case newDefault != zero && newMax != zero:
 		if newMax < newDefault {
-			return fmt.Errorf("backend max lease TTL of %d would be less than backend default lease TTL of %d",
-				int(newMax.Seconds()), int(newDefault.Seconds()))
+			return fmt.Errorf("backend max lease TTL of %d would be less than backend default lease TTL of %d", int(newMax.Seconds()), int(newDefault.Seconds()))
 		}
 	}
 
@@ -48,7 +47,7 @@ func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *Moun
 		return fmt.Errorf("failed to update mount table, rolling back TTL changes")
 	}
 	if b.Core.logger.IsInfo() {
-		b.Core.logger.Info("core: mount tuning of leases successful", "path", path)
+		b.Core.logger.Info("mount tuning of leases successful", "path", path)
 	}
 
 	return nil

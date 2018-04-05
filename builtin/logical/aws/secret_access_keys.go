@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -174,7 +175,7 @@ func (b *backend) secretAccessKeysCreate(
 		UserName: username,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Error writing WAL entry: %s", err)
+		return nil, errwrap.Wrapf("error writing WAL entry: {{err}}", err)
 	}
 
 	// Create the user
@@ -223,7 +224,7 @@ func (b *backend) secretAccessKeysCreate(
 	// the secret because it'll get rolled back anyways, so we have to return
 	// an error here.
 	if err := framework.DeleteWAL(ctx, s, walId); err != nil {
-		return nil, fmt.Errorf("Failed to commit WAL entry: %s", err)
+		return nil, errwrap.Wrapf("failed to commit WAL entry: {{err}}", err)
 	}
 
 	// Return the info!
@@ -243,6 +244,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	resp.Secret.TTL = lease.Lease
+	resp.Secret.MaxTTL = lease.LeaseMax
 
 	if usernameWarning != "" {
 		resp.AddWarning(usernameWarning)
@@ -271,8 +273,10 @@ func (b *backend) secretAccessKeysRenew(ctx context.Context, req *logical.Reques
 		lease = &configLease{}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
-	return f(ctx, req, d)
+	resp := &logical.Response{Secret: req.Secret}
+	resp.Secret.TTL = lease.Lease
+	resp.Secret.MaxTTL = lease.LeaseMax
+	return resp, nil
 }
 
 func secretAccessKeysRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

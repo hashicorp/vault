@@ -1,0 +1,28 @@
+<div class="card replication-card">
+  <nav class="menu">
+    <p class="menu-label">Disaster Recovery</p>
+    <ul>
+      <li>
+        {{replication-mode-summary
+          mode="dr"
+          display='menu'
+          cluster=cluster
+          tagName='a'
+          click=(action d.actions.close)
+        }}
+      </li>
+    </ul>
+    <p class="menu-label">Performance</p>
+    <ul>
+      <li>
+        {{replication-mode-summary
+          mode="performance"
+          display='menu'
+          cluster=cluster
+          tagName='a'
+          click=(action d.actions.close)
+        }}
+      </li>
+    </ul>
+  </nav>
+ </div>
