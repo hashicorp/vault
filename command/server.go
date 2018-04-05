@@ -597,7 +597,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 CLUSTER_SYNTHESIS_COMPLETE:
 
-	if coreConfig.RedirectAddr == coreConfig.ClusterAddr {
+	if coreConfig.RedirectAddr == coreConfig.ClusterAddr && len(coreConfig.RedirectAddr) != 0 {
 		c.UI.Error(fmt.Sprintf(
 			"Address %q used for both API and cluster addresses", coreConfig.RedirectAddr))
 		return 1
