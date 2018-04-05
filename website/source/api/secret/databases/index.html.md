@@ -39,9 +39,12 @@ list of additional parameters.
 - `verify_connection` `(bool: true)` – Specifies if the connection is verified
   during initial configuration. Defaults to true.
 
-- `allowed_roles` `(slice: [])` - Array or comma separated string of the roles
-  allowed to use this connection. Defaults to empty (no roles), if contains a
-  "*" any role can use this connection.
+- `allowed_roles` `(list: [])` - List of the roles allowed to use this connection. 
+  Defaults to empty (no roles), if contains a "*" any role can use this connection.
+
+- `root_rotation_statements` `(list: [])` - Specifies the database statements to be 
+  executed to rotate the root user's credentials. See the plugin's API page for more 
+  information on support and formatting for this parameter.
 
 ### Sample Payload
 
@@ -49,7 +52,9 @@ list of additional parameters.
 {
   "plugin_name": "mysql-database-plugin",
   "allowed_roles": "readonly",
-  "connection_url": "root:mysql@tcp(127.0.0.1:3306)/"
+  "connection_url": "{{username}}:{{password}}@tcp(127.0.0.1:3306)/",
+  "username": "root",
+  "password": "mysql"
 }
 ```
 
@@ -94,7 +99,8 @@ $ curl \
 			"readonly"
 		],
 		"connection_details": {
-			"connection_url": "root:mysql@tcp(127.0.0.1:3306)/",
+			"connection_url": "{{username}}:{{password}}@tcp(127.0.0.1:3306)/",
+      "username": "root"
 		},
 		"plugin_name": "mysql-database-plugin"
 	},
@@ -198,20 +204,20 @@ This endpoint creates or updates a role definition.
   associated with this role. Accepts time suffixed strings ("1h") or an integer
   number of seconds. Defaults to system/engine default TTL time.
 
-- `creation_statements` `(string: <required>)` – Specifies the database
+- `creation_statements` `(list: <required>)` – Specifies the database
   statements executed to create and configure a user. See the plugin's API page
   for more information on support and formatting for this parameter.
 
-- `revocation_statements` `(string: "")` – Specifies the database statements to
+- `revocation_statements` `(list: [])` – Specifies the database statements to
   be executed to revoke a user. See the plugin's API page for more information
   on support and formatting for this parameter.
 
-- `rollback_statements` `(string: "")` – Specifies the database statements to be
+- `rollback_statements` `(list: [])` – Specifies the database statements to be
   executed rollback a create operation in the event of an error. Not every
   plugin type will support this functionality. See the plugin's API page for
   more information on support and formatting for this parameter.
 
-- `renew_statements` `(string: "")` – Specifies the database statements to be
+- `renew_statements` `(list: [])` – Specifies the database statements to be
   executed to renew a user. Not every plugin type will support this
   functionality. See the plugin's API page for more information on support and
   formatting for this parameter.
@@ -223,7 +229,7 @@ This endpoint creates or updates a role definition.
 ```json
 {
     "db_name": "mysql",
-    "creation_statements": "CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';",
+    "creation_statements": ["CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}'", "GRANT SELECT ON *.* TO '{{name}}'@'%'"],
     "default_ttl": "1h",
     "max_ttl": "24h"
 }
@@ -265,13 +271,13 @@ $ curl \
 ```json
 {
     "data": {
-		"creation_statements": "CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';         GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";",
+		"creation_statements": ["CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';"], "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"],
 		"db_name": "mysql",
 		"default_ttl": 3600,
 		"max_ttl": 86400,
-		"renew_statements": "",
-		"revocation_statements": "",
-		"rollback_statements": ""
+		"renew_statements": [],
+		"revocation_statements": [],
+		"rollback_statements": []
 	},
 }
 ```
