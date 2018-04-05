@@ -92,9 +92,9 @@ In this guide, you are going to perform the following steps:
 ### Step 1: Provision the Cloud Resources
 
 **Task 1:** Be sure to set your working directory to where the
-`/aws-kms-unseal/terraform` folder is located.
+[`/aws-kms-unseal/terraform`](#download-demo-assets) folder is located.
 
-The working directory should contain the Terraform files:
+The working directory should contain the provided Terraform files:
 
 ```bash
 ~/git/vault-guides/operations/aws-kms-unseal/terraform$ tree
@@ -111,7 +111,7 @@ The working directory should contain the Terraform files:
 
 **Task 2:** Set your AWS credentials as environment variables:
 
-```bash
+```plaintext
 $ export AWS_ACCESS_KEY_ID = "<YOUR_AWS_ACCESS_KEY_ID>"
 
 $ export AWS_SECRET_ACCESS_KEY = "<YOUR_AWS_SECRET_ACCESS_KEY>"
@@ -125,11 +125,10 @@ An example is provided (`terraform.tfvars.example`):
 vault_url = "http://s3.amazonaws.com/some/path/to/vault-enterprise.zip"
 ```
 
-**Task 3:** Perform a `terraform init` to pull down the necessary provider
-resources. Then `terraform plan` to verify your changes and the resources that
-will be created. If all looks good, then perform a `terraform apply` to
-provision the resources. The Terraform output will display the public IP address
-to SSH into your server.
+**Task 3:** Perform a **`terraform init`** to pull down the necessary provider
+resources. Then **`terraform plan`** to verify your changes and the resources that
+will be created. If all looks good, then perform a **`terraform apply`** to
+provision the resources.
 
 ```plaintext
 $ terraform init
@@ -153,8 +152,9 @@ connections = Connect to Vault via SSH   ssh ubuntu@192.0.2.1 -i private.key
 Vault Enterprise web interface  http://192.0.2.1:8200/ui
 ```
 
-**NOTE:** Outputs will contain instructions to connect to the server via SSH as
-shown in the example above.
+**NOTE:** The Terraform output will display the public IP address to SSH into
+your server as well as the Vault Enterprise web interface address.
+
 
 ### Step 2: Test the Auto Unseal Feature
 
@@ -170,7 +170,7 @@ Are you sure you want to continue connecting (yes/no)? yes
 When you are prompted, enter "yes" to continue.
 
 To verify that Vault has been installed, run `vault status` command which should
-respond with "_server is not yet initialized_" message.
+return "_server is not yet initialized_" message.
 
 ```plaintext
 $ export VAULT_ADDR=http://127.0.0.1:8200
@@ -184,8 +184,8 @@ Code: 400. Errors:
 * server is not yet initialized
 ```
 
-Run the `vault operator init` command to initialize the Vault server by setting
-its key share to be `1` as follow:
+Run the **`vault operator init`** command to initialize the Vault server by setting
+its key share to be **`1`** as follow:
 
 ```plaintext
 $ vault operator init -stored-shares=1 -recovery-shares=1 -recovery-threshold=1 -key-shares=1 -key-threshold=1
