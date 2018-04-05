@@ -1,6 +1,6 @@
 ---
 layout: "guides"
-page_title: "Vault Auto-unseal using AWS KMS - Guides"
+page_title: "Vault Auto Unseal using AWS KMS - Guides"
 sidebar_current: "guides-autounseal-aws-kms"
 description: |-
   In this guide, we'll show an example of how to use Terraform to provision an
@@ -11,7 +11,7 @@ description: |-
 
 # Vault Auto Unseal using AWS Key Management Service
 
-~> **Enterprise Only:** Vault replication feature is a part of _Vault Enterprise_.
+~> **Enterprise Only:** Vaultuto unsealing feature is a part of _Vault Enterprise_.
 
 When a Vault server is started, it starts in a
 [***sealed***](/docs/concepts/seal.html) state and it does not know how to
@@ -27,7 +27,7 @@ instance that can utilize an encryption key from [AWS Key Management Services
 
 ## Reference Material
 
-- [Vault Enterorise Auto Unseal](/docs/enterprise/auto-unseal/index.html)
+- [Vault Enterprise Auto Unseal](/docs/enterprise/auto-unseal/index.html)
 - [Configuration: `awskms` Seal](/docs/configuration/seal/awskms.html)
 
 
@@ -70,7 +70,8 @@ and basic understanding of its usage
 ### Download demo assets
 
 Clone or download the demo assets from the
-[hashicorp/vault-guides](https://github.com/hashicorp/vault-guides/tree/master/operations/aws-kms-unseal/terraform) GitHub repository to perform the steps described in this guide.
+[hashicorp/vault-guides](https://github.com/hashicorp/vault-guides/tree/master/operations/aws-kms-unseal/terraform)
+GitHub repository to perform the steps described in this guide.
 
 
 ## Steps
@@ -184,8 +185,8 @@ Code: 400. Errors:
 * server is not yet initialized
 ```
 
-Run the **`vault operator init`** command to initialize the Vault server by setting
-its key share to be **`1`** as follow:
+Run the **`vault operator init`** command to initialize the Vault server by
+setting its key share to be **`1`** as follow:
 
 ```plaintext
 $ vault operator init -stored-shares=1 -recovery-shares=1 -recovery-threshold=1 -key-shares=1 -key-threshold=1
