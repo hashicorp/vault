@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	colorable "github.com/mattn/go-colorable"
 	"github.com/mitchellh/cli"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
@@ -285,7 +284,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
-	c.logGate = &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
+	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
 	var level log.Level
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
