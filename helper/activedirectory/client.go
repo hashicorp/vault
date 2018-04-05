@@ -15,32 +15,24 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
-func NewClient(logger hclog.Logger, conf *Configuration) Client {
-	return &client{logger, conf, ldapifc.NewClient()}
+func NewClient(logger hclog.Logger, conf *Configuration) *Client {
+	return &Client{logger, conf, ldapifc.NewClient()}
 }
 
-func NewClientWith(logger hclog.Logger, conf *Configuration, ldapClient ldapifc.Client) Client {
-	return &client{logger, conf, ldapClient}
+func NewClientWith(logger hclog.Logger, conf *Configuration, ldapClient ldapifc.Client) *Client {
+	return &Client{logger, conf, ldapClient}
 }
 
-type Client interface {
-	Search(baseDNValues []string, filters map[*Field][]string) ([]*Entry, error)
-
-	UpdateEntry(baseDNValues []string, filters map[*Field][]string, newValues map[*Field][]string) error
-
-	UpdatePassword(baseDNValues []string, filters map[*Field][]string, newPassword string) error
-}
-
-type client struct {
+type Client struct {
 	logger     hclog.Logger
 	conf       *Configuration
 	ldapClient ldapifc.Client
 }
 
-func (c *client) Search(baseDNValues []string, filters map[*Field][]string) ([]*Entry, error) {
+func (c *Client) Search(filters map[*Field][]string) ([]*Entry, error) {
 
 	req := &ldap.SearchRequest{
-		BaseDN: toDNString(baseDNValues),
+		BaseDN: toDNString(strings.Split(c.conf.RootDomainName, ",")),
 		Scope:  ldap.ScopeWholeSubtree,
 		Filter: toFilterString(filters),
 	}
@@ -63,9 +55,9 @@ func (c *client) Search(baseDNValues []string, filters map[*Field][]string) ([]*
 	return entries, nil
 }
 
-func (c *client) UpdateEntry(baseDNValues []string, filters map[*Field][]string, newValues map[*Field][]string) error {
+func (c *Client) UpdateEntry(filters map[*Field][]string, newValues map[*Field][]string) error {
 
-	entries, err := c.Search(baseDNValues, filters)
+	entries, err := c.Search(filters)
 	if err != nil {
 		return err
 	}
@@ -92,6 +84,7 @@ func (c *client) UpdateEntry(baseDNValues []string, filters map[*Field][]string,
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
 	return conn.Modify(modifyReq)
 }
@@ -100,7 +93,7 @@ func (c *client) UpdateEntry(baseDNValues []string, filters map[*Field][]string,
 // Active Directory doesn't recognize the passwordModify method.
 // See https://github.com/go-ldap/ldap/issues/106
 // for more.
-func (c *client) UpdatePassword(baseDNValues []string, filters map[*Field][]string, newPassword string) error {
+func (c *Client) UpdatePassword(filters map[*Field][]string, newPassword string) error {
 
 	if !c.conf.StartTLS {
 		return errors.New("per Active Directory, a TLS session must be in progress to update passwords, please update your StartTLS setting")
@@ -115,10 +108,10 @@ func (c *client) UpdatePassword(baseDNValues []string, filters map[*Field][]stri
 		FieldRegistry.UnicodePassword: {pwdEncoded},
 	}
 
-	return c.UpdateEntry(baseDNValues, filters, newValues)
+	return c.UpdateEntry(filters, newValues)
 }
 
-func (c *client) getFirstSucceedingConnection() (ldapifc.Connection, error) {
+func (c *Client) getFirstSucceedingConnection() (ldapifc.Connection, error) {
 
 	var retErr *multierror.Error
 
@@ -151,11 +144,12 @@ func (c *client) getFirstSucceedingConnection() (ldapifc.Connection, error) {
 	return nil, retErr
 }
 
-func (c *client) connect(u *url.URL, tlsConfig *tls.Config) (ldapifc.Connection, error) {
+func (c *Client) connect(u *url.URL, tlsConfig *tls.Config) (ldapifc.Connection, error) {
 
 	_, port, err := net.SplitHostPort(u.Host)
 	if err != nil {
 		// err intentionally ignored - we'll fall back to default ldap ports if we're unable to parse this
+		port = ""
 	}
 
 	switch u.Scheme {
@@ -197,14 +191,8 @@ func (c *client) connect(u *url.URL, tlsConfig *tls.Config) (ldapifc.Connection,
 
 // According to the MS docs, the password needs to be utf16 and enclosed in quotes.
 func formatPassword(original string) (string, error) {
-
 	utf16 := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
-
-	pwdEncoded, err := utf16.NewEncoder().String("\"" + original + "\"")
-	if err != nil {
-		return "", err
-	}
-	return pwdEncoded, nil
+	return utf16.NewEncoder().String("\"" + original + "\"")
 }
 
 func toDNString(dnValues []string) string {

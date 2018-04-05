@@ -11,6 +11,7 @@ import (
 var (
 	// ex. "ldap://138.91.247.105"
 	rawURL = os.Getenv("TEST_LDAP_URL")
+	dn     = os.Getenv("TEST_DN")
 
 	// these can be left blank if the operation performed doesn't require them
 	username = os.Getenv("TEST_LDAP_USERNAME")
@@ -23,12 +24,11 @@ func main() {
 	config := newInsecureConfig()
 	client := activedirectory.NewClient(hclog.Default(), config)
 
-	baseDN := []string{"example, com"}
 	filters := map[*activedirectory.Field][]string{
 		activedirectory.FieldRegistry.GivenName: {"Sara", "Sarah"},
 	}
 
-	entries, err := client.Search(baseDN, filters)
+	entries, err := client.Search(filters)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -42,13 +42,14 @@ func main() {
 
 func newInsecureConfig() *activedirectory.Configuration {
 	return &activedirectory.Configuration{
-		Certificate:   "",
-		InsecureTLS:   true,
-		Password:      password,
-		StartTLS:      false,
-		TLSMinVersion: 771,
-		TLSMaxVersion: 771,
-		URL:           rawURL,
-		Username:      username,
+		RootDomainName: dn,
+		Certificate:    "",
+		InsecureTLS:    true,
+		Password:       password,
+		StartTLS:       false,
+		TLSMinVersion:  771,
+		TLSMaxVersion:  771,
+		URLs:           []string{rawURL},
+		Username:       username,
 	}
 }

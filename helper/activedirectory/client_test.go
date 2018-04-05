@@ -23,13 +23,11 @@ func TestSearch(t *testing.T) {
 
 	client := NewClientWith(hclog.NewNullLogger(), config, ldapClient)
 
-	baseDN := []string{"example", "com"}
-
 	filters := map[*Field][]string{
 		FieldRegistry.Surname: {"Jones"},
 	}
 
-	entries, err := client.Search(baseDN, filters)
+	entries, err := client.Search(filters)
 	if err != nil {
 		fmt.Println(err.Error())
 		t.FailNow()
@@ -93,8 +91,6 @@ func TestUpdateEntry(t *testing.T) {
 
 	client := NewClientWith(hclog.NewNullLogger(), config, ldapClient)
 
-	baseDN := []string{"example", "com"}
-
 	filters := map[*Field][]string{
 		FieldRegistry.Surname: {"Jones"},
 	}
@@ -103,7 +99,7 @@ func TestUpdateEntry(t *testing.T) {
 		FieldRegistry.CommonName: {"Blue", "Red"},
 	}
 
-	if err := client.UpdateEntry(baseDN, filters, newValues); err != nil {
+	if err := client.UpdateEntry(filters, newValues); err != nil {
 		t.FailNow()
 	}
 }
@@ -139,13 +135,11 @@ func TestUpdatePassword(t *testing.T) {
 
 	client := NewClientWith(hclog.NewNullLogger(), config, ldapClient)
 
-	baseDN := []string{"example", "com"}
-
 	filters := map[*Field][]string{
 		FieldRegistry.Surname: {"Jones"},
 	}
 
-	if err := client.UpdatePassword(baseDN, filters, testPass); err != nil {
+	if err := client.UpdatePassword(filters, testPass); err != nil {
 		t.FailNow()
 	}
 }
@@ -213,7 +207,8 @@ func (f *fakeLDAPConnection) StartTLS(config *tls.Config) error {
 
 func emptyConfig() *Configuration {
 	return &Configuration{
-		URL: "ldap://127.0.0.1",
+		RootDomainName: "example,com",
+		URLs:           []string{"ldap://127.0.0.1"},
 	}
 }
 

@@ -10,7 +10,6 @@ import (
 // Entry is an Active Directory-specific construct
 // to make knowing and grabbing fields more convenient,
 // while retaining all original information.
-// while retaining all original information.
 func NewEntry(logger hclog.Logger, ldapEntry *ldap.Entry) *Entry {
 	m := make(map[*Field][]string)
 	for _, attribute := range ldapEntry.Attributes {

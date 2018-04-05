@@ -3,23 +3,32 @@ package ad
 import (
 	"context"
 
+	"github.com/hashicorp/vault/builtin/logical/ad/config"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(_ context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 
-	confHandler := &configHandler{conf.Logger}
+	confManager, err := config.NewManager(ctx, conf)
+	if err != nil {
+		return nil, err
+	}
 
-	return &framework.Backend{
+	b := &framework.Backend{
 		Paths: []*framework.Path{
-			confHandler.Path(),
+			confManager.Path(),
 		},
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{
-				"config",
+				config.BackendPath,
 			},
 		},
+		Invalidate:  confManager.Invalidate,
 		BackendType: logical.TypeLogical,
-	}, nil
+	}
+
+	b.Setup(ctx, conf)
+
+	return b, nil
 }

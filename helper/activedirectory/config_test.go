@@ -22,6 +22,7 @@ func TestCertificateValidation(t *testing.T) {
 	// certificate should cause an error if a bad one is provided
 	fd.Raw = map[string]interface{}{
 		"certificate": "cats",
+		"dn":          "example,com",
 	}
 	config, err = NewConfiguration(hclog.NewNullLogger(), fd)
 	if err == nil {
@@ -31,6 +32,7 @@ func TestCertificateValidation(t *testing.T) {
 	// valid certificates should pass inspection
 	fd.Raw = map[string]interface{}{
 		"certificate": validCertificate,
+		"dn":          "example,com",
 	}
 	config, err = NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
@@ -72,10 +74,31 @@ func TestTLSSessionDefaultsToSecure(t *testing.T) {
 	}
 }
 
+func TestRootDomainName(t *testing.T) {
+	fd := fieldDataWithSchema()
+	fd.Raw = map[string]interface{}{}
+	_, err := NewConfiguration(hclog.NewNullLogger(), fd)
+	if err == nil {
+		t.FailNow()
+	}
+	fd.Raw = map[string]interface{}{
+		"urls": "ldap://138.91.247.105",
+		"dn":   "example,com",
+	}
+	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
+	if err != nil {
+		t.FailNow()
+	}
+	if config.RootDomainName != "example,com" {
+		t.FailNow()
+	}
+}
+
 func TestGetTLSConfigs(t *testing.T) {
 	fd := fieldDataWithSchema()
 	fd.Raw = map[string]interface{}{
-		"url": "ldap://138.91.247.105",
+		"urls": "ldap://138.91.247.105",
+		"dn":   "example,com",
 	}
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
@@ -114,51 +137,55 @@ func fieldDataWithSchema() *framework.FieldData {
 		Schema: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
-				Default:     "",
 				Description: "Username with sufficient permissions in Active Directory to administer passwords.",
 			},
 
 			"password": {
 				Type:        framework.TypeString,
-				Default:     "",
 				Description: "Password for username with sufficient permissions in Active Directory to administer passwords.",
 			},
 
-			"url": {
-				Type:        framework.TypeString,
+			"urls": {
+				Type:        framework.TypeCommaStringSlice,
 				Default:     "ldap://127.0.0.1",
 				Description: "LDAP URL to connect to (default: ldap://127.0.0.1). Multiple URLs can be specified by concatenating them with commas; they will be tried in-order.",
 			},
 
 			"certificate": {
 				Type:        framework.TypeString,
-				Default:     "",
-				Description: "CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded (optional)",
+				Description: "CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.",
+			},
+
+			"dn": {
+				Type:        framework.TypeString,
+				Description: "The root distinguished name to bind to when managing service accounts.",
 			},
 
 			"insecure_tls": {
 				Type:        framework.TypeBool,
-				Default:     false,
-				Description: "Skip LDAP server SSL Certificate verification - VERY insecure (optional)",
+				Description: "Skip LDAP server SSL Certificate verification - VERY insecure.",
 			},
 
 			"starttls": {
 				Type:        framework.TypeBool,
 				Default:     true,
-				Description: "Issue a StartTLS command after establishing unencrypted connection (optional)",
+				Description: "Issue a StartTLS command after establishing unencrypted connection.",
 			},
 
 			"tls_min_version": {
 				Type:        framework.TypeString,
 				Default:     "tls12",
-				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'.",
 			},
 
 			"tls_max_version": {
 				Type:        framework.TypeString,
 				Default:     "tls12",
-				Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+				Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'.",
 			},
+		},
+		Raw: map[string]interface{}{
+			"dn": "example,com",
 		},
 	}
 }
