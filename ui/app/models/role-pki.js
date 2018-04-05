@@ -55,6 +55,10 @@ export default DS.Model.extend({
     defaultValue: 'DigitalSignature,KeyAgreement,KeyEncipherment',
     editType: 'stringArray',
   }),
+  requireCn: attr('boolean', {
+    label: 'Require common name',
+    defaultValue: true,
+  }),
   useCsrCommonName: attr('boolean', {
     label: 'Use CSR common name',
     defaultValue: true,
@@ -192,6 +196,7 @@ export default DS.Model.extend({
           'allowAnyName',
           'enforceHostnames',
           'allowIpSans',
+          'requireCn',
           'useCsrCommonName',
           'useCsrSans',
           'ou',
