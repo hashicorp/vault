@@ -521,7 +521,7 @@ func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, instance *com
 	} else if len(role.BoundRegion) > 0 {
 		zone, err := gceClient.Zones.Get(role.ProjectId, zone).Do()
 		if err != nil {
-			return fmt.Errorf("could not verify instance zone '%s' is available for project '%s': %v", role.ProjectId, zone, err)
+			return fmt.Errorf("could not verify instance zone '%s' is available for project '%s': %v", zone.Name, role.ProjectId, err)
 		}
 		if zone.Region != role.BoundRegion {
 			return fmt.Errorf("zone '%s' is not in region '%s'", zone.Name, zone.Region)
