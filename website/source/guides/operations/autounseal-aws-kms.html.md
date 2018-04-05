@@ -11,7 +11,7 @@ description: |-
 
 # Vault Auto Unseal using AWS Key Management Service
 
-~> **Enterprise Only:** Vaultuto unsealing feature is a part of _Vault Enterprise_.
+~> **Enterprise Only:** Vault auto unsealing feature is a part of _Vault Enterprise_.
 
 When a Vault server is started, it starts in a
 [***sealed***](/docs/concepts/seal.html) state and it does not know how to
