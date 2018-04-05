@@ -395,11 +395,11 @@ nope = "yes"
 		t.Fatal("expected error")
 	}
 
-	if !strings.Contains(err.Error(), "invalid key 'bad' on line 2") {
+	if !strings.Contains(err.Error(), "invalid key \"bad\" on line 2") {
 		t.Errorf("bad error: %q", err)
 	}
 
-	if !strings.Contains(err.Error(), "invalid key 'nope' on line 3") {
+	if !strings.Contains(err.Error(), "invalid key \"nope\" on line 3") {
 		t.Errorf("bad error: %q", err)
 	}
 }
@@ -419,11 +419,11 @@ listener "tcp" {
 		t.Fatal("expected error")
 	}
 
-	if !strings.Contains(err.Error(), "listeners.tcp: invalid key 'bad' on line 3") {
+	if !strings.Contains(err.Error(), "listeners.tcp: invalid key \"bad\" on line 3") {
 		t.Errorf("bad error: %q", err)
 	}
 
-	if !strings.Contains(err.Error(), "listeners.tcp: invalid key 'nope' on line 4") {
+	if !strings.Contains(err.Error(), "listeners.tcp: invalid key \"nope\" on line 4") {
 		t.Errorf("bad error: %q", err)
 	}
 }
@@ -443,11 +443,11 @@ telemetry {
 		t.Fatal("expected error")
 	}
 
-	if !strings.Contains(err.Error(), "telemetry: invalid key 'bad' on line 3") {
+	if !strings.Contains(err.Error(), "telemetry: invalid key \"bad\" on line 3") {
 		t.Errorf("bad error: %q", err)
 	}
 
-	if !strings.Contains(err.Error(), "telemetry: invalid key 'nope' on line 4") {
+	if !strings.Contains(err.Error(), "telemetry: invalid key \"nope\" on line 4") {
 		t.Errorf("bad error: %q", err)
 	}
 }
