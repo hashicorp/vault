@@ -85,7 +85,7 @@ AWS KMS. Included is a Terraform configuration that has the following:
 In this guide, you are going to perform the following steps:
 
 1. [Provision the Cloud Resources](#step-1-provision-the-cloud-resources)
-1. [Verification](#step-2-verification)
+1. [Test the Auto Unseal Feature](#step-2-test-the-auto-unseal-feature)
 1. [Clean Up](#step-3-clean-up)
 
 
@@ -94,7 +94,7 @@ In this guide, you are going to perform the following steps:
 **Task 1:** Be sure to set your working directory to where the
 `/aws-kms-unseal/terraform` folder is located.
 
-Terraform files should be located in this directory:
+The working directory should contain the Terraform files:
 
 ```bash
 ~/git/vault-guides/operations/aws-kms-unseal/terraform$ tree
@@ -156,7 +156,7 @@ Vault Enterprise web interface  http://192.0.2.1:8200/ui
 **NOTE:** Outputs will contain instructions to connect to the server via SSH as
 shown in the example above.
 
-### Step 2: Verification
+### Step 2: Test the Auto Unseal Feature
 
 SSH into the provisioned EC2 instance.
 
@@ -169,8 +169,12 @@ Are you sure you want to continue connecting (yes/no)? yes
 ```
 When you are prompted, enter "yes" to continue.
 
+To verify that Vault has been installed, run `vault status` command which should
+respond with "_server is not yet initialized_" message.
 
 ```plaintext
+$ export VAULT_ADDR=http://127.0.0.1:8200
+
 $ vault status
 Error checking seal status: Error making API request.
 
@@ -178,8 +182,13 @@ URL: GET http://127.0.0.1:8200/v1/sys/seal-status
 Code: 400. Errors:
 
 * server is not yet initialized
+```
 
-$ vault init -stored-shares=1 -recovery-shares=1 -recovery-threshold=1 -key-shares=1 -key-threshold=1
+Run the `vault operator init` command to initialize the Vault server by setting
+its key share to be `1` as follow:
+
+```plaintext
+$ vault operator init -stored-shares=1 -recovery-shares=1 -recovery-threshold=1 -key-shares=1 -key-threshold=1
 Recovery Key 1: oOxAQfxcZitjqZfF3984De8rUckPeahQDUvmJ1A4JrQ=
 Initial Root Token: 54c4dbe3-d45b-79d9-18d0-602831a6a991
 
@@ -187,32 +196,49 @@ Vault initialized successfully.
 
 Recovery key initialized with 1 keys and a key threshold of 1. Please
 securely distribute the above keys.
+```
 
-$ systemctl stop vault
-root@ip-192-168-100-100:~# vault status
+Stop and start the Vault server:
+
+```plaintext
+$ sudo systemctl stop vault
+
+$ vault status
 Error checking seal status: Get http://127.0.0.1:8200/v1/sys/seal-status: dial tcp 127.0.0.1:8200: getsockopt: connection refused
 
-$ systemctl start vault
-root@ip-192-168-100-100:~# vault status
+$ sudo systemctl start vault
+```
+
+Check the Vault status to verify that it has been started and unsealed.
+
+```plaintext
+$ vault status
 Type: shamir
 Sealed: false
 Key Shares: 1
 Key Threshold: 1
 Unseal Progress: 0
 Unseal Nonce:
-Version: 0.9.0+prem.hsm
+Version: 0.9.6+prem.hsm
 Cluster Name: vault-cluster-01cf6f33
 Cluster ID: fb787d8a-b882-fee8-b461-445320cde311
 
 High-Availability Enabled: false
+```
 
-$ vault auth 54c4dbe3-d45b-79d9-18d0-602831a6a991
+Log into Vault using the generated initial root token:
+
+```plaintext
+$ vault login 54c4dbe3-d45b-79d9-18d0-602831a6a991
 Successfully authenticated! You are now logged in.
 token: 54c4dbe3-d45b-79d9-18d0-602831a6a991
 token_duration: 0
 token_policies: [root]
+```
 
+Review the Vault configuration file (`/etc/vault.d/vault.hcl`).
 
+```plaintext
 $ cat /etc/vault.d/vault.hcl
 storage "file" {
   path = "/opt/vault"
@@ -226,6 +252,16 @@ seal "awskms" {
 }
 ui=true
 ```
+
+Notice the Vault configuration file defines the [`awskms`
+stanza](/docs/configuration/seal/awskms.html) which sets the AWS KMS key ID to
+use for encryption and decryption.
+
+At this point, you should be able to launch the Vault Enterprise UI by entering
+the address provided in the `terraform apply` outputs (e.g. http://192.0.2.1:8200/ui)
+and log in with your initial root token.
+
+![Unseal with Shamir's Secret Sharing](/assets/images/vault-autounseal-3.png)
 
 
 ### Step 3: Clean Up
