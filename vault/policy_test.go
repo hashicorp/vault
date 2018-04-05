@@ -326,7 +326,7 @@ path "/" {
 		t.Fatalf("expected error")
 	}
 
-	if !strings.Contains(err.Error(), `path "/": invalid capability 'banana'`) {
+	if !strings.Contains(err.Error(), `path "/": invalid capability "banana"`) {
 		t.Errorf("bad error: %s", err)
 	}
 }

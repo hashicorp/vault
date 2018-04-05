@@ -43,7 +43,7 @@ func TestPolicyStore_Root(t *testing.T) {
 
 	// Set should fail
 	err = ps.SetPolicy(context.Background(), p)
-	if err.Error() != "cannot update root policy" {
+	if err.Error() != `cannot update "root" policy` {
 		t.Fatalf("err: %v", err)
 	}
 

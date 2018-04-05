@@ -449,7 +449,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 func TestCore_Remount_Protected(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	err := c.remount(context.Background(), "sys", "foo")
-	if err.Error() != "cannot remount 'sys/'" {
+	if err.Error() != `cannot remount "sys/"` {
 		t.Fatalf("err: %v", err)
 	}
 }
