@@ -166,7 +166,7 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Name:    "version",
 		Target:  &c.flagVersion,
 		Default: 0,
-		Usage:   "Select the version of the engine to run. Not supported by all engines.",
+		Usage:   "Select the version of the auth method to run. Not supported by all auth methods.",
 	})
 
 	return set
