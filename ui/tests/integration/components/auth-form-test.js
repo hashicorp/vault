@@ -35,7 +35,11 @@ test('it renders error on CSP violation', function(assert) {
   this.set('cluster', Ember.Object.create({ standby: true }));
   this.render(hbs`{{auth-form cluster=cluster}}`);
   assert.equal(component.errorText, '');
-  return component.login().then(() => wait()).then(() => {
+  component.login();
+  // because this is an ember-concurrency backed service,
+  // we have to manually force settling the run queue
+  Ember.run.later(() => Ember.run.cancelTimers(), 50);
+  return wait().then(() => {
     assert.equal(component.errorText, CSP_ERR_TEXT);
   });
 });
