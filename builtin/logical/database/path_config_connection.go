@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/fatih/structs"
 	uuid "github.com/hashicorp/go-uuid"
@@ -169,8 +170,8 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 			return nil, err
 		}
 
-		if _, ok := config.ConnectionDetails["connection_url"]; ok {
-			delete(config.ConnectionDetails, "connection_url")
+		if _, ok := config.ConnectionDetails["password"]; ok {
+			delete(config.ConnectionDetails, "password")
 		}
 
 		return &logical.Response{
@@ -226,9 +227,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		delete(data.Raw, "verify_connection")
 		delete(data.Raw, "root_rotation_statements")
 
-		// Create a database plugin and initialize it. This instance is not
-		// going to be used and is initialized just to ensure all parameters
-		// are valid and the connection is verified, if requested.
+		// Create a database plugin and initialize it.
 		db, err := dbplugin.PluginFactory(ctx, pluginName, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
@@ -272,7 +271,16 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		resp := &logical.Response{}
-		resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the connection details as is, including passwords, if any.")
+
+		// The is a simple test to to check for passwords in the connection_url paramater. If one exists,
+		// warn the user to use templated url string
+		if connURLRaw, ok := config.ConnectionDetails["connection_url"]; ok {
+			if connURL, err := url.Parse(connURLRaw.(string)); err == nil {
+				if _, ok := connURL.User.Password(); ok {
+					resp.AddWarning("Password found in connection_url, use a templated url to enable root rotation and prevent read access to password information.")
+				}
+			}
+		}
 
 		return resp, nil
 	}

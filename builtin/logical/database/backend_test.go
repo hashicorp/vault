@@ -17,6 +17,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
+	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/hashicorp/vault/vault"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
@@ -499,6 +500,8 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"connection_url": connURL,
 		"plugin_name":    "postgresql-database-plugin",
 		"allowed_roles":  []string{"plugin-role-test"},
+		"username":       "postgres",
+		"password":       "secret",
 	}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -510,11 +513,25 @@ func TestBackend_connectionCrud(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
+	if len(resp.Warnings) != 1 {
+		t.Fatalf("expected warning about password in url %s, resp:%#v\n", connURL, resp)
+	}
+
+	// Replace connection url with templated version
+	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	data["connection_url"] = connURL
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
 
 	// Read connection
 	expected := map[string]interface{}{
-		"plugin_name":                        "postgresql-database-plugin",
-		"connection_details":                 map[string]interface{}{},
+		"plugin_name": "postgresql-database-plugin",
+		"connection_details": map[string]interface{}{
+			"username":       "postgres",
+			"connection_url": connURL,
+		},
 		"allowed_roles":                      []string{"plugin-role-test"},
 		"root_credentials_rotate_statements": []string{},
 	}
@@ -555,7 +572,11 @@ func TestBackend_connectionCrud(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
 
-	if !testCredsExist(t, credsResp, connURL) {
+	credCheckURL := dbutil.QueryHelper(connURL, map[string]string{
+		"username": "postgres",
+		"password": "secret",
+	})
+	if !testCredsExist(t, credsResp, credCheckURL) {
 		t.Fatalf("Creds should exist")
 	}
 
@@ -895,6 +916,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 }
 
 func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
+	t.Helper()
 	var d struct {
 		Username string `mapstructure:"username"`
 		Password string `mapstructure:"password"`
