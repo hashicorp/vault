@@ -259,11 +259,11 @@ nope = "yes"
 		t.Fatalf("expected error")
 	}
 
-	if !strings.Contains(err.Error(), "invalid key 'bad' on line 2") {
+	if !strings.Contains(err.Error(), `invalid key "bad" on line 2`) {
 		t.Errorf("bad error: %q", err)
 	}
 
-	if !strings.Contains(err.Error(), "invalid key 'nope' on line 3") {
+	if !strings.Contains(err.Error(), `invalid key "nope" on line 3`) {
 		t.Errorf("bad error: %q", err)
 	}
 }
@@ -279,7 +279,7 @@ path "/" {
 		t.Fatalf("expected error")
 	}
 
-	if !strings.Contains(err.Error(), "invalid key 'capabilites' on line 3") {
+	if !strings.Contains(err.Error(), `invalid key "capabilites" on line 3`) {
 		t.Errorf("bad error: %s", err)
 	}
 }
@@ -294,7 +294,7 @@ path "/" {
 		t.Fatalf("expected error")
 	}
 
-	if !strings.Contains(err.Error(), `path "/": invalid policy 'banana'`) {
+	if !strings.Contains(err.Error(), `path "/": invalid policy "banana"`) {
 		t.Errorf("bad error: %s", err)
 	}
 }
@@ -326,7 +326,7 @@ path "/" {
 		t.Fatalf("expected error")
 	}
 
-	if !strings.Contains(err.Error(), `path "/": invalid capability 'banana'`) {
+	if !strings.Contains(err.Error(), `path "/": invalid capability "banana"`) {
 		t.Errorf("bad error: %s", err)
 	}
 }

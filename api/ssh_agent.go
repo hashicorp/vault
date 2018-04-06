@@ -171,7 +171,7 @@ func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
 	}
 
 	if c.VaultAddr == "" {
-		return nil, fmt.Errorf("missing config 'vault_addr'")
+		return nil, fmt.Errorf(`missing config "vault_addr"`)
 	}
 	return &c, nil
 }
