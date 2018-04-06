@@ -102,7 +102,7 @@ GitHub repository to perform the steps described in this guide.
 
 The following assets can be found in the repository:
 
-- Chef cookbook (**`/chef`**): A sample cookbook with a recipe that installs NGINX
+- Chef cookbook (**`/chef/cookbooks`**): A sample cookbook with a recipe that installs NGINX
 and demonstrates Vault Ruby Gem functionality used to interact with Vault APIs.
 - Terraform configurations (**`/terraform-aws`**):
     - **`/terraform-aws/mgmt-node`**: Configuration to set up a management
@@ -110,7 +110,7 @@ and demonstrates Vault Ruby Gem functionality used to interact with Vault APIs.
     - **`/terraform-aws/chef-node`**: Configuration to set up a Chef node and
     bootstrap it with the Chef Server, passing in Vault's AppRole RoleID and the
     appropriate Chef run-list.
-- Vault configuration (**`/vault`**): Data scripts used to configure the
+- Vault configuration (**`/scripts`**): Data scripts used to configure the
 appropriate mounts and policies in Vault for this demo.
 
 
@@ -217,6 +217,12 @@ vault-public-ip = 192.0.2.0
 The Terraform output will display the public IP address to SSH into
 your server.
 
+For example:
+
+```plaintext
+$ ssh -i "/path/to/EC2/private_key.pem" ubuntu@192.0.2.0
+```
+
 **Task 4:** Initial setup of the Chef server takes several minutes. Once you can
 SSH into your mgmt server, run `tail -f /var/log/tf-user-data.log` to see when
 the initial configuration is complete.
@@ -266,8 +272,10 @@ First, initialize and unseal the Vault server using a shortcut.
 
 ~> This is a convenient shortcut for demo. **_DO NOT DO THIS IN PRODUCTION!!!_**
 
+Refer to the [online documentation for initializing and unsealing](/intro/getting-started/deploy.html#initializing-the-vault) Vault for more details.
+
 ```shell
-# Initialize the Vault server and writ out the unseal keys and root token into files
+# Initialize the Vault server and write out the unseal keys and root token into files
 $ curl --silent
        --request PUT \
        --data '{"secret_shares": 1, "secret_threshold": 1}' \
@@ -303,20 +311,14 @@ policies, AppRole auth method, and tokens.
 #### Set up our AppRole policy
 
 This is the policy that will be attached to _secret zero_ which you are
-delivering to our appliaction (**app-1**).
-
-`app-1-secret-read.hcl`:
+delivering to our application (**app-1**).
 
 ```bash
-# Grant rad and list capabilities on secret/app-1 path
-path "secret/app-1" {
-  capabilities = [ "read", "list"]
-}
-```
+# Policy to apply to AppRole token
+tee app-1-secret-read.json <<EOF
+{"policy":"path \"secret/app-1\" {capabilities = [\"read\", \"list\"]}"}
+EOF
 
-Run the following command to write `app-1-secret-read` policy:
-
-```bash
 # Create the app-1-secret-read policy in Vault
 $ curl --silent \
        --location \
