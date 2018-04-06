@@ -221,6 +221,9 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	authPath = ensureTrailingSlash(authPath)
 
 	if c.flagVersion > 0 {
+		if c.flagOptions == nil {
+			c.flagOptions = make(map[string]string)
+		}
 		c.flagOptions["version"] = strconv.Itoa(c.flagVersion)
 	}
 
