@@ -11,6 +11,7 @@ export default Ember.Controller.extend({
     { label: 'Cassandra', value: 'cassandra' },
     { label: 'Consul', value: 'consul' },
     { label: 'Databases', value: 'database' },
+    { label: 'Google Cloud', value: 'gcp' },
     { label: 'KV', value: 'kv' },
     { label: 'MongoDB', value: 'mongodb' },
     { label: 'MS SQL', value: 'mssql', deprecated: true },
