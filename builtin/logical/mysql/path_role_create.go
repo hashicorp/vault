@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"database/sql"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -103,15 +104,7 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 			continue
 		}
 
-		stmt, err := tx.Prepare(Query(query, map[string]string{
-			"name":     username,
-			"password": password,
-		}))
-		if err != nil {
-			return nil, err
-		}
-		defer stmt.Close()
-		if _, err := stmt.Exec(); err != nil {
+		if err := executeStatement(tx, username, password, query); err != nil {
 			return nil, err
 		}
 	}
@@ -134,6 +127,21 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 	resp.Secret.MaxTTL = lease.LeaseMax
 
 	return resp, nil
+}
+
+func executeStatement(tx *sql.Tx, username string, password string, query string) error {
+	stmt, err := tx.Prepare(Query(query, map[string]string{
+		"name":     username,
+		"password": password,
+	}))
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	if _, err := stmt.Exec(); err != nil {
+		return err
+	}
+	return nil
 }
 
 const pathRoleCreateReadHelpSyn = `

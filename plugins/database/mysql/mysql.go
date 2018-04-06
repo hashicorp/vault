@@ -164,27 +164,11 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 				"expiration": expirationStr,
 			})
 
-			stmt, err := tx.PrepareContext(ctx, query)
+			shouldContinue, err := executeCreateUserStmt(ctx, tx, query)
 			if err != nil {
-				// If the error code we get back is Error 1295: This command is not
-				// supported in the prepared statement protocol yet, we will execute
-				// the statement without preparing it. This allows the caller to
-				// manually prepare statements, as well as run other not yet
-				// prepare supported commands. If there is no error when running we
-				// will continue to the next statement.
-				if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
-					_, err = tx.ExecContext(ctx, query)
-					if err != nil {
-						return "", "", err
-					}
-					continue
+				if !shouldContinue {
+					return "", "", err
 				}
-
-				return "", "", err
-			}
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
-				return "", "", err
 			}
 		}
 	}
@@ -195,6 +179,32 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	}
 
 	return username, password, nil
+}
+
+func executeCreateUserStmt(ctx context.Context, tx *sql.Tx, query string) (shouldContinue bool, err error) {
+	stmt, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		// If the error code we get back is Error 1295: This command is not
+		// supported in the prepared statement protocol yet, we will execute
+		// the statement without preparing it. This allows the caller to
+		// manually prepare statements, as well as run other not yet
+		// prepare supported commands. If there is no error when running we
+		// will continue to the next statement.
+		if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
+			_, err = tx.ExecContext(ctx, query)
+			if err != nil {
+				return false, err
+			}
+			return true, err
+		}
+
+		return false, err
+	}
+	defer stmt.Close()
+	if _, err := stmt.ExecContext(ctx); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // NOOP
@@ -291,16 +301,7 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 			if len(query) == 0 {
 				continue
 			}
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-				"username": m.Username,
-				"password": password,
-			}))
-			if err != nil {
-				return nil, err
-			}
-
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
+			if err := executeRotateStmt(ctx, tx, query, m.Username, password); err != nil {
 				return nil, err
 			}
 		}
@@ -316,4 +317,20 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 
 	m.RawConfig["password"] = password
 	return m.RawConfig, nil
+}
+
+func executeRotateStmt(ctx context.Context, tx *sql.Tx, query string, username string, password string) error {
+	stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+		"username": username,
+		"password": password,
+	}))
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+	if _, err := stmt.ExecContext(ctx); err != nil {
+		return err
+	}
+	return nil
 }

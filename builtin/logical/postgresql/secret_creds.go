@@ -211,14 +211,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 		// many permissions as possible right now
 		var lastStmtError error
 		for _, query := range revocationStmts {
-			stmt, err := db.Prepare(query)
-			if err != nil {
-				lastStmtError = err
-				continue
-			}
-			defer stmt.Close()
-			_, err = stmt.Exec()
-			if err != nil {
+			if err := execute(db, query); err != nil {
 				lastStmtError = err
 			}
 		}
@@ -258,15 +251,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 				continue
 			}
 
-			stmt, err := tx.Prepare(Query(query, map[string]string{
-				"name": username,
-			}))
-			if err != nil {
-				return nil, err
-			}
-			defer stmt.Close()
-
-			if _, err := stmt.Exec(); err != nil {
+			if err := executeRevokeStatement(tx, username, query); err != nil {
 				return nil, err
 			}
 		}
@@ -277,4 +262,32 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	return resp, nil
+}
+
+func execute(db *sql.DB, query string) error {
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func executeRevokeStatement(tx *sql.Tx, username string, query string) error {
+	stmt, err := tx.Prepare(Query(query, map[string]string{
+		"name": username,
+	}))
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	if _, err := stmt.Exec(); err != nil {
+		return err
+	}
+	return nil
 }

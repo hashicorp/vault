@@ -130,15 +130,9 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revokeStmts {
-		stmt, err := db.Prepare(query)
-		if err != nil {
+		if err := execute(db, query); err != nil {
 			lastStmtError = err
 			continue
-		}
-		defer stmt.Close()
-		_, err = stmt.Exec()
-		if err != nil {
-			lastStmtError = err
 		}
 	}
 
@@ -161,6 +155,19 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	return nil, nil
+}
+
+func execute(db *sql.DB, query string) error {
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 const dropUserSQL = `

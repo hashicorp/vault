@@ -143,16 +143,7 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 				continue
 			}
 
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-				"name":       username,
-				"password":   password,
-				"expiration": expirationStr,
-			}))
-			if err != nil {
-				return "", "", err
-			}
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
+			if err := executeStatement(ctx, tx, query, username, password, expirationStr); err != nil {
 				return "", "", err
 			}
 		}
@@ -238,14 +229,7 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 				continue
 			}
 
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-				"name": username,
-			}))
-			if err != nil {
-				return err
-			}
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
+			if err := execute(ctx, tx, query, username); err != nil {
 				return err
 			}
 		}
@@ -300,4 +284,34 @@ func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 // RotateRootCredentials is not currently supported on HANA
 func (h *HANA) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
 	return nil, errors.New("root credentaion rotation is not currently implemented in this database secrets engine")
+}
+
+func executeStatement(ctx context.Context, tx *sql.Tx, query string, username string, password string, expirationStr string) error {
+	stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+		"name":       username,
+		"password":   password,
+		"expiration": expirationStr,
+	}))
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	if _, err := stmt.ExecContext(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func execute(ctx context.Context, tx *sql.Tx, query string, username string) error {
+	stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+		"name": username,
+	}))
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	if _, err := stmt.ExecContext(ctx); err != nil {
+		return err
+	}
+	return nil
 }
