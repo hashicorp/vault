@@ -169,7 +169,7 @@ func TestRenewer_Renew(t *testing.T) {
 
 			secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 				Policies:       []string{"default"},
-				TTL:            "2s",
+				TTL:            "3s",
 				ExplicitMaxTTL: "10s",
 			})
 			if err != nil {
@@ -198,8 +198,8 @@ func TestRenewer_Renew(t *testing.T) {
 				if !renew.Secret.Auth.Renewable {
 					t.Errorf("expected lease to be renewable: %#v", renew)
 				}
-				if renew.Secret.Auth.LeaseDuration > 2 {
-					t.Errorf("expected lease to < 2s: %#v", renew)
+				if renew.Secret.Auth.LeaseDuration > 3 {
+					t.Errorf("expected lease to < 3s: %#v", renew)
 				}
 				if renew.Secret.Auth.ClientToken == "" {
 					t.Error("expected a client token")
@@ -207,7 +207,7 @@ func TestRenewer_Renew(t *testing.T) {
 				if renew.Secret.Auth.Accessor == "" {
 					t.Error("expected an accessor")
 				}
-			case <-time.After(3 * time.Second):
+			case <-time.After(5 * time.Second):
 				t.Errorf("no renewal")
 			}
 
@@ -221,7 +221,7 @@ func TestRenewer_Renew(t *testing.T) {
 					break outer
 				case <-v.RenewCh():
 					continue outer
-				case <-time.After(3 * time.Second):
+				case <-time.After(5 * time.Second):
 					t.Errorf("no data")
 					break outer
 				}
