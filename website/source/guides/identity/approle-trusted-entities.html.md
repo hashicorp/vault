@@ -308,14 +308,16 @@ would typically be done by a Vault administrator.
 Now that you have your Vault server unsealed, you can begin to set up necessary
 policies, AppRole auth method, and tokens.
 
-#### Set up our AppRole policy
+#### Task 1: Set up our AppRole policy
 
 This is the policy that will be attached to _secret zero_ which you are
 delivering to our application (**app-1**).
 
+**API call using cURL**
+
 ```bash
 # Policy to apply to AppRole token
-tee app-1-secret-read.json <<EOF
+$ tee app-1-secret-read.json <<EOF
 {"policy":"path \"secret/app-1\" {capabilities = [\"read\", \"list\"]}"}
 EOF
 
@@ -328,7 +330,24 @@ $ curl --silent \
        $VAULT_ADDR/v1/sys/policy/app-1-secret-read
 ```
 
-#### Enable the AppRole authentication method
+**CLI command**
+
+```bash
+# Policy to apply to AppRole token
+$ tee app-1-secret-read.hcl <<EOF
+path "secret/app-1" {
+  capabilities = ["read", "list"]
+}
+EOF
+
+# Create the app-1-secret-read policy in Vault
+$ vault policy write app-1-secret-read app-1-secret-read.hcl
+```
+
+
+#### Task 2: Enable the AppRole authentication method
+
+**API call using cURL**
 
 ```bash
 # Payload for invoking sys/auth API endpoint
@@ -348,9 +367,17 @@ $ curl --silent \
        $VAULT_ADDR/v1/sys/auth/approle
 ```
 
-#### Configure the AppRole
+**CLI command**
+
+```plaintext
+$ vault auth enable -description="Demo AppRole auth method" approle
+```
+
+#### Task 3: Configure the AppRole
 
 Now, you are going to create an AppRole role named, **app-1**.
+
+**API call using cURL**
 
 ```bash
 # Payload containing AppRole auth method configuration
@@ -379,6 +406,14 @@ $ curl --silent \
        $VAULT_ADDR/v1/auth/approle/role/app-1
 ```
 
+**CLI command**
+
+```bash
+# TTL is set to 10 minutes, and Max TTL to be 30 minutes
+$ vault write auth/approle/role/app-1 policies="app-1-secret-read" token_ttl="10m" token_max_ttl="30m"
+```
+
+
 ### Step 4: Configure Tokens for Terraform and Chef
 
 Now, you're ready to configure the policies and tokens to Terraform and Chef to
@@ -391,6 +426,8 @@ _but not both_.
 #### Task 1: Create a policy and token for Terraform
 Create a token with appropriate policies allowing Terraform to pull
 the `RoleID` from Vault:
+
+**API call using cURL**
 
 ```bash
 # Policy file granting to retrieve RoleID from Vault
@@ -428,8 +465,8 @@ $ tee roleid-token-config.json <<EOF
     "app-1-approle-roleid-get",
     "terraform-token-create"
   ],
-  "metadata": {
-    "user": "chef-demo"
+  "meta": {
+    "user": "terraform-demo"
   },
   "ttl": "720h",
   "renewable": true
@@ -467,17 +504,67 @@ $ cat roleid-token.json | jq
       "default",
       "terraform-token-create"
     ],
-    "metadata": null,
+    "metadata": {
+      "user": "terraform-demo"
+    },
     "lease_duration": 2592000,
     "renewable": true,
     "entity_id": ""
   }
 }
 ```
+<br>
+**CLI command**
+
+```bash
+# Policy file granting to retrieve RoleID from Vault
+$ tee app-1-approle-roleid-get.hcl <<EOF
+path "auth/approle/role/app-1/role-id" {
+  capabilities = [ "read" ]
+}
+EOF
+
+# Create the app-1-approle-roleid-get policy in Vault
+$ vault policy write app-1-approle-roleid-get app-1-approle-roleid-get.hcl
+
+# For Terraform
+# See: https://www.terraform.io/docs/providers/vault/index.html#token
+# Policy granting to create tokens required by Terraform
+$ tee terraform-token-create.hcl <<EOF
+path "auth/token/create" {
+  capabilities = [ "update" ]
+}
+EOF
+
+# Create the app-1-approle-roleid-get policy in Vault
+$ vault policy write terraform-token-create terraform-token-create.hcl
+
+# Get token and save it in roleid-token.txt
+$ vault token create -policy="app-1-approle-roleid-get" -policy="terraform-token-create" \
+      -metadata="user"="terraform-user" > roleid-token.txt
+```
+
+The token and associated metadata will be written out to the file
+`roleid-token.txt`. The `token` value is what you'll give to Terraform.
+The file should look similar to the following:
+
+```plaintext
+$ cat roleid-token.txt
+Key                Value
+---                -----
+token              2600aeda-6385-c163-7171-543b1e1fabcf
+token_accessor     6ef835e3-4948-8c61-1e89-3625ca31fd84
+token_duration     768h
+token_renewable    true
+token_policies     [app-1-approle-roleid-get default terraform-token-create]
+token_meta_user    terraform-demo
+```
 
 #### Task 2: Create a policy and token for Chef
 Create a token with appropriate policies allowing Chef to pull the `SecretID`
 from Vault:
+
+**API call using cURL**
 
 ```bash
 # Policy file granting to retrieve SecretID
@@ -499,7 +586,7 @@ $ tee secretid-token-config.json <<EOF
   "policies": [
     "app-1-approle-secretid-create"
   ],
-  "metadata": {
+  "meta": {
     "user": "chef-demo"
   },
   "ttl": "720h",
@@ -535,13 +622,49 @@ $ cat secretid-token.json | jq
       "app-1-approle-secretid-create",
       "default"
     ],
-    "metadata": null,
+    "metadata": {
+      "user": "chef-demo"
+    },
     "lease_duration": 2592000,
     "renewable": true,
     "entity_id": ""
   }
 }
 ```
+
+<br>
+**CLI command**
+
+```bash
+# Policy file granting to retrieve SecretID
+$ tee app-1-approle-secretid-create.hcl <<EOF
+path "auth/approle/role/app-1/secret-id" {
+  capabilities = [ "update" ]
+}
+EOF
+
+# Create the app-1-approle-secretid-create policy in Vault
+$ vault policy write app-1-approle-secretid-create app-1-approle-secretid-create.hcl
+
+# Get token for Chef to get SecretID from Vault and store it in secretid-token.txt
+$ vault token create -policy="app-1-approle-secretid-create" \
+      -metadata="user"="chef-demo" > secretid-token.txt
+```
+
+The resulting file should look like this:
+
+```plaintext
+$ cat secretid-token.txt
+Key                Value
+---                -----
+token              20d69183-59cb-c953-6dea-34f5f1bbe5f7
+token_accessor     a17e7a43-c14a-b96a-0014-9149d218e74a
+token_duration     768h
+token_renewable    true
+token_policies     [app-1-approle-secretid-create default]
+token_meta_user    chef-demo
+```
+
 
 
 ### Step 5: Save the Token in a Chef Data Bag
@@ -604,6 +727,8 @@ wrap_info:
 Let's write some test data in the `secret/app-1` path so that the target app
 will have some secret to retrieve from Vault at a later step.
 
+**API call using cURL**
+
 ```bash
 # Write some demo secrets
 $ tee demo-secrets.json <<'EOF'
@@ -619,22 +744,13 @@ $ curl --silent \
        --request POST \
        --data @demo-secrets.json \
        $VAULT_ADDR/v1/secret/app-1
-```
 
-
-Verify that you can read the data:
-
-```plaintext
+# Verify that you can read back the data:
 $ curl --silent \
        --location \
        --header "X-Vault-Token: $VAULT_TOKEN" \
        --request GET \
        $VAULT_ADDR/v1/secret/app-1 | jq
-```
-
-You should see the following:
-
-```plaintext
 {
   "request_id": "1f73c7ee-27fa-bad0-9c77-b330eef1ea88",
   "lease_id": "",
@@ -650,7 +766,23 @@ You should see the following:
 }
 ```
 
-At this point, just about all the pieces are in place. Remember, these setup
+**CLI command**
+
+```bash
+# Write some demo secrets
+$ vault write secret/app-1 username="app-1-user" password="\$up3r\$3cr3t!"
+
+# Verify that you can read back the data:
+$ vault read secret/app-1
+Key                 Value
+---                 -----
+refresh_interval    768h
+password            $up3r$3cr3t!
+username            app-1-user
+```
+
+
+-> At this point, just about all the pieces are in place. Remember, these setup
 steps will only need to be performed upon initial creation of an AppRole, and
 would typically be done by a Vault administrator.
 
@@ -658,7 +790,7 @@ would typically be done by a Vault administrator.
 
 ## <a name="phase2"></a>Phase 2: Provision our Chef Node to Show AppRole Login
 
-To complete the demo, run the `chef-node` Terraform configuration to see how
+To complete the demo, run the **`chef-node`** Terraform configuration to see how
 everything talks to each other.
 
 #### Task 1: Change the working directory
