@@ -871,6 +871,12 @@
 			"revisionTime": "2018-02-23T16:03:09Z"
 		},
 		{
+			"checksumSHA1": "VsE3zx2d8kpwj97TWhYddzAwBrY=",
+			"path": "github.com/fatih/color",
+			"revision": "507f6050b8568533fb3f5504de8e5205fa62a114",
+			"revisionTime": "2018-02-13T13:34:03Z"
+		},
+		{
 			"checksumSHA1": "5BP5xofo0GoFi6FtgqFFbmHyUKI=",
 			"path": "github.com/fatih/structs",
 			"revision": "ebf56d35bba727c68ac77f56f2fcf90b181851aa",
@@ -1485,8 +1491,8 @@
 		{
 			"checksumSHA1": "SEnjvwVyfuU2xBaOfXfwPD5MZqk=",
 			"path": "github.com/mattn/go-colorable",
-			"revision": "7dc3415be66d7cc68bf0182f35c8d31f8d2ad8a7",
-			"revisionTime": "2018-02-05T07:01:58Z"
+			"revision": "efa589957cd060542a26d2dd7832fd6a6c6c3ade",
+			"revisionTime": "2018-03-10T13:32:14Z"
 		},
 		{
 			"checksumSHA1": "w5RcOnfv5YDr3j2bd1YydkPiZx4=",
@@ -1513,10 +1519,10 @@
 			"revisionTime": "2018-01-25T10:38:03Z"
 		},
 		{
-			"checksumSHA1": "GTwA+0jQnOqTHsVaBIMvTKaE5eI=",
+			"checksumSHA1": "+o0siVvR8q36mKCpT5F/Sn2T7xo=",
 			"path": "github.com/mitchellh/cli",
-			"revision": "518dc677a1e1222682f4e7db06721942cb8e9e4c",
-			"revisionTime": "2018-01-17T15:54:40Z"
+			"revision": "c54c85e9bd492bdba226ffdda55d4e293b79f8e8",
+			"revisionTime": "2018-04-06T01:10:36Z"
 		},
 		{
 			"checksumSHA1": "+p4JY4wmFQAppCdlrJ8Kxybmht8=",
