@@ -194,7 +194,7 @@ created. If all looks good, then perform a `terraform apply` to provision the
 resources. The Terraform output will display the public IP address to SSH into
 your server.
 
-```shell
+```plaintext
 $ terraform init
 Initializing provider plugins...
 ...
@@ -221,13 +221,13 @@ your server.
 SSH into your mgmt server, run `tail -f /var/log/tf-user-data.log` to see when
 the initial configuration is complete.
 
-```shell
+```plaintext
 $ tail -f /var/log/tf-user-data.log
 ```
 
 When you see the following message, the initial setup is complete.
 
-```shell
+```plaintext
 + echo '2018/03/27 21:53:06 /var/lib/cloud/instance/scripts/part-001: Complete'
 ```
 
@@ -246,7 +246,7 @@ manually
 
 Before moving on, set your working environment variables in your mgmt server:
 
-```shell
+```plaintext
 $ export VAULT_ADDR=http://127.0.0.1:8200
 $ export VAULT_SKIP_VERIFY=true
 ```
@@ -447,7 +447,7 @@ The token and associated metadata will be written out to the file
 `roleid-token.json`. The `client_token` value is what you'll give to Terraform.
 The file should look similar to the following:
 
-```bash
+```plaintext
 $ cat roleid-token.json | jq
 {
   "request_id": "2e1d05eb-988d-4cf7-7b6a-d2668de31536",
@@ -516,7 +516,7 @@ $ curl --silent \
 
 The resulting file should look like this:
 
-```bash
+```plaintext
 $ cat secretid-token.json | jq
 {
   "request_id": "6f6ad8a1-fedb-b838-60ce-87999f01aff6",
@@ -574,7 +574,7 @@ $ knife data bag show secretid-token approle-secretid-token
 
 The last step should show the following output:
 
-```bash
+```plaintext
 $ knife data bag show secretid-token approle-secretid-token
 WARNING: Unencrypted data bag detected, ignoring any provided secret options.
 auth:
@@ -622,7 +622,7 @@ $ curl --silent \
 
 Verify that you can read the data:
 
-```bash
+```plaintext
 $ curl --silent \
        --location \
        --header "X-Vault-Token: $VAULT_TOKEN" \
@@ -632,7 +632,7 @@ $ curl --silent \
 
 You should see the following:
 
-```json
+```plaintext
 {
   "request_id": "1f73c7ee-27fa-bad0-9c77-b330eef1ea88",
   "lease_id": "",
@@ -665,7 +665,7 @@ Open another terminal on your host machine (**not** the `mgmt-node`)
 and `cd` into the `identity/vault-chef-approle/terraform-aws/chef-node`
 directory:
 
-```bash
+```plaintext
 $ cd identity/vault-chef-approle/terraform-aws/chef-node
 ```
 
@@ -684,9 +684,9 @@ in [Step 4](#step-4-configure-tokens-for-terraform-and-chef).
   `client_token` in the `/home/ubuntu/vault-chef-approle-demo/roleid-token.json`
   file:
 
-  ```shell
-  $ cat ~/vault-chef-approle-demo/roleid-token.json | jq ".auth.client_token"
-  ```
+```plaintext
+$ cat ~/vault-chef-approle-demo/roleid-token.json | jq ".auth.client_token"
+```
 
 
 #### Task 3: Run Terraform
@@ -701,7 +701,7 @@ server.
 > **NOTE:** If the `terraform apply` fails with "`io: read/write on closed pipe`"
 error, this is a [known
 issue](https://github.com/hashicorp/terraform/issues/17638) with Terraform
-0.11.4 and 0.11.5.  Please try again with another Terraform version. 
+0.11.4 and 0.11.5.  Please try again with another Terraform version.
 
 At this point, Terraform will perform the following actions:
 
@@ -757,9 +757,9 @@ Read Our Secrets:
 
 ## Additional References
 
-The following is a curated list of webinars/blogs/etc. that add additional
-context to fill out the concepts discussed in the webinar and demonstrated in
-the code:
+The following is a curated list of webinars, blogs and GitHub repositories that
+add additional context to fill out the concepts discussed in the webinar and
+demonstrated in the code:
 
 - [Managing Secrets in a Container Environment by Jeff Mitchell](https://www.youtube.com/watch?v=skENC9aXgco)
 - [Using HashiCorp's Vault with Chef written by Seth Vargo](https://www.hashicorp.com/blog/using-hashicorps-vault-with-chef)
