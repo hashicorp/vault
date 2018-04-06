@@ -362,7 +362,7 @@ func TestHandler_sealed(t *testing.T) {
 func TestHandler_error(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	respondError(w, 500, errors.New("Test Error"))
+	respondError(w, 500, errors.New("test Error"))
 
 	if w.Code != 500 {
 		t.Fatalf("expected 500, got %d", w.Code)

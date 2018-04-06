@@ -159,7 +159,7 @@ func kvDeleteRequest(client *api.Client, path string) (*api.Secret, error) {
 func addPrefixToVKVPath(p, apiPrefix string) (string, error) {
 	parts := strings.SplitN(p, "/", 2)
 	if len(parts) != 2 {
-		return "", errors.New("Invalid path")
+		return "", errors.New("invalid path")
 	}
 
 	return path.Join(parts[0], apiPrefix, parts[1]), nil

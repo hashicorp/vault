@@ -87,7 +87,7 @@ func prepareCouchdbDBTestContainer(t *testing.T) (cleanup func(), retAddress, us
 			return err
 		}
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("Expected couchdb to return status code 200, got (%s) instead.", resp.Status)
+			return fmt.Errorf("expected couchdb to return status code 200, got (%s) instead.", resp.Status)
 		}
 		return nil
 	}); err != nil {

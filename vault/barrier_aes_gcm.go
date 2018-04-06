@@ -107,7 +107,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key []byte) error {
 	// Verify the key size
 	min, max := b.KeyLength()
 	if len(key) < min || len(key) > max {
-		return fmt.Errorf("Key size must be %d or %d", min, max)
+		return fmt.Errorf("key size must be %d or %d", min, max)
 	}
 
 	// Check if already initialized
@@ -626,7 +626,7 @@ func (b *AESGCMBarrier) updateMasterKeyCommon(key []byte) (*Keyring, error) {
 	// Verify the key size
 	min, max := b.KeyLength()
 	if len(key) < min || len(key) > max {
-		return nil, fmt.Errorf("Key size must be %d or %d", min, max)
+		return nil, fmt.Errorf("key size must be %d or %d", min, max)
 	}
 
 	return b.keyring.SetMasterKey(key), nil

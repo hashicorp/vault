@@ -414,7 +414,7 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUsage, extUsage x509.ExtKeyUsage, validity time.Duration, certBundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
 	parsedCertBundle, err := certBundle.ToParsedCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing cert bundle: %s", err)
+		return nil, fmt.Errorf("error parsing cert bundle: %s", err)
 	}
 
 	if key != nil {
@@ -428,69 +428,69 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 			parsedCertBundle.PrivateKey = key
 			parsedCertBundle.PrivateKeyBytes, err = x509.MarshalECPrivateKey(key.(*ecdsa.PrivateKey))
 			if err != nil {
-				return nil, fmt.Errorf("Error parsing EC key: %s", err)
+				return nil, fmt.Errorf("error parsing EC key: %s", err)
 			}
 		}
 	}
 
 	switch {
 	case parsedCertBundle.Certificate == nil:
-		return nil, fmt.Errorf("Did not find a certificate in the cert bundle")
+		return nil, fmt.Errorf("did not find a certificate in the cert bundle")
 	case len(parsedCertBundle.CAChain) == 0 || parsedCertBundle.CAChain[0].Certificate == nil:
-		return nil, fmt.Errorf("Did not find a CA in the cert bundle")
+		return nil, fmt.Errorf("did not find a CA in the cert bundle")
 	case parsedCertBundle.PrivateKey == nil:
-		return nil, fmt.Errorf("Did not find a private key in the cert bundle")
+		return nil, fmt.Errorf("did not find a private key in the cert bundle")
 	case parsedCertBundle.PrivateKeyType == certutil.UnknownPrivateKey:
-		return nil, fmt.Errorf("Could not figure out type of private key")
+		return nil, fmt.Errorf("could not figure out type of private key")
 	}
 
 	switch {
 	case parsedCertBundle.PrivateKeyType == certutil.RSAPrivateKey && keyType != "rsa":
 		fallthrough
 	case parsedCertBundle.PrivateKeyType == certutil.ECPrivateKey && keyType != "ec":
-		return nil, fmt.Errorf("Given key type does not match type found in bundle")
+		return nil, fmt.Errorf("given key type does not match type found in bundle")
 	}
 
 	cert := parsedCertBundle.Certificate
 
 	if usage != cert.KeyUsage {
-		return nil, fmt.Errorf("Expected usage of %#v, got %#v; ext usage is %#v", usage, cert.KeyUsage, cert.ExtKeyUsage)
+		return nil, fmt.Errorf("expected usage of %#v, got %#v; ext usage is %#v", usage, cert.KeyUsage, cert.ExtKeyUsage)
 	}
 
 	// There should only be one ext usage type, because only one is requested
 	// in the tests
 	if len(cert.ExtKeyUsage) != 1 {
-		return nil, fmt.Errorf("Got wrong size key usage in generated cert; expected 1, values are %#v", cert.ExtKeyUsage)
+		return nil, fmt.Errorf("got wrong size key usage in generated cert; expected 1, values are %#v", cert.ExtKeyUsage)
 	}
 	switch extUsage {
 	case x509.ExtKeyUsageEmailProtection:
 		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageEmailProtection {
-			return nil, fmt.Errorf("Bad extended key usage")
+			return nil, fmt.Errorf("bad extended key usage")
 		}
 	case x509.ExtKeyUsageServerAuth:
 		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageServerAuth {
-			return nil, fmt.Errorf("Bad extended key usage")
+			return nil, fmt.Errorf("bad extended key usage")
 		}
 	case x509.ExtKeyUsageClientAuth:
 		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageClientAuth {
-			return nil, fmt.Errorf("Bad extended key usage")
+			return nil, fmt.Errorf("bad extended key usage")
 		}
 	case x509.ExtKeyUsageCodeSigning:
 		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageCodeSigning {
-			return nil, fmt.Errorf("Bad extended key usage")
+			return nil, fmt.Errorf("bad extended key usage")
 		}
 	}
 
 	// 40 seconds since we add 30 second slack for clock skew
 	if math.Abs(float64(time.Now().Unix()-cert.NotBefore.Unix())) > 40 {
-		return nil, fmt.Errorf("Validity period starts out of range")
+		return nil, fmt.Errorf("validity period starts out of range")
 	}
 	if !cert.NotBefore.Before(time.Now().Add(-10 * time.Second)) {
-		return nil, fmt.Errorf("Validity period not far enough in the past")
+		return nil, fmt.Errorf("validity period not far enough in the past")
 	}
 
 	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 20 {
-		return nil, fmt.Errorf("Certificate validity end: %s; expected within 20 seconds of %s", cert.NotAfter.Format(time.RFC3339), time.Now().Add(validity).Format(time.RFC3339))
+		return nil, fmt.Errorf("certificate validity end: %s; expected within 20 seconds of %s", cert.NotAfter.Format(time.RFC3339), time.Now().Add(validity).Format(time.RFC3339))
 	}
 
 	return parsedCertBundle, nil
@@ -853,7 +853,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 					return fmt.Errorf("CA certificate:\n%#v\ndoes not match original:\n%#v\n", rawBytes, []byte(caCert))
 				}
 				if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
-					return fmt.Errorf("Expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
+					return fmt.Errorf("expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
 				}
 				return nil
 			},
@@ -873,7 +873,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", pemBytes, caCert)
 				}
 				if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
-					return fmt.Errorf("Expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
+					return fmt.Errorf("expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
 				}
 				return nil
 			},
@@ -934,7 +934,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", string(rawBytes), caCert)
 				}
 				if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
-					return fmt.Errorf("Expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
+					return fmt.Errorf("expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
 				}
 				return nil
 			},
@@ -954,7 +954,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", pemBytes, caCert)
 				}
 				if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
-					return fmt.Errorf("Expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
+					return fmt.Errorf("expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
 				}
 				return nil
 			},
@@ -1540,7 +1540,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		if resp.IsError() {
 			return nil
 		}
-		return fmt.Errorf("Expected an error, but did not seem to get one")
+		return fmt.Errorf("expected an error, but did not seem to get one")
 	}
 
 	// Adds tests with the currently configured issue/role information
@@ -1573,13 +1573,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return fmt.Errorf("Error checking generated certificate: %s", err)
+				return fmt.Errorf("error checking generated certificate: %s", err)
 			}
 			cert := parsedCertBundle.Certificate
 
 			expected := strutil.RemoveDuplicates(role.Country, true)
 			if !reflect.DeepEqual(cert.Subject.Country, expected) {
-				return fmt.Errorf("Error: returned certificate has Country of %s but %s was specified in the role.", cert.Subject.Country, expected)
+				return fmt.Errorf("error: returned certificate has Country of %s but %s was specified in the role", cert.Subject.Country, expected)
 			}
 			return nil
 		}
@@ -1594,13 +1594,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return fmt.Errorf("Error checking generated certificate: %s", err)
+				return fmt.Errorf("error checking generated certificate: %s", err)
 			}
 			cert := parsedCertBundle.Certificate
 
 			expected := strutil.RemoveDuplicates(role.OU, true)
 			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
-				return fmt.Errorf("Error: returned certificate has OU of %s but %s was specified in the role.", cert.Subject.OrganizationalUnit, expected)
+				return fmt.Errorf("error: returned certificate has OU of %s but %s was specified in the role", cert.Subject.OrganizationalUnit, expected)
 			}
 			return nil
 		}
@@ -1615,13 +1615,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return fmt.Errorf("Error checking generated certificate: %s", err)
+				return fmt.Errorf("error checking generated certificate: %s", err)
 			}
 			cert := parsedCertBundle.Certificate
 
 			expected := strutil.RemoveDuplicates(role.Organization, true)
 			if !reflect.DeepEqual(cert.Subject.Organization, expected) {
-				return fmt.Errorf("Error: returned certificate has Organization of %s but %s was specified in the role.", cert.Subject.Organization, expected)
+				return fmt.Errorf("error: returned certificate has Organization of %s but %s was specified in the role", cert.Subject.Organization, expected)
 			}
 			return nil
 		}
@@ -1636,13 +1636,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return fmt.Errorf("Error checking generated certificate: %s", err)
+				return fmt.Errorf("error checking generated certificate: %s", err)
 			}
 			cert := parsedCertBundle.Certificate
 
 			expected := strutil.RemoveDuplicates(role.Locality, true)
 			if !reflect.DeepEqual(cert.Subject.Locality, expected) {
-				return fmt.Errorf("Error: returned certificate has Locality of %s but %s was specified in the role.", cert.Subject.Locality, expected)
+				return fmt.Errorf("error: returned certificate has Locality of %s but %s was specified in the role", cert.Subject.Locality, expected)
 			}
 			return nil
 		}
@@ -1657,13 +1657,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return fmt.Errorf("Error checking generated certificate: %s", err)
+				return fmt.Errorf("error checking generated certificate: %s", err)
 			}
 			cert := parsedCertBundle.Certificate
 
 			expected := strutil.RemoveDuplicates(role.Province, true)
 			if !reflect.DeepEqual(cert.Subject.Province, expected) {
-				return fmt.Errorf("Error: returned certificate has Province of %s but %s was specified in the role.", cert.Subject.Province, expected)
+				return fmt.Errorf("error: returned certificate has Province of %s but %s was specified in the role", cert.Subject.Province, expected)
 			}
 			return nil
 		}
@@ -1678,13 +1678,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return fmt.Errorf("Error checking generated certificate: %s", err)
+				return fmt.Errorf("error checking generated certificate: %s", err)
 			}
 			cert := parsedCertBundle.Certificate
 
 			expected := strutil.RemoveDuplicates(role.StreetAddress, true)
 			if !reflect.DeepEqual(cert.Subject.StreetAddress, expected) {
-				return fmt.Errorf("Error: returned certificate has StreetAddress of %s but %s was specified in the role.", cert.Subject.StreetAddress, expected)
+				return fmt.Errorf("error: returned certificate has StreetAddress of %s but %s was specified in the role", cert.Subject.StreetAddress, expected)
 			}
 			return nil
 		}
@@ -1699,13 +1699,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return fmt.Errorf("Error checking generated certificate: %s", err)
+				return fmt.Errorf("error checking generated certificate: %s", err)
 			}
 			cert := parsedCertBundle.Certificate
 
 			expected := strutil.RemoveDuplicates(role.PostalCode, true)
 			if !reflect.DeepEqual(cert.Subject.PostalCode, expected) {
-				return fmt.Errorf("Error: returned certificate has PostalCode of %s but %s was specified in the role.", cert.Subject.PostalCode, expected)
+				return fmt.Errorf("error: returned certificate has PostalCode of %s but %s was specified in the role", cert.Subject.PostalCode, expected)
 			}
 			return nil
 		}
@@ -1722,19 +1722,19 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			parsedCertBundle, err := checkCertsAndPrivateKey(role.KeyType, key, usage, extUsage, validity, &certBundle)
 			if err != nil {
-				return fmt.Errorf("Error checking generated certificate: %s", err)
+				return fmt.Errorf("error checking generated certificate: %s", err)
 			}
 			cert := parsedCertBundle.Certificate
 			if cert.Subject.CommonName != name {
-				return fmt.Errorf("Error: returned certificate has CN of %s but %s was requested", cert.Subject.CommonName, name)
+				return fmt.Errorf("error: returned certificate has CN of %s but %s was requested", cert.Subject.CommonName, name)
 			}
 			if strings.Contains(cert.Subject.CommonName, "@") {
 				if len(cert.DNSNames) != 0 || len(cert.EmailAddresses) != 1 {
-					return fmt.Errorf("Error: found more than one DNS SAN or not one Email SAN but only one was requested, cert.DNSNames = %#v, cert.EmailAddresses = %#v", cert.DNSNames, cert.EmailAddresses)
+					return fmt.Errorf("error: found more than one DNS SAN or not one Email SAN but only one was requested, cert.DNSNames = %#v, cert.EmailAddresses = %#v", cert.DNSNames, cert.EmailAddresses)
 				}
 			} else {
 				if len(cert.DNSNames) != 1 || len(cert.EmailAddresses) != 0 {
-					return fmt.Errorf("Error: found more than one Email SAN or not one DNS SAN but only one was requested, cert.DNSNames = %#v, cert.EmailAddresses = %#v", cert.DNSNames, cert.EmailAddresses)
+					return fmt.Errorf("error: found more than one Email SAN or not one DNS SAN but only one was requested, cert.DNSNames = %#v, cert.EmailAddresses = %#v", cert.DNSNames, cert.EmailAddresses)
 				}
 			}
 			var retName string
@@ -1755,7 +1755,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 					t.Fatal(err)
 				}
 				if converted != name {
-					return fmt.Errorf("Error: returned certificate has a DNS SAN of %s (from idna: %s) but %s was requested", retName, converted, name)
+					return fmt.Errorf("error: returned certificate has a DNS SAN of %s (from idna: %s) but %s was requested", retName, converted, name)
 				}
 			}
 			return nil
