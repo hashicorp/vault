@@ -3,6 +3,7 @@ package command
 import (
 	"flag"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,6 +30,7 @@ type AuthEnableCommand struct {
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
+	flagVersion                   int
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -160,6 +162,13 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Usage:   "Enable seal wrapping of critical values in the secrets engine.",
 	})
 
+	f.IntVar(&IntVar{
+		Name:    "version",
+		Target:  &c.flagVersion,
+		Default: 0,
+		Usage:   "Select the version of the engine to run. Not supported by all engines.",
+	})
+
 	return set
 }
 
@@ -210,6 +219,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 	// Append a trailing slash to indicate it's a path in output
 	authPath = ensureTrailingSlash(authPath)
+
+	if c.flagVersion > 0 {
+		c.flagOptions["version"] = strconv.Itoa(c.flagVersion)
+	}
 
 	authOpts := &api.EnableAuthOptions{
 		Type:        authType,

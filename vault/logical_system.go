@@ -1665,13 +1665,22 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.PassthroughRequestHeaders = apiConfig.PassthroughRequestHeaders
 	}
 
-	// Alias versioned KV
-	if logicalType == "vkv" {
+	// Alias KV v1
+	if logicalType == "kv-v1" {
 		logicalType = "kv"
 		if options == nil {
 			options = map[string]string{}
 		}
-		options["versioned"] = "true"
+		options["version"] = "1"
+	}
+
+	// Alias KV v2
+	if logicalType == "kv-v2" {
+		logicalType = "kv"
+		if options == nil {
+			options = map[string]string{}
+		}
+		options["version"] = "2"
 	}
 
 	// Create the mount entry
@@ -2099,16 +2108,16 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		b.Core.logger.Info("core: mount tuning of options", "path", path, "options", options)
 		// Special case to make sure we can not disable versioning once it's
 		// enabeled. If the vkv backend suports downgrading this can be removed.
-		meVersioned, err := parseutil.ParseBool(mountEntry.Options["versioned"])
+		meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
 		if err != nil {
 			return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
 		}
-		optVersioned, err := parseutil.ParseBool(options["versioned"])
+		optVersion, err := parseutil.ParseInt(options["version"])
 		if err != nil {
 			return handleError(errwrap.Wrapf("unable to parse options: {{err}}", err))
 		}
-		if meVersioned && !optVersioned {
-			return logical.ErrorResponse("cannot disable versioning once it's enabled"), logical.ErrInvalidRequest
+		if meVersion > optVersion {
+			return logical.ErrorResponse(fmt.Sprintf("cannot downgrade mount from version %d", meVersion)), logical.ErrInvalidRequest
 		}
 
 		oldVal := mountEntry.Options
@@ -2125,15 +2134,9 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			return handleError(err)
 		}
 
-		// Another special case to add a warning if we are going to be
-		// upgrading.
-		oldVersioned, err := parseutil.ParseBool(oldVal["versioned"])
-		if err != nil {
-			return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
-		}
-		if !oldVersioned && optVersioned {
+		if meVersion < optVersion {
 			resp = &logical.Response{}
-			resp.AddWarning("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly.")
+			resp.AddWarning(fmt.Sprintf("Upgrading mount from version %d to version %d. This mount will be unavailable for a brief period and will resume service shortly.", meVersion, optVersion))
 		}
 
 		// Reload the backend to kick off the upgrade process.
