@@ -13,7 +13,7 @@ func TestCertificateValidation(t *testing.T) {
 	fd := fieldDataWithSchema()
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.FailNow()
+		t.Error(err)
 	}
 	if config.Certificate != "" {
 		t.FailNow()
@@ -26,7 +26,7 @@ func TestCertificateValidation(t *testing.T) {
 	}
 	config, err = NewConfiguration(hclog.NewNullLogger(), fd)
 	if err == nil {
-		t.FailNow()
+		t.Error(err)
 	}
 
 	// valid certificates should pass inspection
@@ -36,7 +36,7 @@ func TestCertificateValidation(t *testing.T) {
 	}
 	config, err = NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.FailNow()
+		t.Error(err)
 	}
 }
 
@@ -44,7 +44,7 @@ func TestTLSDefaultsTo12(t *testing.T) {
 	fd := fieldDataWithSchema()
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.FailNow()
+		t.Error(err)
 	}
 	expected := uint16(771)
 	if config.TLSMinVersion != expected || config.TLSMaxVersion != expected {
@@ -56,7 +56,7 @@ func TestTLSSessionDefaultsToStarting(t *testing.T) {
 	fd := fieldDataWithSchema()
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.FailNow()
+		t.Error(err)
 	}
 	if !config.StartTLS {
 		t.FailNow()
@@ -67,7 +67,7 @@ func TestTLSSessionDefaultsToSecure(t *testing.T) {
 	fd := fieldDataWithSchema()
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.FailNow()
+		t.Error(err)
 	}
 	if config.InsecureTLS {
 		t.FailNow()
@@ -79,7 +79,7 @@ func TestRootDomainName(t *testing.T) {
 	fd.Raw = map[string]interface{}{}
 	_, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err == nil {
-		t.FailNow()
+		t.Error(err)
 	}
 	fd.Raw = map[string]interface{}{
 		"urls": "ldap://138.91.247.105",
@@ -87,7 +87,7 @@ func TestRootDomainName(t *testing.T) {
 	}
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.FailNow()
+		t.Error(err)
 	}
 	if config.RootDomainName != "example,com" {
 		t.FailNow()
@@ -102,11 +102,11 @@ func TestGetTLSConfigs(t *testing.T) {
 	}
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.FailNow()
+		t.Error(err)
 	}
 	tlsConfigs, err := config.GetTLSConfigs()
 	if err != nil {
-		t.FailNow()
+		t.Error(err)
 	}
 	if len(tlsConfigs) != 1 {
 		t.FailNow()

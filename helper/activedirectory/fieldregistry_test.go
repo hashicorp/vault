@@ -36,7 +36,7 @@ func TestFieldRegistryParsesFieldsByString(t *testing.T) {
 
 	field, err := FieldRegistry.Parse("sn")
 	if err != nil {
-		t.FailNow()
+		t.Error(err)
 	}
 
 	if field != FieldRegistry.Surname {

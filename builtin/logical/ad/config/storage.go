@@ -3,31 +3,32 @@ package config
 import (
 	"context"
 
+	"github.com/hashicorp/vault/helper/activedirectory"
 	"github.com/hashicorp/vault/logical"
 )
 
-const storageKey = "config"
+const StorageKey = "config"
 
-func readConfig(ctx context.Context, storage logical.Storage) (*EngineConf, error) {
+func readConfig(ctx context.Context, storage logical.Storage) (*engineConf, error) {
 
-	engineConf := newUnsetEngineConf()
+	config := &engineConf{&PasswordConf{}, &activedirectory.Configuration{}}
 
-	entry, err := storage.Get(ctx, storageKey)
+	entry, err := storage.Get(ctx, StorageKey)
 	if err != nil {
 		return nil, err
 	}
 	if entry == nil {
-		return engineConf, nil
+		return nil, nil
 	}
 
-	if err := entry.DecodeJSON(engineConf); err != nil {
+	if err := entry.DecodeJSON(config); err != nil {
 		return nil, err
 	}
-	return engineConf, nil
+	return config, nil
 }
 
-func writeConfig(ctx context.Context, storage logical.Storage, config *EngineConf) error {
-	entry, err := logical.StorageEntryJSON(storageKey, config)
+func writeConfig(ctx context.Context, storage logical.Storage, config *engineConf) error {
+	entry, err := logical.StorageEntryJSON(StorageKey, config)
 	if err != nil {
 		return err
 	}
@@ -35,5 +36,5 @@ func writeConfig(ctx context.Context, storage logical.Storage, config *EngineCon
 }
 
 func deleteConfig(ctx context.Context, storage logical.Storage) error {
-	return storage.Delete(ctx, storageKey)
+	return storage.Delete(ctx, StorageKey)
 }

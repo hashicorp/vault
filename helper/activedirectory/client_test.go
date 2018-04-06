@@ -29,8 +29,7 @@ func TestSearch(t *testing.T) {
 
 	entries, err := client.Search(filters)
 	if err != nil {
-		fmt.Println(err.Error())
-		t.FailNow()
+		t.Error(err)
 	}
 
 	if len(entries) != 1 {
@@ -55,6 +54,7 @@ func TestSearch(t *testing.T) {
 
 	result, _ = entry.GetJoined(FieldRegistry.PrimaryGroupID)
 	if result != "513" {
+		t.Error(err)
 		t.FailNow()
 	}
 
@@ -100,7 +100,7 @@ func TestUpdateEntry(t *testing.T) {
 	}
 
 	if err := client.UpdateEntry(filters, newValues); err != nil {
-		t.FailNow()
+		t.Error(err)
 	}
 }
 
@@ -120,7 +120,7 @@ func TestUpdatePassword(t *testing.T) {
 
 	expectedPass, err := formatPassword(testPass)
 	if err != nil {
-		t.FailNow()
+		t.Error(err)
 	}
 	conn.modifyRequestToExpect = &ldap.ModifyRequest{
 		DN: "CN=Jim H.. Jones,OU=Vault,OU=Engineering,DC=example,DC=com",
@@ -140,7 +140,7 @@ func TestUpdatePassword(t *testing.T) {
 	}
 
 	if err := client.UpdatePassword(filters, testPass); err != nil {
-		t.FailNow()
+		t.Error(err)
 	}
 }
 
