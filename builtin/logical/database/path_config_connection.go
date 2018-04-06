@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/fatih/structs"
 	uuid "github.com/hashicorp/go-uuid"
@@ -168,6 +169,16 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		var config DatabaseConfig
 		if err := entry.DecodeJSON(&config); err != nil {
 			return nil, err
+		}
+
+		// Mask the password if it is in the url
+		if connURLRaw, ok := config.ConnectionDetails["connection_url"]; ok {
+			connURL := connURLRaw.(string)
+			if conn, err := url.Parse(connURL); err == nil {
+				if password, ok := conn.User.Password(); ok {
+					config.ConnectionDetails["connection_url"] = strings.Replace(connURL, password, "*****", -1)
+				}
+			}
 		}
 
 		if _, ok := config.ConnectionDetails["password"]; ok {

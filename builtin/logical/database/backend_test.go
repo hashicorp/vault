@@ -519,7 +519,17 @@ func TestBackend_connectionCrud(t *testing.T) {
 		t.Fatalf("expected warning about password in url %s, resp:%#v\n", connURL, resp)
 	}
 
+	req.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+	if strings.Contains(resp.Data["connection_details"].(map[string]interface{})["connection_url"].(string), "secret") {
+		t.Fatal("password should not be found in the connection url")
+	}
+
 	// Replace connection url with templated version
+	req.Operation = logical.UpdateOperation
 	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
 	data["connection_url"] = connURL
 	resp, err = b.HandleRequest(context.Background(), req)
