@@ -210,8 +210,10 @@ func TestBackend_config_connection(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"plugin_name":                        "postgresql-database-plugin",
-		"connection_details":                 map[string]interface{}{},
+		"plugin_name": "postgresql-database-plugin",
+		"connection_details": map[string]interface{}{
+			"connection_url": "sample_connection_url",
+		},
 		"allowed_roles":                      []string{"*"},
 		"root_credentials_rotate_statements": []string{},
 	}
