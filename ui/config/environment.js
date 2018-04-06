@@ -52,6 +52,10 @@ module.exports = function(environment) {
       enabled: false,
     };
   }
+  if (environment !== 'production') {
+    ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
+    ENV.contentSecurityPolicyMeta = true;
+  }
 
   if (environment === 'production') {
   }

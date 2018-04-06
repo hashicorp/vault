@@ -8,7 +8,7 @@ export default Ember.Route.extend(UnloadModelRoute, UnsavedModelRoute, {
   model() {
     let policyType = this.policyType();
 
-    if (!this.get('version.features').includes('Sentinel') && policyType !== 'acl') {
+    if (!this.get('version.hasSentinel') && policyType !== 'acl') {
       return this.transitionTo('vault.cluster.policies', policyType);
     }
     return this.store.createRecord(`policy/${policyType}`, {});
