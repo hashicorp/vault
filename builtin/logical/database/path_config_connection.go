@@ -181,9 +181,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 			}
 		}
 
-		if _, ok := config.ConnectionDetails["password"]; ok {
-			delete(config.ConnectionDetails, "password")
-		}
+		delete(config.ConnectionDetails, "password")
 
 		return &logical.Response{
 			Data: structs.New(config).Map(),
