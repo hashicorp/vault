@@ -330,6 +330,7 @@ $ curl --silent \
        $VAULT_ADDR/v1/sys/policy/app-1-secret-read
 ```
 
+<br>
 **CLI command**
 
 ```bash
@@ -366,7 +367,7 @@ $ curl --silent \
        --data @approle.json \
        $VAULT_ADDR/v1/sys/auth/approle
 ```
-
+<br>
 **CLI command**
 
 ```plaintext
@@ -405,7 +406,7 @@ $ curl --silent \
        --data @app-1-approle-role.json \
        $VAULT_ADDR/v1/auth/approle/role/app-1
 ```
-
+<br>
 **CLI command**
 
 ```bash
@@ -765,7 +766,7 @@ $ curl --silent \
   "auth": null
 }
 ```
-
+<br>
 **CLI command**
 
 ```bash
