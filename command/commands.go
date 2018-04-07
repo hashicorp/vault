@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/mssql"
 	"github.com/hashicorp/vault/builtin/logical/mysql"
 	"github.com/hashicorp/vault/builtin/logical/nomad"
+	"github.com/hashicorp/vault/builtin/logical/openpgp"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/postgresql"
 	"github.com/hashicorp/vault/builtin/logical/rabbitmq"
@@ -120,6 +121,7 @@ var (
 		"mssql":      mssql.Factory,
 		"mysql":      mysql.Factory,
 		"nomad":      nomad.Factory,
+		"openpgp":    openpgp.Factory,
 		"pki":        pki.Factory,
 		"plugin":     plugin.Factory,
 		"postgresql": postgresql.Factory,
