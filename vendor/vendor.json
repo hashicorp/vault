@@ -1285,10 +1285,10 @@
 			"revisionTime": "2018-02-03T00:31:27Z"
 		},
 		{
-			"checksumSHA1": "RX7zonQaV7u0L+0ShGZNMJVqLt8=",
+			"checksumSHA1": "2C/dB4cbq0XihR+kjvVx6+vd0S0=",
 			"path": "github.com/hashicorp/vault-plugin-auth-azure/plugin",
-			"revision": "66be13ef38e71c5ff175b3eaafa01582df5691e4",
-			"revisionTime": "2018-04-04T11:52:51Z"
+			"revision": "b286b6dab40418055cf96240a4d100d7a505b518",
+			"revisionTime": "2018-04-07T15:06:41Z"
 		},
 		{
 			"checksumSHA1": "z3uh8zJmu5wVa22xfPcTt5JDBJg=",
