@@ -53,8 +53,7 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 		return
 	}
 	if barrierConfig == nil {
-		respondError(w, http.StatusBadRequest, fmt.Errorf(
-			"server is not yet initialized"))
+		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"))
 		return
 	}
 

@@ -271,7 +271,7 @@ func Test(tt TestT, c TestCase) {
 		// If the error is a 'logical.ErrorResponse' and if error was not expected,
 		// set the error so that this can be caught below.
 		if resp.IsError() && !s.ErrorOk {
-			err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
+			err = fmt.Errorf("erroneous response:\n\n%#v", resp)
 		}
 
 		// Either the 'err' was nil or if an error was expected, it was set to nil.
@@ -300,7 +300,7 @@ func Test(tt TestT, c TestCase) {
 		req.ClientToken = client.Token()
 		resp, err := core.HandleRequest(req)
 		if err == nil && resp.IsError() {
-			err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
+			err = fmt.Errorf("erroneous response:\n\n%#v", resp)
 		}
 		if err != nil {
 			failedRevokes = append(failedRevokes, req.Secret)
@@ -317,7 +317,7 @@ func Test(tt TestT, c TestCase) {
 	req.ClientToken = client.Token()
 	resp, err := core.HandleRequest(req)
 	if err == nil && resp.IsError() {
-		err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
+		err = fmt.Errorf("erroneous response:\n\n%#v", resp)
 	}
 	if err != nil {
 		if !errwrap.Contains(err, logical.ErrUnsupportedOperation.Error()) {

@@ -100,7 +100,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 
 	// Check if this is a nested mount
 	if existing, _, ok := r.root.LongestPrefix(prefix); ok && existing != "" {
-		return fmt.Errorf("cannot mount under existing mount '%s'", existing)
+		return fmt.Errorf("cannot mount under existing mount %q", existing)
 	}
 
 	// Build the paths
@@ -176,7 +176,7 @@ func (r *Router) Remount(src, dst string) error {
 	// Check for existing mount
 	raw, ok := r.root.Get(src)
 	if !ok {
-		return fmt.Errorf("no mount at '%s'", src)
+		return fmt.Errorf("no mount at %q", src)
 	}
 
 	// Update the mount point

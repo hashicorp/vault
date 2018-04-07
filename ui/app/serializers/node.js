@@ -28,9 +28,6 @@ export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    // payload looks like:
-    // { "nodes": { "name": { "sealed": "true" }}}
-
     const nodes = payload.nodes
       ? Object.keys(payload.nodes).map(name => this.nodeFromObject(name, payload))
       : [Ember.assign(payload, { id: '1' })];

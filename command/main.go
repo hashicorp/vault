@@ -10,6 +10,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/hashicorp/vault/command/token"
+	colorable "github.com/mattn/go-colorable"
 	"github.com/mitchellh/cli"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -99,10 +100,10 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		runOpts = &RunOptions{}
 	}
 	if runOpts.Stdout == nil {
-		runOpts.Stdout = os.Stdout
+		runOpts.Stdout = colorable.NewColorable(os.Stdout)
 	}
 	if runOpts.Stderr == nil {
-		runOpts.Stderr = os.Stderr
+		runOpts.Stderr = colorable.NewColorable(os.Stderr)
 	}
 
 	args = setupEnv(args)

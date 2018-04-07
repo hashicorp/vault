@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -151,7 +152,7 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 
 	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read CA private key: %v", err)
+		return nil, errwrap.Wrapf("failed to read CA private key: {{err}}", err)
 	}
 	if privateKeyEntry == nil || privateKeyEntry.Key == "" {
 		return nil, fmt.Errorf("failed to read CA private key")
@@ -159,7 +160,7 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 
 	signer, err := ssh.ParsePrivateKey([]byte(privateKeyEntry.Key))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse stored CA private key: %v", err)
+		return nil, errwrap.Wrapf("failed to parse stored CA private key: {{err}}", err)
 	}
 
 	cBundle := creationBundle{
@@ -312,7 +313,7 @@ func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshR
 		}
 
 		if len(notAllowedOptions) != 0 {
-			return nil, fmt.Errorf("Critical options not on allowed list: %v", notAllowedOptions)
+			return nil, fmt.Errorf("critical options not on allowed list: %v", notAllowedOptions)
 		}
 	}
 
@@ -376,7 +377,7 @@ func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.D
 		if !specifiedTTL {
 			ttl = maxTTL
 		} else {
-			return 0, fmt.Errorf("ttl is larger than maximum allowed (%d)", maxTTL/time.Second)
+			return 0, fmt.Errorf("ttl is larger than maximum allowed %d", maxTTL/time.Second)
 		}
 	}
 

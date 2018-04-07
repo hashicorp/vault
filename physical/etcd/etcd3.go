@@ -14,6 +14,7 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/coreos/etcd/pkg/transport"
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
@@ -117,7 +118,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 		// grpc converts this to uint32 internally, so parse as that to avoid passing invalid values
 		val, err := strconv.ParseUint(maxReceive, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("value [%v] of 'max_receive_size' could not be understood", maxReceive)
+			return nil, errwrap.Wrapf(fmt.Sprintf("value of 'max_receive_size' (%v) could not be understood: {{err}}", maxReceive), err)
 		}
 		cfg.MaxCallRecvMsgSize = int(val)
 	}
@@ -133,7 +134,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 	sync, err := strconv.ParseBool(ssync)
 	if err != nil {
-		return nil, fmt.Errorf("value of 'sync' (%v) could not be understood", err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("value of 'sync' (%v) could not be understood: {{err}}", ssync), err)
 	}
 
 	if sync {

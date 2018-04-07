@@ -63,7 +63,6 @@ at a different path, use that value instead of `gcp`.
 
 ```sh
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
     --data '{"role": "dev-role", "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}' \
     http://127.0.0.1:8200/v1/auth/gcp/login

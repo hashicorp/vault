@@ -242,7 +242,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		switch consistencyMode {
 		case consistencyModeDefault, consistencyModeStrong:
 		default:
-			return nil, fmt.Errorf("invalid consistency_mode value: %s", consistencyMode)
+			return nil, fmt.Errorf("invalid consistency_mode value: %q", consistencyMode)
 		}
 	} else {
 		consistencyMode = consistencyModeDefault
@@ -311,7 +311,7 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 	if okCert && okKey {
 		tlsCert, err := tls.LoadX509KeyPair(conf["tls_cert_file"], conf["tls_key_file"])
 		if err != nil {
-			return nil, fmt.Errorf("client tls setup failed: %v", err)
+			return nil, errwrap.Wrapf("client tls setup failed: {{err}}", err)
 		}
 
 		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
@@ -322,7 +322,7 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 
 		data, err := ioutil.ReadFile(tlsCaFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read CA file: %v", err)
+			return nil, errwrap.Wrapf("failed to read CA file: {{err}}", err)
 		}
 
 		if !caPool.AppendCertsFromPEM(data) {
@@ -469,7 +469,7 @@ func (c *ConsulBackend) LockWith(key, value string) (physical.Lock, error) {
 	}
 	lock, err := c.client.LockOpts(opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create lock: %v", err)
+		return nil, errwrap.Wrapf("failed to create lock: {{err}}", err)
 	}
 	cl := &ConsulLock{
 		client:          c.client,
@@ -495,7 +495,7 @@ func (c *ConsulBackend) DetectHostAddr() (string, error) {
 	}
 	addr, ok := self["Member"]["Addr"].(string)
 	if !ok {
-		return "", fmt.Errorf("Unable to convert an address to string")
+		return "", fmt.Errorf("unable to convert an address to string")
 	}
 	return addr, nil
 }
@@ -809,7 +809,7 @@ func (c *ConsulBackend) setRedirectAddr(addr string) (err error) {
 
 	url, err := url.Parse(addr)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf(`failed to parse redirect URL "%v": {{err}}`, addr), err)
+		return errwrap.Wrapf(fmt.Sprintf("failed to parse redirect URL %q: {{err}}", addr), err)
 	}
 
 	var portStr string

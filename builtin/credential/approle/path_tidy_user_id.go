@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -65,18 +66,18 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 			secretIDEntry, err := s.Get(ctx, entryIndex)
 			if err != nil {
 				lock.Unlock()
-				return fmt.Errorf("error fetching SecretID %s: %s", secretIDHMAC, err)
+				return errwrap.Wrapf(fmt.Sprintf("error fetching SecretID %q: {{err}}", secretIDHMAC), err)
 			}
 
 			if secretIDEntry == nil {
-				result = multierror.Append(result, fmt.Errorf("entry for SecretID %s is nil", secretIDHMAC))
+				result = multierror.Append(result, fmt.Errorf("entry for SecretID %q is nil", secretIDHMAC))
 				lock.Unlock()
 				continue
 			}
 
 			if secretIDEntry.Value == nil || len(secretIDEntry.Value) == 0 {
 				lock.Unlock()
-				return fmt.Errorf("found entry for SecretID %s but actual SecretID is empty", secretIDHMAC)
+				return fmt.Errorf("found entry for SecretID %q but actual SecretID is empty", secretIDHMAC)
 			}
 
 			var result secretIDStorageEntry
@@ -96,7 +97,7 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 
 				if err := s.Delete(ctx, entryIndex); err != nil {
 					lock.Unlock()
-					return fmt.Errorf("error deleting SecretID %s from storage: %s", secretIDHMAC, err)
+					return errwrap.Wrapf(fmt.Sprintf("error deleting SecretID %q from storage: {{err}}", secretIDHMAC), err)
 				}
 			}
 

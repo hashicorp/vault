@@ -461,7 +461,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.RedirectAddr != "" {
 		u, err := url.Parse(conf.RedirectAddr)
 		if err != nil {
-			return nil, fmt.Errorf("redirect address is not valid url: %s", err)
+			return nil, errwrap.Wrapf("redirect address is not valid url: {{err}}", err)
 		}
 
 		if u.Scheme == "" {
@@ -559,14 +559,14 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.PluginDirectory != "" {
 		c.pluginDirectory, err = filepath.Abs(conf.PluginDirectory)
 		if err != nil {
-			return nil, fmt.Errorf("core setup failed, could not verify plugin directory: %v", err)
+			return nil, errwrap.Wrapf("core setup failed, could not verify plugin directory: {{err}}", err)
 		}
 	}
 
 	// Construct a new AES-GCM barrier
 	c.barrier, err = NewAESGCMBarrier(c.physical)
 	if err != nil {
-		return nil, fmt.Errorf("barrier setup failed: %v", err)
+		return nil, errwrap.Wrapf("barrier setup failed: {{err}}", err)
 	}
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
@@ -1167,7 +1167,7 @@ func (c *Core) unsealPart(ctx context.Context, config *SealConfig, key []byte, u
 	} else {
 		recoveredKey, err = shamir.Combine(c.unlockInfo.Parts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to compute master key: %v", err)
+			return nil, errwrap.Wrapf("failed to compute master key: {{err}}", err)
 		}
 	}
 
@@ -1186,7 +1186,7 @@ func (c *Core) unsealPart(ctx context.Context, config *SealConfig, key []byte, u
 		if c.seal.StoredKeysSupported() {
 			masterKeyShares, err := c.seal.GetStoredKeys(ctx)
 			if err != nil {
-				return nil, fmt.Errorf("unable to retrieve stored keys: %v", err)
+				return nil, errwrap.Wrapf("unable to retrieve stored keys: {{err}}", err)
 			}
 
 			if len(masterKeyShares) == 1 {
@@ -1195,7 +1195,7 @@ func (c *Core) unsealPart(ctx context.Context, config *SealConfig, key []byte, u
 
 			masterKey, err = shamir.Combine(masterKeyShares)
 			if err != nil {
-				return nil, fmt.Errorf("failed to compute master key: %v", err)
+				return nil, errwrap.Wrapf("failed to compute master key: {{err}}", err)
 			}
 		}
 		return masterKey, nil
@@ -2082,7 +2082,7 @@ func (c *Core) scheduleUpgradeCleanup(ctx context.Context) error {
 	// List the upgrades
 	upgrades, err := c.barrier.List(ctx, keyringUpgradePrefix)
 	if err != nil {
-		return fmt.Errorf("failed to list upgrades: %v", err)
+		return errwrap.Wrapf("failed to list upgrades: {{err}}", err)
 	}
 
 	// Nothing to do if no upgrades

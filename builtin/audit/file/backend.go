@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -46,7 +47,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	switch format {
 	case "json", "jsonx":
 	default:
-		return nil, fmt.Errorf("unknown format type %s", format)
+		return nil, fmt.Errorf("unknown format type %q", format)
 	}
 
 	// Check if hashing of accessor is disabled
@@ -113,7 +114,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		// otherwise it will be too late to catch later without problems
 		// (ref: https://github.com/hashicorp/vault/issues/550)
 		if err := b.open(); err != nil {
-			return nil, fmt.Errorf("sanity check failed; unable to open %s for writing: %v", path, err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("sanity check failed; unable to open %q for writing: {{err}}", path), err)
 		}
 	}
 
