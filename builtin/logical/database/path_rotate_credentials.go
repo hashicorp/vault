@@ -48,8 +48,7 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 		b.Lock()
 		defer b.Unlock()
 
-		// Take the write lock instead of read since we are updating the
-		// connection
+		// Take the write lock on the instance
 		db.Lock()
 		defer db.Unlock()
 
@@ -68,7 +67,11 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 		}
 
 		// Close the plugin
-		db.Database.Close()
+		db.closed = true
+		if err := db.Database.Close(); err != nil {
+			b.Logger().Error("error closing the database plugin connection", "err", err)
+		}
+		// Even on error, still remove the connection
 		delete(b.connections, name)
 
 		return nil, nil
