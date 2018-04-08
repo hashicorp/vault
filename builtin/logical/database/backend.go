@@ -249,7 +249,7 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 	case rpc.ErrShutdown, dbplugin.ErrPluginShutdown:
 		// Put this in a goroutine so that requests can run with the read or write lock
 		// and simply defer the unlock.  Since we are attaching the instance and matching
-		// the id in the conneciton map, we can safely do this.
+		// the id in the connection map, we can safely do this.
 		go func() {
 			b.Lock()
 			defer b.Unlock()

@@ -19,7 +19,7 @@ func pathRotateCredentials(b *databaseBackend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathRotateCredentialsUpdate(),
+			logical.UpdateOperation: b.pathRotateCredentialsUpdate(),
 		},
 
 		HelpSynopsis:    pathCredsCreateReadHelpSyn,
@@ -44,6 +44,10 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
+		// Take out the backend lock since we are swapping out the connection
+		b.Lock()
+		defer b.Unlock()
+
 		// Take the write lock instead of read since we are updating the
 		// connection
 		db.Lock()
@@ -63,9 +67,9 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
-		if err := b.ClearConnection(name); err != nil {
-			return nil, err
-		}
+		// Close the plugin
+		db.Database.Close()
+		delete(b.connections, name)
 
 		return nil, nil
 	}

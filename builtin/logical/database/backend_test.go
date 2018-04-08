@@ -927,6 +927,107 @@ func TestBackend_allowedRoles(t *testing.T) {
 	}
 }
 
+func TestBackend_RotateRootCredentials(t *testing.T) {
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	defer cleanup()
+
+	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url": connURL,
+		"plugin_name":    "postgresql-database-plugin",
+		"allowed_roles":  []string{"plugin-role-test"},
+		"username":       "postgres",
+		"password":       "secret",
+	}
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Create a role
+	data = map[string]interface{}{
+		"db_name":             "plugin-test",
+		"creation_statements": testRole,
+		"max_ttl":             "10m",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+	// Get creds
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "creds/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	credsResp, err := b.HandleRequest(context.Background(), req)
+	if err != nil || (credsResp != nil && credsResp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+	}
+
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "rotate-root/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (credsResp != nil && credsResp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+	}
+
+	dbConfig, err := b.(*databaseBackend).DatabaseConfig(context.Background(), config.StorageView, "plugin-test")
+	if err != nil {
+		t.Fatalf("err: %#v", err)
+	}
+	if dbConfig.ConnectionDetails["password"].(string) == "secret" {
+		t.Fatal("root credentials not rotated")
+	}
+
+	// Get creds to make sure it still works
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "creds/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	credsResp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (credsResp != nil && credsResp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+	}
+}
+
 func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
 	t.Helper()
 	var d struct {
