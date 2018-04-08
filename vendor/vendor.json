@@ -1297,16 +1297,16 @@
 			"revisionTime": "2018-04-03T19:19:30Z"
 		},
 		{
-			"checksumSHA1": "tL7KItTD9AMO1kiYtx1UPFHlSK8=",
+			"checksumSHA1": "klHF0u2D5rTw60ZcNufHHtO8nSk=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "df8bafaba3c96499674c60d7f60af220a7b70ec0",
-			"revisionTime": "2018-04-05T19:37:04Z"
+			"revision": "c1f38c311636440ff37e1f655f9722d3d9c1c0cc",
+			"revisionTime": "2018-04-08T01:06:05Z"
 		},
 		{
 			"checksumSHA1": "ffJQvzbQvmCG/PdaElGSfGnDgNM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin/util",
-			"revision": "df8bafaba3c96499674c60d7f60af220a7b70ec0",
-			"revisionTime": "2018-04-05T19:37:04Z"
+			"revision": "c1f38c311636440ff37e1f655f9722d3d9c1c0cc",
+			"revisionTime": "2018-04-08T01:06:05Z"
 		},
 		{
 			"checksumSHA1": "I3b7HgnguhModU0rkNBp3PjzpZ8=",
