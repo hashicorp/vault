@@ -252,6 +252,45 @@ func TestCassandra_RevokeUser(t *testing.T) {
 	}
 }
 
+func TestCassandra_RotateRootCredentials(t *testing.T) {
+	cleanup, address, port := prepareCassandraTestContainer(t)
+	defer cleanup()
+
+	connectionDetails := map[string]interface{}{
+		"hosts":            address,
+		"port":             port,
+		"username":         "cassandra",
+		"password":         "cassandra",
+		"protocol_version": 4,
+	}
+
+	db := new()
+
+	connProducer := db.cassandraConnectionProducer
+
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if !connProducer.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	newConf, err := db.RotateRootCredentials(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if newConf["password"] == "cassandra" {
+		t.Fatal("password was not updated")
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
 func testCredsExist(t testing.TB, address string, port int, username, password string) error {
 	clusterConfig := gocql.NewCluster(address)
 	clusterConfig.Authenticator = gocql.PasswordAuthenticator{
