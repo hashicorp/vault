@@ -75,6 +75,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * auth/gcp: Invalidate clients on config change
  * auth/token: Revoke-orphan and tidy operations now correctly cleans up the
    parent prefix entry in the underlying storage backend. These operations also
    mark corresponding child tokens as orphans by removing the parent/secondary
