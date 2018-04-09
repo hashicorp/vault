@@ -49,7 +49,7 @@ has a number of parameters to further configure a connection.
 {
   "plugin_name": "hana-database-plugin",
   "allowed_roles": "readonly",
-  "connection_url": "hdb://{{username}}:{{password}@localhost:1433",
+  "connection_url": "hdb://{{username}}:{{password}}@localhost:1433",
   "max_open_connections": 5,
   "max_connection_lifetime": "5s",
   "username": "username",

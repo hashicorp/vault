@@ -180,6 +180,30 @@ $ curl \
     http://127.0.0.1:8200/v1/database/reset/mysql
 ```
 
+## Rotate Root Credentials
+
+This endpoint is used to rotate the root superuser credentials stored for
+the database connection.  This user must have permissions to update its own
+password.
+
+| Method   | Path                          | Produces               |
+| :------- | :---------------------------- | :--------------------- |
+| `POST`   | `/database/rotate-root/:name` | `204 (empty body)`     |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the connection to rotate.
+  This is specified as part of the URL.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/database/rotate-root/mysql
+```
+
 ## Create Role
 
 This endpoint creates or updates a role definition.
