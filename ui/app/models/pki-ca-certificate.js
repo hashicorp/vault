@@ -35,6 +35,11 @@ export default Certificate.extend({
     label: 'PEM bundle',
     editType: 'file',
   }),
+  addBasicConstraints: attr('boolean', {
+    label: 'Add a Basic Constraints extension with CA: true',
+    helpText:
+      'Only needed as a workaround in some compatibility scenarios with Active Directory Certificate Services',
+  }),
 
   fieldDefinition: computed('caType', 'uploadPemBundle', function() {
     const type = this.get('caType');
@@ -73,6 +78,7 @@ export default Certificate.extend({
             'keyType',
             'keyBits',
             'excludeCnFromSans',
+            'addBasicConstraints',
             'ou',
             'organization',
             'otherSans',

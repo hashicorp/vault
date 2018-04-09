@@ -55,6 +55,10 @@ export default DS.Model.extend({
     defaultValue: 'DigitalSignature,KeyAgreement,KeyEncipherment',
     editType: 'stringArray',
   }),
+  requireCn: attr('boolean', {
+    label: 'Require common name',
+    defaultValue: true,
+  }),
   useCsrCommonName: attr('boolean', {
     label: 'Use CSR common name',
     defaultValue: true,
@@ -89,6 +93,12 @@ export default DS.Model.extend({
   }),
   generateLease: attr('boolean', {}),
   noStore: attr('boolean', {}),
+  policyIdentifiers: attr({
+    editType: 'stringArray',
+  }),
+  basicConstraintsValidForNonCA: attr('boolean', {
+    label: 'Mark Basic Constraints valid when issuing non-CA certificates.',
+  }),
 
   updatePath: queryRecord(
     'capabilities',
@@ -192,6 +202,7 @@ export default DS.Model.extend({
           'allowAnyName',
           'enforceHostnames',
           'allowIpSans',
+          'requireCn',
           'useCsrCommonName',
           'useCsrSans',
           'ou',
@@ -213,7 +224,9 @@ export default DS.Model.extend({
         ],
       },
       { 'Extended Key Usage': ['serverFlag', 'clientFlag', 'codeSigningFlag', 'emailProtectionFlag'] },
-      { Advanced: ['generateLease', 'noStore'] },
+      {
+        Advanced: ['generateLease', 'noStore', 'basicConstraintsValidForNonCA', 'policyIdentifiers'],
+      },
     ];
 
     return this.fieldsToAttrs(Ember.copy(groups, true));

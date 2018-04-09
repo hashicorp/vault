@@ -59,6 +59,10 @@ func (b *GcpAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
+
+	// Invalidate exisitng clients so they read the new configuration
+	b.Close()
+
 	return nil, nil
 }
 
