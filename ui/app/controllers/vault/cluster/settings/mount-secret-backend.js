@@ -34,7 +34,7 @@ export default Ember.Controller.extend({
   showConfig: false,
   local: false,
   sealWrap: false,
-  versioned: true,
+  version: 2,
 
   selection: computed('selectedType', function() {
     return this.get('mountTypes').findBy('value', this.get('selectedType'));
@@ -54,7 +54,7 @@ export default Ember.Controller.extend({
       local: false,
       showConfig: false,
       sealWrap: false,
-      versioned: true,
+      version: 2,
     });
   },
 
@@ -86,7 +86,7 @@ export default Ember.Controller.extend({
         local,
         max_lease_ttl,
         sealWrap,
-        versioned,
+        version,
       } = this.getProperties(
         'selectedPath',
         'selectedType',
@@ -96,7 +96,7 @@ export default Ember.Controller.extend({
         'local',
         'max_lease_ttl',
         'sealWrap',
-        'versioned'
+        'version'
       );
       const currentModel = this.get('model');
       if (currentModel && currentModel.rollbackAttributes) {
@@ -118,9 +118,9 @@ export default Ember.Controller.extend({
         };
       }
 
-      if (type === 'kv' && versioned) {
+      if (type === 'kv') {
         attrs.options = {
-          versioned: 'true',
+          version,
         };
       }
 
