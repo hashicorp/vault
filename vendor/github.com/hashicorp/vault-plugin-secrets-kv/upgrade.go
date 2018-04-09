@@ -29,18 +29,46 @@ func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framewor
 }
 
 func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) error {
-	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
-		b.Logger().Info("upgrade not running on performace replication secondary")
-		return nil
-	}
-
+	// Don't run if the plugin is in metadata mode.
 	if pluginutil.InMetadataMode() {
 		b.Logger().Info("upgrade not running while plugin is in metadata mode")
 		return nil
 	}
 
+	// Don't run while on a DR secondary.
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		b.Logger().Info("upgrade not running on disaster recovery replication secondary")
+		return nil
+	}
+
 	if !atomic.CompareAndSwapUint32(b.upgrading, 0, 1) {
 		return errors.New("upgrade already in process")
+	}
+
+	// If we are a replication secondary, wait until the primary has finished
+	// upgrading.
+	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		b.Logger().Info("upgrade not running on performace replication secondary")
+
+		go func() {
+			for {
+				time.Sleep(time.Second)
+
+				done, err := b.upgradeDone(ctx, s)
+				if err != nil {
+					b.Logger().Error("upgrading resulted in error", "error", err)
+					return
+				}
+
+				if done {
+					break
+				}
+			}
+
+			atomic.StoreUint32(b.upgrading, 0)
+		}()
+
+		return nil
 	}
 
 	upgradeInfo := &UpgradeInfo{
