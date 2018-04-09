@@ -668,8 +668,9 @@ b07d7a47-1d0d-741d-20b4-ae0de7c6d964
 
 ## Next steps
 
-Watch the video recording of the [Delivering Secret Zero: Vault AppRole with Terraform and Chef](https://www.hashicorp.com/resources/delivering-secret-zero-vault-approle-terraform-chef)
-webinar which talks about the usage of AppRole with Terraform and Chef as its trusted entities.
+Read the [_AppRole with Terraform and
+Chef_](/guides/identity/approle-trusted-entities.html) guide to better
+understand the role of trusted entities using Terraform and Chef as an example. 
 
 To learn more about response wrapping, go to the [Cubbyhole Response
 Wrapping](/guides/secret-mgmt/cubbyhole.html) guide.
