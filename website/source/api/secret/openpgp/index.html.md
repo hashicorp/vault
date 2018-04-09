@@ -76,6 +76,7 @@ $ curl \
 
 ```json
 {
+  "generate": false,
   "key": "-----BEGIN PGP PRIVATE KEY BLOCK-----\n\nlQOYBFmZe5wBCACx8caRJ+M8mKCrS7FdJ5kTdjApbvsx3ccPwvAQhtT2pIYkU\/ec\n...\naUNPVQgd7AF+MIuana8p6KeAXGS3fpiF4vIM0VoeWfEiO9rzdG0ilm16E61r9A==\n=+776\n-----END PGP PRIVATE KEY BLOCK-----\n"
 }
 ```
