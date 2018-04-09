@@ -958,9 +958,6 @@ func (c *Core) defaultMountTable() *MountTable {
 		UUID:             mountUUID,
 		Accessor:         mountAccessor,
 		BackendAwareUUID: bUUID,
-		Options: map[string]string{
-			"version": "2",
-		},
 	}
 	table.Entries = append(table.Entries, kvMount)
 	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
