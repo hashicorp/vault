@@ -6,15 +6,13 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"io"
-	"strings"
-
-	"golang.org/x/crypto/openpgp/packet"
-
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
+	"github.com/keybase/go-crypto/openpgp"
+	"github.com/keybase/go-crypto/openpgp/armor"
+	"github.com/keybase/go-crypto/openpgp/packet"
+	"io"
+	"strings"
 )
 
 func pathShowSessionKey(b *backend) *framework.Path {
@@ -107,7 +105,7 @@ func (b *backend) pathShowSessionKeyWrite(ctx context.Context, req *logical.Requ
 		switch p := p.(type) {
 		case *packet.EncryptedKey:
 			encryptedKey := packet.EncryptedKey(*p)
-			keys := keyring.KeysById(encryptedKey.KeyId)
+			keys := keyring.KeysById(encryptedKey.KeyId, nil)
 			for _, key := range keys {
 				encryptedKey.Decrypt(key.PrivateKey, nil)
 
