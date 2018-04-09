@@ -751,7 +751,7 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 				ErrorOk: true,
 				Check: func(resp *logical.Response) error {
 					if resp.Data["error"] != "setting key_id is not allowed by role" {
-						return errors.New("Custom user key id was allowed even when 'allow_user_key_ids' is false.")
+						return errors.New("custom user key id was allowed even when 'allow_user_key_ids' is false")
 					}
 					return nil
 				},
@@ -795,12 +795,12 @@ func signCertificateStep(
 
 			serialNumber := resp.Data["serial_number"].(string)
 			if serialNumber == "" {
-				return errors.New("No serial number in response")
+				return errors.New("no serial number in response")
 			}
 
 			signedKey := strings.TrimSpace(resp.Data["signed_key"].(string))
 			if signedKey == "" {
-				return errors.New("No signed key in response")
+				return errors.New("no signed key in response")
 			}
 
 			key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
@@ -819,28 +819,28 @@ func validateSSHCertificate(cert *ssh.Certificate, keyId string, certType int, v
 	ttl time.Duration) error {
 
 	if cert.KeyId != keyId {
-		return fmt.Errorf("Incorrect KeyId: %v, wanted %v", cert.KeyId, keyId)
+		return fmt.Errorf("incorrect KeyId: %v, wanted %v", cert.KeyId, keyId)
 	}
 
 	if cert.CertType != uint32(certType) {
-		return fmt.Errorf("Incorrect CertType: %v", cert.CertType)
+		return fmt.Errorf("incorrect CertType: %v", cert.CertType)
 	}
 
 	if time.Unix(int64(cert.ValidAfter), 0).After(time.Now()) {
-		return fmt.Errorf("Incorrect ValidAfter: %v", cert.ValidAfter)
+		return fmt.Errorf("incorrect ValidAfter: %v", cert.ValidAfter)
 	}
 
 	if time.Unix(int64(cert.ValidBefore), 0).Before(time.Now()) {
-		return fmt.Errorf("Incorrect ValidBefore: %v", cert.ValidBefore)
+		return fmt.Errorf("incorrect ValidBefore: %v", cert.ValidBefore)
 	}
 
 	actualTtl := time.Unix(int64(cert.ValidBefore), 0).Add(-30 * time.Second).Sub(time.Unix(int64(cert.ValidAfter), 0))
 	if actualTtl != ttl {
-		return fmt.Errorf("Incorrect ttl: expected: %v, actualL %v", ttl, actualTtl)
+		return fmt.Errorf("incorrect ttl: expected: %v, actualL %v", ttl, actualTtl)
 	}
 
 	if !reflect.DeepEqual(cert.ValidPrincipals, validPrincipals) {
-		return fmt.Errorf("Incorrect ValidPrincipals: expected: %#v actual: %#v", validPrincipals, cert.ValidPrincipals)
+		return fmt.Errorf("incorrect ValidPrincipals: expected: %#v actual: %#v", validPrincipals, cert.ValidPrincipals)
 	}
 
 	publicSigningKey, err := getSigningPublicKey()
@@ -848,19 +848,19 @@ func validateSSHCertificate(cert *ssh.Certificate, keyId string, certType int, v
 		return err
 	}
 	if !reflect.DeepEqual(cert.SignatureKey, publicSigningKey) {
-		return fmt.Errorf("Incorrect SignatureKey: %v", cert.SignatureKey)
+		return fmt.Errorf("incorrect SignatureKey: %v", cert.SignatureKey)
 	}
 
 	if cert.Signature == nil {
-		return fmt.Errorf("Incorrect Signature: %v", cert.Signature)
+		return fmt.Errorf("incorrect Signature: %v", cert.Signature)
 	}
 
 	if !reflect.DeepEqual(cert.Permissions.Extensions, extensionPermissions) {
-		return fmt.Errorf("Incorrect Permissions.Extensions: Expected: %v, Actual: %v", extensionPermissions, cert.Permissions.Extensions)
+		return fmt.Errorf("incorrect Permissions.Extensions: Expected: %v, Actual: %v", extensionPermissions, cert.Permissions.Extensions)
 	}
 
 	if !reflect.DeepEqual(cert.Permissions.CriticalOptions, criticalOptionPermissions) {
-		return fmt.Errorf("Incorrect Permissions.CriticalOptions: %v", cert.Permissions.CriticalOptions)
+		return fmt.Errorf("incorrect Permissions.CriticalOptions: %v", cert.Permissions.CriticalOptions)
 	}
 
 	return nil
@@ -935,7 +935,7 @@ func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[str
 			}
 
 			if !reflect.DeepEqual(ac, ex) {
-				return fmt.Errorf("Invalid response")
+				return fmt.Errorf("invalid response")
 			}
 			return nil
 		},
@@ -966,7 +966,7 @@ func testLookupRead(t *testing.T, data map[string]interface{}, expected []string
 		Data:      data,
 		Check: func(resp *logical.Response) error {
 			if resp.Data == nil || resp.Data["roles"] == nil {
-				return fmt.Errorf("Missing roles information")
+				return fmt.Errorf("missing roles information")
 			}
 			if !reflect.DeepEqual(resp.Data["roles"].([]string), expected) {
 				return fmt.Errorf("Invalid response: \nactual:%#v\nexpected:%#v", resp.Data["roles"].([]string), expected)
@@ -1060,7 +1060,7 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 					return err
 				}
 				if len(e.Error) == 0 {
-					return fmt.Errorf("expected error, but write succeeded.")
+					return fmt.Errorf("expected error, but write succeeded")
 				}
 				return nil
 			}
@@ -1072,19 +1072,19 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 					return err
 				}
 				if d.Key == "" {
-					return fmt.Errorf("Generated key is an empty string")
+					return fmt.Errorf("generated key is an empty string")
 				}
 				// Checking only for a parsable key
 				_, err := ssh.ParsePrivateKey([]byte(d.Key))
 				if err != nil {
-					return fmt.Errorf("Generated key is invalid")
+					return fmt.Errorf("generated key is invalid")
 				}
 			} else {
 				if resp.Data["key_type"] != KeyTypeOTP {
-					return fmt.Errorf("Incorrect key_type")
+					return fmt.Errorf("incorrect key_type")
 				}
 				if resp.Data["key"] == nil {
-					return fmt.Errorf("Invalid key")
+					return fmt.Errorf("invalid key")
 				}
 			}
 			return nil

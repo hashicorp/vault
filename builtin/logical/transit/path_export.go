@@ -208,7 +208,7 @@ func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string,
 		return "", err
 	}
 	if ecder == nil {
-		return "", errors.New("No data returned when marshalling to private key")
+		return "", errors.New("no data returned when marshalling to private key")
 	}
 
 	block := pem.Block{

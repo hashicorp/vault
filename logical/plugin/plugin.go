@@ -139,7 +139,7 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		backend = raw.(*backendGRPCPluginClient)
 		transport = "gRPC"
 	default:
-		return nil, errors.New("Unsupported plugin client type")
+		return nil, errors.New("unsupported plugin client type")
 	}
 
 	// Wrap the backend in a tracing middleware

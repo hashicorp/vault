@@ -203,7 +203,7 @@ func testAccStepConfig(d map[string]interface{}, expectError bool) logicaltest.T
 					return err
 				}
 				if len(e.Error) == 0 {
-					return fmt.Errorf("expected error, but write succeeded.")
+					return fmt.Errorf("expected error, but write succeeded")
 				}
 				return nil
 			} else if resp != nil && resp.IsError() {

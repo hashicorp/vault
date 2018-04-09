@@ -212,7 +212,7 @@ func testStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 		Path:      "users",
 		Check: func(resp *logical.Response) error {
 			if resp.IsError() {
-				return fmt.Errorf("Got error response: %#v", *resp)
+				return fmt.Errorf("got error response: %#v", *resp)
 			}
 
 			if !reflect.DeepEqual(users, resp.Data["keys"].([]string)) {

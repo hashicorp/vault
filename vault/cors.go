@@ -91,7 +91,7 @@ func (c *Core) loadCORSConfig(ctx context.Context) error {
 // cross-origin requests to Vault.
 func (c *CORSConfig) Enable(ctx context.Context, urls []string, headers []string) error {
 	if len(urls) == 0 {
-		return errors.New("at least one origin or the wildcard must be provided.")
+		return errors.New("at least one origin or the wildcard must be provided")
 	}
 
 	if strutil.StrListContains(urls, "*") && len(urls) > 1 {

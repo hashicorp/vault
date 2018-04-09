@@ -475,7 +475,7 @@ func testAccStepDeleteNotDisabledPolicy(t *testing.T, name string) logicaltest.T
 		ErrorOk:   true,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
-				return fmt.Errorf("Got nil response instead of error")
+				return fmt.Errorf("got nil response instead of error")
 			}
 			if resp.IsError() {
 				return nil
@@ -677,10 +677,10 @@ func testAccStepRewrap(
 			verString := splitStrings[1][1:]
 			ver, err := strconv.Atoi(verString)
 			if err != nil {
-				return fmt.Errorf("Error pulling out version from verString '%s', ciphertext was %s", verString, d.Ciphertext)
+				return fmt.Errorf("error pulling out version from verString '%s', ciphertext was %s", verString, d.Ciphertext)
 			}
 			if ver != expectedVer {
-				return fmt.Errorf("Did not get expected version")
+				return fmt.Errorf("did not get expected version")
 			}
 			decryptData["ciphertext"] = d.Ciphertext
 			return nil
