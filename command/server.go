@@ -1100,6 +1100,25 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		return nil, err
 	}
 
+	// Upgrade the default K/V store
+	req := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        "sys/mounts/secret/tune",
+		Data: map[string]interface{}{
+			"options": map[string]string{
+				"version": "2",
+			},
+		},
+	}
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		return nil, errwrap.Wrapf("error upgrading default K/V store: {{err}}", err)
+	}
+	if resp.IsError() {
+		return nil, errwrap.Wrapf("failed to upgrade default K/V store: {{err}}", resp.Error())
+	}
+
 	return init, nil
 }
 
