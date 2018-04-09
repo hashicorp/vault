@@ -55,7 +55,13 @@ func newAzureProvider(config *azureConfig) (*azureProvider, error) {
 	// makes a request to the discovery URL to determine the issuer and key set information to configure
 	// the OIDC verifier
 	discoveryURL := fmt.Sprintf("%s%s/.well-known/openid-configuration", settings.Environment.ActiveDirectoryEndpoint, settings.TenantID)
-	resp, err := httpClient.Get(discoveryURL)
+	req, err := http.NewRequest("GET", discoveryURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent())
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -120,6 +126,7 @@ func (p *azureProvider) ComputeClient(subscriptionID string) computeClient {
 	client := compute.NewVirtualMachinesClient(subscriptionID)
 	client.Authorizer = p.authorizer
 	client.Sender = p.httpClient
+	client.AddToUserAgent(userAgent())
 	return client
 }
 

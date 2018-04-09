@@ -851,6 +851,13 @@ request is denied.
 - `require_cn` `(bool: true)` - If set to false, makes the `common_name` field
   optional while generating a certificate.
 
+- `policy_identifiers` `(list: [])` – A comma-separated string or list of policy
+  oids.
+
+- `basic_constraints_valid_for_non_ca` `(bool: false)` - Mark Basic Constraints
+  valid when issuing non-CA certificates.
+
+
 ### Sample Payload
 
 ```json
