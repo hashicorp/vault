@@ -36,7 +36,7 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 	}
 
 	// Don't run while on a DR secondary.
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
 		b.Logger().Info("upgrade not running on disaster recovery replication secondary")
 		return nil
 	}
