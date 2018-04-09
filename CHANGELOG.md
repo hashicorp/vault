@@ -20,6 +20,10 @@ DEPRECATIONS/CHANGES:
    default. Existing configurations will continue to work as they do now;
    however, the next time a configuration is written `case_sensitive_names`
    will need to be explicitly set to `true`.
+ * TTL handling within core: All lease TTL handling has been centralized within
+   the core of Vault to ensure consistency across all backends. Since this was
+   previously delegated to individual backends, there may be some slight
+   differences in TTLs generated from some backends.
 
 FEATURES:
 
@@ -41,8 +45,8 @@ FEATURES:
    Vault, invalidating the old credentials and ensuring only Vault knows the
    actual valid values.
  * Azure Authentication Plugin: There is now a plugin (pulled in to Vault) that
-   allows authenticating Azure machines to Vault using their Azure-provided
-   credentials. See the [plugin
+   allows authenticating Azure machines to Vault using Azure's Managed Service
+   Identity credentials. See the [plugin
    repository](https://github.com/hashicorp/vault-plugin-auth-azure) for more
    information.
  * GCP Secrets Plugin: There is now a plugin (pulled in to Vault) that allows
@@ -56,11 +60,11 @@ FEATURES:
    through to backends on a per-mount basis. This is useful in various cases
    when plugins are interacting with external services.
  * HA for Google Cloud Storage: The GCS storage type now supports HA.
- * UI support for identity - add and edit entities, groups, and their associated
+ * UI support for identity: Add and edit entities, groups, and their associated
    aliases.
- * UI auth method support - enable, disable, and configure all of the built-in 
+ * UI auth method support: Enable, disable, and configure all of the built-in 
    authentication methods.
- * UI (Enterprise) - View and edit Sentinel policies.
+ * UI (Enterprise): View and edit Sentinel policies.
 
 IMPROVEMENTS:
 
@@ -71,10 +75,12 @@ IMPROVEMENTS:
  * storage/mysql: Allow setting max idle connections and connection lifetime
    [GH-4211]
  * storage/gcs: Add HA support [GH-4226]
- * ui - add Nomad to the list of available secret engines
+ * ui: Add Nomad to the list of available secret engines
+ * ui: Adds ability to set static headers to be returned by the UI
 
 BUG FIXES:
 
+ * auth/gcp: Invalidate clients on config change
  * auth/token: Revoke-orphan and tidy operations now correctly cleans up the
    parent prefix entry in the underlying storage backend. These operations also
    mark corresponding child tokens as orphans by removing the parent/secondary
