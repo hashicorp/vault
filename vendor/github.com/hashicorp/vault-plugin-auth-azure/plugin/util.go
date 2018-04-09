@@ -2,8 +2,13 @@ package plugin
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"runtime"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
 // Using the same time parsing logic from https://github.com/coreos/go-oidc
@@ -39,4 +44,14 @@ func strListContains(haystack []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+// userAgent determines the User Agent to send on HTTP requests. This is mostly copied
+// from the useragent helper in vault and may get replaced with something more general
+// for plugins
+func userAgent() string {
+	version := os.Getenv(pluginutil.PluginVaultVersionEnv)
+	projectURL := "https://www.vaultproject.io/"
+	rt := runtime.Version()
+	return fmt.Sprintf("Vault/%s (+%s; %s)", version, projectURL, rt)
 }
