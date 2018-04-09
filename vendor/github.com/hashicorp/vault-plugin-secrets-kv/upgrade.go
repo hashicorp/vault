@@ -25,7 +25,7 @@ func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framewor
 			// that are trying to access a mount immediately upon enabling be
 			// more likely to behave correctly since the operation should take
 			// almost no time.
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(15 * time.Millisecond)
 
 			if atomic.LoadUint32(b.upgrading) == 1 {
 				return logical.ErrorResponse("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
@@ -166,7 +166,7 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 			case err == nil:
 				break READONLY_LOOP
 			case err.Error() == logical.ErrSetupReadOnly.Error():
-				time.Sleep(time.Second)
+				time.Sleep(10 * time.Millisecond)
 			default:
 				b.Logger().Error("writing upgrade info resulted in an error", "error", err)
 				return
