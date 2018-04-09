@@ -1643,6 +1643,22 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 					"plugin_name must be provided for plugin backend"),
 				logical.ErrInvalidRequest
 		}
+
+	case "kv-v1":
+		// Alias KV v1
+		logicalType = "kv"
+		if options == nil {
+			options = map[string]string{}
+		}
+		options["version"] = "1"
+
+	case "kv-v2":
+		// Alias KV v2
+		logicalType = "kv"
+		if options == nil {
+			options = map[string]string{}
+		}
+		options["version"] = "2"
 	}
 
 	// Copy over the force no cache if set
@@ -1663,24 +1679,6 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 	if len(apiConfig.PassthroughRequestHeaders) > 0 {
 		config.PassthroughRequestHeaders = apiConfig.PassthroughRequestHeaders
-	}
-
-	// Alias KV v1
-	if logicalType == "kv-v1" {
-		logicalType = "kv"
-		if options == nil {
-			options = map[string]string{}
-		}
-		options["version"] = "1"
-	}
-
-	// Alias KV v2
-	if logicalType == "kv-v2" {
-		logicalType = "kv"
-		if options == nil {
-			options = map[string]string{}
-		}
-		options["version"] = "2"
 	}
 
 	// Create the mount entry
