@@ -12,7 +12,7 @@ description: |-
 # Vault AppRole with Terraform and Chef Demo
 
 In the [AppRole Pull
-Authentication](/guides/identity/authentication.html#advanced-feature) guide,
+Authentication](/guides/identity/authentication.html#advanced-features) guide,
 the question of how best to deliver the Role ID and Secret ID were brought up,
 and the role of trusted entities (Terraform, Chef, Nomad, Kubernetes, etc.) was
 mentioned.
