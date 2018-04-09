@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestGPG_Decrypt(t *testing.T) {
+func TestPGP_Decrypt(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	b := Backend()
 
@@ -62,7 +62,7 @@ func TestGPG_Decrypt(t *testing.T) {
 	decrypt("test", encryptedAndSignedMessageAsciiArmored, "ascii-armor", publicSignerKey, expected)
 }
 
-func TestGPG_DecryptError(t *testing.T) {
+func TestPGP_DecryptError(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	b := Backend()
 
@@ -71,7 +71,7 @@ func TestGPG_DecryptError(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/testGenerated",
 		Data: map[string]interface{}{
-			"real_name": "Vault GPG test",
+			"real_name": "Vault PGP test",
 		},
 	}
 	_, err := b.HandleRequest(context.Background(), req)

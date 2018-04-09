@@ -34,7 +34,7 @@ func pathShowSessionKey(b *backend) *framework.Path {
 			},
 			"signer_key": {
 				Type:        framework.TypeString,
-				Description: "The ASCII-armored GPG key of the signer of the ciphertext. If present, the signature must be valid.",
+				Description: "The ASCII-armored PGP key of the signer of the ciphertext. If present, the signature must be valid.",
 			},
 		},
 

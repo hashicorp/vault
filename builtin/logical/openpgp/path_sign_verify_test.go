@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestGPG_SignVerify(t *testing.T) {
+func TestPGP_SignVerify(t *testing.T) {
 	var b *backend
 	storage := &logical.InmemStorage{}
 
@@ -17,7 +17,7 @@ func TestGPG_SignVerify(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/test",
 		Data: map[string]interface{}{
-			"real_name": "Vault GPG test",
+			"real_name": "Vault PGP test",
 			"email":     "vault@example.com",
 		},
 	}
@@ -26,7 +26,7 @@ func TestGPG_SignVerify(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/test2",
 		Data: map[string]interface{}{
-			"real_name": "Vault GPG test2",
+			"real_name": "Vault PGP test2",
 			"email":     "vault@example.com",
 		},
 	}

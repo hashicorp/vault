@@ -52,7 +52,7 @@ func TestBackend_CRUDImportedKey(t *testing.T) {
 	}
 
 	keyData := map[string]interface{}{
-		"key":      gpgKey,
+		"key":      pgpKey,
 		"generate": false,
 		"key_bits": 2048,
 	}
@@ -194,7 +194,7 @@ func testAccStepListKey(names []string) logicaltest.TestStep {
 	}
 }
 
-const gpgKey = `-----BEGIN PGP PRIVATE KEY BLOCK-----
+const pgpKey = `-----BEGIN PGP PRIVATE KEY BLOCK-----
 
 lQOYBFmZfJIBCACx2NgAf4rLLx2QKo444ATs3ewJICdy/cYhETxcn5wewdrxQayJ
 XWtHZmLujIi9n+/ELg1ruqQOu+u+l21JZKa2QLaaSfqsk6aYY+sppvp3x8V9LXyN

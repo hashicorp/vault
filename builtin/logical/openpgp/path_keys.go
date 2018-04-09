@@ -35,15 +35,15 @@ func pathKeys(b *backend) *framework.Path {
 			},
 			"real_name": {
 				Type:        framework.TypeString,
-				Description: "The real name of the identity associated with the generated GPG key. Must not contain any of \"()<>\x00\". Only used if generate is false.",
+				Description: "The real name of the identity associated with the generated PGP key. Must not contain any of \"()<>\x00\". Only used if generate is false.",
 			},
 			"email": {
 				Type:        framework.TypeString,
-				Description: "The email of the identity associated with the generated GPG key. Must not contain any of \"()<>\x00\". Only used if generate is false.",
+				Description: "The email of the identity associated with the generated PGP key. Must not contain any of \"()<>\x00\". Only used if generate is false.",
 			},
 			"comment": {
 				Type:        framework.TypeString,
-				Description: "The comment of the identity associated with the generated GPG key. Must not contain any of \"()<>\x00\". Only used if generate is false.",
+				Description: "The comment of the identity associated with the generated PGP key. Must not contain any of \"()<>\x00\". Only used if generate is false.",
 			},
 			"key_bits": {
 				Type:        framework.TypeInt,
@@ -52,7 +52,7 @@ func pathKeys(b *backend) *framework.Path {
 			},
 			"key": {
 				Type:        framework.TypeString,
-				Description: "The ASCII-armored GPG key to use. Only used if generate is false.",
+				Description: "The ASCII-armored PGP key to use. Only used if generate is false.",
 			},
 			"exportable": {
 				Type:        framework.TypeBool,

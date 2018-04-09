@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestGPG_CreateNotGeneratedKeyWithoutKeyError(t *testing.T) {
+func TestPGP_CreateNotGeneratedKeyWithoutKeyError(t *testing.T) {
 	storage := &logical.InmemStorage{}
 
 	b := Backend()
@@ -29,7 +29,7 @@ func TestGPG_CreateNotGeneratedKeyWithoutKeyError(t *testing.T) {
 	}
 }
 
-func TestGPG_CreateErrorGeneratedKeyWithInvalidKey(t *testing.T) {
+func TestPGP_CreateErrorGeneratedKeyWithInvalidKey(t *testing.T) {
 	storage := &logical.InmemStorage{}
 
 	b := Backend()
@@ -53,7 +53,7 @@ func TestGPG_CreateErrorGeneratedKeyWithInvalidKey(t *testing.T) {
 	}
 }
 
-func TestGPG_CreateErrorGeneratedKeyWithOnlyPublicKey(t *testing.T) {
+func TestPGP_CreateErrorGeneratedKeyWithOnlyPublicKey(t *testing.T) {
 	storage := &logical.InmemStorage{}
 
 	b := Backend()
@@ -64,7 +64,7 @@ func TestGPG_CreateErrorGeneratedKeyWithOnlyPublicKey(t *testing.T) {
 		Path:      "keys/test",
 		Data: map[string]interface{}{
 			"generate": false,
-			"key":      gpgPublicKey,
+			"key":      pgpPublicKey,
 		},
 	}
 	response, err := b.HandleRequest(context.Background(), req)
@@ -77,7 +77,7 @@ func TestGPG_CreateErrorGeneratedKeyWithOnlyPublicKey(t *testing.T) {
 	}
 }
 
-func TestGPG_CreateErrorGeneratedKeyTooSmallKeyBits(t *testing.T) {
+func TestPGP_CreateErrorGeneratedKeyTooSmallKeyBits(t *testing.T) {
 	storage := &logical.InmemStorage{}
 
 	b := Backend()
@@ -100,7 +100,7 @@ func TestGPG_CreateErrorGeneratedKeyTooSmallKeyBits(t *testing.T) {
 	}
 }
 
-const gpgPublicKey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
+const pgpPublicKey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQENBFmZfJIBCACx2NgAf4rLLx2QKo444ATs3ewJICdy/cYhETxcn5wewdrxQayJ
 XWtHZmLujIi9n+/ELg1ruqQOu+u+l21JZKa2QLaaSfqsk6aYY+sppvp3x8V9LXyN

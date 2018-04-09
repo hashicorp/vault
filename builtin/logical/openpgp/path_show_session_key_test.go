@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestGPG_ShowSessionKey(t *testing.T) {
+func TestPGP_ShowSessionKey(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	b := Backend()
 
@@ -65,7 +65,7 @@ func TestGPG_ShowSessionKey(t *testing.T) {
 	showSessionKey("test", encryptedSessionMessageBase64EncodedWithMultipleKeys, "base64", "", "9:F8054D6D0F6E9C89155B829BC71E0613472EA70E32B9DA7893960536B04BB2BD")
 }
 
-func TestGPG_ShowSessionKeyError(t *testing.T) {
+func TestPGP_ShowSessionKeyError(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	b := Backend()
 
@@ -75,7 +75,7 @@ func TestGPG_ShowSessionKeyError(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/testGenerated",
 		Data: map[string]interface{}{
-			"real_name": "Vault GPG test",
+			"real_name": "Vault PGP test",
 		},
 	}
 	_, err := b.HandleRequest(context.Background(), req)

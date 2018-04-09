@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestGPG_ExportNotExistingKeyReturnsNotFound(t *testing.T) {
+func TestPGP_ExportNotExistingKeyReturnsNotFound(t *testing.T) {
 	storage := &logical.InmemStorage{}
 
 	b := Backend()
@@ -23,7 +23,7 @@ func TestGPG_ExportNotExistingKeyReturnsNotFound(t *testing.T) {
 	}
 }
 
-func TestGPG_ExportNotExportableKeyReturnsNotFound(t *testing.T) {
+func TestPGP_ExportNotExportableKeyReturnsNotFound(t *testing.T) {
 	storage := &logical.InmemStorage{}
 
 	b := Backend()
@@ -33,7 +33,7 @@ func TestGPG_ExportNotExportableKeyReturnsNotFound(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/test",
 		Data: map[string]interface{}{
-			"real_name": "Vault GPG test",
+			"real_name": "Vault PGP test",
 		},
 	}
 	_, err := b.HandleRequest(context.Background(), req)
@@ -55,7 +55,7 @@ func TestGPG_ExportNotExportableKeyReturnsNotFound(t *testing.T) {
 	}
 }
 
-func TestGPG_ExportKey(t *testing.T) {
+func TestPGP_ExportKey(t *testing.T) {
 	storage := &logical.InmemStorage{}
 
 	b := Backend()
@@ -65,7 +65,7 @@ func TestGPG_ExportKey(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/test",
 		Data: map[string]interface{}{
-			"real_name":  "Vault GPG test",
+			"real_name":  "Vault PGP test",
 			"exportable": true,
 		},
 	}
