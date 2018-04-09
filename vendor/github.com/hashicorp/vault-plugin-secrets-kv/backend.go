@@ -65,14 +65,14 @@ type versionedKVBackend struct {
 // Factory will return a logical backend of type versionedKVBackend or
 // PassthroughBackend based on the config passed in.
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	versioned := conf.Config["versioned"]
+	version := conf.Config["version"]
 
 	var b logical.Backend
 	var err error
-	switch versioned {
-	case "false", "":
+	switch version {
+	case "1", "":
 		return LeaseSwitchedPassthroughBackend(ctx, conf, conf.Config["leased_passthrough"] == "true")
-	case "true":
+	case "2":
 		b, err = VersionedKVFactory(ctx, conf)
 	}
 	if err != nil {
@@ -130,20 +130,11 @@ func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logic
 		return nil, err
 	}
 
-	upgradeEntry, err := conf.StorageView.Get(ctx, path.Join(b.storagePrefix, "upgrading"))
+	upgradeDone, err := b.upgradeDone(ctx, conf.StorageView)
 	if err != nil {
 		return nil, err
 	}
-
-	var upgradeInfo UpgradeInfo
-	if upgradeEntry != nil {
-		err := proto.Unmarshal(upgradeEntry.Value, &upgradeInfo)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if !upgradeInfo.Done {
+	if !upgradeDone {
 		err := b.Upgrade(ctx, conf.StorageView)
 		if err != nil {
 			return nil, err
@@ -151,6 +142,23 @@ func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logic
 	}
 
 	return b, nil
+}
+
+func (b *versionedKVBackend) upgradeDone(ctx context.Context, s logical.Storage) (bool, error) {
+	upgradeEntry, err := s.Get(ctx, path.Join(b.storagePrefix, "upgrading"))
+	if err != nil {
+		return false, err
+	}
+
+	var upgradeInfo UpgradeInfo
+	if upgradeEntry != nil {
+		err := proto.Unmarshal(upgradeEntry.Value, &upgradeInfo)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return upgradeInfo.Done, nil
 }
 
 func pathInvalid(b *versionedKVBackend) []*framework.Path {

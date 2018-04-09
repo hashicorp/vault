@@ -256,7 +256,7 @@ func prepareDynamoDBTestContainer(t *testing.T) (cleanup func(), retAddress stri
 			return err
 		}
 		if resp.StatusCode != 400 {
-			return fmt.Errorf("Expected DynamoDB to return status code 400, got (%s) instead.", resp.Status)
+			return fmt.Errorf("expected DynamoDB to return status code 400, got (%s) instead", resp.Status)
 		}
 		return nil
 	}); err != nil {

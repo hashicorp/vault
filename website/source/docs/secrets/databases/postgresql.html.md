@@ -35,7 +35,9 @@ more information about setting up the database secrets engine.
     $ vault write database/config/my-postgresql-database \
         plugin_name=postgresql-database-plugin \
         allowed_roles="my-role" \
-        connection_url="postgresql://root:root@localhost:5432/"
+        connection_url="postgresql://{{username}}:{{password}}@localhost:5432/" \
+        username="root" \
+        password="root"
     ```
 
 1. Configure a role that maps a name in Vault to an SQL statement to execute to

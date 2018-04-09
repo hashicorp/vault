@@ -1285,10 +1285,10 @@
 			"revisionTime": "2018-02-03T00:31:27Z"
 		},
 		{
-			"checksumSHA1": "2C/dB4cbq0XihR+kjvVx6+vd0S0=",
+			"checksumSHA1": "NCsUBSk7mleZOEz5iDQIXTvxroI=",
 			"path": "github.com/hashicorp/vault-plugin-auth-azure/plugin",
-			"revision": "b286b6dab40418055cf96240a4d100d7a505b518",
-			"revisionTime": "2018-04-07T15:06:41Z"
+			"revision": "ef1aebd830562fe9a1c629102fcb156a536e8a0a",
+			"revisionTime": "2018-04-09T18:16:42Z"
 		},
 		{
 			"checksumSHA1": "z3uh8zJmu5wVa22xfPcTt5JDBJg=",
@@ -1333,10 +1333,10 @@
 			"revisionTime": "2018-04-03T22:22:59Z"
 		},
 		{
-			"checksumSHA1": "gEscxeVb1jtaLn/g5eimNHCMcPE=",
+			"checksumSHA1": "+W1j4zJ44dL29vfn4yLHH87lRfA=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
-			"revision": "1d06ac75a8fe06fec8a09c16e8b58e7b032a670d",
-			"revisionTime": "2018-04-05T18:08:10Z"
+			"revision": "5b4b4aafd60a46dca4ece3c5e34d6c421f18c78e",
+			"revisionTime": "2018-04-09T17:18:23Z"
 		},
 		{
 			"checksumSHA1": "vTfeYxi0Z1y176bjQaYh1/FpQ9s=",

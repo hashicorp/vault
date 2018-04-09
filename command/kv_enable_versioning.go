@@ -77,7 +77,7 @@ func (c *KVEnableVersioningCommand) Run(args []string) int {
 
 	if err := client.Sys().TuneMount(mountPath, api.MountConfigInput{
 		Options: map[string]string{
-			"versioned": "true",
+			"version": "2",
 		},
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error tuning secrets engine %s: %s", mountPath, err))

@@ -1,12 +1,12 @@
 ---
 layout: "docs"
 page_title: "KV - Secrets Engines"
-sidebar_current: "docs-secrets-kv-nonversioned"
+sidebar_current: "docs-secrets-kv-v1"
 description: |-
   The KV secrets engine can store arbitrary secrets.
 ---
 
-# KV Secrets Engine
+# KV Secrets Engine - Version 1
 
 The `kv` secrets engine is used to store arbitrary secrets within the
 configured physical storage for Vault.
@@ -28,10 +28,10 @@ secret's path.
 
 ## Setup
 
-To enable a non-versioned kv store:
+To enable a version 1 kv store:
 
 ```
-vault secrets enable kv
+vault secrets enable -version=1 kv
 ```
 
 ## Usage
@@ -106,5 +106,5 @@ ttl                 30m
 ## API
 
 The KV secrets engine has a full HTTP API. Please see the
-[KV secrets engine API](/api/secret/kv/kv.html) for more
+[KV secrets engine API](/api/secret/kv/kv-v1.html) for more
 details.

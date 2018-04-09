@@ -115,7 +115,7 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 
 	if username, ok := conf["username"]; ok {
 		if cluster.ProtoVersion < 2 {
-			return nil, fmt.Errorf("Authentication is not supported with protocol version < 2")
+			return nil, fmt.Errorf("authentication is not supported with protocol version < 2")
 		}
 		authenticator := gocql.PasswordAuthenticator{Username: username}
 		if password, ok := conf["password"]; ok {
