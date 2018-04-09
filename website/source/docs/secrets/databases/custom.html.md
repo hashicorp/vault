@@ -33,11 +33,11 @@ All plugins for the database secrets engine must implement the same simple inter
 ```go
 type Database interface {
 	Type() (string, error)
-	CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error)
-	RenewUser(statements Statements, username string, expiration time.Time) error
-	RevokeUser(statements Statements, username string) error
-
-	Initialize(config map[string]interface{}, verifyConnection bool) error
+	CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error)
+	RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) error
+	RevokeUser(ctx context.Context, statements Statements, username string) error
+	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
+	Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
 	Close() error
 }
 ```
@@ -48,10 +48,10 @@ statements to the plugin on function call. The struct is defined as:
 
 ```go
 type Statements struct {
-	CreationStatements   string
-	RevocationStatements string
-	RollbackStatements   string
-	RenewStatements      string
+	Creation   []string
+	Revocation []string
+	Rollback   []string
+	Renewal    []string
 }
 ```
 
