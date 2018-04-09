@@ -24,6 +24,9 @@ DEPRECATIONS/CHANGES:
    the core of Vault to ensure consistency across all backends. Since this was
    previously delegated to individual backends, there may be some slight
    differences in TTLs generated from some backends.
+ * Removal of default `secret/` mount: In 0.12 we will stop mounting `secret/`
+   by default at initialization time (it will still be available in `dev`
+   mode).
 
 FEATURES:
 

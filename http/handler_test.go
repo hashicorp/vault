@@ -168,7 +168,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
-				"options":   map[string]interface{}{"version": "2"},
+				"options":   map[string]interface{}{"version": "1"},
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -221,7 +221,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
-			"options":   map[string]interface{}{"version": "2"},
+			"options":   map[string]interface{}{"version": "1"},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
