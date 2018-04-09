@@ -189,6 +189,8 @@ func pathInvalid(b *versionedKVBackend) []*framework.Path {
 				logical.DeleteOperation: handler,
 				logical.ListOperation:   handler,
 			},
+
+			HelpDescription: pathInvalidHelp,
 		},
 	}
 }
@@ -397,4 +399,32 @@ encrypted/decrypted by Vault: they are never stored unencrypted in the backend
 and the backend never has an opportunity to see the unencrypted value. Each key
 can have a configured number of versions, and versions can be retrieved based on
 their version numbers.
+`
+
+var pathInvalidHelp string = backendHelp + `
+
+## PATHS
+
+The following paths are supported by this backend. To view help for
+any of the paths below, use the help command with any route matching
+the path pattern. Note that depending on the policy of your auth token,
+you may or may not be able to access certain paths.
+
+    ^config$
+        Configures settings for the KV store
+
+    ^data/.*$
+        Write, Read, and Delete data in the Key-Value Store.
+
+    ^delete/.*$
+        Marks one or more versions as deleted in the KV store.
+
+    ^destroy/.*$
+        Permanently removes one or more versions in the KV store
+
+    ^metadata/.*$
+        Configures settings for the KV store
+
+    ^undelete/.*$
+        Undeletes one or more versions from the KV store.
 `
