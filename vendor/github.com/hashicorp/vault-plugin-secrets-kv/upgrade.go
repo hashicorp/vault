@@ -21,7 +21,15 @@ import (
 func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		if atomic.LoadUint32(b.upgrading) == 1 {
-			return logical.ErrorResponse("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
+			// Sleep for a very short time before returning. This helps clients
+			// that are trying to access a mount immediately upon enabling be
+			// more likely to behave correctly since the operation should take
+			// almost no time.
+			time.Sleep(10 * time.Millisecond)
+
+			if atomic.LoadUint32(b.upgrading) == 1 {
+				return logical.ErrorResponse("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
+			}
 		}
 
 		return next(ctx, req, data)

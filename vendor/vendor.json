@@ -1333,10 +1333,10 @@
 			"revisionTime": "2018-04-03T22:22:59Z"
 		},
 		{
-			"checksumSHA1": "fFMnPRGUl/EzWcVZIs0V/mfT0kE=",
+			"checksumSHA1": "LdNxvsrLF5VQtnEBgudpaYs/aYQ=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
-			"revision": "98cc9e3a079df0922126f1c8032acd9e4fa10e70",
-			"revisionTime": "2018-04-09T19:45:29Z"
+			"revision": "80b95c81a236871dc91e2f61f3e6eec2b47ed65b",
+			"revisionTime": "2018-04-09T20:32:02Z"
 		},
 		{
 			"checksumSHA1": "vTfeYxi0Z1y176bjQaYh1/FpQ9s=",
