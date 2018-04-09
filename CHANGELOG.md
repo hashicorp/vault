@@ -20,6 +20,10 @@ DEPRECATIONS/CHANGES:
    default. Existing configurations will continue to work as they do now;
    however, the next time a configuration is written `case_sensitive_names`
    will need to be explicitly set to `true`.
+ * TTL handling within core: All lease TTL handling has been centralized within
+   the core of Vault to ensure consistency across all backends. Since this was
+   previously delegated to individual backends, there may be some slight
+   differences in TTLs generated from some backends.
 
 FEATURES:
 
@@ -41,8 +45,8 @@ FEATURES:
    Vault, invalidating the old credentials and ensuring only Vault knows the
    actual valid values.
  * Azure Authentication Plugin: There is now a plugin (pulled in to Vault) that
-   allows authenticating Azure machines to Vault using their Azure-provided
-   credentials. See the [plugin
+   allows authenticating Azure machines to Vault using Azure's Managed Service
+   Identity credentials. See the [plugin
    repository](https://github.com/hashicorp/vault-plugin-auth-azure) for more
    information.
  * GCP Secrets Plugin: There is now a plugin (pulled in to Vault) that allows
