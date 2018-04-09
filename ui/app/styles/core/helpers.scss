@@ -52,7 +52,7 @@
   align-items: center;
 }
 .is-flex-1 {
-  flex: 1;
+  flex-grow: 1;
 }
 .is-flex-wrap {
   flex-flow: row wrap;

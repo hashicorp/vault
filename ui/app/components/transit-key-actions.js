@@ -2,7 +2,8 @@ import Ember from 'ember';
 const { get, set } = Ember;
 
 const TRANSIT_PARAMS = {
-  algorithm: 'sha2-256',
+  hash_algorithm: 'sha2-256',
+  signature_algorithm: 'pss',
   bits: 256,
   bytes: 32,
   ciphertext: null,
@@ -25,11 +26,12 @@ const TRANSIT_PARAMS = {
   valid: null,
   plaintextOriginal: null,
   didDecode: false,
+  verification: 'Signature',
 };
 const PARAMS_FOR_ACTION = {
-  sign: ['input', 'algorithm', 'key_version', 'prehashed'],
-  verify: ['input', 'hmac', 'signature', 'algorithm', 'prehashed'],
-  hmac: ['input', 'algorithm', 'key_version'],
+  sign: ['input', 'hash_algorithm', 'key_version', 'prehashed', 'signature_algorithm'],
+  verify: ['input', 'hmac', 'signature', 'hash_algorithm', 'prehashed'],
+  hmac: ['input', 'hash_algorithm', 'key_version'],
   encrypt: ['plaintext', 'context', 'nonce', 'key_version'],
   decrypt: ['ciphertext', 'context', 'nonce'],
   rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
@@ -68,6 +70,11 @@ export default Ember.Component.extend(TRANSIT_PARAMS, {
       exportKeyVersion,
     });
   },
+
+  keyIsRSA: Ember.computed('key.type', function() {
+    let type = get(this, 'key.type');
+    return type === 'rsa-2048' || type === 'rsa-4096';
+  }),
 
   getModelInfo() {
     const model = get(this, 'key') || get(this, 'backend');
@@ -138,7 +145,12 @@ export default Ember.Component.extend(TRANSIT_PARAMS, {
   },
 
   compactData(data) {
+    let type = get(this, 'key.type');
+    let isRSA = type === 'rsa-2048' || type === 'rsa-4096';
     return Object.keys(data).reduce((result, key) => {
+      if (key === 'signature_algorithm' && !isRSA) {
+        return result;
+      }
       if (data[key]) {
         result[key] = data[key];
       }
