@@ -807,7 +807,7 @@ $ cd identity/vault-chef-approle/terraform-aws/chef-node
 #### Task 2: Update terraform.tfvars.example
 
 Replace the variable values in `terraform.tfvars.example` to match your
-environment and save it as `terraform.tfvars` like you have done at [Step 1]((#step-1-provision-the-vault--chef-server)).
+environment and save it as `terraform.tfvars` like you have done at [Step 1](#step-1-provision-the-vault-and-chef-server).
 
 Note the following:
 
