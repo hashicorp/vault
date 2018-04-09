@@ -668,9 +668,7 @@ b07d7a47-1d0d-741d-20b4-ae0de7c6d964
 
 ## Next steps
 
-Read the [_AppRole with Terraform and
-Chef_](/guides/identity/approle-trusted-entities.html) guide to better
-understand the role of trusted entities using Terraform and Chef as an example. 
+Read the [_AppRole with Terraform and Chef_](/guides/identity/approle-trusted-entities.html) guide to better
+understand the role of trusted entities using Terraform and Chef as an example.
 
-To learn more about response wrapping, go to the [Cubbyhole Response
-Wrapping](/guides/secret-mgmt/cubbyhole.html) guide.
+To learn more about response wrapping, go to the [Cubbyhole Response Wrapping](/guides/secret-mgmt/cubbyhole.html) guide.
