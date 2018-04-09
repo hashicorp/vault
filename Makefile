@@ -22,10 +22,7 @@ bin: prep
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS) ui' sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # dev creates binaries for testing Vault locally. These are put
-# into ./bin/ as well as $GOPATH/bin, except for quickdev which
-# is only put into /bin/
-quickdev: prep
-	@CGO_ENABLED=0 go build -i -tags='$(BUILD_TAGS)' -o bin/vault
+# into ./bin/ as well as $GOPATH/bin
 dev: prep
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-ui: prep
