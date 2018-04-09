@@ -20,7 +20,6 @@ export default DS.Model.extend({
   options: fragment('mount-options'),
   local: attr('boolean'),
   sealWrap: attr('boolean'),
-  isVersioned: computed.alias('options.versioned'),
 
   shouldIncludeInList: computed('type', function() {
     return !LIST_EXCLUDED_BACKENDS.includes(this.get('type'));
