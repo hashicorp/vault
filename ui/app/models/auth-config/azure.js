@@ -10,7 +10,7 @@ const { computed } = Ember;
 export default AuthConfig.extend({
   tenantId: attr('string', {
     label: 'Tenant ID',
-    helpText: 'The tenant id for the Azure Active Directory organization',
+    helpText: 'The tenant ID for the Azure Active Directory organization',
   }),
   resource: attr('string', {
     helpText: 'The configured URL for the application registered in Azure Active Directory',
@@ -18,7 +18,7 @@ export default AuthConfig.extend({
   clientId: attr('string', {
     label: 'Client ID',
     helpText:
-      'The client id for credentials to query the Azure APIs. Currently read permissions to query compute resources are required.',
+      'The client ID for credentials to query the Azure APIs. Currently read permissions to query compute resources are required.',
   }),
   clientSecret: attr('string', {
     helpText: 'The client secret for credentials to query the Azure APIs',
