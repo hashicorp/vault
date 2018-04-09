@@ -56,11 +56,11 @@ FEATURES:
    through to backends on a per-mount basis. This is useful in various cases
    when plugins are interacting with external services.
  * HA for Google Cloud Storage: The GCS storage type now supports HA.
- * UI support for identity - add and edit entities, groups, and their associated
+ * UI support for identity: Add and edit entities, groups, and their associated
    aliases.
- * UI auth method support - enable, disable, and configure all of the built-in 
+ * UI auth method support: Enable, disable, and configure all of the built-in 
    authentication methods.
- * UI (Enterprise) - View and edit Sentinel policies.
+ * UI (Enterprise): View and edit Sentinel policies.
 
 IMPROVEMENTS:
 
@@ -71,7 +71,8 @@ IMPROVEMENTS:
  * storage/mysql: Allow setting max idle connections and connection lifetime
    [GH-4211]
  * storage/gcs: Add HA support [GH-4226]
- * ui - add Nomad to the list of available secret engines
+ * ui: Add Nomad to the list of available secret engines
+ * ui: Adds ability to set static headers to be returned by the UI
 
 BUG FIXES:
 
