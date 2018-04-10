@@ -83,6 +83,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * api: Fix retries not working [GH-4322]
  * auth/gcp: Invalidate clients on config change
  * auth/token: Revoke-orphan and tidy operations now correctly cleans up the
    parent prefix entry in the underlying storage backend. These operations also
