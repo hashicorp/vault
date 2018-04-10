@@ -2,6 +2,15 @@
 
 DEPRECATIONS/CHANGES:
 
+ * Database plugin compatibility: The database plugin interface was enhanced to
+   support some additional functionality related to root credential rotation
+   and supporting templated URL strings. The changes were made in a
+   backwards-compatible way and all builtin plugins were updated with the new
+   features. Custom plugins not built into Vault will need to be upgraded to
+   support templated URL strings and root rotation. Additionally, the
+   Initialize method was deprecated in favor of a new Init method that supports
+   configuration modifications that occur in the plugin back to the primary
+   data store.
  * Removal of returned secret information: For a long time Vault has returned
    configuration given to various secret engines and auth methods with secret
    values (such as secret API keys or passwords) still intact, and with a
