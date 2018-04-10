@@ -15,8 +15,8 @@ type Config struct {
 }
 
 // ExecuteDBQuery handles executing one single statement, while properly releasing its resources.
-// - ctx: 		Optional, may be nil
-// - db: 		Required
+// - ctx: 	Optional, may be nil
+// - db: 	Required
 // - config: 	Optional, may be nil
 // - query: 	Required
 func ExecuteDBQuery(ctx context.Context, db *sql.DB, config *Config, query string) error {
@@ -33,8 +33,8 @@ func ExecuteDBQuery(ctx context.Context, db *sql.DB, config *Config, query strin
 }
 
 // ExecuteTxQuery handles executing one single statement, while properly releasing its resources.
-// - ctx: 		Optional, may be nil
-// - tx: 		Required
+// - ctx: 	Optional, may be nil
+// - tx: 	Required
 // - config: 	Optional, may be nil
 // - query: 	Required
 func ExecuteTxQuery(ctx context.Context, tx *sql.Tx, config *Config, query string) error {
