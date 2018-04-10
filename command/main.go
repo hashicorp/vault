@@ -37,7 +37,7 @@ func setupEnv(args []string) []string {
 			break
 		}
 
-		if arg == "-v" || arg == "--version" {
+		if len(args) == 1 && (arg == "-v" || arg == "-version" || arg == "--version") {
 			args = []string{"version"}
 			break
 		}
