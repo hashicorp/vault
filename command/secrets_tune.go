@@ -3,6 +3,7 @@ package command
 import (
 	"flag"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ type SecretsTuneCommand struct {
 	flagAuditNonHMACRequestKeys  []string
 	flagAuditNonHMACResponseKeys []string
 	flagListingVisibility        string
+	flagVersion                  int
 }
 
 func (c *SecretsTuneCommand) Synopsis() string {
@@ -101,6 +103,13 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
 	})
 
+	f.IntVar(&IntVar{
+		Name:    "version",
+		Target:  &c.flagVersion,
+		Default: 0,
+		Usage:   "Select the version of the engine to run. Not supported by all engines.",
+	})
+
 	return set
 }
 
@@ -134,6 +143,13 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
+	}
+
+	if c.flagVersion > 0 {
+		if c.flagOptions == nil {
+			c.flagOptions = make(map[string]string)
+		}
+		c.flagOptions["version"] = strconv.Itoa(c.flagVersion)
 	}
 
 	// Append a trailing slash to indicate it's a path in output
