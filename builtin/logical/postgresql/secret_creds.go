@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/helper/transaction"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/lib/pq"
@@ -211,7 +212,10 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 		// many permissions as possible right now
 		var lastStmtError error
 		for _, query := range revocationStmts {
-			if err := execute(db, query); err != nil {
+			c := &transaction.Config{
+				DB: db,
+			}
+			if err := transaction.Execute(c, query); err != nil {
 				lastStmtError = err
 			}
 		}
@@ -251,7 +255,12 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 				continue
 			}
 
-			if err := executeRevokeStatement(tx, username, query); err != nil {
+			c := &transaction.Config{
+				Tx:   tx,
+				Name: username,
+			}
+
+			if err := transaction.Execute(c, query); err != nil {
 				return nil, err
 			}
 		}
@@ -262,32 +271,4 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	return resp, nil
-}
-
-func execute(db *sql.DB, query string) error {
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func executeRevokeStatement(tx *sql.Tx, username string, query string) error {
-	stmt, err := tx.Prepare(Query(query, map[string]string{
-		"name": username,
-	}))
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	if _, err := stmt.Exec(); err != nil {
-		return err
-	}
-	return nil
 }

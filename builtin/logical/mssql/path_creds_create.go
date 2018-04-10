@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"database/sql"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/helper/transaction"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -91,7 +91,12 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 			continue
 		}
 
-		if err := executeStatement(tx, username, password, query); err != nil {
+		c := &transaction.Config{
+			Tx:       tx,
+			Name:     username,
+			Password: password,
+		}
+		if err := transaction.Execute(c, query); err != nil {
 			return nil, err
 		}
 	}
@@ -112,21 +117,6 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 	resp.Secret.MaxTTL = leaseConfig.TTLMax
 
 	return resp, nil
-}
-
-func executeStatement(tx *sql.Tx, username string, password string, query string) error {
-	stmt, err := tx.Prepare(Query(query, map[string]string{
-		"name":     username,
-		"password": password,
-	}))
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
-		return err
-	}
-	return nil
 }
 
 const pathCredsCreateHelpSyn = `

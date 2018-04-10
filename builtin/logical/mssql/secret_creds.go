@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/transaction"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -130,7 +131,11 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revokeStmts {
-		if err := execute(db, query); err != nil {
+
+		c := &transaction.Config{
+			DB: db,
+		}
+		if err := transaction.Execute(c, query); err != nil {
 			lastStmtError = err
 			continue
 		}
@@ -155,19 +160,6 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	return nil, nil
-}
-
-func execute(db *sql.DB, query string) error {
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 const dropUserSQL = `

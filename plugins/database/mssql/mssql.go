@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/helper/transaction"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
@@ -129,7 +130,15 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 				continue
 			}
 
-			if err := executeStatement(ctx, tx, query, username, password, expirationStr); err != nil {
+			c := &transaction.Config{
+				Ctx:        ctx,
+				Tx:         tx,
+				Name:       username,
+				Password:   password,
+				Expiration: expirationStr,
+			}
+
+			if err := transaction.Execute(c, query); err != nil {
 				return "", "", err
 			}
 		}
@@ -141,22 +150,6 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	}
 
 	return username, password, nil
-}
-
-func executeStatement(ctx context.Context, tx *sql.Tx, query string, username string, password string, expirationStr string) error {
-	stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-		"name":       username,
-		"password":   password,
-		"expiration": expirationStr,
-	}))
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	if _, err := stmt.ExecContext(ctx); err != nil {
-		return err
-	}
-	return nil
 }
 
 // RenewUser is not supported on MSSQL, so this is a no-op.
@@ -196,7 +189,12 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 				continue
 			}
 
-			if err := execute(ctx, tx, query, username); err != nil {
+			c := &transaction.Config{
+				Ctx:  ctx,
+				Tx:   tx,
+				Name: username,
+			}
+			if err := transaction.Execute(c, query); err != nil {
 				return err
 			}
 		}
@@ -207,20 +205,6 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 		return err
 	}
 
-	return nil
-}
-
-func execute(ctx context.Context, tx *sql.Tx, query string, username string) error {
-	stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-		"name": username,
-	}))
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	if _, err := stmt.ExecContext(ctx); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -299,7 +283,12 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revokeStmts {
-		if err := executeRevokeStmt(ctx, db, query); err != nil {
+
+		c := &transaction.Config{
+			Ctx: ctx,
+			DB:  db,
+		}
+		if err := transaction.Execute(c, query); err != nil {
 			lastStmtError = err
 		}
 	}
@@ -322,19 +311,6 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 		return err
 	}
 
-	return nil
-}
-
-func executeRevokeStmt(ctx context.Context, db *sql.DB, query string) error {
-	stmt, err := db.PrepareContext(ctx, query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	_, err = stmt.ExecContext(ctx)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -375,7 +351,14 @@ func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) 
 			if len(query) == 0 {
 				continue
 			}
-			if err := executeRotateStmt(ctx, tx, query, m.Username, password); err != nil {
+
+			c := &transaction.Config{
+				Ctx:      ctx,
+				Tx:       tx,
+				Username: m.Username,
+				Password: password,
+			}
+			if err := transaction.Execute(c, query); err != nil {
 				return nil, err
 			}
 		}
@@ -391,22 +374,6 @@ func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) 
 
 	m.RawConfig["password"] = password
 	return m.RawConfig, nil
-}
-
-func executeRotateStmt(ctx context.Context, tx *sql.Tx, query string, username string, password string) error {
-	stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-		"username": username,
-		"password": password,
-	}))
-	if err != nil {
-		return err
-	}
-
-	defer stmt.Close()
-	if _, err := stmt.ExecContext(ctx); err != nil {
-		return err
-	}
-	return nil
 }
 
 const dropUserSQL = `

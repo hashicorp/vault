@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/helper/transaction"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
@@ -229,7 +230,12 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 				continue
 			}
 
-			if err := execute(ctx, tx, query, username); err != nil {
+			c := &transaction.Config{
+				Ctx:  ctx,
+				Tx:   tx,
+				Name: username,
+			}
+			if err := transaction.Execute(c, query); err != nil {
 				return err
 			}
 		}
@@ -261,6 +267,7 @@ func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 	if _, err := disableStmt.ExecContext(ctx); err != nil {
 		return err
 	}
+	disableStmt.Exec()
 
 	// Invalidates current sessions and performs soft drop (drop if no dependencies)
 	// if hard drop is desired, custom revoke statements should be written for role
@@ -291,20 +298,6 @@ func executeStatement(ctx context.Context, tx *sql.Tx, query string, username st
 		"name":       username,
 		"password":   password,
 		"expiration": expirationStr,
-	}))
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	if _, err := stmt.ExecContext(ctx); err != nil {
-		return err
-	}
-	return nil
-}
-
-func execute(ctx context.Context, tx *sql.Tx, query string, username string) error {
-	stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-		"name": username,
 	}))
 	if err != nil {
 		return err

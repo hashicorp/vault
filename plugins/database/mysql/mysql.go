@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/helper/transaction"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
@@ -301,7 +302,15 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 			if len(query) == 0 {
 				continue
 			}
-			if err := executeRotateStmt(ctx, tx, query, m.Username, password); err != nil {
+
+			c := &transaction.Config{
+				Ctx:      ctx,
+				Tx:       tx,
+				Username: m.Username,
+				Password: password,
+			}
+
+			if err := transaction.Execute(c, query); err != nil {
 				return nil, err
 			}
 		}
@@ -317,20 +326,4 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 
 	m.RawConfig["password"] = password
 	return m.RawConfig, nil
-}
-
-func executeRotateStmt(ctx context.Context, tx *sql.Tx, query string, username string, password string) error {
-	stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-		"username": username,
-		"password": password,
-	}))
-	if err != nil {
-		return err
-	}
-
-	defer stmt.Close()
-	if _, err := stmt.ExecContext(ctx); err != nil {
-		return err
-	}
-	return nil
 }
