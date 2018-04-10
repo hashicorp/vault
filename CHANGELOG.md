@@ -39,9 +39,7 @@ FEATURES:
    of the `kv` backend can be upgraded to the new versioned mode (downgrades
    are not currently supported). The old "passthrough" mode is still the
    default for new mounts; versioning can be turned on by setting the
-   `-options` flag for the `vault secrets enable` command to specify
-   `versioned=true`. This may become the default between the beta and final
-   release.
+   `-version=2` flag for the `vault secrets enable` command.
  * Database Root Credential Rotation: Database configurations can now rotate
    their own configured admin/root credentials, allowing configured credentials
    for a database connection to be rotated immediately after sending them into
