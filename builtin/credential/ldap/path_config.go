@@ -385,7 +385,7 @@ type ConfigEntry struct {
 	DiscoverDN         bool   `json:"discoverdn"`
 	TLSMinVersion      string `json:"tls_min_version"`
 	TLSMaxVersion      string `json:"tls_max_version"`
-	CaseSensitiveNames *bool  `json:"case_sensitive_names,omitempty`
+	CaseSensitiveNames *bool  `json:"case_sensitive_names,omitempty"`
 }
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {

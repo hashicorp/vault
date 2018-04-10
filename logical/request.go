@@ -143,7 +143,7 @@ type Request struct {
 
 	// For replication, contains the last WAL on the remote side after handling
 	// the request, used for best-effort avoidance of stale read-after-write
-	lastRemoteWAL uint64 `sentinel:""`
+	lastRemoteWAL uint64
 }
 
 // Get returns a data field and guards for nil Data
