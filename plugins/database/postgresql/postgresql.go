@@ -200,7 +200,7 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 				Name:       username,
 				Expiration: expirationStr,
 			}
-			if err := transaction.ExecuteTxQuery(nil, tx, c, query); err != nil {
+			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return err
 			}
 		}
