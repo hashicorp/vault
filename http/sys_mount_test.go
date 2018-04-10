@@ -511,7 +511,7 @@ func TestSysRemount(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad:\ngot\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 }
 
@@ -734,10 +734,12 @@ func TestSysTuneMount_Options(t *testing.T) {
 			"default_lease_ttl": json.Number("2764800"),
 			"max_lease_ttl":     json.Number("2764800"),
 			"force_no_cache":    false,
+			"options":           map[string]interface{}{"test": "true"},
 		},
 		"default_lease_ttl": json.Number("2764800"),
 		"max_lease_ttl":     json.Number("2764800"),
 		"force_no_cache":    false,
+		"options":           map[string]interface{}{"test": "true"},
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]

@@ -1646,7 +1646,8 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	switch logicalType {
-	case "kv", "kv-v1":
+	case "kv":
+	case "kv-v1":
 		// Alias KV v1
 		logicalType = "kv"
 		if options == nil {
@@ -2117,9 +2118,10 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		b.Core.logger.Info("mount tuning of options", "path", path, "options", options)
 
 		var changed bool
-
+		var numBuiltIn int
 		if v, ok := options["version"]; ok {
 			changed = true
+			numBuiltIn++
 			// Special case to make sure we can not disable versioning once it's
 			// enabeled. If the vkv backend suports downgrading this can be removed.
 			meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
@@ -2137,7 +2139,13 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 				resp = &logical.Response{}
 				resp.AddWarning(fmt.Sprintf("Upgrading mount from version %d to version %d. This mount will be unavailable for a brief period and will resume service shortly.", meVersion, optVersion))
 			}
-
+		}
+		if options != nil {
+			// For anything we don't recognize and provide special handling,
+			// always write
+			if len(options) > numBuiltIn {
+				changed = true
+			}
 		}
 
 		if changed {
