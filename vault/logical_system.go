@@ -1643,8 +1643,10 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 					"plugin_name must be provided for plugin backend"),
 				logical.ErrInvalidRequest
 		}
+	}
 
-	case "kv-v1":
+	switch logicalType {
+	case "kv", "kv-v1":
 		// Alias KV v1
 		logicalType = "kv"
 		if options == nil {
@@ -1659,6 +1661,13 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 			options = map[string]string{}
 		}
 		options["version"] = "2"
+
+	default:
+		if options != nil && options["version"] != "" {
+			return logical.ErrorResponse(fmt.Sprintf(
+					"secrets engine %q does not allow setting a version", logicalType)),
+				logical.ErrInvalidRequest
+		}
 	}
 
 	// Copy over the force no cache if set
@@ -2412,6 +2421,12 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 					"plugin_name must be provided for plugin backend"),
 				logical.ErrInvalidRequest
 		}
+	}
+
+	if options != nil && options["version"] != "" {
+		return logical.ErrorResponse(fmt.Sprintf(
+				"auth method %q does not allow setting a version", logicalType)),
+			logical.ErrInvalidRequest
 	}
 
 	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
