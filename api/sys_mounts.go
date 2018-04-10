@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 
-	"github.com/fatih/structs"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -44,10 +43,8 @@ func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
 }
 
 func (c *Sys) Mount(path string, mountInfo *MountInput) error {
-	body := structs.Map(mountInfo)
-
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s", path))
-	if err := r.SetJSONBody(body); err != nil {
+	if err := r.SetJSONBody(mountInfo); err != nil {
 		return err
 	}
 
@@ -88,9 +85,8 @@ func (c *Sys) Remount(from, to string) error {
 }
 
 func (c *Sys) TuneMount(path string, config MountConfigInput) error {
-	body := structs.Map(config)
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
-	if err := r.SetJSONBody(body); err != nil {
+	if err := r.SetJSONBody(config); err != nil {
 		return err
 	}
 
@@ -120,44 +116,44 @@ func (c *Sys) MountConfig(path string) (*MountConfigOutput, error) {
 }
 
 type MountInput struct {
-	Type        string            `json:"type" structs:"type"`
-	Description string            `json:"description" structs:"description"`
-	Config      MountConfigInput  `json:"config" structs:"config"`
-	Options     map[string]string `json:"options" structs:"options"`
-	Local       bool              `json:"local" structs:"local"`
-	PluginName  string            `json:"plugin_name,omitempty" structs:"plugin_name"`
-	SealWrap    bool              `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
+	Type        string            `json:"type"`
+	Description string            `json:"description"`
+	Config      MountConfigInput  `json:"config"`
+	Options     map[string]string `json:"options"`
+	Local       bool              `json:"local"`
+	PluginName  string            `json:"plugin_name,omitempty"`
+	SealWrap    bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
 }
 
 type MountConfigInput struct {
-	Options                   map[string]string `json:"options" structs:"options" mapstructure:"options"`
-	DefaultLeaseTTL           string            `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL               string            `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	ForceNoCache              bool              `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginName                string            `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	AuditNonHMACRequestKeys   []string          `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
-	AuditNonHMACResponseKeys  []string          `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
-	ListingVisibility         string            `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
-	PassthroughRequestHeaders []string          `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	Options                   map[string]string `json:"options" mapstructure:"options"`
+	DefaultLeaseTTL           string            `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL               string            `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache              bool              `json:"force_no_cache" mapstructure:"force_no_cache"`
+	PluginName                string            `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys   []string          `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  []string          `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility         string            `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
+	PassthroughRequestHeaders []string          `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
 }
 
 type MountOutput struct {
-	Type        string            `json:"type" structs:"type"`
-	Description string            `json:"description" structs:"description"`
-	Accessor    string            `json:"accessor" structs:"accessor"`
-	Config      MountConfigOutput `json:"config" structs:"config"`
-	Options     map[string]string `json:"options" structs:"options"`
-	Local       bool              `json:"local" structs:"local"`
-	SealWrap    bool              `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
+	Type        string            `json:"type"`
+	Description string            `json:"description"`
+	Accessor    string            `json:"accessor"`
+	Config      MountConfigOutput `json:"config"`
+	Options     map[string]string `json:"options"`
+	Local       bool              `json:"local"`
+	SealWrap    bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
 }
 
 type MountConfigOutput struct {
-	DefaultLeaseTTL           int      `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL               int      `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	ForceNoCache              bool     `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginName                string   `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	AuditNonHMACRequestKeys   []string `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
-	AuditNonHMACResponseKeys  []string `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
-	ListingVisibility         string   `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
-	PassthroughRequestHeaders []string `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	DefaultLeaseTTL           int      `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL               int      `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache              bool     `json:"force_no_cache" mapstructure:"force_no_cache"`
+	PluginName                string   `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys   []string `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  []string `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility         string   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
+	PassthroughRequestHeaders []string `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
 }

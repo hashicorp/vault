@@ -42,16 +42,16 @@ type SSHHelper struct {
 type SSHVerifyResponse struct {
 	// Usually empty. If the request OTP is echo request message, this will
 	// be set to the corresponding echo response message.
-	Message string `json:"message" structs:"message" mapstructure:"message"`
+	Message string `json:"message" mapstructure:"message"`
 
 	// Username associated with the OTP
-	Username string `json:"username" structs:"username" mapstructure:"username"`
+	Username string `json:"username" mapstructure:"username"`
 
 	// IP associated with the OTP
-	IP string `json:"ip" structs:"ip" mapstructure:"ip"`
+	IP string `json:"ip" mapstructure:"ip"`
 
 	// Name of the role against which the OTP was issued
-	RoleName string `json:"role_name" structs:"role_name" mapstructure:"role_name"`
+	RoleName string `json:"role_name" mapstructure:"role_name"`
 }
 
 // SSHHelperConfig is a structure which represents the entries from the vault-ssh-helper's configuration file.

@@ -1,26 +1,27 @@
+/*eslint-disable no-constant-condition*/
 import Ember from 'ember';
-const { computed } = Ember;
+import { task, waitForEvent } from 'ember-concurrency';
 
-export default Ember.Service.extend({
-  init() {
-    this._super(...arguments);
-    this.handleCSP = Ember.run.bind(this, '_handleCSP');
-  },
+const { Service, computed } = Ember;
 
+export default Service.extend({
   events: [],
-
-  _handleCSP(event) {
-    this.get('events').addObject(event);
-  },
-
   connectionViolations: computed.filterBy('events', 'violatedDirective', 'connect-src'),
 
   attach() {
-    this.get('events').clear();
-    window.document.addEventListener('securitypolicyviolation', this.handleCSP, true);
+    this.get('monitor').perform();
   },
 
   remove() {
-    window.document.removeEventListener('securitypolicyviolation', this.handleCSP, true);
+    this.get('monitor').cancelAll();
   },
+
+  monitor: task(function*() {
+    this.get('events').clear();
+
+    while (true) {
+      let event = yield waitForEvent(window.document, 'securitypolicyviolation');
+      this.get('events').addObject(event);
+    }
+  }),
 });

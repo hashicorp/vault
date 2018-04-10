@@ -179,7 +179,7 @@ func (s *encryptedKeyStorage) List(ctx context.Context, prefix string) ([]string
 
 		decoded := Base62Decode(k)
 		if len(decoded) == 0 {
-			return nil, errors.New("Could not decode key")
+			return nil, errors.New("could not decode key")
 		}
 
 		// Decrypt the data with the object's key policy.

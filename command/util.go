@@ -6,8 +6,7 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/crypto/ssh/terminal"
-
+	"github.com/fatih/color"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/token"
@@ -109,7 +108,7 @@ func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
 // to something else, the "raw" value is printed without a newline character.
 // Otherwise the value is printed as normal.
 func PrintRaw(ui cli.Ui, str string) int {
-	if terminal.IsTerminal(int(os.Stdout.Fd())) {
+	if !color.NoColor {
 		ui.Output(str)
 	} else {
 		// The cli.Ui prints a CR, which is not wanted since the user probably wants

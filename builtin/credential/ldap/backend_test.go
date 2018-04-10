@@ -677,7 +677,7 @@ func testAccStepGroupList(t *testing.T, groups []string) logicaltest.TestStep {
 		Path:      "groups",
 		Check: func(resp *logical.Response) error {
 			if resp.IsError() {
-				return fmt.Errorf("Got error response: %#v", *resp)
+				return fmt.Errorf("got error response: %#v", *resp)
 			}
 
 			expected := make([]string, len(groups))
@@ -702,7 +702,7 @@ func testAccStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 		Path:      "users",
 		Check: func(resp *logical.Response) error {
 			if resp.IsError() {
-				return fmt.Errorf("Got error response: %#v", *resp)
+				return fmt.Errorf("got error response: %#v", *resp)
 			}
 
 			expected := make([]string, len(users))

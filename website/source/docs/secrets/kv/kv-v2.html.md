@@ -1,12 +1,12 @@
 ---
 layout: "docs"
 page_title: "KV - Secrets Engines"
-sidebar_current: "docs-secrets-kv-versioned"
+sidebar_current: "docs-secrets-kv-v2"
 description: |-
   The KV secrets engine can store arbitrary secrets.
 ---
 
-# Versioned KV Secrets Engine
+# KV Secrets Engine - Version 2
 
 The `kv` secrets engine is used to store arbitrary secrets within the
 configured physical storage for Vault.
@@ -25,20 +25,20 @@ Most secrets engines must be configured in advance before they can perform their
 functions. These steps are usually completed by an operator or configuration
 management tool.
 
-A versioned `kv` secrets engine can be enabled by:
+A v2 `kv` secrets engine can be enabled by:
 
 ```
-$ vault secrets enable vkv
+$ vault secrets enable -version=2 kv
 ```
 
-Additionally, the versioned `kv` secrets engine is enabled by default at the
+Additionally, the v2 `kv` secrets engine is enabled by default at the
 path `secret/`. It can be disabled, moved, or enabled multiple times at
 different paths. Each instance of the KV secrets engine is isolated and unique.
 
-## Upgrading from Non-Versioned
+## Upgrading from Version 1
 
-An existing non-versioned kv can be easily upgraded to a versioned key/value
-store with the CLI command:
+An existing version 1 kv can be easily upgraded to a version 2 KV store with the
+CLI command:
 
 ```
 $ vault kv enable-versioning secret/
@@ -51,7 +51,7 @@ or via the API:
 $ cat payload.json
 {
   "options": {
-      "versioned": "true"
+      "version": "2"
   }
 }
 
@@ -68,13 +68,13 @@ process could take a long time, so plan accordingly.
 
 ## ACL Rules
 
-The versioned kv store uses a prefixed API, which is different from the
-non-versioned store. Before upgrading from a non-versioned kv the ACL rules
-should be changed. Also different paths in the versioned API can be ACL'ed
+The version 2 kv store uses a prefixed API, which is different from the
+version 1 API. Before upgrading from a version 1 kv the ACL rules
+should be changed. Also different paths in the version 2 API can be ACL'ed
 differently.
 
 Writing and reading versions are prefixed with the `data/` path. This policy
-that worked for the non-versioned kv:
+that worked for the version 1 kv:
 
 ```
 path "secret/dev/team-1/*" {
@@ -146,7 +146,7 @@ path "secret/metadata/dev/team-1/*" {
 }
 ```
 
-See the [API Specification](/api/secret/kv/versioned-kv.html) for more
+See the [API Specification](/api/secret/kv/kv-v2.html) for more
 information.
 
 ## Usage
@@ -381,5 +381,5 @@ See the commands below for more information:
 ## API
 
 The KV secrets engine has a full HTTP API. Please see the
-[KV secrets engine API](/api/secret/kv/versioned-kv.html) for more
+[KV secrets engine API](/api/secret/kv/kv-v2.html) for more
 details.

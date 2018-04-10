@@ -132,7 +132,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"local":     false,
 			"seal_wrap": false,
 			"options": map[string]string{
-				"versioned": "true",
+				"version": "1",
 			},
 		},
 		"sys/": map[string]interface{}{
@@ -195,7 +195,7 @@ func TestSystemBackend_mount(t *testing.T) {
 	req.Data["local"] = true
 	req.Data["seal_wrap"] = true
 	req.Data["options"] = map[string]string{
-		"versioned": "true",
+		"version": "1",
 	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
@@ -228,7 +228,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"local":     false,
 			"seal_wrap": false,
 			"options": map[string]string{
-				"versioned": "true",
+				"version": "1",
 			},
 		},
 		"sys/": map[string]interface{}{
@@ -286,7 +286,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"local":     true,
 			"seal_wrap": true,
 			"options": map[string]string{
-				"versioned": "true",
+				"version": "1",
 			},
 		},
 	}

@@ -1,4 +1,4 @@
-<form {{action 'doSubmit' (hash input=input algorithm=algorithm key_version=key_version context=context prehashed=prehashed) on="submit"}}>
+<form {{action 'doSubmit' (hash input=input hash_algorithm=hash_algorithm signature_algorithm=signature_algorithm key_version=key_version context=context prehashed=prehashed) on="submit"}}>
   {{#if signature}}
     <div class="box is-sideless is-fullwidth is-marginless">
       <div class="field">
@@ -59,7 +59,7 @@
       <div class="field">
         <div class="level is-mobile">
           <div class="level-left">
-            <label for="algorithm" class="is-label">Algorithm</label>
+            <label for="hash_algorithm" class="is-label">Hash Algorithm</label>
           </div>
           <div class="level-right">
             <div class="control is-flex">
@@ -71,19 +71,40 @@
         <div class="control is-expanded">
           <div class="select is-fullwidth">
             <select
-             name="algorithm"
-             id="algorithm"
-             onchange={{action (mut algorithm) value="target.value"}}
+             name="hash_algorithm"
+             id="hash_algorithm"
+             onchange={{action (mut hash_algorithm) value="target.value"}}
              >
              {{#each (sha2-digest-sizes) as |algo|}}
-               <option selected={{if algorithm (eq algorithm algo) (eq algo 'sha2-256')}} value={{algo}}>
-                 <code>{{algo}}</code>
+               <option selected={{if hash_algorithm (eq hash_algorithm algo) (eq algo 'sha2-256')}} value={{algo}}>
+                 {{algo}}
                </option>
              {{/each}}
             </select>
           </div>
         </div>
       </div>
+      {{#if (or (eq key.type 'rsa-2048') (eq key.type 'rsa-4096'))}}
+        <div class="field">
+          <label for="signature_algorithm" class="is-label">Signature Algorithm</label>
+          <div class="control is-expanded">
+            <div class="select is-fullwidth">
+              <select
+               name="signature_algorithm"
+               id="signature_algorithm"
+               data-test-signature-algorithm="true"
+               onchange={{action (mut signature_algorithm) value="target.value"}}
+               >
+               {{#each (array 'pss' 'pkcs1v15') as |sigAlgo|}}
+                 <option selected={{if signature_algorithm (eq signature_algorithm sigAlgo) (eq sigAlgo 'pss')}} value={{sigAlgo}}>
+                   {{sigAlgo}}
+                 </option>
+               {{/each}}
+              </select>
+            </div>
+          </div>
+        </div>
+      {{/if}}
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">

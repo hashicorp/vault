@@ -1285,10 +1285,10 @@
 			"revisionTime": "2018-02-03T00:31:27Z"
 		},
 		{
-			"checksumSHA1": "RX7zonQaV7u0L+0ShGZNMJVqLt8=",
+			"checksumSHA1": "NCsUBSk7mleZOEz5iDQIXTvxroI=",
 			"path": "github.com/hashicorp/vault-plugin-auth-azure/plugin",
-			"revision": "66be13ef38e71c5ff175b3eaafa01582df5691e4",
-			"revisionTime": "2018-04-04T11:52:51Z"
+			"revision": "ef1aebd830562fe9a1c629102fcb156a536e8a0a",
+			"revisionTime": "2018-04-09T18:16:42Z"
 		},
 		{
 			"checksumSHA1": "z3uh8zJmu5wVa22xfPcTt5JDBJg=",
@@ -1297,16 +1297,16 @@
 			"revisionTime": "2018-04-03T19:19:30Z"
 		},
 		{
-			"checksumSHA1": "tL7KItTD9AMO1kiYtx1UPFHlSK8=",
+			"checksumSHA1": "klHF0u2D5rTw60ZcNufHHtO8nSk=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "df8bafaba3c96499674c60d7f60af220a7b70ec0",
-			"revisionTime": "2018-04-05T19:37:04Z"
+			"revision": "c1f38c311636440ff37e1f655f9722d3d9c1c0cc",
+			"revisionTime": "2018-04-08T01:06:05Z"
 		},
 		{
 			"checksumSHA1": "ffJQvzbQvmCG/PdaElGSfGnDgNM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin/util",
-			"revision": "df8bafaba3c96499674c60d7f60af220a7b70ec0",
-			"revisionTime": "2018-04-05T19:37:04Z"
+			"revision": "c1f38c311636440ff37e1f655f9722d3d9c1c0cc",
+			"revisionTime": "2018-04-08T01:06:05Z"
 		},
 		{
 			"checksumSHA1": "I3b7HgnguhModU0rkNBp3PjzpZ8=",
@@ -1333,10 +1333,10 @@
 			"revisionTime": "2018-04-03T22:22:59Z"
 		},
 		{
-			"checksumSHA1": "gEscxeVb1jtaLn/g5eimNHCMcPE=",
+			"checksumSHA1": "m3cQgQrCSuWHiPA339FaZU6LuHU=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
-			"revision": "1d06ac75a8fe06fec8a09c16e8b58e7b032a670d",
-			"revisionTime": "2018-04-05T18:08:10Z"
+			"revision": "bc6216eebacf73fab61fd5cc7535b5eda7a74c98",
+			"revisionTime": "2018-04-09T21:22:48Z"
 		},
 		{
 			"checksumSHA1": "vTfeYxi0Z1y176bjQaYh1/FpQ9s=",
@@ -1705,10 +1705,10 @@
 			"revisionTime": "2017-03-13T16:33:22Z"
 		},
 		{
-			"checksumSHA1": "WKM6mnULSA223qnzHiuketiTzEw=",
+			"checksumSHA1": "t2yP3EKVt3Iqn5QP2K7Qah+YK0c=",
 			"path": "github.com/sethgrid/pester",
-			"revision": "1808e6f72af9682aaae9189a91c6bb9b416297ca",
-			"revisionTime": "2018-02-01T15:35:47Z"
+			"revision": "ed9870dad3170c0b25ab9b11830cc57c3a7798fb",
+			"revisionTime": "2018-02-27T22:34:04Z"
 		},
 		{
 			"checksumSHA1": "7VrRVHHEc37zSSPAQaj+5jRWhzo=",

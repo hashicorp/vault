@@ -3,7 +3,7 @@
     {{#each-in fieldGroup as |group fields|}}
       {{#if (or (eq group "default") (eq group "Options"))}}
         {{#each fields as |attr|}}
-          {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+          {{info-table-row alwaysRender=true label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
         {{/each}}
       {{else}}
         <div class="box is-sideless is-fullwidth is-marginless">

@@ -1353,7 +1353,7 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 		return nil, fmt.Errorf("unrecognized arn: contains %d colon-separated parts, expected 6", len(fullParts))
 	}
 	if fullParts[0] != "arn" {
-		return nil, fmt.Errorf("unrecognized arn: does not begin with arn:")
+		return nil, fmt.Errorf("unrecognized arn: does not begin with \"arn:\"")
 	}
 	// normally aws, but could be aws-cn or aws-us-gov
 	entity.Partition = fullParts[1]

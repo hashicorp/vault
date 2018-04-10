@@ -34,7 +34,7 @@ func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (c
 		dockertest.Pull("mysql")
 	})
 
-	cid, connErr := dockertest.ConnectToMySQL(60, 500*time.Millisecond, func(connURL string) bool {
+	cid, connErr := dockertest.ConnectToMySQL(120, 500*time.Millisecond, func(connURL string) bool {
 		// This will cause a validation to run
 		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Storage:   s,

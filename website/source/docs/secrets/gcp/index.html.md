@@ -77,7 +77,7 @@ Once the secrets engine has been set up, you can generate two types of secrets i
     [IAM service account keys](https://cloud.google.com/iam/docs/service-accounts#service_account_keys).
 
 
-Each secret is associated with a [Vault lease](docs/concepts/lease.html) that
+Each secret is associated with a [Vault lease](/docs/concepts/lease.html) that
 can be revoked and possibly renewed (see lease docs for how to do so). On revoking
 a lease, the secret is no longer guaranteed to work.
 
