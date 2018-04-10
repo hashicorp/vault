@@ -106,6 +106,8 @@ BUG FIXES:
    of secret engines.
  * replication: Fix issue with DR secondaries when using mount specified local 
    paths.
+ * cli: Fix an issue where generating a dr operation token would not output the 
+   token.
 
 ## 0.9.6 (March 20th, 2018)
 
