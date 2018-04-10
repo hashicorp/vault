@@ -486,8 +486,11 @@ func (c *OperatorGenerateRootCommand) printStatus(status *api.GenerateRootStatus
 	if status.PGPFingerprint != "" {
 		out = append(out, fmt.Sprintf("PGP Fingerprint | %s", status.PGPFingerprint))
 	}
-	if status.EncodedRootToken != "" {
+	switch {
+	case status.EncodedRootToken != "":
 		out = append(out, fmt.Sprintf("Root Token | %s", status.EncodedRootToken))
+	case status.EncodedToken != "":
+		out = append(out, fmt.Sprintf("Root Token | %s", status.EncodedToken))
 	}
 
 	output := columnOutput(out, nil)
