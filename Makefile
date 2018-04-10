@@ -89,6 +89,9 @@ bootstrap:
 		go get -u $$tool; \
 	done
 
+update-plugins:
+	grep vault-plugin- vendor/vendor.json | cut -d '"' -f 4 | xargs govendor fetch
+
 static-assets:
 	@echo "--> Generating static assets"
 	@go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 ./pkg/web_ui/...
