@@ -22,8 +22,19 @@ const (
 )
 
 type Reader interface {
-	// Config returns a non-pointer to indicate the the engineConf returned is immutable
-	Config(ctx context.Context, storage logical.Storage) (ImmutableEngineConf, error)
+	// Config returns the current *EngineConf.
+	// This shouldn't be retained in memory, but rather should be pulled on the fly every time,
+	// in case the config changes.
+	//   - If error is nil, *EngineConf is not nil.
+	//   - Returns an UnsetError if the config is currently unset by the user - none exists.
+	//   - Returns other errors if storage is inaccessible, etc.
+	Config(ctx context.Context, storage logical.Storage) (*EngineConf, error)
+}
+
+type UnsetError struct{}
+
+func (e *UnsetError) Error() string {
+	return "the configuration is not currently set"
 }
 
 // NewManager creates a Manager, which manages all aspects of the config.
@@ -46,15 +57,15 @@ func NewManager(ctx context.Context, conf *logical.BackendConfig) (*Manager, err
 type Manager struct {
 	logger  hclog.Logger
 	rwMutex *sync.RWMutex
-	config  *engineConf
+	config  *EngineConf
 }
 
-func (m *Manager) Config(ctx context.Context, storage logical.Storage) (ImmutableEngineConf, error) {
+func (m *Manager) Config(ctx context.Context, storage logical.Storage) (*EngineConf, error) {
 
 	m.rwMutex.RLock()
 	if m.config != nil {
 		defer m.rwMutex.RUnlock()
-		return m.config.Immutable(), nil
+		return m.config, nil
 	}
 
 	// upgrade the lock
@@ -64,15 +75,13 @@ func (m *Manager) Config(ctx context.Context, storage logical.Storage) (Immutabl
 
 	config, err := readConfig(ctx, storage)
 	if err != nil {
-		return ImmutableEngineConf{}, err
+		return nil, err
 	}
-	m.config = config
-
-	if m.config == nil {
-		// it's simply unset by the user
-		return ImmutableEngineConf{}, nil
+	if config == nil {
+		// the config is currently unset by the user
+		return nil, &UnsetError{}
 	}
-	return m.config.Immutable(), nil
+	return m.config, nil
 }
 
 func (m *Manager) Invalidate(ctx context.Context, key string) {
@@ -197,7 +206,7 @@ func (m *Manager) update(ctx context.Context, req *logical.Request, fieldData *f
 		return nil, err
 	}
 	passwordConf := newPasswordConfig(fieldData)
-	config := &engineConf{passwordConf, activeDirectoryConf}
+	config := &EngineConf{passwordConf, activeDirectoryConf}
 
 	// Write and cache it.
 	if err := writeConfig(ctx, req.Storage, config); err != nil {

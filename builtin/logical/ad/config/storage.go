@@ -9,9 +9,9 @@ import (
 
 const StorageKey = "config"
 
-func readConfig(ctx context.Context, storage logical.Storage) (*engineConf, error) {
+func readConfig(ctx context.Context, storage logical.Storage) (*EngineConf, error) {
 
-	config := &engineConf{&PasswordConf{}, &activedirectory.Configuration{}}
+	config := &EngineConf{&PasswordConf{}, &activedirectory.Configuration{}}
 
 	entry, err := storage.Get(ctx, StorageKey)
 	if err != nil {
@@ -27,7 +27,7 @@ func readConfig(ctx context.Context, storage logical.Storage) (*engineConf, erro
 	return config, nil
 }
 
-func writeConfig(ctx context.Context, storage logical.Storage, config *engineConf) error {
+func writeConfig(ctx context.Context, storage logical.Storage, config *EngineConf) error {
 	entry, err := logical.StorageEntryJSON(StorageKey, config)
 	if err != nil {
 		return err

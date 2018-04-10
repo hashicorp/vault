@@ -90,7 +90,7 @@ func configIsStoredAsExpected() bool {
 		return false
 	}
 
-	engineConf := &config.ImmutableEngineConf{}
+	engineConf := &config.EngineConf{}
 	if err := entry.DecodeJSON(engineConf); err != nil {
 		return false
 	}

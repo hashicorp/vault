@@ -27,12 +27,13 @@ func TestCacheReader(t *testing.T) {
 	var configReader Reader
 	configReader = m
 
+	// we should start with no config
 	config, err := configReader.Config(ctx, storage)
 	if err != nil {
-		t.FailNow()
-	}
-	if config.ADConf.Username != "" {
-		t.FailNow()
+		_, ok := err.(*UnsetError)
+		if !ok {
+			t.FailNow()
+		}
 	}
 
 	req := &logical.Request{
@@ -56,6 +57,7 @@ func TestCacheReader(t *testing.T) {
 		t.Error(err)
 	}
 
+	// now that we've updated the config, we should be able to read it
 	config, err = configReader.Config(ctx, storage)
 	if err != nil {
 		t.Error(err)
@@ -76,11 +78,12 @@ func TestCacheReader(t *testing.T) {
 		t.Error(err)
 	}
 
+	// now that we've deleted the config, it should be unset again
 	config, err = configReader.Config(ctx, storage)
 	if err != nil {
-		t.Error(err)
-	}
-	if config.ADConf.Username != "" {
-		t.FailNow()
+		_, ok := err.(*UnsetError)
+		if !ok {
+			t.FailNow()
+		}
 	}
 }
