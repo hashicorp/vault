@@ -1,4 +1,4 @@
-## 0.10.0 (Unreleased)
+## 0.10.0 (April 10th, 2018)
 
 DEPRECATIONS/CHANGES:
 
