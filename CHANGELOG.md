@@ -2,7 +2,7 @@
 
 SECURITY:
 
- * Log sanitization for Combined Database Secrect Engine: In certain failure 
+ * Log sanitization for Combined Database Secret Engine: In certain failure 
    scenarios with incorrectly formatted connection urls, the raw connection 
    errors were being returned to the user with the configured database 
    credentials. Errors are now sanitized before being returned to the user.
@@ -25,7 +25,7 @@ DEPRECATIONS/CHANGES:
    secret. This was mostly done to make it easy for tools like Terraform to
    judge whether state had drifted. However, it also feels quite un-Vault-y to
    do this and we've never felt very comfortable doing so. In 0.10 we have gone
-   through and removed this bevhavior from the various backends; fields which
+   through and removed this behavior from the various backends; fields which
    contained secret values are simply no longer returned on read. We are
    working with the Terraform team to make changes to their provider to
    accommodate this as best as possible, and users of other tools may have to
