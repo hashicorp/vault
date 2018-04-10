@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/helper/transaction"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/lib/pq"
@@ -212,7 +212,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 		// many permissions as possible right now
 		var lastStmtError error
 		for _, query := range revocationStmts {
-			if err := transaction.ExecuteDBQuery(nil, db, nil, query); err != nil {
+			if err := dbtxn.ExecuteDBQuery(nil, db, nil, query); err != nil {
 				lastStmtError = err
 			}
 		}
@@ -252,10 +252,10 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 				continue
 			}
 
-			c := &transaction.Config{
+			c := &dbtxn.Config{
 				Name: username,
 			}
-			if err := transaction.ExecuteTxQuery(nil, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(nil, tx, c, query); err != nil {
 				return nil, err
 			}
 		}

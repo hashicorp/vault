@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/transaction"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -132,7 +132,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	var lastStmtError error
 	for _, query := range revokeStmts {
 
-		if err := transaction.ExecuteDBQuery(nil, db, nil, query); err != nil {
+		if err := dbtxn.ExecuteDBQuery(nil, db, nil, query); err != nil {
 			lastStmtError = err
 			continue
 		}

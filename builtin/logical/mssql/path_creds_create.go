@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/helper/transaction"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -91,11 +91,11 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 			continue
 		}
 
-		c := &transaction.Config{
+		c := &dbtxn.Config{
 			Name:     username,
 			Password: password,
 		}
-		if err := transaction.ExecuteTxQuery(nil, tx, c, query); err != nil {
+		if err := dbtxn.ExecuteTxQuery(nil, tx, c, query); err != nil {
 			return nil, err
 		}
 	}

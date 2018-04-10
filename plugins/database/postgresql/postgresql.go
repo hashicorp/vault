@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/helper/transaction"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
@@ -140,12 +140,12 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 				continue
 			}
 
-			c := &transaction.Config{
+			c := &dbtxn.Config{
 				Name:       username,
 				Password:   password,
 				Expiration: expirationStr,
 			}
-			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return "", "", err
 			}
 		}
@@ -196,11 +196,11 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 				continue
 			}
 
-			c := &transaction.Config{
+			c := &dbtxn.Config{
 				Name:       username,
 				Expiration: expirationStr,
 			}
-			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return err
 			}
 		}
@@ -244,10 +244,10 @@ func (p *PostgreSQL) customRevokeUser(ctx context.Context, username string, revo
 				continue
 			}
 
-			c := &transaction.Config{
+			c := &dbtxn.Config{
 				Name: username,
 			}
-			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return err
 			}
 		}
@@ -340,7 +340,7 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revocationStmts {
-		if err := transaction.ExecuteDBQuery(ctx, db, nil, query); err != nil {
+		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 		}
 	}
@@ -404,11 +404,11 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 			if len(query) == 0 {
 				continue
 			}
-			c := &transaction.Config{
+			c := &dbtxn.Config{
 				Username: p.Username,
 				Password: password,
 			}
-			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return nil, err
 			}
 		}

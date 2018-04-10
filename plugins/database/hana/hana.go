@@ -11,8 +11,8 @@ import (
 	_ "github.com/SAP/go-hdb/driver"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/helper/transaction"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
@@ -144,12 +144,12 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 				continue
 			}
 
-			c := &transaction.Config{
+			c := &dbtxn.Config{
 				Name:       username,
 				Password:   password,
 				Expiration: expirationStr,
 			}
-			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return "", "", err
 			}
 		}
@@ -235,10 +235,10 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 				continue
 			}
 
-			c := &transaction.Config{
+			c := &dbtxn.Config{
 				Name: username,
 			}
-			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return err
 			}
 		}

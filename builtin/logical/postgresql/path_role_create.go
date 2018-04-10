@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/helper/transaction"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	_ "github.com/lib/pq"
@@ -107,13 +107,13 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 			continue
 		}
 
-		c := &transaction.Config{
+		c := &dbtxn.Config{
 			Name:       username,
 			Password:   password,
 			Expiration: expiration,
 		}
 
-		if err := transaction.ExecuteTxQuery(nil, tx, c, query); err != nil {
+		if err := dbtxn.ExecuteTxQuery(nil, tx, c, query); err != nil {
 			return nil, err
 		}
 	}
