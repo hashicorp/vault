@@ -1643,8 +1643,10 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 					"plugin_name must be provided for plugin backend"),
 				logical.ErrInvalidRequest
 		}
+	}
 
-	case "kv-v1":
+	switch logicalType {
+	case "kv", "kv-v1":
 		// Alias KV v1
 		logicalType = "kv"
 		if options == nil {
@@ -1659,6 +1661,13 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 			options = map[string]string{}
 		}
 		options["version"] = "2"
+
+	default:
+		if options != nil && options["version"] != "" {
+			return logical.ErrorResponse(fmt.Sprintf(
+					"secrets engine %q does not allow setting a version", logicalType)),
+				logical.ErrInvalidRequest
+		}
 	}
 
 	// Copy over the force no cache if set
@@ -2098,47 +2107,57 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	var err error
 	var resp *logical.Response
+	var options map[string]string
 	if optionsRaw, ok := data.GetOk("options"); ok {
-		b.Core.logger.Info("mount tuning of options", "path", path)
-		options := optionsRaw.(map[string]string)
-
+		options = optionsRaw.(map[string]string)
+	}
+	if len(options) > 0 {
 		b.Core.logger.Info("mount tuning of options", "path", path, "options", options)
-		// Special case to make sure we can not disable versioning once it's
-		// enabeled. If the vkv backend suports downgrading this can be removed.
-		meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
-		if err != nil {
-			return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
-		}
-		optVersion, err := parseutil.ParseInt(options["version"])
-		if err != nil {
-			return handleError(errwrap.Wrapf("unable to parse options: {{err}}", err))
-		}
-		if meVersion > optVersion {
-			return logical.ErrorResponse(fmt.Sprintf("cannot downgrade mount from version %d", meVersion)), logical.ErrInvalidRequest
+
+		var changed bool
+
+		if v, ok := options["version"]; ok {
+			changed = true
+			// Special case to make sure we can not disable versioning once it's
+			// enabeled. If the vkv backend suports downgrading this can be removed.
+			meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
+			if err != nil {
+				return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
+			}
+			optVersion, err := parseutil.ParseInt(v)
+			if err != nil {
+				return handleError(errwrap.Wrapf("unable to parse options: {{err}}", err))
+			}
+			if meVersion > optVersion {
+				return logical.ErrorResponse(fmt.Sprintf("cannot downgrade mount from version %d", meVersion)), logical.ErrInvalidRequest
+			}
+			if meVersion < optVersion {
+				resp = &logical.Response{}
+				resp.AddWarning(fmt.Sprintf("Upgrading mount from version %d to version %d. This mount will be unavailable for a brief period and will resume service shortly.", meVersion, optVersion))
+			}
+
 		}
 
-		oldVal := mountEntry.Options
-		mountEntry.Options = options
-		// Update the mount table
-		switch {
-		case strings.HasPrefix(path, "auth/"):
-			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
-		default:
-			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
-		}
-		if err != nil {
-			mountEntry.Options = oldVal
-			return handleError(err)
-		}
+		if changed {
+			oldVal := mountEntry.Options
+			mountEntry.Options = options
+			// Update the mount table
+			switch {
+			case strings.HasPrefix(path, "auth/"):
+				err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Options = oldVal
+				return handleError(err)
+			}
 
-		if meVersion < optVersion {
-			resp = &logical.Response{}
-			resp.AddWarning(fmt.Sprintf("Upgrading mount from version %d to version %d. This mount will be unavailable for a brief period and will resume service shortly.", meVersion, optVersion))
+			// Reload the backend to kick off the upgrade process.
+			b.Core.reloadBackendCommon(ctx, mountEntry, strings.HasPrefix(path, credentialRoutePrefix))
 		}
-
-		// Reload the backend to kick off the upgrade process.
-		b.Core.reloadBackendCommon(ctx, mountEntry, strings.HasPrefix(path, credentialRoutePrefix))
 	}
 
 	return resp, nil
@@ -2402,6 +2421,12 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 					"plugin_name must be provided for plugin backend"),
 				logical.ErrInvalidRequest
 		}
+	}
+
+	if options != nil && options["version"] != "" {
+		return logical.ErrorResponse(fmt.Sprintf(
+				"auth method %q does not allow setting a version", logicalType)),
+			logical.ErrInvalidRequest
 	}
 
 	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
