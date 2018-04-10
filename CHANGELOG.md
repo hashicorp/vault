@@ -1,5 +1,12 @@
 ## 0.10.0 (April 10th, 2018)
 
+SECURITY:
+
+ * Log sanitization for Combined Database Secrect Engine: In certain failure 
+   scenarios with incorrectly formatted connection urls, the raw connection 
+   errors were being returned to the user with the configured database 
+   credentials. Errors are now sanitized before being returned to the user.
+
 DEPRECATIONS/CHANGES:
 
  * Database plugin compatibility: The database plugin interface was enhanced to
