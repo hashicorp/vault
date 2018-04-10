@@ -107,7 +107,7 @@ BUG FIXES:
  * replication: Fix issue with DR secondaries when using mount specified local 
    paths.
  * cli: Fix an issue where generating a dr operation token would not output the 
-   token.
+   token [GH-4328]
 
 ## 0.9.6 (March 20th, 2018)
 
