@@ -65,14 +65,14 @@ type versionedKVBackend struct {
 // Factory will return a logical backend of type versionedKVBackend or
 // PassthroughBackend based on the config passed in.
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	versioned := conf.Config["versioned"]
+	version := conf.Config["version"]
 
 	var b logical.Backend
 	var err error
-	switch versioned {
-	case "false", "":
+	switch version {
+	case "1", "":
 		return LeaseSwitchedPassthroughBackend(ctx, conf, conf.Config["leased_passthrough"] == "true")
-	case "true":
+	case "2":
 		b, err = VersionedKVFactory(ctx, conf)
 	}
 	if err != nil {
@@ -130,20 +130,11 @@ func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logic
 		return nil, err
 	}
 
-	upgradeEntry, err := conf.StorageView.Get(ctx, path.Join(b.storagePrefix, "upgrading"))
+	upgradeDone, err := b.upgradeDone(ctx, conf.StorageView)
 	if err != nil {
 		return nil, err
 	}
-
-	var upgradeInfo UpgradeInfo
-	if upgradeEntry != nil {
-		err := proto.Unmarshal(upgradeEntry.Value, &upgradeInfo)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if !upgradeInfo.Done {
+	if !upgradeDone {
 		err := b.Upgrade(ctx, conf.StorageView)
 		if err != nil {
 			return nil, err
@@ -153,10 +144,38 @@ func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logic
 	return b, nil
 }
 
+func (b *versionedKVBackend) upgradeDone(ctx context.Context, s logical.Storage) (bool, error) {
+	upgradeEntry, err := s.Get(ctx, path.Join(b.storagePrefix, "upgrading"))
+	if err != nil {
+		return false, err
+	}
+
+	var upgradeInfo UpgradeInfo
+	if upgradeEntry != nil {
+		err := proto.Unmarshal(upgradeEntry.Value, &upgradeInfo)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return upgradeInfo.Done, nil
+}
+
 func pathInvalid(b *versionedKVBackend) []*framework.Path {
 	handler := func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		var subCommand string
+		switch req.Operation {
+		case logical.CreateOperation, logical.UpdateOperation:
+			subCommand = "put"
+		case logical.ReadOperation:
+			subCommand = "get"
+		case logical.ListOperation:
+			subCommand = "list"
+		case logical.DeleteOperation:
+			subCommand = "delete"
+		}
 		resp := &logical.Response{}
-		resp.AddWarning("Invalid path for a versioned K/V secrets engine. See the API docs for the appropriate API endpoints to use. If using the Vault CLI, try using 'vault kv' for operations on K/V secrets engine mounts.")
+		resp.AddWarning(fmt.Sprintf("Invalid path for a versioned K/V secrets engine. See the API docs for the appropriate API endpoints to use. If using the Vault CLI, use 'vault kv %s' for this operation.", subCommand))
 		return logical.RespondWithStatusCode(resp, req, http.StatusNotFound)
 	}
 
@@ -170,6 +189,8 @@ func pathInvalid(b *versionedKVBackend) []*framework.Path {
 				logical.DeleteOperation: handler,
 				logical.ListOperation:   handler,
 			},
+
+			HelpDescription: pathInvalidHelp,
 		},
 	}
 }
@@ -378,4 +399,32 @@ encrypted/decrypted by Vault: they are never stored unencrypted in the backend
 and the backend never has an opportunity to see the unencrypted value. Each key
 can have a configured number of versions, and versions can be retrieved based on
 their version numbers.
+`
+
+var pathInvalidHelp string = backendHelp + `
+
+## PATHS
+
+The following paths are supported by this backend. To view help for
+any of the paths below, use the help command with any route matching
+the path pattern. Note that depending on the policy of your auth token,
+you may or may not be able to access certain paths.
+
+    ^config$
+        Configures settings for the KV store
+
+    ^data/.*$
+        Write, Read, and Delete data in the Key-Value Store.
+
+    ^delete/.*$
+        Marks one or more versions as deleted in the KV store.
+
+    ^destroy/.*$
+        Permanently removes one or more versions in the KV store
+
+    ^metadata/.*$
+        Configures settings for the KV store
+
+    ^undelete/.*$
+        Undeletes one or more versions from the KV store.
 `

@@ -23,7 +23,10 @@ has a number of parameters to further configure a connection.
 | `POST`   | `/database/config/:name`     | `204 (empty body)` |
 
 ### Parameters
-- `connection_url` `(string: <required>)` - Specifies the MSSQL DSN.
+- `connection_url` `(string: <required>)` - Specifies the MSSQL DSN. This field
+  can be templated and supports passing the username and password
+  parameters in the following format {{field_name}}.  A templated connection URL is
+  required when using root credential rotation.
 
 - `max_open_connections` `(int: 2)` - Specifies the maximum number of open
   connections to the database.
@@ -36,15 +39,21 @@ has a number of parameters to further configure a connection.
 - `max_connection_lifetime` `(string: "0s")` - Specifies the maximum amount of
   time a connection may be reused. If <= 0s connections are reused forever.
 
+- `username` `(string: "")` - The root credential username used in the connection URL. 
+
+- `password` `(string: "")` - The root credential password used in the connection URL. 
+
 ### Sample Payload
 
 ```json
 {
   "plugin_name": "mssql-database-plugin",
   "allowed_roles": "readonly",
-  "connection_url": "sqlserver://sa:yourStrong(!)Password@localhost:1433",
+  "connection_url": "sqlserver://{{username}}:{{password}}@localhost:1433",
   "max_open_connections": 5,
   "max_connection_lifetime": "5s",
+  "username": "sa",
+  "password": "yourStrong(!)Password"
 }
 ```
 
@@ -70,13 +79,13 @@ API](/api/secret/databases/index.html#create-role) in the database secrets engin
 The following are the statements used by this plugin. If not mentioned in this
 list the plugin does not support that statement type.
 
-- `creation_statements` `(string: <required>)` – Specifies the database
+- `creation_statements` `(list: <required>)` – Specifies the database
   statements executed to create and configure a user. Must be a
   semicolon-separated string, a base64-encoded semicolon-separated string, a
   serialized JSON string array, or a base64-encoded serialized JSON string
   array. The '{{name}}' and '{{password}}' values will be substituted.
 
-- `revocation_statements` `(string: "")` – Specifies the database statements to
+- `revocation_statements` `(list: [])` – Specifies the database statements to
   be executed to revoke a user. Must be a semicolon-separated string, a
   base64-encoded semicolon-separated string, a serialized JSON string array, or
   a base64-encoded serialized JSON string array. The '{{name}}' value will be

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/password"
 )
@@ -42,12 +43,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 				return nil, fmt.Errorf("user interrupted")
 			}
 
-			return nil, fmt.Errorf("An error occurred attempting to "+
+			return nil, errwrap.Wrapf("An error occurred attempting to "+
 				"ask for a token. The raw error message is shown below, but usually "+
 				"this is because you attempted to pipe a value into the command or "+
 				"you are executing outside of a terminal (tty). If you want to pipe "+
 				"the value, pass \"-\" as the argument to read from stdin. The raw "+
-				"error was: %s", err)
+				"error was: {{err}}", err)
 		}
 	}
 

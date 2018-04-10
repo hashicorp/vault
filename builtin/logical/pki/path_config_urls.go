@@ -76,7 +76,7 @@ func writeURLs(ctx context.Context, req *logical.Request, entries *urlEntries) e
 		return err
 	}
 	if entry == nil {
-		return fmt.Errorf("Unable to marshal entry into JSON")
+		return fmt.Errorf("unable to marshal entry into JSON")
 	}
 
 	err = req.Storage.Put(ctx, entry)

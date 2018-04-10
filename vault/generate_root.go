@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pgpkeys"
@@ -118,7 +119,7 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 	case len(otp) > 0:
 		otpBytes, err := base64.StdEncoding.DecodeString(otp)
 		if err != nil {
-			return fmt.Errorf("error decoding base64 OTP value: %s", err)
+			return errwrap.Wrapf("error decoding base64 OTP value: {{err}}", err)
 		}
 		if otpBytes == nil || len(otpBytes) != 16 {
 			return fmt.Errorf("decoded OTP value is invalid or wrong length")
@@ -127,7 +128,7 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 	case len(pgpKey) > 0:
 		fingerprints, err := pgpkeys.GetFingerprints([]string{pgpKey}, nil)
 		if err != nil {
-			return fmt.Errorf("error parsing PGP key: %s", err)
+			return errwrap.Wrapf("error parsing PGP key: {{err}}", err)
 		}
 		if len(fingerprints) != 1 || fingerprints[0] == "" {
 			return fmt.Errorf("could not acquire PGP key entity")
@@ -226,7 +227,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	}
 
 	if nonce != c.generateRootConfig.Nonce {
-		return nil, fmt.Errorf("incorrect nonce supplied; nonce for this root generation operation is %s", c.generateRootConfig.Nonce)
+		return nil, fmt.Errorf("incorrect nonce supplied; nonce for this root generation operation is %q", c.generateRootConfig.Nonce)
 	}
 
 	if strategy != c.generateRootConfig.Strategy {
@@ -265,7 +266,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		masterKey, err = shamir.Combine(c.generateRootProgress)
 		c.generateRootProgress = nil
 		if err != nil {
-			return nil, fmt.Errorf("failed to compute master key: %v", err)
+			return nil, errwrap.Wrapf("failed to compute master key: {{err}}", err)
 		}
 	}
 

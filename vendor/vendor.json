@@ -871,6 +871,12 @@
 			"revisionTime": "2018-02-23T16:03:09Z"
 		},
 		{
+			"checksumSHA1": "VsE3zx2d8kpwj97TWhYddzAwBrY=",
+			"path": "github.com/fatih/color",
+			"revision": "507f6050b8568533fb3f5504de8e5205fa62a114",
+			"revisionTime": "2018-02-13T13:34:03Z"
+		},
+		{
 			"checksumSHA1": "5BP5xofo0GoFi6FtgqFFbmHyUKI=",
 			"path": "github.com/fatih/structs",
 			"revision": "ebf56d35bba727c68ac77f56f2fcf90b181851aa",
@@ -1279,10 +1285,10 @@
 			"revisionTime": "2018-02-03T00:31:27Z"
 		},
 		{
-			"checksumSHA1": "RX7zonQaV7u0L+0ShGZNMJVqLt8=",
+			"checksumSHA1": "NCsUBSk7mleZOEz5iDQIXTvxroI=",
 			"path": "github.com/hashicorp/vault-plugin-auth-azure/plugin",
-			"revision": "66be13ef38e71c5ff175b3eaafa01582df5691e4",
-			"revisionTime": "2018-04-04T11:52:51Z"
+			"revision": "ef1aebd830562fe9a1c629102fcb156a536e8a0a",
+			"revisionTime": "2018-04-09T18:16:42Z"
 		},
 		{
 			"checksumSHA1": "z3uh8zJmu5wVa22xfPcTt5JDBJg=",
@@ -1291,16 +1297,16 @@
 			"revisionTime": "2018-04-03T19:19:30Z"
 		},
 		{
-			"checksumSHA1": "vEweDZmRP5eIif9mmvuIruZZmbU=",
+			"checksumSHA1": "klHF0u2D5rTw60ZcNufHHtO8nSk=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "802aebd1f7f76aba82863a7e4b1daef0e4186a4f",
-			"revisionTime": "2018-04-03T18:54:50Z"
+			"revision": "c1f38c311636440ff37e1f655f9722d3d9c1c0cc",
+			"revisionTime": "2018-04-08T01:06:05Z"
 		},
 		{
 			"checksumSHA1": "ffJQvzbQvmCG/PdaElGSfGnDgNM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin/util",
-			"revision": "802aebd1f7f76aba82863a7e4b1daef0e4186a4f",
-			"revisionTime": "2018-04-03T18:54:50Z"
+			"revision": "c1f38c311636440ff37e1f655f9722d3d9c1c0cc",
+			"revisionTime": "2018-04-08T01:06:05Z"
 		},
 		{
 			"checksumSHA1": "I3b7HgnguhModU0rkNBp3PjzpZ8=",
@@ -1327,10 +1333,10 @@
 			"revisionTime": "2018-04-03T22:22:59Z"
 		},
 		{
-			"checksumSHA1": "4Sp0A91EzXy/7mhDadD+2kH7gGk=",
+			"checksumSHA1": "m3cQgQrCSuWHiPA339FaZU6LuHU=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
-			"revision": "0eb5e1d4ad51fe069a869a7f38c7cddc54bfff62",
-			"revisionTime": "2018-04-03T21:08:50Z"
+			"revision": "bc6216eebacf73fab61fd5cc7535b5eda7a74c98",
+			"revisionTime": "2018-04-09T21:22:48Z"
 		},
 		{
 			"checksumSHA1": "vTfeYxi0Z1y176bjQaYh1/FpQ9s=",
@@ -1485,8 +1491,8 @@
 		{
 			"checksumSHA1": "SEnjvwVyfuU2xBaOfXfwPD5MZqk=",
 			"path": "github.com/mattn/go-colorable",
-			"revision": "7dc3415be66d7cc68bf0182f35c8d31f8d2ad8a7",
-			"revisionTime": "2018-02-05T07:01:58Z"
+			"revision": "efa589957cd060542a26d2dd7832fd6a6c6c3ade",
+			"revisionTime": "2018-03-10T13:32:14Z"
 		},
 		{
 			"checksumSHA1": "w5RcOnfv5YDr3j2bd1YydkPiZx4=",
@@ -1513,10 +1519,10 @@
 			"revisionTime": "2018-01-25T10:38:03Z"
 		},
 		{
-			"checksumSHA1": "GTwA+0jQnOqTHsVaBIMvTKaE5eI=",
+			"checksumSHA1": "+o0siVvR8q36mKCpT5F/Sn2T7xo=",
 			"path": "github.com/mitchellh/cli",
-			"revision": "518dc677a1e1222682f4e7db06721942cb8e9e4c",
-			"revisionTime": "2018-01-17T15:54:40Z"
+			"revision": "c54c85e9bd492bdba226ffdda55d4e293b79f8e8",
+			"revisionTime": "2018-04-06T01:10:36Z"
 		},
 		{
 			"checksumSHA1": "+p4JY4wmFQAppCdlrJ8Kxybmht8=",

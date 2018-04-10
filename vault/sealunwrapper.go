@@ -87,7 +87,7 @@ func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, e
 	}
 	// It's actually encrypted and we can't read it
 	if se.Wrapped {
-		return nil, fmt.Errorf("cannot decode sealwrapped storage entry %s", entry.Key)
+		return nil, fmt.Errorf("cannot decode sealwrapped storage entry %q", entry.Key)
 	}
 	if atomic.LoadUint32(d.allowUnwraps) != 1 {
 		return &physical.Entry{
@@ -125,7 +125,7 @@ func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, e
 		return entry, nil
 	}
 	if se.Wrapped {
-		return nil, fmt.Errorf("cannot decode sealwrapped storage entry %s", entry.Key)
+		return nil, fmt.Errorf("cannot decode sealwrapped storage entry %q", entry.Key)
 	}
 
 	entry = &physical.Entry{

@@ -201,7 +201,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, uri, name string) log
 			}
 			if resp != nil {
 				if resp.IsError() {
-					return fmt.Errorf("Error on resp: %#v", *resp)
+					return fmt.Errorf("error on resp: %#v", *resp)
 				}
 			}
 

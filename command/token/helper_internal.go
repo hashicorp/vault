@@ -23,7 +23,7 @@ type InternalTokenHelper struct {
 func (i *InternalTokenHelper) populateTokenPath() {
 	homePath, err := homedir.Dir()
 	if err != nil {
-		panic(fmt.Errorf("error getting user's home directory: %v", err))
+		panic(fmt.Sprintf("error getting user's home directory: %v", err))
 	}
 	i.tokenPath = homePath + "/.vault-token"
 }

@@ -6,17 +6,18 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
 // ErrReadOnly is returned when a backend does not support
 // writing. This can be caused by a read-only replica or secondary
 // cluster operation.
-var ErrReadOnly = errors.New("Cannot write to readonly storage")
+var ErrReadOnly = errors.New("cannot write to readonly storage")
 
 // ErrSetupReadOnly is returned when a write operation is attempted on a
 // storage while the backend is still being setup.
-var ErrSetupReadOnly = errors.New("Cannot write to storage during setup")
+var ErrSetupReadOnly = errors.New("cannot write to storage during setup")
 
 // Storage is the way that logical backends are able read/write data.
 type Storage interface {
@@ -42,7 +43,7 @@ func (e *StorageEntry) DecodeJSON(out interface{}) error {
 func StorageEntryJSON(k string, v interface{}) (*StorageEntry, error) {
 	encodedBytes, err := jsonutil.EncodeJSON(v)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode storage entry: %v", err)
+		return nil, errwrap.Wrapf("failed to encode storage entry: {{err}}", err)
 	}
 
 	return &StorageEntry{
@@ -67,7 +68,7 @@ func ScanView(ctx context.Context, view ClearableView, cb func(path string)) err
 		// List the contents
 		contents, err := view.List(ctx, current)
 		if err != nil {
-			return fmt.Errorf("list failed at path '%s': %v", current, err)
+			return errwrap.Wrapf(fmt.Sprintf("list failed at path %q: {{err}}", current), err)
 		}
 
 		// Handle the contents in the directory

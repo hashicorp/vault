@@ -15,7 +15,7 @@ export default Ember.Route.extend(ClusterRoute, {
   },
 
   shouldReturnEmptyModel(policyType, version) {
-    return policyType !== 'acl' && (version.get('isOSS') || !version.get('features').includes('Sentinel'));
+    return policyType !== 'acl' && (version.get('isOSS') || !version.get('hasSentinel'));
   },
 
   model(params) {

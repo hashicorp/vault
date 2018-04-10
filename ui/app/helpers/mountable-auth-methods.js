@@ -12,6 +12,11 @@ const MOUNTABLE_AUTH_METHODS = [
     type: 'aws',
   },
   {
+    displayName: 'Azure',
+    value: 'azure',
+    type: 'azure',
+  },
+  {
     displayName: 'Google Cloud',
     value: 'gcp',
     type: 'gcp',

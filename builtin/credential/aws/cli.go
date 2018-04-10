@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/awsutil"
 )
@@ -36,7 +37,7 @@ func GenerateLoginData(accessKey, secretKey, sessionToken, headerValue string) (
 
 	_, err = creds.Get()
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve credentials from credential chain: %v", err)
+		return nil, errwrap.Wrapf("failed to retrieve credentials from credential chain: {{err}}", err)
 	}
 
 	// Use the credentials we've found to construct an STS session

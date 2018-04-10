@@ -1,12 +1,12 @@
 ---
 layout: "api"
 page_title: "KV - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-kv-versioned"
+sidebar_current: "docs-http-secret-kv-v2"
 description: |-
   This is the API documentation for the Vault KV secrets engine.
 ---
 
-# Versioned KV Secrets Engine (API)
+# KV Secrets Engine - Version 2 (API)
 
 This is the API documentation for the Vault KV secrets engine while running in
 versioned mode. For general information about the usage and operation of the kv
@@ -19,7 +19,7 @@ possible to enable secrets engines at any location, please update your API calls
 accordingly.
 
 
-## Configure the Versioned K/V Backend
+## Configure the KV Engine 
 
 This path configures backend level settings that are applied to every key in the
 key-value store.

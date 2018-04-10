@@ -148,7 +148,7 @@ path "secret" {
 		}
 
 		stderr := ui.ErrorWriter.String()
-		expected := "Failed to parse policy"
+		expected := "failed to parse policy"
 		if !strings.Contains(stderr, expected) {
 			t.Errorf("expected %q to include %q", stderr, expected)
 		}
@@ -183,7 +183,7 @@ path "secret" {
 		}
 
 		stderr := ui.ErrorWriter.String()
-		expected := "Failed to parse policy"
+		expected := "failed to parse policy"
 		if !strings.Contains(stderr, expected) {
 			t.Errorf("expected %q to include %q", stderr, expected)
 		}
@@ -218,7 +218,7 @@ path "secret" {
 		}
 
 		stderr := ui.ErrorWriter.String()
-		expected := "Failed to parse policy"
+		expected := "failed to parse policy"
 		if !strings.Contains(stderr, expected) {
 			t.Errorf("expected %q to include %q", stderr, expected)
 		}

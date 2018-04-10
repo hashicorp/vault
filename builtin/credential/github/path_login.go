@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/go-github/github"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -163,7 +164,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	if config.BaseURL != "" {
 		parsedURL, err := url.Parse(config.BaseURL)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Successfully parsed base_url when set but failing to parse now: %s", err)
+			return nil, nil, errwrap.Wrapf("successfully parsed base_url when set but failing to parse now: {{err}}", err)
 		}
 		client.BaseURL = parsedURL
 	}

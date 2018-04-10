@@ -233,7 +233,7 @@ func testUsersWrite(t *testing.T, user string, data map[string]interface{}, expe
 		ErrorOk:   true,
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
-				return fmt.Errorf("Expected error but received nil")
+				return fmt.Errorf("expected error but received nil")
 			}
 			return nil
 		},
@@ -248,7 +248,7 @@ func testLoginWrite(t *testing.T, user string, data map[string]interface{}, expe
 		ErrorOk:   true,
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
-				return fmt.Errorf("Expected error but received nil")
+				return fmt.Errorf("expected error but received nil")
 			}
 			return nil
 		},
@@ -261,7 +261,7 @@ func testAccStepList(t *testing.T, users []string) logicaltest.TestStep {
 		Path:      "users",
 		Check: func(resp *logical.Response) error {
 			if resp.IsError() {
-				return fmt.Errorf("Got error response: %#v", *resp)
+				return fmt.Errorf("got error response: %#v", *resp)
 			}
 
 			exp := []string{"web", "web2", "web3"}

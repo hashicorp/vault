@@ -11,6 +11,7 @@ export default DS.Model.extend({
   nodes: hasMany('nodes', { async: false }),
   name: attr('string'),
   status: attr('string'),
+  standby: attr('boolean'),
 
   needsInit: computed('nodes', 'nodes.[]', function() {
     // needs init if no nodes are initialized

@@ -3,6 +3,7 @@ package command
 import (
 	"flag"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,6 +31,7 @@ type SecretsEnableCommand struct {
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
+	flagVersion                   int
 }
 
 func (c *SecretsEnableCommand) Synopsis() string {
@@ -177,6 +179,13 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Usage:   "Enable seal wrapping of critical values in the secrets engine.",
 	})
 
+	f.IntVar(&IntVar{
+		Name:    "version",
+		Target:  &c.flagVersion,
+		Default: 0,
+		Usage:   "Select the version of the engine to run. Not supported by all engines.",
+	})
+
 	return set
 }
 
@@ -224,6 +233,13 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 		} else {
 			mountPath = engineType
 		}
+	}
+
+	if c.flagVersion > 0 {
+		if c.flagOptions == nil {
+			c.flagOptions = make(map[string]string)
+		}
+		c.flagOptions["version"] = strconv.Itoa(c.flagVersion)
 	}
 
 	// Append a trailing slash to indicate it's a path in output

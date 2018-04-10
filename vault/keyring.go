@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
@@ -46,7 +47,7 @@ func (k *Key) Serialize() ([]byte, error) {
 func DeserializeKey(buf []byte) (*Key, error) {
 	k := new(Key)
 	if err := jsonutil.DecodeJSON(buf, k); err != nil {
-		return nil, fmt.Errorf("deserialization failed: %v", err)
+		return nil, errwrap.Wrapf("deserialization failed: {{err}}", err)
 	}
 	return k, nil
 }
@@ -78,7 +79,7 @@ func (k *Keyring) AddKey(key *Key) (*Keyring, error) {
 	// Ensure there is no conflict
 	if exist, ok := k.keys[key.Term]; ok {
 		if !bytes.Equal(key.Value, exist.Value) {
-			return nil, fmt.Errorf("Conflicting key for term %d already installed", key.Term)
+			return nil, fmt.Errorf("conflicting key for term %d already installed", key.Term)
 		}
 		return k, nil
 	}
@@ -105,7 +106,7 @@ func (k *Keyring) AddKey(key *Key) (*Keyring, error) {
 func (k *Keyring) RemoveKey(term uint32) (*Keyring, error) {
 	// Ensure this is not the active key
 	if term == k.activeTerm {
-		return nil, fmt.Errorf("Cannot remove active key")
+		return nil, fmt.Errorf("cannot remove active key")
 	}
 
 	// Check if this term does not exist
@@ -168,7 +169,7 @@ func DeserializeKeyring(buf []byte) (*Keyring, error) {
 	// Deserialize the keyring
 	var enc EncodedKeyring
 	if err := jsonutil.DecodeJSON(buf, &enc); err != nil {
-		return nil, fmt.Errorf("deserialization failed: %v", err)
+		return nil, errwrap.Wrapf("deserialization failed: {{err}}", err)
 	}
 
 	// Create a new keyring

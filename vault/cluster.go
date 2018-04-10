@@ -74,7 +74,7 @@ func (c *Core) Cluster(ctx context.Context) (*Cluster, error) {
 
 	// Decode the cluster information
 	if err = jsonutil.DecodeJSON(entry.Value, &cluster); err != nil {
-		return nil, fmt.Errorf("failed to decode cluster details: %v", err)
+		return nil, errwrap.Wrapf("failed to decode cluster details: {{err}}", err)
 	}
 
 	// Set in config file
@@ -139,7 +139,7 @@ func (c *Core) loadLocalClusterTLS(adv activeAdvertisement) (retErr error) {
 	cert, err := x509.ParseCertificate(adv.ClusterCert)
 	if err != nil {
 		c.logger.Error("failed parsing local cluster certificate", "error", err)
-		return fmt.Errorf("error parsing local cluster certificate: %v", err)
+		return errwrap.Wrapf("error parsing local cluster certificate: {{err}}", err)
 	}
 
 	c.localClusterParsedCert.Store(cert)

@@ -1442,7 +1442,7 @@ func (b *SystemBackend) handleRekeyRetrieve(
 	recovery bool) (*logical.Response, error) {
 	backup, err := b.Core.RekeyRetrieveBackup(ctx, recovery)
 	if err != nil {
-		return nil, fmt.Errorf("unable to look up backed-up keys: %v", err)
+		return nil, errwrap.Wrapf("unable to look up backed-up keys: {{err}}", err)
 	}
 	if backup == nil {
 		return logical.ErrorResponse("no backed-up keys found"), nil
@@ -1457,7 +1457,7 @@ func (b *SystemBackend) handleRekeyRetrieve(
 			}
 			key, err := hex.DecodeString(j)
 			if err != nil {
-				return nil, fmt.Errorf("error decoding hex-encoded backup key: %v", err)
+				return nil, errwrap.Wrapf("error decoding hex-encoded backup key: {{err}}", err)
 			}
 			currB64Keys = append(currB64Keys, base64.StdEncoding.EncodeToString(key))
 			keysB64[k] = currB64Keys
@@ -1493,7 +1493,7 @@ func (b *SystemBackend) handleRekeyDelete(
 	recovery bool) (*logical.Response, error) {
 	err := b.Core.RekeyDeleteBackup(ctx, recovery)
 	if err != nil {
-		return nil, fmt.Errorf("error during deletion of backed-up keys: %v", err)
+		return nil, errwrap.Wrapf("error during deletion of backed-up keys: {{err}}", err)
 	}
 
 	return nil, nil
@@ -1643,6 +1643,22 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 					"plugin_name must be provided for plugin backend"),
 				logical.ErrInvalidRequest
 		}
+
+	case "kv-v1":
+		// Alias KV v1
+		logicalType = "kv"
+		if options == nil {
+			options = map[string]string{}
+		}
+		options["version"] = "1"
+
+	case "kv-v2":
+		// Alias KV v2
+		logicalType = "kv"
+		if options == nil {
+			options = map[string]string{}
+		}
+		options["version"] = "2"
 	}
 
 	// Copy over the force no cache if set
@@ -1663,15 +1679,6 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 	if len(apiConfig.PassthroughRequestHeaders) > 0 {
 		config.PassthroughRequestHeaders = apiConfig.PassthroughRequestHeaders
-	}
-
-	// Alias versioned KV
-	if logicalType == "vkv" {
-		logicalType = "kv"
-		if options == nil {
-			options = map[string]string{}
-		}
-		options["versioned"] = "true"
 	}
 
 	// Create the mount entry
@@ -1814,13 +1821,13 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 	sysView := b.Core.router.MatchingSystemView(path)
 	if sysView == nil {
 		b.Backend.Logger().Error("cannot fetch sysview", "path", path)
-		return handleError(fmt.Errorf("sys: cannot fetch sysview for path %s", path))
+		return handleError(fmt.Errorf("sys: cannot fetch sysview for path %q", path))
 	}
 
 	mountEntry := b.Core.router.MatchingMountEntry(path)
 	if mountEntry == nil {
 		b.Backend.Logger().Error("cannot fetch mount entry", "path", path)
-		return handleError(fmt.Errorf("sys: cannot fetch mount entry for path %s", path))
+		return handleError(fmt.Errorf("sys: cannot fetch mount entry for path %q", path))
 	}
 
 	resp := &logical.Response{
@@ -1887,14 +1894,14 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	for _, p := range untunableMounts {
 		if strings.HasPrefix(path, p) {
 			b.Backend.Logger().Error("cannot tune this mount", "path", path)
-			return handleError(fmt.Errorf("sys: cannot tune '%s'", path))
+			return handleError(fmt.Errorf("cannot tune %q", path))
 		}
 	}
 
 	mountEntry := b.Core.router.MatchingMountEntry(path)
 	if mountEntry == nil {
 		b.Backend.Logger().Error("tune failed: no mount entry found", "path", path)
-		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
+		return handleError(fmt.Errorf("tune of path %q failed: no mount entry found", path))
 	}
 	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
@@ -1915,7 +1922,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	mountEntry = b.Core.router.MatchingMountEntry(path)
 	if mountEntry == nil {
 		b.Backend.Logger().Error("tune failed: no mount entry found", "path", path)
-		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
+		return handleError(fmt.Errorf("tune of path %q failed: no mount entry found", path))
 	}
 	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
@@ -2099,16 +2106,16 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		b.Core.logger.Info("core: mount tuning of options", "path", path, "options", options)
 		// Special case to make sure we can not disable versioning once it's
 		// enabeled. If the vkv backend suports downgrading this can be removed.
-		meVersioned, err := parseutil.ParseBool(mountEntry.Options["versioned"])
+		meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
 		if err != nil {
 			return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
 		}
-		optVersioned, err := parseutil.ParseBool(options["versioned"])
+		optVersion, err := parseutil.ParseInt(options["version"])
 		if err != nil {
 			return handleError(errwrap.Wrapf("unable to parse options: {{err}}", err))
 		}
-		if meVersioned && !optVersioned {
-			return logical.ErrorResponse("cannot disable versioning once it's enabled"), logical.ErrInvalidRequest
+		if meVersion > optVersion {
+			return logical.ErrorResponse(fmt.Sprintf("cannot downgrade mount from version %d", meVersion)), logical.ErrInvalidRequest
 		}
 
 		oldVal := mountEntry.Options
@@ -2125,15 +2132,9 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			return handleError(err)
 		}
 
-		// Another special case to add a warning if we are going to be
-		// upgrading.
-		oldVersioned, err := parseutil.ParseBool(oldVal["versioned"])
-		if err != nil {
-			return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
-		}
-		if !oldVersioned && optVersioned {
+		if meVersion < optVersion {
 			resp = &logical.Response{}
-			resp.AddWarning("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly.")
+			resp.AddWarning(fmt.Sprintf("Upgrading mount from version %d to version %d. This mount will be unavailable for a brief period and will resume service shortly.", meVersion, optVersion))
 		}
 
 		// Reload the backend to kick off the upgrade process.
@@ -2963,7 +2964,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
 	}); err != nil {
 		b.Core.logger.Error("core: error saving keyring canary", "error", err)
-		return nil, fmt.Errorf("failed to save keyring canary: %v", err)
+		return nil, errwrap.Wrapf("failed to save keyring canary: {{err}}", err)
 	}
 
 	return nil, nil
@@ -3064,7 +3065,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, token string
 		// Use the token to decrement the use count to avoid a second operation on the token.
 		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
-			return "", fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
+			return "", errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
 		}
 
 		defer b.Core.tokenStore.Revoke(ctx, token)
@@ -3077,7 +3078,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, token string
 	}
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return "", fmt.Errorf("error looking up wrapping information: %v", err)
+		return "", errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
 	}
 	if cubbyResp == nil {
 		return "no information found; wrapping token may be from a previous Vault version", ErrInternalError
@@ -3119,7 +3120,7 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 	}
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
+		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -3141,7 +3142,7 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 	if creationTTLRaw != nil {
 		creationTTL, err := creationTTLRaw.(json.Number).Int64()
 		if err != nil {
-			return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
+			return nil, errwrap.Wrapf("error reading creation_ttl value from wrapping information: {{err}}", err)
 		}
 		resp.Data["creation_ttl"] = time.Duration(creationTTL).Seconds()
 	}
@@ -3175,7 +3176,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		// Use the token to decrement the use count to avoid a second operation on the token.
 		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
-			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
+			return nil, errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
 		}
 		defer b.Core.tokenStore.Revoke(ctx, token)
 	}
@@ -3188,7 +3189,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	}
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
+		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -3207,7 +3208,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	}
 	creationTTL, err := cubbyResp.Data["creation_ttl"].(json.Number).Int64()
 	if err != nil {
-		return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
+		return nil, errwrap.Wrapf("error reading creation_ttl value from wrapping information: {{err}}", err)
 	}
 
 	// Get creation_path to return as the response later
@@ -3225,7 +3226,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	}
 	cubbyResp, err = b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, fmt.Errorf("error looking up response: %v", err)
+		return nil, errwrap.Wrapf("error looking up response: {{err}}", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil

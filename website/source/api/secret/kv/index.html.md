@@ -8,10 +8,10 @@ description: |-
 
 # KV Secrets Engine (API)
 
-This backend can be run in one of two modes. Each of which have a distinct API.
-Choose the mode below you are running. For more information on the two modes see
-the [Vault kv documentation](/docs/secrets/kv/index.html).
+This backend can be run in one of two versions. Each of which have a distinct API.
+Choose the version below you are running. For more information on the KV secrets
+engine see the [Vault kv documentation](/docs/secrets/kv/index.html).
 
- - [Normal KV API](/api/secret/kv/kv.html)
+ - [KV Version 1 API](/api/secret/kv/kv-v1.html)
  
- - [Versioned KV API](/api/secret/kv/versioned-kv.html)
+ - [KV Version 2 API](/api/secret/kv/kv-v2.html)

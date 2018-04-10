@@ -329,7 +329,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 	// Check for the correct backend type
 	backendType := backend.Type()
 	if entry.Type == "plugin" && backendType != logical.TypeLogical {
-		return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
+		return fmt.Errorf("cannot mount %q of type %q as a logical backend", entry.Config.PluginName, backendType)
 	}
 
 	c.setCoreBackend(entry, backend, view)
@@ -363,7 +363,7 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 	// Prevent protected paths from being unmounted
 	for _, p := range protectedMounts {
 		if strings.HasPrefix(path, p) {
-			return fmt.Errorf("cannot unmount '%s'", path)
+			return fmt.Errorf("cannot unmount %q", path)
 		}
 	}
 	return c.unmountInternal(ctx, path)
@@ -493,7 +493,7 @@ func (c *Core) taintMountEntry(ctx context.Context, path string) error {
 func (c *Core) remountForce(ctx context.Context, path string) error {
 	me := c.router.MatchingMountEntry(path)
 	if me == nil {
-		return fmt.Errorf("cannot find mount for path '%s'", path)
+		return fmt.Errorf("cannot find mount for path %q", path)
 	}
 
 	me, err := me.Clone()
@@ -520,18 +520,18 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	// Prevent protected paths from being remounted
 	for _, p := range protectedMounts {
 		if strings.HasPrefix(src, p) {
-			return fmt.Errorf("cannot remount '%s'", src)
+			return fmt.Errorf("cannot remount %q", src)
 		}
 	}
 
 	// Verify exact match of the route
 	match := c.router.MatchingMount(src)
 	if match == "" || src != match {
-		return fmt.Errorf("no matching mount at '%s'", src)
+		return fmt.Errorf("no matching mount at %q", src)
 	}
 
 	if match := c.router.MatchingMount(dst); match != "" {
-		return fmt.Errorf("existing mount at '%s'", match)
+		return fmt.Errorf("existing mount at %q", match)
 	}
 
 	// Mark the entry as tainted
@@ -837,7 +837,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Check for the correct backend type
 		backendType = backend.Type()
 		if entry.Type == "plugin" && backendType != logical.TypeLogical {
-			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
+			return fmt.Errorf("cannot mount %q of type %q as a logical backend", entry.Config.PluginName, backendType)
 		}
 
 		c.setCoreBackend(entry, backend, view)
@@ -892,7 +892,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	}
 	f, ok := c.logicalBackends[t]
 	if !ok {
-		return nil, fmt.Errorf("unknown backend type: %s", t)
+		return nil, fmt.Errorf("unknown backend type: %q", t)
 	}
 
 	// Set up conf to pass in plugin_name
@@ -959,7 +959,7 @@ func (c *Core) defaultMountTable() *MountTable {
 		Accessor:         mountAccessor,
 		BackendAwareUUID: bUUID,
 		Options: map[string]string{
-			"versioned": "true",
+			"version": "1",
 		},
 	}
 	table.Entries = append(table.Entries, kvMount)

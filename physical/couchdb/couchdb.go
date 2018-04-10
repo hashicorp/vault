@@ -105,7 +105,7 @@ func (m *couchDBClient) get(key string) (*physical.Entry, error) {
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, nil
 	} else if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GET returned %s", resp.Status)
+		return nil, fmt.Errorf("GET returned %q", resp.Status)
 	}
 	bs, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
