@@ -304,13 +304,11 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 			}
 
 			c := &transaction.Config{
-				Ctx:      ctx,
-				Tx:       tx,
 				Username: m.Username,
 				Password: password,
 			}
 
-			if err := transaction.Execute(c, query); err != nil {
+			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return nil, err
 			}
 		}

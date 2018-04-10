@@ -132,10 +132,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	var lastStmtError error
 	for _, query := range revokeStmts {
 
-		c := &transaction.Config{
-			DB: db,
-		}
-		if err := transaction.Execute(c, query); err != nil {
+		if err := transaction.ExecuteDBQuery(nil, db, nil, query); err != nil {
 			lastStmtError = err
 			continue
 		}

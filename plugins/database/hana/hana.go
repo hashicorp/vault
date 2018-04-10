@@ -144,7 +144,12 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 				continue
 			}
 
-			if err := executeStatement(ctx, tx, query, username, password, expirationStr); err != nil {
+			c := &transaction.Config{
+				Name:       username,
+				Password:   password,
+				Expiration: expirationStr,
+			}
+			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return "", "", err
 			}
 		}
@@ -231,11 +236,9 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 			}
 
 			c := &transaction.Config{
-				Ctx:  ctx,
-				Tx:   tx,
 				Name: username,
 			}
-			if err := transaction.Execute(c, query); err != nil {
+			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return err
 			}
 		}
@@ -267,7 +270,6 @@ func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 	if _, err := disableStmt.ExecContext(ctx); err != nil {
 		return err
 	}
-	disableStmt.Exec()
 
 	// Invalidates current sessions and performs soft drop (drop if no dependencies)
 	// if hard drop is desired, custom revoke statements should be written for role
@@ -291,20 +293,4 @@ func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 // RotateRootCredentials is not currently supported on HANA
 func (h *HANA) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
 	return nil, errors.New("root credentaion rotation is not currently implemented in this database secrets engine")
-}
-
-func executeStatement(ctx context.Context, tx *sql.Tx, query string, username string, password string, expirationStr string) error {
-	stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-		"name":       username,
-		"password":   password,
-		"expiration": expirationStr,
-	}))
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	if _, err := stmt.ExecContext(ctx); err != nil {
-		return err
-	}
-	return nil
 }

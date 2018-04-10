@@ -3,67 +3,71 @@ package transaction
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 )
 
 type Config struct {
-	Ctx        context.Context
 	Name       string
 	Username   string
 	Password   string
 	Expiration string
-	Tx         *sql.Tx
-	DB         *sql.DB
 }
 
-func Execute(c *Config, query string) error {
+// ExecuteDBQuery handles executing one single statement, while properly releasing its resources.
+// - ctx: 		Optional, may be nil
+// - db: 		Required
+// - config: 	Optional, may be nil
+// - query: 	Required
+func ExecuteDBQuery(ctx context.Context, db *sql.DB, config *Config, query string) error {
 
-	if err := validate(c); err != nil {
-		return err
-	}
+	parsedQuery := parseQuery(config, query)
 
-	stmt, err := statement(c, query)
+	stmt, err := dbPrepare(ctx, db, parsedQuery)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	return execute(c, stmt)
+	return execute(ctx, stmt)
 }
 
-func validate(c *Config) error {
-	if c.DB == nil && c.Tx == nil {
-		return errors.New("a *sql.Tx or *sql.DB must be provided to prepare the statement")
+// ExecuteTxQuery handles executing one single statement, while properly releasing its resources.
+// - ctx: 		Optional, may be nil
+// - tx: 		Required
+// - config: 	Optional, may be nil
+// - query: 	Required
+func ExecuteTxQuery(ctx context.Context, tx *sql.Tx, config *Config, query string) error {
+
+	parsedQuery := parseQuery(config, query)
+
+	stmt, err := txPrepare(ctx, tx, parsedQuery)
+	if err != nil {
+		return err
 	}
-	if c.DB != nil && c.Tx != nil {
-		return errors.New("cannot provide both a *sql.Tx and a *sql.DB because only one must be used to prepare the statement")
-	}
-	return nil
+	defer stmt.Close()
+
+	return execute(ctx, stmt)
 }
 
-func statement(c *Config, query string) (*sql.Stmt, error) {
-
-	q := parseQuery(c, query)
-
-	if c.Tx != nil {
-		if c.Ctx != nil {
-			return c.Tx.PrepareContext(c.Ctx, q)
-		}
-		return c.Tx.Prepare(q)
+func dbPrepare(ctx context.Context, db *sql.DB, parsedQuery string) (*sql.Stmt, error) {
+	if ctx != nil {
+		return db.PrepareContext(ctx, parsedQuery)
 	}
-
-	if c.Ctx != nil {
-		return c.DB.PrepareContext(c.Ctx, q)
-	}
-	return c.DB.Prepare(q)
+	return db.Prepare(parsedQuery)
 }
 
-func execute(c *Config, stmt *sql.Stmt) error {
+func txPrepare(ctx context.Context, tx *sql.Tx, parsedQuery string) (*sql.Stmt, error) {
+	if ctx != nil {
+		return tx.PrepareContext(ctx, parsedQuery)
+	}
+	return tx.Prepare(parsedQuery)
+}
 
-	if c.Ctx != nil {
-		if _, err := stmt.ExecContext(c.Ctx); err != nil {
+func execute(ctx context.Context, stmt *sql.Stmt) error {
+
+	if ctx != nil {
+		if _, err := stmt.ExecContext(ctx); err != nil {
 			return err
 		}
 		return nil
@@ -76,6 +80,10 @@ func execute(c *Config, stmt *sql.Stmt) error {
 }
 
 func parseQuery(c *Config, tpl string) string {
+
+	if c == nil {
+		return tpl
+	}
 
 	if c.Name == "" && c.Username == "" && c.Password == "" && c.Expiration == "" {
 		return tpl

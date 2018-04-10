@@ -105,12 +105,10 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 		}
 
 		c := &transaction.Config{
-			Tx:       tx,
 			Name:     username,
 			Password: password,
 		}
-
-		if err := transaction.Execute(c, query); err != nil {
+		if err := transaction.ExecuteTxQuery(nil, tx, c, query); err != nil {
 			return nil, err
 		}
 	}

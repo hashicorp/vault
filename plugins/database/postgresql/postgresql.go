@@ -141,14 +141,11 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 			}
 
 			c := &transaction.Config{
-				Ctx:        ctx,
-				Tx:         tx,
 				Name:       username,
 				Password:   password,
 				Expiration: expirationStr,
 			}
-
-			if err := transaction.Execute(c, query); err != nil {
+			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return "", "", err
 			}
 		}
@@ -200,12 +197,10 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 			}
 
 			c := &transaction.Config{
-				Ctx:        ctx,
-				Tx:         tx,
 				Name:       username,
 				Expiration: expirationStr,
 			}
-			if err := transaction.Execute(c, query); err != nil {
+			if err := transaction.ExecuteTxQuery(nil, tx, c, query); err != nil {
 				return err
 			}
 		}
@@ -250,11 +245,9 @@ func (p *PostgreSQL) customRevokeUser(ctx context.Context, username string, revo
 			}
 
 			c := &transaction.Config{
-				Ctx:  ctx,
-				Tx:   tx,
 				Name: username,
 			}
-			if err := transaction.Execute(c, query); err != nil {
+			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return err
 			}
 		}
@@ -347,12 +340,7 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revocationStmts {
-
-		c := &transaction.Config{
-			Ctx: ctx,
-			DB:  db,
-		}
-		if err := transaction.Execute(c, query); err != nil {
+		if err := transaction.ExecuteDBQuery(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 		}
 	}
@@ -417,12 +405,10 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 				continue
 			}
 			c := &transaction.Config{
-				Ctx:      ctx,
-				Tx:       tx,
 				Username: p.Username,
 				Password: password,
 			}
-			if err := transaction.Execute(c, query); err != nil {
+			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return nil, err
 			}
 		}

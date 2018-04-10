@@ -131,14 +131,12 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 			}
 
 			c := &transaction.Config{
-				Ctx:        ctx,
-				Tx:         tx,
 				Name:       username,
 				Password:   password,
 				Expiration: expirationStr,
 			}
 
-			if err := transaction.Execute(c, query); err != nil {
+			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return "", "", err
 			}
 		}
@@ -190,11 +188,9 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 			}
 
 			c := &transaction.Config{
-				Ctx:  ctx,
-				Tx:   tx,
 				Name: username,
 			}
-			if err := transaction.Execute(c, query); err != nil {
+			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return err
 			}
 		}
@@ -283,12 +279,7 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revokeStmts {
-
-		c := &transaction.Config{
-			Ctx: ctx,
-			DB:  db,
-		}
-		if err := transaction.Execute(c, query); err != nil {
+		if err := transaction.ExecuteDBQuery(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 		}
 	}
@@ -353,12 +344,10 @@ func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) 
 			}
 
 			c := &transaction.Config{
-				Ctx:      ctx,
-				Tx:       tx,
 				Username: m.Username,
 				Password: password,
 			}
-			if err := transaction.Execute(c, query); err != nil {
+			if err := transaction.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return nil, err
 			}
 		}
