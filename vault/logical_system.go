@@ -2113,7 +2113,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	if optionsRaw, ok := data.GetOk("options"); ok {
 		options = optionsRaw.(map[string]string)
 	}
-	if options != nil {
+	if len(options) > 0 {
 		b.Core.logger.Info("mount tuning of options", "path", path, "options", options)
 
 		var changed bool
