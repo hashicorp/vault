@@ -1987,7 +1987,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			return handleError(err)
 		}
 		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("core: mount tuning of description successful", "path", path)
+			b.Core.logger.Info("mount tuning of description successful", "path", path)
 		}
 	}
 
@@ -2013,7 +2013,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		mountEntry.SyncCache()
 
 		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("core: mount tuning of audit_non_hmac_request_keys successful", "path", path)
+			b.Core.logger.Info("mount tuning of audit_non_hmac_request_keys successful", "path", path)
 		}
 	}
 
@@ -2039,7 +2039,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		mountEntry.SyncCache()
 
 		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("core: mount tuning of audit_non_hmac_response_keys successful", "path", path)
+			b.Core.logger.Info("mount tuning of audit_non_hmac_response_keys successful", "path", path)
 		}
 	}
 
@@ -2068,7 +2068,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 
 		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("core: mount tuning of listing_visibility successful", "path", path)
+			b.Core.logger.Info("mount tuning of listing_visibility successful", "path", path)
 		}
 	}
 
@@ -2094,16 +2094,16 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		mountEntry.SyncCache()
 
 		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("core: mount tuning of passthrough_request_headers successful", "path", path)
+			b.Core.logger.Info("mount tuning of passthrough_request_headers successful", "path", path)
 		}
 	}
 
 	var resp *logical.Response
 	if optionsRaw, ok := data.GetOk("options"); ok {
-		b.Core.logger.Info("core: mount tuning of options", "path", path)
+		b.Core.logger.Info("mount tuning of options", "path", path)
 		options := optionsRaw.(map[string]string)
 
-		b.Core.logger.Info("core: mount tuning of options", "path", path, "options", options)
+		b.Core.logger.Info("mount tuning of options", "path", path, "options", options)
 		// Special case to make sure we can not disable versioning once it's
 		// enabeled. If the vkv backend suports downgrading this can be removed.
 		meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
@@ -2963,7 +2963,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
 	}); err != nil {
-		b.Core.logger.Error("core: error saving keyring canary", "error", err)
+		b.Core.logger.Error("error saving keyring canary", "error", err)
 		return nil, errwrap.Wrapf("failed to save keyring canary: {{err}}", err)
 	}
 

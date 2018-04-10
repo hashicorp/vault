@@ -335,7 +335,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		if registerLease {
 			sysView := c.router.MatchingSystemView(req.Path)
 			if sysView == nil {
-				c.logger.Error("core: unable to look up sys view for login path", "request_path", req.Path)
+				c.logger.Error("unable to look up sys view for login path", "request_path", req.Path)
 				return nil, nil, ErrInternalError
 			}
 
