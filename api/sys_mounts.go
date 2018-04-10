@@ -88,9 +88,8 @@ func (c *Sys) Remount(from, to string) error {
 }
 
 func (c *Sys) TuneMount(path string, config MountConfigInput) error {
-	body := structs.Map(config)
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
-	if err := r.SetJSONBody(body); err != nil {
+	if err := r.SetJSONBody(config); err != nil {
 		return err
 	}
 
