@@ -336,7 +336,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 
 	newTable := c.mounts.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
-	if err := c.persistMounts(ctx, newTable, entry.Local); err != nil {
+	if err := c.persistMounts(ctx, newTable, &entry.Local); err != nil {
 		c.logger.Error("failed to update mount table", "error", err)
 		return logical.CodedError(500, "failed to update mount table")
 	}
@@ -457,7 +457,7 @@ func (c *Core) removeMountEntry(ctx context.Context, path string) error {
 	}
 
 	// Update the mount table
-	if err := c.persistMounts(ctx, newTable, entry.Local); err != nil {
+	if err := c.persistMounts(ctx, newTable, &entry.Local); err != nil {
 		c.logger.Error("failed to remove entry from mounts table", "error", err)
 		return logical.CodedError(500, "failed to remove entry from mounts table")
 	}
@@ -480,7 +480,7 @@ func (c *Core) taintMountEntry(ctx context.Context, path string) error {
 	}
 
 	// Update the mount table
-	if err := c.persistMounts(ctx, c.mounts, entry.Local); err != nil {
+	if err := c.persistMounts(ctx, c.mounts, &entry.Local); err != nil {
 		c.logger.Error("failed to taint entry in mounts table", "error", err)
 		return logical.CodedError(500, "failed to taint entry in mounts table")
 	}
@@ -571,7 +571,7 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	}
 
 	// Update the mount table
-	if err := c.persistMounts(ctx, c.mounts, entry.Local); err != nil {
+	if err := c.persistMounts(ctx, c.mounts, &entry.Local); err != nil {
 		entry.Path = src
 		entry.Tainted = true
 		c.mountsLock.Unlock()
@@ -710,7 +710,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 		return nil
 	}
 
-	if err := c.persistMounts(ctx, c.mounts, false); err != nil {
+	if err := c.persistMounts(ctx, c.mounts, nil); err != nil {
 		c.logger.Error("failed to persist mount table", "error", err)
 		return errLoadMountsFailed
 	}
@@ -718,7 +718,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 }
 
 // persistMounts is used to persist the mount table after modification
-func (c *Core) persistMounts(ctx context.Context, table *MountTable, localOnly bool) error {
+func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool) error {
 	if table.Type != mountTableType {
 		c.logger.Error("given table to persist has wrong type", "actual_type", table.Type, "expected_type", mountTableType)
 		return fmt.Errorf("invalid table type given, not persisting")
@@ -747,17 +747,17 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, localOnly b
 		}
 	}
 
-	if !localOnly {
+	writeTable := func(mt *MountTable, path string) error {
 		// Encode the mount table into JSON and compress it (lzw).
-		compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalMounts, nil)
+		compressedBytes, err := jsonutil.EncodeJSONAndCompress(mt, nil)
 		if err != nil {
-			c.logger.Error("failed to encode and/or compress the mount table", "error", err)
+			c.logger.Error("failed to encode or compress mount table", "error", err)
 			return err
 		}
 
 		// Create an entry
 		entry := &Entry{
-			Key:   coreMountConfigPath,
+			Key:   path,
 			Value: compressedBytes,
 		}
 
@@ -766,26 +766,33 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, localOnly b
 			c.logger.Error("failed to persist mount table", "error", err)
 			return err
 		}
+
+		return nil
 	}
 
-	// Repeat with local mounts
-	compressedBytes, err := jsonutil.EncodeJSONAndCompress(localMounts, nil)
-	if err != nil {
-		c.logger.Error("failed to encode and/or compress the local mount table", "error", err)
-		return err
+	var err error
+	switch {
+	case local == nil:
+		// Write non-local mounts
+		err := writeTable(nonLocalMounts, coreMountConfigPath)
+		if err != nil {
+			return err
+		}
+
+		// Write local mounts
+		err = writeTable(localMounts, coreLocalMountConfigPath)
+		if err != nil {
+			return err
+		}
+	case *local:
+		// Write local mounts
+		err = writeTable(localMounts, coreLocalMountConfigPath)
+	default:
+		// Write non-local mounts
+		err = writeTable(nonLocalMounts, coreMountConfigPath)
 	}
 
-	entry := &Entry{
-		Key:   coreLocalMountConfigPath,
-		Value: compressedBytes,
-	}
-
-	if err := c.barrier.Put(ctx, entry); err != nil {
-		c.logger.Error("failed to persist local mount table", "error", err)
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // setupMounts is invoked after we've loaded the mount table to
