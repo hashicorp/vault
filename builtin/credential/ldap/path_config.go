@@ -385,7 +385,12 @@ type ConfigEntry struct {
 	DiscoverDN         bool   `json:"discoverdn"`
 	TLSMinVersion      string `json:"tls_min_version"`
 	TLSMaxVersion      string `json:"tls_max_version"`
-	CaseSensitiveNames *bool  `json:"case_sensitive_names,omitempty"`
+
+	// This json tag deviates from snake case because there was a past issue
+	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames".
+	// To continue reading in users' previously stored values,
+	// we chose to carry that forward.
+	CaseSensitiveNames *bool  `json:"CaseSensitiveNames,omitempty"`
 }
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
