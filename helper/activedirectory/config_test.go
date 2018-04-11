@@ -16,7 +16,7 @@ func TestCertificateValidation(t *testing.T) {
 		t.Error(err)
 	}
 	if config.Certificate != "" {
-		t.FailNow()
+		t.Fatalf("expected no certificate but received %s", config.Certificate)
 	}
 
 	// certificate should cause an error if a bad one is provided
@@ -48,7 +48,7 @@ func TestTLSDefaultsTo12(t *testing.T) {
 	}
 	expected := uint16(771)
 	if config.TLSMinVersion != expected || config.TLSMaxVersion != expected {
-		t.FailNow()
+		t.Fatal("expected TLS min and max version of 771 which corresponds with TLS 1.2 since TLS 1.1 and 1.0 have known vulnerabilities")
 	}
 }
 
@@ -59,7 +59,7 @@ func TestTLSSessionDefaultsToStarting(t *testing.T) {
 		t.Error(err)
 	}
 	if !config.StartTLS {
-		t.FailNow()
+		t.Fatal("expected to default to StartTLS since its the most secure setting")
 	}
 }
 
@@ -70,7 +70,7 @@ func TestTLSSessionDefaultsToSecure(t *testing.T) {
 		t.Error(err)
 	}
 	if config.InsecureTLS {
-		t.FailNow()
+		t.Fatal("expected to default to a secure TLS connection")
 	}
 }
 
@@ -90,7 +90,7 @@ func TestRootDomainName(t *testing.T) {
 		t.Error(err)
 	}
 	if config.RootDomainName != "example,com" {
-		t.FailNow()
+		t.Fatalf("expected RootDomainName of \"example,com\" but received \"%s\"", config.RootDomainName)
 	}
 }
 
@@ -109,25 +109,25 @@ func TestGetTLSConfigs(t *testing.T) {
 		t.Error(err)
 	}
 	if len(tlsConfigs) != 1 {
-		t.FailNow()
+		t.Error("expected 1 TLS config because there's 1 url")
 	}
 
 	for u, tlsConfig := range tlsConfigs {
 		if u.String() != "ldap://138.91.247.105" {
-			t.FailNow()
+			t.Errorf("expected url of \"ldap://138.91.247.105\" but received \"%s\"", u.String())
 		}
 
 		if tlsConfig.InsecureSkipVerify {
-			t.FailNow()
+			t.Error("InsecureSkipVerify should be false because we should default to the most secure connection")
 		}
 
 		if tlsConfig.ServerName != "138.91.247.105" {
-			t.FailNow()
+			t.Errorf("expected ServerName of \"138.91.247.105\" but received \"%s\"", tlsConfig.ServerName)
 		}
 
 		expected := uint16(771)
 		if tlsConfig.MinVersion != expected || tlsConfig.MaxVersion != expected {
-			t.FailNow()
+			t.Fatal("expected TLS min and max version of 771 which corresponds with TLS 1.2 since TLS 1.1 and 1.0 have known vulnerabilities")
 		}
 	}
 }

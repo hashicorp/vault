@@ -33,7 +33,7 @@ func TestCacheReader(t *testing.T) {
 		t.Error(err)
 	}
 	if config != nil {
-		t.FailNow()
+		t.Error("config should initially be nil because it's unset as of yet")
 	}
 
 	req := &logical.Request{
@@ -64,7 +64,7 @@ func TestCacheReader(t *testing.T) {
 	}
 
 	if config.ADConf.Username != "tester" {
-		t.FailNow()
+		t.Error("returned config is not populated as expected")
 	}
 
 	req = &logical.Request{
@@ -84,6 +84,6 @@ func TestCacheReader(t *testing.T) {
 		t.Error(err)
 	}
 	if config != nil {
-		t.FailNow()
+		t.Error("config should again be nil because after it's been deleted, it's again unset by the user")
 	}
 }
