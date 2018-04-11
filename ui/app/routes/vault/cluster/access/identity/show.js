@@ -13,11 +13,25 @@ export default Ember.Route.extend({
       Ember.set(error, 'httpStatus', 404);
       throw error;
     }
-    // TODO peekRecord here to see if we have the record already
+
+    // if the record is in the store use that
+    let model =
+      this.store.peekRecord(modelType, params.item_id) || this.store.findRecord(modelType, params.item_id);
+
     return Ember.RSVP.hash({
-      model: this.store.findRecord(modelType, params.item_id),
+      model,
       section,
     });
+  },
+
+  activate() {
+    // if we're just entering the route, and it's not a hard reload
+    // reload to make sure we have the newest info
+    if (this.currentModel) {
+      Ember.run.next(() => {
+        this.controller.get('model').reload();
+      });
+    }
   },
 
   afterModel(resolvedModel) {

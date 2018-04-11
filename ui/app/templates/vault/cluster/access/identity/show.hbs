@@ -17,12 +17,12 @@
     </div>
     <div class="level-right">
       {{#unless (or (and (eq model.identityType "group") (eq model.type "internal")) model.alias)}}
-        <a href="{{href-to 'vault.cluster.access.identity.aliases.add' model.id}}" class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true>
+        <a href="{{href-to 'vault.cluster.access.identity.aliases.add' (pluralize model.identityType) model.id}}" class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true>
           Add alias
           {{i-con glyph="chevron-right" size=11}}
         </a>
       {{/unless}}
-      <a href="{{href-to 'vault.cluster.access.identity.edit' model.id}}" class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true>
+      <a href="{{href-to 'vault.cluster.access.identity.edit' (pluralize model.identityType) model.id}}" class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true>
         Edit {{model.identityType}}
         {{i-con glyph="chevron-right" size=11}}
       </a>
@@ -34,7 +34,7 @@
     <ul>
       {{#each (tabs-for-identity-show model.identityType model.type) as |tab|}}
         {{#link-to "vault.cluster.access.identity.show" model.id tab tagName="li"}}
-          <a href={{href-to "vault.cluster.access.identity.show" model.id tab }}>
+          <a href={{href-to "vault.cluster.access.identity.show" (pluralize model.identityType) model.id tab }}>
             {{capitalize tab}}
           </a>
         {{/link-to}}

@@ -61,7 +61,7 @@ export default Ember.Component.extend({
 
   willDestroy() {
     let model = this.get('model');
-    if (!model.isDestroyed || !model.isDestroying) {
+    if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {
       model.rollbackAttributes();
     }
   },
