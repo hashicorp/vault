@@ -23,7 +23,13 @@ func ExecuteDBQuery(ctx context.Context, db *sql.DB, config *Config, query strin
 
 	parsedQuery := parseQuery(config, query)
 
-	stmt, err := dbPrepare(ctx, db, parsedQuery)
+	var stmt *sql.Stmt
+	var err error
+	if ctx != nil {
+		stmt, err = db.PrepareContext(ctx, parsedQuery)
+	} else {
+		stmt, err = db.Prepare(parsedQuery)
+	}
 	if err != nil {
 		return err
 	}
@@ -41,27 +47,19 @@ func ExecuteTxQuery(ctx context.Context, tx *sql.Tx, config *Config, query strin
 
 	parsedQuery := parseQuery(config, query)
 
-	stmt, err := txPrepare(ctx, tx, parsedQuery)
+	var stmt *sql.Stmt
+	var err error
+	if ctx != nil {
+		stmt, err = tx.PrepareContext(ctx, parsedQuery)
+	} else {
+		stmt, err = tx.Prepare(parsedQuery)
+	}
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
 	return execute(ctx, stmt)
-}
-
-func dbPrepare(ctx context.Context, db *sql.DB, parsedQuery string) (*sql.Stmt, error) {
-	if ctx != nil {
-		return db.PrepareContext(ctx, parsedQuery)
-	}
-	return db.Prepare(parsedQuery)
-}
-
-func txPrepare(ctx context.Context, tx *sql.Tx, parsedQuery string) (*sql.Stmt, error) {
-	if ctx != nil {
-		return tx.PrepareContext(ctx, parsedQuery)
-	}
-	return tx.Prepare(parsedQuery)
 }
 
 func execute(ctx context.Context, stmt *sql.Stmt) error {
