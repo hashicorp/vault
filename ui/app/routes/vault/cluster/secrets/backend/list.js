@@ -28,8 +28,13 @@ export default Ember.Route.extend({
   },
 
   capabilities(secret) {
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const path = backend + '/' + secret;
+    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    let backendModel = this.store.peekRecord('secret-engine', backend);
+    let version = backendModel.get('options.version');
+    let path = backend + '/' + secret;
+    if (version && version === 2) {
+      path = backend + '/data/' + secret;
+    }
     return this.store.findRecord('capabilities', path);
   },
 

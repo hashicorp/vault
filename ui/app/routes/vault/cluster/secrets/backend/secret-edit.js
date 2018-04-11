@@ -5,11 +5,15 @@ import UnloadModelRoute from 'vault/mixins/unload-model-route';
 export default Ember.Route.extend(UnloadModelRoute, {
   capabilities(secret) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    let backendModel = this.store.peekRecord('secret-engine', backend);
+    let version = backendModel.get('options.version');
     let path;
     if (backend === 'transit') {
       path = backend + '/keys/' + secret;
     } else if (backend === 'ssh' || backend === 'aws') {
       path = backend + '/roles/' + secret;
+    } else if (version && version === 2) {
+      path = backend + '/data/' + secret;
     } else {
       path = backend + '/' + secret;
     }
