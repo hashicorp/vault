@@ -28,7 +28,7 @@ func TestFieldRegistryEqualityComparisonsWork(t *testing.T) {
 	}
 
 	if !foundGivenName || !foundSurname {
-		t.Error("the field registry's equality comparisons are not working")
+		t.Fatal("the field registry's equality comparisons are not working")
 	}
 }
 
@@ -36,10 +36,10 @@ func TestFieldRegistryParsesFieldsByString(t *testing.T) {
 
 	field, err := FieldRegistry.Parse("sn")
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	if field != FieldRegistry.Surname {
-		t.Error("the field registry is unable to parse registry fields from their string representations")
+		t.Fatal("the field registry is unable to parse registry fields from their string representations")
 	}
 }

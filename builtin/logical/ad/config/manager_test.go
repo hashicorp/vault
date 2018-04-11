@@ -21,7 +21,7 @@ func TestCacheReader(t *testing.T) {
 		StorageView: storage,
 	})
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	var configReader Reader
@@ -30,10 +30,10 @@ func TestCacheReader(t *testing.T) {
 	// we should start with no config
 	config, err := configReader.Config(ctx, storage)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if config != nil {
-		t.Error("config should initially be nil because it's unset as of yet")
+		t.Fatal("config should initially be nil because it's unset as of yet")
 	}
 
 	req := &logical.Request{
@@ -54,17 +54,17 @@ func TestCacheReader(t *testing.T) {
 
 	_, err = m.update(ctx, req, fieldData)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	// now that we've updated the config, we should be able to read it
 	config, err = configReader.Config(ctx, storage)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	if config.ADConf.Username != "tester" {
-		t.Error("returned config is not populated as expected")
+		t.Fatal("returned config is not populated as expected")
 	}
 
 	req = &logical.Request{
@@ -75,15 +75,15 @@ func TestCacheReader(t *testing.T) {
 
 	_, err = m.delete(ctx, req, nil)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	// now that we've deleted the config, it should be unset again
 	config, err = configReader.Config(ctx, storage)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if config != nil {
-		t.Error("config should again be nil because after it's been deleted, it's again unset by the user")
+		t.Fatal("config should again be nil because after it's been deleted, it's again unset by the user")
 	}
 }

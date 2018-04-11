@@ -13,7 +13,7 @@ func TestCertificateValidation(t *testing.T) {
 	fd := fieldDataWithSchema()
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if config.Certificate != "" {
 		t.Fatalf("expected no certificate but received %s", config.Certificate)
@@ -26,7 +26,7 @@ func TestCertificateValidation(t *testing.T) {
 	}
 	config, err = NewConfiguration(hclog.NewNullLogger(), fd)
 	if err == nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	// valid certificates should pass inspection
@@ -36,7 +36,7 @@ func TestCertificateValidation(t *testing.T) {
 	}
 	config, err = NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 }
 
@@ -44,7 +44,7 @@ func TestTLSDefaultsTo12(t *testing.T) {
 	fd := fieldDataWithSchema()
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	expected := uint16(771)
 	if config.TLSMinVersion != expected || config.TLSMaxVersion != expected {
@@ -56,7 +56,7 @@ func TestTLSSessionDefaultsToStarting(t *testing.T) {
 	fd := fieldDataWithSchema()
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if !config.StartTLS {
 		t.Fatal("expected to default to StartTLS since its the most secure setting")
@@ -67,7 +67,7 @@ func TestTLSSessionDefaultsToSecure(t *testing.T) {
 	fd := fieldDataWithSchema()
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if config.InsecureTLS {
 		t.Fatal("expected to default to a secure TLS connection")
@@ -79,7 +79,7 @@ func TestRootDomainName(t *testing.T) {
 	fd.Raw = map[string]interface{}{}
 	_, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err == nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	fd.Raw = map[string]interface{}{
 		"urls": "ldap://138.91.247.105",
@@ -87,7 +87,7 @@ func TestRootDomainName(t *testing.T) {
 	}
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if config.RootDomainName != "example,com" {
 		t.Fatalf("expected RootDomainName of \"example,com\" but received \"%s\"", config.RootDomainName)
@@ -102,27 +102,27 @@ func TestGetTLSConfigs(t *testing.T) {
 	}
 	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	tlsConfigs, err := config.GetTLSConfigs()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if len(tlsConfigs) != 1 {
-		t.Error("expected 1 TLS config because there's 1 url")
+		t.Fatal("expected 1 TLS config because there's 1 url")
 	}
 
 	for u, tlsConfig := range tlsConfigs {
 		if u.String() != "ldap://138.91.247.105" {
-			t.Errorf("expected url of \"ldap://138.91.247.105\" but received \"%s\"", u.String())
+			t.Fatalf("expected url of \"ldap://138.91.247.105\" but received \"%s\"", u.String())
 		}
 
 		if tlsConfig.InsecureSkipVerify {
-			t.Error("InsecureSkipVerify should be false because we should default to the most secure connection")
+			t.Fatal("InsecureSkipVerify should be false because we should default to the most secure connection")
 		}
 
 		if tlsConfig.ServerName != "138.91.247.105" {
-			t.Errorf("expected ServerName of \"138.91.247.105\" but received \"%s\"", tlsConfig.ServerName)
+			t.Fatalf("expected ServerName of \"138.91.247.105\" but received \"%s\"", tlsConfig.ServerName)
 		}
 
 		expected := uint16(771)
