@@ -54,7 +54,6 @@ func TestSearch(t *testing.T) {
 
 	result, _ = entry.GetJoined(FieldRegistry.PrimaryGroupID)
 	if result != "513" {
-		t.Error(err)
 		t.FailNow()
 	}
 

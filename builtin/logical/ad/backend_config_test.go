@@ -43,9 +43,7 @@ func TestConfigWriteReadDelete(t *testing.T) {
 		t.Error(err)
 	}
 	verifyResponse(t, resp)
-	if !configIsStoredAsExpected() {
-		t.FailNow()
-	}
+	configIsStoredAsExpected(t)
 
 	// Read
 	req = &logical.Request{
@@ -58,9 +56,7 @@ func TestConfigWriteReadDelete(t *testing.T) {
 		t.Error(err)
 	}
 	verifyResponse(t, resp)
-	if !configIsStoredAsExpected() {
-		t.FailNow()
-	}
+	configIsStoredAsExpected(t)
 
 	// Delete
 	req = &logical.Request{
@@ -84,65 +80,64 @@ func TestConfigWriteReadDelete(t *testing.T) {
 	}
 }
 
-func configIsStoredAsExpected() bool {
+func configIsStoredAsExpected(t *testing.T) {
 	entry, err := storage.Get(ctx, config.StorageKey)
 	if err != nil {
-		return false
+		t.Error(err)
 	}
 
 	engineConf := &config.EngineConf{}
 	if err := entry.DecodeJSON(engineConf); err != nil {
-		return false
+		t.Error(err)
 	}
 
 	if engineConf.ADConf.Certificate != validCertificate {
-		return false
+		t.FailNow()
 	}
 
 	if engineConf.ADConf.RootDomainName != "example,com" {
-		return false
+		t.FailNow()
 	}
 
 	if engineConf.ADConf.InsecureTLS {
-		return false
+		t.FailNow()
 	}
 
 	if engineConf.ADConf.Password != "pa$$w0rd" {
-		return false
+		t.FailNow()
 	}
 
 	if !engineConf.ADConf.StartTLS {
-		return false
+		t.FailNow()
 	}
 
 	if engineConf.ADConf.URLs[0] != "ldap://138.91.247.105" {
-		return false
+		t.FailNow()
 	}
 
 	if engineConf.ADConf.TLSMinVersion != 771 {
-		return false
+		t.FailNow()
 	}
 
 	if engineConf.ADConf.TLSMaxVersion != 771 {
-		return false
+		t.FailNow()
 	}
 
 	if engineConf.ADConf.Username != "tester" {
-		return false
+		t.FailNow()
 	}
 
 	if engineConf.PasswordConf.DefaultPasswordTTL != config.DefaultPasswordTTLs {
-		return false
+		t.FailNow()
 	}
 
 	if engineConf.PasswordConf.MaxPasswordTTL != config.DefaultPasswordTTLs {
-		return false
+		t.FailNow()
 	}
 
 	if engineConf.PasswordConf.PasswordLength != config.DefaultPasswordLength {
-		return false
+		t.FailNow()
 	}
-	return true
 }
 
 func verifyResponse(t *testing.T, resp *logical.Response) {

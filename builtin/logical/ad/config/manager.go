@@ -25,16 +25,9 @@ type Reader interface {
 	// Config returns the current *EngineConf.
 	// This shouldn't be retained in memory, but rather should be pulled on the fly every time,
 	// in case the config changes.
-	//   - If error is nil, *EngineConf is not nil.
-	//   - Returns an UnsetError if the config is currently unset by the user - none exists.
-	//   - Returns other errors if storage is inaccessible, etc.
+	//
+	// NOTE: If error is nil, *EngineConf still may be nil if it's unset by the user.
 	Config(ctx context.Context, storage logical.Storage) (*EngineConf, error)
-}
-
-type UnsetError struct{}
-
-func (e *UnsetError) Error() string {
-	return "the configuration is not currently set"
 }
 
 // NewManager creates a Manager, which manages all aspects of the config.
@@ -77,10 +70,7 @@ func (m *Manager) Config(ctx context.Context, storage logical.Storage) (*EngineC
 	if err != nil {
 		return nil, err
 	}
-	if config == nil {
-		// the config is currently unset by the user
-		return nil, &UnsetError{}
-	}
+	m.config = config
 	return m.config, nil
 }
 
