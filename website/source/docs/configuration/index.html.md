@@ -121,9 +121,9 @@ to specify where the configuration is.
   allows the decryption/encryption of raw data into and out of the security
   barrier. This is a highly privileged endpoint.
 
-- `ui` `(bool: false, Enterprise-only)` – Enables the built-in web UI, which is
-  available on all listeners (address + port) at the `/ui` path. Browsers accessing
-  the standard Vault API address will automatically redirect there. This can also
+- `ui` `(bool: false)` – Enables the built-in web UI, which is
+  available on all listeners (address + port) at the `/ui` path. (Vault Enterprise, or Vault OSS 0.10+)
+  Browsers accessing the standard Vault API address will automatically redirect there. This can also
   be provided via the environment variable `VAULT_UI`.
 
 - `pid_file` `(string: "")` - Path to the file in which the Vault server's
