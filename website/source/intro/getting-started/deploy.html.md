@@ -111,7 +111,7 @@ server_.
 
 During initialization, the encryption keys are generated, unseal keys are
 created, and the initial root token is setup. To initialize Vault use `vault
-init`. This is an _unauthenticated_ request, but it only works on brand new
+operator init`. This is an _unauthenticated_ request, but it only works on brand new
 Vaults with no data:
 
 ```text
