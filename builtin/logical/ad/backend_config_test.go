@@ -127,16 +127,16 @@ func configIsStoredAsExpected(t *testing.T) {
 		t.Fatalf("expected Username to be \"tester\" but received \"%s\"", engineConf.ADConf.Username)
 	}
 
-	if engineConf.PasswordConf.DefaultPasswordTTL != config.DefaultPasswordTTLs {
-		t.Fatalf("received unexpected DefaultPasswordTTL of \"%d\"", engineConf.PasswordConf.DefaultPasswordTTL)
+	if engineConf.PasswordConf.TTL != config.DefaultPasswordTTLs {
+		t.Fatalf("received unexpected TTL of \"%d\"", engineConf.PasswordConf.TTL)
 	}
 
-	if engineConf.PasswordConf.MaxPasswordTTL != config.DefaultPasswordTTLs {
-		t.Fatalf("received unexpected MaxPasswordTTL of \"%d\"", engineConf.PasswordConf.MaxPasswordTTL)
+	if engineConf.PasswordConf.MaxTTL != config.DefaultPasswordTTLs {
+		t.Fatalf("received unexpected MaxTTL of \"%d\"", engineConf.PasswordConf.MaxTTL)
 	}
 
-	if engineConf.PasswordConf.PasswordLength != config.DefaultPasswordLength {
-		t.Fatalf("received unexpected PasswordLength of \"%d\"", engineConf.PasswordConf.PasswordLength)
+	if engineConf.PasswordConf.Length != config.DefaultPasswordLength {
+		t.Fatalf("received unexpected Length of \"%d\"", engineConf.PasswordConf.Length)
 	}
 }
 
@@ -179,16 +179,16 @@ func verifyResponse(t *testing.T, resp *logical.Response) {
 		t.Fatalf("expected username to be \"tester\" but received \"%s\"", resp.Data["username"])
 	}
 
-	if resp.Data["default_password_ttl"] != config.DefaultPasswordTTLs {
-		t.Fatalf("received unexpected default_password_ttl of \"%d\"", resp.Data["default_password_ttl"])
+	if resp.Data["ttl"] != config.DefaultPasswordTTLs {
+		t.Fatalf("received unexpected ttl of \"%d\"", resp.Data["ttl"])
 	}
 
-	if resp.Data["max_password_ttl"] != config.DefaultPasswordTTLs {
-		t.Fatalf("received unexpected default_password_ttl of \"%d\"", resp.Data["max_password_ttl"])
+	if resp.Data["max_ttl"] != config.DefaultPasswordTTLs {
+		t.Fatalf("received unexpected max_ttl of \"%d\"", resp.Data["max_ttl"])
 	}
 
 	if resp.Data["password_length"] != config.DefaultPasswordLength {
-		t.Fatalf("received unexpected default_password_ttl of \"%d\"", resp.Data["password_length"])
+		t.Fatalf("received unexpected password_length of \"%d\"", resp.Data["password_length"])
 	}
 }
 

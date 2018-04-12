@@ -2,11 +2,12 @@ package config
 
 import (
 	"context"
+	"sync"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/activedirectory"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"sync"
 )
 
 const (
@@ -135,13 +136,13 @@ func (m *Manager) Path() *framework.Path {
 				Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'.",
 			},
 
-			"default_password_ttl": {
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Default:     DefaultPasswordTTLs,
 				Description: "In seconds, the default password time-to-live.",
 			},
 
-			"max_password_ttl": {
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Default:     DefaultPasswordTTLs,
 				Description: "In seconds, the maximum password time-to-live.",
