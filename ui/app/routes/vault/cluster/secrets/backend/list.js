@@ -27,17 +27,6 @@ export default Ember.Route.extend({
     }
   },
 
-  capabilities(secret) {
-    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    let backendModel = this.store.peekRecord('secret-engine', backend);
-    let version = backendModel.get('options.version');
-    let path = backend + '/' + secret;
-    if (version && version === 2) {
-      path = backend + '/data/' + secret;
-    }
-    return this.store.findRecord('capabilities', path);
-  },
-
   getModelType(backend, tab) {
     const types = {
       transit: 'transit-key',
@@ -54,29 +43,26 @@ export default Ember.Route.extend({
     const secret = params.secret ? params.secret : '';
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     const backends = this.modelFor('vault.cluster.secrets').mapBy('id');
-    return Ember.RSVP.hash({
-      secrets: this.store
-        .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
-          id: secret,
-          backend,
-          responsePath: 'data.keys',
-          page: params.page,
-          pageFilter: params.pageFilter,
-          size: 100,
-        })
-        .then(model => {
-          this.set('has404', false);
-          return model;
-        })
-        .catch(err => {
-          if (backends.includes(backend) && err.httpStatus === 404 && secret === '') {
-            return [];
-          } else {
-            throw err;
-          }
-        }),
-      capabilities: this.capabilities(secret),
-    });
+    return this.store
+      .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
+        id: secret,
+        backend,
+        responsePath: 'data.keys',
+        page: params.page,
+        pageFilter: params.pageFilter,
+        size: 100,
+      })
+      .then(model => {
+        this.set('has404', false);
+        return model;
+      })
+      .catch(err => {
+        if (backends.includes(backend) && err.httpStatus === 404 && secret === '') {
+          return [];
+        } else {
+          throw err;
+        }
+      });
   },
 
   afterModel(model) {
@@ -112,8 +98,7 @@ export default Ember.Route.extend({
     const has404 = this.get('has404');
     controller.set('hasModel', true);
     controller.setProperties({
-      model: model.secrets,
-      capabilities: model.capabilities,
+      model,
       baseKey: { id: secret },
       has404,
       backend,
