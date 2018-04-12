@@ -11,8 +11,6 @@ const StorageKey = "config"
 
 func readConfig(ctx context.Context, storage logical.Storage) (*EngineConf, error) {
 
-	config := &EngineConf{&PasswordConf{}, &activedirectory.Configuration{}}
-
 	entry, err := storage.Get(ctx, StorageKey)
 	if err != nil {
 		return nil, err
@@ -21,6 +19,7 @@ func readConfig(ctx context.Context, storage logical.Storage) (*EngineConf, erro
 		return nil, nil
 	}
 
+	config := &EngineConf{&PasswordConf{}, &activedirectory.Configuration{}}
 	if err := entry.DecodeJSON(config); err != nil {
 		return nil, err
 	}
