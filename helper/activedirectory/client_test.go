@@ -29,43 +29,42 @@ func TestSearch(t *testing.T) {
 
 	entries, err := client.Search(filters)
 	if err != nil {
-		fmt.Println(err.Error())
-		t.FailNow()
+		t.Fatal(err)
 	}
 
 	if len(entries) != 1 {
-		t.FailNow()
+		t.Fatalf("only one entry was provided, but multiple were found: %s", entries)
 	}
 	entry := entries[0]
 
 	result, _ := entry.GetJoined(FieldRegistry.Surname)
 	if result != "Jones" {
-		t.FailNow()
+		t.Fatalf("expected Surname of \"Jones\" but received \"%s\"", result)
 	}
 
 	result, _ = entry.GetJoined(FieldRegistry.BadPasswordTime)
 	if result != "131653637947737037" {
-		t.FailNow()
+		t.Fatalf("expected BadPasswordTime of \"131653637947737037\" but received \"%s\"", result)
 	}
 
 	result, _ = entry.GetJoined(FieldRegistry.PasswordLastSet)
 	if result != "0" {
-		t.FailNow()
+		t.Fatalf("expected PasswordLastSet of \"0\" but received \"%s\"", result)
 	}
 
 	result, _ = entry.GetJoined(FieldRegistry.PrimaryGroupID)
 	if result != "513" {
-		t.FailNow()
+		t.Fatalf("expected PrimaryGroupID of \"513\" but received \"%s\"", result)
 	}
 
 	result, _ = entry.GetJoined(FieldRegistry.UserPrincipalName)
 	if result != "jim@example.com" {
-		t.FailNow()
+		t.Fatalf("expected UserPrincipalName of \"jim@example.com\" but received \"%s\"", result)
 	}
 
 	result, _ = entry.GetJoined(FieldRegistry.ObjectClass)
 	if result != "top,person,organizationalPerson,user" {
-		t.FailNow()
+		t.Fatalf("expected ObjectClass of \"top,person,organizationalPerson,user\" but received \"%s\"", result)
 	}
 }
 
@@ -100,7 +99,7 @@ func TestUpdateEntry(t *testing.T) {
 	}
 
 	if err := client.UpdateEntry(filters, newValues); err != nil {
-		t.FailNow()
+		t.Fatal(err)
 	}
 }
 
@@ -120,7 +119,7 @@ func TestUpdatePassword(t *testing.T) {
 
 	expectedPass, err := formatPassword(testPass)
 	if err != nil {
-		t.FailNow()
+		t.Fatal(err)
 	}
 	conn.modifyRequestToExpect = &ldap.ModifyRequest{
 		DN: "CN=Jim H.. Jones,OU=Vault,OU=Engineering,DC=example,DC=com",
@@ -140,7 +139,7 @@ func TestUpdatePassword(t *testing.T) {
 	}
 
 	if err := client.UpdatePassword(filters, testPass); err != nil {
-		t.FailNow()
+		t.Fatal(err)
 	}
 }
 
