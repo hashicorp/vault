@@ -103,10 +103,10 @@ func useInlinePolicy(d *framework.FieldData) (bool, error) {
 	ba := d.Get("arn").(string) != ""
 
 	if !bp && !ba {
-		return false, errors.New("Either policy or arn must be provided")
+		return false, errors.New("either policy or arn must be provided")
 	}
 	if bp && ba {
-		return false, errors.New("Only one of policy or arn should be provided")
+		return false, errors.New("only one of policy or arn should be provided")
 	}
 	return bp, nil
 }

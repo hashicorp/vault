@@ -10,6 +10,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
       'aws-client': 'auth-config/aws/client',
       'aws-identity-whitelist': 'auth-config/aws/identity-whitelist',
       'aws-roletag-blacklist': 'auth-config/aws/roletag-blacklist',
+      'azure-configuration': 'auth-config/azure',
       'github-configuration': 'auth-config/github',
       'gcp-configuration': 'auth-config/gcp',
       'kubernetes-configuration': 'auth-config/kubernetes',

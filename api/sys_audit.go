@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 
-	"github.com/fatih/structs"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -83,10 +82,8 @@ func (c *Sys) EnableAudit(
 }
 
 func (c *Sys) EnableAuditWithOptions(path string, options *EnableAuditOptions) error {
-	body := structs.Map(options)
-
 	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/audit/%s", path))
-	if err := r.SetJSONBody(body); err != nil {
+	if err := r.SetJSONBody(options); err != nil {
 		return err
 	}
 
@@ -113,10 +110,10 @@ func (c *Sys) DisableAudit(path string) error {
 // documentation. Please refer to that documentation for more details.
 
 type EnableAuditOptions struct {
-	Type        string            `json:"type" structs:"type"`
-	Description string            `json:"description" structs:"description"`
-	Options     map[string]string `json:"options" structs:"options"`
-	Local       bool              `json:"local" structs:"local"`
+	Type        string            `json:"type"`
+	Description string            `json:"description"`
+	Options     map[string]string `json:"options"`
+	Local       bool              `json:"local"`
 }
 
 type Audit struct {

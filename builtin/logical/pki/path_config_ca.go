@@ -2,8 +2,8 @@ package pki
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
@@ -62,7 +62,7 @@ func (b *backend) pathCAWrite(ctx context.Context, req *logical.Request, data *f
 
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("error converting raw values into cert bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw values into cert bundle: {{err}}", err)
 	}
 
 	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)

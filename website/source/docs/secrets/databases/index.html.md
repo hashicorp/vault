@@ -48,7 +48,9 @@ management tool.
     $ vault write database/config/my-database \
         plugin_name="..." \
         connection_url="..." \
-        allowed_roles="..."
+        allowed_roles="..." \
+        username="..." \
+        password="..."
     ```
 
     This secrets engine can configure multiple database connections. For details

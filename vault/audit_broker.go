@@ -65,7 +65,7 @@ func (a *AuditBroker) GetHash(ctx context.Context, name string, input string) (s
 	defer a.RUnlock()
 	be, ok := a.backends[name]
 	if !ok {
-		return "", fmt.Errorf("unknown audit backend %s", name)
+		return "", fmt.Errorf("unknown audit backend %q", name)
 	}
 
 	return be.backend.GetHash(ctx, input)

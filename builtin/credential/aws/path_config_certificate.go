@@ -206,7 +206,7 @@ func (b *backend) awsPublicCertificates(ctx context.Context, s logical.Storage, 
 			return nil, err
 		}
 		if certEntry == nil {
-			return nil, fmt.Errorf("certificate storage has a nil entry under the name:%s\n", cert)
+			return nil, fmt.Errorf("certificate storage has a nil entry under the name: %q", cert)
 		}
 		// Append relevant certificates only
 		if (isPkcs && certEntry.Type == "pkcs7") ||

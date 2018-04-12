@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/logical"
@@ -326,7 +327,7 @@ func (i *IdentityStore) pathGroupIDList() framework.OperationFunc {
 		ws := memdb.NewWatchSet()
 		iter, err := i.MemDBGroupIterator(ws)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch iterator for group in memdb: %v", err)
+			return nil, errwrap.Wrapf("failed to fetch iterator for group in memdb: {{err}}", err)
 		}
 
 		var groupIDs []string

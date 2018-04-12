@@ -43,7 +43,7 @@ nope = "true"
 		t.Fatal("expected error")
 	}
 
-	if !strings.Contains(err.Error(), "invalid key 'nope' on line 3") {
+	if !strings.Contains(err.Error(), `invalid key "nope" on line 3`) {
 		t.Errorf("bad error: %s", err.Error())
 	}
 }

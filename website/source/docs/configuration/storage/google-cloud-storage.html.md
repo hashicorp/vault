@@ -7,7 +7,7 @@ description: |-
   Google Cloud Storage.
 ---
 
-# Google Cloud Storage Backend
+# Google Cloud Storage Storage Backend
 
 The Google Cloud Storage storage backend is used to persist Vault's data in
 [Google Cloud Storage][gcs-docs].

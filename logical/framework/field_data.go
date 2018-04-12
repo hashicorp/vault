@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/mitchellh/mapstructure"
@@ -39,11 +40,10 @@ func (d *FieldData) Validate() error {
 			TypeKVPairs, TypeCommaIntSlice:
 			_, _, err := d.getPrimitive(field, schema)
 			if err != nil {
-				return fmt.Errorf("Error converting input %v for field %s: %s", value, field, err)
+				return errwrap.Wrapf(fmt.Sprintf("error converting input %v for field %q: {{err}}", value, field), err)
 			}
 		default:
-			return fmt.Errorf("unknown field type %s for field %s",
-				schema.Type, field)
+			return fmt.Errorf("unknown field type %q for field %q", schema.Type, field)
 		}
 	}
 
@@ -107,7 +107,7 @@ func (d *FieldData) GetOk(k string) (interface{}, bool) {
 func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	schema, ok := d.Schema[k]
 	if !ok {
-		return nil, false, fmt.Errorf("unknown field: %s", k)
+		return nil, false, fmt.Errorf("unknown field: %q", k)
 	}
 
 	switch schema.Type {
@@ -117,7 +117,7 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 		return d.getPrimitive(k, schema)
 	default:
 		return nil, false,
-			fmt.Errorf("unknown field type %s for field %s", schema.Type, k)
+			fmt.Errorf("unknown field type %q for field %q", schema.Type, k)
 	}
 }
 

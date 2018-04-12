@@ -147,11 +147,10 @@ func (b *azureAuthBackend) pathConfigRead(ctx context.Context, req *logical.Requ
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"tenant_id":     config.TenantID,
-			"resource":      config.Resource,
-			"environment":   config.Environment,
-			"client_id":     config.ClientID,
-			"client_secret": config.ClientSecret,
+			"tenant_id":   config.TenantID,
+			"resource":    config.Resource,
+			"environment": config.Environment,
+			"client_id":   config.ClientID,
 		},
 	}
 	return resp, nil

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -229,7 +230,7 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 					if fromLockHeld {
 						fromEntityLock.Unlock()
 					}
-					return nil, fmt.Errorf("failed to update alias during merge: %v", err)
+					return nil, errwrap.Wrapf("failed to update alias during merge: {{err}}", err)
 				}
 
 				// Add the alias to the desired entity
@@ -503,7 +504,7 @@ func (i *IdentityStore) pathEntityIDList() framework.OperationFunc {
 		ws := memdb.NewWatchSet()
 		iter, err := i.MemDBEntities(ws)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch iterator for entities in memdb: %v", err)
+			return nil, errwrap.Wrapf("failed to fetch iterator for entities in memdb: {{err}}", err)
 		}
 
 		var entityIDs []string

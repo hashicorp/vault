@@ -138,7 +138,7 @@ func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) 
 		t.OutputMap(ui, data.(map[string]interface{}))
 		return nil
 	default:
-		return errors.New("Cannot use the table formatter for this type")
+		return errors.New("cannot use the table formatter for this type")
 	}
 }
 
@@ -151,7 +151,7 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 		ui.Output(tableOutput(data.([]string), nil))
 		return nil
 	default:
-		return errors.New("Error: table formatter cannot output list for this data type")
+		return errors.New("error: table formatter cannot output list for this data type")
 	}
 
 	list := data.([]interface{})
@@ -161,7 +161,7 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 		for i, v := range list {
 			typed, ok := v.(string)
 			if !ok {
-				return fmt.Errorf("Error: %v is not a string", v)
+				return fmt.Errorf("%v is not a string", v)
 			}
 			keys[i] = typed
 		}

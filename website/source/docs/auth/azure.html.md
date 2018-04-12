@@ -59,7 +59,6 @@ at a different path, use that value instead of `azure`.
 
 ```sh
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
     --data '{"role": "dev-role", "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}' \
     https://vault.rocks/v1/auth/azure/login

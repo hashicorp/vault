@@ -16,7 +16,7 @@ func (v *Flag) String() string {
 func (v *Flag) Set(raw string) error {
 	idx := strings.Index(raw, "=")
 	if idx == -1 {
-		return fmt.Errorf("No '=' value in arg: %s", raw)
+		return fmt.Errorf("no '=' value in arg: %q", raw)
 	}
 
 	if *v == nil {

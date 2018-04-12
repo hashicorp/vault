@@ -10,8 +10,6 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-const warningACLReadAccess string = "Read access to this endpoint should be controlled via ACLs as it will return the configuration information as-is, including any passwords."
-
 func pathConfig(b *GcpAuthBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
@@ -61,6 +59,10 @@ func (b *GcpAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
+
+	// Invalidate exisitng clients so they read the new configuration
+	b.Close()
+
 	return nil, nil
 }
 
@@ -78,13 +80,11 @@ func (b *GcpAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 			"client_email":          config.Credentials.ClientEmail,
 			"client_id":             config.Credentials.ClientId,
 			"private_key_id":        config.Credentials.PrivateKeyId,
-			"private_key":           config.Credentials.PrivateKey,
 			"project_id":            config.Credentials.ProjectId,
 			"google_certs_endpoint": config.GoogleCertsEndpoint,
 		},
 	}
 
-	resp.AddWarning(warningACLReadAccess)
 	return resp, nil
 }
 

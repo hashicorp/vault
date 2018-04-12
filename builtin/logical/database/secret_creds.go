@@ -32,7 +32,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 
 		roleNameRaw, ok := req.Secret.InternalData["role"]
 		if !ok {
-			return nil, fmt.Errorf("could not find role with name: %s", req.Secret.InternalData["role"])
+			return nil, fmt.Errorf("could not find role with name: %q", req.Secret.InternalData["role"])
 		}
 
 		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
@@ -40,7 +40,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			return nil, err
 		}
 		if role == nil {
-			return nil, fmt.Errorf("error during renew: could not find role with name %s", req.Secret.InternalData["role"])
+			return nil, fmt.Errorf("error during renew: could not find role with name %q", req.Secret.InternalData["role"])
 		}
 
 		// Get the Database object
@@ -96,7 +96,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			return nil, err
 		}
 		if role == nil {
-			return nil, fmt.Errorf("error during revoke: could not find role with name %s", req.Secret.InternalData["role"])
+			return nil, fmt.Errorf("error during revoke: could not find role with name %q", req.Secret.InternalData["role"])
 		}
 
 		// Get our connection

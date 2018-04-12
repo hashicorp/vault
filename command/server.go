@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	colorable "github.com/mattn/go-colorable"
 	"github.com/mitchellh/cli"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
@@ -285,7 +284,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
-	c.logGate = &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
+	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
 	var level log.Level
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
@@ -539,9 +538,9 @@ func (c *ServerCommand) Run(args []string) int {
 	if ok && coreConfig.RedirectAddr == "" {
 		redirect, err := c.detectRedirect(detect, config)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error detecting redirect address: %s", err))
+			c.UI.Error(fmt.Sprintf("Error detecting api address: %s", err))
 		} else if redirect == "" {
-			c.UI.Error("Failed to detect redirect address.")
+			c.UI.Error("Failed to detect api address")
 		} else {
 			coreConfig.RedirectAddr = redirect
 		}
@@ -579,7 +578,7 @@ func (c *ServerCommand) Run(args []string) int {
 				host = u.Host
 				port = "443"
 			} else {
-				c.UI.Error(fmt.Sprintf("Error parsing redirect address: %v", err))
+				c.UI.Error(fmt.Sprintf("Error parsing api address: %v", err))
 				return 1
 			}
 		}
@@ -596,6 +595,12 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 CLUSTER_SYNTHESIS_COMPLETE:
+
+	if coreConfig.RedirectAddr == coreConfig.ClusterAddr && len(coreConfig.RedirectAddr) != 0 {
+		c.UI.Error(fmt.Sprintf(
+			"Address %q used for both API and cluster addresses", coreConfig.RedirectAddr))
+		return 1
+	}
 
 	if coreConfig.ClusterAddr != "" {
 		// Force https as we'll always be TLS-secured
@@ -644,8 +649,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		infoKeys = append(infoKeys, "cluster address")
 	}
 	if coreConfig.RedirectAddr != "" {
-		info["redirect address"] = coreConfig.RedirectAddr
-		infoKeys = append(infoKeys, "redirect address")
+		info["api address"] = coreConfig.RedirectAddr
+		infoKeys = append(infoKeys, "api address")
 	}
 
 	if config.HAStorage != nil {
@@ -1031,7 +1036,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 
 	isLeader, _, _, err := core.Leader()
 	if err != nil && err != vault.ErrHANotEnabled {
-		return nil, fmt.Errorf("failed to check active status: %v", err)
+		return nil, errwrap.Wrapf("failed to check active status: {{err}}", err)
 	}
 	if err == nil {
 		leaderCount := 5
@@ -1044,7 +1049,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 			time.Sleep(1 * time.Second)
 			isLeader, _, _, err = core.Leader()
 			if err != nil {
-				return nil, fmt.Errorf("failed to check active status: %v", err)
+				return nil, errwrap.Wrapf("failed to check active status: {{err}}", err)
 			}
 			leaderCount--
 		}
@@ -1066,13 +1071,13 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 		resp, err := core.HandleRequest(req)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create root token with ID %s: %s", coreConfig.DevToken, err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create root token with ID %q: {{err}}", coreConfig.DevToken), err)
 		}
 		if resp == nil {
-			return nil, fmt.Errorf("nil response when creating root token with ID %s", coreConfig.DevToken)
+			return nil, fmt.Errorf("nil response when creating root token with ID %q", coreConfig.DevToken)
 		}
 		if resp.Auth == nil {
-			return nil, fmt.Errorf("nil auth when creating root token with ID %s", coreConfig.DevToken)
+			return nil, fmt.Errorf("nil auth when creating root token with ID %q", coreConfig.DevToken)
 		}
 
 		init.RootToken = resp.Auth.ClientToken
@@ -1082,7 +1087,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.Data = nil
 		resp, err = core.HandleRequest(req)
 		if err != nil {
-			return nil, fmt.Errorf("failed to revoke initial root token: %s", err)
+			return nil, errwrap.Wrapf("failed to revoke initial root token: {{err}}", err)
 		}
 	}
 
@@ -1093,6 +1098,25 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 	if err := tokenHelper.Store(init.RootToken); err != nil {
 		return nil, err
+	}
+
+	// Upgrade the default K/V store
+	req := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        "sys/mounts/secret/tune",
+		Data: map[string]interface{}{
+			"options": map[string]string{
+				"version": "2",
+			},
+		},
+	}
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		return nil, errwrap.Wrapf("error upgrading default K/V store: {{err}}", err)
+	}
+	if resp.IsError() {
+		return nil, errwrap.Wrapf("failed to upgrade default K/V store: {{err}}", resp.Error())
 	}
 
 	return init, nil
@@ -1111,8 +1135,8 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	infoKeys = append(infoKeys, "cluster parameters path")
 
 	for i, core := range testCluster.Cores {
-		info[fmt.Sprintf("node %d redirect address", i)] = fmt.Sprintf("https://%s", core.Listeners[0].Address.String())
-		infoKeys = append(infoKeys, fmt.Sprintf("node %d redirect address", i))
+		info[fmt.Sprintf("node %d api address", i)] = fmt.Sprintf("https://%s", core.Listeners[0].Address.String())
+		infoKeys = append(infoKeys, fmt.Sprintf("node %d api address", i))
 	}
 
 	infoKeys = append(infoKeys, "version")
@@ -1349,7 +1373,7 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 		if val, ok := list.Config["tls_disable"]; ok {
 			disable, err := parseutil.ParseBool(val)
 			if err != nil {
-				return "", fmt.Errorf("tls_disable: %s", err)
+				return "", errwrap.Wrapf("tls_disable: {{err}}", err)
 			}
 
 			if disable {
@@ -1477,7 +1501,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 		sink, err := datadog.NewDogStatsdSink(telConfig.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return fmt.Errorf("failed to start DogStatsD sink. Got: %s", err)
+			return errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)
@@ -1506,7 +1530,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
 					if err := relFunc(nil); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading listener: %v", err))
+						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf("error encountered reloading listener: {{err}}", err))
 					}
 				}
 			}
@@ -1515,7 +1539,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
 					if err := relFunc(nil); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading file audit device at path %s: %v", strings.TrimPrefix(k, "audit_file|"), err))
+						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf(fmt.Sprintf("error encountered reloading file audit device at path %q: {{err}}", strings.TrimPrefix(k, "audit_file|")), err))
 					}
 				}
 			}
@@ -1542,7 +1566,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	// Open the PID file
 	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("could not open pid file: %v", err)
+		return errwrap.Wrapf("could not open pid file: {{err}}", err)
 	}
 	defer pidFile.Close()
 
@@ -1550,7 +1574,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	pid := os.Getpid()
 	_, err = pidFile.WriteString(fmt.Sprintf("%d", pid))
 	if err != nil {
-		return fmt.Errorf("could not write to pid file: %v", err)
+		return errwrap.Wrapf("could not write to pid file: {{err}}", err)
 	}
 	return nil
 }

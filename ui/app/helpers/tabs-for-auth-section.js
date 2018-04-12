@@ -15,6 +15,12 @@ const TABS_FOR_SETTINGS = {
       routeParams: ['vault.cluster.settings.auth.configure.section', 'roletag-blacklist'],
     },
   ],
+  azure: [
+    {
+      label: 'Configuration',
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+    },
+  ],
   github: [
     {
       label: 'Configuration',

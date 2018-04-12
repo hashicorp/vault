@@ -1,12 +1,12 @@
 ---
 layout: "api"
 page_title: "KV - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-kv"
+sidebar_current: "docs-http-secret-kv-v1"
 description: |-
   This is the API documentation for the Vault KV secrets engine.
 ---
 
-# KV Secrets Engine (API)
+# KV Secrets Engine - Version 1 (API)
 
 This is the API documentation for the Vault KV secrets engine. For general
 information about the usage and operation of the kv secrets engine, please
@@ -34,7 +34,7 @@ This endpoint retrieves the secret at the specified location.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/secret/my-secret
+    https://127.0.0.1:8200/v1/secret/my-secret
 ```
 
 ### Sample Response
@@ -80,7 +80,7 @@ this command.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/secret/my-secret
+    https://127.0.0.1:8200/v1/secret/my-secret
 ```
 
 ### Sample Response
@@ -140,7 +140,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/secret/my-secret
+    https://127.0.0.1:8200/v1/secret/my-secret
 ```
 
 ## Delete Secret
@@ -162,5 +162,5 @@ This endpoint deletes the secret at the specified location.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/secret/my-secret
+    https://127.0.0.1:8200/v1/secret/my-secret
 ```

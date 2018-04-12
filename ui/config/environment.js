@@ -52,6 +52,14 @@ module.exports = function(environment) {
       enabled: false,
     };
   }
+  if (environment !== 'production') {
+    ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
+    ENV.contentSecurityPolicyMeta = true;
+    ENV.contentSecurityPolicy = {
+      'connect-src': ["'self'"],
+      'style-src': ["'unsafe-inline'", "'self'"],
+    };
+  }
 
   if (environment === 'production') {
   }

@@ -30,7 +30,6 @@ at a different path, use that value instead of `radius`.
 
 ```shell
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
     --data '{"password": "..."}' \
     http://127.0.0.1:8200/v1/auth/radius/login/sethvargo

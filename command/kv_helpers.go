@@ -3,12 +3,14 @@ package command
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"path"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/strutil"
 )
 
 func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {
@@ -16,7 +18,7 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 	if r.Headers == nil {
 		r.Headers = http.Header{}
 	}
-	r.Headers.Add(consts.VaultKVCLIClientHeader, "v1")
+	r.Headers.Add(consts.VaultKVCLIClientHeader, "v2")
 
 	for k, v := range params {
 		r.Params.Set(k, v)
@@ -26,6 +28,17 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
+		secret, parseErr := api.ParseSecret(resp.Body)
+		switch parseErr {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
 		return nil, nil
 	}
 	if err != nil {
@@ -40,7 +53,7 @@ func kvListRequest(client *api.Client, path string) (*api.Secret, error) {
 	if r.Headers == nil {
 		r.Headers = http.Header{}
 	}
-	r.Headers.Add(consts.VaultKVCLIClientHeader, "v1")
+	r.Headers.Add(consts.VaultKVCLIClientHeader, "v2")
 
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
@@ -51,6 +64,17 @@ func kvListRequest(client *api.Client, path string) (*api.Secret, error) {
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
+		secret, parseErr := api.ParseSecret(resp.Body)
+		switch parseErr {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
 		return nil, nil
 	}
 	if err != nil {
@@ -65,7 +89,7 @@ func kvWriteRequest(client *api.Client, path string, data map[string]interface{}
 	if r.Headers == nil {
 		r.Headers = http.Header{}
 	}
-	r.Headers.Add(consts.VaultKVCLIClientHeader, "v1")
+	r.Headers.Add(consts.VaultKVCLIClientHeader, "v2")
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
@@ -73,6 +97,19 @@ func kvWriteRequest(client *api.Client, path string, data map[string]interface{}
 	resp, err := client.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
+	}
+	if resp != nil && resp.StatusCode == 404 {
+		secret, parseErr := api.ParseSecret(resp.Body)
+		switch parseErr {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, err
+		}
 	}
 	if err != nil {
 		return nil, err
@@ -90,10 +127,23 @@ func kvDeleteRequest(client *api.Client, path string) (*api.Secret, error) {
 	if r.Headers == nil {
 		r.Headers = http.Header{}
 	}
-	r.Headers.Add(consts.VaultKVCLIClientHeader, "v1")
+	r.Headers.Add(consts.VaultKVCLIClientHeader, "v2")
 	resp, err := client.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
+	}
+	if resp != nil && resp.StatusCode == 404 {
+		secret, parseErr := api.ParseSecret(resp.Body)
+		switch parseErr {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, err
+		}
 	}
 	if err != nil {
 		return nil, err
@@ -109,7 +159,7 @@ func kvDeleteRequest(client *api.Client, path string) (*api.Secret, error) {
 func addPrefixToVKVPath(p, apiPrefix string) (string, error) {
 	parts := strings.SplitN(p, "/", 2)
 	if len(parts) != 2 {
-		return "", errors.New("Invalid path")
+		return "", errors.New("invalid path")
 	}
 
 	return path.Join(parts[0], apiPrefix, parts[1]), nil
@@ -140,4 +190,13 @@ func getHeaderForMap(header string, data map[string]interface{}) string {
 	}
 
 	return fmt.Sprintf("%s %s %s", strings.Repeat("=", equalSigns/2), header, strings.Repeat("=", equalSigns/2))
+}
+
+func kvParseVersionsFlags(versions []string) []string {
+	versionsOut := make([]string, 0, len(versions))
+	for _, v := range versions {
+		versionsOut = append(versionsOut, strutil.ParseStringSlice(v, ",")...)
+	}
+
+	return versionsOut
 }

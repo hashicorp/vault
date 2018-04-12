@@ -12,6 +12,7 @@ import (
 	"text/template"
 
 	"github.com/go-ldap/ldap"
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/consts"
@@ -253,7 +254,7 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 		// Validate the template before proceeding
 		_, err := template.New("queryTemplate").Parse(groupfilter)
 		if err != nil {
-			return nil, fmt.Errorf("invalid groupfilter (%v)", err)
+			return nil, errwrap.Wrapf("invalid groupfilter: {{err}}", err)
 		}
 
 		cfg.GroupFilter = groupfilter
@@ -275,7 +276,7 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 		}
 		_, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse certificate %s", err.Error())
+			return nil, errwrap.Wrapf("failed to parse certificate: {{err}}", err)
 		}
 		cfg.Certificate = certificate
 	}
@@ -367,24 +368,29 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 }
 
 type ConfigEntry struct {
-	logger             log.Logger
-	Url                string `json:"url"`
-	UserDN             string `json:"userdn"`
-	GroupDN            string `json:"groupdn"`
-	GroupFilter        string `json:"groupfilter"`
-	GroupAttr          string `json:"groupattr"`
-	UPNDomain          string `json:"upndomain"`
-	UserAttr           string `json:"userattr"`
-	Certificate        string `json:"certificate"`
-	InsecureTLS        bool   `json:"insecure_tls"`
-	StartTLS           bool   `json:"starttls"`
-	BindDN             string `json:"binddn"`
-	BindPassword       string `json:"bindpass"`
-	DenyNullBind       bool   `json:"deny_null_bind"`
-	DiscoverDN         bool   `json:"discoverdn"`
-	TLSMinVersion      string `json:"tls_min_version"`
-	TLSMaxVersion      string `json:"tls_max_version"`
-	CaseSensitiveNames *bool  `json:"case_sensitive_names,omitempty`
+	logger        log.Logger
+	Url           string `json:"url"`
+	UserDN        string `json:"userdn"`
+	GroupDN       string `json:"groupdn"`
+	GroupFilter   string `json:"groupfilter"`
+	GroupAttr     string `json:"groupattr"`
+	UPNDomain     string `json:"upndomain"`
+	UserAttr      string `json:"userattr"`
+	Certificate   string `json:"certificate"`
+	InsecureTLS   bool   `json:"insecure_tls"`
+	StartTLS      bool   `json:"starttls"`
+	BindDN        string `json:"binddn"`
+	BindPassword  string `json:"bindpass"`
+	DenyNullBind  bool   `json:"deny_null_bind"`
+	DiscoverDN    bool   `json:"discoverdn"`
+	TLSMinVersion string `json:"tls_min_version"`
+	TLSMaxVersion string `json:"tls_max_version"`
+
+	// This json tag deviates from snake case because there was a past issue
+	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames".
+	// To continue reading in users' previously stored values,
+	// we chose to carry that forward.
+	CaseSensitiveNames *bool `json:"CaseSensitiveNames,omitempty"`
 }
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
@@ -429,7 +435,7 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 	for _, uut := range urls {
 		u, err := url.Parse(uut)
 		if err != nil {
-			retErr = multierror.Append(retErr, fmt.Errorf("error parsing url %q: %s", uut, err.Error()))
+			retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("error parsing url %q: {{err}}", uut), err))
 			continue
 		}
 		host, port, err := net.SplitHostPort(u.Host)
@@ -480,7 +486,7 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 			retErr = nil
 			break
 		}
-		retErr = multierror.Append(retErr, fmt.Errorf("error connecting to host %q: %s", uut, err.Error()))
+		retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("error connecting to host %q: {{err}}", uut), err))
 	}
 
 	return conn, retErr.ErrorOrNil()

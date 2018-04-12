@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/helper/consts"
@@ -98,7 +99,7 @@ func (b *FileBackend) DeleteInternal(ctx context.Context, path string) error {
 
 	err := os.Remove(fullPath)
 	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("Failed to remove %q: %v", fullPath, err)
+		return errwrap.Wrapf(fmt.Sprintf("failed to remove %q: {{err}}", fullPath), err)
 	}
 
 	err = b.cleanupLogicalPath(path)

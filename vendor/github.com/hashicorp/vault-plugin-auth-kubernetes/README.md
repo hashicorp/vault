@@ -7,7 +7,7 @@ This plugin allows for Kubernetes Service Accounts to authenticate with Vault.
 
 ## Quick Links
     - Vault Website: https://www.vaultproject.io
-    - Kunernetes Auth Docs: https://www.vaultproject.io/docs/auth/kubernetes.html
+    - Kubernetes Auth Docs: https://www.vaultproject.io/docs/auth/kubernetes.html
     - Main Project Github: https://www.github.com/hashicorp/vault
 
 

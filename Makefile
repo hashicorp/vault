@@ -19,13 +19,10 @@ default: dev
 
 # bin generates the releasable binaries for Vault
 bin: prep
-	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS) ui' sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # dev creates binaries for testing Vault locally. These are put
-# into ./bin/ as well as $GOPATH/bin, except for quickdev which
-# is only put into /bin/
-quickdev: prep
-	@CGO_ENABLED=0 go build -i -tags='$(BUILD_TAGS)' -o bin/vault
+# into ./bin/ as well as $GOPATH/bin
 dev: prep
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-ui: prep
@@ -91,6 +88,9 @@ bootstrap:
 		echo "Installing/Updating $$tool" ; \
 		go get -u $$tool; \
 	done
+
+update-plugins:
+	grep vault-plugin- vendor/vendor.json | cut -d '"' -f 4 | xargs govendor fetch
 
 static-assets:
 	@echo "--> Generating static assets"

@@ -6,6 +6,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -55,7 +56,7 @@ func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request
 
 	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving role: %v", err)
+		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
 	}
 	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("Role %q not found", roleName)), nil
@@ -97,7 +98,7 @@ func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request
 
 	zeroAddressEntry, err := b.getZeroAddressRoles(ctx, req.Storage)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving zero-address roles: %v", err)
+		return nil, errwrap.Wrapf("error retrieving zero-address roles: {{err}}", err)
 	}
 	var zeroAddressRoles []string
 	if zeroAddressEntry != nil {
@@ -171,7 +172,7 @@ func (b *backend) GenerateDynamicCredential(ctx context.Context, req *logical.Re
 	// Fetch the host key to be used for dynamic key installation
 	keyEntry, err := req.Storage.Get(ctx, fmt.Sprintf("keys/%s", role.KeyName))
 	if err != nil {
-		return "", "", fmt.Errorf("key %q not found. err: %v", role.KeyName, err)
+		return "", "", errwrap.Wrapf(fmt.Sprintf("key %q not found: {{err}}", role.KeyName), err)
 	}
 
 	if keyEntry == nil {
@@ -180,13 +181,13 @@ func (b *backend) GenerateDynamicCredential(ctx context.Context, req *logical.Re
 
 	var hostKey sshHostKey
 	if err := keyEntry.DecodeJSON(&hostKey); err != nil {
-		return "", "", fmt.Errorf("error reading the host key: %v", err)
+		return "", "", errwrap.Wrapf("error reading the host key: {{err}}", err)
 	}
 
 	// Generate a new RSA key pair with the given key length.
 	dynamicPublicKey, dynamicPrivateKey, err := generateRSAKeys(role.KeyBits)
 	if err != nil {
-		return "", "", fmt.Errorf("error generating key: %v", err)
+		return "", "", errwrap.Wrapf("error generating key: {{err}}", err)
 	}
 
 	if len(role.KeyOptionSpecs) != 0 {
@@ -196,7 +197,7 @@ func (b *backend) GenerateDynamicCredential(ctx context.Context, req *logical.Re
 	// Add the public key to authorized_keys file in target machine
 	err = b.installPublicKeyInTarget(ctx, role.AdminUser, username, ip, role.Port, hostKey.Key, dynamicPublicKey, role.InstallScript, true)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to add public key to authorized_keys file in target: %v", err)
+		return "", "", errwrap.Wrapf("failed to add public key to authorized_keys file in target: {{err}}", err)
 	}
 	return dynamicPublicKey, dynamicPrivateKey, nil
 }

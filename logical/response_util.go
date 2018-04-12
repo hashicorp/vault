@@ -24,11 +24,21 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 		// Basically: if we have empty "keys" or no keys at all, 404. This
 		// provides consistency with GET.
 		case req.Operation == ListOperation && resp.WrapInfo == nil:
-			if resp == nil || len(resp.Data) == 0 {
+			if resp == nil {
+				return http.StatusNotFound, nil
+			}
+			if len(resp.Data) == 0 {
+				if len(resp.Warnings) > 0 {
+					return 0, nil
+				}
 				return http.StatusNotFound, nil
 			}
 			keysRaw, ok := resp.Data["keys"]
 			if !ok || keysRaw == nil {
+				// If we don't have keys but have other data, return as-is
+				if len(resp.Data) > 0 || len(resp.Warnings) > 0 {
+					return 0, nil
+				}
 				return http.StatusNotFound, nil
 			}
 

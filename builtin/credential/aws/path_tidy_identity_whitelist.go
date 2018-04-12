@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -50,15 +51,15 @@ func (b *backend) tidyWhitelistIdentity(ctx context.Context, s logical.Storage, 
 	for _, instanceID := range identities {
 		identityEntry, err := s.Get(ctx, "whitelist/identity/"+instanceID)
 		if err != nil {
-			return fmt.Errorf("error fetching identity of instanceID %s: %s", instanceID, err)
+			return errwrap.Wrapf(fmt.Sprintf("error fetching identity of instanceID %q: {{err}}", instanceID), err)
 		}
 
 		if identityEntry == nil {
-			return fmt.Errorf("identity entry for instanceID %s is nil", instanceID)
+			return fmt.Errorf("identity entry for instanceID %q is nil", instanceID)
 		}
 
 		if identityEntry.Value == nil || len(identityEntry.Value) == 0 {
-			return fmt.Errorf("found identity entry for instanceID %s but actual identity is empty", instanceID)
+			return fmt.Errorf("found identity entry for instanceID %q but actual identity is empty", instanceID)
 		}
 
 		var result whitelistIdentity
@@ -68,7 +69,7 @@ func (b *backend) tidyWhitelistIdentity(ctx context.Context, s logical.Storage, 
 
 		if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
 			if err := s.Delete(ctx, "whitelist/identity"+instanceID); err != nil {
-				return fmt.Errorf("error deleting identity of instanceID %s from storage: %s", instanceID, err)
+				return errwrap.Wrapf(fmt.Sprintf("error deleting identity of instanceID %q from storage: {{err}}", instanceID), err)
 			}
 		}
 	}

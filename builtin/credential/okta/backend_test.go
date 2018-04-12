@@ -125,7 +125,7 @@ func testConfigRead(t *testing.T, token string, d map[string]interface{}) logica
 			}
 
 			if resp.Data["organization"] != d["organization"] {
-				return fmt.Errorf("Org mismatch expected %s but got %s", d["organization"], resp.Data["Org"])
+				return fmt.Errorf("org mismatch expected %s but got %s", d["organization"], resp.Data["Org"])
 			}
 
 			if resp.Data["base_url"] != d["base_url"] {

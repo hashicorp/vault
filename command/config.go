@@ -77,8 +77,7 @@ func checkHCLKeys(node ast.Node, valid []string) error {
 	for _, item := range list.Items {
 		key := item.Keys[0].Token.Value().(string)
 		if _, ok := validMap[key]; !ok {
-			result = multierror.Append(result, fmt.Errorf(
-				"invalid key '%s' on line %d", key, item.Assign.Line))
+			result = multierror.Append(result, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
 		}
 	}
 

@@ -132,7 +132,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"local":     false,
 			"seal_wrap": false,
 			"options": map[string]string{
-				"versioned": "true",
+				"version": "1",
 			},
 		},
 		"sys/": map[string]interface{}{
@@ -195,7 +195,7 @@ func TestSystemBackend_mount(t *testing.T) {
 	req.Data["local"] = true
 	req.Data["seal_wrap"] = true
 	req.Data["options"] = map[string]string{
-		"versioned": "true",
+		"version": "1",
 	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
@@ -228,7 +228,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"local":     false,
 			"seal_wrap": false,
 			"options": map[string]string{
-				"versioned": "true",
+				"version": "1",
 			},
 		},
 		"sys/": map[string]interface{}{
@@ -286,7 +286,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"local":     true,
 			"seal_wrap": true,
 			"options": map[string]string{
-				"versioned": "true",
+				"version": "1",
 			},
 		},
 	}
@@ -331,7 +331,7 @@ func TestSystemBackend_mount_invalid(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "unknown backend type: nope" {
+	if resp.Data["error"] != `unknown backend type: "nope"` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -653,7 +653,7 @@ func TestSystemBackend_remount_invalid(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "no matching mount at 'unknown/'" {
+	if resp.Data["error"] != `no matching mount at "unknown/"` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -668,7 +668,7 @@ func TestSystemBackend_remount_system(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "cannot remount 'sys/'" {
+	if resp.Data["error"] != `cannot remount "sys/"` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -1493,7 +1493,7 @@ func TestSystemBackend_enableAuth_invalid(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "unknown backend type: nope" {
+	if resp.Data["error"] != `unknown backend type: "nope"` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -1710,7 +1710,7 @@ func TestSystemBackend_enableAudit_invalid(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "unknown backend type: nope" {
+	if resp.Data["error"] != `unknown backend type: "nope"` {
 		t.Fatalf("bad: %v", resp)
 	}
 }

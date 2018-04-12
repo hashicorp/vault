@@ -527,7 +527,7 @@ You can pass the `client_token` returned in [Step 4](#step4) as a part of the
 CLI command.
 
 ```shell
-$ VAULT_TOKEN=3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e vault read secret/mysql/webapp
+$ VAULT_TOKEN=3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e vault kv get secret/mysql/webapp
 No value found at secret/mysql/webapp
 ```
 
@@ -540,7 +540,7 @@ token: 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e
 token_duration: 2762013
 token_policies: [default jenkins]
 
-$ vault read secret/mysql/webapp
+$ vault kv get secret/mysql/webapp
 No value found at secret/mysql/webapp
 ```
 
@@ -551,7 +551,7 @@ found" message.
 `secret/mysql/webapp` path.
 
 ```shell
-$ vault write secret/dev/config/mongodb @mysqldb.txt
+$ vault kv put secret/dev/config/mongodb @mysqldb.txt
 
 $ cat mysqldb.txt
 {
@@ -576,7 +576,7 @@ You can now pass the `client_token` returned in [Step 4](#step4) in the
 ```plaintext
 $ curl --header "X-Vault-Token: 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e" \
        --request GET \
-       http://127.0.0.1:8200/v1/secret/mysql/webapp | jq
+       http://127.0.0.1:8200/v1/secret/data/mysql/webapp | jq
 {
   "errors": []
 }
@@ -668,8 +668,9 @@ b07d7a47-1d0d-741d-20b4-ae0de7c6d964
 
 ## Next steps
 
-Watch the video recording of the [Delivering Secret Zero: Vault AppRole with Terraform and Chef](https://www.hashicorp.com/resources/delivering-secret-zero-vault-approle-terraform-chef)
-webinar which talks about the usage of AppRole with Terraform and Chef as its trusted entities.
+Read the [_AppRole with Terraform and
+Chef_](/guides/identity/approle-trusted-entities.html) guide to better
+understand the role of trusted entities using Terraform and Chef as an example. 
 
 To learn more about response wrapping, go to the [Cubbyhole Response
 Wrapping](/guides/secret-mgmt/cubbyhole.html) guide.

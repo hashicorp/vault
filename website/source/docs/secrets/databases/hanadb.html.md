@@ -34,8 +34,10 @@ more information about setting up the database secrets engine.
     ```text
     $ vault write database/config/my-hana-database \
         plugin_name=hana-database-plugin \
-        connection_url="hdb://username:password@localhost:1433" \
-        allowed_roles="my-role"
+        connection_url="hdb://{{username}}:{{password}}@localhost:1433" \
+        allowed_roles="my-role" \
+        username="username" \
+        password="password"
     ```
 
 1. Configure a role that maps a name in Vault to an SQL statement to execute to

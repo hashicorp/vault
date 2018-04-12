@@ -75,6 +75,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		LeaseOptions: logical.LeaseOptions{
 			Renewable: true,
 			TTL:       role.TokenTTL,
+			MaxTTL:    role.TokenMaxTTL,
 		},
 		Alias: &logical.Alias{
 			Name: role.RoleID,
@@ -100,10 +101,10 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 	// Ensure that the Role still exists.
 	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate role %s during renewal:%s", roleName, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to validate role %q during renewal: {{err}}", roleName), err)
 	}
 	if role == nil {
-		return nil, fmt.Errorf("role %s does not exist during renewal", roleName)
+		return nil, fmt.Errorf("role %q does not exist during renewal", roleName)
 	}
 
 	resp := &logical.Response{Auth: req.Auth}

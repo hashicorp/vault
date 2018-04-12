@@ -20,6 +20,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/errutil"
 )
 
@@ -293,10 +294,10 @@ func (p *ParsedCertBundle) Verify() error {
 	if p.PrivateKey != nil && p.Certificate != nil {
 		equal, err := ComparePublicKeys(p.Certificate.PublicKey, p.PrivateKey.Public())
 		if err != nil {
-			return fmt.Errorf("could not compare public and private keys: %s", err)
+			return errwrap.Wrapf("could not compare public and private keys: {{err}}", err)
 		}
 		if !equal {
-			return fmt.Errorf("Public key of certificate does not match private key")
+			return fmt.Errorf("public key of certificate does not match private key")
 		}
 	}
 
@@ -307,7 +308,7 @@ func (p *ParsedCertBundle) Verify() error {
 				return fmt.Errorf("certificate %d of certificate chain is not a certificate authority", i+1)
 			}
 			if !bytes.Equal(certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId) {
-				return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect (%s/%s)",
+				return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect (%q/%q)",
 					i+1, certPath[i].Certificate.Subject.CommonName, caCert.Certificate.Subject.CommonName)
 			}
 		}
@@ -556,13 +557,13 @@ func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
 		// Technically we only need one cert, but this doesn't duplicate code
 		certBundle, err := p.ToCertBundle()
 		if err != nil {
-			return nil, fmt.Errorf("Error converting parsed bundle to string bundle when getting TLS config: %s", err)
+			return nil, errwrap.Wrapf("error converting parsed bundle to string bundle when getting TLS config: {{err}}", err)
 		}
 
 		caPool := x509.NewCertPool()
 		ok := caPool.AppendCertsFromPEM([]byte(certBundle.CAChain[0]))
 		if !ok {
-			return nil, fmt.Errorf("Could not append CA certificate")
+			return nil, fmt.Errorf("could not append CA certificate")
 		}
 
 		if usage&TLSServer > 0 {
