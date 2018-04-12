@@ -165,12 +165,29 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 				"expiration": expirationStr,
 			})
 
-			shouldContinue, err := executeCreateUserStmt(ctx, tx, query)
+			stmt, err := tx.PrepareContext(ctx, query)
 			if err != nil {
-				if !shouldContinue {
-					return "", "", err
+				// If the error code we get back is Error 1295: This command is not
+				// supported in the prepared statement protocol yet, we will execute
+				// the statement without preparing it. This allows the caller to
+				// manually prepare statements, as well as run other not yet
+				// prepare supported commands. If there is no error when running we
+				// will continue to the next statement.
+				if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
+					_, err = tx.ExecContext(ctx, query)
+					if err != nil {
+						return "", "", err
+					}
+					continue
 				}
+
+				return "", "", err
 			}
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				stmt.Close()
+				return "", "", err
+			}
+			stmt.Close()
 		}
 	}
 
@@ -180,32 +197,6 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	}
 
 	return username, password, nil
-}
-
-func executeCreateUserStmt(ctx context.Context, tx *sql.Tx, query string) (shouldContinue bool, err error) {
-	stmt, err := tx.PrepareContext(ctx, query)
-	if err != nil {
-		// If the error code we get back is Error 1295: This command is not
-		// supported in the prepared statement protocol yet, we will execute
-		// the statement without preparing it. This allows the caller to
-		// manually prepare statements, as well as run other not yet
-		// prepare supported commands. If there is no error when running we
-		// will continue to the next statement.
-		if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
-			_, err = tx.ExecContext(ctx, query)
-			if err != nil {
-				return false, err
-			}
-			return true, err
-		}
-
-		return false, err
-	}
-	defer stmt.Close()
-	if _, err := stmt.ExecContext(ctx); err != nil {
-		return false, err
-	}
-	return true, nil
 }
 
 // NOOP
