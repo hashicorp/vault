@@ -115,7 +115,7 @@ export default Ember.Route.extend({
       }
       controller.setProperties({
         filter: filter || '',
-        page: model.secrets.get('meta.currentPage') || 1,
+        page: model.get('meta.currentPage') || 1,
       });
     }
   },
