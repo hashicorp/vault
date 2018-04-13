@@ -30,10 +30,10 @@ func TestCacheReader(t *testing.T) {
 	// we should start with no config
 	config, err := configReader.Config(ctx, storage)
 	if err != nil {
-		t.Fatal(err)
-	}
-	if config != nil {
-		t.Fatal("config should initially be nil because it's unset as of yet")
+		_, ok := err.(*Unset)
+		if !ok {
+			t.Fatal(err)
+		}
 	}
 
 	req := &logical.Request{
@@ -81,9 +81,9 @@ func TestCacheReader(t *testing.T) {
 	// now that we've deleted the config, it should be unset again
 	config, err = configReader.Config(ctx, storage)
 	if err != nil {
-		t.Fatal(err)
-	}
-	if config != nil {
-		t.Fatal("config should again be nil because after it's been deleted, it's again unset by the user")
+		_, ok := err.(*Unset)
+		if !ok {
+			t.Fatal(err)
+		}
 	}
 }

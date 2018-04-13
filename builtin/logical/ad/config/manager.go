@@ -54,6 +54,12 @@ type Manager struct {
 	config  *EngineConf
 }
 
+type Unset struct{}
+
+func (e *Unset) Error() string {
+	return "config is currently unset"
+}
+
 func (m *Manager) Config(ctx context.Context, storage logical.Storage) (*EngineConf, error) {
 
 	m.rwMutex.RLock()
@@ -72,6 +78,13 @@ func (m *Manager) Config(ctx context.Context, storage logical.Storage) (*EngineC
 		return nil, err
 	}
 	m.config = config
+
+	if m.config == nil {
+		// provide an unset error for a consistent error message
+		// and to reduce the lines of code needed to safely
+		// use the conf
+		return nil, &Unset{}
+	}
 	return m.config, nil
 }
 

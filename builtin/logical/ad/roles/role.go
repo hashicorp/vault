@@ -19,9 +19,6 @@ func newRole(logger hclog.Logger, ctx context.Context, storage logical.Storage, 
 	if err != nil {
 		return nil, err
 	}
-	if engineConf == nil {
-		return nil, errors.New("config must be set to create a role")
-	}
 
 	adClient := activedirectory.NewClient(logger, engineConf.ADConf)
 
@@ -65,11 +62,11 @@ func (r *Role) Map() map[string]interface{} {
 }
 
 func getServiceAccountName(fieldData *framework.FieldData) (string, error) {
-	serviceAccountName := fieldData.Get("service_account_name")
+	serviceAccountName := fieldData.Get("service_account_name").(string)
 	if serviceAccountName == "" {
 		return "", errors.New("\"service_account_name\" is required")
 	}
-	return "", nil
+	return serviceAccountName, nil
 }
 
 func verifyAccountExists(adClient *activedirectory.Client, serviceAccountName string) error {
