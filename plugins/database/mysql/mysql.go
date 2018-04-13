@@ -294,12 +294,11 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 				continue
 			}
 
-			c := &dbtxn.Config{
-				Username: m.Username,
-				Password: password,
+			m := map[string]string{
+				"username": m.Username,
+				"password": password,
 			}
-
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return nil, err
 			}
 		}

@@ -140,12 +140,12 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 				continue
 			}
 
-			c := &dbtxn.Config{
-				Name:       username,
-				Password:   password,
-				Expiration: expirationStr,
+			m := map[string]string{
+				"name":       username,
+				"password":   password,
+				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return "", "", err
 			}
 		}
@@ -154,7 +154,6 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		return "", "", err
-
 	}
 
 	return username, password, nil
@@ -196,11 +195,11 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 				continue
 			}
 
-			c := &dbtxn.Config{
-				Name:       username,
-				Expiration: expirationStr,
+			m := map[string]string{
+				"name":       username,
+				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -244,10 +243,10 @@ func (p *PostgreSQL) customRevokeUser(ctx context.Context, username string, revo
 				continue
 			}
 
-			c := &dbtxn.Config{
-				Name: username,
+			m := map[string]string{
+				"name": username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -404,9 +403,9 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 			if len(query) == 0 {
 				continue
 			}
-			c := &dbtxn.Config{
-				Username: p.Username,
-				Password: password,
+			c := map[string]string{
+				"username": p.Username,
+				"password": password,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
 				return nil, err

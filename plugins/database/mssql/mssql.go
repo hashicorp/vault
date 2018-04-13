@@ -130,13 +130,13 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 				continue
 			}
 
-			c := &dbtxn.Config{
-				Name:       username,
-				Password:   password,
-				Expiration: expirationStr,
+			m := map[string]string{
+				"name":       username,
+				"password":   password,
+				"expiration": expirationStr,
 			}
 
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return "", "", err
 			}
 		}
@@ -187,10 +187,10 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 				continue
 			}
 
-			c := &dbtxn.Config{
-				Name: username,
+			m := map[string]string{
+				"name": username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -343,11 +343,11 @@ func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) 
 				continue
 			}
 
-			c := &dbtxn.Config{
-				Username: m.Username,
-				Password: password,
+			m := map[string]string{
+				"username": m.Username,
+				"password": password,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return nil, err
 			}
 		}

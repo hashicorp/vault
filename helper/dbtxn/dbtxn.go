@@ -7,29 +7,16 @@ import (
 	"strings"
 )
 
-type Config struct {
-	Name       string
-	Username   string
-	Password   string
-	Expiration string
-}
-
 // ExecuteDBQuery handles executing one single statement, while properly releasing its resources.
 // - ctx: 	Optional, may be nil
 // - db: 	Required
 // - config: 	Optional, may be nil
 // - query: 	Required
-func ExecuteDBQuery(ctx context.Context, db *sql.DB, config *Config, query string) error {
+func ExecuteDBQuery(ctx context.Context, db *sql.DB, params map[string]string, query string) error {
 
-	parsedQuery := parseQuery(config, query)
+	parsedQuery := parseQuery(params, query)
 
-	var stmt *sql.Stmt
-	var err error
-	if ctx != nil {
-		stmt, err = db.PrepareContext(ctx, parsedQuery)
-	} else {
-		stmt, err = db.Prepare(parsedQuery)
-	}
+	stmt, err := db.PrepareContext(ctx, parsedQuery)
 	if err != nil {
 		return err
 	}
@@ -43,17 +30,11 @@ func ExecuteDBQuery(ctx context.Context, db *sql.DB, config *Config, query strin
 // - tx: 	Required
 // - config: 	Optional, may be nil
 // - query: 	Required
-func ExecuteTxQuery(ctx context.Context, tx *sql.Tx, config *Config, query string) error {
+func ExecuteTxQuery(ctx context.Context, tx *sql.Tx, params map[string]string, query string) error {
 
-	parsedQuery := parseQuery(config, query)
+	parsedQuery := parseQuery(params, query)
 
-	var stmt *sql.Stmt
-	var err error
-	if ctx != nil {
-		stmt, err = tx.PrepareContext(ctx, parsedQuery)
-	} else {
-		stmt, err = tx.Prepare(parsedQuery)
-	}
+	stmt, err := tx.PrepareContext(ctx, parsedQuery)
 	if err != nil {
 		return err
 	}
@@ -77,33 +58,14 @@ func execute(ctx context.Context, stmt *sql.Stmt) error {
 	return nil
 }
 
-func parseQuery(c *Config, tpl string) string {
+func parseQuery(m map[string]string, tpl string) string {
 
-	if c == nil {
+	if m == nil || len(m) <= 0 {
 		return tpl
 	}
 
-	if c.Name == "" && c.Username == "" && c.Password == "" && c.Expiration == "" {
-		return tpl
-	}
-
-	data := make(map[string]string)
-	if c.Name != "" {
-		data["name"] = c.Name
-	}
-	if c.Username != "" {
-		data["username"] = c.Username
-	}
-	if c.Password != "" {
-		data["password"] = c.Password
-	}
-	if c.Expiration != "" {
-		data["expiration"] = c.Expiration
-	}
-
-	for k, v := range data {
+	for k, v := range m {
 		tpl = strings.Replace(tpl, fmt.Sprintf("{{%s}}", k), v, -1)
 	}
-
 	return tpl
 }

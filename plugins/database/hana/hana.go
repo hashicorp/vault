@@ -144,12 +144,12 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 				continue
 			}
 
-			c := &dbtxn.Config{
-				Name:       username,
-				Password:   password,
-				Expiration: expirationStr,
+			m := map[string]string{
+				"name":       username,
+				"password":   password,
+				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return "", "", err
 			}
 		}
@@ -235,10 +235,10 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 				continue
 			}
 
-			c := &dbtxn.Config{
-				Name: username,
+			m := map[string]string{
+				"name": username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}

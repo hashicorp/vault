@@ -104,11 +104,11 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 			continue
 		}
 
-		c := &dbtxn.Config{
-			Name:     username,
-			Password: password,
+		m := map[string]string{
+			"name":     username,
+			"password": password,
 		}
-		if err := dbtxn.ExecuteTxQuery(nil, tx, c, query); err != nil {
+		if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 			return nil, err
 		}
 	}
