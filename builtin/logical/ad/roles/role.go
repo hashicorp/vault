@@ -1,26 +1,16 @@
 package roles
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/builtin/logical/ad/config"
 	"github.com/hashicorp/vault/helper/activedirectory"
-	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func newRole(logger hclog.Logger, ctx context.Context, storage logical.Storage, configReader config.Reader, name string, fieldData *framework.FieldData) (*Role, error) {
-
-	engineConf, err := configReader.Config(ctx, storage)
-	if err != nil {
-		return nil, err
-	}
-
-	adClient := activedirectory.NewClient(logger, engineConf.ADConf)
+func newRole(adClient *activedirectory.Client, passwordConf *config.PasswordConf, name string, fieldData *framework.FieldData) (*Role, error) {
 
 	serviceAccountName, err := getServiceAccountName(fieldData)
 	if err != nil {
@@ -33,7 +23,7 @@ func newRole(logger hclog.Logger, ctx context.Context, storage logical.Storage, 
 		return nil, err
 	}
 
-	ttl, err := getTTL(engineConf.PasswordConf, fieldData)
+	ttl, err := getTTL(passwordConf, fieldData)
 	if err != nil {
 		return nil, err
 	}
@@ -43,24 +33,6 @@ func newRole(logger hclog.Logger, ctx context.Context, storage logical.Storage, 
 		ServiceAccountName: serviceAccountName,
 		TTL:                ttl,
 	}, nil
-}
-
-type Role struct {
-	Name               string     `json:"name"`
-	ServiceAccountName string     `json:"service_account_name"`
-	TTL                int        `json:"ttl"`
-	LastVaultRotation  *time.Time `json:"last_vault_rotation,omitempty"`
-	PasswordLastSet    *time.Time `json:"password_last_set,omitempty"`
-}
-
-func (r *Role) Map() map[string]interface{} {
-	return map[string]interface{}{
-		"name":                 r.Name,
-		"service_account_name": r.ServiceAccountName,
-		"ttl": r.TTL,
-		"last_vault_rotation": r.LastVaultRotation,
-		"password_last_set":   r.PasswordLastSet,
-	}
 }
 
 func getServiceAccountName(fieldData *framework.FieldData) (string, error) {
@@ -82,5 +54,27 @@ func getTTL(passwordConf *config.PasswordConf, fieldData *framework.FieldData) (
 		return 0, fmt.Errorf("requested ttl of %d seconds is over the max ttl of %d seconds", ttl, passwordConf.MaxTTL)
 	}
 
+	if ttl < 0 {
+		return 0, fmt.Errorf("negative ttls are not allowed as they could side-step the preset max ttl")
+	}
+
 	return ttl, nil
+}
+
+type Role struct {
+	Name               string     `json:"name"`
+	ServiceAccountName string     `json:"service_account_name"`
+	TTL                int        `json:"ttl"`
+	LastVaultRotation  *time.Time `json:"last_vault_rotation,omitempty"`
+	PasswordLastSet    *time.Time `json:"password_last_set,omitempty"`
+}
+
+func (r *Role) Map() map[string]interface{} {
+	return map[string]interface{}{
+		"name":                 r.Name,
+		"service_account_name": r.ServiceAccountName,
+		"ttl": r.TTL,
+		"last_vault_rotation": r.LastVaultRotation,
+		"password_last_set":   r.PasswordLastSet,
+	}
 }

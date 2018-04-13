@@ -139,7 +139,14 @@ func (m *Manager) update(ctx context.Context, req *logical.Request, fieldData *f
 		return nil, err
 	}
 
-	role, err := newRole(m.logger, ctx, req.Storage, m.configReader, roleName, fieldData)
+	engineConf, err := m.configReader.Config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	adClient := activedirectory.NewClient(m.logger, engineConf.ADConf)
+
+	role, err := newRole(adClient, engineConf.PasswordConf, roleName, fieldData)
 	if err != nil {
 		return nil, err
 	}

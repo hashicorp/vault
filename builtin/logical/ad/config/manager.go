@@ -213,7 +213,10 @@ func (m *Manager) update(ctx context.Context, req *logical.Request, fieldData *f
 	if err != nil {
 		return nil, err
 	}
-	passwordConf := newPasswordConfig(fieldData)
+	passwordConf, err := newPasswordConfig(fieldData)
+	if err != nil {
+		return nil, err
+	}
 	config := &EngineConf{passwordConf, activeDirectoryConf}
 
 	// Write and cache it.

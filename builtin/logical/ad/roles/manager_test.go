@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestPathRegexpWorks(t *testing.T) {
+func TestPathRegexp(t *testing.T) {
 
 	m := &Manager{}
 	path := m.Path()
@@ -45,6 +45,6 @@ func TestPathRegexpWorks(t *testing.T) {
 	}
 
 	if !strings.HasSuffix(path.Pattern, "$") {
-		t.Fatal("pattern needs to send with a $ or it'll be added outside the package and the regex won't behave as expected")
+		t.Fatal("pattern needs to end with a $ or it'll be added outside the package and the regex won't behave as expected")
 	}
 }
