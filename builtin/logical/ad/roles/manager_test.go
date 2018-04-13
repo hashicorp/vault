@@ -1,38 +1,50 @@
 package roles
 
-import "testing"
+import (
+	"regexp"
+	"strings"
+	"testing"
+)
 
 func TestPathRegexpWorks(t *testing.T) {
-	// TODO write a test based on this:
-	/*
-		func main() {
-			tests := []string{
-				"roles",
-				"roles/",
-				"rolessuper",
-				"roles/candy",
-				"cats/roles",
-				"roles/beccas_role",
-			}
 
-			pattern := `^roles$|^roles/.|^roles/$`
+	m := &Manager{}
+	path := m.Path()
+	re, err := regexp.Compile(path.Pattern)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-			re, err := regexp.Compile(pattern)
-			if err != nil {
-				fmt.Println("err: " + err.Error())
-				return
-			}
+	matches := re.FindStringSubmatch("roles")
+	if len(matches) <= 0 {
+		t.Fatal("roles should be a path that's hit by the matcher")
+	}
 
-			for _, test := range tests {
-				matches := re.FindStringSubmatch(test)
-				if matches == nil {
-					fmt.Println("discarding " + test)
-					continue
-				}
-				fmt.Println(test + " is considered a match")
-			}
-		}
-	*/
-	// also, test it starts with ^ and ends with $ because if it doesn't,
-	// the outer framework will add it on and derp your beautiful regexp
+	matches = re.FindStringSubmatch("roles/")
+	if len(matches) <= 0 {
+		t.Fatal("roles/ should be a path that's hit by the matcher")
+	}
+
+	matches = re.FindStringSubmatch("rolessuper")
+	if len(matches) > 0 {
+		t.Fatal("rolessuper shouldn't be a path that's hit by the matcher")
+	}
+
+	matches = re.FindStringSubmatch("roles/candy")
+	if len(matches) <= 0 {
+		t.Fatal("roles/candy should be a path that's hit by the matcher")
+	}
+
+	matches = re.FindStringSubmatch("cats/roles")
+	if len(matches) > 0 {
+		t.Fatal("cats/roles shouldn't be a path that's hit by the matcher")
+	}
+
+	if !strings.HasPrefix(path.Pattern, "^") {
+		t.Fatal("pattern needs to start with a ^ or it'll be added outside the package and the regex won't behave as expected")
+	}
+
+	if !strings.HasSuffix(path.Pattern, "$") {
+		t.Fatal("pattern needs to send with a $ or it'll be added outside the package and the regex won't behave as expected")
+	}
 }

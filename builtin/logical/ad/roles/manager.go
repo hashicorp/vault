@@ -11,11 +11,15 @@ import (
 	"github.com/hashicorp/vault/helper/activedirectory"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/patrickmn/go-cache"
 )
 
 const (
 	BackendPath = "roles"
 	StorageKey  = "roles"
+
+	cacheCleanup    = time.Second / 2
+	cacheExpiration = time.Second
 
 	unsetTTL = -1000
 )
@@ -24,12 +28,14 @@ func NewManager(logger hclog.Logger, configReader config.Reader) *Manager {
 	return &Manager{
 		logger:       logger,
 		configReader: configReader,
+		cache:        cache.New(cacheExpiration, cacheCleanup),
 	}
 }
 
 type Manager struct {
 	logger       hclog.Logger
 	configReader config.Reader
+	cache        *cache.Cache
 }
 
 func (m *Manager) Path() *framework.Path {
@@ -56,6 +62,10 @@ func (m *Manager) Path() *framework.Path {
 	}
 }
 
+type Reader interface {
+	Role(ctx context.Context, storage logical.Storage, name string) (*Role, error)
+}
+
 type NotFound struct {
 	roleName string
 }
@@ -64,10 +74,22 @@ func (e *NotFound) Error() string {
 	return fmt.Sprintf("%s not found", e.roleName)
 }
 
-// TODO
-//func (m *Manager) Role(ctx context.Context, storage logical.Storage, name string) (*Role, error) {
-//
-//}
+func (m *Manager) Role(ctx context.Context, storage logical.Storage, name string) (*Role, error) {
+
+	roleIfc, found := m.cache.Get(name)
+	if found {
+		return roleIfc.(*Role), nil
+	}
+
+	role, err := m.readFromStorage(ctx, storage, name)
+	if err != nil {
+		return nil, err
+	}
+
+	m.cache.SetDefault(name, role)
+
+	return role, nil
+}
 
 func (m *Manager) delete(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 
@@ -97,24 +119,13 @@ func (m *Manager) read(ctx context.Context, req *logical.Request, _ *framework.F
 		return nil, err
 	}
 
-	entry, err := req.Storage.Get(ctx, StorageKey+"/"+roleName)
+	role, err := m.readFromStorage(ctx, req.Storage, roleName)
 	if err != nil {
-		return nil, err
+		_, ok := err.(*NotFound)
+		if ok {
+			return nil, nil
+		}
 	}
-	if entry == nil {
-		return nil, nil
-	}
-
-	role := &Role{}
-	if err := entry.DecodeJSON(role); err != nil {
-		return nil, err
-	}
-
-	passwordLastSet, err := m.getPasswordLastSet(ctx, req.Storage, role.ServiceAccountName)
-	if err != nil {
-		return nil, err
-	}
-	role.PasswordLastSet = passwordLastSet
 
 	return &logical.Response{
 		Data: role.Map(),
@@ -153,11 +164,6 @@ func (m *Manager) update(ctx context.Context, req *logical.Request, fieldData *f
 	}, nil
 }
 
-// TODO this manager is going to need to expose a way for the creds endpoint to read a role
-// so it can find out last rotated times
-
-// TODO we'll need to cache roles too because when requests come in quickly, we'll need the same role like 100 times at once
-
 func (m *Manager) getPasswordLastSet(ctx context.Context, storage logical.Storage, serviceAccountName string) (*time.Time, error) {
 
 	engineConf, err := m.configReader.Config(ctx, storage)
@@ -165,26 +171,15 @@ func (m *Manager) getPasswordLastSet(ctx context.Context, storage logical.Storag
 		return nil, err
 	}
 
-	filters := map[*activedirectory.Field][]string{
-		activedirectory.FieldRegistry.UserPrincipalName: {serviceAccountName},
-	}
-
-	// TODO make a helper method like get by service account name
 	adClient := activedirectory.NewClient(m.logger, engineConf.ADConf)
-	entries, err := adClient.Search(filters)
+	entry, err := getServiceAccountByName(adClient, serviceAccountName)
 	if err != nil {
 		return nil, err
 	}
-	if len(entries) <= 0 {
-		return nil, fmt.Errorf("service account \"%s\" is not found by Active Directory", serviceAccountName)
-	}
-	if len(entries) > 1 {
-		return nil, fmt.Errorf("unable to tell which service account to use from %s", entries)
-	}
 
-	values, found := entries[0].Get(activedirectory.FieldRegistry.PasswordLastSet)
+	values, found := entry.Get(activedirectory.FieldRegistry.PasswordLastSet)
 	if !found {
-		return nil, fmt.Errorf("%s lacks a PasswordLastSet field", entries[0])
+		return nil, fmt.Errorf("%s lacks a PasswordLastSet field", entry)
 	}
 
 	if len(values) != 1 {
@@ -202,6 +197,30 @@ func (m *Manager) getPasswordLastSet(ctx context.Context, storage logical.Storag
 		return nil, err
 	}
 	return &t, nil
+}
+
+func (m *Manager) readFromStorage(ctx context.Context, storage logical.Storage, roleName string) (*Role, error) {
+
+	entry, err := storage.Get(ctx, StorageKey+"/"+roleName)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, &NotFound{}
+	}
+
+	role := &Role{}
+	if err := entry.DecodeJSON(role); err != nil {
+		return nil, err
+	}
+
+	passwordLastSet, err := m.getPasswordLastSet(ctx, storage, role.ServiceAccountName)
+	if err != nil {
+		return nil, err
+	}
+	role.PasswordLastSet = passwordLastSet
+
+	return role, nil
 }
 
 func roleName(reqPath string) (string, error) {

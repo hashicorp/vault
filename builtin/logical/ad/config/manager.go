@@ -192,6 +192,10 @@ func (m *Manager) read(ctx context.Context, req *logical.Request, _ *framework.F
 
 	_, err := m.Config(ctx, req.Storage)
 	if err != nil {
+		_, ok := err.(*Unset)
+		if ok {
+			return nil, nil
+		}
 		return nil, err
 	}
 

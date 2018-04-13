@@ -27,7 +27,9 @@ func newRole(logger hclog.Logger, ctx context.Context, storage logical.Storage, 
 		return nil, err
 	}
 
-	if err := verifyAccountExists(adClient, serviceAccountName); err != nil {
+	// verify service account exists
+	_, err = getServiceAccountByName(adClient, serviceAccountName)
+	if err != nil {
 		return nil, err
 	}
 
@@ -67,26 +69,6 @@ func getServiceAccountName(fieldData *framework.FieldData) (string, error) {
 		return "", errors.New("\"service_account_name\" is required")
 	}
 	return serviceAccountName, nil
-}
-
-func verifyAccountExists(adClient *activedirectory.Client, serviceAccountName string) error {
-
-	filters := map[*activedirectory.Field][]string{
-		activedirectory.FieldRegistry.UserPrincipalName: {serviceAccountName},
-	}
-
-	entries, err := adClient.Search(filters)
-	if err != nil {
-		return err
-	}
-
-	if len(entries) <= 0 {
-		return fmt.Errorf("service account of %s must already exist in active directory, searches are case sensitive", serviceAccountName)
-	}
-	if len(entries) > 1 {
-		return fmt.Errorf("expected one matching service account, but received %s", entries)
-	}
-	return nil
 }
 
 func getTTL(passwordConf *config.PasswordConf, fieldData *framework.FieldData) (int, error) {
