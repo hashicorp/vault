@@ -128,6 +128,19 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 		t.Fatalf("expected to see entity disabled error, got %v", err)
 	}
 
+	// Attempting to get a new token should also now fail
+	client.SetToken("")
+	resp, err = client.Logical().Write("auth/approle/login", map[string]interface{}{
+		"role_id":   roleID,
+		"secret_id": secretID,
+	})
+	if err == nil {
+		t.Fatalf("expected error, got %#v", *resp)
+	}
+	if !strings.Contains(err.Error(), logical.ErrEntityDisabled.Error()) {
+		t.Fatalf("expected to see entity disabled error, got %v", err)
+	}
+
 	client.SetToken(cluster.RootToken)
 	resp, err = client.Logical().Write("identity/entity/id/"+entityID, map[string]interface{}{
 		"disabled": false,
@@ -140,5 +153,24 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	resp, err = client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Getting a new token should now work again too
+	client.SetToken("")
+	resp, err = client.Logical().Write("auth/approle/login", map[string]interface{}{
+		"role_id":   roleID,
+		"secret_id": secretID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected a response for login")
+	}
+	if resp.Auth == nil {
+		t.Fatal("expected auth object from response")
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatal("expected a client token")
 	}
 }

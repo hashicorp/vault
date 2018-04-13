@@ -519,6 +519,10 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 				return nil, nil, fmt.Errorf("failed to create an entity for the authenticated alias")
 			}
 
+			if entity.Disabled {
+				return nil, nil, logical.ErrEntityDisabled
+			}
+
 			auth.EntityID = entity.ID
 			if auth.GroupAliases != nil {
 				err = c.identityStore.refreshExternalGroupMembershipsByEntityID(auth.EntityID, auth.GroupAliases)
