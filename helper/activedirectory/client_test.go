@@ -1,8 +1,6 @@
 package activedirectory
 
 import (
-	"crypto/tls"
-	"fmt"
 	"testing"
 
 	"github.com/go-ldap/ldap"
@@ -14,12 +12,12 @@ func TestSearch(t *testing.T) {
 
 	config := emptyConfig()
 
-	conn := &fakeLDAPConnection{
-		searchRequestToExpect: testSearchRequest(),
-		searchResultToReturn:  testSearchResult(),
+	conn := &ldapifc.FakeLDAPConnection{
+		SearchRequestToExpect: testSearchRequest(),
+		SearchResultToReturn:  testSearchResult(),
 	}
 
-	ldapClient := &fakeLDAPClient{conn}
+	ldapClient := &ldapifc.FakeLDAPClient{conn}
 
 	client := NewClientWith(hclog.NewNullLogger(), config, ldapClient)
 
@@ -72,12 +70,12 @@ func TestUpdateEntry(t *testing.T) {
 
 	config := emptyConfig()
 
-	conn := &fakeLDAPConnection{
-		searchRequestToExpect: testSearchRequest(),
-		searchResultToReturn:  testSearchResult(),
+	conn := &ldapifc.FakeLDAPConnection{
+		SearchRequestToExpect: testSearchRequest(),
+		SearchResultToReturn:  testSearchResult(),
 	}
 
-	conn.modifyRequestToExpect = &ldap.ModifyRequest{
+	conn.ModifyRequestToExpect = &ldap.ModifyRequest{
 		DN: "CN=Jim H.. Jones,OU=Vault,OU=Engineering,DC=example,DC=com",
 		ReplaceAttributes: []ldap.PartialAttribute{
 			{
@@ -86,7 +84,7 @@ func TestUpdateEntry(t *testing.T) {
 			},
 		},
 	}
-	ldapClient := &fakeLDAPClient{conn}
+	ldapClient := &ldapifc.FakeLDAPClient{conn}
 
 	client := NewClientWith(hclog.NewNullLogger(), config, ldapClient)
 
@@ -112,16 +110,16 @@ func TestUpdatePassword(t *testing.T) {
 	config.Password = "dogs"
 	config.StartTLS = true
 
-	conn := &fakeLDAPConnection{
-		searchRequestToExpect: testSearchRequest(),
-		searchResultToReturn:  testSearchResult(),
+	conn := &ldapifc.FakeLDAPConnection{
+		SearchRequestToExpect: testSearchRequest(),
+		SearchResultToReturn:  testSearchResult(),
 	}
 
 	expectedPass, err := formatPassword(testPass)
 	if err != nil {
 		t.Fatal(err)
 	}
-	conn.modifyRequestToExpect = &ldap.ModifyRequest{
+	conn.ModifyRequestToExpect = &ldap.ModifyRequest{
 		DN: "CN=Jim H.. Jones,OU=Vault,OU=Engineering,DC=example,DC=com",
 		ReplaceAttributes: []ldap.PartialAttribute{
 			{
@@ -130,7 +128,7 @@ func TestUpdatePassword(t *testing.T) {
 			},
 		},
 	}
-	ldapClient := &fakeLDAPClient{conn}
+	ldapClient := &ldapifc.FakeLDAPClient{conn}
 
 	client := NewClientWith(hclog.NewNullLogger(), config, ldapClient)
 
@@ -141,67 +139,6 @@ func TestUpdatePassword(t *testing.T) {
 	if err := client.UpdatePassword(filters, testPass); err != nil {
 		t.Fatal(err)
 	}
-}
-
-type fakeLDAPClient struct {
-	connToReturn ldapifc.Connection
-}
-
-func (f *fakeLDAPClient) Dial(network, addr string) (ldapifc.Connection, error) {
-	return f.connToReturn, nil
-}
-
-func (f *fakeLDAPClient) DialTLS(network, addr string, config *tls.Config) (ldapifc.Connection, error) {
-	return f.connToReturn, nil
-}
-
-type fakeLDAPConnection struct {
-	modifyRequestToExpect *ldap.ModifyRequest
-
-	searchRequestToExpect *ldap.SearchRequest
-	searchResultToReturn  *ldap.SearchResult
-}
-
-func (f *fakeLDAPConnection) Bind(username, password string) error {
-	return nil
-}
-
-func (f *fakeLDAPConnection) Close() {}
-
-func (f *fakeLDAPConnection) Modify(modifyRequest *ldap.ModifyRequest) error {
-	if f.modifyRequestToExpect.DN != modifyRequest.DN {
-		return fmt.Errorf("expected modifyRequest of %s, but received %s", f.modifyRequestToExpect, modifyRequest)
-	}
-	if len(f.modifyRequestToExpect.ReplaceAttributes) != len(modifyRequest.ReplaceAttributes) {
-		return fmt.Errorf("expected modifyRequest of %s, but received %s", f.modifyRequestToExpect, modifyRequest)
-	}
-	if f.modifyRequestToExpect.ReplaceAttributes[0].Type != modifyRequest.ReplaceAttributes[0].Type {
-		return fmt.Errorf("expected modifyRequest of %s, but received %s", f.modifyRequestToExpect, modifyRequest)
-	}
-	if len(f.modifyRequestToExpect.ReplaceAttributes[0].Vals) != len(modifyRequest.ReplaceAttributes[0].Vals) {
-		return fmt.Errorf("expected modifyRequest of %s, but received %s", f.modifyRequestToExpect, modifyRequest)
-	}
-	if f.modifyRequestToExpect.ReplaceAttributes[0].Vals[0] != modifyRequest.ReplaceAttributes[0].Vals[0] {
-		return fmt.Errorf("expected modifyRequest of %s, but received %s", f.modifyRequestToExpect, modifyRequest)
-	}
-	return nil
-}
-
-func (f *fakeLDAPConnection) Search(searchRequest *ldap.SearchRequest) (*ldap.SearchResult, error) {
-	if f.searchRequestToExpect.BaseDN != searchRequest.BaseDN {
-		return nil, fmt.Errorf("expected searchRequest of %v, but received %v", f.searchRequestToExpect, searchRequest)
-	}
-	if f.searchRequestToExpect.Scope != searchRequest.Scope {
-		return nil, fmt.Errorf("expected searchRequest of %v, but received %v", f.searchRequestToExpect, searchRequest)
-	}
-	if f.searchRequestToExpect.Filter != searchRequest.Filter {
-		return nil, fmt.Errorf("expected searchRequest of %v, but received %v", f.searchRequestToExpect, searchRequest)
-	}
-	return f.searchResultToReturn, nil
-}
-
-func (f *fakeLDAPConnection) StartTLS(config *tls.Config) error {
-	return nil
 }
 
 func emptyConfig() *Configuration {
