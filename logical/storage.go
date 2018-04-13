@@ -13,11 +13,11 @@ import (
 // ErrReadOnly is returned when a backend does not support
 // writing. This can be caused by a read-only replica or secondary
 // cluster operation.
-var ErrReadOnly = errors.New("Cannot write to readonly storage")
+var ErrReadOnly = errors.New("cannot write to readonly storage")
 
 // ErrSetupReadOnly is returned when a write operation is attempted on a
 // storage while the backend is still being setup.
-var ErrSetupReadOnly = errors.New("Cannot write to storage during setup")
+var ErrSetupReadOnly = errors.New("cannot write to storage during setup")
 
 // Storage is the way that logical backends are able read/write data.
 type Storage interface {

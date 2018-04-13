@@ -134,7 +134,7 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 	// Update the auth table
 	newTable := c.auth.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
-	if err := c.persistAuth(ctx, newTable, entry.Local); err != nil {
+	if err := c.persistAuth(ctx, newTable, &entry.Local); err != nil {
 		return errors.New("failed to update auth table")
 	}
 
@@ -235,7 +235,7 @@ func (c *Core) removeCredEntry(ctx context.Context, path string) error {
 	}
 
 	// Update the auth table
-	if err := c.persistAuth(ctx, newTable, entry.Local); err != nil {
+	if err := c.persistAuth(ctx, newTable, &entry.Local); err != nil {
 		return errors.New("failed to update auth table")
 	}
 
@@ -281,7 +281,7 @@ func (c *Core) taintCredEntry(ctx context.Context, path string) error {
 	}
 
 	// Update the auth table
-	if err := c.persistAuth(ctx, c.auth, entry.Local); err != nil {
+	if err := c.persistAuth(ctx, c.auth, &entry.Local); err != nil {
 		return errors.New("failed to update auth table")
 	}
 
@@ -369,7 +369,7 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 		return nil
 	}
 
-	if err := c.persistAuth(ctx, c.auth, false); err != nil {
+	if err := c.persistAuth(ctx, c.auth, nil); err != nil {
 		c.logger.Error("failed to persist auth table", "error", err)
 		return errLoadAuthFailed
 	}
@@ -377,7 +377,7 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 }
 
 // persistAuth is used to persist the auth table after modification
-func (c *Core) persistAuth(ctx context.Context, table *MountTable, localOnly bool) error {
+func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) error {
 	if table.Type != credentialTableType {
 		c.logger.Error("given table to persist has wrong type", "actual_type", table.Type, "expected_type", credentialTableType)
 		return fmt.Errorf("invalid table type given, not persisting")
@@ -406,45 +406,49 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, localOnly boo
 		}
 	}
 
-	if !localOnly {
-		// Marshal the table
-		compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalAuth, nil)
+	writeTable := func(mt *MountTable, path string) error {
+		// Encode the mount table into JSON and compress it (lzw).
+		compressedBytes, err := jsonutil.EncodeJSONAndCompress(mt, nil)
 		if err != nil {
-			c.logger.Error("failed to encode and/or compress auth table", "error", err)
+			c.logger.Error("failed to encode or compress auth mount table", "error", err)
 			return err
 		}
 
 		// Create an entry
 		entry := &Entry{
-			Key:   coreAuthConfigPath,
+			Key:   path,
 			Value: compressedBytes,
 		}
 
 		// Write to the physical backend
 		if err := c.barrier.Put(ctx, entry); err != nil {
-			c.logger.Error("failed to persist auth table", "error", err)
+			c.logger.Error("failed to persist auth mount table", "error", err)
 			return err
 		}
+		return nil
 	}
 
-	// Repeat with local auth
-	compressedBytes, err := jsonutil.EncodeJSONAndCompress(localAuth, nil)
-	if err != nil {
-		c.logger.Error("failed to encode and/or compress local auth table", "error", err)
-		return err
+	var err error
+	switch {
+	case local == nil:
+		// Write non-local mounts
+		err := writeTable(nonLocalAuth, coreAuthConfigPath)
+		if err != nil {
+			return err
+		}
+
+		// Write local mounts
+		err = writeTable(localAuth, coreLocalAuthConfigPath)
+		if err != nil {
+			return err
+		}
+	case *local:
+		err = writeTable(localAuth, coreLocalAuthConfigPath)
+	default:
+		err = writeTable(nonLocalAuth, coreAuthConfigPath)
 	}
 
-	entry := &Entry{
-		Key:   coreLocalAuthConfigPath,
-		Value: compressedBytes,
-	}
-
-	if err := c.barrier.Put(ctx, entry); err != nil {
-		c.logger.Error("failed to persist local auth table", "error", err)
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // setupCredentials is invoked after we've loaded the auth table to
@@ -520,7 +524,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 	}
 
 	if persistNeeded {
-		return c.persistAuth(ctx, c.auth, false)
+		return c.persistAuth(ctx, c.auth, nil)
 	}
 
 	return nil

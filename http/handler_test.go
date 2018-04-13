@@ -168,7 +168,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
-				"options":   map[string]interface{}{"versioned": "true"},
+				"options":   map[string]interface{}{"version": "1"},
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -221,7 +221,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
-			"options":   map[string]interface{}{"versioned": "true"},
+			"options":   map[string]interface{}{"version": "1"},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -362,7 +362,7 @@ func TestHandler_sealed(t *testing.T) {
 func TestHandler_error(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	respondError(w, 500, errors.New("Test Error"))
+	respondError(w, 500, errors.New("test Error"))
 
 	if w.Code != 500 {
 		t.Fatalf("expected 500, got %d", w.Code)

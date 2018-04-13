@@ -628,6 +628,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"postal_code":                        r.PostalCode,
 		"no_store":                           r.NoStore,
 		"allowed_other_sans":                 r.AllowedOtherSANs,
+		"require_cn":                         r.RequireCN,
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
 	}

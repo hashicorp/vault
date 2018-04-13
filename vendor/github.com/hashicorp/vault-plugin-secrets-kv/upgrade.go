@@ -21,7 +21,15 @@ import (
 func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		if atomic.LoadUint32(b.upgrading) == 1 {
-			return logical.ErrorResponse("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
+			// Sleep for a very short time before returning. This helps clients
+			// that are trying to access a mount immediately upon enabling be
+			// more likely to behave correctly since the operation should take
+			// almost no time.
+			time.Sleep(15 * time.Millisecond)
+
+			if atomic.LoadUint32(b.upgrading) == 1 {
+				return logical.ErrorResponse("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
+			}
 		}
 
 		return next(ctx, req, data)
@@ -29,18 +37,46 @@ func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framewor
 }
 
 func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) error {
-	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
-		b.Logger().Info("upgrade not running on performace replication secondary")
-		return nil
-	}
-
+	// Don't run if the plugin is in metadata mode.
 	if pluginutil.InMetadataMode() {
 		b.Logger().Info("upgrade not running while plugin is in metadata mode")
 		return nil
 	}
 
+	// Don't run while on a DR secondary.
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+		b.Logger().Info("upgrade not running on disaster recovery replication secondary")
+		return nil
+	}
+
 	if !atomic.CompareAndSwapUint32(b.upgrading, 0, 1) {
 		return errors.New("upgrade already in process")
+	}
+
+	// If we are a replication secondary, wait until the primary has finished
+	// upgrading.
+	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		b.Logger().Info("upgrade not running on performace replication secondary")
+
+		go func() {
+			for {
+				time.Sleep(time.Second)
+
+				done, err := b.upgradeDone(ctx, s)
+				if err != nil {
+					b.Logger().Error("upgrading resulted in error", "error", err)
+					return
+				}
+
+				if done {
+					break
+				}
+			}
+
+			atomic.StoreUint32(b.upgrading, 0)
+		}()
+
+		return nil
 	}
 
 	upgradeInfo := &UpgradeInfo{
@@ -130,7 +166,7 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 			case err == nil:
 				break READONLY_LOOP
 			case err.Error() == logical.ErrSetupReadOnly.Error():
-				time.Sleep(time.Second)
+				time.Sleep(10 * time.Millisecond)
 			default:
 				b.Logger().Error("writing upgrade info resulted in an error", "error", err)
 				return

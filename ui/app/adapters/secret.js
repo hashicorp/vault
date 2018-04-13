@@ -7,7 +7,7 @@ export default ApplicationAdapter.extend({
 
   headers: computed(function() {
     return {
-      'X-Vault-Kv-Client': 'v1',
+      'X-Vault-Kv-Client': 'v2',
     };
   }),
 

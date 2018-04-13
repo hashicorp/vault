@@ -50,7 +50,7 @@ func (scp *SQLCredentialsProducer) GenerateUsername(config dbplugin.UsernameConf
 	}
 
 	username = fmt.Sprintf("%s%s%s", username, scp.Separator, userUUID)
-	username = fmt.Sprintf("%s%s%s", username, scp.Separator, fmt.Sprint(time.Now().UTC().Unix()))
+	username = fmt.Sprintf("%s%s%s", username, scp.Separator, fmt.Sprint(time.Now().Unix()))
 	if scp.UsernameLen > 0 && len(username) > scp.UsernameLen {
 		username = username[:scp.UsernameLen]
 	}

@@ -484,14 +484,14 @@ var testCredentialBackends = map[string]logical.Factory{}
 func StartSSHHostTestServer() (string, error) {
 	pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(testSharedPublicKey))
 	if err != nil {
-		return "", fmt.Errorf("Error parsing public key")
+		return "", fmt.Errorf("error parsing public key")
 	}
 	serverConfig := &ssh.ServerConfig{
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			if bytes.Compare(pubKey.Marshal(), key.Marshal()) == 0 {
 				return &ssh.Permissions{}, nil
 			} else {
-				return nil, fmt.Errorf("Key does not match")
+				return nil, fmt.Errorf("key does not match")
 			}
 		},
 	}
@@ -503,7 +503,7 @@ func StartSSHHostTestServer() (string, error) {
 
 	soc, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		return "", fmt.Errorf("Error listening to connection")
+		return "", fmt.Errorf("error listening to connection")
 	}
 
 	go func() {
@@ -587,10 +587,10 @@ func AddTestCredentialBackend(name string, factory logical.Factory) error {
 // invoked before the test core is created.
 func AddTestLogicalBackend(name string, factory logical.Factory) error {
 	if name == "" {
-		return fmt.Errorf("Missing backend name")
+		return fmt.Errorf("missing backend name")
 	}
 	if factory == nil {
-		return fmt.Errorf("Missing backend factory function")
+		return fmt.Errorf("missing backend factory function")
 	}
 	testLogicalBackends[name] = factory
 	return nil

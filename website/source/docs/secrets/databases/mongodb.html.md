@@ -35,7 +35,9 @@ more information about setting up the database secrets engine.
     $ vault write database/config/my-mongodb-database \
         plugin_name=mongodb-database-plugin \
         allowed_roles="my-role" \
-        connection_url="mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true"
+        connection_url="mongodb://{{username}}:{{password}}@mongodb.acme.com:27017/admin?ssl=true" \
+        username="admin" \
+        password="Password!"
     ```
 
 1. Configure a role that maps a name in Vault to an SQL statement to execute to

@@ -52,6 +52,42 @@ test('it renders', function(assert) {
   assert.equal(this.$('[data-test-transit-action="sign"]').length, 1, 'renders sign');
 });
 
+test('it renders: signature_algorithm field', function(assert) {
+  this.set('key', { backend: 'transit', supportsSigning: true, supportedActions: ['sign', 'verify'] });
+  this.set('selectedAction', 'sign');
+  this.render(hbs`{{transit-key-actions selectedAction=selectedAction key=key}}`);
+  assert.equal(
+    this.$('[data-test-signature-algorithm]').length,
+    0,
+    'does not render signature_algorithm field on sign'
+  );
+  this.set('selectedAction', 'verify');
+  assert.equal(
+    this.$('[data-test-signature-algorithm]').length,
+    0,
+    'does not render signature_algorithm field on verify'
+  );
+
+  this.set('selectedAction', 'sign');
+  this.set('key', {
+    type: 'rsa-2048',
+    supportsSigning: true,
+    backend: 'transit',
+    supportedActions: ['sign', 'verify'],
+  });
+  assert.equal(
+    this.$('[data-test-signature-algorithm]').length,
+    1,
+    'renders signature_algorithm field on sign with rsa key'
+  );
+  this.set('selectedAction', 'verify');
+  assert.equal(
+    this.$('[data-test-signature-algorithm]').length,
+    1,
+    'renders signature_algorithm field on verify with rsa key'
+  );
+});
+
 test('it renders: rotate', function(assert) {
   this.set('key', { backend: 'transit', id: 'akey', supportedActions: ['rotate'] });
   this.render(hbs`{{transit-key-actions selectedAction="rotate" key=key}}`);
