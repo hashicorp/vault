@@ -3,6 +3,7 @@ package ssh
 import (
 	"context"
 	"fmt"
+	"os/user"
 	"reflect"
 	"testing"
 	"time"
@@ -306,6 +307,7 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 		"ip":       testIP,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck:       testAccUserPrecheckFunc(t),
 		AcceptanceTest: true,
 		Factory:        testingFactory,
 		Steps: []logicaltest.TestStep{
@@ -467,13 +469,7 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 	})
 }
 
-func TestSSHBackend_CredsForZeroAddressRoles(t *testing.T) {
-	dynamicRoleData := map[string]interface{}{
-		"key_type":     testDynamicKeyType,
-		"key":          testKeyName,
-		"admin_user":   testAdminUser,
-		"default_user": testAdminUser,
-	}
+func TestSSHBackend_CredsForZeroAddressRoles_otp(t *testing.T) {
 	otpRoleData := map[string]interface{}{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
@@ -485,9 +481,6 @@ func TestSSHBackend_CredsForZeroAddressRoles(t *testing.T) {
 	req1 := map[string]interface{}{
 		"roles": testOTPRoleName,
 	}
-	req2 := map[string]interface{}{
-		"roles": fmt.Sprintf("%s,%s", testOTPRoleName, testDynamicRoleName),
-	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		Factory:        testingFactory,
@@ -496,13 +489,37 @@ func TestSSHBackend_CredsForZeroAddressRoles(t *testing.T) {
 			testCredsWrite(t, testOTPRoleName, data, true),
 			testConfigZeroAddressWrite(t, req1),
 			testCredsWrite(t, testOTPRoleName, data, false),
+			testConfigZeroAddressDelete(t),
+			testCredsWrite(t, testOTPRoleName, data, true),
+		},
+	})
+}
+
+func TestSSHBackend_CredsForZeroAddressRoles_dynamic(t *testing.T) {
+	dynamicRoleData := map[string]interface{}{
+		"key_type":     testDynamicKeyType,
+		"key":          testKeyName,
+		"admin_user":   testAdminUser,
+		"default_user": testAdminUser,
+	}
+	data := map[string]interface{}{
+		"username": testUserName,
+		"ip":       testIP,
+	}
+	req2 := map[string]interface{}{
+		"roles": testDynamicRoleName,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck:       testAccUserPrecheckFunc(t),
+		AcceptanceTest: true,
+		Factory:        testingFactory,
+		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, dynamicRoleData),
 			testCredsWrite(t, testDynamicRoleName, data, true),
 			testConfigZeroAddressWrite(t, req2),
 			testCredsWrite(t, testDynamicRoleName, data, false),
 			testConfigZeroAddressDelete(t),
-			testCredsWrite(t, testOTPRoleName, data, true),
 			testCredsWrite(t, testDynamicRoleName, data, true),
 		},
 	})
@@ -1089,5 +1106,13 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 			}
 			return nil
 		},
+	}
+}
+
+func testAccUserPrecheckFunc(t *testing.T) func() {
+	return func() {
+		if _, err := user.Lookup(testUserName); err != nil {
+			t.Skipf("Acceptance test skipped unless user %q is present", testUserName)
+		}
 	}
 }
