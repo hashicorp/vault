@@ -403,11 +403,11 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 			if len(query) == 0 {
 				continue
 			}
-			c := map[string]string{
+			m := map[string]string{
 				"username": p.Username,
 				"password": password,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, c, query); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return nil, err
 			}
 		}
