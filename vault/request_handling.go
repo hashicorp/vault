@@ -204,7 +204,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// return invalid request so that the status codes can be correct
 		errType := logical.ErrInvalidRequest
 		switch ctErr {
-		case ErrInternalError, logical.ErrPermissionDenied:
+		case ErrInternalError, logical.ErrPermissionDenied, logical.ErrEntityDisabled:
 			errType = ctErr
 		}
 
