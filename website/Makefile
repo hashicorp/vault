@@ -1,4 +1,4 @@
-VERSION?="0.3.29"
+VERSION?="0.3.34"
 
 build:
 	@echo "==> Starting build in Docker..."
@@ -7,6 +7,7 @@ build:
 		--rm \
 		--tty \
 		--volume "$(shell pwd):/website" \
+		-e "ENV=production" \
 		hashicorp/middleman-hashicorp:${VERSION} \
 		bundle exec middleman build --verbose --clean
 
