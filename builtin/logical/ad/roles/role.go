@@ -54,7 +54,7 @@ func getTTL(passwordConf *config.PasswordConf, fieldData *framework.FieldData) (
 		return 0, fmt.Errorf("requested ttl of %d seconds is over the max ttl of %d seconds", ttl, passwordConf.MaxTTL)
 	}
 
-	if ttl < 0 {
+	if ttl <= 0 {
 		return 0, fmt.Errorf("negative ttls are not allowed as they could side-step the preset max ttl")
 	}
 

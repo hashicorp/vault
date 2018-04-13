@@ -111,6 +111,28 @@ func TestNegativeTTL(t *testing.T) {
 	}
 }
 
+func TestZeroTTL(t *testing.T) {
+
+	passwordConf := &config.PasswordConf{
+		TTL:    10,
+		MaxTTL: config.DefaultPasswordTTLs,
+		Length: config.DefaultPasswordLength,
+	}
+
+	fieldData := &framework.FieldData{
+		Raw: map[string]interface{}{
+			"service_account_name": "kibana@example.com",
+			"ttl": 0,
+		},
+		Schema: schema,
+	}
+
+	_, err := newRole(adClient, passwordConf, "kibana", fieldData)
+	if err == nil {
+		t.Fatal("should error then ttl is zero")
+	}
+}
+
 func validLDAPClient() ldapifc.Client {
 	return &ldapifc.FakeLDAPClient{
 		ConnToReturn: &ldapifc.FakeLDAPConnection{
