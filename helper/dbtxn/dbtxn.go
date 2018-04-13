@@ -8,7 +8,7 @@ import (
 )
 
 // ExecuteDBQuery handles executing one single statement, while properly releasing its resources.
-// - ctx: 	Optional, may be nil
+// - ctx: 	Required
 // - db: 	Required
 // - config: 	Optional, may be nil
 // - query: 	Required
@@ -26,7 +26,7 @@ func ExecuteDBQuery(ctx context.Context, db *sql.DB, params map[string]string, q
 }
 
 // ExecuteTxQuery handles executing one single statement, while properly releasing its resources.
-// - ctx: 	Optional, may be nil
+// - ctx: 	Required
 // - tx: 	Required
 // - config: 	Optional, may be nil
 // - query: 	Required
