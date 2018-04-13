@@ -99,6 +99,9 @@ type ConsulBackend struct {
 
 	notifyActiveCh chan notifyEvent
 	notifySealedCh chan notifyEvent
+
+	sessionTTL   string
+	lockWaitTime time.Duration
 }
 
 // NewConsulBackend constructs a Consul backend using the given API client
@@ -184,6 +187,32 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		}
 	}
 
+	sessionTTL := api.DefaultLockSessionTTL
+	sessionTTLStr, ok := conf["session_ttl"]
+	if ok {
+		_, err := time.ParseDuration(sessionTTLStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("invalid session_ttl: {{err}}", err)
+		}
+		sessionTTL = sessionTTLStr
+		if logger.IsDebug() {
+			logger.Debug("config session_ttl set", "session_ttl", sessionTTL)
+		}
+	}
+
+	lockWaitTime := api.DefaultLockWaitTime
+	lockWaitTimeRaw, ok := conf["lock_wait_time"]
+	if ok {
+		d, err := time.ParseDuration(lockWaitTimeRaw)
+		if err != nil {
+			return nil, errwrap.Wrapf("invalid lock_wait_time: {{err}}", err)
+		}
+		lockWaitTime = d
+		if logger.IsDebug() {
+			logger.Debug("config lock_wait_time set", "lock_wait_time", d)
+		}
+	}
+
 	// Configure the client
 	consulConf := api.DefaultConfig()
 	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
@@ -263,6 +292,8 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		consistencyMode:     consistencyMode,
 		notifyActiveCh:      make(chan notifyEvent),
 		notifySealedCh:      make(chan notifyEvent),
+		sessionTTL:          sessionTTL,
+		lockWaitTime:        lockWaitTime,
 	}
 	return c, nil
 }
@@ -466,6 +497,8 @@ func (c *ConsulBackend) LockWith(key, value string) (physical.Lock, error) {
 		Value:          []byte(value),
 		SessionName:    "Vault Lock",
 		MonitorRetries: 5,
+		SessionTTL:     c.sessionTTL,
+		LockWaitTime:   c.lockWaitTime,
 	}
 	lock, err := c.client.LockOpts(opts)
 	if err != nil {

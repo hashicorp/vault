@@ -98,6 +98,12 @@ at Consul's service discovery layer.
   permission to read and write from the `path` in Consul's key-value store.
   This is **not** a Vault token. See the ACL section below for help.
 
+- `session_ttl` `(string: "15s")` - Specifies the minimum allowed [session TTL][consul-session-ttl].
+
+- `lock_wait_time` `(string: "15s")` - Specifies the wait time before a lock
+  lock acquisition is made. This affects the minimum time it takes to cancel a
+  lock acquisition.
+
 The following settings apply when communicating with Consul via an encrypted
 connection. You can read more about encrypting Consul connections on the
 [Consul encryption page][consul-encryption].
@@ -225,3 +231,4 @@ storage "consul" {
 [consul-consistency]: https://www.consul.io/api/index.html#consistency-modes "Consul Consistency Modes"
 [consul-encryption]: https://www.consul.io/docs/agent/encryption.html "Consul Encryption"
 [consul-translate-wan-addrs]: https://www.consul.io/docs/agent/options.html#translate_wan_addrs "Consul Configuration"
+[consul-session-ttl]: https://www.consul.io/docs/agent/options.html#session_ttl_min "Consul Configuration"
