@@ -84,7 +84,7 @@ lease_id           consul/creds/my-role/b2469121-f55f-53c5-89af-a3ba52b1d6d8
 lease_duration     768h
 lease_renewable    true
 token              642783bf-1540-526f-d4de-fe1ac1aed6f0
-    ```
+```
 
 ## API
 
