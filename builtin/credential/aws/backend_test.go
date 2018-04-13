@@ -992,32 +992,32 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 
 	pkcs7 := os.Getenv("TEST_AWS_EC2_PKCS7")
 	if pkcs7 == "" {
-		t.Fatalf("env var TEST_AWS_EC2_PKCS7 not set")
+		t.Skipf("env var TEST_AWS_EC2_PKCS7 not set, skipping test")
 	}
 
 	identityDoc := os.Getenv("TEST_AWS_EC2_IDENTITY_DOCUMENT")
 	if identityDoc == "" {
-		t.Fatalf("env var TEST_AWS_EC2_IDENTITY_DOCUMENT not set")
+		t.Skipf("env var TEST_AWS_EC2_IDENTITY_DOCUMENT not set, skipping test")
 	}
 
 	identityDocSig := os.Getenv("TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG")
 	if identityDocSig == "" {
-		t.Fatalf("env var TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG not set")
+		t.Skipf("env var TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG not set, skipping test")
 	}
 
 	amiID := os.Getenv("TEST_AWS_EC2_AMI_ID")
 	if amiID == "" {
-		t.Fatalf("env var TEST_AWS_EC2_AMI_ID not set")
+		t.Skipf("env var TEST_AWS_EC2_AMI_ID not set, skipping test")
 	}
 
 	iamARN := os.Getenv("TEST_AWS_EC2_IAM_ROLE_ARN")
 	if iamARN == "" {
-		t.Fatalf("env var TEST_AWS_EC2_IAM_ROLE_ARN not set")
+		t.Skipf("env var TEST_AWS_EC2_IAM_ROLE_ARN not set, skipping test")
 	}
 
 	accountID := os.Getenv("TEST_AWS_EC2_ACCOUNT_ID")
 	if accountID == "" {
-		t.Fatalf("env var TEST_AWS_EC2_ACCOUNT_ID not set")
+		t.Skipf("env var TEST_AWS_EC2_ACCOUNT_ID not set, skipping test")
 	}
 
 	roleName := amiID
@@ -1423,9 +1423,16 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// good enough rather than having to muck around in the low-level details
 	for _, envvar := range []string{
 		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SECURITY_TOKEN", "AWS_SESSION_TOKEN"} {
+		// Skip test if any of the required env vars are missing
+		testEnvVar := os.Getenv("TEST_" + envvar)
+		if testEnvVar == "" {
+			t.Skipf("env var %s not set, skipping test", "TEST_"+envvar)
+		}
+
 		// restore existing environment variables (in case future tests need them)
 		defer os.Setenv(envvar, os.Getenv(envvar))
-		os.Setenv(envvar, os.Getenv("TEST_"+envvar))
+
+		os.Setenv(envvar, testEnvVar)
 	}
 	awsSession, err := session.NewSession()
 	if err != nil {

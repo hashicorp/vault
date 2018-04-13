@@ -6,7 +6,7 @@ GEM
       minitest (~> 5.1)
       thread_safe (~> 0.3, >= 0.3.4)
       tzinfo (~> 1.1)
-    autoprefixer-rails (8.1.0)
+    autoprefixer-rails (8.2.0)
       execjs
     bootstrap-sass (3.3.7)
       autoprefixer-rails (>= 5.2.1)
@@ -78,7 +78,7 @@ GEM
       rack (>= 1.4.5, < 2.0)
       thor (>= 0.15.2, < 2.0)
       tilt (~> 1.4.1, < 2.0)
-    middleman-hashicorp (0.3.30)
+    middleman-hashicorp (0.3.34)
       bootstrap-sass (~> 3.3)
       builder (~> 3.2)
       middleman (~> 3.4)
@@ -115,7 +115,7 @@ GEM
     rack (1.6.9)
     rack-livereload (0.3.16)
       rack
-    rack-test (0.8.3)
+    rack-test (1.0.0)
       rack (>= 1.0, < 3)
     rb-fsevent (0.10.3)
     rb-inotify (0.9.10)
@@ -153,7 +153,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  middleman-hashicorp (= 0.3.30)
+  middleman-hashicorp (= 0.3.34)
 
 BUNDLED WITH
    1.16.1

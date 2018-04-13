@@ -622,11 +622,13 @@ tokens created against a role to be revoked using the
 - `renewable` `(bool: true)` - Set to `false` to disable the ability of the token
   to be renewed past its initial TTL.  Setting the value to `true` will allow
   the token to be renewable up to the system/mount maximum TTL.
-- `explicit_max_ttl` `(string: "")` - If set, the token will have an explicit
-  max TTL set upon it. This maximum token TTL *cannot* be changed later, and
-  unlike with normal tokens, updates to the system/mount max TTL value will
-  have no effect at renewal time -- the token will never be able to be renewed
-  or used past the value set at issue time.
+- `explicit_max_ttl` `(int: 0)` - Provides a maximum lifetime for any
+  tokens issued against this role, including periodic tokens. Unlike direct
+  token creation, where the value for an explicit max TTL is stored in the
+  token, for roles this check will always use the current value set in the
+  role. The main use of this is to provide a hard upper bound on periodic
+  tokens, which otherwise can live forever as long as they are renewed. This is
+  an integer number of seconds.
 - `path_suffix` `(string: "")` - If set, tokens created against this role will
   have the given suffix as part of their path in addition to the role name. This
   can be useful in certain scenarios, such as keeping the same role name in the

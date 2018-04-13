@@ -8,6 +8,16 @@ activate :hashicorp do |h|
 end
 
 helpers do
+  # Returns a segment tracking ID such that local development is not
+  # tracked to production systems.
+  def segmentId()
+    if (ENV['ENV'] == 'production')
+      'OdSFDq9PfujQpmkZf03dFpcUlywme4sC'
+    else
+      '0EXTgkNx0Ydje2PGXVbRhpKKoe5wtzcE'
+    end
+  end
+
   # Returns the FQDN of the image URL.
   #
   # @param [String] path
