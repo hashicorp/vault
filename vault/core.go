@@ -1323,6 +1323,11 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		return retErr
 	}
 
+	// Since there is no token store in standby nodes, sealing cannot be done.
+	// Ideally, the request has to be forwarded to leader node for validation
+	// and the operation should be performed. But for now, just returning with
+	// an error and recommending a vault restart, which essentially does the
+	// same thing.
 	if c.standby {
 		c.logger.Error("vault cannot seal when in standby mode; please restart instead")
 		retErr = multierror.Append(retErr, errors.New("vault cannot seal when in standby mode; please restart instead"))
@@ -1333,11 +1338,6 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	// Validate the token is a root token
 	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
 	if err != nil {
-		// Since there is no token store in standby nodes, sealing cannot
-		// be done. Ideally, the request has to be forwarded to leader node
-		// for validation and the operation should be performed. But for now,
-		// just returning with an error and recommending a vault restart, which
-		// essentially does the same thing.
 		retErr = multierror.Append(retErr, err)
 		c.stateLock.RUnlock()
 		return retErr
@@ -1346,10 +1346,12 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
-		Policies:    te.Policies,
-		Metadata:    te.Meta,
-		DisplayName: te.DisplayName,
-		EntityID:    te.EntityID,
+	}
+	if te != nil {
+		auth.Policies = te.Policies
+		auth.Metadata = te.Meta
+		auth.DisplayName = te.DisplayName
+		auth.EntityID = te.EntityID
 	}
 
 	logInput := &audit.LogInput{
@@ -1461,10 +1463,12 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
-		Policies:    te.Policies,
-		Metadata:    te.Meta,
-		DisplayName: te.DisplayName,
-		EntityID:    te.EntityID,
+	}
+	if te != nil {
+		auth.Policies = te.Policies
+		auth.Metadata = te.Meta
+		auth.DisplayName = te.DisplayName
+		auth.EntityID = te.EntityID
 	}
 
 	logInput := &audit.LogInput{
