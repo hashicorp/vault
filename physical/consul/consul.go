@@ -171,7 +171,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	checkTimeout := defaultCheckTimeout
 	checkTimeoutStr, ok := conf["check_timeout"]
 	if ok {
-		d, err := time.ParseDuration(checkTimeoutStr)
+		d, err := parseutil.ParseDurationSecond(checkTimeoutStr)
 		if err != nil {
 			return nil, err
 		}
@@ -190,7 +190,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	sessionTTL := api.DefaultLockSessionTTL
 	sessionTTLStr, ok := conf["session_ttl"]
 	if ok {
-		_, err := time.ParseDuration(sessionTTLStr)
+		_, err := parseutil.ParseDurationSecond(sessionTTLStr)
 		if err != nil {
 			return nil, errwrap.Wrapf("invalid session_ttl: {{err}}", err)
 		}
@@ -203,7 +203,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	lockWaitTime := api.DefaultLockWaitTime
 	lockWaitTimeRaw, ok := conf["lock_wait_time"]
 	if ok {
-		d, err := time.ParseDuration(lockWaitTimeRaw)
+		d, err := parseutil.ParseDurationSecond(lockWaitTimeRaw)
 		if err != nil {
 			return nil, errwrap.Wrapf("invalid lock_wait_time: {{err}}", err)
 		}
