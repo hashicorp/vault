@@ -26,6 +26,9 @@ This endpoint creates or updates an Entity.
 
 - `policies` `(list of strings: [])` – Policies to be tied to the entity.
 
+- `disabled` `(bool: false)` – Whether the entity is disabled. Disabled
+  entities' associated tokens cannot be used, but are not revoked.
+
 ### Sample Payload
 
 ```json
@@ -86,6 +89,7 @@ $ curl \
   "data": {
     "bucket_key_hash": "177553e4c58987f4cc5d7e530136c642",
     "creation_time": "2017-07-25T20:29:22.614756844Z",
+    "disabled": false,
     "id": "8d6a45e5-572f-8f13-d226-cd0d1ec57297",
     "last_update_time": "2017-07-25T20:29:22.614756844Z",
     "metadata": {
@@ -120,6 +124,8 @@ This endpoint is used to update an existing entity.
 
 - `policies` `(list of strings: [])` – Policies to be tied to the entity.
 
+- `disabled` `(bool: false)` – Whether the entity is disabled. Disabled
+  entities' associated tokens cannot be used, but are not revoked.
 
 ### Sample Payload
 
