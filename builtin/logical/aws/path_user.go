@@ -33,7 +33,8 @@ func pathUser(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathCredsRead,
+			logical.ReadOperation:   b.pathCredsRead,
+			logical.UpdateOperation: b.pathCredsRead,
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,
