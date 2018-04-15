@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"reflect"
 	"strconv"
 	"testing"
 
@@ -20,7 +21,8 @@ func TestBackend_PathListRoles(t *testing.T) {
 	}
 
 	roleData := map[string]interface{}{
-		"arn": "testarn",
+		"role_arns":       []string{"arn:aws:iam::123456789012:role/path/RoleName"},
+		"credential_type": assumedRoleCred,
 	}
 
 	roleReq := &logical.Request{
@@ -61,5 +63,92 @@ func TestBackend_PathListRoles(t *testing.T) {
 
 	if len(resp.Data["keys"].([]string)) != 10 {
 		t.Fatalf("failed to list all 10 roles")
+	}
+}
+
+func TestUpgradeLegacyPolicyEntry(t *testing.T) {
+	var input string
+	var expected awsRoleEntry
+	var output *awsRoleEntry
+
+	input = "arn:aws:iam::123456789012:role/path/RoleName"
+	expected = awsRoleEntry{
+		CredentialTypes:          []string{assumedRoleCred},
+		RoleArns:                 []string{input},
+		ProhibitFlexibleCredPath: true,
+		Version:                  1,
+	}
+	output = upgradeLegacyPolicyEntry(input)
+	if output.InvalidData != "" {
+		t.Fatalf("bad: error processing upgrade of %q: got invalid data of %v", input, output.InvalidData)
+	}
+	if !reflect.DeepEqual(*output, expected) {
+		t.Fatalf("bad: expected %#v; received %#v", expected, *output)
+	}
+
+	input = "arn:aws:iam::123456789012:policy/MyPolicy"
+	expected = awsRoleEntry{
+		CredentialTypes:          []string{iamUserCred},
+		PolicyArns:               []string{input},
+		ProhibitFlexibleCredPath: true,
+		Version:                  1,
+	}
+	output = upgradeLegacyPolicyEntry(input)
+	if output.InvalidData != "" {
+		t.Fatalf("bad: error processing upgrade of %q: got invalid data of %v", input, output.InvalidData)
+	}
+	if !reflect.DeepEqual(*output, expected) {
+		t.Fatalf("bad: expected %#v; received %#v", expected, *output)
+	}
+
+	input = "arn:aws:iam::aws:policy/AWSManagedPolicy"
+	expected.PolicyArns = []string{input}
+	output = upgradeLegacyPolicyEntry(input)
+	if output.InvalidData != "" {
+		t.Fatalf("bad: error processing upgrade of %q: got invalid data of %v", input, output.InvalidData)
+	}
+	if !reflect.DeepEqual(*output, expected) {
+		t.Fatalf("bad: expected %#v; received %#v", expected, *output)
+	}
+
+	input = `
+{
+	"Version": "2012-10-07",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Action": "ec2:Describe*",
+			"Resource": "*"
+		}
+	]
+}`
+	compacted, err := compactJSON(input)
+	if err != nil {
+		t.Fatalf("error parsing JSON: %v", err)
+	}
+	expected = awsRoleEntry{
+		CredentialTypes:          []string{iamUserCred, federationTokenCred},
+		PolicyDocument:           compacted,
+		ProhibitFlexibleCredPath: true,
+		Version:                  1,
+	}
+	output = upgradeLegacyPolicyEntry(input)
+	if output.InvalidData != "" {
+		t.Fatalf("bad: error processing upgrade of %q: got invalid data of %v", input, output.InvalidData)
+	}
+	if !reflect.DeepEqual(*output, expected) {
+		t.Fatalf("bad: expected %#v; received %#v", expected, *output)
+	}
+
+	// Due to lack of prior input validation, this could exist in the storage, and we need
+	// to be able to read it out in some fashion, so have to handle this in a poor fashion
+	input = "arn:gobbledygook"
+	expected = awsRoleEntry{
+		InvalidData: input,
+		Version:     1,
+	}
+	output = upgradeLegacyPolicyEntry(input)
+	if !reflect.DeepEqual(*output, expected) {
+		t.Fatalf("bad: expected %#v; received %#v", expected, *output)
 	}
 }
