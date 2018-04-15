@@ -58,8 +58,9 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 
 	// Handling nomad maximum token length
 	// https://github.com/hashicorp/nomad/blob/d9276e22b3b74674996fb548cdb6bc4c70d5b0e4/nomad/structs/structs.go#L115
-	if len(tokenName) > 64 {
-		tokenName = tokenName[0:63]
+	// size increased in https://github.com/hashicorp/nomad/pull/3888
+	if len(tokenName) > 256 {
+		tokenName = tokenName[0:255]
 	}
 
 	// Create it
