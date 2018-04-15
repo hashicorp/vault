@@ -13,42 +13,59 @@
       </div>
     {{/if}}
     <div class="field">
-      <div class="level">
-        <div class="level-left">
-          {{#if useARN}}
-            <label for="arn" class="is-label">
-              ARN
-            </label>
-          {{else}}
-            <label for="policy" class="is-label">
-              Policy
-            </label>
-          {{/if}}
-        </div>
-        <div class="level-right">
-          <div class="control is-flex">
-            {{input
-              data-test-aws-toggle-use-arn=true
-              id="use-arn"
-              type="checkbox"
-              name="use-arn"
-              class="switch is-rounded is-success is-small"
-              checked=useARN
-            }}
-            <label for="use-arn">Use Amazon Resource Name</label>
-          </div>
+      <label for="credential-type" class="is-label">
+        Credential Type
+      </label>
+      <div class="control is-expanded">
+        <div class="select is-fullwidth">
+          <select
+             name="credential-type"
+             id="credential-type"
+             onchange={{action (mut model.credential_type) value="target.value"}}
+          >
+            <option selected={{eq model.credential_type "iam_user"}} value="iam_user">
+              IAM User
+            </option>
+            <option selected={{eq model.credential_type "assumed_role"}} value="assumed_role">
+              Assumed Role
+            </option>
+            <option selected={{eq model.credential_type "federation_token"}} value="federation_token">
+              Federation Token
+            </option>
+          </select>
         </div>
       </div>
-      <div class="control">
-        {{#if useARN}}
-          {{input id="arn" value=model.arn class="input" data-test-input="arn"}}
-        {{else}}
+    </div>
+    {{#if (eq model.credential_type "assumed_role") }}
+      <div class="field">
+        <label for="role_arns" class="is-label">
+          Role ARNs
+        </label>
+        <div class="control">
+          {{input id="role_arns" value=model.role_arns class="input" data-test-input="role_arns"}}
+        </div>
+      </div>
+    {{/if}}
+    {{#if (eq model.credential_type "iam_user") }}
+      <div class="field">
+        <label for="policy_arns" class="is-label">
+          Policy ARNs
+        </label>
+        <div class="control">
+          {{input id="policy_arns" value=model.policy_arns class="input" data-test-input="policy_arns"}}
+        </div>
+      </div>
+    {{/if}}
+  </div>
+  <div class="field">
+    <label for="policy_document" class="is-label">
+      Policy
+    </label>
+    <div class="control">
           {{json-editor
-            value=(if model.policy (stringify (jsonify model.policy)) emptyData)
-            valueUpdated=(action "codemirrorUpdated" "policy")
-          }}
-        {{/if}}
-      </div>
+            value=(if model.policy_document (stringify (jsonify model.policy_document)) emptyData)
+            valueUpdated=(action "codemirrorUpdated" "policy_document")
+            }}
     </div>
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">

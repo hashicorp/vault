@@ -6,7 +6,7 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 const { attr } = DS;
 const { computed } = Ember;
 
-const CREATE_FIELDS = ['name', 'policy', 'arn'];
+const CREATE_FIELDS = ['name', 'credential_type', 'role_arns', 'policy_arns', 'policy_document'];
 export default DS.Model.extend({
   backend: attr('string', {
     readOnly: true,
@@ -16,13 +16,26 @@ export default DS.Model.extend({
     fieldValue: 'id',
     readOnly: true,
   }),
-  arn: attr('string', {
+  credential_type: attr('string', {
+    defaultValue: "iam_user",
+  }),
+  role_arns: attr({
+    editType: 'stringArray',
+    label: 'Role ARNs',
+  }),
+  policy_arns: attr({
+    editType: 'stringArray',
+  }),
+  policy_document: attr('string', {
+    widget: 'json',
+  }),
+  /*arn: attr('string', {
     helpText: '',
   }),
   policy: attr('string', {
     helpText: '',
     widget: 'json',
-  }),
+  }),*/
   attrs: computed(function() {
     let keys = CREATE_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
