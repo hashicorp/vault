@@ -684,6 +684,9 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 					logical.UpdateOperation: b.handlePolicySet,
 					logical.DeleteOperation: b.handlePolicyDelete,
 				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
 			},
 
 			&framework.Path{
@@ -1096,6 +1099,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				logical.DeleteOperation: b.handleRawDelete,
 				logical.ListOperation:   b.handleRawList,
 			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
 		})
 	}
 
@@ -4038,5 +4043,9 @@ This path responds to the following HTTP methods.
 	},
 	"passthrough_request_headers": {
 		"A list of headers to whitelist and pass from the request to the backend.",
+	},
+	"raw": {
+		"Write, Read, and Delete data directly in the Storage backend.",
+		"",
 	},
 }
