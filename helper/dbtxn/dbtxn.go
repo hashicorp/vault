@@ -44,15 +44,7 @@ func ExecuteTxQuery(ctx context.Context, tx *sql.Tx, params map[string]string, q
 }
 
 func execute(ctx context.Context, stmt *sql.Stmt) error {
-
-	if ctx != nil {
-		if _, err := stmt.ExecContext(ctx); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	if _, err := stmt.Exec(); err != nil {
+	if _, err := stmt.ExecContext(ctx); err != nil {
 		return err
 	}
 	return nil
