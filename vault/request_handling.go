@@ -204,7 +204,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// return invalid request so that the status codes can be correct
 		errType := logical.ErrInvalidRequest
 		switch ctErr {
-		case ErrInternalError, logical.ErrPermissionDenied:
+		case ErrInternalError, logical.ErrPermissionDenied, logical.ErrEntityDisabled:
 			errType = ctErr
 		}
 
@@ -517,6 +517,10 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 			if entity == nil {
 				return nil, nil, fmt.Errorf("failed to create an entity for the authenticated alias")
+			}
+
+			if entity.Disabled {
+				return nil, nil, logical.ErrEntityDisabled
 			}
 
 			auth.EntityID = entity.ID
