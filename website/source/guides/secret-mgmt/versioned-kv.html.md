@@ -473,6 +473,8 @@ maximum number of versions to keep to be 4.
 
 #### CLI command
 
+To set the `secret/` to keep up to 4 versions:
+
 ```shell
 $ vault write secret/config max_versions=4
 Success! Data written to: secret/config
@@ -483,6 +485,13 @@ Key             Value
 ---             -----
 cas_required    false
 max_versions    4
+```
+
+Alternatively, to limit the number of versions only on the
+**`secret/customer/acme`** path rather than the entire `secret/` engine:
+
+```plaintext
+$ vault kv metadata put -max-versions=4 secret/customer/acme
 ```
 
 Overwrite the data a few more times to see what happens to the data.
@@ -536,12 +545,10 @@ able to read it.
 $ vault kv get -version=1 secret/customer/acme
 No value found at secret/data/customer/data
 ```
-<br>
-
--> To limit the number of versions only on the **`secret/customer/acme`** path rather than the entire `secret/` engine, invoke: **`vault write secret/metadata/customer/acme max_versions=4`** instead.
-
 
 #### API call using cURL
+
+To set the `secret/` to keep up to 4 versions:
 
 ```plaintext
 $ tee payload.json<<EOF
@@ -576,6 +583,19 @@ $ curl --header "X-Vault-Token: ..." \
  "auth": null
 }
 ```
+
+Alternatively, to limit the number of versions only on the
+**`secret/customer/acme`** path rather than the entire `secret/` engine:
+
+```plaintext
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       --data @payload.json
+       http://127.0.0.1:8200/v1/secret/metadata/customer/acme
+```
+
+Invoke the `secret/metadata/customer/acme` endpoint instead.
+
 
 Overwrite the data a few more times to see what happens to the data.
 
@@ -635,11 +655,6 @@ $ curl --header "X-Vault-Token: ..." \
 }
 ```
 
-<br>
-
--> To limit the number of versions only on the **`secret/customer/acme`** path
-rather than the entire `secret/` engine, invoke the **`secret/metadata/customer/acme`** endpoint instead of `secret/config`.
-
 
 ### <a name="step5"></a>Step 5: Delete versions of secret
 
@@ -671,7 +686,8 @@ destroyed        false
 ...
 ```
 
-The metadata indicates that version 4 and 5 were deleted.
+The metadata on version 4 and 5 reports its deletion timestamp
+(`deletion_time`); however, the `destroyed` parameter is set to `false`.
 
 If version 5 was deleted by mistake and you wish to recover, invoke the `vault
 kv undelete` command:
@@ -680,9 +696,6 @@ kv undelete` command:
 $ vault kv undelete -versions=5 secret/customer/acme
 Success! Data written to: secret/undelete/customer/acme
 ```
-
-
-
 
 
 #### API call using cURL
@@ -712,7 +725,8 @@ $ curl --header "X-Vault-Token: ..." \
 ...
 ```
 
-The metadata indicates that version 4 and 5 were deleted.
+The metadata on version 4 and 5 reports its deletion timestamp
+(`deletion_time`); however, the `destroyed` parameter is set to `false`.
 
 If version 5 was deleted by mistake and you wish to recover, invoke the
 `/secret/undelete` endpoint:
@@ -790,6 +804,141 @@ $ curl --header "X-Vault-Token: ..." \
        --request DELETE
        http://127.0.0.1:8200/v1/secret/metadata/customer/acme
 ```
+
+
+### Additional Discussion
+
+The v2 of KV secret engine supports a **_Check-And-Set_** operation to prevent
+unintentional secret overwrite. When you pass the `cas` flag to Vault, it first
+checks if the key already exists.
+
+By default, _Check-And-Set_ operation is not enabled on the KV secret engine;
+therefore, write is always allowed (no checking is performed).  
+
+```plaintext
+$ vault read secret/config
+Key             Value
+---             -----
+cas_required    false
+max_versions    0
+```
+
+#### CLI command
+
+To enable the **_Check-And-Set_** operation:
+
+```shell
+# Enable cas_requied on the secret engine mounted at secret/
+$ vault write secret/config cas-required=true
+
+# Enable cas_requied only on the secret/partner path
+$ vault kv metadata put -cas-required=true secret/partner
+```
+
+Once check-and-set is enabled, every write operation requires `cas` value to be
+passed. If you are sure that you want to overwrite the existing key-value, set
+`cas` to match the current version. Set `cas` to `0` if you want to write the
+secret _only if_ the key does not exists.
+
+**Example:**
+
+```shell
+# To write if the key does not already exists
+$ vault kv put -cas=0 secret/partner name="Example Co." partner_id="123456789"
+Key              Value
+---              -----
+created_time     2018-04-16T22:58:15.798753323Z
+deletion_time    n/a
+destroyed        false
+version          1
+
+# To overwrite the secret, you must specify the current version with -cas flag
+$ vault kv put -cas=1 secret/partner name="Example Co." partner_id="ABCDEFGHIJKLMN"
+Key              Value
+---              -----
+created_time     2018-04-16T23:00:28.66552289Z
+deletion_time    n/a
+destroyed        false
+version          2
+```
+
+#### API call using cURL
+
+To enable the **_Check-And-Set_** operation:
+
+```shell
+$ tee payload.json<<EOF
+{
+  "max_versions": 10,
+  "cas_required": true
+}
+EOF
+
+# Enable cas_requied on the secret engine mounted at secret/
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       --data @payload.json
+       http://127.0.0.1:8200/v1/secret/config
+
+# Enable cas_requied only on the secret/partner path
+$ curl --header "X-Vault-Token: ..." \
+      --request POST \
+      --data @payload.json
+      http://127.0.0.1:8200/v1/secret/metadata/partner
+```
+
+Once check-and-set is enabled, every write operation requires `cas` value to be
+passed. If you are sure that you want to overwrite the existing key-value, set
+`cas` to match the current version. Set `cas` to `0` if you want to write the
+secret _only if_ the key does not exists.
+
+**Example:**
+
+```shell
+# Write if the key does not already exists
+$ tee payload.json <<EOF
+{
+  "options": {
+    "cas": 0
+  },
+  "data": {
+    "name": "Example Co.",
+    "partner_id": "123456789"
+  }
+}
+EOF
+
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       --data @payload.json \
+       http://127.0.0.1:8200/v1/secret/data/partner
+
+# To overwrite the secret, you must pass the current version
+$ tee payload.json <<EOF
+{
+  "options": {
+    "cas": 1
+  },
+  "data": {
+    "name": "Example Co.",
+    "partner_id": "ABCDEFGHIJKLMN"
+  }
+}
+EOF
+
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       --data @payload.json \
+       http://127.0.0.1:8200/v1/secret/data/partner
+```
+
+<br>
+
+~> If the **`cas`** value is missing in your write request, the
+"`check-and-set parameter required for this call`" error will be returned.  If
+the `cas` does not match the current version number, you will receive the
+"`check-and-set parameter did not match the current version`" message.
+
 
 
 ## Next steps
