@@ -30,13 +30,13 @@ export default Ember.Component.extend(DEFAULTS, {
 
   didReceiveAttrs() {
     this._super(...arguments);
-    let newMethod = this.get('selectedAuthBackend');
-    let oldMethod = this.get('oldSelectedAuthBackend');
+    let newMethod = this.get('selectedAuthType');
+    let oldMethod = this.get('oldSelectedAuthType');
 
     if (oldMethod && oldMethod !== newMethod) {
       this.resetDefaults();
     }
-    this.set('oldSelectedAuthBackend', newMethod);
+    this.set('oldSelectedAuthType', newMethod);
   },
 
   resetDefaults() {
@@ -51,8 +51,8 @@ export default Ember.Component.extend(DEFAULTS, {
     return BACKENDS.findBy('type', this.get('selectedAuthType'));
   }),
 
-  providerPartialName: Ember.computed('selectedAuthBackend.type', function() {
-    const type = Ember.String.dasherize(this.get('selectedAuthBackend.type'));
+  providerPartialName: Ember.computed('selectedAuthType', function() {
+    const type = Ember.String.dasherize(this.get('selectedAuthType'));
     return `partials/auth-form/${type}`;
   }),
 
