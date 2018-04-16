@@ -28,6 +28,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	vault.TestWaitActive(t, core)
 	client := cluster.Cores[0].Client
 
+	// Enable LDAP auth
 	err := client.Sys().EnableAuthWithOptions("ldap", &api.EnableAuthOptions{
 		Type: "ldap",
 	})
@@ -35,6 +36,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Configure LDAP auth
 	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
 		"url":      "ldap://ldap.forumsys.com",
 		"userattr": "uid",
@@ -46,6 +48,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Create group in LDAP auth
 	_, err = client.Logical().Write("auth/ldap/groups/testgroup1", map[string]interface{}{
 		"policies": "testgroup1-policy",
 	})
@@ -53,6 +56,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Create user in LDAP auth
 	_, err = client.Logical().Write("auth/ldap/users/tesla", map[string]interface{}{
 		"policies": "default",
 		"groups":   "testgroup1",
@@ -70,6 +74,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 	ldapClientToken := secret.Auth.ClientToken
 
+	// At this point there shouldn't be any identity policy on the token
 	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
 	if err != nil {
 		t.Fatal(err)
@@ -79,8 +84,8 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatalf("identity_policies should not have been set")
 	}
 
+	// Extract the entity ID of the token and set some policies on the entity
 	entityID := secret.Data["entity_id"].(string)
-
 	_, err = client.Logical().Write("identity/entity/id/"+entityID, map[string]interface{}{
 		"policies": []string{
 			"entity_policy_1",
@@ -91,6 +96,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Lookup the token and expect entity policies on the token
 	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
 	if err != nil {
 		t.Fatal(err)
@@ -111,6 +117,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatalf("bad: identity policies; expected: %#v\nactual: %#v", expectedPolicies, actualPolicies)
 	}
 
+	// Create identity group and add entity as its member
 	secret, err = client.Logical().Write("identity/group", map[string]interface{}{
 		"policies": []string{
 			"group_policy_1",
@@ -124,6 +131,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Lookup token and expect both entity and group policies on the token
 	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
 	if err != nil {
 		t.Fatal(err)
@@ -146,7 +154,8 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatalf("bad: identity policies; expected: %#v\nactual: %#v", expectedPolicies, actualPolicies)
 	}
 
-	// Extract out the mount accessor for LDAP auth
+	// Create an external group and renew the token. This should add external
+	// group policies to the token.
 	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
@@ -182,6 +191,8 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Lookup token and expect entity, group and external group policies on the
+	// token
 	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
 	if err != nil {
 		t.Fatal(err)
