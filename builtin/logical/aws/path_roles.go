@@ -213,9 +213,14 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		if legacyRole != "" {
 			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with policy_document"), nil
 		}
-		compacted, err := compactJSON(policyDocumentRaw.(string))
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("cannot parse policy document: %q", policyDocumentRaw.(string))), nil
+		var compacted string
+		if policyDocumentRaw.(string) == "" {
+			compacted = ""
+		} else {
+			compacted, err = compactJSON(policyDocumentRaw.(string))
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("cannot parse policy document: %q", policyDocumentRaw.(string))), nil
+			}
 		}
 		roleEntry.PolicyDocument = compacted
 	}
