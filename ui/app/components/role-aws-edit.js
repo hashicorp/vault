@@ -32,6 +32,11 @@ export default RoleEdit.extend({
         set(this, 'model.policy_arns', []);
       }
 
+      var policy_document = get(this, 'model.policy_document');
+      if (policy_document == '{}') {
+        set(this, 'model.policy_document', '');
+      }
+
       this.persist('save', () => {
         this.hasDataChanges();
         this.transitionToRoute(SHOW_ROUTE, modelId);
