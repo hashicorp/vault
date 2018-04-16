@@ -1,7 +1,6 @@
 package vault_test
 
 import (
-	"fmt"
 	"reflect"
 	"sort"
 	"testing"
@@ -193,7 +192,6 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		actualPolicies = append(actualPolicies, item.(string))
 	}
 	sort.Strings(actualPolicies)
-	fmt.Printf("actualPolicies: %#v\n", actualPolicies)
 
 	expectedPolicies = []string{
 		"entity_policy_1",

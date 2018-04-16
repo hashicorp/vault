@@ -106,7 +106,7 @@ type TokenStore struct {
 
 	tidyLock int64
 
-	identityPoliciesDeriver func(string) (*identity.Entity, []string, error)
+	identityPoliciesDeriverFunc func(string) (*identity.Entity, []string, error)
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -117,12 +117,12 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 
 	// Initialize the store
 	t := &TokenStore{
-		view:                    view,
-		cubbyholeDestroyer:      destroyCubbyhole,
-		logger:                  logger,
-		tokenLocks:              locksutil.CreateLocks(),
-		saltLock:                sync.RWMutex{},
-		identityPoliciesDeriver: c.fetchEntityAndDerivedPolicies,
+		view:                        view,
+		cubbyholeDestroyer:          destroyCubbyhole,
+		logger:                      logger,
+		tokenLocks:                  locksutil.CreateLocks(),
+		saltLock:                    sync.RWMutex{},
+		identityPoliciesDeriverFunc: c.fetchEntityAndDerivedPolicies,
 	}
 
 	if c.policyStore != nil {
@@ -2209,7 +2209,7 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	}
 
 	if out.EntityID != "" {
-		_, identityPolicies, err := ts.identityPoliciesDeriver(out.EntityID)
+		_, identityPolicies, err := ts.identityPoliciesDeriverFunc(out.EntityID)
 		if err != nil {
 			return nil, err
 		}
