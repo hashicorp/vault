@@ -115,6 +115,15 @@ var documentationPaths = []*framework.Path{
 
 		HelpSynopsis:    "Returns the health status of Vault.",
 		HelpDescription: "",
+		Responses: map[logical.Operation]map[int]*framework.ResponseSchema{
+			logical.ReadOperation: map[int]*framework.ResponseSchema{
+				200: &framework.ResponseSchema{Description: "initialized, unsealed, and active"},
+				429: &framework.ResponseSchema{Description: "unsealed and standby"},
+				472: &framework.ResponseSchema{Description: "data recovery mode replication secondary and active"},
+				501: &framework.ResponseSchema{Description: "not initialized"},
+				503: &framework.ResponseSchema{Description: "sealed"},
+			},
+		},
 	},
 
 	&framework.Path{

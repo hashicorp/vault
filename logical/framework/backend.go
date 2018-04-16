@@ -219,46 +219,8 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		}
 	}
 
-	// Call the callback with the request and the data
-	//r, err := callback(ctx, req, &fd)
-	//procPaths(r, b)
-
-	//return r, err //callback(ctx, req, &fd)
 	return callback(ctx, req, &fd)
 }
-
-func procPaths(r *logical.Response, b *Backend) {
-	if r != nil && r.Data["spec"] != nil {
-		paths := r.Data["spec"].(Top).Paths
-		rootPaths := b.SpecialPaths().Root
-		for path := range paths {
-			for _, root := range rootPaths {
-				fmt.Printf("%s  %s\n", root, path)
-				if strings.HasSuffix(root, "*") {
-					if strings.HasPrefix(path[1:], root[0:len(root)-1]) {
-						paths[path].Root = true
-						break
-					}
-				} else {
-					if root == path[1:] {
-						paths[path].Root = true
-						break
-					}
-				}
-			}
-		}
-
-		//path:= spe
-		//fmt.Println(s.Paths)
-		//println(b.System().SudoPrivilege(ctx, path.Pattern, req.ClientToken))
-	}
-
-}
-
-////type OperationFunc func(context.Context, *logical.Request, *FieldData) (*logical.Response, error)
-//func sysWrapper(b *Backend, f OperationFunc) OperationFunc {
-//
-//}
 
 // SpecialPaths is the logical.Backend implementation.
 func (b *Backend) SpecialPaths() *logical.Paths {
@@ -519,6 +481,10 @@ type FieldSchema struct {
 	Type        FieldType
 	Default     interface{}
 	Description string
+
+	// Attrs is an optional K/V map that may be use when rendering
+	// API specifications, docs etc.
+	Attrs map[string]string
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise

@@ -6,29 +6,43 @@ import (
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/oas"
 	"github.com/hashicorp/vault/logical"
 )
 
-// LoadBackend parse paths in a framework.Backend into apidoc paths,
-// methods, etc. It will infer path and body fields from when they're
-// provided, and use existing path help if available.
-func LoadBackend(backend *Backend, doc *Top) {
-	// TODO: refactor!
+// Regex for handling optional and named parameters, and string cleanup
+var optRe = regexp.MustCompile(`(?U)\(.*\)\?`)
+var altRe = regexp.MustCompile(`\((.*)\|(.*)\)`)
+var reqdRe = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)
+var cleanRe = regexp.MustCompile("[()^$?]")
+var wsRe = regexp.MustCompile(`\s+`)
+
+// DocumentPaths parses all paths in a framework.Backend into OAS paths.
+func DocumentPaths(backend *Backend, doc *oas.OASDoc) {
+	var rootPaths []string
+
+	sp := backend.SpecialPaths()
+	if sp != nil {
+		rootPaths = sp.Root
+	}
+
 	for _, p := range backend.Paths {
-		procFrameworkPath(p, []string{}, doc)
-		//doc.Mounts[prefix] = append(doc.Mounts[prefix], paths...)
+		documentPath(p, rootPaths, doc)
 	}
 }
 
-// procFrameworkPath parses a framework.Path into one or more apidoc.Paths.
-func procFrameworkPath(p *Path, rootPaths []string, top *Top) {
+// documentPath parses a framework.Path into one or more oas.Paths,
+// methods, etc. It will infer path and body fields from when they're
+// provided, and use existing path help if available.
+func documentPath(p *Path, rootPaths []string, doc *oas.OASDoc) {
 	var httpMethod string
 
 	paths := expandPattern(p.Pattern)
 
 	for _, path := range paths {
-		pm := PathMethods{}
+		pm := oas.PathMethods{}
 
+		// Test for exact or prefix match of root paths
 		for _, root := range rootPaths {
 			if root == path ||
 				(strings.HasSuffix(root, "*") && strings.HasPrefix(path, root[0:len(root)-1])) {
@@ -37,51 +51,49 @@ func procFrameworkPath(p *Path, rootPaths []string, top *Top) {
 			}
 		}
 
+		// Add details for every registered operation
 		for opType := range p.Callbacks {
-			m := NewMethodDetail()
+			m := oas.NewMethodDetail()
+
 			m.Summary = cleanString(p.HelpSynopsis)
 			m.Description = cleanString(p.HelpDescription)
 
 			switch opType {
 			case logical.CreateOperation, logical.UpdateOperation:
 				httpMethod = "POST"
-				m.Responses[200] = StdRespOK2
+				m.Responses[200] = oas.StdRespOK
 			case logical.DeleteOperation:
 				httpMethod = "DELETE"
-				m.Responses[204] = StdRespNoContent2
+				m.Responses[204] = oas.StdRespNoContent
 			case logical.ReadOperation, logical.ListOperation:
 				httpMethod = "GET"
-				m.Responses[200] = StdRespOK2
+				m.Responses[200] = oas.StdRespOK
 			default:
-				panic(fmt.Sprintf("unknown operation type %v", opType))
+				log.L().Warn("unknown operation", "type", opType)
+				httpMethod = "GET"
+				m.Responses[200] = oas.StdRespOK
 			}
 
+			// Extract path fields into parameters
 			fieldSet := make(map[string]bool)
-			params := pathFields(path)
+			params := oas.PathFields(path)
 
-			// Extract path fields
 			for _, param := range params {
 				fieldSet[param] = true
 				oasType := convertType(p.Fields[param].Type)
-				p := Parameter{
+				p := oas.Parameter{
 					Name:        param,
 					Description: cleanString(p.Fields[param].Description),
 					In:          "path",
 					Type:        oasType.typ,
 					Required:    true,
-					//SubType:     sub,
 				}
 				m.Parameters = append(m.Parameters, p)
-				//m.PathFields = append(m.PathFields, Property{
-				//	Name:        param,
-				//	Type:        typ,
-				//	SubType:     sub,
-				//	Description: cleanString(p.Fields[param].Description),
-				//})
 			}
 
+			// LIST is exported as a GET with a `list` query parameter
 			if opType == logical.ListOperation {
-				m.Parameters = append(m.Parameters, Parameter{
+				m.Parameters = append(m.Parameters, oas.Parameter{
 					Name:        "list",
 					Description: "Return a list if `true`",
 					In:          "query",
@@ -89,44 +101,45 @@ func procFrameworkPath(p *Path, rootPaths []string, top *Top) {
 				})
 			}
 
-			// It's assumed that any fields not present in the path can be part of
-			// the body for POST/PUT methods.
-			if httpMethod == "POST" || httpMethod == "PUT" {
-				s := NewSchema()
+			// Add any fields not present in the path as body parameters for POST
+			if httpMethod == "POST" {
+				s := oas.NewSchema()
 				for name, field := range p.Fields {
 					if !fieldSet[name] {
-						oasType := convertType(field.Type)
-						p := Property2{
-							Type:        oasType.typ,
+						oasField := convertType(field.Type)
+						p := oas.Property{
+							Type:        oasField.typ,
 							Description: cleanString(field.Description),
-							Format:      oasType.format,
-							//SubType:     sub,
+							Format:      oasField.format,
+							Attrs:       field.Attrs,
 						}
-						if oasType.typ == "array" {
-							p.Items = &Property2{
-								Type: oasType.items,
-								//Format: oasType.format,
+						if oasField.typ == "array" {
+							p.Items = &oas.Property{
+								Type: oasField.items,
 							}
 						}
-						s.Properties[name] = p
-						//m.Parameters = append(m.Parameters, p)
-
-						//m.BodyFields = append(m.BodyFields, Property{
-						//	Name:        name,
-						//	Description: cleanString(field.Description),
-						//	Type:        typ,
-						//	SubType:     sub,
-						//})
+						s.Properties[name] = &p
 					}
 				}
+
 				m.Parameters = append(m.Parameters,
-					Parameter{
-						Name:   "body",
-						In:     "body",
-						Schema: s,
+					oas.Parameter{
+						Name:     "body",
+						In:       "body",
+						Schema:   s,
+						Required: true,
 					},
 				)
+			}
 
+			// Add explicitly specified reponse details
+			if respSchema, ok := p.Responses[opType]; ok {
+				for code, resp := range respSchema {
+					m.Responses[code] = oas.Response{
+						Description: resp.Description,
+						Example:     resp.Example,
+					}
+				}
 			}
 
 			switch httpMethod {
@@ -134,39 +147,35 @@ func procFrameworkPath(p *Path, rootPaths []string, top *Top) {
 				pm.Post = m
 			case "GET":
 				pm.Get = m
+			case "DELETE":
+				pm.Delete = m
 			}
-
-			//methods[httpMethod] = &m
 		}
-		top.Paths["/"+path] = &pm
 
-		//if len(methods) > 0 {
-		//	newPath := Path2{
-		//		Pattern: path,
-		//		Methods: methods,
-		//	}
-		//	docPaths = append(docPaths, newPath)
-		//}
+		doc.Paths["/"+path] = &pm
 	}
 }
-
-// Regexen for handling optional and named parameters
-var optRe = regexp.MustCompile(`(?U)\(.*\)\?`)
-var reqdRe = regexp.MustCompile(`\(\?P<(\w+)>[^)]*\)`)
-var cleanRe = regexp.MustCompile("[()^$?]")
 
 // expandPattern expands a regex pattern by generating permutations of any optional parameters
 // and changing named parameters into their {openapi} equivalents.
 func expandPattern(pattern string) []string {
+	var paths []string
 
 	// This construct is added by GenericNameRegex and is much easier to remove now
 	// than to compensate for in the other regexes.
 	pattern = strings.Replace(pattern, `\w(([\w-.]+)?\w)?`, "", -1)
 
+	// Initialize paths with the original pattern or the halves of an
+	// alternation, which is also present in some patterns.
+	matches := altRe.FindAllStringSubmatch(pattern, -1)
+	if len(matches) > 0 {
+		paths = []string{matches[0][1], matches[0][2]}
+	} else {
+		paths = []string{pattern}
+	}
+
 	// expand all optional regex elements into two paths. This approach is really only useful up to 2 optional
 	// groups, but we probably don't want to deal with the exponential increase beyond that anyway.
-	paths := []string{pattern}
-
 	for i := 0; i < len(paths); i++ {
 		p := paths[i]
 		match := optRe.FindStringIndex(p)
@@ -193,7 +202,7 @@ func expandPattern(pattern string) []string {
 	return replacedPaths
 }
 
-type OASType struct {
+type oasType struct {
 	typ    string
 	items  string
 	format string
@@ -201,11 +210,12 @@ type OASType struct {
 
 // convertType translates a FieldType into an OpenAPI type.
 // In the case of arrays, a subtype is returns as well.
-func convertType(t FieldType) OASType {
-	ret := OASType{typ: "string"}
+func convertType(t FieldType) oasType {
+	ret := oasType{}
 
 	switch t {
 	case TypeString, TypeNameString:
+		ret.typ = "string"
 	case TypeInt:
 		ret.typ = "number"
 	case TypeDurationSecond:
@@ -233,21 +243,8 @@ func convertType(t FieldType) OASType {
 	return ret
 }
 
-var wsRe = regexp.MustCompile(`\s+`)
-
-// cleanString prepares s for inclusion in the output YAML. This is currently just
-// basic escaping, whitespace thinning, and wrapping in quotes.
+// cleanString prepares s for inclusion in the output
 func cleanString(s string) string {
 	s = strings.TrimSpace(s)
-
-	// TODO: no truncation for now.
-	//if idx := strings.Index(s, "\n"); idx != -1 {
-	//	s = s[0:idx] + "..."
-	//}
-
-	s = wsRe.ReplaceAllString(s, " ")
-	//s = strings.Replace(s, `"`, `\"`, -1)
-
-	//return fmt.Sprintf(`"%s"`, s)
-	return s
+	return wsRe.ReplaceAllString(s, " ")
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/oas"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -82,6 +83,13 @@ type Path struct {
 	// be automatically line-wrapped at 80 characters.
 	HelpSynopsis    string
 	HelpDescription string
+
+	Responses map[logical.Operation]map[int]*ResponseSchema
+}
+
+type ResponseSchema struct {
+	Description string
+	Example     string
 }
 
 func (p *Path) helpCallback(b *Backend) OperationFunc {
@@ -126,16 +134,19 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			return nil, errwrap.Wrapf("error executing template: {{err}}", err)
 		}
 
-		s := oas(p, b.SpecialPaths().Root)
+		// Build OpenAPI specification
+		var rootPaths []string
+		doc := oas.NewOASDoc()
 
-		return logical.HelpResponse(help, nil, s), nil
+		sp := b.SpecialPaths()
+		if sp != nil {
+			rootPaths = sp.Root
+		}
+
+		documentPath(p, rootPaths, &doc)
+
+		return logical.HelpResponse(help, nil, doc), nil
 	}
-}
-
-func oas(p *Path, rootPaths []string) Top {
-	top := NewTop()
-	procFrameworkPath(p, rootPaths, &top)
-	return top //string(s)
 }
 
 type pathTemplateData struct {

@@ -94,7 +94,7 @@ func HelpResponse(text string, seeAlso []string, spec interface{}) *Response {
 		Data: map[string]interface{}{
 			"help":     text,
 			"see_also": seeAlso,
-			"oas2":     spec,
+			"oas2":     spec, // TODO: maybe this should be "spec", or something similarly generic?
 		},
 	}
 }

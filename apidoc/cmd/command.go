@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/hashicorp/vault/helper/oas"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/vault"
 )
 
 func Run() int {
-	doc := framework.NewTop()
+	doc := oas.NewOASDoc()
 
 	// we can choose to build different things at this point
 	buildDoc(&doc)
@@ -30,10 +31,10 @@ func Run() int {
 
 // buildDoc is a sample of how to populate a Document with content
 // from backends or other sources.
-func buildDoc(doc *framework.Top) {
+func buildDoc(doc *oas.OASDoc) {
 	// Load the /sys backend, and then append the separate manual paths
 	backend := vault.NewSystemBackend(&vault.Core{}, nil).Backend
-	framework.LoadBackend(backend, doc)
+	framework.DocumentPaths(backend, doc)
 	//doc.AddPath("sys", vault.ManualPaths()...)
 
 	// Load another backend to show how separate mounts could be presented.
