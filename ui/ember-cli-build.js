@@ -32,6 +32,12 @@ module.exports = function(defaults) {
       plugins: [
         'transform-object-rest-spread'
       ]
+    },
+    autoprefixer: {
+      grid: true,
+      browsers: [
+        "last 4 versions"
+      ]
     }
   });
 
