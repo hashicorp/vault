@@ -55,19 +55,19 @@ func tcpListenerFactory(config map[string]interface{}, _ io.Writer, ui cli.Ui) (
 	}
 
 	if ffHopsRaw, ok := config["x_forwarded_for_hop_skips"]; ok {
-		ffHops, err := parseutil.ParseInt(ffHopsRaw)
+		ffHops64, err := parseutil.ParseInt(ffHopsRaw)
 		if err != nil {
 			return nil, nil, nil, errwrap.Wrapf("error parsing \"x_forwarded_for_hop_skips\": {{err}}", err)
 		}
-		if ffHops < 0 {
+		if ffHops64 < 0 {
 			return nil, nil, nil, fmt.Errorf("\"x_forwarded_for_hop_skips\" cannot be negative")
 		}
-		props["x_forwarded_for_hop_skips"] = strconv.Itoa(int(ffHops))
+		ffHops := int(ffHops64)
+		props["x_forwarded_for_hop_skips"] = strconv.Itoa(ffHops)
 		config["x_forwarded_for_hop_skips"] = ffHops
 	} else if ffAllowedOK {
-		ffHops := 0
 		props["x_forwarded_for_hop_skips"] = "0"
-		config["x_forwarded_for_hop_skips"] = int(ffHops)
+		config["x_forwarded_for_hop_skips"] = int(0)
 	}
 
 	if ffRejectNotPresentRaw, ok := config["x_forwarded_for_reject_not_present"]; ok {
