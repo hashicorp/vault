@@ -115,8 +115,8 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				logical.ListOperation: i.pathGroupIDList(),
 			},
 
-			HelpSynopsis:    strings.TrimSpace(entityHelp["group-id-list"][0]),
-			HelpDescription: strings.TrimSpace(entityHelp["group-id-list"][1]),
+			HelpSynopsis:    strings.TrimSpace(groupHelp["group-id-list"][0]),
+			HelpDescription: strings.TrimSpace(groupHelp["group-id-list"][1]),
 		},
 	}
 }

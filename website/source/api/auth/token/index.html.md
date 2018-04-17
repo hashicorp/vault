@@ -273,7 +273,7 @@ Returns information about the client token from the accessor.
 
 ```json
 {
-  "accessor": "2c84f488-2133-4ced-87b0-570f93a76830"
+  "accessor": "8609694a-cdbc-db9b-d345-e782dbb562ed"
 }
 ```
 
@@ -291,25 +291,32 @@ $ curl \
 
 ```json
 {
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
   "data": {
-    "creation_time": 1457533232,
+    "accessor": "8609694a-cdbc-db9b-d345-e782dbb562ed",
+    "creation_time": 1523979354,
     "creation_ttl": 2764800,
-    "display_name": "token",
-    "meta": null,
+    "display_name": "ldap2-tesla",
+    "entity_id": "7d2e3179-f69b-450c-7179-ac8ee8bd8ca9",
+    "expire_time": "2018-05-19T11:35:54.466476215-04:00",
+    "explicit_max_ttl": 0,
+    "id": "",
+    "identity_policies": [
+      "dev-group-policy"
+    ],
+    "issue_time": "2018-04-17T11:35:54.466476078-04:00",
+    "meta": {
+      "username": "tesla"
+    },
     "num_uses": 0,
-    "orphan": false,
-    "path": "auth/token/create",
+    "orphan": true,
+    "path": "auth/ldap2/login/tesla",
     "policies": [
       "default",
-      "web"
+      "testgroup2-policy"
     ],
-    "ttl": 2591976
-  },
-  "warnings": null,
-  "auth": null
+    "renewable": true,
+    "ttl": 2763902
+  }
 }
 ```
 
