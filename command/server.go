@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/gated-writer"
@@ -90,6 +91,11 @@ type ServerCommand struct {
 	flagDevFourCluster   bool
 	flagDevTransactional bool
 	flagTestVerifyOnly   bool
+}
+
+type ServerListener struct {
+	net.Listener
+	config map[string]interface{}
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -670,8 +676,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	clusterAddrs := []*net.TCPAddr{}
 
 	// Initialize the listeners
+	lns := make([]ServerListener, 0, len(config.Listeners))
 	c.reloadFuncsLock.Lock()
-	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
 		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logGate, c.UI)
 		if err != nil {
@@ -679,7 +685,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			return 1
 		}
 
-		lns = append(lns, ln)
+		lns = append(lns, ServerListener{
+			Listener: ln,
+			config:   lnConfig.Config,
+		})
 
 		if reloadFunc != nil {
 			relSlice := (*c.reloadFuncs)["listener|"+lnConfig.Type]
@@ -738,7 +747,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Make sure we close all listeners from this point on
 	listenerCloseFunc := func() {
 		for _, ln := range lns {
-			ln.Close()
+			ln.Listener.Close()
 		}
 	}
 
@@ -776,12 +785,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		return 0
 	}
 
-	handler := vaulthttp.Handler(core)
-
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set
 	core.SetClusterListenerAddrs(clusterAddrs)
-	core.SetClusterHandler(handler)
+	core.SetClusterHandler(vaulthttp.Handler(core))
 
 	err = core.UnsealWithStoredKeys(context.Background())
 	if err != nil {
@@ -914,10 +921,23 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Initialize the HTTP servers
 	for _, ln := range lns {
+		handler := vaulthttp.Handler(core)
+
+		// We perform validation on the config earlier, we can just cast here
+		if _, ok := ln.config["forwarded_for_authorized_addrs"]; ok {
+			hopSkips := ln.config["forwarded_for_hop_skips"].(int)
+			authzdAddrs := ln.config["forwarded_for_authorized_addrs"].([]*sockaddr.SockAddrMarshaler)
+			rejectNotPresent := ln.config["forwarded_for_reject_not_present"].(bool)
+			rejectNonAuthz := ln.config["forwarded_for_reject_non_authorized"].(bool)
+			if len(authzdAddrs) > 0 {
+				handler = vaulthttp.WrapForwardedForHandler(handler, authzdAddrs, rejectNotPresent, rejectNonAuthz, hopSkips)
+			}
+		}
+
 		server := &http.Server{
 			Handler: handler,
 		}
-		go server.Serve(ln)
+		go server.Serve(ln.Listener)
 	}
 
 	if newCoreError != nil {
