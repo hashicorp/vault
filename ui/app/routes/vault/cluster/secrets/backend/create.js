@@ -46,7 +46,7 @@ export default EditBase.extend({
     const parentKey = params.secret ? params.secret : '';
     return Ember.RSVP.hash({
       secret: this.createModel(transition, parentKey),
-      capabilities: this.capabilities(parentKey),
+      capabilities: {},
     });
   },
 });

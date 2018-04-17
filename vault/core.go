@@ -802,6 +802,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		}
 	}
 
+	if entity != nil && entity.Disabled {
+		return nil, te, logical.ErrEntityDisabled
+	}
+
 	// Check if this is a root protected path
 	rootPath := c.router.RootPath(req.Path)
 
@@ -1319,20 +1323,21 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		return retErr
 	}
 
+	// Since there is no token store in standby nodes, sealing cannot be done.
+	// Ideally, the request has to be forwarded to leader node for validation
+	// and the operation should be performed. But for now, just returning with
+	// an error and recommending a vault restart, which essentially does the
+	// same thing.
+	if c.standby {
+		c.logger.Error("vault cannot seal when in standby mode; please restart instead")
+		retErr = multierror.Append(retErr, errors.New("vault cannot seal when in standby mode; please restart instead"))
+		c.stateLock.RUnlock()
+		return retErr
+	}
+
 	// Validate the token is a root token
 	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
 	if err != nil {
-		// Since there is no token store in standby nodes, sealing cannot
-		// be done. Ideally, the request has to be forwarded to leader node
-		// for validation and the operation should be performed. But for now,
-		// just returning with an error and recommending a vault restart, which
-		// essentially does the same thing.
-		if c.standby {
-			c.logger.Error("vault cannot seal when in standby mode; please restart instead")
-			retErr = multierror.Append(retErr, errors.New("vault cannot seal when in standby mode; please restart instead"))
-			c.stateLock.RUnlock()
-			return retErr
-		}
 		retErr = multierror.Append(retErr, err)
 		c.stateLock.RUnlock()
 		return retErr
@@ -1341,10 +1346,12 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
-		Policies:    te.Policies,
-		Metadata:    te.Meta,
-		DisplayName: te.DisplayName,
-		EntityID:    te.EntityID,
+	}
+	if te != nil {
+		auth.Policies = te.Policies
+		auth.Metadata = te.Meta
+		auth.DisplayName = te.DisplayName
+		auth.EntityID = te.EntityID
 	}
 
 	logInput := &audit.LogInput{
@@ -1354,6 +1361,12 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 		c.logger.Error("failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
+		c.stateLock.RUnlock()
+		return retErr
+	}
+
+	if entity != nil && entity.Disabled {
+		retErr = multierror.Append(retErr, logical.ErrEntityDisabled)
 		c.stateLock.RUnlock()
 		return retErr
 	}
@@ -1450,10 +1463,12 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
-		Policies:    te.Policies,
-		Metadata:    te.Meta,
-		DisplayName: te.DisplayName,
-		EntityID:    te.EntityID,
+	}
+	if te != nil {
+		auth.Policies = te.Policies
+		auth.Metadata = te.Meta
+		auth.DisplayName = te.DisplayName
+		auth.EntityID = te.EntityID
 	}
 
 	logInput := &audit.LogInput{
@@ -1463,6 +1478,12 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 		c.logger.Error("failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
+		return retErr
+	}
+
+	if entity != nil && entity.Disabled {
+		retErr = multierror.Append(retErr, logical.ErrEntityDisabled)
+		c.stateLock.RUnlock()
 		return retErr
 	}
 

@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -104,6 +105,8 @@ type TokenStore struct {
 	salt     *salt.Salt
 
 	tidyLock int64
+
+	identityPoliciesDeriverFunc func(string) (*identity.Entity, []string, error)
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -114,11 +117,12 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 
 	// Initialize the store
 	t := &TokenStore{
-		view:               view,
-		cubbyholeDestroyer: destroyCubbyhole,
-		logger:             logger,
-		tokenLocks:         locksutil.CreateLocks(),
-		saltLock:           sync.RWMutex{},
+		view:                        view,
+		cubbyholeDestroyer:          destroyCubbyhole,
+		logger:                      logger,
+		tokenLocks:                  locksutil.CreateLocks(),
+		saltLock:                    sync.RWMutex{},
+		identityPoliciesDeriverFunc: c.fetchEntityAndDerivedPolicies,
 	}
 
 	if c.policyStore != nil {
@@ -2202,6 +2206,16 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 		renewable, _ := leaseTimes.renewable()
 		resp.Data["renewable"] = renewable
 		resp.Data["issue_time"] = leaseTimes.IssueTime
+	}
+
+	if out.EntityID != "" {
+		_, identityPolicies, err := ts.identityPoliciesDeriverFunc(out.EntityID)
+		if err != nil {
+			return nil, err
+		}
+		if len(identityPolicies) != 0 {
+			resp.Data["identity_policies"] = identityPolicies
+		}
 	}
 
 	if urltoken {
