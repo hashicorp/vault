@@ -10,6 +10,8 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * identity: Persist entity memberships in external identity groups across
+   mounts [GH-4365]
  * secret/gcp: Fix panic on rollback when a roleset wasn't created properly
    [GH-4344]
 
