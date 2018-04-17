@@ -59,6 +59,9 @@ func tcpListenerFactory(config map[string]interface{}, _ io.Writer, ui cli.Ui) (
 		if err != nil {
 			return nil, nil, nil, errwrap.Wrapf("error parsing \"forwarded_for_hop_skips\": {{err}}", err)
 		}
+		if ffHops < 0 {
+			return nil, nil, nil, fmt.Errorf("\"forwarded_for_hop_skips\" cannot be negative")
+		}
 		props["forwarded_for_hop_skips"] = strconv.Itoa(int(ffHops))
 		config["forwarded_for_hop_skips"] = ffHops
 	} else if ffAllowedOK {

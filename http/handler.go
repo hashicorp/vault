@@ -204,7 +204,7 @@ func WrapForwardedForHandler(h http.Handler, authorizedAddrs []*sockaddr.SockAdd
 			// authorized (or we've turned off explicit rejection) and we
 			// should assume that what comes in should be properly
 			// formatted.
-			respondError(w, http.StatusBadRequest, fmt.Errorf("malformed X-Forwarded-For configuration or request, hops to skip (%d) would skip before earliest chain link (chain length %d)", hopSkips, len(headers)))
+			respondError(w, http.StatusBadRequest, fmt.Errorf("malformed x-forwarded-for configuration or request, hops to skip (%d) would skip before earliest chain link (chain length %d)", hopSkips, len(headers)))
 			return
 		}
 
