@@ -12,7 +12,7 @@ export default Ember.Component.extend({
     return `${this.get('filename')}-${new Date().toISOString()}.${this.get('extension')}`;
   }),
 
-  fileLike: computed('data', 'mime', 'strigify', 'download', function() {
+  fileLike: computed('data', 'mime', 'stringify', 'download', function() {
     let file;
     let data = this.get('data');
     let filename = this.get('download');

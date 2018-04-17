@@ -114,9 +114,9 @@
     </div>
   </form>
 {{else}}
-  <div class="box is-marginless is-shadowless">
-    {{message-error errors=errors}}
-    <form {{action 'onSubmit' (hash key=key) on="submit"}} id="shamir">
+  <form {{action 'onSubmit' (hash key=key) on="submit"}} id="shamir">
+    <div class="box is-marginless is-shadowless">
+      {{message-error errors=errors}}
       <div class="box has-slim-padding is-shadowless is-marginless">
         {{#if hasBlock}}
           {{yield}}
@@ -132,29 +132,28 @@
           {{input class="input"type="password" name="key" value=key data-test-shamir-input=true}}
         </div>
       </div>
-    </form>
-  </div>
-  <div class="box is-marginless is-shadowless has-background-white-bis">
-    <div class="columns is-mobile">
-      <div class="column is-narrow">
-        <button
-          form="shamir"
-          type="submit"
-          class="button is-primary"
-          disabled={{loading}}
-          data-test-shamir-submit=true
-        >
-          {{if generateAction "Generate Token" buttonText}}
-        </button>
-      </div>
-      <div class="column is-offset-2 is-flex-v-centered">
-        {{#if (or started hasProgress)}}
-          {{shamir-progress
-            threshold=threshold
-            progress=progress
-          }}
-        {{/if}}
+    </div>
+    <div class="box is-marginless is-shadowless has-background-white-bis">
+      <div class="columns is-mobile">
+        <div class="column is-narrow">
+          <button
+            type="submit"
+            class="button is-primary"
+            disabled={{loading}}
+            data-test-shamir-submit=true
+          >
+            {{if generateAction "Generate Token" buttonText}}
+          </button>
+        </div>
+        <div class="column is-flex-v-centered is-flex-end">
+          {{#if (or started hasProgress)}}
+            {{shamir-progress
+              threshold=threshold
+              progress=progress
+            }}
+          {{/if}}
+        </div>
       </div>
     </div>
-  </div>
+  </form>
 {{/if}}
