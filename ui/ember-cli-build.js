@@ -36,7 +36,8 @@ module.exports = function(defaults) {
     autoprefixer: {
       grid: true,
       browsers: [
-        "last 4 versions"
+        "defaults",
+        "ie 11"
       ]
     }
   });
