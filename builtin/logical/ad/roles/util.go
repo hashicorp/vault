@@ -8,6 +8,7 @@ import (
 
 func getServiceAccountByName(adClient *activedirectory.Client, serviceAccountName string) (*activedirectory.Entry, error) {
 
+	// TODO can this be in a serviceAccountNameFilter() util method in the higher package?
 	filters := map[*activedirectory.Field][]string{
 		activedirectory.FieldRegistry.UserPrincipalName: {serviceAccountName},
 	}

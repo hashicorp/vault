@@ -62,11 +62,11 @@ func getTTL(passwordConf *config.PasswordConf, fieldData *framework.FieldData) (
 }
 
 type Role struct {
-	Name               string     `json:"name"`
-	ServiceAccountName string     `json:"service_account_name"`
-	TTL                int        `json:"ttl"`
-	LastVaultRotation  *time.Time `json:"last_vault_rotation,omitempty"`
-	PasswordLastSet    *time.Time `json:"password_last_set,omitempty"`
+	Name               string    `json:"name"`
+	ServiceAccountName string    `json:"service_account_name"`
+	TTL                int       `json:"ttl"`
+	LastVaultRotation  time.Time `json:"last_vault_rotation"`
+	PasswordLastSet    time.Time `json:"password_last_set"`
 }
 
 func (r *Role) Map() map[string]interface{} {

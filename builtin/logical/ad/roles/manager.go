@@ -38,6 +38,12 @@ type Manager struct {
 	cache        *cache.Cache
 }
 
+func (m *Manager) Invalidate(ctx context.Context, key string) {
+	if key == BackendPath {
+		m.cache.Flush()
+	}
+}
+
 func (m *Manager) Path() *framework.Path {
 	return &framework.Path{
 		Pattern: `^roles$|^roles/.|^roles/$`,
@@ -171,39 +177,39 @@ func (m *Manager) update(ctx context.Context, req *logical.Request, fieldData *f
 	}, nil
 }
 
-func (m *Manager) getPasswordLastSet(ctx context.Context, storage logical.Storage, serviceAccountName string) (*time.Time, error) {
+func (m *Manager) getPasswordLastSet(ctx context.Context, storage logical.Storage, serviceAccountName string) (time.Time, error) {
 
 	engineConf, err := m.configReader.Config(ctx, storage)
 	if err != nil {
-		return nil, err
+		return time.Time{}, err
 	}
 
 	adClient := activedirectory.NewClient(m.logger, engineConf.ADConf)
 	entry, err := getServiceAccountByName(adClient, serviceAccountName)
 	if err != nil {
-		return nil, err
+		return time.Time{}, err
 	}
 
 	values, found := entry.Get(activedirectory.FieldRegistry.PasswordLastSet)
 	if !found {
-		return nil, fmt.Errorf("%s lacks a PasswordLastSet field", entry)
+		return time.Time{}, fmt.Errorf("%s lacks a PasswordLastSet field", entry)
 	}
 
 	if len(values) != 1 {
-		return nil, fmt.Errorf("expected only one value for PasswordLastSet, but received %s", values)
+		return time.Time{}, fmt.Errorf("expected only one value for PasswordLastSet, but received %s", values)
 	}
 
 	ticks := values[0]
 	if ticks == "0" {
 		// password has never been rolled in Active Directory, only created
-		return nil, nil
+		return time.Time{}, nil
 	}
 
 	t, err := activedirectory.ParseTime(ticks)
 	if err != nil {
-		return nil, err
+		return time.Time{}, err
 	}
-	return &t, nil
+	return t, nil
 }
 
 func (m *Manager) readFromStorage(ctx context.Context, storage logical.Storage, roleName string) (*Role, error) {
