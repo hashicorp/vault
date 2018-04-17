@@ -10,6 +10,7 @@ import (
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
@@ -182,10 +183,11 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 
 				return "", "", err
 			}
-			defer stmt.Close()
 			if _, err := stmt.ExecContext(ctx); err != nil {
+				stmt.Close()
 				return "", "", err
 			}
+			stmt.Close()
 		}
 	}
 
@@ -291,16 +293,12 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 			if len(query) == 0 {
 				continue
 			}
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+
+			m := map[string]string{
 				"username": m.Username,
 				"password": password,
-			}))
-			if err != nil {
-				return nil, err
 			}
-
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return nil, err
 			}
 		}
