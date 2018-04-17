@@ -5,6 +5,15 @@ IMPROVEMENTS:
  * identity: Add the ability to disable an entity. Disabling an entity does not
    revoke associated tokens, but while the entity is disabled they cannot be
    used. [GH-4353]
+ * auth/token: Add to the token lookup response, the policies inherited due to
+   identity associations [GH-4366]
+
+BUG FIXES:
+
+ * identity: Persist entity memberships in external identity groups across
+   mounts [GH-4365]
+ * secret/gcp: Fix panic on rollback when a roleset wasn't created properly
+   [GH-4344]
 
 ## 0.10.0 (April 10th, 2018)
 

@@ -68,7 +68,7 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupAliasHelp["group-alias-by-id"][0]),
-			HelpDescription: strings.TrimSpace(groupHelp["group-alias-by-id"][1]),
+			HelpDescription: strings.TrimSpace(groupAliasHelp["group-alias-by-id"][1]),
 		},
 		{
 			Pattern: "group-alias/id/?$",
@@ -76,8 +76,8 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 				logical.ListOperation: i.pathGroupAliasIDList(),
 			},
 
-			HelpSynopsis:    strings.TrimSpace(entityHelp["group-alias-id-list"][0]),
-			HelpDescription: strings.TrimSpace(entityHelp["group-alias-id-list"][1]),
+			HelpSynopsis:    strings.TrimSpace(groupAliasHelp["group-alias-id-list"][0]),
+			HelpDescription: strings.TrimSpace(groupAliasHelp["group-alias-id-list"][1]),
 		},
 	}
 }
@@ -285,7 +285,7 @@ var groupAliasHelp = map[string][2]string{
 		"",
 	},
 	"group-alias-id-list": {
-		"List all the entity IDs.",
+		"List all the group alias IDs.",
 		"",
 	},
 }
