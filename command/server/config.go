@@ -763,7 +763,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"endpoint",
 			"forwarded_for_authorized_addrs",
 			"forwarded_for_hop_skips",
-			"forwarded_for_reject_non_authorized",
+			"forwarded_for_reject_not_authorized",
 			"forwarded_for_reject_not_present",
 			"infrastructure",
 			"node_id",

@@ -928,7 +928,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			hopSkips := ln.config["forwarded_for_hop_skips"].(int)
 			authzdAddrs := ln.config["forwarded_for_authorized_addrs"].([]*sockaddr.SockAddrMarshaler)
 			rejectNotPresent := ln.config["forwarded_for_reject_not_present"].(bool)
-			rejectNonAuthz := ln.config["forwarded_for_reject_non_authorized"].(bool)
+			rejectNonAuthz := ln.config["forwarded_for_reject_not_authorized"].(bool)
 			if len(authzdAddrs) > 0 {
 				handler = vaulthttp.WrapForwardedForHandler(handler, authzdAddrs, rejectNotPresent, rejectNonAuthz, hopSkips)
 			}

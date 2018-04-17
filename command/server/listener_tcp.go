@@ -82,16 +82,16 @@ func tcpListenerFactory(config map[string]interface{}, _ io.Writer, ui cli.Ui) (
 		config["forwarded_for_reject_not_present"] = true
 	}
 
-	if ffRejectNonAuthorizedRaw, ok := config["forwarded_for_reject_non_authorized"]; ok {
+	if ffRejectNonAuthorizedRaw, ok := config["forwarded_for_reject_not_authorized"]; ok {
 		ffRejectNonAuthorized, err := parseutil.ParseBool(ffRejectNonAuthorizedRaw)
 		if err != nil {
-			return nil, nil, nil, errwrap.Wrapf("error parsing \"forwarded_for_reject_non_authorized\": {{err}}", err)
+			return nil, nil, nil, errwrap.Wrapf("error parsing \"forwarded_for_reject_not_authorized\": {{err}}", err)
 		}
-		props["forwarded_for_reject_non_authorized"] = strconv.FormatBool(ffRejectNonAuthorized)
-		config["forwarded_for_reject_non_authorized"] = ffRejectNonAuthorized
+		props["forwarded_for_reject_not_authorized"] = strconv.FormatBool(ffRejectNonAuthorized)
+		config["forwarded_for_reject_not_authorized"] = ffRejectNonAuthorized
 	} else if ffAllowedOK {
-		props["forwarded_for_reject_non_authorized"] = "true"
-		config["forwarded_for_reject_non_authorized"] = true
+		props["forwarded_for_reject_not_authorized"] = "true"
+		config["forwarded_for_reject_not_authorized"] = true
 	}
 
 	return listenerWrapTLS(ln, props, config, ui)

@@ -152,7 +152,7 @@ func ParseAddrs(addrs interface{}) ([]*sockaddr.SockAddrMarshaler, error) {
 	for _, addr := range stringAddrs {
 		sa, err := sockaddr.NewSockAddr(addr)
 		if err != nil {
-			return nil, errwrap.Wrapf("error parsing address: {{err}}", err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("error parsing address %q: {{err}}", addr), err)
 		}
 		out = append(out, &sockaddr.SockAddrMarshaler{
 			SockAddr: sa,
