@@ -57,8 +57,8 @@ nonce prior to writing them to its persistent storage. The storage backend never
 sees the unencrypted value, so gaining access to the raw storage isn't enough to
 access your secrets.
 
-~> **NOTE:** This guide demonstrates secret management using v2 of the KV
-secret engine.
+~> **NOTE:** This guide demonstrates secret management using [v2 of the KV
+secret engine](/docs/secrets/kv/kv-v2.html).
 
 ## Prerequisites
 

@@ -14,8 +14,7 @@ The [Static Secrets](/guides/secret-mgmt/static-secrets.html) guide introduced
 the basics of working with key-value secret engine. **Vault 0.10** introduced [_K/V
 Secrets Engine v2 with Secret
 Versioning_](https://www.hashicorp.com/blog/vault-0-10).  This guide
-demonstrates the new features introduced by the key-value secret engine v2 so
-that you can start leveraging them.
+demonstrates the new features introduced by the key-value secret engine v2.
 
 
 ## Reference Material
@@ -41,7 +40,7 @@ more than one user is writing at the same path.
 Run the **version 2** of KV secret engine which can retain a configurable
 number of secret versions. This enables older versions' data to be retrievable
 in case of unwanted deletion or updates of the data.  In addition, its
-_Check-and-Set_ operations can be used to protect the data from overwritten
+_Check-and-Set_ operations can be used to protect the data from being overwritten
 unintentionally.
 
 ![Versioned KV](/assets/images/vault-versioned-kv-1.png)
@@ -57,8 +56,8 @@ unsealed](/intro/getting-started/deploy.html).
 ### Policy requirements
 
 -> **NOTE:** For the purpose of this guide, you can use **`root`** token to work
-with Vault. However, it is recommended that root tokens are only used for just
-enough initial setup or in emergencies. As a best practice, use tokens with
+with Vault. However, it is recommended that root tokens are only used for
+initial setup or in emergencies. As a best practice, use tokens with
 appropriate set of policies based on your role in the organization.
 
 To perform all tasks demonstrated in this guide, your policy must include the
@@ -102,7 +101,7 @@ You will perform the following:
 ### <a name="step1"></a>Step 1: Check the KV secret engine version
 (**Persona:** devops)
 
-Before begin, verify that you are using the v2 of the KV secret engine.
+Before beginning, verify that you are using the v2 of the KV secret engine.
 
 #### CLI command
 
@@ -536,10 +535,10 @@ deletion_time    n/a
 destroyed        false
 ```
 
-In this example, the current version is 6. Notice that version 1 and 2 does not
+In this example, the current version is 6. Notice that version 1 and 2 do not
 show up in the metadata. Because the kv secret engine is configured to keep only
-4 versions, the oldest two versions are permanently deleted that you won't be
-able to read it.
+4 versions, the oldest two versions are permanently deleted and you won't be
+able to read them.
 
 ```plaintext
 $ vault kv get -version=1 secret/customer/acme
@@ -642,10 +641,10 @@ $ curl --header "X-Vault-Token: ..." \
 }
 ```
 
-In this example, the current version is 6. Notice that version 1 and 2 does not
+In this example, the current version is 6. Notice that version 1 and 2 do not
 show up in the metadata. Because the kv secret engine is configured to keep only
-4 versions, the oldest two versions are permanently deleted that you won't be
-able to read it.
+4 versions, the oldest two versions are permanently deleted and you won't be
+able to read them.
 
 ```plaintext
 $ curl --header "X-Vault-Token: ..." \
@@ -661,7 +660,7 @@ $ curl --header "X-Vault-Token: ..." \
 
 #### CLI command
 
-Let's delete version 4 and 5 of the secret:
+Let's delete versions 4 and 5:
 
 ```shell
 $ vault kv delete -versions="4,5" secret/customer/acme
@@ -686,7 +685,7 @@ destroyed        false
 ...
 ```
 
-The metadata on version 4 and 5 reports its deletion timestamp
+The metadata on versions 4 and 5 reports its deletion timestamp
 (`deletion_time`); however, the `destroyed` parameter is set to `false`.
 
 If version 5 was deleted by mistake and you wish to recover, invoke the `vault
@@ -700,7 +699,7 @@ Success! Data written to: secret/undelete/customer/acme
 
 #### API call using cURL
 
-Let's delete version 4 and 5 of the secret:
+Let's delete versions 4 and 5:
 
 ```shell
 $ curl --header "X-Vault-Token: ..." \
@@ -725,7 +724,7 @@ $ curl --header "X-Vault-Token: ..." \
 ...
 ```
 
-The metadata on version 4 and 5 reports its deletion timestamp
+The metadata on versions 4 and 5 reports its deletion timestamp
 (`deletion_time`); however, the `destroyed` parameter is set to `false`.
 
 If version 5 was deleted by mistake and you wish to recover, invoke the
@@ -944,7 +943,5 @@ the `cas` does not match the current version number, you will receive the
 ## Next steps
 
 This guide introduced the CLI commands and API endpoints to read and write
-secrets in key-value secret engine. To keep it simple, the `devops` persona
-generated a token for `apps`.  Read [AppRole Pull
-Authentication](/guides/identity/authentication.html) guide to learn about
-programmatically generate a token for apps.
+static secrets in the key-value secret engine. Read [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets.html) guide to learn about the
+usage of database secret engine.
