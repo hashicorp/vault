@@ -606,7 +606,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		// Force https as we'll always be TLS-secured
 		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error parsing cluster address %s: %v", coreConfig.RedirectAddr, err))
+			c.UI.Error(fmt.Sprintf("Error parsing cluster address %s: %v", coreConfig.ClusterAddr, err))
 			return 11
 		}
 		u.Scheme = "https"
