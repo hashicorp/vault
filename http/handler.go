@@ -185,14 +185,15 @@ func WrapForwardedForHandler(h http.Handler, authorizedAddrs []*sockaddr.SockAdd
 
 		// Split comma separated ones, which are common. This brings it in line
 		// to the multiple-header case.
-		if len(headers) == 1 {
-			headers = strings.Split(headers[0], ",")
-		}
-		for i, v := range headers {
-			headers[i] = strings.TrimSpace(v)
+		var acc []string
+		for _, header := range headers {
+			vals := strings.Split(header, ",")
+			for _, v := range vals {
+				acc = append(acc, strings.TrimSpace(v))
+			}
 		}
 
-		indexToUse := len(headers) - 1 - hopSkips
+		indexToUse := len(acc) - 1 - hopSkips
 		if indexToUse < 0 {
 			// This is likely an error in either configuration or other
 			// infrastructure. We could either deny the request, or we
@@ -208,7 +209,7 @@ func WrapForwardedForHandler(h http.Handler, authorizedAddrs []*sockaddr.SockAdd
 			return
 		}
 
-		r.RemoteAddr = net.JoinHostPort(headers[indexToUse], port)
+		r.RemoteAddr = net.JoinHostPort(acc[indexToUse], port)
 		h.ServeHTTP(w, r)
 		return
 	})
