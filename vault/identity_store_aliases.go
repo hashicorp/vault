@@ -434,7 +434,7 @@ var aliasHelp = map[string][2]string{
 		"",
 	},
 	"alias-id-list": {
-		"List all the entity IDs.",
+		"List all the alias IDs.",
 		"",
 	},
 }
