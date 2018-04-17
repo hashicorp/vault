@@ -662,8 +662,7 @@ list in order to satisfy that constraint.
 - `period` `(string: "")` - If set, indicates that the token generated using
   this role should never expire. The token should be renewed within the duration
   specified by this value. At each renewal, the token's TTL will be set to the
-  value of this parameter.  The maximum allowed lifetime of tokens issued using
-  this role.
+  value of this parameter.
 - `policies` `(array: [])` - Policies to be set on tokens issued using this
   role.
 - `allow_instance_migration` `(bool: false)` - If set, allows migration of the
