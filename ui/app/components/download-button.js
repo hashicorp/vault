@@ -12,16 +12,36 @@ export default Ember.Component.extend({
     return `${this.get('filename')}-${new Date().toISOString()}.${this.get('extension')}`;
   }),
 
-  href: computed('data', 'mime', 'stringify', function() {
+  fileLike: computed('data', 'mime', 'stringify', 'download', function() {
+    let file;
     let data = this.get('data');
-    const mime = this.get('mime');
+    let filename = this.get('download');
+    let mime = this.get('mime');
     if (this.get('stringify')) {
       data = JSON.stringify(data, null, 2);
     }
-
-    const file = new File([data], { type: mime });
-    return window.URL.createObjectURL(file);
+    if (window.navigator.msSaveOrOpenBlob) {
+      file = new Blob([data], { type: mime });
+      file.name = filename;
+    } else {
+      file = new File([data], filename, { type: mime });
+    }
+    return file;
   }),
+
+  href: computed('fileLike', function() {
+    return window.URL.createObjectURL(this.get('fileLike'));
+  }),
+
+  click(event) {
+    if (!window.navigator.msSaveOrOpenBlob) {
+      return;
+    }
+    event.preventDefault();
+    let file = this.get('fileLike');
+    //lol whyyyy
+    window.navigator.msSaveOrOpenBlob(file, file.name);
+  },
 
   actionText: 'Download',
   data: null,
