@@ -44,54 +44,54 @@ func tcpListenerFactory(config map[string]interface{}, _ io.Writer, ui cli.Ui) (
 
 	props := map[string]string{"addr": addr}
 
-	ffAllowedRaw, ffAllowedOK := config["forwarded_for_authorized_addrs"]
+	ffAllowedRaw, ffAllowedOK := config["x_forwarded_for_authorized_addrs"]
 	if ffAllowedOK {
 		ffAllowed, err := parseutil.ParseAddrs(ffAllowedRaw)
 		if err != nil {
-			return nil, nil, nil, errwrap.Wrapf("error parsing \"forwarded_for_authorized_addrs\": {{err}}", err)
+			return nil, nil, nil, errwrap.Wrapf("error parsing \"x_forwarded_for_authorized_addrs\": {{err}}", err)
 		}
-		props["forwarded_for_authorized_addrs"] = fmt.Sprintf("%v", ffAllowed)
-		config["forwarded_for_authorized_addrs"] = ffAllowed
+		props["x_forwarded_for_authorized_addrs"] = fmt.Sprintf("%v", ffAllowed)
+		config["x_forwarded_for_authorized_addrs"] = ffAllowed
 	}
 
-	if ffHopsRaw, ok := config["forwarded_for_hop_skips"]; ok {
+	if ffHopsRaw, ok := config["x_forwarded_for_hop_skips"]; ok {
 		ffHops, err := parseutil.ParseInt(ffHopsRaw)
 		if err != nil {
-			return nil, nil, nil, errwrap.Wrapf("error parsing \"forwarded_for_hop_skips\": {{err}}", err)
+			return nil, nil, nil, errwrap.Wrapf("error parsing \"x_forwarded_for_hop_skips\": {{err}}", err)
 		}
 		if ffHops < 0 {
-			return nil, nil, nil, fmt.Errorf("\"forwarded_for_hop_skips\" cannot be negative")
+			return nil, nil, nil, fmt.Errorf("\"x_forwarded_for_hop_skips\" cannot be negative")
 		}
-		props["forwarded_for_hop_skips"] = strconv.Itoa(int(ffHops))
-		config["forwarded_for_hop_skips"] = ffHops
+		props["x_forwarded_for_hop_skips"] = strconv.Itoa(int(ffHops))
+		config["x_forwarded_for_hop_skips"] = ffHops
 	} else if ffAllowedOK {
 		ffHops := 0
-		props["forwarded_for_hop_skips"] = "0"
-		config["forwarded_for_hop_skips"] = int(ffHops)
+		props["x_forwarded_for_hop_skips"] = "0"
+		config["x_forwarded_for_hop_skips"] = int(ffHops)
 	}
 
-	if ffRejectNotPresentRaw, ok := config["forwarded_for_reject_not_present"]; ok {
+	if ffRejectNotPresentRaw, ok := config["x_forwarded_for_reject_not_present"]; ok {
 		ffRejectNotPresent, err := parseutil.ParseBool(ffRejectNotPresentRaw)
 		if err != nil {
-			return nil, nil, nil, errwrap.Wrapf("error parsing \"forwarded_for_reject_not_present\": {{err}}", err)
+			return nil, nil, nil, errwrap.Wrapf("error parsing \"x_forwarded_for_reject_not_present\": {{err}}", err)
 		}
-		props["forwarded_for_reject_not_present"] = strconv.FormatBool(ffRejectNotPresent)
-		config["forwarded_for_reject_not_present"] = ffRejectNotPresent
+		props["x_forwarded_for_reject_not_present"] = strconv.FormatBool(ffRejectNotPresent)
+		config["x_forwarded_for_reject_not_present"] = ffRejectNotPresent
 	} else if ffAllowedOK {
-		props["forwarded_for_reject_not_present"] = "true"
-		config["forwarded_for_reject_not_present"] = true
+		props["x_forwarded_for_reject_not_present"] = "true"
+		config["x_forwarded_for_reject_not_present"] = true
 	}
 
-	if ffRejectNonAuthorizedRaw, ok := config["forwarded_for_reject_not_authorized"]; ok {
+	if ffRejectNonAuthorizedRaw, ok := config["x_forwarded_for_reject_not_authorized"]; ok {
 		ffRejectNonAuthorized, err := parseutil.ParseBool(ffRejectNonAuthorizedRaw)
 		if err != nil {
-			return nil, nil, nil, errwrap.Wrapf("error parsing \"forwarded_for_reject_not_authorized\": {{err}}", err)
+			return nil, nil, nil, errwrap.Wrapf("error parsing \"x_forwarded_for_reject_not_authorized\": {{err}}", err)
 		}
-		props["forwarded_for_reject_not_authorized"] = strconv.FormatBool(ffRejectNonAuthorized)
-		config["forwarded_for_reject_not_authorized"] = ffRejectNonAuthorized
+		props["x_forwarded_for_reject_not_authorized"] = strconv.FormatBool(ffRejectNonAuthorized)
+		config["x_forwarded_for_reject_not_authorized"] = ffRejectNonAuthorized
 	} else if ffAllowedOK {
-		props["forwarded_for_reject_not_authorized"] = "true"
-		config["forwarded_for_reject_not_authorized"] = true
+		props["x_forwarded_for_reject_not_authorized"] = "true"
+		config["x_forwarded_for_reject_not_authorized"] = true
 	}
 
 	return listenerWrapTLS(ln, props, config, ui)

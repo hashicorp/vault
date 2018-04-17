@@ -924,11 +924,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		handler := vaulthttp.Handler(core)
 
 		// We perform validation on the config earlier, we can just cast here
-		if _, ok := ln.config["forwarded_for_authorized_addrs"]; ok {
-			hopSkips := ln.config["forwarded_for_hop_skips"].(int)
-			authzdAddrs := ln.config["forwarded_for_authorized_addrs"].([]*sockaddr.SockAddrMarshaler)
-			rejectNotPresent := ln.config["forwarded_for_reject_not_present"].(bool)
-			rejectNonAuthz := ln.config["forwarded_for_reject_not_authorized"].(bool)
+		if _, ok := ln.config["x_forwarded_for_authorized_addrs"]; ok {
+			hopSkips := ln.config["x_forwarded_for_hop_skips"].(int)
+			authzdAddrs := ln.config["x_forwarded_for_authorized_addrs"].([]*sockaddr.SockAddrMarshaler)
+			rejectNotPresent := ln.config["x_forwarded_for_reject_not_present"].(bool)
+			rejectNonAuthz := ln.config["x_forwarded_for_reject_not_authorized"].(bool)
 			if len(authzdAddrs) > 0 {
 				handler = vaulthttp.WrapForwardedForHandler(handler, authzdAddrs, rejectNotPresent, rejectNonAuthz, hopSkips)
 			}
