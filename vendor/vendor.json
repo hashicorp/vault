@@ -1317,20 +1317,20 @@
 		{
 			"checksumSHA1": "RPIFaxCjd6lchN99dcfhJ0vqqTI=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin",
-			"revision": "ada0fa63a5aac6ab3e756204dc5fbbb32e4982d7",
-			"revisionTime": "2018-04-12T23:17:40Z"
+			"revision": "b5ca08100f178f8c3eb138c4f5c4a3d039ed173e",
+			"revisionTime": "2018-04-17T17:32:19Z"
 		},
 		{
-			"checksumSHA1": "sV9w7yCitfGr2/4RjdKkdZjYAmA=",
+			"checksumSHA1": "1xWWeopXV4tbHTrVM1eFuH8TCuo=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil",
-			"revision": "ada0fa63a5aac6ab3e756204dc5fbbb32e4982d7",
-			"revisionTime": "2018-04-12T23:17:40Z"
+			"revision": "b5ca08100f178f8c3eb138c4f5c4a3d039ed173e",
+			"revisionTime": "2018-04-17T17:32:19Z"
 		},
 		{
 			"checksumSHA1": "81kYL49zTBoj1NYczxB2Xbr2d6Y=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util",
-			"revision": "ada0fa63a5aac6ab3e756204dc5fbbb32e4982d7",
-			"revisionTime": "2018-04-12T23:17:40Z"
+			"revision": "b5ca08100f178f8c3eb138c4f5c4a3d039ed173e",
+			"revisionTime": "2018-04-17T17:32:19Z"
 		},
 		{
 			"checksumSHA1": "m3cQgQrCSuWHiPA339FaZU6LuHU=",
