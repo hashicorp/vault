@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-cleanhttp"
-	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
@@ -408,39 +407,4 @@ func TestHandler_nonPrintableChars(t *testing.T) {
 	}
 
 	testResponseStatus(t, resp, 400)
-}
-
-func TestHandler_XForwardedFor(t *testing.T) {
-	addr, err := sockaddr.NewIPAddr("127.0.0.1")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// First: test reject not present
-	testHandler := func(c *vault.Core) http.Handler {
-		origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNoContent)
-		})
-		return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-			&sockaddr.SockAddrMarshaler{
-				SockAddr: addr,
-			},
-		}, true, false, 0)
-	}
-
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: testHandler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	client := cluster.Cores[0].Client
-	req := client.NewRequest("GET", "/")
-	_, err = client.RawRequest(req)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), "missing x-forwarded-for") {
-		t.Fatalf("bad error message: %v", err)
-	}
 }
