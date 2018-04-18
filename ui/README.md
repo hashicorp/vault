@@ -7,16 +7,31 @@ A short introduction of this app could easily go here.
 
 You will need the following things properly installed on your computer.
 
-* [Git](https://git-scm.com/)
 * [Node.js](https://nodejs.org/) (with NPM)
 * [Bower](https://bower.io/)
+* [Yarn](https://yarnpkg.com/en/)
 * [Ember CLI](https://ember-cli.com/)
 
 
 ## Running / Development
+To get all of the JavaScript dependencies installed, run this in the `ui` directory:
 
-* `ember serve`
-* Visit your app at [http://localhost:4200](http://localhost:4200).
+`yarn && bower install`
+
+If you want to run Vault UI and proxy back to a Vault server running
+on the default port, 8200, run the following in the `ui` directory:
+
+* `yarn run start`
+
+This will start an Ember CLI server that proxies requests to port 8200,
+and enable live rebuilding of the application as you change the UI application code.
+Visit your app at [http://localhost:4200](http://localhost:4200).
+
+If your Vault server is running on a different port you can use the
+long-form version of the npm script:
+
+`ember server --proxy=http://localhost:PORT`
+
 
 ### Code Generators
 
@@ -24,17 +39,26 @@ Make use of the many generators for code, try `ember help generate` for more det
 
 ### Running Tests
 
-* `ember test`
-* `ember test --server`
+Running tests will spin up a Vault dev server on port 9200 via a
+pretest script that testem (the test runner) executes. All of the
+acceptance tests then run, proxing requests back to that server.
 
-### Building
+* `yarn run test-oss`
+* `yarn run test-oss -s` to keep the test server running after the initial run.
+* `yarn run test -f="policies"` to filter the tests that are run. `-f` gets passed into
+[QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
 
-* `ember build` (development)
-* `ember build --environment production` (production)
+### Building Vault UI into a Vault Binary
+We use `go-bindata-assetfs` to build the static assets of the
+Ember application into a Vault binary.
 
-### Deploying
+This can be done by running these commands from the root directory run:
+`make static-dist`
+`make dev-ui`
 
-Specify what it takes to deploy your app.
+This will result in a Vault binary that has the UI built-in - though in
+a non-dev setup it will still need to be enabled via the `ui` config or
+setting `VAULT_UI` environment variable.
 
 ## Further Reading / Useful Links
 
