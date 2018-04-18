@@ -98,7 +98,11 @@ at Consul's service discovery layer.
   permission to read and write from the `path` in Consul's key-value store.
   This is **not** a Vault token. See the ACL section below for help.
 
-- `session_ttl` `(string: "15s")` - Specifies the minimum allowed [session TTL][consul-session-ttl].
+- `session_ttl` `(string: "15s")` - Specifies the minimum allowed [session
+  TTL][consul-session-ttl]. Consul server has a lower limit of 10s on the
+  session TTL by default. The value of `session_ttl` here cannot be lesser than
+  10s unless the `session_ttl_min` on the consul server's configuration has a
+  lesser value.
 
 - `lock_wait_time` `(string: "15s")` - Specifies the wait time before a lock
   lock acquisition is made. This affects the minimum time it takes to cancel a
