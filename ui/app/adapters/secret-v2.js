@@ -9,7 +9,9 @@ export default ApplicationAdapter.extend({
     const data = serializer.serialize(snapshot);
     const { id } = snapshot;
 
-    return this.ajax(this.urlForSecret(snapshot.attr('backend'), id), 'POST', { data });
+    return this.ajax(this.urlForSecret(snapshot.attr('backend'), id), 'POST', {
+      data: { data },
+    });
   },
 
   createRecord() {
@@ -25,8 +27,8 @@ export default ApplicationAdapter.extend({
     return this.ajax(this.urlForSecret(snapshot.attr('backend'), id), 'DELETE');
   },
 
-  urlForSecret(backend, id) {
-    let url = this.buildURL() + '/' + backend + '/';
+  urlForSecret(backend, id, infix = 'data') {
+    let url = `${this.buildURL()}/${backend}/${infix}/`;
     if (!Ember.isEmpty(id)) {
       url = url + id;
     }
@@ -43,19 +45,35 @@ export default ApplicationAdapter.extend({
     return { data };
   },
 
-  fetchByQuery(query, action) {
-    const { id, backend } = query;
-    return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id, action)).then(resp => {
-      resp.id = id;
+  urlForQuery(query) {
+    let { id, backend } = query;
+    return this.urlForSecret(backend, id, 'metadata');
+  },
+
+  urlForQueryRecord(query) {
+    let { id, backend } = query;
+    return this.urlForSecret(backend, id);
+  },
+
+  query(store, type, query) {
+    return this.ajax(
+      this.urlForQuery(query, type.modelName),
+      'GET',
+      this.optionsForQuery(query.id, 'query')
+    ).then(resp => {
+      resp.id = query.id;
       return resp;
     });
   },
 
-  query(store, type, query) {
-    return this.fetchByQuery(query, 'query');
-  },
-
   queryRecord(store, type, query) {
-    return this.fetchByQuery(query, 'queryRecord');
+    return this.ajax(
+      this.urlForQueryRecord(query, type.modelName),
+      'GET',
+      this.optionsForQuery(query.id, 'queryRecord')
+    ).then(resp => {
+      resp.id = query.id;
+      return resp;
+    });
   },
 });

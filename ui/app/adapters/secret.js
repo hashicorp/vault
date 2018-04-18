@@ -1,24 +1,15 @@
 import Ember from 'ember';
 import ApplicationAdapter from './application';
-const { computed } = Ember;
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
-
-  headers: computed(function() {
-    return {
-      'X-Vault-Kv-Client': 'v2',
-    };
-  }),
 
   createOrUpdate(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
     const { id } = snapshot;
 
-    return this.ajax(this.urlForSecret(snapshot.attr('backend'), id), 'POST', {
-      data: { data },
-    });
+    return this.ajax(this.urlForSecret(snapshot.attr('backend'), id), 'POST', { data });
   },
 
   createRecord() {
@@ -34,8 +25,8 @@ export default ApplicationAdapter.extend({
     return this.ajax(this.urlForSecret(snapshot.attr('backend'), id), 'DELETE');
   },
 
-  urlForSecret(backend, id, infix = 'data') {
-    let url = `${this.buildURL()}/${backend}/${infix}/`;
+  urlForSecret(backend, id) {
+    let url = this.buildURL() + '/' + backend + '/';
     if (!Ember.isEmpty(id)) {
       url = url + id;
     }
@@ -52,35 +43,19 @@ export default ApplicationAdapter.extend({
     return { data };
   },
 
-  urlForQuery(query) {
-    let { id, backend } = query;
-    return this.urlForSecret(backend, id, 'metadata');
-  },
-
-  urlForQueryRecord(query) {
-    let { id, backend } = query;
-    return this.urlForSecret(backend, id);
+  fetchByQuery(query, action) {
+    const { id, backend } = query;
+    return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id, action)).then(resp => {
+      resp.id = id;
+      return resp;
+    });
   },
 
   query(store, type, query) {
-    return this.ajax(
-      this.urlForQuery(query, type.modelName),
-      'GET',
-      this.optionsForQuery(query.id, 'query')
-    ).then(resp => {
-      resp.id = query.id;
-      return resp;
-    });
+    return this.fetchByQuery(query, 'query');
   },
 
   queryRecord(store, type, query) {
-    return this.ajax(
-      this.urlForQueryRecord(query, type.modelName),
-      'GET',
-      this.optionsForQuery(query.id, 'queryRecord')
-    ).then(resp => {
-      resp.id = query.id;
-      return resp;
-    });
+    return this.fetchByQuery(query, 'queryRecord');
   },
 });

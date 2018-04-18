@@ -11,8 +11,9 @@ var SecretProxy = Ember.Object.extend(KeyMixin, {
 
   createRecord(backend) {
     let modelType = 'secret';
-    if (backend === 'cubbyhole') {
-      modelType = modelType + '-cubbyhole';
+    let backendModel = this.store.peekRecord('secret-engine', backend);
+    if (backendModel.get('type') === 'kv' && backendModel.get('options.version') === 2) {
+      modelType = 'secret-v2';
     }
     return this.store.createRecord(modelType, this.toModel());
   },
@@ -25,7 +26,7 @@ export default EditBase.extend({
     if (modelType === 'role-ssh') {
       return this.store.createRecord(modelType, { keyType: 'ca' });
     }
-    if (modelType !== 'secret' && modelType !== 'secret-cubbyhole') {
+    if (modelType !== 'secret' && modelType !== 'secret-v2') {
       return this.store.createRecord(modelType);
     }
     const key = transition.queryParams.initialKey || '';

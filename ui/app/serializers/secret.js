@@ -18,7 +18,7 @@ export default DS.RESTSerializer.extend({
       });
       return secrets;
     }
-    payload.secret_data = payload.data.data;
+    payload.secret_data = payload.data;
     delete payload.data;
     return [payload];
   },
