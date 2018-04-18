@@ -1,0 +1,177 @@
+<form {{action "doSubmit" (hash input=input signature=signature signature_algorithm=signature_algorithm hmac=hmac hash_algorithm=hash_algorithm context=context prehashed=prehashed) on="submit"}}>
+  {{#if (not-eq valid null)}}
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <h4 class="is-label">Verified</h4>
+      <div class="box">
+        <div class="columns is-centered">
+          <div class="column is-half has-text-centered">
+            <p class="box is-shadowless {{if valid 'has-text-success' 'has-text-danger'}}" data-test-transit-verify="true">
+            {{i-con glyph=(if valid 'checkmark' 'close') }}
+            The input is <b>{{if valid 'valid' 'not valid'}}</b> for the given {{if signature 'signature' 'hmac'}}.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <button {{action 'onClear'}} type="button" class="button">
+        Back
+      </button>
+    </div>
+  {{else}}
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <div class="field">
+        <label for="input" class="is-label">
+          Input
+        </label>
+        <div class="control is-relative">
+          {{textarea id="input" name="input" value=input class="textarea" data-test-transit-input="input"}}
+          {{b64-toggle value=input isInput=false data-test-transit-b64-toggle="input"}}
+        </div>
+      </div>
+      {{#if (and key.supportsSigning key.derived (not hmac))}}
+        <div class="field">
+          <label for="context" class="is-label">
+            Context
+          </label>
+          <div class="field has-addons">
+            <div class="control">
+              {{input type="text" id="context" value=context class="input" data-test-transit-input="context"}}
+            </div>
+            <div class="control">
+              {{b64-toggle value=context data-test-transit-b64-toggle="context"}}
+            </div>
+          </div>
+        </div>
+      {{/if}}
+      {{#if key.supportsSigning}}
+        <div class="columns is-5">
+          <div class="column is-one-third">
+            <div class="field">
+              <label for="verification" class="is-label">Verification Type</label>
+              <div class="control is-expanded">
+                <div class="select is-fullwidth">
+                  <select
+                   name="verification"
+                   id="verification"
+                   onchange={{queue
+                    (action (mut verification) value="target.value") 
+                    (action "clearParams" (array "hmac" "signature"))
+                   }}
+                  >
+                    {{#each (array 'Signature' 'HMAC') as |type|}}
+                      <option selected={{if verification (eq verification type) (if hmac (eq type 'HMAC') (eq type 'Signature'))}} value={{type}}>
+                        {{type}}
+                      </option>
+                    {{/each}}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <div class="level is-mobile">
+                <div class="level-left">
+                  <label for="hash_algorithm" class="is-label">Hash Algorithm</label>
+                </div>
+                <div class="level-right">
+                  {{#unless (eq verification 'HMAC')}}
+                    <div class="control is-flex">
+                      {{input  id="prehashed" type="checkbox" name="prehashed" class="switch is-rounded is-success is-small" checked=prehashed }}
+                      <label for="prehashed">Prehashed</label>
+                    </div>
+                  {{/unless}}
+                </div>
+              </div>
+              <div class="control is-expanded">
+                <div class="select is-fullwidth">
+                  <select
+                   name="hash_algorithm"
+                   id="hash_algorithm"
+                   onchange={{action (mut hash_algorithm) value="target.value"}}
+                  >
+                    {{#each (sha2-digest-sizes) as |algo|}}
+                      <option selected={{if hash_algorithm (eq hash_algorithm algo) (eq algo 'sha2-256')}} value={{algo}}>
+                        <code>{{algo}}</code>
+                      </option>
+                    {{/each}}
+                  </select>
+                </div>
+              </div>
+            </div>
+            {{#if (and keyIsRSA (or (and verification (eq verification 'Signature')) signature))}}
+              <div class="field">
+                <label for="signature_algorithm" class="is-label">Signature Algorithm</label>
+                <div class="control is-expanded">
+                  <div class="select is-fullwidth">
+                    <select
+                     name="signature_algorithm"
+                     id="signature_algorithm"
+                     data-test-signature-algorithm="true"
+                     onchange={{action (mut signature_algorithm) value="target.value"}}
+                     >
+                     {{#each (array 'pss' 'pkcs1v15') as |sigAlgo|}}
+                       <option selected={{if signature_algorithm (eq signature_algorithm sigAlgo) (eq sigAlgo 'pss')}} value={{sigAlgo}}>
+                         {{sigAlgo}}
+                       </option>
+                     {{/each}}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            {{/if}}
+
+          </div>
+          <div class="column is-two-thirds is-flex-column">
+            {{#if (or (and verification (eq verification 'HMAC')) hmac)}}
+              <div class="field is-flex-column is-flex-1">
+                <label for="hmac" class="is-label">HMAC</label>
+                <div class="control is-flex-column is-flex-1">
+                  {{textarea class="textarea is-flex-1" id="hmac" value=hmac}}
+                </div>
+              </div>
+            {{else}}
+              <div class="field is-flex-column is-flex-1">
+                <label for="signature" class="is-label">Signature</label>
+                <div class="control is-flex-column is-flex-1">
+                  {{textarea id="signature" class="textarea is-flex-1" value=signature}}
+                </div>
+              </div>
+            {{/if}}
+          </div>
+        </div>
+      {{else}}
+        <div class="field">
+          <label for="hmac" class="is-label">HMAC</label>
+          <div class="control">
+            {{textarea class="textarea" id="hmac" value=hmac}}
+          </div>
+        </div>
+        <div class="field">
+          <label for="hash_algorithm" class="is-label">Algorithm</label>
+          <div class="control is-expanded">
+            <div class="select is-fullwidth">
+              <select
+               name="hash_algorithm"
+               id="hash_algorithm"
+               onchange={{action (mut hash_algorithm) value="target.value"}}
+              >
+                {{#each (array 'sha2-224' 'sha2-256' 'sha2-384' 'sha2-512') as |algo|}}
+                  <option selected={{if hash_algorithm (eq hash_algorithm algo) (eq algo 'sha2-256')}} value={{algo}}>
+                    <code>{{algo}}</code>
+                  </option>
+                {{/each}}
+              </select>
+            </div>
+          </div>
+        </div>
+      {{/if}}
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="submit" disabled={{loading}} class="button is-primary {{if loading 'is-loading'}}">
+          Verify
+        </button>
+      </div>
+    </div>
+  {{/if}}
+</form>

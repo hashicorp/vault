@@ -13,9 +13,9 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 const (

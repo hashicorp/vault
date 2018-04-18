@@ -309,17 +309,17 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	if err := parsedBundle.Verify(); err != nil {
-		return nil, fmt.Errorf("verification of parsed bundle failed: %s", err)
+		return nil, errwrap.Wrapf("verification of parsed bundle failed: {{err}}", err)
 	}
 
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("Error converting raw signing bundle to cert bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw signing bundle to cert bundle: {{err}}", err)
 	}
 
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw cert bundle to cert bundle: {{err}}", err)
 	}
 
 	resp := &logical.Response{
@@ -366,7 +366,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Unable to store certificate locally: %v", err)
+		return nil, errwrap.Wrapf("unable to store certificate locally: {{err}}", err)
 	}
 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
@@ -413,7 +413,7 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("Error converting raw signing bundle to cert bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw signing bundle to cert bundle: {{err}}", err)
 	}
 
 	urls := &urlEntries{}

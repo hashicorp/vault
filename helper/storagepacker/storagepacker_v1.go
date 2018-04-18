@@ -10,10 +10,10 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 const (
@@ -348,7 +348,7 @@ func NewStoragePackerV1(view logical.Storage, logger log.Logger, viewPrefix stri
 	packer := &StoragePackerV1{
 		view:         view,
 		viewPrefix:   viewPrefix,
-		logger:       logger,
+		logger:       logger.Named("storagepacker"),
 		storageLocks: locksutil.CreateLocks(),
 	}
 

@@ -8,7 +8,7 @@ import (
 	proxyproto "github.com/armon/go-proxyproto"
 	"github.com/hashicorp/errwrap"
 	sockaddr "github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/helper/parseutil"
 )
 
 // ProxyProtoConfig contains configuration for the PROXY protocol
@@ -19,42 +19,12 @@ type ProxyProtoConfig struct {
 }
 
 func (p *ProxyProtoConfig) SetAuthorizedAddrs(addrs interface{}) error {
-	p.AuthorizedAddrs = make([]*sockaddr.SockAddrMarshaler, 0)
-	stringAddrs := make([]string, 0)
-
-	switch addrs.(type) {
-	case string:
-		stringAddrs = strutil.ParseArbitraryStringSlice(addrs.(string), ",")
-		if len(stringAddrs) == 0 {
-			return fmt.Errorf("unable to parse addresses from %v", addrs)
-		}
-
-	case []string:
-		stringAddrs = addrs.([]string)
-
-	case []interface{}:
-		for _, v := range addrs.([]interface{}) {
-			stringAddr, ok := v.(string)
-			if !ok {
-				return fmt.Errorf("error parsing %v as string", v)
-			}
-			stringAddrs = append(stringAddrs, stringAddr)
-		}
-
-	default:
-		return fmt.Errorf("unknown address input type %T", addrs)
+	aa, err := parseutil.ParseAddrs(addrs)
+	if err != nil {
+		return err
 	}
 
-	for _, addr := range stringAddrs {
-		sa, err := sockaddr.NewSockAddr(addr)
-		if err != nil {
-			return errwrap.Wrapf("error parsing authorized address: {{err}}", err)
-		}
-		p.AuthorizedAddrs = append(p.AuthorizedAddrs, &sockaddr.SockAddrMarshaler{
-			SockAddr: sa,
-		})
-	}
-
+	p.AuthorizedAddrs = aa
 	return nil
 }
 

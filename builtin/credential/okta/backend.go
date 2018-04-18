@@ -115,13 +115,13 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	switch result.Status {
 	case "LOCKED_OUT":
 		if b.Logger().IsDebug() {
-			b.Logger().Debug("auth/okta: user is locked out", "user", username)
+			b.Logger().Debug("user is locked out", "user", username)
 		}
 		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
 
 	case "PASSWORD_EXPIRED":
 		if b.Logger().IsDebug() {
-			b.Logger().Debug("auth/okta: password is expired", "user", username)
+			b.Logger().Debug("password is expired", "user", username)
 		}
 		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
 
@@ -131,7 +131,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	case "MFA_ENROLL", "MFA_ENROLL_ACTIVATE":
 		if !cfg.BypassOktaMFA {
 			if b.Logger().IsDebug() {
-				b.Logger().Debug("auth/okta: user must enroll or complete mfa enrollment", "user", username)
+				b.Logger().Debug("user must enroll or complete mfa enrollment", "user", username)
 			}
 			return nil, logical.ErrorResponse("okta authentication failed: you must complete MFA enrollment to continue"), nil, nil
 		}
@@ -204,7 +204,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 				// Allowed
 			default:
 				if b.Logger().IsDebug() {
-					b.Logger().Debug("auth/okta: unhandled result status", "status", result.Status, "factorstatus", result.FactorResult)
+					b.Logger().Debug("unhandled result status", "status", result.Status, "factorstatus", result.FactorResult)
 				}
 				return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
 			}
@@ -215,7 +215,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	default:
 		if b.Logger().IsDebug() {
-			b.Logger().Debug("auth/okta: unhandled result status", "status", result.Status)
+			b.Logger().Debug("unhandled result status", "status", result.Status)
 		}
 		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
 	}
@@ -230,7 +230,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		// Allowed
 	default:
 		if b.Logger().IsDebug() {
-			b.Logger().Debug("auth/okta: authentication returned a non-success status", "status", result.Status)
+			b.Logger().Debug("authentication returned a non-success status", "status", result.Status)
 		}
 		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
 	}
@@ -254,12 +254,12 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	user, err := b.User(ctx, req.Storage, username)
 	if err != nil {
 		if b.Logger().IsDebug() {
-			b.Logger().Debug("auth/okta: error looking up user", "error", err)
+			b.Logger().Debug("error looking up user", "error", err)
 		}
 	}
 	if err == nil && user != nil && user.Groups != nil {
 		if b.Logger().IsDebug() {
-			b.Logger().Debug("auth/okta: adding local groups", "num_local_groups", len(user.Groups), "local_groups", user.Groups)
+			b.Logger().Debug("adding local groups", "num_local_groups", len(user.Groups), "local_groups", user.Groups)
 		}
 		allGroups = append(allGroups, user.Groups...)
 	}
@@ -270,7 +270,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		entry, _, err := b.Group(ctx, req.Storage, groupName)
 		if err != nil {
 			if b.Logger().IsDebug() {
-				b.Logger().Debug("auth/okta: error looking up group policies", "error", err)
+				b.Logger().Debug("error looking up group policies", "error", err)
 			}
 		}
 		if err == nil && entry != nil && entry.Policies != nil {
@@ -309,15 +309,15 @@ func (b *backend) getOktaGroups(client *okta.Client, user *okta.User) ([]string,
 		oktaGroups = append(oktaGroups, group.Profile.Name)
 	}
 	if b.Logger().IsDebug() {
-		b.Logger().Debug("auth/okta: Groups fetched from Okta", "num_groups", len(oktaGroups), "groups", fmt.Sprintf("%#v", oktaGroups))
+		b.Logger().Debug("Groups fetched from Okta", "num_groups", len(oktaGroups), "groups", fmt.Sprintf("%#v", oktaGroups))
 	}
 	return oktaGroups, nil
 }
 
 const backendHelp = `
 The Okta credential provider allows authentication querying,
-checking username and password, and associating policies.  If an api token is configure
-groups are pulled down from Okta.
+checking username and password, and associating policies.  If an api token is
+configured groups are pulled down from Okta.
 
 Configuration of the connection is done through the "config" and "policies"
 endpoints by a user with root access. Authentication is then done

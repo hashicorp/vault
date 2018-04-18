@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/logical"
@@ -67,7 +68,7 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupAliasHelp["group-alias-by-id"][0]),
-			HelpDescription: strings.TrimSpace(groupHelp["group-alias-by-id"][1]),
+			HelpDescription: strings.TrimSpace(groupAliasHelp["group-alias-by-id"][1]),
 		},
 		{
 			Pattern: "group-alias/id/?$",
@@ -75,8 +76,8 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 				logical.ListOperation: i.pathGroupAliasIDList(),
 			},
 
-			HelpSynopsis:    strings.TrimSpace(entityHelp["group-alias-id-list"][0]),
-			HelpDescription: strings.TrimSpace(entityHelp["group-alias-id-list"][1]),
+			HelpSynopsis:    strings.TrimSpace(groupAliasHelp["group-alias-id-list"][0]),
+			HelpDescription: strings.TrimSpace(groupAliasHelp["group-alias-id-list"][1]),
 		},
 	}
 }
@@ -152,7 +153,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(req *logical.Request, d *fr
 		return logical.ErrorResponse("missing mount_accessor"), nil
 	}
 
-	mountValidationResp := i.validateMountAccessorFunc(mountAccessor)
+	mountValidationResp := i.core.router.validateMountByAccessor(mountAccessor)
 	if mountValidationResp == nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
 	}
@@ -258,7 +259,7 @@ func (i *IdentityStore) pathGroupAliasIDList() framework.OperationFunc {
 		ws := memdb.NewWatchSet()
 		iter, err := i.MemDBAliases(ws, true)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch iterator for group aliases in memdb: %v", err)
+			return nil, errwrap.Wrapf("failed to fetch iterator for group aliases in memdb: {{err}}", err)
 		}
 
 		var groupAliasIDs []string
@@ -284,7 +285,7 @@ var groupAliasHelp = map[string][2]string{
 		"",
 	},
 	"group-alias-id-list": {
-		"List all the entity IDs.",
+		"List all the group alias IDs.",
 		"",
 	},
 }

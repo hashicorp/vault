@@ -10,7 +10,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/url"
 	"os"
 	"time"
@@ -30,10 +29,6 @@ var (
 	// PluginCACertPEMEnv is an ENV name used for holding a CA PEM-encoded
 	// string. Used for testing.
 	PluginCACertPEMEnv = "VAULT_TESTING_PLUGIN_CA_PEM"
-
-	// PluginMetadataModeEnv is an ENV name used to disable TLS communication
-	// to bootstrap mounting plugins.
-	PluginMetadataModeEnv = "VAULT_PLUGIN_METADATA_MODE"
 )
 
 // generateCert is used internally to create certificates for the plugin
@@ -83,7 +78,7 @@ func generateCert() ([]byte, *ecdsa.PrivateKey, error) {
 func createClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config, error) {
 	clientCert, err := x509.ParseCertificate(certBytes)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing generated plugin certificate: %v", err)
+		return nil, errwrap.Wrapf("error parsing generated plugin certificate: {{err}}", err)
 	}
 
 	cert := tls.Certificate{
@@ -141,7 +136,7 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 		// Parse the JWT and retrieve the vault address
 		wt, err := jws.ParseJWT([]byte(unwrapToken))
 		if err != nil {
-			return nil, fmt.Errorf("error decoding token: %s", err)
+			return nil, errwrap.Wrapf("error decoding token: {{err}}", err)
 		}
 		if wt == nil {
 			return nil, errors.New("nil decoded token")
@@ -161,7 +156,7 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 
 		// Sanity check the value
 		if _, err := url.Parse(vaultAddr); err != nil {
-			return nil, fmt.Errorf("error parsing the vault api_addr: %s", err)
+			return nil, errwrap.Wrapf("error parsing the vault api_addr: {{err}}", err)
 		}
 
 		// Unwrap the token
@@ -194,12 +189,12 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 
 		serverCertBytes, err := base64.StdEncoding.DecodeString(serverCertBytesRaw)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing certificate: %v", err)
+			return nil, errwrap.Wrapf("error parsing certificate: {{err}}", err)
 		}
 
 		serverCert, err := x509.ParseCertificate(serverCertBytes)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing certificate: %v", err)
+			return nil, errwrap.Wrapf("error parsing certificate: {{err}}", err)
 		}
 
 		// Retrieve and parse the server's private key
@@ -210,12 +205,12 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 
 		serverKeyRaw, err := base64.StdEncoding.DecodeString(serverKeyB64)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing certificate: %v", err)
+			return nil, errwrap.Wrapf("error parsing certificate: {{err}}", err)
 		}
 
 		serverKey, err := x509.ParseECPrivateKey(serverKeyRaw)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing certificate: %v", err)
+			return nil, errwrap.Wrapf("error parsing certificate: {{err}}", err)
 		}
 
 		// Add CA cert to the cert pool

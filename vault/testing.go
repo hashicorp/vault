@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/copystructure"
 
 	"golang.org/x/crypto/ssh"
@@ -35,8 +35,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/logbridge"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -106,7 +105,7 @@ func TestCoreNewSeal(t testing.T) *Core {
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
 func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -274,7 +273,7 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
 	t.Helper()
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = NewTestSeal(t, nil)
 
@@ -487,14 +486,14 @@ var testCredentialBackends = map[string]logical.Factory{}
 func StartSSHHostTestServer() (string, error) {
 	pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(testSharedPublicKey))
 	if err != nil {
-		return "", fmt.Errorf("Error parsing public key")
+		return "", fmt.Errorf("error parsing public key")
 	}
 	serverConfig := &ssh.ServerConfig{
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			if bytes.Compare(pubKey.Marshal(), key.Marshal()) == 0 {
 				return &ssh.Permissions{}, nil
 			} else {
-				return nil, fmt.Errorf("Key does not match")
+				return nil, fmt.Errorf("key does not match")
 			}
 		},
 	}
@@ -506,7 +505,7 @@ func StartSSHHostTestServer() (string, error) {
 
 	soc, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		return "", fmt.Errorf("Error listening to connection")
+		return "", fmt.Errorf("error listening to connection")
 	}
 
 	go func() {
@@ -590,10 +589,10 @@ func AddTestCredentialBackend(name string, factory logical.Factory) error {
 // invoked before the test core is created.
 func AddTestLogicalBackend(name string, factory logical.Factory) error {
 	if name == "" {
-		return fmt.Errorf("Missing backend name")
+		return fmt.Errorf("missing backend name")
 	}
 	if factory == nil {
-		return fmt.Errorf("Missing backend factory function")
+		return fmt.Errorf("missing backend factory function")
 	}
 	testLogicalBackends[name] = factory
 	return nil
@@ -679,7 +678,7 @@ func (n *rawHTTP) System() logical.SystemView {
 }
 
 func (n *rawHTTP) Logger() log.Logger {
-	return logformat.NewVaultLogger(log.LevelTrace)
+	return logging.NewVaultLogger(log.Trace)
 }
 
 func (n *rawHTTP) Cleanup(ctx context.Context) {
@@ -922,7 +921,7 @@ type TestClusterOptions struct {
 	BaseListenAddress  string
 	NumCores           int
 	SealFunc           func() Seal
-	RawLogger          interface{}
+	Logger             log.Logger
 	TempDir            string
 	CACert             []byte
 	CAKey              *ecdsa.PrivateKey
@@ -1109,7 +1108,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	//
 	// Listener setup
 	//
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 	ports := make([]int, numCores)
 	if baseAddr != nil {
 		for i := 0; i < numCores; i++ {
@@ -1275,13 +1274,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			coreConfig.Seal = opts.SealFunc()
 		}
 
-		if opts != nil && opts.RawLogger != nil {
-			switch opts.RawLogger.(type) {
-			case *logbridge.Logger:
-				coreConfig.Logger = opts.RawLogger.(*logbridge.Logger).Named(fmt.Sprintf("core%d", i)).LogxiLogger()
-			case *logbridge.LogxiLogger:
-				coreConfig.Logger = opts.RawLogger.(*logbridge.LogxiLogger).Named(fmt.Sprintf("core%d", i))
-			}
+		if opts != nil && opts.Logger != nil {
+			coreConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
 		}
 
 		c, err := NewCore(coreConfig)

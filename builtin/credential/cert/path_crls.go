@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -54,7 +55,7 @@ func (b *backend) populateCRLs(ctx context.Context, storage logical.Storage) err
 
 	keys, err := storage.List(ctx, "crls/")
 	if err != nil {
-		return fmt.Errorf("error listing CRLs: %v", err)
+		return errwrap.Wrapf("error listing CRLs: {{err}}", err)
 	}
 	if keys == nil || len(keys) == 0 {
 		return nil
@@ -64,7 +65,7 @@ func (b *backend) populateCRLs(ctx context.Context, storage logical.Storage) err
 		entry, err := storage.Get(ctx, "crls/"+key)
 		if err != nil {
 			b.crls = nil
-			return fmt.Errorf("error loading CRL %s: %v", key, err)
+			return errwrap.Wrapf(fmt.Sprintf("error loading CRL %q: {{err}}", key), err)
 		}
 		if entry == nil {
 			continue
@@ -73,7 +74,7 @@ func (b *backend) populateCRLs(ctx context.Context, storage logical.Storage) err
 		err = entry.DecodeJSON(&crlInfo)
 		if err != nil {
 			b.crls = nil
-			return fmt.Errorf("error decoding CRL %s: %v", key, err)
+			return errwrap.Wrapf(fmt.Sprintf("error decoding CRL %q: {{err}}", key), err)
 		}
 		b.crls[key] = crlInfo
 	}
@@ -103,20 +104,20 @@ func parseSerialString(input string) (*big.Int, error) {
 	case strings.Count(input, ":") > 0:
 		serialBytes := certutil.ParseHexFormatted(input, ":")
 		if serialBytes == nil {
-			return nil, fmt.Errorf("error parsing serial %s", input)
+			return nil, fmt.Errorf("error parsing serial %q", input)
 		}
 		ret.SetBytes(serialBytes)
 	case strings.Count(input, "-") > 0:
 		serialBytes := certutil.ParseHexFormatted(input, "-")
 		if serialBytes == nil {
-			return nil, fmt.Errorf("error parsing serial %s", input)
+			return nil, fmt.Errorf("error parsing serial %q", input)
 		}
 		ret.SetBytes(serialBytes)
 	default:
 		var success bool
 		ret, success = ret.SetString(input, 0)
 		if !success {
-			return nil, fmt.Errorf("error parsing serial %s", input)
+			return nil, fmt.Errorf("error parsing serial %q", input)
 		}
 	}
 

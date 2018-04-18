@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -40,7 +41,7 @@ func (c *Core) setupPluginCatalog() error {
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("core: successfully setup plugin catalog", "plugin-directory", c.pluginDirectory)
+		c.logger.Info("successfully setup plugin catalog", "plugin-directory", c.pluginDirectory)
 	}
 
 	return nil
@@ -58,12 +59,12 @@ func (c *PluginCatalog) Get(ctx context.Context, name string) (*pluginutil.Plugi
 		// Look for external plugins in the barrier
 		out, err := c.catalogView.Get(ctx, name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve plugin \"%s\": %v", name, err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to retrieve plugin %q: {{err}}", name), err)
 		}
 		if out != nil {
 			entry := new(pluginutil.PluginRunner)
 			if err := jsonutil.DecodeJSON(out.Value, entry); err != nil {
-				return nil, fmt.Errorf("failed to decode plugin entry: %v", err)
+				return nil, errwrap.Wrapf("failed to decode plugin entry: {{err}}", err)
 			}
 
 			// prepend the plugin directory to the command
@@ -106,11 +107,11 @@ func (c *PluginCatalog) Set(ctx context.Context, name, command string, args []st
 	commandFull := filepath.Join(c.directory, command)
 	sym, err := filepath.EvalSymlinks(commandFull)
 	if err != nil {
-		return fmt.Errorf("error while validating the command path: %v", err)
+		return errwrap.Wrapf("error while validating the command path: {{err}}", err)
 	}
 	symAbs, err := filepath.Abs(filepath.Dir(sym))
 	if err != nil {
-		return fmt.Errorf("error while validating the command path: %v", err)
+		return errwrap.Wrapf("error while validating the command path: {{err}}", err)
 	}
 
 	if symAbs != c.directory {
@@ -127,7 +128,7 @@ func (c *PluginCatalog) Set(ctx context.Context, name, command string, args []st
 
 	buf, err := json.Marshal(entry)
 	if err != nil {
-		return fmt.Errorf("failed to encode plugin entry: %v", err)
+		return errwrap.Wrapf("failed to encode plugin entry: {{err}}", err)
 	}
 
 	logicalEntry := logical.StorageEntry{
@@ -135,7 +136,7 @@ func (c *PluginCatalog) Set(ctx context.Context, name, command string, args []st
 		Value: buf,
 	}
 	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
-		return fmt.Errorf("failed to persist plugin entry: %v", err)
+		return errwrap.Wrapf("failed to persist plugin entry: {{err}}", err)
 	}
 	return nil
 }

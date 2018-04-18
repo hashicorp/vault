@@ -8,8 +8,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+// Factory is used by framework
 func Factory(ctx context.Context, c *logical.BackendConfig) (logical.Backend, error) {
-	b := Backend(c)
+	b := backend(c)
 	if err := b.Setup(ctx, c); err != nil {
 		return nil, err
 	}
@@ -24,7 +25,7 @@ type azureAuthBackend struct {
 	provider provider
 }
 
-func Backend(c *logical.BackendConfig) *azureAuthBackend {
+func backend(c *logical.BackendConfig) *azureAuthBackend {
 	b := new(azureAuthBackend)
 
 	b.Backend = &framework.Backend{

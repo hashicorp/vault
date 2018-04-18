@@ -7,11 +7,13 @@ import (
 	"path"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/locksutil"
+	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -19,7 +21,15 @@ import (
 func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		if atomic.LoadUint32(b.upgrading) == 1 {
-			return logical.ErrorResponse("Can not handle request while upgrade is in process"), logical.ErrInvalidRequest
+			// Sleep for a very short time before returning. This helps clients
+			// that are trying to access a mount immediately upon enabling be
+			// more likely to behave correctly since the operation should take
+			// almost no time.
+			time.Sleep(15 * time.Millisecond)
+
+			if atomic.LoadUint32(b.upgrading) == 1 {
+				return logical.ErrorResponse("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
+			}
 		}
 
 		return next(ctx, req, data)
@@ -27,8 +37,15 @@ func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framewor
 }
 
 func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) error {
-	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
-		b.Logger().Info("versioned k/v: upgrade not running on performace replication secondary")
+	// Don't run if the plugin is in metadata mode.
+	if pluginutil.InMetadataMode() {
+		b.Logger().Info("upgrade not running while plugin is in metadata mode")
+		return nil
+	}
+
+	// Don't run while on a DR secondary.
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+		b.Logger().Info("upgrade not running on disaster recovery replication secondary")
 		return nil
 	}
 
@@ -36,21 +53,44 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 		return errors.New("upgrade already in process")
 	}
 
-	// Write upgrade canary
-	info, err := proto.Marshal(&UpgradeInfo{
+	// If we are a replication secondary, wait until the primary has finished
+	// upgrading.
+	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		b.Logger().Info("upgrade not running on performace replication secondary")
+
+		go func() {
+			for {
+				time.Sleep(time.Second)
+
+				done, err := b.upgradeDone(ctx, s)
+				if err != nil {
+					b.Logger().Error("upgrading resulted in error", "error", err)
+					return
+				}
+
+				if done {
+					break
+				}
+			}
+
+			atomic.StoreUint32(b.upgrading, 0)
+		}()
+
+		return nil
+	}
+
+	upgradeInfo := &UpgradeInfo{
 		StartedTime: ptypes.TimestampNow(),
-	})
+	}
+
+	// Encode the canary
+	info, err := proto.Marshal(upgradeInfo)
 	if err != nil {
 		return err
 	}
 
-	err = s.Put(ctx, &logical.StorageEntry{
-		Key:   path.Join(b.storagePrefix, "upgrading"),
-		Value: info,
-	})
-	if err != nil {
-		return err
-	}
+	// Because this is a long running process we need a new context.
+	ctx = context.Background()
 
 	upgradeKey := func(key string) error {
 		if strings.HasPrefix(key, b.storagePrefix) {
@@ -114,35 +154,63 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 	// potentially long process.
 	go func() {
 
-		b.Logger().Info("versioned k/v: collecting keys")
-		keys, err := logical.CollectKeys(ctx, s)
-		if err != nil {
-			b.Logger().Error("versioned k/v: upgrading resulted in error", "error", err)
-			return
-		}
-
-		b.Logger().Info("versioned k/v: done collecting keys", "num_keys", len(keys))
-		for i, key := range keys {
-			if b.Logger().IsTrace() && i%500 == 0 {
-				b.Logger().Trace("versioned k/v: upgrading keys", "progress", fmt.Sprintf("%d/%d", i, len(keys)))
-			}
-			err := upgradeKey(key)
-			if err != nil {
-				b.Logger().Error("versioned k/v: upgrading resulted in error", "error", err, "progress", fmt.Sprintf("%d/%d", i+1, len(keys)))
+		// Write the canary value and if we are read only wait until the setup
+		// process has finished.
+	READONLY_LOOP:
+		for {
+			err := s.Put(ctx, &logical.StorageEntry{
+				Key:   path.Join(b.storagePrefix, "upgrading"),
+				Value: info,
+			})
+			switch {
+			case err == nil:
+				break READONLY_LOOP
+			case err.Error() == logical.ErrSetupReadOnly.Error():
+				time.Sleep(10 * time.Millisecond)
+			default:
+				b.Logger().Error("writing upgrade info resulted in an error", "error", err)
 				return
 			}
 		}
 
-		b.Logger().Info("versioned k/v: upgrading keys finished")
-
-		// Remove the upgrading canary
-		err = s.Delete(ctx, path.Join(b.storagePrefix, "upgrading"))
+		b.Logger().Info("collecting keys to upgrade")
+		keys, err := logical.CollectKeys(ctx, s)
 		if err != nil {
-			b.Logger().Error("versioned k/v: removing upgrade canary resulted in an error", "error", err)
+			b.Logger().Error("upgrading resulted in error", "error", err)
 			return
+		}
+
+		b.Logger().Info("done collecting keys", "num_keys", len(keys))
+		for i, key := range keys {
+			if b.Logger().IsDebug() && i%500 == 0 {
+				b.Logger().Debug("upgrading keys", "progress", fmt.Sprintf("%d/%d", i, len(keys)))
+			}
+			err := upgradeKey(key)
+			if err != nil {
+				b.Logger().Error("upgrading resulted in error", "error", err, "progress", fmt.Sprintf("%d/%d", i+1, len(keys)))
+				return
+			}
+		}
+
+		b.Logger().Info("upgrading keys finished")
+
+		// Write upgrade done value
+		upgradeInfo.Done = true
+		info, err := proto.Marshal(upgradeInfo)
+		if err != nil {
+			b.Logger().Error("encoding upgrade info resulted in an error", "error", err)
+		}
+
+		err = s.Put(ctx, &logical.StorageEntry{
+			Key:   path.Join(b.storagePrefix, "upgrading"),
+			Value: info,
+		})
+		if err != nil {
+			b.Logger().Error("writing upgrade done resulted in an error", "error", err)
 		}
 
 		atomic.StoreUint32(b.upgrading, 0)
 	}()
+
 	return nil
 }

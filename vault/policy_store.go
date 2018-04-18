@@ -9,11 +9,11 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 const (
@@ -173,7 +173,7 @@ func NewPolicyStore(ctx context.Context, core *Core, baseView *BarrierView, syst
 
 	keys, err := logical.CollectKeys(ctx, ps.aclView)
 	if err != nil {
-		ps.logger.Error("policy: error collecting acl policy keys", "error", err)
+		ps.logger.Error("error collecting acl policy keys", "error", err)
 		return nil
 	}
 	for _, key := range keys {
@@ -189,7 +189,7 @@ func NewPolicyStore(ctx context.Context, core *Core, baseView *BarrierView, syst
 func (c *Core) setupPolicyStore(ctx context.Context) error {
 	// Create the policy store
 	sysView := &dynamicSystemView{core: c}
-	c.policyStore = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, c.logger)
+	c.policyStore = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, c.logger.ResetNamed("policy"))
 
 	if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
 		// Policies will sync from the primary
@@ -235,7 +235,7 @@ func (ps *PolicyStore) invalidate(ctx context.Context, name string, policyType P
 	// Force a reload
 	_, err := ps.GetPolicy(ctx, name, policyType)
 	if err != nil {
-		ps.logger.Error("policy: error fetching policy after invalidation", "name", saneName)
+		ps.logger.Error("error fetching policy after invalidation", "name", saneName)
 	}
 }
 
@@ -251,7 +251,7 @@ func (ps *PolicyStore) SetPolicy(ctx context.Context, p *Policy) error {
 	// Policies are normalized to lower-case
 	p.Name = ps.sanitizeName(p.Name)
 	if strutil.StrListContains(immutablePolicies, p.Name) {
-		return fmt.Errorf("cannot update %s policy", p.Name)
+		return fmt.Errorf("cannot update %q policy", p.Name)
 	}
 
 	return ps.setPolicyInternal(ctx, p)
@@ -267,7 +267,7 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 		Type:    p.Type,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create entry: %v", err)
+		return errwrap.Wrapf("failed to create entry: {{err}}", err)
 	}
 	switch p.Type {
 	case PolicyTypeACL:
@@ -313,7 +313,7 @@ func (ps *PolicyStore) GetPolicy(ctx context.Context, name string, policyType Po
 		case PolicyTypeACL:
 			view = ps.aclView
 		default:
-			return nil, fmt.Errorf("invalid type of policy in type map: %s", policyType)
+			return nil, fmt.Errorf("invalid type of policy in type map: %q", policyType)
 		}
 	}
 
@@ -400,7 +400,7 @@ func (ps *PolicyStore) ListPolicies(ctx context.Context, policyType PolicyType) 
 	case PolicyTypeACL:
 		keys, err = logical.CollectKeys(ctx, ps.aclView)
 	default:
-		return nil, fmt.Errorf("unknown policy type %s", policyType)
+		return nil, fmt.Errorf("unknown policy type %q", policyType)
 	}
 
 	// We only have non-assignable ACL policies at the moment
@@ -436,7 +436,7 @@ func (ps *PolicyStore) DeletePolicy(ctx context.Context, name string, policyType
 	switch policyType {
 	case PolicyTypeACL:
 		if strutil.StrListContains(immutablePolicies, name) {
-			return fmt.Errorf("cannot delete %s policy", name)
+			return fmt.Errorf("cannot delete %q policy", name)
 		}
 		if name == "default" {
 			return fmt.Errorf("cannot delete default policy")
@@ -499,7 +499,7 @@ func (ps *PolicyStore) loadACLPolicy(ctx context.Context, policyName, policyText
 	}
 
 	if policy == nil {
-		return fmt.Errorf("parsing %s policy resulted in nil policy", policyName)
+		return fmt.Errorf("parsing %q policy resulted in nil policy", policyName)
 	}
 
 	policy.Name = policyName

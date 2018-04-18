@@ -161,7 +161,7 @@ func TestCore_Mount_Local(t *testing.T) {
 	}
 
 	c.mounts.Entries[1].Local = true
-	if err := c.persistMounts(context.Background(), c.mounts, false); err != nil {
+	if err := c.persistMounts(context.Background(), c.mounts, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -449,7 +449,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 func TestCore_Remount_Protected(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	err := c.remount(context.Background(), "sys", "foo")
-	if err.Error() != "cannot remount 'sys/'" {
+	if err.Error() != `cannot remount "sys/"` {
 		t.Fatalf("err: %v", err)
 	}
 }
@@ -557,7 +557,7 @@ func testCore_MountTable_UpgradeToTyped_Common(
 		t.Fatal(err)
 	}
 
-	var persistFunc func(context.Context, *MountTable, bool) error
+	var persistFunc func(context.Context, *MountTable, *bool) error
 
 	// It should load successfully and be upgraded and persisted
 	switch testType {
@@ -571,7 +571,13 @@ func testCore_MountTable_UpgradeToTyped_Common(
 		mt = c.auth
 	case "audits":
 		err = c.loadAudits(context.Background())
-		persistFunc = c.persistAudit
+		persistFunc = func(ctx context.Context, mt *MountTable, b *bool) error {
+			if b == nil {
+				b = new(bool)
+				*b = false
+			}
+			return c.persistAudit(ctx, mt, *b)
+		}
 		mt = c.audit
 	}
 	if err != nil {
@@ -600,19 +606,19 @@ func testCore_MountTable_UpgradeToTyped_Common(
 	// Now try saving invalid versions
 	origTableType := mt.Type
 	mt.Type = "foo"
-	if err := persistFunc(context.Background(), mt, false); err == nil {
+	if err := persistFunc(context.Background(), mt, nil); err == nil {
 		t.Fatal("expected error")
 	}
 
 	if len(mt.Entries) > 0 {
 		mt.Type = origTableType
 		mt.Entries[0].Table = "bar"
-		if err := persistFunc(context.Background(), mt, false); err == nil {
+		if err := persistFunc(context.Background(), mt, nil); err == nil {
 			t.Fatal("expected error")
 		}
 
 		mt.Entries[0].Table = mt.Type
-		if err := persistFunc(context.Background(), mt, false); err != nil {
+		if err := persistFunc(context.Background(), mt, nil); err != nil {
 			t.Fatal(err)
 		}
 	}

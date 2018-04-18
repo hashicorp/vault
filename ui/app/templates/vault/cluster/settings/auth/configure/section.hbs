@@ -1,0 +1,5 @@
+{{#if (eq model.section "options") }}
+  {{auth-config-form/options model.model}}
+{{else}}
+  {{auth-config-form/config model.model}}
+{{/if}}

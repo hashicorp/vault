@@ -5,15 +5,15 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func mockPolicyStore(t *testing.T) *PolicyStore {
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
-	p := NewPolicyStore(context.Background(), nil, view, logical.TestSystemView(), logformat.NewVaultLogger(log.LevelTrace))
+	p := NewPolicyStore(context.Background(), nil, view, logical.TestSystemView(), logging.NewVaultLogger(log.Trace))
 	return p
 }
 
@@ -22,7 +22,7 @@ func mockPolicyStoreNoCache(t *testing.T) *PolicyStore {
 	sysView.CachingDisabledVal = true
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
-	p := NewPolicyStore(context.Background(), nil, view, sysView, logformat.NewVaultLogger(log.LevelTrace))
+	p := NewPolicyStore(context.Background(), nil, view, sysView, logging.NewVaultLogger(log.Trace))
 	return p
 }
 
@@ -43,13 +43,13 @@ func TestPolicyStore_Root(t *testing.T) {
 
 	// Set should fail
 	err = ps.SetPolicy(context.Background(), p)
-	if err.Error() != "cannot update root policy" {
+	if err.Error() != `cannot update "root" policy` {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Delete should fail
 	err = ps.DeletePolicy(context.Background(), "root", PolicyTypeACL)
-	if err.Error() != "cannot delete root policy" {
+	if err.Error() != `cannot delete "root" policy` {
 		t.Fatalf("err: %v", err)
 	}
 }

@@ -9,88 +9,36 @@ description: |-
 # KV Secrets Engine
 
 The `kv` secrets engine is used to store arbitrary secrets within the
-configured physical storage for Vault.
+configured physical storage for Vault. This backend can be run in one of two
+modes. It can be a generic Key-Value store that stores one value for a key.
+Versioning can be enabled and a configurable number of versions for each key
+will be stored.
 
-Writing to a key in the `kv` backend will replace the old value; sub-fields are
-not merged together.
+## KV Version 1
 
-Key names must always be strings. If you write non-string values directly via
-the CLI, they will be converted into strings. However, you can preserve
-non-string values by writing the key/value pairs to Vault from a JSON file or
-using the HTTP API. 
+When running the `kv` secrets backend non-versioned only the most recently
+written value for a key will be preserved. The benefits of non-versioned `kv`
+is a reduced storage size for each key since no additional metadata or history
+is stored. Additionally, requests going to a backend configured this way will be
+more performant because for any given request there will be fewer storage calls
+and no locking.
 
-This secrets engine honors the distinction between the `create` and `update`
-capabilities inside ACL policies.
+More information about running in this mode can be found in the [K/V Version 1
+Docs](/docs/secrets/kv/kv-v1.html)
 
-~> **Note**: Path and key names are _not_ obfuscated or encrypted; only the
-values set on keys are. You should not store sensitive information as part of a
-secret's path.
+## KV Version 2
 
-## Setup
+When running v2 of the `kv` backend a key can retain a configurable number of
+versions. This defaults to 10 versions. The older versions' metadata and data
+can be retrieved. Additionally, Check-and-Set operations can be used to avoid
+overwritting data unintentionally.  
 
-Most secrets engines must be configured in advance before they can perform their
-functions. These steps are usually completed by an operator or configuration
-management tool.
+When a version is deleted the underlying data is not removed, rather it is
+marked as deleted. Deleted versions can be undeleted. To permanently remove a
+version's data the destroy command or API endpoint can be used. Additionally all
+versions and metadata for a key can be deleted by deleting on the metadata
+command or API endpoint. Each of these operations can be ACL'ed differently,
+restricting who has permissions to soft delete, undelete, or fully remove data.
 
-The `kv` secrets engine is enabled by default at the path `secret/`. It can
-be disabled, moved, or enabled multiple times at different paths. Each instance
-of the KV secrets engine is isolated and unique.
-
-## Usage
-
-After the secrets engine is configured and a user/machine has a Vault token with
-the proper permission, it can generate credentials. The `kv` secrets engine
-allows for writing keys with arbitrary values.
-
-1. Write arbitrary data:
-
-    ```text
-    $ vault kv put secret/my-secret my-value=s3cr3t
-    Success! Data written to: secret/my-secret
-    ```
-
-1. Read arbitrary data:
-
-    ```text
-    $ vault kv get secret/my-secret
-    Key                 Value
-    ---                 -----
-    refresh_interval    768h
-    my-value            s3cr3t
-    ```
-
-## TTLs
-
-Unlike other secrets engines, the KV secrets engine does not enforce TTLs
-for expiration. Instead, the `lease_duration` is a hint for how often consumers
-should check back for a new value. This is commonly displayed as
-`refresh_interval` instead of `lease_duration` to clarify this in output.
-
-If provided a key of `ttl`, the KV secrets engine will utilize this value
-as the lease duration:
-
-```text
-$ vault kv put secret/my-secret ttl=30m my-value=s3cr3t
-Success! Data written to: secret/my-secret
-```
-
-Even will a `ttl` set, the secrets engine _never_ removes data on its own. The
-`ttl` key is merely advisory.
-
-When reading a value with a `ttl`, both the `ttl` key _and_ the refresh interval
-will reflect the value:
-
-```text
-$ vault kv get secret/my-secret
-Key                 Value
----                 -----
-refresh_interval    30m
-my-value            s3cr3t
-ttl                 30m
-```
-
-## API
-
-The KV secrets engine has a full HTTP API. Please see the
-[KV secrets engine API](/api/secret/kv/index.html) for more
-details.
+More information about running in this mode can be found in the [K/V Version 2
+Docs](/docs/secrets/kv/kv-v2.html)

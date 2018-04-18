@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -41,8 +43,10 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 		leaseConfig = &configLease{}
 	}
 
-	f := framework.LeaseExtend(leaseConfig.TTL, leaseConfig.TTLMax, b.System())
-	return f(ctx, req, d)
+	resp := &logical.Response{Secret: req.Secret}
+	resp.Secret.TTL = leaseConfig.TTL
+	resp.Secret.MaxTTL = leaseConfig.TTLMax
+	return resp, nil
 }
 
 func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -127,24 +131,19 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revokeStmts {
-		stmt, err := db.Prepare(query)
-		if err != nil {
+
+		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 			continue
-		}
-		defer stmt.Close()
-		_, err = stmt.Exec()
-		if err != nil {
-			lastStmtError = err
 		}
 	}
 
 	// can't drop if not all database users are dropped
 	if rows.Err() != nil {
-		return nil, fmt.Errorf("could not generate sql statements for all rows: %s", rows.Err())
+		return nil, errwrap.Wrapf("could not generate sql statements for all rows: {{err}}", rows.Err())
 	}
 	if lastStmtError != nil {
-		return nil, fmt.Errorf("could not perform all sql statements: %s", lastStmtError)
+		return nil, errwrap.Wrapf("could not perform all sql statements: {{err}}", lastStmtError)
 	}
 
 	// Drop this login

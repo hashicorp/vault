@@ -7,9 +7,9 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
+	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
-	log "github.com/mgutz/logxi/v1"
 )
 
 type backendEntry struct {
@@ -65,7 +65,7 @@ func (a *AuditBroker) GetHash(ctx context.Context, name string, input string) (s
 	defer a.RUnlock()
 	be, ok := a.backends[name]
 	if !ok {
-		return "", fmt.Errorf("unknown audit backend %s", name)
+		return "", fmt.Errorf("unknown audit backend %q", name)
 	}
 
 	return be.backend.GetHash(ctx, input)
@@ -82,7 +82,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *audit.LogInput, header
 
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Error("audit: panic during logging", "request_path", in.Request.Path, "error", r)
+			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r)
 			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
 
@@ -96,7 +96,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *audit.LogInput, header
 
 	// All logged requests must have an identifier
 	//if req.ID == "" {
-	//	a.logger.Error("audit: missing identifier in request object", "request_path", req.Path)
+	//	a.logger.Error("missing identifier in request object", "request_path", req.Path)
 	//	retErr = multierror.Append(retErr, fmt.Errorf("missing identifier in request object: %s", req.Path))
 	//	return
 	//}
@@ -112,7 +112,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *audit.LogInput, header
 		in.Request.Headers = nil
 		transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend.GetHash)
 		if thErr != nil {
-			a.logger.Error("audit: backend failed to include headers", "backend", name, "error", thErr)
+			a.logger.Error("backend failed to include headers", "backend", name, "error", thErr)
 			continue
 		}
 		in.Request.Headers = transHeaders
@@ -121,7 +121,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *audit.LogInput, header
 		lrErr := be.backend.LogRequest(ctx, in)
 		metrics.MeasureSince([]string{"audit", name, "log_request"}, start)
 		if lrErr != nil {
-			a.logger.Error("audit: backend failed to log request", "backend", name, "error", lrErr)
+			a.logger.Error("backend failed to log request", "backend", name, "error", lrErr)
 		} else {
 			anyLogged = true
 		}
@@ -144,7 +144,7 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *audit.LogInput, heade
 
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Error("audit: panic during logging", "request_path", in.Request.Path, "error", r)
+			a.logger.Error("panic during logging", "request_path", in.Request.Path, "error", r)
 			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
 
@@ -168,7 +168,7 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *audit.LogInput, heade
 		in.Request.Headers = nil
 		transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend.GetHash)
 		if thErr != nil {
-			a.logger.Error("audit: backend failed to include headers", "backend", name, "error", thErr)
+			a.logger.Error("backend failed to include headers", "backend", name, "error", thErr)
 			continue
 		}
 		in.Request.Headers = transHeaders
@@ -177,7 +177,7 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *audit.LogInput, heade
 		lrErr := be.backend.LogResponse(ctx, in)
 		metrics.MeasureSince([]string{"audit", name, "log_response"}, start)
 		if lrErr != nil {
-			a.logger.Error("audit: backend failed to log response", "backend", name, "error", lrErr)
+			a.logger.Error("backend failed to log response", "backend", name, "error", lrErr)
 		} else {
 			anyLogged = true
 		}

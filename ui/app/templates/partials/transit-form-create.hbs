@@ -1,0 +1,116 @@
+{{message-error model=key}}
+<form onsubmit={{action "createOrUpdateKey" "create"}} onchange={{action "handleChange"}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="field">
+      <label for="key-name" class="is-label">Name</label>
+      {{input id="key-name" value=key.id class="input" data-test-transit-key-name=true}}
+    </div>
+    <div class="field">
+      <label for="key-type" class="is-label">Type</label>
+      <div class="control is-expanded" >
+        <div class="select is-fullwidth">
+          <select
+            name="key-type"
+            id="key-type"
+            onchange={{action (mut key.type) value="target.value"}}
+            data-test-transit-key-type=true
+          >
+            <option selected={{eq key.type "aes256-gcm96"}} value="aes256-gcm96">
+              aes256-gcm96
+            </option>
+            <option selected={{eq key.type "chacha20-poly1305"}} value="chacha20-poly1305">
+              chacha20-poly1305
+            </option>
+            <option selected={{eq key.type "ecdsa-p256"}} value="ecdsa-p256">
+              ecdsa-p256
+            </option>
+            <option selected={{eq key.type "ed25519"}} value="ed25519">
+              ed25519
+            </option>
+            <option selected={{eq key.type "rsa-2048"}} value="rsa-2048">
+              rsa-2048
+            </option>
+            <option selected={{eq key.type "rsa-4096"}} value="rsa-4096">
+              rsa-4096
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="b-checkbox">
+        <input type="checkbox"
+          id="key-exportable"
+          class="styled"
+          checked={{key.exportable}}
+          onchange={{action "setValueOnKey" "exportable"}}
+          data-test-transit-key-exportable=true
+        />
+        <label for="key-exportable" class="is-label">
+          Exportable
+        </label>
+      </div>
+    </div>
+    {{#if (or
+        (eq key.type "aes256-gcm96")
+        (eq key.type "chacha20-poly1305")
+        (eq key.type "ed25519")
+      )
+    }}
+      <div class="field">
+        <div class="b-checkbox">
+          <input type="checkbox"
+            id="key-derived"
+            class="styled"
+            checked={{key.derived}}
+            onchange={{action "derivedChange" value="target.checked"}}
+            data-test-transit-key-derived=true
+          />
+          <label for="key-derived" class="is-label">
+            Derived
+          </label>
+        </div>
+      </div>
+    {{/if}}
+    {{#if (or
+        (eq key.type "aes256-gcm96")
+        (eq key.type "chacha20-poly1305")
+      )
+    }}
+      <div class="field">
+        <div class="b-checkbox">
+          <input type="checkbox"
+           data-test-transit-key-convergent-encryption
+           id="key-convergent"
+           class="styled"
+           checked={{key.convergentEncryption}}
+           onchange={{action "convergentEncryptionChange" value="target.checked"}}
+          />
+          <label for="key-convergent" class="is-label">
+            Enable convergent encryption
+          </label>
+        </div>
+      </div>
+    {{/if}}
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        data-test-transit-key-create
+        type="submit"
+        disabled={{requestInFlight}}
+        class="button is-primary {{if requestInFlight 'is-loading'}}"
+      >
+        Create encryption key
+      </button>
+    </div>
+    <div class="control">
+      {{#secret-link
+        mode="list"
+        class="button"
+      }}
+        Cancel
+      {{/secret-link}}
+    </div>
+  </div>
+</form>

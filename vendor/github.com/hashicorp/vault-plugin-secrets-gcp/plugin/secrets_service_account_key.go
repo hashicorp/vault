@@ -3,11 +3,11 @@ package gcpsecrets
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"google.golang.org/api/iam/v1"
-	"time"
 )
 
 const (
@@ -102,8 +102,10 @@ func (b *backend) secretKeyRenew(ctx context.Context, req *logical.Request, d *f
 		cfg = &config{}
 	}
 
-	f := framework.LeaseExtend(cfg.TTL, cfg.MaxTTL, b.System())
-	return f(ctx, req, d)
+	resp.Secret = req.Secret
+	resp.Secret.TTL = cfg.TTL
+	resp.Secret.MaxTTL = cfg.MaxTTL
+	return resp, nil
 }
 
 func (b *backend) verifySecretServiceKeyExists(ctx context.Context, req *logical.Request) (*logical.Response, error) {
@@ -164,25 +166,9 @@ func secretKeyRevoke(ctx context.Context, req *logical.Request, d *framework.Fie
 }
 
 func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleSet, keyType, keyAlgorithm string) (*logical.Response, error) {
-	var ttl time.Duration
 	cfg, err := getConfig(ctx, s)
 	if err != nil {
 		return nil, errwrap.Wrapf("could not read backend config: {{err}}", err)
-	}
-	max := b.System().MaxLeaseTTL()
-	if cfg == nil {
-		ttl = b.System().DefaultLeaseTTL()
-	} else {
-		if cfg.MaxTTL != 0 && cfg.MaxTTL < max {
-			max = cfg.MaxTTL
-		}
-		if cfg.TTL > 0 {
-			ttl = cfg.TTL
-		}
-	}
-
-	if ttl > max {
-		ttl = max
 	}
 
 	iamC, err := newIamAdmin(ctx, s)
@@ -216,8 +202,9 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 	}
 
 	resp := b.Secret(SecretTypeKey).Response(secretD, internalD)
-	resp.Secret.LeaseOptions.TTL = ttl
-	resp.Secret.LeaseOptions.Renewable = true
+	resp.Secret.TTL = cfg.TTL
+	resp.Secret.MaxTTL = cfg.MaxTTL
+	resp.Secret.Renewable = true
 	return resp, nil
 }
 

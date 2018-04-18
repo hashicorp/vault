@@ -180,18 +180,30 @@ $ curl \
 ```json
 {
   "data": {
-    "id": "ClientToken",
-    "policies": [
-      "web",
-      "stage"
-     ],
-    "path": "auth/github/login",
+    "accessor": "8609694a-cdbc-db9b-d345-e782dbb562ed",
+    "creation_time": 1523979354,
+    "creation_ttl": 2764800,
+    "display_name": "ldap2-tesla",
+    "entity_id": "7d2e3179-f69b-450c-7179-ac8ee8bd8ca9",
+    "expire_time": "2018-05-19T11:35:54.466476215-04:00",
+    "explicit_max_ttl": 0,
+    "id": "cf64a70f-3a12-3f6c-791d-6cef6d390eed",
+    "identity_policies": [
+      "dev-group-policy"
+    ],
+    "issue_time": "2018-04-17T11:35:54.466476078-04:00",
     "meta": {
-      "user": "armon",
-      "organization": "hashicorp"
+      "username": "tesla"
     },
-    "display_name": "github-armon",
-    "num_uses": 0
+    "num_uses": 0,
+    "orphan": true,
+    "path": "auth/ldap2/login/tesla",
+    "policies": [
+      "default",
+      "testgroup2-policy"
+    ],
+    "renewable": true,
+    "ttl": 2764790
   }
 }
 ```
@@ -217,18 +229,30 @@ $ curl \
 ```json
 {
   "data": {
-    "id": "ClientToken",
-    "policies": [
-      "web",
-      "stage"
-     ],
-    "path": "auth/github/login",
+    "accessor": "8609694a-cdbc-db9b-d345-e782dbb562ed",
+    "creation_time": 1523979354,
+    "creation_ttl": 2764800,
+    "display_name": "ldap2-tesla",
+    "entity_id": "7d2e3179-f69b-450c-7179-ac8ee8bd8ca9",
+    "expire_time": "2018-05-19T11:35:54.466476215-04:00",
+    "explicit_max_ttl": 0,
+    "id": "cf64a70f-3a12-3f6c-791d-6cef6d390eed",
+    "identity_policies": [
+      "dev-group-policy"
+    ],
+    "issue_time": "2018-04-17T11:35:54.466476078-04:00",
     "meta": {
-      "user": "armon",
-      "organization": "hashicorp"
+      "username": "tesla"
     },
-    "display_name": "github-armon",
-    "num_uses": 0
+    "num_uses": 0,
+    "orphan": true,
+    "path": "auth/ldap2/login/tesla",
+    "policies": [
+      "default",
+      "testgroup2-policy"
+    ],
+    "renewable": true,
+    "ttl": 2764790
   }
 }
 ```
@@ -249,7 +273,7 @@ Returns information about the client token from the accessor.
 
 ```json
 {
-  "accessor": "2c84f488-2133-4ced-87b0-570f93a76830"
+  "accessor": "8609694a-cdbc-db9b-d345-e782dbb562ed"
 }
 ```
 
@@ -267,25 +291,32 @@ $ curl \
 
 ```json
 {
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
   "data": {
-    "creation_time": 1457533232,
+    "accessor": "8609694a-cdbc-db9b-d345-e782dbb562ed",
+    "creation_time": 1523979354,
     "creation_ttl": 2764800,
-    "display_name": "token",
-    "meta": null,
+    "display_name": "ldap2-tesla",
+    "entity_id": "7d2e3179-f69b-450c-7179-ac8ee8bd8ca9",
+    "expire_time": "2018-05-19T11:35:54.466476215-04:00",
+    "explicit_max_ttl": 0,
+    "id": "",
+    "identity_policies": [
+      "dev-group-policy"
+    ],
+    "issue_time": "2018-04-17T11:35:54.466476078-04:00",
+    "meta": {
+      "username": "tesla"
+    },
     "num_uses": 0,
-    "orphan": false,
-    "path": "auth/token/create",
+    "orphan": true,
+    "path": "auth/ldap2/login/tesla",
     "policies": [
       "default",
-      "web"
+      "testgroup2-policy"
     ],
-    "ttl": 2591976
-  },
-  "warnings": null,
-  "auth": null
+    "renewable": true,
+    "ttl": 2763902
+  }
 }
 ```
 
@@ -622,11 +653,13 @@ tokens created against a role to be revoked using the
 - `renewable` `(bool: true)` - Set to `false` to disable the ability of the token
   to be renewed past its initial TTL.  Setting the value to `true` will allow
   the token to be renewable up to the system/mount maximum TTL.
-- `explicit_max_ttl` `(string: "")` - If set, the token will have an explicit
-  max TTL set upon it. This maximum token TTL *cannot* be changed later, and
-  unlike with normal tokens, updates to the system/mount max TTL value will
-  have no effect at renewal time -- the token will never be able to be renewed
-  or used past the value set at issue time.
+- `explicit_max_ttl` `(int: 0)` - Provides a maximum lifetime for any
+  tokens issued against this role, including periodic tokens. Unlike direct
+  token creation, where the value for an explicit max TTL is stored in the
+  token, for roles this check will always use the current value set in the
+  role. The main use of this is to provide a hard upper bound on periodic
+  tokens, which otherwise can live forever as long as they are renewed. This is
+  an integer number of seconds.
 - `path_suffix` `(string: "")` - If set, tokens created against this role will
   have the given suffix as part of their path in addition to the role name. This
   can be useful in certain scenarios, such as keeping the same role name in the

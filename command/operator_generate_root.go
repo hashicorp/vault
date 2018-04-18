@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/password"
@@ -252,14 +253,14 @@ func (c *OperatorGenerateRootCommand) Run(args []string) int {
 // verifyOTP verifies the given OTP code is exactly 16 bytes.
 func (c *OperatorGenerateRootCommand) verifyOTP(otp string) error {
 	if len(otp) == 0 {
-		return fmt.Errorf("No OTP passed in")
+		return fmt.Errorf("no OTP passed in")
 	}
 	otpBytes, err := base64.StdEncoding.DecodeString(otp)
 	if err != nil {
-		return fmt.Errorf("Error decoding base64 OTP value: %s", err)
+		return errwrap.Wrapf("error decoding base64 OTP value: {{err}}", err)
 	}
 	if otpBytes == nil || len(otpBytes) != 16 {
-		return fmt.Errorf("Decoded OTP value is invalid or wrong length")
+		return fmt.Errorf("decoded OTP value is invalid or wrong length")
 	}
 
 	return nil
@@ -485,8 +486,11 @@ func (c *OperatorGenerateRootCommand) printStatus(status *api.GenerateRootStatus
 	if status.PGPFingerprint != "" {
 		out = append(out, fmt.Sprintf("PGP Fingerprint | %s", status.PGPFingerprint))
 	}
-	if status.EncodedRootToken != "" {
+	switch {
+	case status.EncodedRootToken != "":
 		out = append(out, fmt.Sprintf("Root Token | %s", status.EncodedRootToken))
+	case status.EncodedToken != "":
+		out = append(out, fmt.Sprintf("Root Token | %s", status.EncodedToken))
 	}
 
 	output := columnOutput(out, nil)

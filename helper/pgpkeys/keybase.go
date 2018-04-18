@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/keybase/go-crypto/openpgp"
@@ -75,7 +76,7 @@ func FetchKeybasePubkeys(input []string) (map[string]string, error) {
 	}
 
 	if out.Status.Name != "OK" {
-		return nil, fmt.Errorf("got non-OK response: %s", out.Status.Name)
+		return nil, fmt.Errorf("got non-OK response: %q", out.Status.Name)
 	}
 
 	missingNames := make([]string, 0, len(usernames))
@@ -92,16 +93,16 @@ func FetchKeybasePubkeys(input []string) (map[string]string, error) {
 			return nil, err
 		}
 		if len(entityList) != 1 {
-			return nil, fmt.Errorf("primary key could not be parsed for user %s", usernames[i])
+			return nil, fmt.Errorf("primary key could not be parsed for user %q", usernames[i])
 		}
 		if entityList[0] == nil {
-			return nil, fmt.Errorf("primary key was nil for user %s", usernames[i])
+			return nil, fmt.Errorf("primary key was nil for user %q", usernames[i])
 		}
 
 		serializedEntity.Reset()
 		err = entityList[0].Serialize(serializedEntity)
 		if err != nil {
-			return nil, fmt.Errorf("error serializing entity for user %s: %s", usernames[i], err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("error serializing entity for user %q: {{err}}", usernames[i]), err)
 		}
 
 		// The API returns values in the same ordering requested, so this should properly match
@@ -109,7 +110,7 @@ func FetchKeybasePubkeys(input []string) (map[string]string, error) {
 	}
 
 	if len(missingNames) > 0 {
-		return nil, fmt.Errorf("unable to fetch keys for user(s) %s from keybase", strings.Join(missingNames, ","))
+		return nil, fmt.Errorf("unable to fetch keys for user(s) %q from keybase", strings.Join(missingNames, ","))
 	}
 
 	return ret, nil

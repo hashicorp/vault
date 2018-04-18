@@ -9,7 +9,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -121,6 +120,7 @@ func (b *azureAuthBackend) pathLogin(ctx context.Context, req *logical.Request, 
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				TTL:       role.TTL,
+				MaxTTL:    role.MaxTTL,
 			},
 		},
 	}
@@ -135,21 +135,6 @@ func (b *azureAuthBackend) pathLogin(ctx context.Context, req *logical.Request, 
 		})
 	}
 
-	if resp.Auth.TTL == 0 {
-		resp.Auth.TTL = b.System().DefaultLeaseTTL()
-	}
-	if role.MaxTTL > 0 {
-		maxTTL := role.MaxTTL
-		if maxTTL > b.System().MaxLeaseTTL() {
-			maxTTL = b.System().MaxLeaseTTL()
-		}
-
-		if resp.Auth.TTL > maxTTL {
-			resp.Auth.TTL = maxTTL
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", resp.Auth.TTL, maxTTL))
-		}
-	}
-
 	return resp, nil
 }
 
@@ -159,8 +144,10 @@ func (b *azureAuthBackend) verifyClaims(claims *additionalClaims, role *azureRol
 		return fmt.Errorf("token is not yet valid (Token Not Before: %v)", notBefore)
 	}
 
-	if len(role.BoundServicePrincipalIDs) > 0 {
-		if !strutil.StrListContains(role.BoundServicePrincipalIDs, claims.ObjectID) {
+	switch {
+	case len(role.BoundServicePrincipalIDs) == 1 && role.BoundServicePrincipalIDs[0] == "*":
+	case len(role.BoundServicePrincipalIDs) > 0:
+		if !strListContains(role.BoundServicePrincipalIDs, claims.ObjectID) {
 			return fmt.Errorf("service principal not authorized: %s", claims.ObjectID)
 		}
 	}
@@ -168,7 +155,7 @@ func (b *azureAuthBackend) verifyClaims(claims *additionalClaims, role *azureRol
 	if len(role.BoundGroupIDs) > 0 {
 		var found bool
 		for _, group := range claims.GroupIDs {
-			if strutil.StrListContains(role.BoundGroupIDs, group) {
+			if strListContains(role.BoundGroupIDs, group) {
 				found = true
 				break
 			}
@@ -208,13 +195,13 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 		return errors.New("token object id does not match virtual machine principal id")
 	}
 
-	// Check bound subsriptions
-	if len(role.BoundSubscriptionsIDs) > 0 && !strutil.StrListContains(role.BoundSubscriptionsIDs, subscriptionID) {
+	// Check bound subscriptions
+	if len(role.BoundSubscriptionsIDs) > 0 && !strListContains(role.BoundSubscriptionsIDs, subscriptionID) {
 		return errors.New("subscription not authorized")
 	}
 
 	// Check bound resource groups
-	if len(role.BoundResourceGroups) > 0 && !strutil.StrListContains(role.BoundResourceGroups, resourceGroupName) {
+	if len(role.BoundResourceGroups) > 0 && !strListContains(role.BoundResourceGroups, resourceGroupName) {
 		return errors.New("resource group not authorized")
 	}
 
@@ -223,7 +210,7 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 		if vm.Location == nil {
 			return errors.New("vm location is empty")
 		}
-		if !strutil.StrListContains(role.BoundLocations, to.String(vm.Location)) {
+		if !strListContains(role.BoundLocations, to.String(vm.Location)) {
 			return errors.New("location not authorized")
 		}
 	}
@@ -246,16 +233,11 @@ func (b *azureAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Requ
 		return nil, fmt.Errorf("role %s does not exist during renewal", roleName)
 	}
 
-	// If 'Period' is set on the Role, the token should never expire.
-	// Replenish the TTL with 'Period's value.
-	if role.Period > time.Duration(0) {
-		// If 'Period' was updated after the token was issued,
-		// token will bear the updated 'Period' value as its TTL.
-		req.Auth.TTL = role.Period
-		return &logical.Response{Auth: req.Auth}, nil
-	}
-
-	return framework.LeaseExtend(role.TTL, role.MaxTTL, b.System())(ctx, req, data)
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.TTL = role.TTL
+	resp.Auth.MaxTTL = role.MaxTTL
+	resp.Auth.Period = role.Period
+	return resp, nil
 }
 
 type additionalClaims struct {

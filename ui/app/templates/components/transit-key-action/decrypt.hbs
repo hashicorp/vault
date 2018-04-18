@@ -1,0 +1,76 @@
+<form {{action 'doSubmit' (hash ciphertext=ciphertext context=context nonce=nonce) on="submit"}}>
+  {{#if (and plaintext ciphertext)}}
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <div class="field">
+        <label for="plaintext" class="is-label">
+          Plaintext
+        </label>
+        <div class="control is-relative">
+          {{textarea id="plaintext" value=plaintext readonly=true class="textarea" data-test-transit-input="plaintext"}}
+          {{b64-toggle value=plaintext isInput=false initialEncoding="base64" data-test-transit-b64-toggle="plaintext"}}
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        {{#copy-button
+          clipboardTarget="#plaintext"
+          class="button is-primary"
+          buttonType="button"
+          success=(action (set-flash-message 'Plaintext copied!'))
+        }}
+          Copy
+        {{/copy-button}}
+      </div>
+      <div class="control">
+        <button {{action 'onClear'}} type="button" class="button">
+          Back
+        </button>
+      </div>
+    </div>
+  {{else}}
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <div class="field">
+        <label for="ciphertext" class="is-label">Ciphertext</label>
+        <div class="control">
+          {{textarea id="ciphertext" name="ciphertext" value=ciphertext class="textarea" data-test-transit-input="ciphertext"}}
+        </div>
+      </div>
+      {{#if key.derived}}
+        <div class="field">
+          <label for="context" class="is-label">
+            Context
+          </label>
+          <div class="field has-addons">
+            <div class="control">
+              {{input type="text" id="context" value=context class="input" data-test-transit-input="context"}}
+            </div>
+            <div class="control">
+              {{b64-toggle value=context data-test-transit-b64-toggle="context"}}
+            </div>
+          </div>
+        </div>
+      {{/if}}
+      {{#if (eq key.convergentEncryptionVersion 1)}}
+        <div class="field">
+          <label for="nonce" class="is-label">Nonce</label>
+          <div class="field has-addons">
+            <div class="control">
+              {{input type="text" id="nonce" value=nonce class="input" data-test-transit-input="nonce"}}
+            </div>
+            <div class="control">
+              {{b64-toggle value=nonce data-test-transit-b64-toggle="nonce"}}
+            </div>
+          </div>
+        </div>
+      {{/if}}
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="submit" class="button is-primary" id="decrypt">
+           Decrypt
+        </button>
+      </div>
+    </div>
+  {{/if}}
+</form>

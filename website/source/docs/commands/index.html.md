@@ -83,7 +83,7 @@ primary interface for reading and writing data to Vault is the same.
 To write data to Vault, use the `vault write` command:
 
 ```text
-$ vault write secret/password value=itsasecret
+$ vault kv put secret/password value=itsasecret
 ```
 
 For some secrets engines, the key/value pairs are arbitrary. For others, they
@@ -96,14 +96,14 @@ Some commands in Vault can read data from stdin using `-` as the value. If `-`
 is the entire argument, Vault expects to read a JSON object from stdin:
 
 ```text
-$ echo -n '{"value":"itsasecret"}' | vault write secret/password -
+$ echo -n '{"value":"itsasecret"}' | vault kv put secret/password -
 ```
 
 In addition to reading full JSON objects, Vault can read just a  value from
 stdin:
 
 ```text
-$ echo -n "itsasecret" | vault write secret/password value=-
+$ echo -n "itsasecret" | vault kv put secret/password value=-
 ```
 
 #### Files
@@ -113,13 +113,13 @@ stdin as documented above. If an argument starts with `@`, Vault will read it as
 a file:
 
 ```text
-$ vault write secret/password @data.json
+$ vault kv put secret/password @data.json
 ```
 
 Or specify the contents of a file as a value:
 
 ```text
-$ vault write secret/password value=@data.txt
+$ vault kv put secret/password value=@data.txt
 ```
 
 ### Reading Data
@@ -127,7 +127,7 @@ $ vault write secret/password value=@data.txt
 After data is persisted, read it back using `vault read`:
 
 ```
-$ vault read secret/password
+$ vault kv get  secret/password
 Key                 Value
 ---                 -----
 refresh_interval    768h0m0s

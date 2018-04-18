@@ -35,8 +35,10 @@ more information about setting up the database secrets engine.
     ```text
     $ vault write database/config/my-mssql-database \
         plugin_name=mssql-database-plugin \
-        connection_url='sqlserver://sa:yourStrong(!)Password@localhost:1433' \
-        allowed_roles="my-role"
+        connection_url='sqlserver://{{username}}:{{password}}@localhost:1433' \
+        allowed_roles="my-role" \
+        username="sa" \
+        password="yourStrong(!)Password"
     ```
 
     In this case, we've configured Vault with the user "sa" and password

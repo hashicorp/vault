@@ -16,8 +16,8 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 // CouchDBBackend allows the management of couchdb users
@@ -105,7 +105,7 @@ func (m *couchDBClient) get(key string) (*physical.Entry, error) {
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, nil
 	} else if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GET returned %s", resp.Status)
+		return nil, fmt.Errorf("GET returned %q", resp.Status)
 	}
 	bs, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -177,7 +177,7 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("couchdb: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 

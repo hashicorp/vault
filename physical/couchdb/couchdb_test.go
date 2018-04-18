@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
@@ -19,7 +19,7 @@ func TestCouchDBBackend(t *testing.T) {
 	cleanup, endpoint, username, password := prepareCouchdbDBTestContainer(t)
 	defer cleanup()
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewCouchDBBackend(map[string]string{
 		"endpoint": endpoint,
@@ -38,7 +38,7 @@ func TestTransactionalCouchDBBackend(t *testing.T) {
 	cleanup, endpoint, username, password := prepareCouchdbDBTestContainer(t)
 	defer cleanup()
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewTransactionalCouchDBBackend(map[string]string{
 		"endpoint": endpoint,
@@ -87,7 +87,7 @@ func prepareCouchdbDBTestContainer(t *testing.T) (cleanup func(), retAddress, us
 			return err
 		}
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("Expected couchdb to return status code 200, got (%s) instead.", resp.Status)
+			return fmt.Errorf("expected couchdb to return status code 200, got (%s) instead.", resp.Status)
 		}
 		return nil
 	}); err != nil {

@@ -49,7 +49,7 @@ func (cg *CertificateGetter) Reload(_ map[string]interface{}) error {
 	// Check for encrypted pem block
 	keyBlock, _ := pem.Decode(keyPEMBlock)
 	if keyBlock == nil {
-		return errors.New("Decoded PEM is blank")
+		return errors.New("decoded PEM is blank")
 	}
 
 	if x509.IsEncryptedPEMBlock(keyBlock) {

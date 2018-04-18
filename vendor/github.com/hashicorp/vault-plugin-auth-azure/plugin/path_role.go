@@ -50,8 +50,7 @@ to 0, in which case the value will fall back to the system/mount defaults.`,
 be renewed. Defaults to 0, in which case the value will fall back to the system/mount defaults.`,
 				},
 				"period": &framework.FieldSchema{
-					Type:    framework.TypeDurationSecond,
-					Default: 0,
+					Type: framework.TypeDurationSecond,
 					Description: `If set, indicates that the token generated using this role
 should never expire. The token should be renewed within the
 duration specified by this value. At each renewal, the token's
@@ -243,9 +242,9 @@ func (b *azureAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logica
 
 	periodRaw, ok := data.GetOk("period")
 	if ok {
-		role.Period = time.Second * time.Duration(periodRaw.(int))
+		role.Period = time.Duration(periodRaw.(int)) * time.Second
 	} else if req.Operation == logical.CreateOperation {
-		role.Period = time.Second * time.Duration(data.Get("period").(int))
+		role.Period = time.Duration(data.Get("period").(int)) * time.Second
 	}
 	if role.Period > b.System().MaxLeaseTTL() {
 		return logical.ErrorResponse(fmt.Sprintf("'period' of '%q' is greater than the backend's maximum lease TTL of '%q'", role.Period.String(), b.System().MaxLeaseTTL().String())), nil
@@ -261,15 +260,15 @@ func (b *azureAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logica
 	}
 
 	if tokenTTLRaw, ok := data.GetOk("ttl"); ok {
-		role.TTL = time.Second * time.Duration(tokenTTLRaw.(int))
+		role.TTL = time.Duration(tokenTTLRaw.(int)) * time.Second
 	} else if req.Operation == logical.CreateOperation {
-		role.TTL = time.Second * time.Duration(data.Get("ttl").(int))
+		role.TTL = time.Duration(data.Get("ttl").(int)) * time.Second
 	}
 
 	if tokenMaxTTLRaw, ok := data.GetOk("max_ttl"); ok {
-		role.MaxTTL = time.Second * time.Duration(tokenMaxTTLRaw.(int))
+		role.MaxTTL = time.Duration(tokenMaxTTLRaw.(int)) * time.Second
 	} else if req.Operation == logical.CreateOperation {
-		role.MaxTTL = time.Second * time.Duration(data.Get("max_ttl").(int))
+		role.MaxTTL = time.Duration(data.Get("max_ttl").(int)) * time.Second
 	}
 
 	if boundServicePrincipalIDs, ok := data.GetOk("bound_service_principal_ids"); ok {
@@ -292,10 +291,18 @@ func (b *azureAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logica
 		role.BoundLocations = boundLocations.([]string)
 	}
 
+	if len(role.BoundServicePrincipalIDs) == 0 &&
+		len(role.BoundGroupIDs) == 0 &&
+		len(role.BoundSubscriptionsIDs) == 0 &&
+		len(role.BoundResourceGroups) == 0 &&
+		len(role.BoundLocations) == 0 {
+		return logical.ErrorResponse("must have at least one bound constraint when creating/updating a role"), nil
+	}
+
 	// Check that the TTL value provided is less than the MaxTTL.
 	// Sanitizing the TTL and MaxTTL is not required now and can be performed
 	// at credential issue time.
-	if role.MaxTTL > time.Duration(0) && role.TTL > role.MaxTTL {
+	if role.MaxTTL > 0 && role.TTL > role.MaxTTL {
 		return logical.ErrorResponse("ttl should not be greater than max_ttl"), nil
 	}
 

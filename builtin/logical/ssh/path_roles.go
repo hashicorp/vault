@@ -7,6 +7,7 @@ import (
 
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
@@ -305,7 +306,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	if cidrList != "" {
 		valid, err := cidrutil.ValidateCIDRListString(cidrList, ",")
 		if err != nil {
-			return nil, fmt.Errorf("failed to validate cidr_list: %v", err)
+			return nil, errwrap.Wrapf("failed to validate cidr_list: {{err}}", err)
 		}
 		if !valid {
 			return logical.ErrorResponse("failed to validate cidr_list"), nil
@@ -317,7 +318,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	if excludeCidrList != "" {
 		valid, err := cidrutil.ValidateCIDRListString(excludeCidrList, ",")
 		if err != nil {
-			return nil, fmt.Errorf("failed to validate exclude_cidr_list entry: %v", err)
+			return nil, errwrap.Wrapf("failed to validate exclude_cidr_list entry: {{err}}", err)
 		}
 		if !valid {
 			return logical.ErrorResponse(fmt.Sprintf("failed to validate exclude_cidr_list entry: %v", err)), nil
@@ -571,14 +572,14 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 		if err != nil {
 			// On error, log warning and continue
 			if b.Logger().IsWarn() {
-				b.Logger().Warn("ssh: error getting role info", "role", entry, "error", err)
+				b.Logger().Warn("error getting role info", "role", entry, "error", err)
 			}
 			continue
 		}
 		if role == nil {
 			// On empty role, log warning and continue
 			if b.Logger().IsWarn() {
-				b.Logger().Warn("ssh: no role info found", "role", entry)
+				b.Logger().Warn("no role info found", "role", entry)
 			}
 			continue
 		}
@@ -586,7 +587,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 		roleInfo, err := b.parseRole(role)
 		if err != nil {
 			if b.Logger().IsWarn() {
-				b.Logger().Warn("ssh: error parsing role info", "role", entry, "error", err)
+				b.Logger().Warn("error parsing role info", "role", entry, "error", err)
 			}
 			continue
 		}

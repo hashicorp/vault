@@ -3,6 +3,7 @@ package gcpsecrets
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/go-multierror"
@@ -156,9 +157,9 @@ func (b *backend) serviceAccountPolicyRollback(ctx context.Context, req *logical
 		return err
 	}
 
-	// Take our any bindings still being used by this role set from roles being removed.
+	// Take out any bindings still being used by this role set from roles being removed.
 	rolesToRemove := util.ToSet(entry.Roles)
-	if rs.AccountId.ResourceName() == entry.AccountId.ResourceName() {
+	if rs != nil && rs.AccountId.ResourceName() == entry.AccountId.ResourceName() {
 		currRoles, ok := rs.Bindings[entry.Resource]
 		if ok {
 			rolesToRemove = rolesToRemove.Sub(currRoles)

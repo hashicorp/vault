@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"cloud.google.com/go/spanner"
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 	"golang.org/x/net/context"
 )
 
@@ -46,7 +46,7 @@ func TestBackend(t *testing.T) {
 		"database":   database,
 		"table":      table,
 		"ha_enabled": "false",
-	}, logformat.NewVaultLogger(log.LevelTrace))
+	}, logging.NewVaultLogger(log.Debug))
 	if err != nil {
 		t.Fatal(err)
 	}

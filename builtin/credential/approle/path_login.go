@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
@@ -76,6 +75,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		LeaseOptions: logical.LeaseOptions{
 			Renewable: true,
 			TTL:       role.TokenTTL,
+			MaxTTL:    role.TokenMaxTTL,
 		},
 		Alias: &logical.Alias{
 			Name: role.RoleID,
@@ -101,23 +101,17 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 	// Ensure that the Role still exists.
 	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate role %s during renewal:%s", roleName, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to validate role %q during renewal: {{err}}", roleName), err)
 	}
 	if role == nil {
-		return nil, fmt.Errorf("role %s does not exist during renewal", roleName)
+		return nil, fmt.Errorf("role %q does not exist during renewal", roleName)
 	}
 
-	// If a period is provided, set that as part of resp.Auth.Period and return a
-	// response immediately. Let expiration manager handle renewal from there on.
-	if role.Period > time.Duration(0) {
-		resp := &logical.Response{
-			Auth: req.Auth,
-		}
-		resp.Auth.Period = role.Period
-		return resp, nil
-	}
-
-	return framework.LeaseExtend(role.TokenTTL, role.TokenMaxTTL, b.System())(ctx, req, data)
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.TTL = role.TokenTTL
+	resp.Auth.MaxTTL = role.TokenMaxTTL
+	resp.Auth.Period = role.Period
+	return resp, nil
 }
 
 const pathLoginHelpSys = "Issue a token based on the credentials supplied"

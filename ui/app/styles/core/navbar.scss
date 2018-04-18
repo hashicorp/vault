@@ -1,0 +1,47 @@
+.navbar {
+  align-items: center;
+  height: 3.5rem;
+}
+
+.navbar-end {
+  .navbar-item {
+    padding: 0.5em 0.75em;
+
+    .button {
+      display: inline-flex;
+      min-width: 2.5rem;
+    }
+  }
+}
+
+a.navbar-item {
+  color: $white-ter;
+  &:hover,
+  &:active {
+    color: $white;
+    background: transparent;
+  }
+}
+
+.navbar-brand {
+  margin: 0 0 0 $size-10;
+
+  a {
+    @include from($tablet) {
+      height: 3.25rem;
+    }
+  }
+}
+
+.navbar-sections {
+  justify-content: flex-start;
+  background-color: $grey;
+
+  @include from($tablet) {
+    background-color: transparent;
+    position: absolute;
+    left: 3.5em;
+    top: 0;
+    height: 3.25rem;
+  }
+}

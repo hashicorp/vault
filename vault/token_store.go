@@ -11,13 +11,15 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -126,6 +128,8 @@ type TokenStore struct {
 
 	tidyLock int64
 
+	identityPoliciesDeriverFunc func(string) (*identity.Entity, []string, error)
+
 	// db is the in-memory database to quickly access various items that are
 	// related to a token.
 	db *memdb.MemDB
@@ -135,7 +139,7 @@ type TokenStore struct {
 
 // NewTokenStore is used to construct a token store that is
 // backed by the given barrier view.
-func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) (*TokenStore, error) {
+func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logical.BackendConfig) (*TokenStore, error) {
 	// Create a sub-view
 	view := c.systemBarrierView.SubView(tokenSubPath)
 
@@ -158,13 +162,14 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 
 	// Initialize the store
 	t := &TokenStore{
-		view:               view,
-		cubbyholeDestroyer: destroyCubbyhole,
-		logger:             c.logger,
-		tokenLocks:         locksutil.CreateLocks(),
-		saltLock:           sync.RWMutex{},
-		db:                 db,
-		mappingPacker:      mappingPacker,
+		view:                        view,
+		cubbyholeDestroyer:          destroyCubbyhole,
+		logger:                      logger,
+		tokenLocks:                  locksutil.CreateLocks(),
+		saltLock:                    sync.RWMutex{},
+		identityPoliciesDeriverFunc: c.fetchEntityAndDerivedPolicies,
+		db:            db,
+		mappingPacker: mappingPacker,
 	}
 
 	if c.policyStore != nil {
@@ -534,7 +539,7 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 }
 
 func (ts *TokenStore) Invalidate(ctx context.Context, key string) {
-	//ts.logger.Trace("token: invalidating key", "key", key)
+	//ts.logger.Debug("invalidating key", "key", key)
 
 	switch key {
 	case tokenSubPath + salt.DefaultLocation:
@@ -838,7 +843,7 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *TokenEntry, writeS
 	// Marshal the entry
 	enc, err := json.Marshal(entry)
 	if err != nil {
-		return fmt.Errorf("failed to encode entry: %v", err)
+		return errwrap.Wrapf("failed to encode entry: {{err}}", err)
 	}
 
 	tokenMapping, err := ts.MemDBTokenMappingByTokenID(entry.ID)
@@ -895,7 +900,7 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *TokenEntry, writeS
 		le.SealWrap = true
 	}
 	if err := ts.view.Put(ctx, le); err != nil {
-		return fmt.Errorf("failed to persist entry: %v", err)
+		return errwrap.Wrapf("failed to persist entry: {{err}}", err)
 	}
 
 	return nil
@@ -932,7 +937,7 @@ func (ts *TokenStore) UseToken(ctx context.Context, te *TokenEntry) (*TokenEntry
 	var err error
 	te, err = ts.lookupTokenNonLocked(ctx, te.ID, false)
 	if err != nil {
-		return nil, fmt.Errorf("failed to refresh entry: %v", err)
+		return nil, errwrap.Wrapf("failed to refresh entry: {{err}}", err)
 	}
 	// If it can't be found we shouldn't be trying to use it, so if we get nil
 	// back, it is because it has been revoked in the interim or will be
@@ -1043,7 +1048,7 @@ func (ts *TokenStore) lookupTokenByPathIDOrSaltedID(ctx context.Context, pathID,
 	// Lookup token
 	raw, err := ts.view.Get(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read entry: %v", err)
+		return nil, errwrap.Wrapf("failed to read entry: {{err}}", err)
 	}
 
 	// Bail if not found
@@ -1054,7 +1059,7 @@ func (ts *TokenStore) lookupTokenByPathIDOrSaltedID(ctx context.Context, pathID,
 	// Unmarshal the token
 	entry := new(TokenEntry)
 	if err := jsonutil.DecodeJSON(raw.Value, entry); err != nil {
-		return nil, fmt.Errorf("failed to decode entry: %v", err)
+		return nil, errwrap.Wrapf("failed to decode entry: {{err}}", err)
 	}
 
 	// This is a token that is awaiting deferred revocation or tainted
@@ -1069,7 +1074,7 @@ func (ts *TokenStore) lookupTokenByPathIDOrSaltedID(ctx context.Context, pathID,
 	}
 	check, err := ts.expiration.RestoreTokenCheck(entry.Path, pathSuffix)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check token in restore mode: %v", err)
+		return nil, errwrap.Wrapf("failed to check token in restore mode: {{err}}", err)
 	}
 	if !check {
 		return nil, nil
@@ -1113,7 +1118,7 @@ func (ts *TokenStore) lookupTokenByPathIDOrSaltedID(ctx context.Context, pathID,
 	// If fields are getting upgraded, store the changes
 	if persistNeeded {
 		if err := ts.storeCommon(ctx, entry, false); err != nil {
-			return nil, fmt.Errorf("failed to persist token upgrade: %v", err)
+			return nil, errwrap.Wrapf("failed to persist token upgrade: {{err}}", err)
 		}
 	}
 
@@ -1260,7 +1265,7 @@ func (ts *TokenStore) Revoke(ctx context.Context, id string) (ret error) {
 
 		path := parentPrefix + parentSaltedID + "/" + saltedID
 		if err = ts.view.Delete(ctx, path); err != nil {
-			return fmt.Errorf("failed to delete entry: %v", err)
+			return errwrap.Wrapf("failed to delete entry: {{err}}", err)
 		}
 	}
 
@@ -1273,7 +1278,7 @@ func (ts *TokenStore) Revoke(ctx context.Context, id string) (ret error) {
 
 		path := accessorPrefix + accessorSaltedID
 		if err = ts.view.Delete(ctx, path); err != nil {
-			return fmt.Errorf("failed to delete entry: %v", err)
+			return errwrap.Wrapf("failed to delete entry: {{err}}", err)
 		}
 	}
 
@@ -1288,12 +1293,12 @@ func (ts *TokenStore) Revoke(ctx context.Context, id string) (ret error) {
 	parentPath := parentPrefix + saltedID + "/"
 	children, err := ts.view.List(ctx, parentPath)
 	if err != nil {
-		return fmt.Errorf("failed to scan for children: %v", err)
+		return errwrap.Wrapf("failed to scan for children: {{err}}", err)
 	}
 	for _, child := range children {
 		te, err := ts.lookupTokenNonLocked(ctx, child, true)
 		if err != nil {
-			return fmt.Errorf("failed to get child token: %v", err)
+			return errwrap.Wrapf("failed to get child token: {{err}}", err)
 		}
 		lock := locksutil.LockForKey(ts.tokenLocks, te.ID)
 		lock.Lock()
@@ -1302,18 +1307,18 @@ func (ts *TokenStore) Revoke(ctx context.Context, id string) (ret error) {
 		err = ts.storeCommon(ctx, te, false)
 		if err != nil {
 			lock.Unlock()
-			return fmt.Errorf("failed to update child token: %v", err)
+			return errwrap.Wrapf("failed to update child token: {{err}}", err)
 		}
 		lock.Unlock()
 	}
 	if err = logical.ClearView(ctx, ts.view.SubView(parentPath)); err != nil {
-		return fmt.Errorf("failed to delete entry: %v", err)
+		return errwrap.Wrapf("failed to delete entry: {{err}}", err)
 	}
 
 	// Now that the entry is not usable for any revocation tasks, nuke it
 	path := lookupPrefix + saltedID
 	if err = ts.view.Delete(ctx, path); err != nil {
-		return fmt.Errorf("failed to delete entry: %v", err)
+		return errwrap.Wrapf("failed to delete entry: {{err}}", err)
 	}
 
 	return nil
@@ -1364,7 +1369,7 @@ func (ts *TokenStore) RevokeTree(ctx context.Context, tokenID string) error {
 		path := parentPrefix + id + "/"
 		persistedChildren, err := ts.view.List(ctx, path)
 		if err != nil {
-			return fmt.Errorf("failed to scan for children: %v", err)
+			return errwrap.Wrapf("failed to scan for children: {{err}}", err)
 		}
 
 		// Combine the fetched child tokens
@@ -1373,7 +1378,7 @@ func (ts *TokenStore) RevokeTree(ctx context.Context, tokenID string) error {
 		// If there are no children, then we are at a leaf node.
 		if len(children) == 0 {
 			if err := ts.Revoke(ctx, id); err != nil {
-				return fmt.Errorf("failed to revoke entry: %v", err)
+				return errwrap.Wrapf("failed to revoke entry: {{err}}", err)
 			}
 			// If the length of l is equal to 1, then the last token has been deleted
 			if l == 1 {
@@ -1435,7 +1440,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(ctx context.Context, saltedAccessor
 	var aEntry accessorEntry
 
 	if err != nil {
-		return aEntry, fmt.Errorf("failed to read index using accessor: %s", err)
+		return aEntry, errwrap.Wrapf("failed to read index using accessor: {{err}}", err)
 	}
 	if entry == nil {
 		return aEntry, &logical.StatusBadRequest{Err: "invalid accessor"}
@@ -1446,7 +1451,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(ctx context.Context, saltedAccessor
 	if err != nil {
 		te, err := ts.lookupTokenNonLocked(ctx, string(entry.Value), tainted)
 		if err != nil {
-			return accessorEntry{}, fmt.Errorf("failed to look up token using accessor index: %s", err)
+			return accessorEntry{}, errwrap.Wrapf("failed to look up token using accessor index: {{err}}", err)
 		}
 		// It's hard to reason about what to do here -- it may be that the
 		// token was revoked async, or that it's an old accessor index entry
@@ -1468,25 +1473,25 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 	var tidyErrors *multierror.Error
 
 	if !atomic.CompareAndSwapInt64(&ts.tidyLock, 0, 1) {
-		ts.logger.Warn("token: tidy operation on tokens is already in progress")
+		ts.logger.Warn("tidy operation on tokens is already in progress")
 		return nil, fmt.Errorf("tidy operation on tokens is already in progress")
 	}
 
 	defer atomic.CompareAndSwapInt64(&ts.tidyLock, 1, 0)
 
-	ts.logger.Info("token: beginning tidy operation on tokens")
-	defer ts.logger.Info("token: finished tidy operation on tokens")
+	ts.logger.Info("beginning tidy operation on tokens")
+	defer ts.logger.Info("finished tidy operation on tokens")
 
 	// List out all the accessors
 	saltedAccessorList, err := ts.view.List(ctx, accessorPrefix)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch accessor index entries: %v", err)
+		return nil, errwrap.Wrapf("failed to fetch accessor index entries: {{err}}", err)
 	}
 
 	// First, clean up secondary index entries that are no longer valid
 	parentList, err := ts.view.List(ctx, parentPrefix)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch secondary index entries: %v", err)
+		return nil, errwrap.Wrapf("failed to fetch secondary index entries: {{err}}", err)
 	}
 
 	var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
@@ -1499,7 +1504,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		// Get the children
 		children, err := ts.view.List(ctx, parentPrefix+parent)
 		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read secondary index: %v", err))
+			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to read secondary index: {{err}}", err))
 			continue
 		}
 
@@ -1509,14 +1514,14 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		originalChildrenCount := int64(len(children))
 		exists, _ := ts.lookupTokenNonLocked(ctx, strings.TrimSuffix(parent, "/"), true)
 		if exists == nil {
-			ts.logger.Trace("token: deleting invalid parent prefix entry", "index", parentPrefix+parent)
+			ts.logger.Debug("deleting invalid parent prefix entry", "index", parentPrefix+parent)
 		}
 
 		var deletedChildrenCount int64
 		for _, child := range children {
 			countParentList++
 			if countParentList%500 == 0 {
-				ts.logger.Info("token: checking validity of tokens in secondary index list", "progress", countParentList)
+				ts.logger.Info("checking validity of tokens in secondary index list", "progress", countParentList)
 			}
 
 			// Also perform deletion if the parent doesn't exist any more.
@@ -1531,7 +1536,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				te.Parent = ""
 				err = ts.storeCommon(ctx, te, false)
 				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to convert child token into an orphan token: %v", err))
+					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to convert child token into an orphan token: {{err}}", err))
 				}
 				lock.Unlock()
 				continue
@@ -1541,10 +1546,10 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			// on with the delete on the secondary index
 			if te == nil || exists == nil {
 				index := parentPrefix + parent + child
-				ts.logger.Trace("token: deleting invalid secondary index", "index", index)
+				ts.logger.Debug("deleting invalid secondary index", "index", index)
 				err = ts.view.Delete(ctx, index)
 				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index: %v", err))
+					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to delete secondary index: {{err}}", err))
 					continue
 				}
 				deletedChildrenCount++
@@ -1571,12 +1576,12 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 	for _, saltedAccessor := range saltedAccessorList {
 		countAccessorList++
 		if countAccessorList%500 == 0 {
-			ts.logger.Info("token: checking if accessors contain valid tokens", "progress", countAccessorList)
+			ts.logger.Info("checking if accessors contain valid tokens", "progress", countAccessorList)
 		}
 
 		accessorEntry, err := ts.lookupBySaltedAccessor(ctx, saltedAccessor, true)
 		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor index: %v", err))
+			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to read the accessor index: {{err}}", err))
 			continue
 		}
 
@@ -1589,7 +1594,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			// item since this is just a best-effort operation
 			err = ts.view.Delete(ctx, index)
 			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete the accessor index: %v", err))
+				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to delete the accessor index: {{err}}", err))
 				continue
 			}
 			deletedCountAccessorEmptyToken++
@@ -1602,7 +1607,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		// exist
 		te, err := ts.lookupTokenNonLocked(ctx, accessorEntry.TokenID, true)
 		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup tainted ID: %v", err))
+			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup tainted ID: {{err}}", err))
 			lock.RUnlock()
 			continue
 		}
@@ -1613,7 +1618,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		// more and conclude that accessor, leases, and secondary index entries
 		// for this token should not exist as well.
 		if te == nil {
-			ts.logger.Info("token: deleting token with nil entry")
+			ts.logger.Info("deleting token with nil entry")
 
 			// RevokeByToken expects a '*TokenEntry'. For the
 			// purposes of tidying, it is sufficient if the token
@@ -1626,7 +1631,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			// the leases associated with the token.
 			err := ts.expiration.RevokeByToken(tokenEntry)
 			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke leases of expired token: %v", err))
+				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to revoke leases of expired token: {{err}}", err))
 				continue
 			}
 			deletedCountInvalidTokenInAccessor++
@@ -1639,21 +1644,21 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			// entry to try again.
 			err = ts.view.Delete(ctx, index)
 			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete accessor entry: %v", err))
+				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to delete accessor entry: {{err}}", err))
 				continue
 			}
 			deletedCountAccessorInvalidToken++
 		}
 	}
 
-	ts.logger.Debug("token: number of entries scanned in parent prefix", "count", countParentEntries)
-	ts.logger.Debug("token: number of entries deleted in parent prefix", "count", deletedCountParentEntries)
-	ts.logger.Debug("token: number of tokens scanned in parent index list", "count", countParentList)
-	ts.logger.Debug("token: number of tokens revoked in parent index list", "count", deletedCountParentList)
-	ts.logger.Debug("token: number of accessors scanned", "count", countAccessorList)
-	ts.logger.Debug("token: number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
-	ts.logger.Debug("token: number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
-	ts.logger.Debug("token: number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
+	ts.logger.Info("number of entries scanned in parent prefix", "count", countParentEntries)
+	ts.logger.Info("number of entries deleted in parent prefix", "count", deletedCountParentEntries)
+	ts.logger.Info("number of tokens scanned in parent index list", "count", countParentList)
+	ts.logger.Info("number of tokens revoked in parent index list", "count", deletedCountParentList)
+	ts.logger.Info("number of accessors scanned", "count", countAccessorList)
+	ts.logger.Info("number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
+	ts.logger.Info("number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
+	ts.logger.Info("number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
 
 	return nil, tidyErrors.ErrorOrNil()
 }
@@ -2015,6 +2020,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		te.EntityID = parent.EntityID
 	}
 
+	var explicitMaxTTLToUse time.Duration
 	if data.ExplicitMaxTTL != "" {
 		dur, err := parseutil.ParseDurationSecond(data.ExplicitMaxTTL)
 		if err != nil {
@@ -2024,6 +2030,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			return logical.ErrorResponse("explicit_max_ttl must be positive"), logical.ErrInvalidRequest
 		}
 		te.ExplicitMaxTTL = dur
+		explicitMaxTTLToUse = dur
 	}
 
 	var periodToUse time.Duration
@@ -2073,13 +2080,13 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	if role != nil {
 		if role.ExplicitMaxTTL != 0 {
 			switch {
-			case te.ExplicitMaxTTL == 0:
-				te.ExplicitMaxTTL = role.ExplicitMaxTTL
+			case explicitMaxTTLToUse == 0:
+				explicitMaxTTLToUse = role.ExplicitMaxTTL
 			default:
-				if role.ExplicitMaxTTL < te.ExplicitMaxTTL {
-					te.ExplicitMaxTTL = role.ExplicitMaxTTL
+				if role.ExplicitMaxTTL < explicitMaxTTLToUse {
+					explicitMaxTTLToUse = role.ExplicitMaxTTL
 				}
-				resp.AddWarning(fmt.Sprintf("Explicit max TTL specified both during creation call and in role; using the lesser value of %d seconds", int64(te.ExplicitMaxTTL.Seconds())))
+				resp.AddWarning(fmt.Sprintf("Explicit max TTL specified both during creation call and in role; using the lesser value of %d seconds", int64(explicitMaxTTLToUse.Seconds())))
 			}
 		}
 		if role.Period != 0 {
@@ -2097,49 +2104,21 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	sysView := ts.System()
 
-	if periodToUse > 0 {
-		// Cap period value to the sys/mount max value; this matches behavior
-		// in expiration manager for renewals
-		if periodToUse > sysView.MaxLeaseTTL() {
-			resp.AddWarning(fmt.Sprintf("Period of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", int64(periodToUse.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
-			periodToUse = sysView.MaxLeaseTTL()
+	// Only calculate a TTL if you are A) periodic, B) have a TTL, C) do not have a TTL and are not a root token
+	if periodToUse > 0 || te.TTL > 0 || (te.TTL == 0 && !strutil.StrListContains(te.Policies, "root")) {
+		ttl, warnings, err := framework.CalculateTTL(sysView, 0, te.TTL, periodToUse, 0, explicitMaxTTLToUse, time.Unix(te.CreationTime, 0))
+		if err != nil {
+			return nil, err
 		}
-		te.TTL = periodToUse
-	} else {
-		// Set the default lease if not provided, root tokens are exempt
-		if te.TTL == 0 && !strutil.StrListContains(te.Policies, "root") {
-			te.TTL = sysView.DefaultLeaseTTL()
+		for _, warning := range warnings {
+			resp.AddWarning(warning)
 		}
-
-		// Limit the lease duration
-		if te.TTL > sysView.MaxLeaseTTL() && sysView.MaxLeaseTTL() != 0 {
-			te.TTL = sysView.MaxLeaseTTL()
-		}
+		te.TTL = ttl
 	}
 
-	// Run some bounding checks if the explicit max TTL is set; we do not check
-	// period as it's defined to escape the max TTL
-	if te.ExplicitMaxTTL > 0 {
-		// Limit the lease duration, except for periodic tokens -- in that case the explicit max limits the period, which itself can escape normal max
-		if sysView.MaxLeaseTTL() != 0 && te.ExplicitMaxTTL > sysView.MaxLeaseTTL() && periodToUse == 0 {
-			resp.AddWarning(fmt.Sprintf(
-				"Explicit max TTL of %d seconds is greater than system/mount allowed value; value is being capped to %d seconds",
-				int64(te.ExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
-			te.ExplicitMaxTTL = sysView.MaxLeaseTTL()
-		}
-
-		if te.TTL == 0 {
-			// This won't be the case if it's periodic -- it will be set above
-			te.TTL = te.ExplicitMaxTTL
-		} else {
-			// Limit even in the periodic case
-			if te.TTL > te.ExplicitMaxTTL {
-				resp.AddWarning(fmt.Sprintf(
-					"Requested TTL of %d seconds higher than explicit max TTL; value being capped to %d seconds",
-					int64(te.TTL.Seconds()), int64(te.ExplicitMaxTTL.Seconds())))
-				te.TTL = te.ExplicitMaxTTL
-			}
-		}
+	// Root tokens are still bound by explicit max TTL
+	if te.TTL == 0 && explicitMaxTTLToUse > 0 {
+		te.TTL = explicitMaxTTLToUse
 	}
 
 	// Don't advertise non-expiring root tokens as renewable, as attempts to renew them are denied
@@ -2165,9 +2144,11 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			TTL:       te.TTL,
 			Renewable: renewable,
 		},
-		ClientToken: te.ID,
-		Accessor:    te.Accessor,
-		EntityID:    te.EntityID,
+		ClientToken:    te.ID,
+		Accessor:       te.Accessor,
+		EntityID:       te.EntityID,
+		Period:         periodToUse,
+		ExplicitMaxTTL: explicitMaxTTLToUse,
 	}
 
 	if ts.policyLookupFunc != nil {
@@ -2357,6 +2338,16 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 		resp.Data["issue_time"] = leaseTimes.IssueTime
 	}
 
+	if out.EntityID != "" {
+		_, identityPolicies, err := ts.identityPoliciesDeriverFunc(out.EntityID)
+		if err != nil {
+			return nil, err
+		}
+		if len(identityPolicies) != 0 {
+			resp.Data["identity_policies"] = identityPolicies
+		}
+	}
+
 	if urltoken {
 		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
 	}
@@ -2414,74 +2405,29 @@ func (ts *TokenStore) authRenew(ctx context.Context, req *logical.Request, d *fr
 
 	te, err := ts.Lookup(ctx, req.Auth.ClientToken)
 	if err != nil {
-		return nil, fmt.Errorf("error looking up token: %s", err)
+		return nil, errwrap.Wrapf("error looking up token: {{err}}", err)
 	}
 	if te == nil {
 		return nil, fmt.Errorf("no token entry found during lookup")
 	}
 
-	f := framework.LeaseExtend(req.Auth.Increment, te.ExplicitMaxTTL, ts.System())
-
-	// If (te/role).Period is not zero, this is a periodic token. The TTL for a
-	// periodic token is always the same (the period value). It is not subject
-	// to normal maximum TTL checks that would come from calling LeaseExtend,
-	// so we fast path it.
-	//
-	// The one wrinkle here is if the token has an explicit max TTL. If both
-	// are set, we treat it as a regular token and use the periodic value as
-	// the increment.
-
-	// No role? Use normal LeaseExtend semantics, taking into account
-	// TokenEntry properties
 	if te.Role == "" {
-		//Explicit max TTL overrides the period, if both are set
-		if te.Period != 0 {
-			if te.ExplicitMaxTTL == 0 {
-				req.Auth.TTL = te.Period
-				return &logical.Response{Auth: req.Auth}, nil
-			} else {
-				maxTime := time.Unix(te.CreationTime, 0).Add(te.ExplicitMaxTTL)
-				if time.Now().Add(te.Period).After(maxTime) {
-					req.Auth.TTL = maxTime.Sub(time.Now())
-				} else {
-					req.Auth.TTL = te.Period
-				}
-				return &logical.Response{Auth: req.Auth}, nil
-			}
-		}
-		return f(ctx, req, d)
+		req.Auth.Period = te.Period
+		req.Auth.ExplicitMaxTTL = te.ExplicitMaxTTL
+		return &logical.Response{Auth: req.Auth}, nil
 	}
 
 	role, err := ts.tokenStoreRole(ctx, te.Role)
 	if err != nil {
-		return nil, fmt.Errorf("error looking up role %s: %s", te.Role, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("error looking up role %q: {{err}}", te.Role), err)
 	}
-
 	if role == nil {
-		return nil, fmt.Errorf("original token role (%s) could not be found, not renewing", te.Role)
+		return nil, fmt.Errorf("original token role %q could not be found, not renewing", te.Role)
 	}
 
-	// Same deal here, but using the role period
-	if role.Period != 0 {
-		periodToUse := role.Period
-		if te.Period > 0 && te.Period < role.Period {
-			periodToUse = te.Period
-		}
-		if te.ExplicitMaxTTL == 0 {
-			req.Auth.TTL = periodToUse
-			return &logical.Response{Auth: req.Auth}, nil
-		} else {
-			maxTime := time.Unix(te.CreationTime, 0).Add(te.ExplicitMaxTTL)
-			if time.Now().Add(periodToUse).After(maxTime) {
-				req.Auth.TTL = maxTime.Sub(time.Now())
-			} else {
-				req.Auth.TTL = periodToUse
-			}
-			return &logical.Response{Auth: req.Auth}, nil
-		}
-	}
-
-	return f(ctx, req, d)
+	req.Auth.Period = role.Period
+	req.Auth.ExplicitMaxTTL = role.ExplicitMaxTTL
+	return &logical.Response{Auth: req.Auth}, nil
 }
 
 func (ts *TokenStore) tokenStoreRole(ctx context.Context, name string) (*tsRoleEntry, error) {

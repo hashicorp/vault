@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/policyutil"
-	log "github.com/mgutz/logxi/v1"
 
 	"time"
 
@@ -21,7 +21,7 @@ func TestBackend_Config(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 12
 	maxLeaseTTLVal := time.Hour * 24
 	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: logformat.NewVaultLogger(log.LevelTrace),
+		Logger: logging.NewVaultLogger(log.Trace),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
 			MaxLeaseTTLVal:     maxLeaseTTLVal,
@@ -125,7 +125,7 @@ func testConfigRead(t *testing.T, token string, d map[string]interface{}) logica
 			}
 
 			if resp.Data["organization"] != d["organization"] {
-				return fmt.Errorf("Org mismatch expected %s but got %s", d["organization"], resp.Data["Org"])
+				return fmt.Errorf("org mismatch expected %s but got %s", d["organization"], resp.Data["Org"])
 			}
 
 			if resp.Data["base_url"] != d["base_url"] {

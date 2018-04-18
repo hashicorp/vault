@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="74px" height="128px" viewBox="0 0 74 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <g id="vault-hex" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" opacity="0.0299999993">
+    <path d="M36,-1.96752179 L73.7513243,62 L-1.75132433,62 L36,-1.96752179 Z" id="Triangle" stroke="#FFFFFF" stroke-width="2"></path>
+    <rect id="Rectangle" fill="#FFFFFF" x="0" y="125" width="72" height="2"></rect>
+    <path d="M36,61.0324782 L73.7513243,125 L-1.75132433,125 L36,61.0324782 Z" id="Triangle" stroke="#FFFFFF" stroke-width="2" transform="translate(36.000000, 93.500000) scale(1, -1) translate(-36.000000, -93.500000) "></path>
+  </g>
+</svg>

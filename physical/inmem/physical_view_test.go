@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func TestPhysicalView_impl(t *testing.T) {
@@ -14,7 +14,7 @@ func TestPhysicalView_impl(t *testing.T) {
 }
 
 func newInmemTestBackend() (physical.Backend, error) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 	return NewInmem(nil, logger)
 }
 

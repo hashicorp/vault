@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -90,15 +91,11 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 			continue
 		}
 
-		stmt, err := tx.Prepare(Query(query, map[string]string{
+		m := map[string]string{
 			"name":     username,
 			"password": password,
-		}))
-		if err != nil {
-			return nil, err
 		}
-		defer stmt.Close()
-		if _, err := stmt.Exec(); err != nil {
+		if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 			return nil, err
 		}
 	}
@@ -115,12 +112,8 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 	}, map[string]interface{}{
 		"username": username,
 	})
-
-	ttl := leaseConfig.TTL
-	if ttl == 0 || (leaseConfig.TTLMax > 0 && ttl > leaseConfig.TTLMax) {
-		ttl = leaseConfig.TTLMax
-	}
-	resp.Secret.TTL = ttl
+	resp.Secret.TTL = leaseConfig.TTL
+	resp.Secret.MaxTTL = leaseConfig.TTLMax
 
 	return resp, nil
 }

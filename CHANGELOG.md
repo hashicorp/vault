@@ -1,7 +1,48 @@
-## 0.10.0 (Unreleased)
+## 0.10.1 (Unreleased)
+
+FEATURES:
+
+ * X-Forwarded-For support: `X-Forwarded-For` headers can now be used to set
+   the client IP seen by Vault. See the [TCP listener configuration
+   page](https://www.vaultproject.io/docs/configuration/listener/tcp.html) for
+   details.
+
+IMPROVEMENTS:
+
+ * auth/token: Add to the token lookup response, the policies inherited due to
+   identity associations [GH-4366]
+ * core: Add X-Forwarded-For support [GH-4380]
+ * identity: Add the ability to disable an entity. Disabling an entity does not
+   revoke associated tokens, but while the entity is disabled they cannot be
+   used. [GH-4353]
+
+BUG FIXES:
+
+ * identity: Persist entity memberships in external identity groups across
+   mounts [GH-4365]
+ * secret/gcp: Fix panic on rollback when a roleset wasn't created properly
+   [GH-4344]
+
+## 0.10.0 (April 10th, 2018)
+
+SECURITY:
+
+ * Log sanitization for Combined Database Secret Engine: In certain failure 
+   scenarios with incorrectly formatted connection urls, the raw connection 
+   errors were being returned to the user with the configured database 
+   credentials. Errors are now sanitized before being returned to the user.
 
 DEPRECATIONS/CHANGES:
 
+ * Database plugin compatibility: The database plugin interface was enhanced to
+   support some additional functionality related to root credential rotation
+   and supporting templated URL strings. The changes were made in a
+   backwards-compatible way and all builtin plugins were updated with the new
+   features. Custom plugins not built into Vault will need to be upgraded to
+   support templated URL strings and root rotation. Additionally, the
+   Initialize method was deprecated in favor of a new Init method that supports
+   configuration modifications that occur in the plugin back to the primary
+   data store.
  * Removal of returned secret information: For a long time Vault has returned
    configuration given to various secret engines and auth methods with secret
    values (such as secret API keys or passwords) still intact, and with a
@@ -9,32 +50,45 @@ DEPRECATIONS/CHANGES:
    secret. This was mostly done to make it easy for tools like Terraform to
    judge whether state had drifted. However, it also feels quite un-Vault-y to
    do this and we've never felt very comfortable doing so. In 0.10 we have gone
-   through and removed this bevhavior from the various backends; fields which
+   through and removed this behavior from the various backends; fields which
    contained secret values are simply no longer returned on read. We are
    working with the Terraform team to make changes to their provider to
    accommodate this as best as possible, and users of other tools may have to
    make adjustments, but in the end we felt that the ends did not justify the
    means and we needed to prioritize security over operational convenience.
+ * LDAP auth method case sensitivity: We now treat usernames and groups
+   configured locally for policy assignment in a case insensitive fashion by
+   default. Existing configurations will continue to work as they do now;
+   however, the next time a configuration is written `case_sensitive_names`
+   will need to be explicitly set to `true`.
+ * TTL handling within core: All lease TTL handling has been centralized within
+   the core of Vault to ensure consistency across all backends. Since this was
+   previously delegated to individual backends, there may be some slight
+   differences in TTLs generated from some backends.
+ * Removal of default `secret/` mount: In 0.12 we will stop mounting `secret/`
+   by default at initialization time (it will still be available in `dev`
+   mode).
 
 FEATURES:
 
+ * OSS UI: The Vault UI is now fully open-source. Similarly to the CLI, some
+   features are only available with a supporting version of Vault, but the code
+   base is entirely open.
  * Versioned K/V: The `kv` backend has been completely revamped, featuring
    flexible versioning of values, check-and-set protections, and more. A new
    `vault kv` subcommand allows friendly interactions with it. Existing mounts
    of the `kv` backend can be upgraded to the new versioned mode (downgrades
    are not currently supported). The old "passthrough" mode is still the
    default for new mounts; versioning can be turned on by setting the
-   `-options` flag for the `vault secrets enable` command to specify
-   `versioned=true`. This may become the default between the beta and final
-   release.
+   `-version=2` flag for the `vault secrets enable` command.
  * Database Root Credential Rotation: Database configurations can now rotate
    their own configured admin/root credentials, allowing configured credentials
    for a database connection to be rotated immediately after sending them into
    Vault, invalidating the old credentials and ensuring only Vault knows the
    actual valid values.
  * Azure Authentication Plugin: There is now a plugin (pulled in to Vault) that
-   allows authenticating Azure machines to Vault using their Azure-provided
-   credentials. See the [plugin
+   allows authenticating Azure machines to Vault using Azure's Managed Service
+   Identity credentials. See the [plugin
    repository](https://github.com/hashicorp/vault-plugin-auth-azure) for more
    information.
  * GCP Secrets Plugin: There is now a plugin (pulled in to Vault) that allows
@@ -48,18 +102,28 @@ FEATURES:
    through to backends on a per-mount basis. This is useful in various cases
    when plugins are interacting with external services.
  * HA for Google Cloud Storage: The GCS storage type now supports HA.
+ * UI support for identity: Add and edit entities, groups, and their associated
+   aliases.
+ * UI auth method support: Enable, disable, and configure all of the built-in 
+   authentication methods.
+ * UI (Enterprise): View and edit Sentinel policies.
 
 IMPROVEMENTS:
 
+ * core: Centralize TTL generation for leases in core [GH-4230]
  * identity: API to update group-alias by ID [GH-4237]
  * secret/cassandra: Update Cassandra storage delete function to not use batch
    operations [GH-4054]
  * storage/mysql: Allow setting max idle connections and connection lifetime
    [GH-4211]
  * storage/gcs: Add HA support [GH-4226]
+ * ui: Add Nomad to the list of available secret engines
+ * ui: Adds ability to set static headers to be returned by the UI
 
 BUG FIXES:
 
+ * api: Fix retries not working [GH-4322]
+ * auth/gcp: Invalidate clients on config change
  * auth/token: Revoke-orphan and tidy operations now correctly cleans up the
    parent prefix entry in the underlying storage backend. These operations also
    mark corresponding child tokens as orphans by removing the parent/secondary
@@ -73,6 +137,18 @@ BUG FIXES:
  * secret/pki: When tidying if a value is unexpectedly nil, delete it and move
    on [GH-4214]
  * storage/s3: Fix panic if S3 returns no Content-Length header [GH-4222]
+ * ui: Fixed an issue where the UI was checking incorrect paths when operating 
+   on transit keys. Capabilities are now checked when attempting to encrypt / 
+   decrypt, etc.
+ * ui: Fixed IE 11 layout issues and JS errors that would stop the application
+   from running.
+ * ui: Fixed the link that gets rendered when a user doesn't have permissions 
+   to view the root of a secret engine. The link now sends them back to the list
+   of secret engines.
+ * replication: Fix issue with DR secondaries when using mount specified local 
+   paths.
+ * cli: Fix an issue where generating a dr operation token would not output the 
+   token [GH-4328]
 
 ## 0.9.6 (March 20th, 2018)
 

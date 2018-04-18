@@ -97,7 +97,8 @@ func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("AWS_ACCOUNT_ID"); v == "" {
 		accountId, err := getAccountId()
 		if err != nil {
-			t.Fatalf("AWS_ACCOUNT_ID could not be read from iam:GetUser for acceptance tests: %#v", err)
+			t.Logf("Unable to retrive user via iam:GetUser: %#v", err)
+			t.Skip("AWS_ACCOUNT_ID not explicitly set and could not be read from iam:GetUser for acceptance tests, skipping")
 		}
 		log.Printf("[INFO] Test: Used %s as AWS_ACCOUNT_ID", accountId)
 		os.Setenv("AWS_ACCOUNT_ID", accountId)

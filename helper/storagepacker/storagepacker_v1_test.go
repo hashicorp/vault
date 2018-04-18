@@ -5,16 +5,16 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes"
+	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func BenchmarkStoragePackerV1(b *testing.B) {
 	storagePacker, err := NewStoragePackerV1(
 		&logical.InmemStorage{},
-		log.New("storagepackertest"),
+		log.New(&log.LoggerOptions{Name: "storagepackertest"}),
 		"",
 	)
 	if err != nil {
@@ -67,7 +67,7 @@ func BenchmarkStoragePackerV1(b *testing.B) {
 func TestStoragePackerV1(t *testing.T) {
 	storagePacker, err := NewStoragePackerV1(
 		&logical.InmemStorage{},
-		log.New("storagepackertest"),
+		log.New(&log.LoggerOptions{Name: "storagepackertest"}),
 		"",
 	)
 	if err != nil {
@@ -117,7 +117,7 @@ func TestStoragePackerV1(t *testing.T) {
 func TestStoragePackerV1_SerializeDeserializeComplexItem_Version1(t *testing.T) {
 	storagePacker, err := NewStoragePackerV1(
 		&logical.InmemStorage{},
-		log.New("storagepackertest"),
+		log.New(&log.LoggerOptions{Name: "storagepackertest"}),
 		"",
 	)
 	if err != nil {

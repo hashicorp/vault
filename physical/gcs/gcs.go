@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 
 	"cloud.google.com/go/storage"
 	"github.com/armon/go-metrics"
@@ -108,6 +108,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to parse chunk_size: {{err}}", err)
 	}
+
 	// Values are specified as kb, but the API expects them as bytes.
 	chunkSize = chunkSize * 1024
 

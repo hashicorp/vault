@@ -9,6 +9,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -146,7 +147,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, fmt.Errorf("policies do not match")
 	}
 
-	return framework.LeaseExtend(0, 0, b.System())(ctx, req, d)
+	return &logical.Response{Auth: req.Auth}, nil
 }
 
 func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, appId, userId string) (string, *logical.Response, error) {
@@ -168,7 +169,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, a
 	if raw, ok := appsMap["cidr_block"]; ok {
 		_, cidr, err := net.ParseCIDR(raw.(string))
 		if err != nil {
-			return "", nil, fmt.Errorf("invalid restriction cidr: %s", err)
+			return "", nil, errwrap.Wrapf("invalid restriction cidr: {{err}}", err)
 		}
 
 		var addr string
@@ -187,7 +188,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, a
 
 	apps, ok := appsRaw.(string)
 	if !ok {
-		return "", nil, fmt.Errorf("internal error: mapping is not a string")
+		return "", nil, fmt.Errorf("mapping is not a string")
 	}
 
 	// Verify that the app is in the list

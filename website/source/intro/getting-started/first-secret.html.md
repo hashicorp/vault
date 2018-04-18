@@ -30,11 +30,11 @@ Let's start by writing a secret. This is done very simply with the
 `vault write` command, as shown below:
 
 ```text
-$ vault write secret/hello value=world
+$ vault kv put secret/hello foo=world
 Success! Data written to: secret/hello
 ```
 
-This writes the pair `value=world` to the path `secret/hello`. We'll
+This writes the pair `foo=world` to the path `secret/hello`. We'll
 cover paths in more detail later, but for now it is important that the
 path is prefixed with `secret/`, otherwise this example won't work. The
 `secret/` prefix is where arbitrary secrets can be read and written.
@@ -42,11 +42,11 @@ path is prefixed with `secret/`, otherwise this example won't work. The
 You can even write multiple pieces of data, if you want:
 
 ```text
-$ vault write secret/hello value=world excited=yes
+$ vault kv put secret/hello foo=world excited=yes
 Success! Data written to: secret/hello
 ```
 
-`vault write` is a very powerful command. In addition to writing data
+`vault kv put` is a very powerful command. In addition to writing data
 directly from the command-line, it can read values and key pairs from
 `STDIN` as well as files. For more information, see the
 [command documentation](/docs/commands/index.html).
@@ -61,12 +61,12 @@ please use files. See the link above about reading in from `STDIN` for more info
 As you might expect, secrets can be read with `vault read`:
 
 ```text
-$ vault read secret/hello
+$ vault kv get secret/hello
 Key                 Value
 ---                 -----
 refresh_interval    768h
 excited             yes
-value               world
+foo                world
 ```
 
 As you can see, the values we wrote are given back to us. Vault reads
@@ -84,14 +84,14 @@ Optional JSON output is very useful for scripts. For example below we use the
 `jq` tool to extract the value of the `excited` secret:
 
 ```text
-$ vault read -format=json secret/hello | jq -r .data.excited
+$ vault kv get -format=json secret/hello | jq -r .data.excited
 yes
 ```
 
 When supported, you can also get a field directly:
 
 ```text
-$ vault read -field=excited secret/hello
+$ vault kv get -field=excited secret/hello
 yes
 ```
 
@@ -101,7 +101,7 @@ Now that we've learned how to read and write a secret, let's go ahead
 and delete it. We can do this with `vault delete`:
 
 ```text
-$ vault delete secret/hello
+$ vault kv delete secret/hello
 Success! Data deleted (if it existed) at: secret/hello
 ```
 

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/password"
 )
@@ -26,7 +27,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	if x, ok := m["lookup"]; ok {
 		parsed, err := strconv.ParseBool(x)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to parse \"lookup\" as boolean: %s", err)
+			return nil, errwrap.Wrapf("Failed to parse \"lookup\" as boolean: {{err}}", err)
 		}
 		lookup = parsed
 	}
@@ -51,12 +52,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 				return nil, fmt.Errorf("user interrupted")
 			}
 
-			return nil, fmt.Errorf("An error occurred attempting to "+
+			return nil, errwrap.Wrapf("An error occurred attempting to "+
 				"ask for a token. The raw error message is shown below, but usually "+
 				"this is because you attempted to pipe a value into the command or "+
 				"you are executing outside of a terminal (tty). If you want to pipe "+
 				"the value, pass \"-\" as the argument to read from stdin. The raw "+
-				"error was: %s", err)
+				"error was: {{err}}", err)
 		}
 	}
 
@@ -65,8 +66,8 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 	if token == "" {
 		return nil, fmt.Errorf(
-			"A token must be passed to auth. Please view the help for more " +
-				"information.")
+			"a token must be passed to auth, please view the help for more " +
+				"information")
 	}
 
 	// If the user declined verification, return now. Note that we will not have
@@ -86,10 +87,10 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 	secret, err := c.Auth().Token().LookupSelf()
 	if err != nil {
-		return nil, fmt.Errorf("Error looking up token: %s", err)
+		return nil, errwrap.Wrapf("error looking up token: {{err}}", err)
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("Empty response from lookup-self")
+		return nil, fmt.Errorf("empty response from lookup-self")
 	}
 
 	// Return an auth struct that "looks" like the response from an auth method.
@@ -97,27 +98,27 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	// mirror that data here.
 	id, err := secret.TokenID()
 	if err != nil {
-		return nil, fmt.Errorf("Error accessing token ID: %s", err)
+		return nil, errwrap.Wrapf("error accessing token ID: {{err}}", err)
 	}
 	accessor, err := secret.TokenAccessor()
 	if err != nil {
-		return nil, fmt.Errorf("Error accessing token accessor: %s", err)
+		return nil, errwrap.Wrapf("error accessing token accessor: {{err}}", err)
 	}
 	policies, err := secret.TokenPolicies()
 	if err != nil {
-		return nil, fmt.Errorf("Error accessing token policies: %s", err)
+		return nil, errwrap.Wrapf("error accessing token policies: {{err}}", err)
 	}
 	metadata, err := secret.TokenMetadata()
 	if err != nil {
-		return nil, fmt.Errorf("Error accessing token metadata: %s", err)
+		return nil, errwrap.Wrapf("error accessing token metadata: {{err}}", err)
 	}
 	dur, err := secret.TokenTTL()
 	if err != nil {
-		return nil, fmt.Errorf("Error converting token TTL: %s", err)
+		return nil, errwrap.Wrapf("error converting token TTL: {{err}}", err)
 	}
 	renewable, err := secret.TokenIsRenewable()
 	if err != nil {
-		return nil, fmt.Errorf("Error checking if token is renewable: %s", err)
+		return nil, errwrap.Wrapf("error checking if token is renewable: {{err}}", err)
 	}
 	return &api.Secret{
 		Auth: &api.SecretAuth{

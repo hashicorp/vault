@@ -10,7 +10,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
@@ -430,49 +431,49 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
 		if err := parseStorage(&result, o, "storage"); err != nil {
-			return nil, fmt.Errorf("error parsing 'storage': %s", err)
+			return nil, errwrap.Wrapf("error parsing 'storage': {{err}}", err)
 		}
 	} else {
 		if o := list.Filter("backend"); len(o.Items) > 0 {
 			if err := parseStorage(&result, o, "backend"); err != nil {
-				return nil, fmt.Errorf("error parsing 'backend': %s", err)
+				return nil, errwrap.Wrapf("error parsing 'backend': {{err}}", err)
 			}
 		}
 	}
 
 	if o := list.Filter("ha_storage"); len(o.Items) > 0 {
 		if err := parseHAStorage(&result, o, "ha_storage"); err != nil {
-			return nil, fmt.Errorf("error parsing 'ha_storage': %s", err)
+			return nil, errwrap.Wrapf("error parsing 'ha_storage': {{err}}", err)
 		}
 	} else {
 		if o := list.Filter("ha_backend"); len(o.Items) > 0 {
 			if err := parseHAStorage(&result, o, "ha_backend"); err != nil {
-				return nil, fmt.Errorf("error parsing 'ha_backend': %s", err)
+				return nil, errwrap.Wrapf("error parsing 'ha_backend': {{err}}", err)
 			}
 		}
 	}
 
 	if o := list.Filter("hsm"); len(o.Items) > 0 {
 		if err := parseSeal(&result, o, "hsm"); err != nil {
-			return nil, fmt.Errorf("error parsing 'hsm': %s", err)
+			return nil, errwrap.Wrapf("error parsing 'hsm': {{err}}", err)
 		}
 	}
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
 		if err := parseSeal(&result, o, "seal"); err != nil {
-			return nil, fmt.Errorf("error parsing 'seal': %s", err)
+			return nil, errwrap.Wrapf("error parsing 'seal': {{err}}", err)
 		}
 	}
 
 	if o := list.Filter("listener"); len(o.Items) > 0 {
 		if err := parseListeners(&result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'listener': %s", err)
+			return nil, errwrap.Wrapf("error parsing 'listener': {{err}}", err)
 		}
 	}
 
 	if o := list.Filter("telemetry"); len(o.Items) > 0 {
 		if err := parseTelemetry(&result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'telemetry': %s", err)
+			return nil, errwrap.Wrapf("error parsing 'telemetry': {{err}}", err)
 		}
 	}
 
@@ -493,9 +494,7 @@ func LoadConfigDir(dir string, logger log.Logger) (*Config, error) {
 		return nil, err
 	}
 	if !fi.IsDir() {
-		return nil, fmt.Errorf(
-			"configuration path must be a directory: %s",
-			dir)
+		return nil, fmt.Errorf("configuration path must be a directory: %q", dir)
 	}
 
 	var files []string
@@ -534,7 +533,7 @@ func LoadConfigDir(dir string, logger log.Logger) (*Config, error) {
 	for _, f := range files {
 		config, err := LoadConfigFile(f, logger)
 		if err != nil {
-			return nil, fmt.Errorf("Error loading %s: %s", f, err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("error loading %q: {{err}}", f), err)
 		}
 
 		if result == nil {
@@ -762,6 +761,10 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"address",
 			"cluster_address",
 			"endpoint",
+			"x_forwarded_for_authorized_addrs",
+			"x_forwarded_for_hop_skips",
+			"x_forwarded_for_reject_not_authorized",
+			"x_forwarded_for_reject_not_present",
 			"infrastructure",
 			"node_id",
 			"proxy_protocol_behavior",
@@ -866,8 +869,7 @@ func checkHCLKeys(node ast.Node, valid []string) error {
 	for _, item := range list.Items {
 		key := item.Keys[0].Token.Value().(string)
 		if _, ok := validMap[key]; !ok {
-			result = multierror.Append(result, fmt.Errorf(
-				"invalid key '%s' on line %d", key, item.Assign.Line))
+			result = multierror.Append(result, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
 		}
 	}
 

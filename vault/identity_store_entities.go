@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -44,6 +45,10 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 					Type:        framework.TypeCommaStringSlice,
 					Description: "Policies to be tied to the entity.",
 				},
+				"disabled": {
+					Type:        framework.TypeBool,
+					Description: "If set true, tokens tied to this identity will not be able to be used (but will not be revoked).",
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.pathEntityRegister(),
@@ -74,6 +79,10 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: "Policies to be tied to the entity.",
+				},
+				"disabled": {
+					Type:        framework.TypeBool,
+					Description: "If set true, tokens tied to this identity will not be able to be used (but will not be revoked).",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -229,7 +238,7 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 					if fromLockHeld {
 						fromEntityLock.Unlock()
 					}
-					return nil, fmt.Errorf("failed to update alias during merge: %v", err)
+					return nil, errwrap.Wrapf("failed to update alias during merge: {{err}}", err)
 				}
 
 				// Add the alias to the desired entity
@@ -353,6 +362,11 @@ func (i *IdentityStore) handleEntityUpdateCommon(req *logical.Request, d *framew
 		entity.Policies = entityPoliciesRaw.([]string)
 	}
 
+	disabledRaw, ok := d.GetOk("disabled")
+	if ok {
+		entity.Disabled = disabledRaw.(bool)
+	}
+
 	// Get the name
 	entityName := d.Get("name").(string)
 	if entityName != "" {
@@ -433,6 +447,7 @@ func (i *IdentityStore) handleEntityReadCommon(entity *identity.Entity) (*logica
 	respData["metadata"] = entity.Metadata
 	respData["merged_entity_ids"] = entity.MergedEntityIDs
 	respData["policies"] = entity.Policies
+	respData["disabled"] = entity.Disabled
 
 	// Convert protobuf timestamp into RFC3339 format
 	respData["creation_time"] = ptypes.TimestampString(entity.CreationTime)
@@ -503,7 +518,7 @@ func (i *IdentityStore) pathEntityIDList() framework.OperationFunc {
 		ws := memdb.NewWatchSet()
 		iter, err := i.MemDBEntities(ws)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch iterator for entities in memdb: %v", err)
+			return nil, errwrap.Wrapf("failed to fetch iterator for entities in memdb: {{err}}", err)
 		}
 
 		var entityIDs []string

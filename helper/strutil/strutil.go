@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	glob "github.com/ryanuber/go-glob"
 )
 
@@ -90,7 +91,7 @@ func ParseKeyValues(input string, out map[string]string, sep string) error {
 		key := strings.TrimSpace(shards[0])
 		value := strings.TrimSpace(shards[1])
 		if key == "" || value == "" {
-			return fmt.Errorf("invalid <key,value> pair: key:'%s' value:'%s'", key, value)
+			return fmt.Errorf("invalid <key,value> pair: key: %q value: %q", key, value)
 		}
 		out[key] = value
 	}
@@ -130,14 +131,14 @@ func ParseArbitraryKeyValues(input string, out map[string]string, sep string) er
 		// If JSON unmarshalling fails, consider that the input was
 		// supplied as a comma separated string of 'key=value' pairs.
 		if err = ParseKeyValues(input, out, sep); err != nil {
-			return fmt.Errorf("failed to parse the input: %v", err)
+			return errwrap.Wrapf("failed to parse the input: {{err}}", err)
 		}
 	}
 
 	// Validate the parsed input
 	for key, value := range out {
 		if key != "" && value == "" {
-			return fmt.Errorf("invalid value for key '%s'", key)
+			return fmt.Errorf("invalid value for key %q", key)
 		}
 	}
 

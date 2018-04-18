@@ -44,8 +44,10 @@ more information about setting up the database secrets engine.
     ```text
     $ vault write database/config/my-mysql-database \
         plugin_name=mysql-database-plugin \
-        connection_url="root:mysql@tcp(127.0.0.1:3306)/" \
-        allowed_roles="my-role"
+        connection_url="{{username}}:{{password}}@tcp(127.0.0.1:3306)/" \
+        allowed_roles="my-role" \
+        username="root" \
+        password="mysql"
     ```
 
 1. Configure a role that maps a name in Vault to an SQL statement to execute to

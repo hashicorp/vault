@@ -11,6 +11,7 @@ import (
 	_ "github.com/SAP/go-hdb/driver"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
@@ -143,16 +144,12 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 				continue
 			}
 
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+			m := map[string]string{
 				"name":       username,
 				"password":   password,
 				"expiration": expirationStr,
-			}))
-			if err != nil {
-				return "", "", err
 			}
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return "", "", err
 			}
 		}
@@ -238,14 +235,10 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 				continue
 			}
 
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+			m := map[string]string{
 				"name": username,
-			}))
-			if err != nil {
-				return err
 			}
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}

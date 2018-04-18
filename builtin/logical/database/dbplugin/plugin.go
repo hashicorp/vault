@@ -9,9 +9,9 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
-	log "github.com/mgutz/logxi/v1"
 )
 
 // Database is the interface that all database objects must implement.
@@ -39,6 +39,8 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 		return nil, err
 	}
 
+	namedLogger := logger.Named(pluginName)
+
 	var transport string
 	var db Database
 	if pluginRunner.Builtin {
@@ -52,14 +54,14 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 		var ok bool
 		db, ok = dbRaw.(Database)
 		if !ok {
-			return nil, fmt.Errorf("unsupported database type: %s", pluginName)
+			return nil, fmt.Errorf("unsupported database type: %q", pluginName)
 		}
 
 		transport = "builtin"
 
 	} else {
 		// create a DatabasePluginClient instance
-		db, err = newPluginClient(ctx, sys, pluginRunner, logger)
+		db, err = newPluginClient(ctx, sys, pluginRunner, namedLogger)
 		if err != nil {
 			return nil, err
 		}
@@ -87,12 +89,10 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 	}
 
 	// Wrap with tracing middleware
-	if logger.IsTrace() {
+	if namedLogger.IsTrace() {
 		db = &databaseTracingMiddleware{
-			transport: transport,
-			next:      db,
-			typeStr:   typeStr,
-			logger:    logger,
+			next:   db,
+			logger: namedLogger.With("transport", transport),
 		}
 	}
 

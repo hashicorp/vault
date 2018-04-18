@@ -86,7 +86,7 @@ type backend struct {
 }
 
 func (b *backend) reloadBackend(ctx context.Context) error {
-	b.Logger().Trace("plugin: reloading plugin backend", "plugin", b.config.Config["plugin_name"])
+	b.Logger().Debug("reloading plugin backend", "plugin", b.config.Config["plugin_name"])
 	return b.startBackend(ctx)
 }
 
@@ -111,12 +111,12 @@ func (b *backend) startBackend(ctx context.Context) error {
 	if !b.loaded {
 		if b.Backend.Type() != nb.Type() {
 			nb.Cleanup(ctx)
-			b.Logger().Warn("plugin: failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchType)
+			b.Logger().Warn("failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchType)
 			return ErrMismatchType
 		}
 		if !reflect.DeepEqual(b.Backend.SpecialPaths(), nb.SpecialPaths()) {
 			nb.Cleanup(ctx)
-			b.Logger().Warn("plugin: failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchPaths)
+			b.Logger().Warn("failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchPaths)
 			return ErrMismatchPaths
 		}
 	}

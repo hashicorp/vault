@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute"
 	"github.com/Azure/go-autorest/autorest"
@@ -55,7 +56,13 @@ func newAzureProvider(config *azureConfig) (*azureProvider, error) {
 	// makes a request to the discovery URL to determine the issuer and key set information to configure
 	// the OIDC verifier
 	discoveryURL := fmt.Sprintf("%s%s/.well-known/openid-configuration", settings.Environment.ActiveDirectoryEndpoint, settings.TenantID)
-	resp, err := httpClient.Get(discoveryURL)
+	req, err := http.NewRequest("GET", discoveryURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent())
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +112,9 @@ func newAzureProvider(config *azureConfig) (*azureProvider, error) {
 		}
 	}
 
+	// Ping the metadata service (if available)
+	go pingMetadataService()
+
 	return &azureProvider{
 		authorizer:   authorizer,
 		oidcVerifier: oidcVerifier,
@@ -120,6 +130,7 @@ func (p *azureProvider) ComputeClient(subscriptionID string) computeClient {
 	client := compute.NewVirtualMachinesClient(subscriptionID)
 	client.Authorizer = p.authorizer
 	client.Sender = p.httpClient
+	client.AddToUserAgent(userAgent())
 	return client
 }
 
@@ -181,4 +192,21 @@ func getAzureSettings(config *azureConfig) (*azureSettings, error) {
 	}
 
 	return settings, nil
+}
+
+// This is simply to ping the Azure metadata service, if it is running
+// in Azure
+func pingMetadataService() {
+	client := cleanhttp.DefaultClient()
+	client.Timeout = 5 * time.Second
+	req, _ := http.NewRequest("GET", "http://169.254.169.254/metadata/instance", nil)
+	req.Header.Add("Metadata", "True")
+	req.Header.Set("User-Agent", userAgent())
+
+	q := req.URL.Query()
+	q.Add("format", "json")
+	q.Add("api-version", "2017-04-02")
+	req.URL.RawQuery = q.Encode()
+
+	client.Do(req)
 }
