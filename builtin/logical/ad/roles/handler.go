@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	BackendPath = "roles"
+	InboundPath = "roles"
 	storageKey  = "roles"
 
 	cacheCleanup    = time.Second / 2
@@ -45,7 +45,7 @@ func (h *handler) AddDeleteWatcher(w DeleteWatcher) {
 }
 
 func (h *handler) Invalidate(ctx context.Context, key string) {
-	prefix := BackendPath + "/"
+	prefix := InboundPath + "/"
 	if strings.HasPrefix(key, prefix) {
 		roleName, err := util.ParseRoleName(prefix, key)
 		if err != nil {
@@ -77,6 +77,8 @@ func (h *handler) Path() *framework.Path {
 			logical.ListOperation:   h.listOperation,
 			logical.DeleteOperation: h.deleteOperation,
 		},
+		HelpSynopsis:    helpSynopsis,
+		HelpDescription: helpDescription,
 	}
 }
 
@@ -135,7 +137,7 @@ func (h *handler) Write(ctx context.Context, storage logical.Storage, role *Role
 func (h *handler) updateOperation(ctx context.Context, req *logical.Request, fieldData *framework.FieldData) (*logical.Response, error) {
 
 	// Get everything we need to construct the role.
-	roleName, err := util.ParseRoleName(BackendPath+"/", req.Path)
+	roleName, err := util.ParseRoleName(InboundPath+"/", req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +182,7 @@ func (h *handler) updateOperation(ctx context.Context, req *logical.Request, fie
 
 func (h *handler) readOperation(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 
-	roleName, err := util.ParseRoleName(BackendPath+"/", req.Path)
+	roleName, err := util.ParseRoleName(InboundPath+"/", req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +209,7 @@ func (h *handler) listOperation(ctx context.Context, req *logical.Request, _ *fr
 
 func (h *handler) deleteOperation(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 
-	roleName, err := util.ParseRoleName(BackendPath+"/", req.Path)
+	roleName, err := util.ParseRoleName(InboundPath+"/", req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -259,3 +261,8 @@ type NotFound struct {
 func (e *NotFound) Error() string {
 	return fmt.Sprintf("%s not found", e.roleName)
 }
+
+const (
+	helpSynopsis    = ``
+	helpDescription = ``
+)

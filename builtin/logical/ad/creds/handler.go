@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	BackendPath = "creds"
+	InboundPath = "creds"
 	storageKey  = "creds"
 
 	// Since Active Directory offers eventual consistency, in testing we found that sometimes
@@ -64,7 +64,7 @@ func (h *handler) Delete(ctx context.Context, storage logical.Storage, roleName 
 }
 
 func (h *handler) Invalidate(ctx context.Context, key string) {
-	prefix := BackendPath + "/"
+	prefix := InboundPath + "/"
 	if strings.HasPrefix(key, prefix) {
 		roleName, err := util.ParseRoleName(prefix, key)
 		if err != nil {
@@ -82,6 +82,8 @@ func (h *handler) Path() *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: h.readOperation,
 		},
+		HelpSynopsis:    helpSynopsis,
+		HelpDescription: helpDescription,
 	}
 }
 
@@ -101,7 +103,7 @@ func (h *handler) readOperationLogic(ctx context.Context, req *logical.Request) 
 
 	cred := &credential{}
 
-	roleName, err := util.ParseRoleName(BackendPath+"/", req.Path)
+	roleName, err := util.ParseRoleName(InboundPath+"/", req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -207,3 +209,8 @@ func (h *handler) generateAndReturnCreds(ctx context.Context, storage logical.St
 		Data: cred.Map(),
 	}, nil
 }
+
+const (
+	helpSynopsis    = ``
+	helpDescription = ``
+)

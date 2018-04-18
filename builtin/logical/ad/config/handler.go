@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	BackendPath = "config"
+	InboundPath = "config"
 	StorageKey  = "config"
 
 	// This length is arbitrarily chosen but should work for
@@ -72,7 +72,7 @@ func (h *handler) Read(ctx context.Context, storage logical.Storage) (*EngineCon
 }
 
 func (h *handler) Invalidate(ctx context.Context, key string) {
-	if key == BackendPath {
+	if key == InboundPath {
 		h.rwMutex.Lock()
 		h.config = nil
 		h.rwMutex.Unlock()
@@ -81,7 +81,7 @@ func (h *handler) Invalidate(ctx context.Context, key string) {
 
 func (h *handler) Path() *framework.Path {
 	return &framework.Path{
-		Pattern: BackendPath,
+		Pattern: InboundPath,
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
@@ -155,6 +155,8 @@ func (h *handler) Path() *framework.Path {
 			logical.ReadOperation:   h.readOperation,
 			logical.DeleteOperation: h.deleteOperation,
 		},
+		HelpSynopsis:    helpSynopsis,
+		HelpDescription: helpDescription,
 	}
 }
 
@@ -259,3 +261,8 @@ type Unset struct{}
 func (e *Unset) Error() string {
 	return "the config is currently unset"
 }
+
+const (
+	helpSynopsis    = ``
+	helpDescription = ``
+)

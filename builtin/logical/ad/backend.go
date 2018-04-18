@@ -22,6 +22,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	roleHandler.AddDeleteWatcher(credsHandler)
 
 	b := &framework.Backend{
+		Help: help,
 		Paths: []*framework.Path{
 			configHandler.Path(),
 			roleHandler.Path(),
@@ -29,8 +30,8 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 		},
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{
-				config.BackendPath,
-				creds.BackendPath,
+				config.InboundPath,
+				creds.InboundPath,
 			},
 		},
 		Invalidate:  util.Invalidator(configHandler.Invalidate, roleHandler.Invalidate, credsHandler.Invalidate).Invalidate,
@@ -41,3 +42,5 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 	return b, nil
 }
+
+const help = ``

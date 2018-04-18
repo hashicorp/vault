@@ -28,7 +28,7 @@ func TestConfigWriteReadDelete(t *testing.T) {
 	// Write
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      config.BackendPath,
+		Path:      config.InboundPath,
 		Storage:   storage,
 		Data: map[string]interface{}{
 			"username":    "tester",
@@ -48,7 +48,7 @@ func TestConfigWriteReadDelete(t *testing.T) {
 	// Read
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      config.BackendPath,
+		Path:      config.InboundPath,
 		Storage:   storage,
 	}
 	resp, err = b.HandleRequest(ctx, req)
@@ -61,7 +61,7 @@ func TestConfigWriteReadDelete(t *testing.T) {
 	// Delete
 	req = &logical.Request{
 		Operation: logical.DeleteOperation,
-		Path:      config.BackendPath,
+		Path:      config.InboundPath,
 		Storage:   storage,
 	}
 	resp, err = b.HandleRequest(ctx, req)

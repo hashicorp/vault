@@ -32,7 +32,7 @@ func TestCacheReader(t *testing.T) {
 
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      BackendPath,
+		Path:      InboundPath,
 		Storage:   storage,
 	}
 
@@ -63,7 +63,7 @@ func TestCacheReader(t *testing.T) {
 
 	req = &logical.Request{
 		Operation: logical.DeleteOperation,
-		Path:      BackendPath,
+		Path:      InboundPath,
 		Storage:   storage,
 	}
 
