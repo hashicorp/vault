@@ -70,11 +70,25 @@ type Role struct {
 }
 
 func (r *Role) Map() map[string]interface{} {
-	return map[string]interface{}{
+	m := map[string]interface{}{
 		"name":                 r.Name,
 		"service_account_name": r.ServiceAccountName,
 		"ttl": r.TTL,
-		"last_vault_rotation": r.LastVaultRotation,
-		"password_last_set":   r.PasswordLastSet,
 	}
+
+	var unset time.Time
+
+	if r.LastVaultRotation == unset {
+		m["last_vault_rotation"] = nil
+	} else {
+		m["last_vault_rotation"] = r.LastVaultRotation
+	}
+
+	if r.PasswordLastSet == unset {
+		m["password_last_set"] = nil
+	} else {
+		m["password_last_set"] = r.PasswordLastSet
+	}
+
+	return m
 }

@@ -2,12 +2,12 @@ package roles
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/builtin/logical/ad/config"
+	"github.com/hashicorp/vault/builtin/logical/ad/util"
 	"github.com/hashicorp/vault/helper/activedirectory"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -24,18 +24,24 @@ const (
 	unsetTTL = -1000
 )
 
-func NewManager(logger hclog.Logger, configReader config.Reader) *Manager {
+func NewManager(logger hclog.Logger, configReader config.Handler) *Manager {
 	return &Manager{
-		logger:       logger,
-		configReader: configReader,
-		cache:        cache.New(cacheExpiration, cacheCleanup),
+		logger:         logger,
+		configReader:   configReader,
+		cache:          cache.New(cacheExpiration, cacheCleanup),
+		deleteHandlers: []DeleteHandler{},
 	}
 }
 
 type Manager struct {
-	logger       hclog.Logger
-	configReader config.Reader
-	cache        *cache.Cache
+	logger         hclog.Logger
+	configReader   config.Handler
+	cache          *cache.Cache
+	deleteHandlers []DeleteHandler
+}
+
+func (m *Manager) AddDeleteHandler(h DeleteHandler) {
+	m.deleteHandlers = append(m.deleteHandlers, h)
 }
 
 func (m *Manager) Invalidate(ctx context.Context, key string) {
@@ -68,8 +74,14 @@ func (m *Manager) Path() *framework.Path {
 	}
 }
 
-type Reader interface {
+type DeleteHandler interface {
+	Delete(ctx context.Context, storage logical.Storage, roleName string) error
+}
+
+type Handler interface {
 	Role(ctx context.Context, storage logical.Storage, name string) (*Role, error)
+	Update(ctx context.Context, storage logical.Storage, role *Role) error
+	AddDeleteHandler(h DeleteHandler)
 }
 
 type NotFound struct {
@@ -97,9 +109,21 @@ func (m *Manager) Role(ctx context.Context, storage logical.Storage, name string
 	return role, nil
 }
 
+func (m *Manager) Update(ctx context.Context, storage logical.Storage, role *Role) error {
+	entry, err := logical.StorageEntryJSON(StorageKey+"/"+role.Name, role)
+	if err != nil {
+		return err
+	}
+	if err := storage.Put(ctx, entry); err != nil {
+		return err
+	}
+	m.cache.SetDefault(role.Name, role)
+	return nil
+}
+
 func (m *Manager) delete(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 
-	roleName, err := roleName(req.Path)
+	roleName, err := util.ParseRoleName(BackendPath+"/", req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +131,15 @@ func (m *Manager) delete(ctx context.Context, req *logical.Request, _ *framework
 	if err := req.Storage.Delete(ctx, StorageKey+"/"+roleName); err != nil {
 		return nil, err
 	}
+
+	m.cache.Delete(roleName)
+
+	for _, h := range m.deleteHandlers {
+		if err := h.Delete(ctx, req.Storage, roleName); err != nil {
+			return nil, err
+		}
+	}
+
 	return nil, nil
 }
 
@@ -120,7 +153,7 @@ func (m *Manager) list(ctx context.Context, req *logical.Request, _ *framework.F
 
 func (m *Manager) read(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 
-	roleName, err := roleName(req.Path)
+	roleName, err := util.ParseRoleName(BackendPath+"/", req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +173,7 @@ func (m *Manager) read(ctx context.Context, req *logical.Request, _ *framework.F
 
 func (m *Manager) update(ctx context.Context, req *logical.Request, fieldData *framework.FieldData) (*logical.Response, error) {
 
-	roleName, err := roleName(req.Path)
+	roleName, err := util.ParseRoleName(BackendPath+"/", req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -157,12 +190,7 @@ func (m *Manager) update(ctx context.Context, req *logical.Request, fieldData *f
 		return nil, err
 	}
 
-	entry, err := logical.StorageEntryJSON(StorageKey+"/"+roleName, role)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := req.Storage.Put(ctx, entry); err != nil {
+	if err := m.Update(ctx, req.Storage, role); err != nil {
 		return nil, err
 	}
 
@@ -234,15 +262,4 @@ func (m *Manager) readFromStorage(ctx context.Context, storage logical.Storage, 
 	role.PasswordLastSet = passwordLastSet
 
 	return role, nil
-}
-
-func roleName(reqPath string) (string, error) {
-
-	prefix := BackendPath + "/"
-	prefixLen := len(prefix)
-
-	if len(reqPath) <= prefixLen {
-		return "", errors.New("role name must be provided")
-	}
-	return reqPath[prefixLen:], nil
 }

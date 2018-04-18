@@ -51,6 +51,7 @@ func newFieldRegistry() *fieldRegistry {
 // that may be useful to Vault. Feel free to add to this list!
 type fieldRegistry struct {
 	AccountExpires              *Field `ldap:"accountExpires"`
+	AdminCount                  *Field `ldap:"adminCount"`
 	BadPasswordCount            *Field `ldap:"badPwdCount"`
 	BadPasswordTime             *Field `ldap:"badPasswordTime"`
 	CodePage                    *Field `ldap:"codePage"`
@@ -66,6 +67,7 @@ type fieldRegistry struct {
 	InstanceType                *Field `ldap:"instanceType"`
 	LastLogoff                  *Field `ldap:"lastLogoff"`
 	LastLogon                   *Field `ldap:"lastLogon"`
+	LastLogonTimestamp          *Field `ldap:"lastLogonTimestamp"`
 	LogonCount                  *Field `ldap:"logonCount"`
 	MemberOf                    *Field `ldap:"memberOf"`
 	Name                        *Field `ldap:"name"`

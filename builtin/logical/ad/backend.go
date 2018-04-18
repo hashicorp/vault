@@ -20,6 +20,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	roleManager := roles.NewManager(conf.Logger, confManager)
 
 	credsManager := creds.NewManager(conf.Logger, confManager, roleManager)
+	roleManager.AddDeleteHandler(credsManager) // yucky?
 
 	invalidator := newInvalidationMgr(confManager.Invalidate, roleManager.Invalidate, credsManager.Invalidate)
 
@@ -51,6 +52,9 @@ type invalidationMgr struct {
 	toCall []framework.InvalidateFunc
 }
 
+// TODO really need to work through cache invalidation because if a call for creds comes in,
+// it could change the password last updated on a ROLE
+// would the invalidation key include a rolename so I don't have to flush the whole cache?
 func (v *invalidationMgr) invalidate(ctx context.Context, key string) {
 	for _, f := range v.toCall {
 		f(ctx, key)

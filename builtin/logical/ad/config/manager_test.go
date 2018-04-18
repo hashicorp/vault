@@ -24,7 +24,7 @@ func TestCacheReader(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var configReader Reader
+	var configReader Handler
 	configReader = m
 
 	// we should start with no config

@@ -22,7 +22,7 @@ const (
 	DefaultPasswordTTLs = 24 * 60 * 60 * 32
 )
 
-type Reader interface {
+type Handler interface {
 	// Config returns the current *EngineConf.
 	// This shouldn't be retained in memory, but rather should be pulled on the fly every time,
 	// in case the config changes.

@@ -46,7 +46,7 @@ func TestTLSDefaultsTo12(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := uint16(771)
+	expected := "tls12"
 	if config.TLSMinVersion != expected || config.TLSMaxVersion != expected {
 		t.Fatal("expected TLS min and max version of 771 which corresponds with TLS 1.2 since TLS 1.1 and 1.0 have known vulnerabilities")
 	}
