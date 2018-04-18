@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/go-ldap/ldap"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/builtin/logical/ad/config"
 	"github.com/hashicorp/vault/helper/activedirectory"
 	"github.com/hashicorp/vault/helper/ldapifc"
@@ -12,9 +11,8 @@ import (
 )
 
 var (
-	manager  = &Manager{}
-	schema   = manager.Path().Fields
-	adClient = activedirectory.NewClientWith(hclog.NewNullLogger(), emptyConfig(), validLDAPClient())
+	mgr    = &handler{}
+	schema = mgr.Path().Fields
 )
 
 func TestOnlyDefaultTTLs(t *testing.T) {
@@ -32,12 +30,12 @@ func TestOnlyDefaultTTLs(t *testing.T) {
 		Schema: schema,
 	}
 
-	role, err := newRole(adClient, passwordConf, "kibana", fieldData)
+	ttl, err := getValidatedTTL(passwordConf, fieldData)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if role.TTL != config.DefaultPasswordTTLs {
+	if ttl != config.DefaultPasswordTTLs {
 		t.Fatal("ttl is not defaulting properly")
 	}
 }
@@ -57,12 +55,12 @@ func TestCustomOperatorTTLButDefaultRoleTTL(t *testing.T) {
 		Schema: schema,
 	}
 
-	role, err := newRole(adClient, passwordConf, "kibana", fieldData)
+	ttl, err := getValidatedTTL(passwordConf, fieldData)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if role.TTL != 10 {
+	if ttl != 10 {
 		t.Fatal("ttl is not defaulting properly")
 	}
 }
@@ -83,7 +81,7 @@ func TestTTLTooHigh(t *testing.T) {
 		Schema: schema,
 	}
 
-	_, err := newRole(adClient, passwordConf, "kibana", fieldData)
+	_, err := getValidatedTTL(passwordConf, fieldData)
 	if err == nil {
 		t.Fatal("should error when ttl is too high")
 	}
@@ -105,7 +103,7 @@ func TestNegativeTTL(t *testing.T) {
 		Schema: schema,
 	}
 
-	_, err := newRole(adClient, passwordConf, "kibana", fieldData)
+	_, err := getValidatedTTL(passwordConf, fieldData)
 	if err == nil {
 		t.Fatal("should error then ttl is negative")
 	}
@@ -127,7 +125,7 @@ func TestZeroTTL(t *testing.T) {
 		Schema: schema,
 	}
 
-	_, err := newRole(adClient, passwordConf, "kibana", fieldData)
+	_, err := getValidatedTTL(passwordConf, fieldData)
 	if err == nil {
 		t.Fatal("should error then ttl is zero")
 	}

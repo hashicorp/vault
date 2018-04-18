@@ -46,7 +46,7 @@ func newInsecureConfig() *activedirectory.Configuration {
 		Certificate:    "",
 		InsecureTLS:    true,
 		Password:       password,
-		StartTLS:       false,
+		StartTLS:       true,
 		TLSMinVersion:  "tls12",
 		TLSMaxVersion:  "tls12",
 		URLs:           []string{rawURL},

@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/builtin/logical/ad/config"
-	"github.com/hashicorp/vault/helper/activedirectory"
+	"github.com/hashicorp/vault/builtin/logical/ad/util"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func newRole(adClient *activedirectory.Client, passwordConf *config.PasswordConf, name string, fieldData *framework.FieldData) (*Role, error) {
+func newRole(logger hclog.Logger, engineConf *config.EngineConf, roleName string, fieldData *framework.FieldData) (*Role, error) {
 
 	serviceAccountName, err := getServiceAccountName(fieldData)
 	if err != nil {
@@ -18,18 +19,19 @@ func newRole(adClient *activedirectory.Client, passwordConf *config.PasswordConf
 	}
 
 	// verify service account exists
-	_, err = getServiceAccountByName(adClient, serviceAccountName)
+	secretsClient := util.NewSecretsClient(logger, engineConf.ADConf)
+	_, err = secretsClient.Get(serviceAccountName)
 	if err != nil {
 		return nil, err
 	}
 
-	ttl, err := getTTL(passwordConf, fieldData)
+	ttl, err := getValidatedTTL(engineConf.PasswordConf, fieldData)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Role{
-		Name:               name,
+		Name:               roleName,
 		ServiceAccountName: serviceAccountName,
 		TTL:                ttl,
 	}, nil
@@ -43,7 +45,7 @@ func getServiceAccountName(fieldData *framework.FieldData) (string, error) {
 	return serviceAccountName, nil
 }
 
-func getTTL(passwordConf *config.PasswordConf, fieldData *framework.FieldData) (int, error) {
+func getValidatedTTL(passwordConf *config.PasswordConf, fieldData *framework.FieldData) (int, error) {
 
 	ttl := fieldData.Get("ttl").(int)
 	if ttl == unsetTTL {
@@ -70,6 +72,7 @@ type Role struct {
 }
 
 func (r *Role) Map() map[string]interface{} {
+
 	m := map[string]interface{}{
 		"name":                 r.Name,
 		"service_account_name": r.ServiceAccountName,
@@ -78,15 +81,11 @@ func (r *Role) Map() map[string]interface{} {
 
 	var unset time.Time
 
-	if r.LastVaultRotation == unset {
-		m["last_vault_rotation"] = nil
-	} else {
+	if r.LastVaultRotation != unset {
 		m["last_vault_rotation"] = r.LastVaultRotation
 	}
 
-	if r.PasswordLastSet == unset {
-		m["password_last_set"] = nil
-	} else {
+	if r.PasswordLastSet != unset {
 		m["password_last_set"] = r.PasswordLastSet
 	}
 

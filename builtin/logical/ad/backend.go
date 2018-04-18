@@ -6,57 +6,38 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/ad/config"
 	"github.com/hashicorp/vault/builtin/logical/ad/creds"
 	"github.com/hashicorp/vault/builtin/logical/ad/roles"
+	"github.com/hashicorp/vault/builtin/logical/ad/util"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 
-	confManager, err := config.NewManager(ctx, conf)
-	if err != nil {
-		return nil, err
-	}
+	configHandler := config.Handler(conf.Logger)
 
-	roleManager := roles.NewManager(conf.Logger, confManager)
+	roleHandler := roles.Handler(conf.Logger, configHandler)
 
-	credsManager := creds.NewManager(conf.Logger, confManager, roleManager)
-	roleManager.AddDeleteHandler(credsManager) // yucky?
+	credsHandler := creds.Handler(conf.Logger, configHandler, roleHandler)
 
-	invalidator := newInvalidationMgr(confManager.Invalidate, roleManager.Invalidate, credsManager.Invalidate)
+	roleHandler.AddDeleteWatcher(credsHandler)
 
 	b := &framework.Backend{
 		Paths: []*framework.Path{
-			confManager.Path(),
-			roleManager.Path(),
-			credsManager.Path(),
+			configHandler.Path(),
+			roleHandler.Path(),
+			credsHandler.Path(),
 		},
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{
 				config.BackendPath,
+				creds.BackendPath,
 			},
 		},
-		Invalidate:  invalidator.invalidate,
+		Invalidate:  util.Invalidator(configHandler.Invalidate, roleHandler.Invalidate, credsHandler.Invalidate).Invalidate,
 		BackendType: logical.TypeLogical,
 	}
 
 	b.Setup(ctx, conf)
 
 	return b, nil
-}
-
-func newInvalidationMgr(invalidationFuncs ...framework.InvalidateFunc) *invalidationMgr {
-	return &invalidationMgr{invalidationFuncs}
-}
-
-type invalidationMgr struct {
-	toCall []framework.InvalidateFunc
-}
-
-// TODO really need to work through cache invalidation because if a call for creds comes in,
-// it could change the password last updated on a ROLE
-// would the invalidation key include a rolename so I don't have to flush the whole cache?
-func (v *invalidationMgr) invalidate(ctx context.Context, key string) {
-	for _, f := range v.toCall {
-		f(ctx, key)
-	}
 }

@@ -1,7 +1,10 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/go-errors/errors"
+	"github.com/hashicorp/vault/builtin/logical/ad/util"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
@@ -23,8 +26,8 @@ func newPasswordConfig(fieldData *framework.FieldData) (*PasswordConf, error) {
 		return nil, errors.New("max_ttl must be positive")
 	}
 
-	if length < 14 {
-		return nil, errors.New("minimum password length is 14 for sufficient complexity to be secure, though Vault recommends a higher length")
+	if length < util.MinimumPasswordLength {
+		return nil, fmt.Errorf("minimum password length is %d for sufficient complexity to be secure, though Vault recommends a higher length", util.MinimumPasswordLength)
 	}
 
 	return &PasswordConf{
