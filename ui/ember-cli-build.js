@@ -32,6 +32,13 @@ module.exports = function(defaults) {
       plugins: [
         'transform-object-rest-spread'
       ]
+    },
+    autoprefixer: {
+      grid: true,
+      browsers: [
+        "defaults",
+        "ie 11"
+      ]
     }
   });
 
