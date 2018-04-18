@@ -21,6 +21,8 @@ BUG FIXES:
 
  * identity: Persist entity memberships in external identity groups across
    mounts [GH-4365]
+ * replication: Fix issue causing secondaries to not connect properly to a
+   pre-0.10 primary until the primary was upgraded
  * secret/gcp: Fix panic on rollback when a roleset wasn't created properly
    [GH-4344]
  * ui: Fix IE11 form submissions in a few parts of the application [GH-4378]
