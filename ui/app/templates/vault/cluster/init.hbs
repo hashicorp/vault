@@ -71,19 +71,19 @@
         </div>
       </div>
     {{else}}
-      <div class="box is-marginless is-shadowless">
-        <form {{action 'initCluster' (hash
-           secret_shares=secret_shares
-           secret_threshold=secret_threshold
-           pgp_keys=pgp_keys
-           use_pgp=use_pgp
-           use_pgp_for_root=use_pgp_for_root
-           root_token_pgp_key=root_token_pgp_key
-           )
-           on="submit"
-         }}
-           id="init"
-        >
+      <form {{action 'initCluster' (hash
+         secret_shares=secret_shares
+         secret_threshold=secret_threshold
+         pgp_keys=pgp_keys
+         use_pgp=use_pgp
+         use_pgp_for_root=use_pgp_for_root
+         root_token_pgp_key=root_token_pgp_key
+         )
+         on="submit"
+       }}
+         id="init"
+      >
+        <div class="box is-marginless is-shadowless">
           <div class="columns is-mobile">
             <div class="column is-half">
               <h1 class="title is-5">
@@ -156,18 +156,17 @@
               {{pgp-list listLength=1 onDataUpdate=(action 'setRootKey')}}
             </div>
           {{/if}}
-        </form>
-      </div>
-      <div class="box is-marginless is-shadowless has-background-white-bis">
-        <button
-          type="submit"
-          class="button is-primary {{if loading 'is-loading'}}"
-          disabled={{loading}}
-          form="init"
-        >
-          Initialize
-        </button>
-      </div>
+        </div>
+        <div class="box is-marginless is-shadowless has-background-white-bis">
+          <button
+            type="submit"
+            class="button is-primary {{if loading 'is-loading'}}"
+            disabled={{loading}}
+          >
+            Initialize
+          </button>
+        </div>
+      </form>
     {{/if}}
   {{/s.content}}
 {{/splash-page}}

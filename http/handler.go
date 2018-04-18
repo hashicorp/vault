@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"os"
 	"strings"
@@ -13,6 +15,7 @@ import (
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -119,6 +122,94 @@ func wrapGenericHandler(h http.Handler) http.Handler {
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
 		w.Header().Set("Cache-Control", "no-store")
+		h.ServeHTTP(w, r)
+		return
+	})
+}
+
+func WrapForwardedForHandler(h http.Handler, authorizedAddrs []*sockaddr.SockAddrMarshaler, rejectNotPresent, rejectNonAuthz bool, hopSkips int) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		headers, headersOK := r.Header[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")]
+		if !headersOK || len(headers) == 0 {
+			if !rejectNotPresent {
+				h.ServeHTTP(w, r)
+				return
+			}
+			respondError(w, http.StatusBadRequest, fmt.Errorf("missing x-forwarded-for header and configured to reject when not present"))
+			return
+		}
+
+		host, port, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			// If not rejecting treat it like we just don't have a valid
+			// header because we can't do a comparison against an address we
+			// can't understand
+			if !rejectNotPresent {
+				h.ServeHTTP(w, r)
+				return
+			}
+			respondError(w, http.StatusBadRequest, errwrap.Wrapf("error parsing client hostport: {{err}}", err))
+			return
+		}
+
+		addr, err := sockaddr.NewIPAddr(host)
+		if err != nil {
+			// We treat this the same as the case above
+			if !rejectNotPresent {
+				h.ServeHTTP(w, r)
+				return
+			}
+			respondError(w, http.StatusBadRequest, errwrap.Wrapf("error parsing client address: {{err}}", err))
+			return
+		}
+
+		var found bool
+		for _, authz := range authorizedAddrs {
+			if authz.Contains(addr) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			// If we didn't find it and aren't configured to reject, simply
+			// don't trust it
+			if !rejectNonAuthz {
+				h.ServeHTTP(w, r)
+				return
+			}
+			respondError(w, http.StatusBadRequest, fmt.Errorf("client address not authorized for x-forwarded-for and configured to reject connection"))
+			return
+		}
+
+		// At this point we have at least one value and it's authorized
+
+		// Split comma separated ones, which are common. This brings it in line
+		// to the multiple-header case.
+		var acc []string
+		for _, header := range headers {
+			vals := strings.Split(header, ",")
+			for _, v := range vals {
+				acc = append(acc, strings.TrimSpace(v))
+			}
+		}
+
+		indexToUse := len(acc) - 1 - hopSkips
+		if indexToUse < 0 {
+			// This is likely an error in either configuration or other
+			// infrastructure. We could either deny the request, or we
+			// could simply not trust the value. Denying the request is
+			// "safer" since if this logic is configured at all there may
+			// be an assumption it can always be trusted. Given that we can
+			// deny accepting the request at all if it's not from an
+			// authorized address, if we're at this point the address is
+			// authorized (or we've turned off explicit rejection) and we
+			// should assume that what comes in should be properly
+			// formatted.
+			respondError(w, http.StatusBadRequest, fmt.Errorf("malformed x-forwarded-for configuration or request, hops to skip (%d) would skip before earliest chain link (chain length %d)", hopSkips, len(headers)))
+			return
+		}
+
+		r.RemoteAddr = net.JoinHostPort(acc[indexToUse], port)
 		h.ServeHTTP(w, r)
 		return
 	})

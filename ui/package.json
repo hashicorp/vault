@@ -57,7 +57,7 @@
     "ember-cli-inject-live-reload": "^1.4.1",
     "ember-cli-mirage": "^0.4.1",
     "ember-cli-moment-shim": "2.2.1",
-    "ember-cli-page-object": "^1.13.0",
+    "ember-cli-page-object": "1.14",
     "ember-cli-pretender": "0.7.0",
     "ember-cli-qunit": "^4.0.0",
     "ember-cli-sass": "6.0.0",

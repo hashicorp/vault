@@ -3,7 +3,21 @@ import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 const BACKENDS = supportedAuthBackends();
 const { computed, inject } = Ember;
 
-export default Ember.Component.extend({
+const attributesForSelectedAuthBackend = {
+  token: ['token'],
+  userpass: ['username', 'password'],
+  ldap: ['username', 'password'],
+  github: ['username', 'password'],
+  okta: ['username', 'password'],
+};
+
+const DEFAULTS = {
+  token: null,
+  username: null,
+  password: null,
+};
+
+export default Ember.Component.extend(DEFAULTS, {
   classNames: ['auth-form'],
   routing: inject.service('-routing'),
   auth: inject.service(),
@@ -14,6 +28,21 @@ export default Ember.Component.extend({
     this.$('li.is-active').get(0).scrollIntoView();
   },
 
+  didReceiveAttrs() {
+    this._super(...arguments);
+    let newMethod = this.get('selectedAuthType');
+    let oldMethod = this.get('oldSelectedAuthType');
+
+    if (oldMethod && oldMethod !== newMethod) {
+      this.resetDefaults();
+    }
+    this.set('oldSelectedAuthType', newMethod);
+  },
+
+  resetDefaults() {
+    this.setProperties(DEFAULTS);
+  },
+
   cluster: null,
   redirectTo: null,
 
@@ -22,9 +51,9 @@ export default Ember.Component.extend({
     return BACKENDS.findBy('type', this.get('selectedAuthType'));
   }),
 
-  providerComponentName: Ember.computed('selectedAuthBackend.type', function() {
-    const type = Ember.String.dasherize(this.get('selectedAuthBackend.type'));
-    return `auth-form/${type}`;
+  providerPartialName: Ember.computed('selectedAuthType', function() {
+    const type = Ember.String.dasherize(this.get('selectedAuthType'));
+    return `partials/auth-form/${type}`;
   }),
 
   hasCSPError: computed.alias('csp.connectionViolations.firstObject'),
@@ -45,15 +74,18 @@ export default Ember.Component.extend({
   },
 
   actions: {
-    doSubmit(data) {
+    doSubmit() {
+      let data = {};
       this.setProperties({
         loading: true,
         error: null,
       });
-      const targetRoute = this.get('redirectTo') || 'vault.cluster';
-      //const {password, token, username} = data;
-      const backend = this.get('selectedAuthBackend.type');
-      const path = this.get('customPath');
+      let targetRoute = this.get('redirectTo') || 'vault.cluster';
+      let backend = this.get('selectedAuthBackend.type');
+      let path = this.get('customPath');
+      let attributes = attributesForSelectedAuthBackend[backend];
+
+      data = Ember.assign(data, this.getProperties(...attributes));
       if (this.get('useCustomPath') && path) {
         data.path = path;
       }
