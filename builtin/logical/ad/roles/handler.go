@@ -228,11 +228,11 @@ func (h *handler) deleteOperation(ctx context.Context, req *logical.Request, _ *
 }
 
 type ReadWriter interface {
-	// Read returns the present *Read for a by a given name.
-	// If error == nil, *Read != nil.
+	// Read returns the present *Role for a by a given name.
+	// If error == nil, *Role != nil.
 	//
 	// The returned error may be due to issues reaching storage,
-	// or it may be because the *Read is unset by the user - they have no role by the given name.
+	// or it may be because the *Role is unset by the user - they have no role by the given name.
 	//
 	// If knowing the error is useful to the caller, it may be inspected like so:
 	//
