@@ -197,8 +197,7 @@ func (h *handler) readOperation(ctx context.Context, req *logical.Request, _ *fr
 
 	_, err := h.Read(ctx, req.Storage)
 	if err != nil {
-		_, ok := err.(*Unset)
-		if ok {
+		if _, ok := err.(*Unset); ok {
 			return nil, nil
 		}
 		return nil, err

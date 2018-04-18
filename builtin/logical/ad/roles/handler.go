@@ -151,6 +151,16 @@ func (h *handler) updateOperation(ctx context.Context, req *logical.Request, fie
 		return nil, err
 	}
 
+	// Was there already a role before that we're now overwriting? If so, let's carry forward the LastVaultRotation.
+	oldRole, err := h.Read(ctx, req.Storage, roleName)
+	if err != nil {
+		if _, ok := err.(*NotFound); !ok {
+			return nil, err
+		}
+	} else {
+		role.LastVaultRotation = oldRole.LastVaultRotation
+	}
+
 	// Write it to storage and the cache.
 	if err := h.Write(ctx, req.Storage, role); err != nil {
 		return nil, err
@@ -177,8 +187,7 @@ func (h *handler) readOperation(ctx context.Context, req *logical.Request, _ *fr
 
 	role, err := h.Read(ctx, req.Storage, roleName)
 	if err != nil {
-		_, ok := err.(*NotFound)
-		if ok {
+		if _, ok := err.(*NotFound); ok {
 			return nil, nil
 		}
 	}

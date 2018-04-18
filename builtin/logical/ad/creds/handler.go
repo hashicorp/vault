@@ -19,6 +19,18 @@ const (
 	BackendPath = "creds"
 	storageKey  = "creds"
 
+	// Since Active Directory offers eventual consistency, in testing we found that sometimes
+	// Active Directory returned "password last set" times that were _later_ than our own,
+	// even though ours were captured after synchronously completing a password update operation.
+	//
+	// An example we captured was:
+	// 		last_vault_rotation     2018-04-18T22:29:57.385454779Z
+	// 		password_last_set       2018-04-18T22:29:57.3902786Z
+	//
+	// Thus we add a short time buffer when checking whether anyone _else_ updated the AD password
+	// since Vault last rotated it.
+	passwordLastSetBuffer = time.Second
+
 	// Since password TTL can be set to as low as 1 second,
 	// we can't cache passwords for an entire second.
 	cacheCleanup    = time.Second / 3
@@ -78,6 +90,9 @@ func (h *handler) readOperation(ctx context.Context, req *logical.Request, _ *fr
 	if err != nil {
 		return nil, err
 	}
+	if resp == nil {
+		return nil, nil
+	}
 	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the creds information as-is, including any passwords.")
 	return resp, nil
 }
@@ -93,6 +108,10 @@ func (h *handler) readOperationLogic(ctx context.Context, req *logical.Request) 
 
 	role, err := h.roleRW.Read(ctx, req.Storage, roleName)
 	if err != nil {
+		if _, ok := err.(*roles.NotFound); ok {
+			// The role was deleted, and we've also already deleted the cred.
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -105,7 +124,7 @@ func (h *handler) readOperationLogic(ctx context.Context, req *logical.Request) 
 
 	// Has anyone manually rotated the password in Active Directory?
 	// If so, we need to rotate it now so Vault will know it.
-	if role.PasswordLastSet.After(role.LastVaultRotation) {
+	if role.PasswordLastSet.After(role.LastVaultRotation.Add(passwordLastSetBuffer)) {
 		return h.generateAndReturnCreds(ctx, req.Storage, role, cred)
 	}
 
@@ -132,7 +151,6 @@ func (h *handler) readOperationLogic(ctx context.Context, req *logical.Request) 
 
 	// Is the password too old?
 	// If so, time for a new one!
-	// TODO will there be any tz related bugs here?
 	now := time.Now().UTC()
 	shouldBeRolled := role.LastVaultRotation.Add(time.Duration(role.TTL) * time.Second) // already in UTC
 	if now.After(shouldBeRolled) {
