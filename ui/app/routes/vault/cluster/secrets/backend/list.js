@@ -46,26 +46,29 @@ export default Ember.Route.extend({
     const secret = params.secret ? params.secret : '';
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     const backends = this.modelFor('vault.cluster.secrets').mapBy('id');
-    return this.store
-      .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
-        id: secret,
-        backend,
-        responsePath: 'data.keys',
-        page: params.page,
-        pageFilter: params.pageFilter,
-        size: 100,
-      })
-      .then(model => {
-        this.set('has404', false);
-        return model;
-      })
-      .catch(err => {
-        if (backends.includes(backend) && err.httpStatus === 404 && secret === '') {
-          return [];
-        } else {
-          throw err;
-        }
-      });
+    return Ember.RSVP.hash({
+      secret,
+      secrets: this.store
+        .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
+          id: secret,
+          backend,
+          responsePath: 'data.keys',
+          page: params.page,
+          pageFilter: params.pageFilter,
+          size: 100,
+        })
+        .then(model => {
+          this.set('has404', false);
+          return model;
+        })
+        .catch(err => {
+          if (backends.includes(backend) && err.httpStatus === 404 && secret === '') {
+            return [];
+          } else {
+            throw err;
+          }
+        }),
+    });
   },
 
   afterModel(model) {
@@ -93,19 +96,20 @@ export default Ember.Route.extend({
       );
   },
 
-  setupController(controller, model) {
-    const secretParams = this.paramsFor(this.routeName);
-    const secret = secretParams.secret ? secretParams.secret : '';
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const backendModel = this.store.peekRecord('secret-engine', backend);
-    const has404 = this.get('has404');
+  setupController(controller, resolvedModel) {
+    let secretParams = this.paramsFor(this.routeName);
+    let secret = resolvedModel.secret;
+    let model = resolvedModel.secrets;
+    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    let backendModel = this.store.peekRecord('secret-engine', backend);
+    let has404 = this.get('has404');
     controller.set('hasModel', true);
     controller.setProperties({
       model,
-      baseKey: { id: secret },
       has404,
       backend,
       backendModel,
+      baseKey: { id: secret },
       backendType: backendModel.get('type'),
     });
     if (!has404) {
