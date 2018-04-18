@@ -5,8 +5,10 @@ if(process.argv[2]){
   process.exit(0);
 }
 
+process.env.TERM = 'dumb';
 var fs = require('fs');
 var path = require('path');
+var readline = require('readline')
 var spawn = require('child_process').spawn;
 var vault = spawn(
   'vault',
@@ -21,21 +23,15 @@ var vault = spawn(
   ]
 );
 
-// https://github.com/chalk/ansi-regex/blob/master/index.js
-var ansiPattern = [
-  '[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\\u0007)',
-  '(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))'
-].join('|');
-
-var ANSI_REGEX = new RegExp(ansiPattern, 'g');
-
 var output = '';
 var unseal, root;
-vault.stdout.on('data', function(data) {
-  var stringData = data.toString().replace(ANSI_REGEX, '');
-  output = output + stringData;
-  console.log(stringData);
 
+readline.createInterface({
+  input     : vault.stdout,
+  terminal  : false
+}).on('line', function(line) {
+  output = output + line;
+  console.log(line);
   var unsealMatch = output.match(/Unseal Key\: (.+)$/m);
   if (unsealMatch && !unseal) { unseal = unsealMatch[1] };
   var rootMatch = output.match(/Root Token\: (.+)$/m);

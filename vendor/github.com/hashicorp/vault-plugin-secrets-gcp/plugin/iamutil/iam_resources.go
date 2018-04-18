@@ -216,10 +216,17 @@ type ServiceConfig struct {
 	ServicePath string
 }
 
-func (r *iamResourceImpl) SetIamPolicyRequest(p *Policy) (*http.Request, error) {
-	data := struct {
-		Policy *Policy `json:"policy,omitempty"`
-	}{Policy: p}
+func (r *iamResourceImpl) SetIamPolicyRequest(p *Policy) (req *http.Request, err error) {
+	var data interface{}
+	switch strings.ToLower(r.config.Service.Name) {
+	// GCS uses a different payload than every other API.
+	case "storage":
+		data = p
+	default:
+		data = struct {
+			Policy *Policy `json:"policy,omitempty"`
+		}{Policy: p}
+	}
 
 	buf, err := googleapi.WithoutDataWrapper.JSONReader(data)
 	if err != nil {
@@ -240,6 +247,12 @@ func (r *iamResourceImpl) constructRequest(httpMtd *HttpMethodCfg, data io.Reade
 		return nil, err
 	}
 
+	if req.Header == nil {
+		req.Header = make(http.Header)
+	}
+	if data != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	replacementMap := make(map[string]string)
 	for cId, replaceK := range httpMtd.ReplacementKeys {
 		rId, ok := r.relativeId.IdTuples[cId]

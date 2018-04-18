@@ -27,7 +27,7 @@ have the means necessary to decrypt it without Vault.
 ## Writing a Secret
 
 Let's start by writing a secret. This is done very simply with the
-`vault write` command, as shown below:
+`vault kv` command, as shown below:
 
 ```text
 $ vault kv put secret/hello foo=world
@@ -46,7 +46,7 @@ $ vault kv put secret/hello foo=world excited=yes
 Success! Data written to: secret/hello
 ```
 
-`vault write` is a very powerful command. In addition to writing data
+`vault kv put` is a very powerful command. In addition to writing data
 directly from the command-line, it can read values and key pairs from
 `STDIN` as well as files. For more information, see the
 [command documentation](/docs/commands/index.html).
