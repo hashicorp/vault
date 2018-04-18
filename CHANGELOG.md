@@ -15,6 +15,7 @@ IMPROVEMENTS:
  * identity: Add the ability to disable an entity. Disabling an entity does not
    revoke associated tokens, but while the entity is disabled they cannot be
    used. [GH-4353]
+ * physical/consul: Allow tuning of session TTL and lock wait time [GH-4352]
 
 BUG FIXES:
 
