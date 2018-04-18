@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	defaultBucketCount      = 256
+	defaultBucketBaseCount  = 256
 	defaultBucketShardCount = 16
 	// Generally speaking, the larger size of the bucket size adversely affects
 	// the performance of the storage packer. More over some of the backends
@@ -41,8 +41,8 @@ type Config struct {
 	// Logger for output
 	Logger log.Logger
 
-	// BucketCount is the number of buckets to create at the base level
-	BucketCount int
+	// BucketBaseCount is the number of buckets to create at the base level
+	BucketBaseCount int
 
 	// BucketShardCount is the number of buckets any given bucket can get
 	// sharded into when it exceeds the maximum allowed size
@@ -122,7 +122,7 @@ func (s *StoragePackerV2) putItem(bucket *PackedBucket, item *Item) (string, err
 	}
 
 	// Compute the shard index to which the item belongs
-	shardIndex, err := shardBucketIndex(item.ID, int(bucket.Data.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
+	shardIndex, err := shardBucketIndex(item.ID, int(bucket.Data.Depth), int(s.config.BucketBaseCount), int(s.config.BucketShardCount))
 	if err != nil {
 		return "", errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
@@ -287,7 +287,7 @@ func (s *StoragePackerV2) getItem(bucket *PackedBucket, itemID string) (*Item, e
 		return nil, nil
 	}
 
-	shardIndex, err := shardBucketIndex(itemID, int(bucket.Data.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
+	shardIndex, err := shardBucketIndex(itemID, int(bucket.Data.Depth), int(s.config.BucketBaseCount), int(s.config.BucketShardCount))
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
@@ -334,7 +334,7 @@ func (s *StoragePackerV2) deleteItem(bucket *PackedBucket, itemID string) error 
 		return nil
 	}
 
-	shardIndex, err := shardBucketIndex(itemID, int(bucket.Data.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
+	shardIndex, err := shardBucketIndex(itemID, int(bucket.Data.Depth), int(s.config.BucketBaseCount), int(s.config.BucketShardCount))
 	if err != nil {
 		return errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
@@ -455,7 +455,7 @@ func (s *StoragePackerV2) splitBucket(bucket *PackedBucket) error {
 			if shard.Buckets == nil {
 				shard.Buckets = make(map[string]*BucketV2)
 			}
-			subShardIndex, err := shardBucketIndex(itemID, int(shard.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
+			subShardIndex, err := shardBucketIndex(itemID, int(shard.Depth), int(s.config.BucketBaseCount), int(s.config.BucketShardCount))
 			if err != nil {
 				return err
 			}
@@ -489,7 +489,7 @@ func (s *StoragePackerV2) primaryBucketIndex(itemID string) (string, error) {
 	}
 
 	// Compute the bits required to enumerate all possible primary buckets
-	bitCount := bitsNeeded(s.config.BucketCount)
+	bitCount := bitsNeeded(s.config.BucketBaseCount)
 
 	// Extract the index value of the primary bucket from the hash of the item ID
 	return strutil.BitMaskedIndexHex(hashVal, bitCount)
@@ -548,8 +548,8 @@ func NewStoragePackerV2(config *Config) (*StoragePackerV2, error) {
 		config.ViewPrefix = config.ViewPrefix + "/"
 	}
 
-	if config.BucketCount == 0 {
-		config.BucketCount = defaultBucketCount
+	if config.BucketBaseCount == 0 {
+		config.BucketBaseCount = defaultBucketBaseCount
 	}
 
 	if config.BucketShardCount == 0 {

@@ -157,22 +157,30 @@ func (ts *TokenStore) CreateTokenMapping(te *TokenEntry) (*token.TokenMapping, e
 		CubbyholeID: cubbyholeID,
 	}
 
-	// Persist the token mapping
-	tokenMappingAsAny, err := ptypes.MarshalAny(tokenMapping)
-	if err != nil {
-		return nil, err
-	}
-	item := &storagepacker.Item{
-		ID:      tokenMapping.ID,
-		Message: tokenMappingAsAny,
-	}
+	switch {
+	case len(te.Policies) == 1 && te.Policies[0] == "root":
+		// Store mapping for root tokens outside of storage packer
 
-	bucketKey, err := ts.mappingPacker.PutItem(item)
-	if err != nil {
-		return nil, err
-	}
+		if err := ts.view.Put(ctx, le); err != nil {
+		}
+	default:
+		// Persist the token mapping
+		tokenMappingAsAny, err := ptypes.MarshalAny(tokenMapping)
+		if err != nil {
+			return nil, err
+		}
+		item := &storagepacker.Item{
+			ID:      tokenMapping.ID,
+			Message: tokenMappingAsAny,
+		}
 
-	tokenMapping.BucketKey = bucketKey
+		bucketKey, err := ts.mappingPacker.PutItem(item)
+		if err != nil {
+			return nil, err
+		}
+
+		tokenMapping.BucketKey = bucketKey
+	}
 
 	// Insert the mapping into MemDB
 	err = ts.MemDBUpsertTokenMapping(tokenMapping)
