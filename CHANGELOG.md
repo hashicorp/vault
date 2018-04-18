@@ -23,6 +23,8 @@ BUG FIXES:
    mounts [GH-4365]
  * secret/gcp: Fix panic on rollback when a roleset wasn't created properly
    [GH-4344]
+ * ui: Fix IE11 form submissions in a few parts of the application [GH-4378]
+ * ui: Fix IE file saving on policy pages and init screens [GH-4376]
 
 ## 0.10.0 (April 10th, 2018)
 
