@@ -5,10 +5,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -608,7 +608,7 @@ func TestBackend_PluginMainCredentials(t *testing.T) {
 }
 
 func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
 	cluster.Start()
@@ -644,77 +644,77 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 		t.Fatal("nil data")
 	}
 
-	exp = map[string]interface{}{
+	exp := map[string]interface{}{
 		"exact_paths": map[string]interface{}{
 			"auth/token/lookup-self": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"read",
 				},
 			},
 			"auth/token/renew-self": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
 			"auth/token/revoke-self": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
 			"sys/capabilities-self": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
 			"sys/internal/ui/resultant-acl": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"read",
 				},
 			},
 			"sys/leases/lookup": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
 			"sys/leases/renew": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
 			"sys/renew": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
 			"sys/tools/hash": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
 			"sys/tools/random": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
 			"sys/wrapping/lookup": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
 			"sys/wrapping/unwrap": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
 			"sys/wrapping/wrap": map[string]interface{}{
-				"capabilities": []string{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
 		},
 		"glob_paths": map[string]interface{}{
-			"cubbyhole": map[string]interface{}{
-				"capabilities": []string{
+			"cubbyhole/": map[string]interface{}{
+				"capabilities": []interface{}{
 					"create",
 					"delete",
 					"list",
@@ -722,13 +722,13 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 					"update",
 				},
 			},
-			"sys/tools/hash": map[string]interface{}{
-				"capabilities": []string{
+			"sys/tools/hash/": map[string]interface{}{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
-			"sys/tools/random": map[string]interface{}{
-				"capabilities": []string{
+			"sys/tools/random/": map[string]interface{}{
+				"capabilities": []interface{}{
 					"update",
 				},
 			},
@@ -736,7 +736,7 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 		"root": false,
 	}
 
-	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	if diff := deep.Equal(resp.Data, exp); diff != nil {
+		t.Fatal(diff)
 	}
 }
