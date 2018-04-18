@@ -6,7 +6,7 @@ import (
 
 func TestFieldRegistryListsFields(t *testing.T) {
 	fields := FieldRegistry.List()
-	if len(fields) != 36 {
+	if len(fields) != 38 {
 		t.FailNow()
 	}
 }

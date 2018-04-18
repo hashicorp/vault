@@ -115,12 +115,12 @@ func configIsStoredAsExpected(t *testing.T) {
 		t.Fatalf("expected the url to be \"ldap://138.91.247.105\" but received \"%s\"", engineConf.ADConf.URLs[0])
 	}
 
-	if engineConf.ADConf.TLSMinVersion != 771 {
-		t.Fatalf("expected TLSMinVersion to be \"771\" but received \"%d\"", engineConf.ADConf.TLSMinVersion)
+	if engineConf.ADConf.TLSMinVersion != "tls12" {
+		t.Fatalf("expected TLSMinVersion to be \"tls12\" but received \"%s\"", engineConf.ADConf.TLSMinVersion)
 	}
 
-	if engineConf.ADConf.TLSMaxVersion != 771 {
-		t.Fatalf("expected TLSMaxVersion to be \"771\" but received \"%d\"", engineConf.ADConf.TLSMaxVersion)
+	if engineConf.ADConf.TLSMaxVersion != "tls12" {
+		t.Fatalf("expected TLSMaxVersion to be \"tls12\" but received \"%s\"", engineConf.ADConf.TLSMaxVersion)
 	}
 
 	if engineConf.ADConf.Username != "tester" {
@@ -167,11 +167,11 @@ func verifyResponse(t *testing.T, resp *logical.Response) {
 		t.Fatalf("expected url to be \"[ldap://138.91.247.105]\" but received \"%s\"", fmt.Sprintf("%s", resp.Data["urls"]))
 	}
 
-	if resp.Data["tlsminversion"].(uint16) != 771 {
+	if resp.Data["tlsminversion"].(string) != "tls12" {
 		t.Fatalf("expected tlsminversion to be \"771\" but received \"%s\"", resp.Data["tlsminversion"])
 	}
 
-	if resp.Data["tlsmaxversion"].(uint16) != 771 {
+	if resp.Data["tlsmaxversion"].(string) != "tls12" {
 		t.Fatalf("expected tlsmaxversion to be \"771\" but received \"%s\"", resp.Data["tlsmaxversion"])
 	}
 

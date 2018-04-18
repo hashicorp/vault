@@ -16,19 +16,13 @@ var (
 
 func TestCacheReader(t *testing.T) {
 
-	m, err := NewManager(ctx, &logical.BackendConfig{
-		Logger:      hclog.NewNullLogger(),
-		StorageView: storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	h := Handler(hclog.NewNullLogger())
 
 	var configReader Reader
-	configReader = m
+	configReader = h
 
 	// we should start with no config
-	config, err := configReader.Config(ctx, storage)
+	config, err := configReader.Read(ctx, storage)
 	if err != nil {
 		_, ok := err.(*Unset)
 		if !ok {
@@ -43,7 +37,7 @@ func TestCacheReader(t *testing.T) {
 	}
 
 	fieldData := &framework.FieldData{
-		Schema: m.Path().Fields,
+		Schema: h.Path().Fields,
 		Raw: map[string]interface{}{
 			"username": "tester",
 			"password": "pa$$w0rd",
@@ -52,13 +46,13 @@ func TestCacheReader(t *testing.T) {
 		},
 	}
 
-	_, err = m.update(ctx, req, fieldData)
+	_, err = h.updateOperation(ctx, req, fieldData)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// now that we've updated the config, we should be able to read it
-	config, err = configReader.Config(ctx, storage)
+	// now that we've updated the config, we should be able to readOperation it
+	config, err = configReader.Read(ctx, storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,13 +67,13 @@ func TestCacheReader(t *testing.T) {
 		Storage:   storage,
 	}
 
-	_, err = m.delete(ctx, req, nil)
+	_, err = h.deleteOperation(ctx, req, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// now that we've deleted the config, it should be unset again
-	config, err = configReader.Config(ctx, storage)
+	config, err = configReader.Read(ctx, storage)
 	if err != nil {
 		_, ok := err.(*Unset)
 		if !ok {

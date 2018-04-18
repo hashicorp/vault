@@ -3,6 +3,8 @@ package activedirectory
 import (
 	"strings"
 
+	"fmt"
+
 	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/go-hclog"
 )
@@ -16,7 +18,7 @@ func NewEntry(logger hclog.Logger, ldapEntry *ldap.Entry) *Entry {
 		field, err := FieldRegistry.Parse(attribute.Name)
 		if err != nil {
 			if logger.IsWarn() {
-				logger.Warn("no field exists in the ActiveDirectory registry for %s, ignoring it")
+				logger.Warn(fmt.Sprintf("no field exists in the ActiveDirectory registry for %s, ignoring it", attribute.Name))
 			}
 			continue
 		}

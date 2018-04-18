@@ -4,31 +4,36 @@ import (
 	"context"
 
 	"github.com/hashicorp/vault/builtin/logical/ad/config"
+	"github.com/hashicorp/vault/builtin/logical/ad/creds"
 	"github.com/hashicorp/vault/builtin/logical/ad/roles"
+	"github.com/hashicorp/vault/builtin/logical/ad/util"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 
-	confManager, err := config.NewManager(ctx, conf)
-	if err != nil {
-		return nil, err
-	}
+	configHandler := config.Handler(conf.Logger)
 
-	roleManager := roles.NewManager(conf.Logger, confManager)
+	roleHandler := roles.Handler(conf.Logger, configHandler)
+
+	credsHandler := creds.Handler(conf.Logger, configHandler, roleHandler)
+
+	roleHandler.AddDeleteWatcher(credsHandler)
 
 	b := &framework.Backend{
 		Paths: []*framework.Path{
-			confManager.Path(),
-			roleManager.Path(),
+			configHandler.Path(),
+			roleHandler.Path(),
+			credsHandler.Path(),
 		},
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{
 				config.BackendPath,
+				creds.BackendPath,
 			},
 		},
-		Invalidate:  confManager.Invalidate,
+		Invalidate:  util.Invalidator(configHandler.Invalidate, roleHandler.Invalidate, credsHandler.Invalidate).Invalidate,
 		BackendType: logical.TypeLogical,
 	}
 

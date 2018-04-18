@@ -2,6 +2,7 @@ package ldapifc
 
 import (
 	"crypto/tls"
+
 	"github.com/go-ldap/ldap"
 )
 
@@ -10,7 +11,7 @@ func NewClient() Client {
 }
 
 // Client provides ldap functionality, but through an interface
-// rather than statically.
+// rather than statically. This allows faking it for tests.
 type Client interface {
 	Dial(network, addr string) (Connection, error)
 	DialTLS(network, addr string, config *tls.Config) (Connection, error)

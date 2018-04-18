@@ -20,7 +20,7 @@ const (
 	DefaultTLSMaxVersion = "tls12"
 )
 
-func NewConfiguration(logger hclog.Logger, fieldData *framework.FieldData) (*Configuration, error) {
+func NewConfiguration(fieldData *framework.FieldData) (*Configuration, error) {
 
 	certificate, err := getValidatedCertificate(fieldData)
 	if err != nil {
@@ -28,16 +28,6 @@ func NewConfiguration(logger hclog.Logger, fieldData *framework.FieldData) (*Con
 	}
 
 	dn, err := getRootDomainName(fieldData)
-	if err != nil {
-		return nil, err
-	}
-
-	tlsMinVersion, err := getTLSMinVersion(fieldData)
-	if err != nil {
-		return nil, err
-	}
-
-	tlsMaxVersion, err := getTLSMaxVersion(fieldData)
 	if err != nil {
 		return nil, err
 	}
@@ -53,11 +43,10 @@ func NewConfiguration(logger hclog.Logger, fieldData *framework.FieldData) (*Con
 		InsecureTLS:    fieldData.Get("insecure_tls").(bool),
 		Password:       fieldData.Get("password").(string),
 		StartTLS:       getStartTLS(fieldData),
-		TLSMinVersion:  tlsMinVersion,
-		TLSMaxVersion:  tlsMaxVersion,
+		TLSMinVersion:  getTLSMinVersion(fieldData),
+		TLSMaxVersion:  getTLSMaxVersion(fieldData),
 		URLs:           urls,
 		Username:       fieldData.Get("username").(string),
-		logger:         logger,
 	}
 
 	if err := conf.validate(); err != nil {
@@ -73,18 +62,25 @@ type Configuration struct {
 	InsecureTLS    bool     `json:"insecure_tls"`
 	Password       string   `json:"password"`
 	StartTLS       bool     `json:"starttls"`
-	TLSMinVersion  uint16   `json:"tlsminversion"`
-	TLSMaxVersion  uint16   `json:"tlsmaxversion"`
+	TLSMinVersion  string   `json:"tlsminversion"`
+	TLSMaxVersion  string   `json:"tlsmaxversion"`
 	URLs           []string `json:"urls"`
 	Username       string   `json:"username"`
-
-	// *tlsConfig objects aren't jsonable, so we must avoid storing them and instead generate them on the fly
-	tlsConfigs map[*url.URL]*tls.Config
-	logger     hclog.Logger
 }
 
 func (c *Configuration) validate() error {
-	if c.TLSMinVersion < c.TLSMaxVersion {
+
+	tlsMinVersion, ok := tlsutil.TLSLookup[c.TLSMinVersion]
+	if !ok {
+		return errors.New("invalid 'tls_min_version' in config")
+	}
+
+	tlsMaxVersion, ok := tlsutil.TLSLookup[c.TLSMaxVersion]
+	if !ok {
+		return errors.New("invalid 'tls_max_version' in config")
+	}
+
+	if tlsMaxVersion < tlsMinVersion {
 		return errors.New("'tls_max_version' must be greater than or equal to 'tls_min_version'")
 	}
 	return nil
@@ -104,18 +100,7 @@ func (c *Configuration) Map() map[string]interface{} {
 	}
 }
 
-func (c *Configuration) GetTLSConfigs() (map[*url.URL]*tls.Config, error) {
-	if len(c.tlsConfigs) <= 0 {
-		configs, err := c.getTLSConfigs()
-		if err != nil {
-			return nil, err
-		}
-		c.tlsConfigs = configs
-	}
-	return c.tlsConfigs, nil
-}
-
-func (c *Configuration) getTLSConfigs() (map[*url.URL]*tls.Config, error) {
+func (c *Configuration) GetTLSConfigs(logger hclog.Logger) (map[*url.URL]*tls.Config, error) {
 
 	confUrls := strings.ToLower(strings.Join(c.URLs, ","))
 	urls := strings.Split(confUrls, ",")
@@ -125,8 +110,8 @@ func (c *Configuration) getTLSConfigs() (map[*url.URL]*tls.Config, error) {
 
 		u, err := url.Parse(uut)
 		if err != nil {
-			if c.logger.IsWarn() {
-				c.logger.Warn(fmt.Sprintf("unable to parse %s: %s, ignoring", uut, err.Error()))
+			if logger.IsWarn() {
+				logger.Warn(fmt.Sprintf("unable to parse %s: %s, ignoring", uut, err.Error()))
 			}
 			continue
 		}
@@ -138,10 +123,13 @@ func (c *Configuration) getTLSConfigs() (map[*url.URL]*tls.Config, error) {
 			host = u.Host
 		}
 
+		tlsMinVersion := tlsutil.TLSLookup[c.TLSMinVersion]
+		tlsMaxVersion := tlsutil.TLSLookup[c.TLSMaxVersion]
+
 		tlsConfig := &tls.Config{
 			ServerName:         host,
-			MinVersion:         c.TLSMinVersion,
-			MaxVersion:         c.TLSMaxVersion,
+			MinVersion:         tlsMinVersion,
+			MaxVersion:         tlsMaxVersion,
 			InsecureSkipVerify: c.InsecureTLS,
 		}
 
@@ -205,34 +193,20 @@ func getStartTLS(fieldData *framework.FieldData) bool {
 	return confStartTLS
 }
 
-func getTLSMinVersion(fieldData *framework.FieldData) (uint16, error) {
-
-	confTLSMinVersion := fieldData.Get("tls_min_version").(string)
-	if confTLSMinVersion == "" {
-		confTLSMinVersion = DefaultTLSMinVersion
+func getTLSMinVersion(fieldData *framework.FieldData) string {
+	tlsMinVersion := fieldData.Get("tls_min_version").(string)
+	if tlsMinVersion == "" {
+		tlsMinVersion = DefaultTLSMinVersion
 	}
-
-	tlsMinVersion, ok := tlsutil.TLSLookup[confTLSMinVersion]
-	if !ok {
-		return 0, errors.New("invalid 'tls_min_version' in config")
-	}
-
-	return tlsMinVersion, nil
+	return tlsMinVersion
 }
 
-func getTLSMaxVersion(fieldData *framework.FieldData) (uint16, error) {
-
-	confTLSMaxVersion := fieldData.Get("tls_max_version").(string)
-	if confTLSMaxVersion == "" {
-		confTLSMaxVersion = DefaultTLSMaxVersion
+func getTLSMaxVersion(fieldData *framework.FieldData) string {
+	tlsMaxVersion := fieldData.Get("tls_max_version").(string)
+	if tlsMaxVersion == "" {
+		tlsMaxVersion = DefaultTLSMaxVersion
 	}
-
-	tlsMaxVersion, ok := tlsutil.TLSLookup[confTLSMaxVersion]
-	if !ok {
-		return 0, errors.New("invalid 'tls_max_version' in config")
-	}
-
-	return tlsMaxVersion, nil
+	return tlsMaxVersion
 }
 
 func getUrls(fieldData *framework.FieldData) ([]string, error) {

@@ -8,7 +8,7 @@ import (
 
 func TestPathRegexp(t *testing.T) {
 
-	m := &Manager{}
+	m := &handler{}
 	path := m.Path()
 	re, err := regexp.Compile(path.Pattern)
 	if err != nil {

@@ -115,7 +115,7 @@ func (c *Client) getFirstSucceedingConnection() (ldapifc.Connection, error) {
 
 	var retErr *multierror.Error
 
-	tlsConfigs, err := c.conf.GetTLSConfigs()
+	tlsConfigs, err := c.conf.GetTLSConfigs(c.logger)
 	if err != nil {
 		return nil, err
 	}

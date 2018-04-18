@@ -11,7 +11,7 @@ func TestCertificateValidation(t *testing.T) {
 
 	// certificate should default to "" without error if it doesn't exist
 	fd := fieldDataWithSchema()
-	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
+	config, err := NewConfiguration(fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestCertificateValidation(t *testing.T) {
 		"certificate": "cats",
 		"dn":          "example,com",
 	}
-	config, err = NewConfiguration(hclog.NewNullLogger(), fd)
+	config, err = NewConfiguration(fd)
 	if err == nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestCertificateValidation(t *testing.T) {
 		"certificate": validCertificate,
 		"dn":          "example,com",
 	}
-	config, err = NewConfiguration(hclog.NewNullLogger(), fd)
+	config, err = NewConfiguration(fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,11 +42,11 @@ func TestCertificateValidation(t *testing.T) {
 
 func TestTLSDefaultsTo12(t *testing.T) {
 	fd := fieldDataWithSchema()
-	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
+	config, err := NewConfiguration(fd)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := uint16(771)
+	expected := "tls12"
 	if config.TLSMinVersion != expected || config.TLSMaxVersion != expected {
 		t.Fatal("expected TLS min and max version of 771 which corresponds with TLS 1.2 since TLS 1.1 and 1.0 have known vulnerabilities")
 	}
@@ -54,7 +54,7 @@ func TestTLSDefaultsTo12(t *testing.T) {
 
 func TestTLSSessionDefaultsToStarting(t *testing.T) {
 	fd := fieldDataWithSchema()
-	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
+	config, err := NewConfiguration(fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestTLSSessionDefaultsToStarting(t *testing.T) {
 
 func TestTLSSessionDefaultsToSecure(t *testing.T) {
 	fd := fieldDataWithSchema()
-	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
+	config, err := NewConfiguration(fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestTLSSessionDefaultsToSecure(t *testing.T) {
 func TestRootDomainName(t *testing.T) {
 	fd := fieldDataWithSchema()
 	fd.Raw = map[string]interface{}{}
-	_, err := NewConfiguration(hclog.NewNullLogger(), fd)
+	_, err := NewConfiguration(fd)
 	if err == nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestRootDomainName(t *testing.T) {
 		"urls": "ldap://138.91.247.105",
 		"dn":   "example,com",
 	}
-	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
+	config, err := NewConfiguration(fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,11 +100,11 @@ func TestGetTLSConfigs(t *testing.T) {
 		"urls": "ldap://138.91.247.105",
 		"dn":   "example,com",
 	}
-	config, err := NewConfiguration(hclog.NewNullLogger(), fd)
+	config, err := NewConfiguration(fd)
 	if err != nil {
 		t.Fatal(err)
 	}
-	tlsConfigs, err := config.GetTLSConfigs()
+	tlsConfigs, err := config.GetTLSConfigs(hclog.NewNullLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
