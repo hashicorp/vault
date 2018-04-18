@@ -85,6 +85,25 @@ listener "tcp" {
   authentication for this listener. The default behavior (when this is false)
   is for Vault to request client certificates when available.
 
+- `x_forwarded_for_authorized_addrs` `(string: <required-to-enable>)` –
+  Specifies the list of source IP addresses for which an X-Forwarded-For header
+  will be trusted. Comma-separated list or JSON array. This turns on
+  X-Forwarded-For support.
+
+- `x_forwarded_for_hop_skips` `(string: "0")` – The number of addresses that will be
+  skipped from the *rear* of the set of hops. For instance, for a header value
+  of `1.2.3.4, 2.3.4.5, 3.4.5.6`, if this value is set to `"1"`, the address that
+  will be used as the originating client IP is `2.3.4.5`.
+
+- `x_forwarded_for_reject_not_authorized` `(string: "true")` – If set false,
+  if there is an X-Forwarded-For header in a connection from an unauthorized
+  address, the header will be ignored and the client connection used as-is,
+  rather than the client connection rejected.
+
+- `x_forwarded_for_reject_not_present` `(string: "true")` – If set false, if
+  there is no X-Forwarded-For header or it is empty, the client address will be
+  used as-is, rather than the client connection rejected.
+
 ## `tcp` Listener Examples
 
 ### Configuring TLS

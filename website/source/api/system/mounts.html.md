@@ -223,7 +223,7 @@ This endpoint tunes configuration parameters for a given mount point.
   object.
 
 - `listing_visibility` `(string: "")` - Speficies whether to show this mount
-    in the UI-specific listing endpoint.
+    in the UI-specific listing endpoint. Valid values are `"unauth"` or `""`.
 
 - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
     to whitelist and pass from the request to the backend.

@@ -1,10 +1,27 @@
 ## 0.10.1 (Unreleased)
 
+FEATURES:
+
+ * X-Forwarded-For support: `X-Forwarded-For` headers can now be used to set
+   the client IP seen by Vault. See the [TCP listener configuration
+   page](https://www.vaultproject.io/docs/configuration/listener/tcp.html) for
+   details.
+
 IMPROVEMENTS:
 
+ * auth/token: Add to the token lookup response, the policies inherited due to
+   identity associations [GH-4366]
+ * core: Add X-Forwarded-For support [GH-4380]
  * identity: Add the ability to disable an entity. Disabling an entity does not
    revoke associated tokens, but while the entity is disabled they cannot be
    used. [GH-4353]
+
+BUG FIXES:
+
+ * identity: Persist entity memberships in external identity groups across
+   mounts [GH-4365]
+ * secret/gcp: Fix panic on rollback when a roleset wasn't created properly
+   [GH-4344]
 
 ## 0.10.0 (April 10th, 2018)
 
