@@ -384,6 +384,9 @@ type Core struct {
 
 	// Stores the sealunwrapper for downgrade needs
 	sealUnwrapper physical.Backend
+
+	// Stores any funcs that should be run on successful postUnseal
+	postUnsealFuncs []func()
 }
 
 // CoreConfig is used to parameterize a core
@@ -1616,6 +1619,9 @@ func (c *Core) sealInternal(keepLock bool) error {
 func (c *Core) postUnseal() (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
 
+	// Clear any out
+	c.postUnsealFuncs = nil
+
 	// Create a new request context
 	c.activeContext, c.activeContextCancelFunc = context.WithCancel(context.Background())
 
@@ -1703,6 +1709,11 @@ func (c *Core) postUnseal() (retErr error) {
 	}
 	c.metricsCh = make(chan struct{})
 	go c.emitMetrics(c.metricsCh)
+
+	for _, v := range c.postUnsealFuncs {
+		v()
+	}
+
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -1712,6 +1723,9 @@ func (c *Core) postUnseal() (retErr error) {
 func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Info("pre-seal teardown starting")
+
+	// Clear any pending funcs
+	c.postUnsealFuncs = nil
 
 	// Clear any rekey progress
 	c.barrierRekeyConfig = nil

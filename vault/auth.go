@@ -472,7 +472,15 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
-		defer view.setReadOnlyErr(nil)
+		for _, p := range singletonMounts {
+			if entry.Type == p {
+				defer view.setReadOnlyErr(nil)
+			} else {
+				c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+					view.setReadOnlyErr(nil)
+				})
+			}
+		}
 
 		// Initialize the backend
 		sysView := c.mountEntrySysView(entry)
