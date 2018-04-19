@@ -821,14 +821,12 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
-		for _, p := range singletonMounts {
-			if entry.Type == p {
-				defer view.setReadOnlyErr(nil)
-			} else {
-				c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-					view.setReadOnlyErr(nil)
-				})
-			}
+		if strutil.StrListContains(singletonMounts, entry.Type) {
+			defer view.setReadOnlyErr(nil)
+		} else {
+			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				view.setReadOnlyErr(nil)
+			})
 		}
 
 		var backend logical.Backend

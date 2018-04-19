@@ -1710,6 +1710,9 @@ func (c *Core) postUnseal() (retErr error) {
 	c.metricsCh = make(chan struct{})
 	go c.emitMetrics(c.metricsCh)
 
+	// This is intentionally the last block in this function. We want to allow
+	// writes just before allowing client requests, to ensure everything has
+	// been set up properly before any writes can have happened.
 	for _, v := range c.postUnsealFuncs {
 		v()
 	}
