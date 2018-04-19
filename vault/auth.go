@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -472,7 +473,13 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
-		defer view.setReadOnlyErr(nil)
+		if strutil.StrListContains(singletonMounts, entry.Type) {
+			defer view.setReadOnlyErr(nil)
+		} else {
+			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				view.setReadOnlyErr(nil)
+			})
+		}
 
 		// Initialize the backend
 		sysView := c.mountEntrySysView(entry)
