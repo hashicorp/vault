@@ -1,9 +1,7 @@
 import Ember from 'ember';
-import ApplicationAdapter from './application';
+import SecretAdapter from './secret';
 
-export default ApplicationAdapter.extend({
-  namespace: 'v1',
-
+export default SecretAdapter.extend({
   createOrUpdate(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot);
@@ -14,65 +12,22 @@ export default ApplicationAdapter.extend({
     });
   },
 
-  createRecord() {
-    return this.createOrUpdate(...arguments);
-  },
-
-  updateRecord() {
-    return this.createOrUpdate(...arguments);
-  },
-
-  deleteRecord(store, type, snapshot) {
-    const { id } = snapshot;
-    return this.ajax(this.urlForSecret(snapshot.attr('backend'), id), 'DELETE');
-  },
-
   urlForSecret(backend, id, infix = 'data') {
     let url = `${this.buildURL()}/${backend}/${infix}/`;
     if (!Ember.isEmpty(id)) {
       url = url + id;
     }
-
     return url;
   },
 
-  optionsForQuery(id, action) {
-    let data = {};
-    if (action === 'query') {
-      data['list'] = true;
+  fetchByQuery(query, methodCall) {
+    let { id, backend } = query;
+    let args = [backend, id];
+    if (methodCall === 'query') {
+      args.push('metadata');
     }
-
-    return { data };
-  },
-
-  urlForQuery(query) {
-    let { id, backend } = query;
-    return this.urlForSecret(backend, id, 'metadata');
-  },
-
-  urlForQueryRecord(query) {
-    let { id, backend } = query;
-    return this.urlForSecret(backend, id);
-  },
-
-  query(store, type, query) {
-    return this.ajax(
-      this.urlForQuery(query, type.modelName),
-      'GET',
-      this.optionsForQuery(query.id, 'query')
-    ).then(resp => {
-      resp.id = query.id;
-      return resp;
-    });
-  },
-
-  queryRecord(store, type, query) {
-    return this.ajax(
-      this.urlForQueryRecord(query, type.modelName),
-      'GET',
-      this.optionsForQuery(query.id, 'queryRecord')
-    ).then(resp => {
-      resp.id = query.id;
+    return this.ajax(this.urlForSecret(...args), 'GET', this.optionsForQuery(id, methodCall)).then(resp => {
+      resp.id = id;
       return resp;
     });
   },

@@ -1,13 +1,9 @@
-import DS from 'ember-data';
 import Ember from 'ember';
-const { decamelize } = Ember.String;
+import ApplicationSerializer from './application';
 
-export default DS.RESTSerializer.extend({
-  keyForAttribute: function(attr) {
-    return decamelize(attr);
-  },
-
-  normalizeSecrets(payload) {
+export default ApplicationSerializer.extend({
+  secretDataPath: 'data',
+  normalizeItems(payload, requestType) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
       const secrets = payload.data.keys.map(secret => {
         let fullSecretPath = payload.id ? payload.id + secret : secret;
@@ -18,22 +14,10 @@ export default DS.RESTSerializer.extend({
       });
       return secrets;
     }
-    payload.secret_data = payload.data;
-    delete payload.data;
-    return [payload];
-  },
-
-  normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    const nullResponses = ['updateRecord', 'createRecord', 'deleteRecord'];
-    const secrets = nullResponses.includes(requestType) ? { id } : this.normalizeSecrets(payload);
-    const { modelName } = primaryModelClass;
-    let transformedPayload = { [modelName]: secrets };
-    // just return the single object because ember is picky
-    if (requestType === 'queryRecord') {
-      transformedPayload = { [modelName]: secrets[0] };
-    }
-
-    return this._super(store, primaryModelClass, transformedPayload, id, requestType);
+    let path = this.get('secretDataPath');
+    payload.secret_data = Ember.get(payload, path);
+    delete payload[path];
+    return requestType === 'queryRecord' ? payload : [payload];
   },
 
   serialize(snapshot) {
