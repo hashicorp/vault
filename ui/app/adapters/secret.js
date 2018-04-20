@@ -26,7 +26,7 @@ export default ApplicationAdapter.extend({
   },
 
   urlForSecret(backend, id) {
-    let url = this.buildURL() + '/' + backend + '/';
+    let url = `${this.buildURL()}/${backend}/`;
     if (!Ember.isEmpty(id)) {
       url = url + id;
     }
