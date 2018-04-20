@@ -72,19 +72,26 @@ test('policies', function(assert) {
   });
 });
 
+// https://github.com/hashicorp/vault/issues/4395
 test('it properly fetches policies when the name ends in a ,', function(assert) {
+  const now = new Date().getTime();
   const policyString = 'path "*" { capabilities = ["update"]}';
-  const policyName = `symbol,.`;
+  const policyName = `${now}-symbol,.`;
 
   page.visit({ type: 'acl' });
   // new policy creation
   click('[data-test-policy-create-link]');
   fillIn('[data-test-policy-input="name"]', policyName);
-  andThen(() => {
+  andThen(function() {
     find('.CodeMirror').get(0).CodeMirror.setValue(policyString);
   });
   click('[data-test-policy-save]');
-  andThen(() => {
+  andThen(function() {
+    assert.equal(
+      currentURL(),
+      `/vault/policy/acl/${policyName}`,
+      'navigates to policy show on successful save'
+    );
     assert.equal(find('[data-test-policy-edit-toggle]').length, 1, 'shows the edit toggle');
   });
 });
