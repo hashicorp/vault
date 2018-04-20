@@ -27,6 +27,9 @@ BUG FIXES:
    [GH-4344]
  * ui: Fix IE11 form submissions in a few parts of the application [GH-4378]
  * ui: Fix IE file saving on policy pages and init screens [GH-4376]
+ * ui: Fixed an issue where the AWS secret backend would show the wrong menu [GH-4371]
+ * ui: Fixed an issue where policies with commas would not render in the 
+   interface properly [GH-4398]
 
 ## 0.10.0 (April 10th, 2018)
 
