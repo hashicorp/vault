@@ -2269,3 +2269,75 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
 }
+
+func TestSystemBackend_InternalUIMount(t *testing.T) {
+	core, b, rootToken := testCoreSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "policy/secret")
+	req.ClientToken = rootToken
+	req.Data = map[string]interface{}{
+		"rules": `path "secret/foo/*" {
+    capabilities = ["create", "read", "update", "delete", "list"]
+}`,
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("Bad %#v %#v", err, resp)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/kv")
+	req.ClientToken = rootToken
+	req.Data = map[string]interface{}{
+		"type": "kv",
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("Bad %#v %#v", err, resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/kv")
+	req.ClientToken = rootToken
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("Bad %#v %#v", err, resp)
+	}
+	if resp.Data["type"] != "kv" {
+		t.Fatalf("Bad Response: %#v", resp)
+	}
+
+	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"secret"})
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/kv")
+	req.ClientToken = "tokenid"
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != logical.ErrPermissionDenied {
+		t.Fatal("expected permission denied error")
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/secret")
+	req.ClientToken = "tokenid"
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("Bad %#v %#v", err, resp)
+	}
+	if resp.Data["type"] != "kv" {
+		t.Fatalf("Bad Response: %#v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/sys")
+	req.ClientToken = "tokenid"
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("Bad %#v %#v", err, resp)
+	}
+	if resp.Data["type"] != "system" {
+		t.Fatalf("Bad Response: %#v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/non-existent")
+	req.ClientToken = "tokenid"
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != logical.ErrPermissionDenied {
+		t.Fatal("expected permission denied error")
+	}
+}

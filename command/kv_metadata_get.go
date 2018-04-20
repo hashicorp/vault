@@ -75,13 +75,23 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
+	v2, err := isKVv2(path, client)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+	if !v2 {
+		c.UI.Error("Metadata not supported on KV Version 1")
+		return 1
+	}
+
 	path, err = addPrefixToVKVPath(path, "metadata")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
-	secret, err := kvReadRequest(client, path, nil)
+	secret, err := client.Logical().Read(path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading %s: %s", path, err))
 		return 2

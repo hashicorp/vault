@@ -74,13 +74,21 @@ func (c *KVListCommand) Run(args []string) int {
 	}
 
 	path := ensureTrailingSlash(sanitizePath(args[0]))
-	path, err = addPrefixToVKVPath(path, "metadata")
+	v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
-	secret, err := kvListRequest(client, path)
+	if v2 {
+		path, err = addPrefixToVKVPath(path, "metadata")
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+	}
+
+	secret, err := client.Logical().List(path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing %s: %s", path, err))
 		return 2

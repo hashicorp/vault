@@ -99,8 +99,23 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 		return 1
 	}
 
-	var err error
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
 	path := sanitizePath(args[0])
+	v2, err := isKVv2(path, client)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+	if !v2 {
+		c.UI.Error("Metadata not supported on KV Version 1")
+		return 1
+	}
+
 	path, err = addPrefixToVKVPath(path, "metadata")
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -112,13 +127,7 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 		"cas_required": c.flagCASRequired,
 	}
 
-	client, err := c.Client()
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
-	}
-
-	secret, err := kvWriteRequest(client, path, data)
+	secret, err := client.Logical().Write(path, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
 		return 2

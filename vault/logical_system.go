@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -92,6 +93,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"wrapping/pubkey",
 				"replication/status",
 				"internal/ui/mounts",
+				"internal/ui/mount/*",
 			},
 		},
 
@@ -1071,6 +1073,20 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				Pattern: "internal/ui/mounts",
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: b.pathInternalUIMountsRead,
+				},
+				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
+			},
+			&framework.Path{
+				Pattern: "internal/ui/mount/(?P<path>.+)",
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The path of the mount.",
+					},
+				},
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.pathInternalUIMountRead,
 				},
 				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
@@ -3395,9 +3411,6 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 }
 
 func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.Core.mountsLock.RLock()
-	defer b.Core.mountsLock.RUnlock()
-
 	resp := &logical.Response{
 		Data: make(map[string]interface{}),
 	}
@@ -3407,6 +3420,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	resp.Data["secret"] = secretMounts
 	resp.Data["auth"] = authMounts
 
+	b.Core.mountsLock.RLock()
 	for _, entry := range b.Core.mounts.Entries {
 		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
 			info := map[string]interface{}{
@@ -3416,7 +3430,9 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 			secretMounts[entry.Path] = info
 		}
 	}
+	b.Core.mountsLock.RUnlock()
 
+	b.Core.authLock.RLock()
 	for _, entry := range b.Core.auth.Entries {
 		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
 			info := map[string]interface{}{
@@ -3425,6 +3441,83 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 			}
 			authMounts[entry.Path] = info
 		}
+	}
+	b.Core.authLock.RUnlock()
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	path := d.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("path not set"), logical.ErrInvalidRequest
+	}
+	path = sanitizeMountPath(path)
+
+	me := b.Core.router.MatchingMountEntry(path)
+	if me == nil {
+		// Return a permission denied error here so this path cannot be used to
+		// brute force a list of mounts.
+		return nil, logical.ErrPermissionDenied
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"type":        me.Type,
+			"description": me.Description,
+			"options":     me.Options,
+		},
+	}
+
+	// If capabilities tells us we have access to the mount's path, go ahead and
+	// return the data.
+	capabilities, err := b.Core.Capabilities(ctx, req.ClientToken, path)
+	if err != nil {
+		return nil, err
+	}
+	if !strutil.StrListContains(capabilities, DenyCapability) {
+		return resp, nil
+	}
+
+	// Load the ACL policies so we can walk the prefix for this mount
+	acl, _, _, err := b.Core.fetchACLTokenEntryAndEntity(req.ClientToken)
+	if err != nil {
+		return nil, err
+	}
+
+	var aclCapabilitiesGiven bool
+	walkFn := func(s string, v interface{}) bool {
+		if v == nil {
+			return false
+		}
+
+		perms := v.(*ACLPermissions)
+
+		switch {
+		case perms.CapabilitiesBitmap&DenyCapabilityInt > 0:
+			return false
+
+		case perms.CapabilitiesBitmap&CreateCapabilityInt > 0,
+			perms.CapabilitiesBitmap&DeleteCapabilityInt > 0,
+			perms.CapabilitiesBitmap&ListCapabilityInt > 0,
+			perms.CapabilitiesBitmap&ReadCapabilityInt > 0,
+			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
+			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0:
+
+			aclCapabilitiesGiven = true
+			return true
+		}
+
+		return false
+	}
+
+	acl.exactRules.WalkPrefix(path, walkFn)
+	if !aclCapabilitiesGiven {
+		acl.globRules.WalkPrefix(path, walkFn)
+	}
+
+	if !aclCapabilitiesGiven {
+		return nil, logical.ErrPermissionDenied
 	}
 
 	return resp, nil
