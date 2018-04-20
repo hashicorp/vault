@@ -925,6 +925,12 @@
 			"revisionTime": "2018-01-25T05:47:45Z"
 		},
 		{
+			"checksumSHA1": "dni8Puy96l7QbQlJwLtrZvM5rxM=",
+			"path": "github.com/go-test/deep",
+			"revision": "6592d9cc0a499ad2d5f574fde80a2b5c5cc3b4f5",
+			"revisionTime": "2018-01-28T22:55:04Z"
+		},
+		{
 			"checksumSHA1": "989p8YX+h2GxOFWhUMvh1O/K3rc=",
 			"path": "github.com/gocql/gocql",
 			"revision": "1303a32993a1242a6fb58dc497a3b8a54ffd257d",
