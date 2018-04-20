@@ -96,7 +96,7 @@ update-plugins:
 
 static-assets:
 	@echo "--> Generating static assets"
-	@go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 ./pkg/web_ui/...
+	@go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
 	@mv bindata_assetfs.go http
 	@$(MAKE) -f $(THIS_FILE) fmt
 
