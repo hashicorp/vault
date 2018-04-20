@@ -3,10 +3,7 @@ package roles
 import (
 	"testing"
 
-	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/vault/builtin/logical/ad/config"
-	"github.com/hashicorp/vault/helper/activedirectory"
-	"github.com/hashicorp/vault/helper/ldapifc"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
@@ -128,37 +125,5 @@ func TestZeroTTL(t *testing.T) {
 	_, err := getValidatedTTL(passwordConf, fieldData)
 	if err == nil {
 		t.Fatal("should error then ttl is zero")
-	}
-}
-
-func validLDAPClient() ldapifc.Client {
-	return &ldapifc.FakeLDAPClient{
-		ConnToReturn: &ldapifc.FakeLDAPConnection{
-			SearchRequestToExpect: &ldap.SearchRequest{
-				BaseDN: "dc=example,dc=com",
-				Filter: "(userPrincipalName=kibana@example.com)",
-				Scope:  2,
-			},
-			SearchResultToReturn: &ldap.SearchResult{
-				Entries: []*ldap.Entry{
-					{
-						DN: "CN=Jim H.. Jones,OU=Vault,OU=Engineering,DC=example,DC=com",
-						Attributes: []*ldap.EntryAttribute{
-							{
-								Name:   activedirectory.FieldRegistry.LastLogon.String(),
-								Values: []string{"131680504285591921"},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func emptyConfig() *activedirectory.Configuration {
-	return &activedirectory.Configuration{
-		RootDomainName: "example,com",
-		URLs:           []string{"ldap://127.0.0.1"},
 	}
 }

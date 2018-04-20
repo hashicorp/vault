@@ -187,9 +187,7 @@ func (h *handler) updateOperation(ctx context.Context, req *logical.Request, fie
 	h.rwMutex.Unlock()
 
 	// Respond.
-	resp := &logical.Response{
-		Data: config.Map(),
-	}
+	resp := &logical.Response{}
 	h.addWarnings(resp)
 
 	return resp, nil

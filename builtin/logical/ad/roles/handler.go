@@ -122,15 +122,15 @@ func (h *handler) Read(ctx context.Context, storage logical.Storage, roleName st
 	return role, nil
 }
 
-func (h *handler) Write(ctx context.Context, storage logical.Storage, role *Role) error {
-	entry, err := logical.StorageEntryJSON(storageKey+"/"+role.Name, role)
+func (h *handler) Write(ctx context.Context, storage logical.Storage, roleName string, role *Role) error {
+	entry, err := logical.StorageEntryJSON(storageKey+"/"+roleName, role)
 	if err != nil {
 		return err
 	}
 	if err := storage.Put(ctx, entry); err != nil {
 		return err
 	}
-	h.cache.SetDefault(role.Name, role)
+	h.cache.SetDefault(roleName, role)
 	return nil
 }
 
@@ -148,7 +148,7 @@ func (h *handler) updateOperation(ctx context.Context, req *logical.Request, fie
 	}
 
 	// Actually construct it.
-	role, err := newRole(h.logger, engineConf, roleName, fieldData)
+	role, err := newRole(h.logger, engineConf, fieldData)
 	if err != nil {
 		return nil, err
 	}
@@ -164,20 +164,12 @@ func (h *handler) updateOperation(ctx context.Context, req *logical.Request, fie
 	}
 
 	// Write it to storage and the cache.
-	if err := h.Write(ctx, req.Storage, role); err != nil {
+	if err := h.Write(ctx, req.Storage, roleName, role); err != nil {
 		return nil, err
 	}
 
-	// We don't want to store when AD shows the password as last set because we're going to pull it on the fly regularly.
-	passwordLastSet, err := util.NewSecretsClient(h.logger, engineConf.ADConf).GetPasswordLastSet(role.ServiceAccountName)
-	if err != nil {
-		return nil, err
-	}
-	role.PasswordLastSet = passwordLastSet
-
-	return &logical.Response{
-		Data: role.Map(),
-	}, nil
+	// Return a 204.
+	return nil, nil
 }
 
 func (h *handler) readOperation(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
@@ -247,7 +239,7 @@ type ReadWriter interface {
 
 	// Write allows the role to be updated outside the package.
 	// This is useful for updating the role.LastVaultRotation time when new creds are generated.
-	Write(ctx context.Context, storage logical.Storage, role *Role) error
+	Write(ctx context.Context, storage logical.Storage, roleName string, role *Role) error
 }
 
 type DeleteWatcher interface {

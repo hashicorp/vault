@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func newRole(logger hclog.Logger, engineConf *config.EngineConf, roleName string, fieldData *framework.FieldData) (*Role, error) {
+func newRole(logger hclog.Logger, engineConf *config.EngineConf, fieldData *framework.FieldData) (*Role, error) {
 
 	serviceAccountName, err := getServiceAccountName(fieldData)
 	if err != nil {
@@ -31,7 +31,6 @@ func newRole(logger hclog.Logger, engineConf *config.EngineConf, roleName string
 	}
 
 	return &Role{
-		Name:               roleName,
 		ServiceAccountName: serviceAccountName,
 		TTL:                ttl,
 	}, nil
@@ -64,7 +63,6 @@ func getValidatedTTL(passwordConf *config.PasswordConf, fieldData *framework.Fie
 }
 
 type Role struct {
-	Name               string    `json:"name"`
 	ServiceAccountName string    `json:"service_account_name"`
 	TTL                int       `json:"ttl"`
 	LastVaultRotation  time.Time `json:"last_vault_rotation"`
@@ -74,7 +72,6 @@ type Role struct {
 func (r *Role) Map() map[string]interface{} {
 
 	m := map[string]interface{}{
-		"name":                 r.Name,
 		"service_account_name": r.ServiceAccountName,
 		"ttl": r.TTL,
 	}

@@ -121,13 +121,13 @@ func (h *handler) readOperationLogic(ctx context.Context, req *logical.Request) 
 	// If not, we need to rotate the password so Vault will know it.
 	var unset time.Time
 	if role.LastVaultRotation == unset {
-		return h.generateAndReturnCreds(ctx, req.Storage, role, cred)
+		return h.generateAndReturnCreds(ctx, req.Storage, roleName, role, cred)
 	}
 
 	// Has anyone manually rotated the password in Active Directory?
 	// If so, we need to rotate it now so Vault will know it.
 	if role.PasswordLastSet.After(role.LastVaultRotation.Add(passwordLastSetBuffer)) {
-		return h.generateAndReturnCreds(ctx, req.Storage, role, cred)
+		return h.generateAndReturnCreds(ctx, req.Storage, roleName, role, cred)
 	}
 
 	// Since we should know the last password, let's retrieve it now so we can return it with the new one.
@@ -148,7 +148,7 @@ func (h *handler) readOperationLogic(ctx context.Context, req *logical.Request) 
 		if err := entry.DecodeJSON(cred); err != nil {
 			return nil, err
 		}
-		h.cache.SetDefault(cred.RoleName, cred)
+		h.cache.SetDefault(roleName, cred)
 	}
 
 	// Is the password too old?
@@ -156,7 +156,7 @@ func (h *handler) readOperationLogic(ctx context.Context, req *logical.Request) 
 	now := time.Now().UTC()
 	shouldBeRolled := role.LastVaultRotation.Add(time.Duration(role.TTL) * time.Second) // already in UTC
 	if now.After(shouldBeRolled) {
-		return h.generateAndReturnCreds(ctx, req.Storage, role, cred)
+		return h.generateAndReturnCreds(ctx, req.Storage, roleName, role, cred)
 	}
 
 	// Current credential is accurate! Return it.
@@ -165,7 +165,7 @@ func (h *handler) readOperationLogic(ctx context.Context, req *logical.Request) 
 	}, nil
 }
 
-func (h *handler) generateAndReturnCreds(ctx context.Context, storage logical.Storage, role *roles.Role, previousCred *credential) (*logical.Response, error) {
+func (h *handler) generateAndReturnCreds(ctx context.Context, storage logical.Storage, roleName string, role *roles.Role, previousCred *credential) (*logical.Response, error) {
 
 	engineConf, err := h.config.Read(ctx, storage)
 	if err != nil {
@@ -184,26 +184,25 @@ func (h *handler) generateAndReturnCreds(ctx context.Context, storage logical.St
 
 	// Time recorded is in UTC for easier user comparison to AD's last rotated time, which is set to UTC by Microsoft.
 	role.LastVaultRotation = time.Now().UTC()
-	if err := h.roleRW.Write(ctx, storage, role); err != nil {
+	if err := h.roleRW.Write(ctx, storage, roleName, role); err != nil {
 		return nil, err
 	}
 
 	cred := &credential{
-		RoleName:        role.Name,
 		Username:        role.ServiceAccountName,
 		CurrentPassword: newPassword,
 		LastPassword:    previousCred.CurrentPassword,
 	}
 
 	// Cache and save the cred.
-	entry, err := logical.StorageEntryJSON(storageKey+"/"+cred.RoleName, cred)
+	entry, err := logical.StorageEntryJSON(storageKey+"/"+roleName, cred)
 	if err != nil {
 		return nil, err
 	}
 	if err := storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
-	h.cache.SetDefault(cred.RoleName, cred)
+	h.cache.SetDefault(roleName, cred)
 
 	return &logical.Response{
 		Data: cred.Map(),
