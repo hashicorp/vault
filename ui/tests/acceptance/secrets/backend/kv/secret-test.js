@@ -5,16 +5,11 @@ import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import Pretender from 'pretender';
+import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
 moduleForAcceptance('Acceptance | secrets/secret/create', {
   beforeEach() {
-    this.server = new Pretender(function() {
-      this.post('/v1/**', this.passthrough);
-      this.put('/v1/**', this.passthrough);
-      this.get('/v1/**', this.passthrough);
-      this.delete('/v1/**', this.passthrough);
-    });
+    this.server = apiStub({ usePassthrough: true });
     return authLogin();
   },
   afterEach() {
@@ -46,6 +41,7 @@ test('it creates a secret and redirects', function(assert) {
 test('version 1 performs the correct capabilities lookup', function(assert) {
   let enginePath = `kv-${new Date().getTime()}`;
   let secretPath = 'foo/bar';
+  // mount version 1 engine
   mountSecrets.visit().path(enginePath).type('kv').version(1).submit();
 
   listPage.create();
