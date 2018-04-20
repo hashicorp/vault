@@ -14,14 +14,13 @@
             item.id
             "details"
             }}
-            class="has-text-black has-text-weight-semibold"
+            class="is-block has-text-black has-text-weight-semibold"
             data-test-lease-link={{item.id}}
           >{{i-con
               glyph="role"
               size=14
               class="has-text-grey-light"
-            }}<span class="has-text-weight-semibold">{{item.id}}</span>
-          </a>
+            }}<span class="has-text-weight-semibold">{{item.id}}</span></a>
         </div>
         <div class="column has-text-right">
           {{#popup-menu name="identity-item" onOpen=(action "reloadRecord" item)}}

@@ -1,23 +1,32 @@
 {{identity/entity-nav identityType=identityType}}
 {{#if model.meta.total}}
   {{#each model as |item|}}
-    <a href={{href-to
+    {{#linked-block
       "vault.cluster.access.identity.aliases.show"
       item.id
-       "details"
+      "details"
+      class="box is-sideless is-marginless"
       }}
-      class="is-flex box is-sideless is-marginless"
-      data-test-lease-link={{item.id}}
-    >
-      {{i-con
-        glyph="role"
-        size=14
-        class="has-text-grey-light"
-      }}
-      <span class="has-text-weight-semibold">
-        {{item.id}}
-      </span>
-    </a>
+      <div class="columns is-mobile">
+        <div class="column is-10">
+          <a href={{href-to
+            "vault.cluster.access.identity.aliases.show"
+            item.id
+             "details"
+            }}
+            class="is-block has-text-black has-text-weight-semibold"
+            data-test-lease-link={{item.id}}
+          >{{i-con
+              glyph="role"
+              size=14
+              class="has-text-grey-light"
+            }}<span class="has-text-weight-semibold">{{item.id}}</span></a>
+        </div>
+        <div class="column has-text-right">
+          {{identity/alias-popup item=item}}
+        </div>
+      </div>
+    {{/linked-block}}
   {{/each}}
 {{else}}
   <div class="box is-bottomless has-background-white-bis">

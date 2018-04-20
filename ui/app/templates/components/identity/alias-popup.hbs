@@ -1,0 +1,42 @@
+{{#popup-menu name="alias-menu"}}
+  <nav class="menu">
+    <ul class="menu-list">
+      <li class="action">
+        <a href={{href-to "vault.cluster.access.identity.aliases.show" (pluralize item.parentType) item.id "details" }}>
+          Details
+        </a>
+      </li>
+      {{#if item.updatePath.isPending}}
+        <li class="action">
+          <button disabled=true type="button" class="link button is-loading is-transparent">
+            loading
+          </button>
+        </li>
+      {{else}}
+        {{#if item.canEdit}}
+          <li class="action">
+            <a href={{href-to "vault.cluster.access.identity.aliases.edit" (pluralize item.parentType) item.id}}>
+              Edit
+            </a>
+          </li>
+        {{/if}}
+        {{#if item.canDelete}}
+          <li class="action">
+            {{#confirm-action
+              confirmButtonClasses="button is-primary"
+              buttonClasses="link"
+              onConfirmAction=(action "delete" item)
+              confirmMessage=(concat "Are you sure you want to delete " item.id "?")
+              showConfirm=(get this (concat "shouldDelete-" item.id))
+              class=(if (get this (concat "shouldDelete-" item.id)) "message is-block is-warning is-outline")
+              containerClasses="message-body is-block"
+              messageClasses="is-block"
+            }}
+              Delete
+            {{/confirm-action}}
+          </li>
+        {{/if}}
+      {{/if}}
+    </ul>
+  </nav>
+{{/popup-menu}}

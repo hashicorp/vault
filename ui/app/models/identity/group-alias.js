@@ -3,6 +3,7 @@ import DS from 'ember-data';
 const { attr, belongsTo } = DS;
 
 export default IdentityModel.extend({
+  parentType: 'group',
   formFields: ['name', 'mountAccessor'],
   group: belongsTo('identity/group', { readOnly: true, async: false }),
 
