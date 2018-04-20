@@ -30,7 +30,11 @@ inside is all that is necessary to run Vault (or `vault.exe` for Windows). Any
 additional files, if any, aren't required to run Vault.
 
 Copy the binary to anywhere on your system. If you intend to access it from the
-command-line, make sure to place it somewhere on your `PATH`.
+command-line, make sure to place it somewhere on your `PATH`. Vault out of the 
+runs over SSL (API calls would be made over HTTPS). If you dont have an SSL cert
+installed on your local system please export the following environment variable.
+VAULT_ADDR=http://127.0.0.1:8200
+This will run Vault over HTTP.
 
 ## Compiling from Source
 
