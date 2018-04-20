@@ -97,6 +97,11 @@ func (c *KVPutCommand) Run(args []string) int {
 		stdin = c.testStdin
 	}
 
+	if len(args) < 1 {
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
 	var err error
 	path := sanitizePath(args[0])
 	path, err = addPrefixToVKVPath(path, "data")
