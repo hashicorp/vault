@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -602,5 +604,139 @@ func TestBackend_PluginMainCredentials(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	resp, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("nil response")
+	}
+	if resp.Auth == nil {
+		t.Fatal("nil auth")
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatal("empty client token")
+	}
+
+	client.SetToken(resp.Auth.ClientToken)
+
+	resp, err = client.Logical().Read("sys/internal/ui/resultant-acl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("nil response")
+	}
+	if resp.Data == nil {
+		t.Fatal("nil data")
+	}
+
+	exp := map[string]interface{}{
+		"exact_paths": map[string]interface{}{
+			"auth/token/lookup-self": map[string]interface{}{
+				"capabilities": []interface{}{
+					"read",
+				},
+			},
+			"auth/token/renew-self": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"auth/token/revoke-self": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/capabilities-self": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/internal/ui/resultant-acl": map[string]interface{}{
+				"capabilities": []interface{}{
+					"read",
+				},
+			},
+			"sys/leases/lookup": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/leases/renew": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/renew": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/tools/hash": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/tools/random": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/wrapping/lookup": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/wrapping/unwrap": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/wrapping/wrap": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+		},
+		"glob_paths": map[string]interface{}{
+			"cubbyhole/": map[string]interface{}{
+				"capabilities": []interface{}{
+					"create",
+					"delete",
+					"list",
+					"read",
+					"update",
+				},
+			},
+			"sys/tools/hash/": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/tools/random/": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+		},
+		"root": false,
+	}
+
+	if diff := deep.Equal(resp.Data, exp); diff != nil {
+		t.Fatal(diff)
 	}
 }

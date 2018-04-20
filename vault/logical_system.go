@@ -1075,6 +1075,14 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
 			},
+			&framework.Path{
+				Pattern: "internal/ui/resultant-acl",
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.pathInternalUIResultantACL,
+				},
+				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
+			},
 		},
 	}
 
@@ -3430,6 +3438,110 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	return resp, nil
 }
 
+func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if req.ClientToken == "" {
+		// 204 -- no ACL
+		return nil, nil
+	}
+
+	acl, _, entity, err := b.Core.fetchACLTokenEntryAndEntity(req.ClientToken)
+	if err != nil {
+		return nil, err
+	}
+
+	if entity != nil && entity.Disabled {
+		return logical.ErrorResponse(logical.ErrEntityDisabled.Error()), nil
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"root": false,
+		},
+	}
+
+	if acl.root {
+		resp.Data["root"] = true
+		return resp, nil
+	}
+
+	exact := map[string]interface{}{}
+	glob := map[string]interface{}{}
+
+	walkFn := func(pt map[string]interface{}, s string, v interface{}) {
+		if v == nil {
+			return
+		}
+
+		perms := v.(*ACLPermissions)
+		capabilities := []string{}
+
+		if perms.CapabilitiesBitmap&CreateCapabilityInt > 0 {
+			capabilities = append(capabilities, CreateCapability)
+		}
+		if perms.CapabilitiesBitmap&DeleteCapabilityInt > 0 {
+			capabilities = append(capabilities, DeleteCapability)
+		}
+		if perms.CapabilitiesBitmap&ListCapabilityInt > 0 {
+			capabilities = append(capabilities, ListCapability)
+		}
+		if perms.CapabilitiesBitmap&ReadCapabilityInt > 0 {
+			capabilities = append(capabilities, ReadCapability)
+		}
+		if perms.CapabilitiesBitmap&SudoCapabilityInt > 0 {
+			capabilities = append(capabilities, SudoCapability)
+		}
+		if perms.CapabilitiesBitmap&UpdateCapabilityInt > 0 {
+			capabilities = append(capabilities, UpdateCapability)
+		}
+
+		// If "deny" is explicitly set or if the path has no capabilities at all,
+		// set the path capabilities to "deny"
+		if perms.CapabilitiesBitmap&DenyCapabilityInt > 0 || len(capabilities) == 0 {
+			capabilities = []string{DenyCapability}
+		}
+
+		res := map[string]interface{}{}
+		if len(capabilities) > 0 {
+			res["capabilities"] = capabilities
+		}
+		if perms.MinWrappingTTL != 0 {
+			res["min_wrapping_ttl"] = int64(perms.MinWrappingTTL.Seconds())
+		}
+		if perms.MaxWrappingTTL != 0 {
+			res["max_wrapping_ttl"] = int64(perms.MaxWrappingTTL.Seconds())
+		}
+		if len(perms.AllowedParameters) > 0 {
+			res["allowed_parameters"] = perms.AllowedParameters
+		}
+		if len(perms.DeniedParameters) > 0 {
+			res["denied_parameters"] = perms.DeniedParameters
+		}
+		if len(perms.RequiredParameters) > 0 {
+			res["required_parameters"] = perms.RequiredParameters
+		}
+
+		pt[s] = res
+	}
+
+	exactWalkFn := func(s string, v interface{}) bool {
+		walkFn(exact, s, v)
+		return false
+	}
+
+	globWalkFn := func(s string, v interface{}) bool {
+		walkFn(glob, s, v)
+		return false
+	}
+
+	acl.exactRules.Walk(exactWalkFn)
+	acl.globRules.Walk(globWalkFn)
+
+	resp.Data["exact_paths"] = exact
+	resp.Data["glob_paths"] = glob
+
+	return resp, nil
+}
+
 func sanitizeMountPath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -4040,12 +4152,22 @@ This path responds to the following HTTP methods.
 	},
 	"listing_visibility": {
 		"Determines the visibility of the mount in the UI-specific listing endpoint.",
+		"",
 	},
 	"passthrough_request_headers": {
 		"A list of headers to whitelist and pass from the request to the backend.",
+		"",
 	},
 	"raw": {
 		"Write, Read, and Delete data directly in the Storage backend.",
+		"",
+	},
+	"internal-ui-mounts": {
+		"Information about mounts returned according to their tuned visibility. Internal API; its location, inputs, and outputs may change.",
+		"",
+	},
+	"internal-ui-resultant-acl": {
+		"Information about a token's resultant ACL. Internal API; its location, inputs, and outputs may change.",
 		"",
 	},
 }
