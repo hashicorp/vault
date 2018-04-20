@@ -324,7 +324,9 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
-		defer view.setReadOnlyErr(nil)
+		c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+			view.setReadOnlyErr(nil)
+		})
 
 		// Initialize the backend
 		backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)

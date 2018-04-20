@@ -71,3 +71,20 @@ test('policies', function(assert) {
     );
   });
 });
+
+test('it properly fetches policies when the name ends in a ,', function(assert) {
+  const policyString = 'path "*" { capabilities = ["update"]}';
+  const policyName = `symbol,.`;
+
+  page.visit({ type: 'acl' });
+  // new policy creation
+  click('[data-test-policy-create-link]');
+  fillIn('[data-test-policy-input="name"]', policyName);
+  andThen(() => {
+    find('.CodeMirror').get(0).CodeMirror.setValue(policyString);
+  });
+  click('[data-test-policy-save]');
+  andThen(() => {
+    assert.equal(find('[data-test-policy-edit-toggle]').length, 1, 'shows the edit toggle');
+  });
+});

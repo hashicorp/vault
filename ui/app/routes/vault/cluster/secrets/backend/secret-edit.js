@@ -44,14 +44,18 @@ export default Ember.Route.extend(UnloadModelRoute, {
   },
 
   modelType(backend, secret) {
-    const models = {
+    let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
       aws: 'role-aws',
-      cubbyhole: 'secret-cubbyhole',
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
     };
-    return models[this.backendType(backend)] || 'secret';
+    let backendModel = this.store.peekRecord('secret-engine', backend);
+    let defaultType = 'secret';
+    if (backendModel.get('type') === 'kv' && backendModel.get('options.version') === 2) {
+      defaultType = 'secret-v2';
+    }
+    return types[backendModel.get('type')] || defaultType;
   },
 
   model(params) {

@@ -9,7 +9,7 @@ description: |-
 
 # AppRole Auth Method
 
-The `approle` auth method allows machines or _apps_ to authenticate with Vault
+The `approle` auth method allows machines or _apps_ to authenticate with
 Vault-defined _roles_. The open design of `AppRole` enables a varied set of
 workflows and configurations to handle large numbers of apps. This auth method
 is oriented to automated workflows (machines and services), and is less useful

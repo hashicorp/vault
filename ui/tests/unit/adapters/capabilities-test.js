@@ -16,6 +16,6 @@ test('calls the correct url', function(assert) {
 
   adapter.findRecord(null, 'capabilities', 'foo');
   assert.equal('/v1/sys/capabilities-self', url, 'calls the correct URL');
-  assert.deepEqual({ path: 'foo' }, options.data, 'data params OK');
+  assert.deepEqual({ paths: ['foo'] }, options.data, 'data params OK');
   assert.equal('POST', method, 'method OK');
 });
