@@ -3,6 +3,7 @@ package vault_test
 import (
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -215,5 +216,123 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	sort.Strings(expectedPolicies)
 	if !reflect.DeepEqual(expectedPolicies, actualPolicies) {
 		t.Fatalf("bad: identity policies; expected: %#v\nactual: %#v", expectedPolicies, actualPolicies)
+	}
+}
+
+func TestTokenStore_CIDRBlocks(t *testing.T) {
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+	client := cluster.Cores[0].Client
+	rootToken := client.Token()
+
+	var err error
+	var secret *api.Secret
+
+	// Test normally
+	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+		"bound_cidrs": []string{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+	}, "testrole")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(secret.Auth.ClientToken)
+	_, err = client.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// CIDR blocks, containing localhost
+	client.SetToken(rootToken)
+	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+		"bound_cidrs": []string{"127.0.0.1/32", "1.2.3.4/8", "5.6.7.8/24"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+	}, "testrole")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(secret.Auth.ClientToken)
+	_, err = client.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// CIDR blocks, not containing localhost (should fail)
+	client.SetToken(rootToken)
+	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+		"bound_cidrs": []string{"1.2.3.4/8", "5.6.7.8/24"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+	}, "testrole")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(secret.Auth.ClientToken)
+	_, err = client.Auth().Token().LookupSelf()
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "permission denied") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Root token, no ttl, should work
+	client.SetToken(rootToken)
+	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+		"bound_cidrs": []string{"1.2.3.4/8", "5.6.7.8/24"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{}, "testrole")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(secret.Auth.ClientToken)
+	_, err = client.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Root token, ttl, should not work
+	client.SetToken(rootToken)
+	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+		"bound_cidrs": []string{"1.2.3.4/8", "5.6.7.8/24"},
+		"period":      3600,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{}, "testrole")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(secret.Auth.ClientToken)
+	_, err = client.Auth().Token().LookupSelf()
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "permission denied") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

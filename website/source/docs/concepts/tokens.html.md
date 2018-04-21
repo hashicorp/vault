@@ -204,5 +204,14 @@ to be given periodic tokens.
 
 There are a few important things to know when using periodic tokens:
 
-* When a periodic token is created via a token store role, the _current_ value of the role's period setting will be used at renewal time
-* A token with both a period and an explicit max TTL will act like a periodic token but will be revoked when the explicit max TTL is reached
+* When a periodic token is created via a token store role, the _current_ value
+  of the role's period setting will be used at renewal time
+* A token with both a period and an explicit max TTL will act like a periodic
+  token but will be revoked when the explicit max TTL is reached
+
+### CIDR-Bound Tokens
+
+Some tokens are able to be bound to CIDR(s) that restrict the range of client
+IPs allowed to use them. These affect all tokens except for non-expiring root
+tokens (those with a TTL of zero). If a root token has an expiration, it also
+is affected by CIDR-binding.
