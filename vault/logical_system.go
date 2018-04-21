@@ -3444,7 +3444,7 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		return nil, nil
 	}
 
-	acl, _, entity, err := b.Core.fetchACLTokenEntryAndEntity(req.ClientToken)
+	acl, _, entity, err := b.Core.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
 		return nil, err
 	}
