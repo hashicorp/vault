@@ -75,7 +75,7 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
-	v2, err := isKVv2(path, client)
+	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -85,12 +85,7 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		return 1
 	}
 
-	path, err = addPrefixToVKVPath(path, "metadata")
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
-	}
-
+	path = addPrefixToVKVPath(path, mountPath, "metadata")
 	secret, err := client.Logical().Read(path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading %s: %s", path, err))

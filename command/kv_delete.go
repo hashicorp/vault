@@ -95,14 +95,14 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
-	v2, err := isKVv2(path, client)
+	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
 	if v2 {
-		err = c.deleteV2(path, client)
+		err = c.deleteV2(path, mountPath, client)
 	} else {
 		_, err = client.Logical().Delete(path)
 	}
@@ -116,11 +116,11 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *KVDeleteCommand) deleteV2(path string, client *api.Client) error {
+func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) error {
 	var err error
 	switch {
 	case len(c.flagVersions) > 0:
-		path, err = addPrefixToVKVPath(path, "delete")
+		path = addPrefixToVKVPath(path, mountPath, "delete")
 		if err != nil {
 			return err
 		}
@@ -132,7 +132,7 @@ func (c *KVDeleteCommand) deleteV2(path string, client *api.Client) error {
 		_, err = client.Logical().Write(path, data)
 	default:
 
-		path, err = addPrefixToVKVPath(path, "data")
+		path = addPrefixToVKVPath(path, mountPath, "data")
 		if err != nil {
 			return err
 		}

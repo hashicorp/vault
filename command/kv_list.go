@@ -74,14 +74,14 @@ func (c *KVListCommand) Run(args []string) int {
 	}
 
 	path := ensureTrailingSlash(sanitizePath(args[0]))
-	v2, err := isKVv2(path, client)
+	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
 	if v2 {
-		path, err = addPrefixToVKVPath(path, "metadata")
+		path = addPrefixToVKVPath(path, mountPath, "metadata")
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2

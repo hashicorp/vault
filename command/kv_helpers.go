@@ -1,7 +1,6 @@
 package command
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -41,62 +40,55 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 	return api.ParseSecret(resp.Body)
 }
 
-func kvPreflightVersionRequest(client *api.Client, path string) (int, error) {
-	parts := strings.SplitN(path, "/", 2)
-	if len(parts) != 2 {
-		return 0, errors.New("invalid path")
-	}
-
-	mountPath := parts[0]
-
-	r := client.NewRequest("GET", "/v1/sys/internal/ui/mount/"+mountPath)
+func kvPreflightVersionRequest(client *api.Client, path string) (string, int, error) {
+	r := client.NewRequest("GET", "/v1/sys/internal/ui/mount/"+path)
 	resp, err := client.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
 	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
 
 	secret, err := api.ParseSecret(resp.Body)
 	if err != nil {
-		return 0, err
+		return "", 0, err
+	}
+	var mountPath string
+	if mountPathRaw, ok := secret.Data["path"]; ok {
+		mountPath = mountPathRaw.(string)
 	}
 	options := secret.Data["options"]
 	if options == nil {
-		return 1, nil
+		return mountPath, 1, nil
 	}
 	versionRaw := options.(map[string]interface{})["version"]
 	if versionRaw == nil {
-		return 1, nil
+		return mountPath, 1, nil
 	}
 	version := versionRaw.(string)
 	switch version {
 	case "", "1":
-		return 1, nil
+		return mountPath, 1, nil
 	case "2":
-		return 2, nil
+		return mountPath, 2, nil
 	}
 
-	return 1, nil
+	return mountPath, 1, nil
 }
 
-func isKVv2(path string, client *api.Client) (bool, error) {
-	version, err := kvPreflightVersionRequest(client, path)
+func isKVv2(path string, client *api.Client) (string, bool, error) {
+	mountPath, version, err := kvPreflightVersionRequest(client, path)
 	if err != nil {
-		return false, err
+		return "", false, err
 	}
 
-	return version == 2, nil
+	return mountPath, version == 2, nil
 }
 
-func addPrefixToVKVPath(p, apiPrefix string) (string, error) {
-	parts := strings.SplitN(p, "/", 2)
-	if len(parts) != 2 {
-		return "", errors.New("invalid path")
-	}
-
-	return path.Join(parts[0], apiPrefix, parts[1]), nil
+func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
+	p = strings.TrimPrefix(p, mountPath)
+	return path.Join(mountPath, apiPrefix, p)
 }
 
 func getHeaderForMap(header string, data map[string]interface{}) string {

@@ -93,7 +93,7 @@ func (c *KVDestroyCommand) Run(args []string) int {
 		return 2
 	}
 
-	v2, err := isKVv2(path, client)
+	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -102,7 +102,7 @@ func (c *KVDestroyCommand) Run(args []string) int {
 		c.UI.Error("Destroy not supported on KV Version 1")
 		return 1
 	}
-	path, err = addPrefixToVKVPath(path, "destroy")
+	path = addPrefixToVKVPath(path, mountPath, "destroy")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2

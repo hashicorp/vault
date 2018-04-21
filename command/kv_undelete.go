@@ -92,7 +92,7 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
-	v2, err := isKVv2(path, client)
+	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -102,12 +102,7 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 		return 1
 	}
 
-	path, err = addPrefixToVKVPath(path, "undelete")
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
-	}
-
+	path = addPrefixToVKVPath(path, mountPath, "undelete")
 	data := map[string]interface{}{
 		"versions": kvParseVersionsFlags(c.flagVersions),
 	}
