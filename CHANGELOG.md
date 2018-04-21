@@ -6,12 +6,17 @@ FEATURES:
    the client IP seen by Vault. See the [TCP listener configuration
    page](https://www.vaultproject.io/docs/configuration/listener/tcp.html) for
    details.
+ * CIDR IP Binding for Tokens: Tokens now support being bound to specific
+   CIDR(s) for usage. Currently this is implemented in Token Roles; usage can
+   be expanded to other authentication backends over time.
 
 IMPROVEMENTS:
 
  * auth/token: Add to the token lookup response, the policies inherited due to
    identity associations [GH-4366]
+ * auth/token: Add CIDR binding to token roles [GH-815]
  * core: Add X-Forwarded-For support [GH-4380]
+ * core: Add token CIDR-binding support [GH-815]
  * identity: Add the ability to disable an entity. Disabling an entity does not
    revoke associated tokens, but while the entity is disabled they cannot be
    used. [GH-4353]
