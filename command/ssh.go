@@ -94,7 +94,7 @@ func (c *SSHCommand) Flags() *FlagSets {
 		Default:    "",
 		EnvVar:     "",
 		Completion: complete.PredictSet("ca", "dynamic", "otp"),
-		Usage:      "Name of the role to use to generate the key.",
+		Usage:      "Name of the authentication mode (ca, dynamic, otp).",
 	})
 
 	f.StringVar(&StringVar{
