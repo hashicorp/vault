@@ -2,72 +2,58 @@ package mysql
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
 	"reflect"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
-	dockertest "gopkg.in/ory-am/dockertest.v2"
+	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
-var (
-	testImagePull sync.Once
-)
-
-func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (cid dockertest.ContainerID, retURL string) {
-	if os.Getenv("MYSQL_DSN") != "" {
-		return "", os.Getenv("MYSQL_DSN")
+func prepareTestContainer(t *testing.T) (func(), string) {
+	if os.Getenv("MYSQL_URL") != "" {
+		return func() {}, os.Getenv("MYSQL_URL")
 	}
 
-	// Without this the checks for whether the container has started seem to
-	// never actually pass. There's really no reason to expose the test
-	// containers, so don't.
-	dockertest.BindDockerToLocalhost = "yep"
-
-	testImagePull.Do(func() {
-		dockertest.Pull("mysql")
-	})
-
-	cid, connErr := dockertest.ConnectToMySQL(120, 500*time.Millisecond, func(connURL string) bool {
-		// This will cause a validation to run
-		resp, err := b.HandleRequest(context.Background(), &logical.Request{
-			Storage:   s,
-			Operation: logical.UpdateOperation,
-			Path:      "config/connection",
-			Data: map[string]interface{}{
-				"connection_url": connURL,
-			},
-		})
-		if err != nil || (resp != nil && resp.IsError()) {
-			// It's likely not up and running yet, so return false and try again
-			return false
-		}
-		if resp == nil {
-			t.Fatal("expected warning")
-		}
-
-		retURL = connURL
-		return true
-	})
-
-	if connErr != nil {
-		t.Fatalf("could not connect to database: %v", connErr)
-	}
-
-	return
-}
-
-func cleanupTestContainer(t *testing.T, cid dockertest.ContainerID) {
-	err := cid.KillRemove()
+	pool, err := dockertest.NewPool("")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to connect to docker: %s", err)
 	}
+
+	resource, err := pool.Run("mysql", "5.7", []string{"MYSQL_ROOT_PASSWORD=secret"})
+	if err != nil {
+		t.Fatalf("Could not start local MySQL docker container: %s", err)
+	}
+
+	cleanup := func() {
+		err := pool.Purge(resource)
+		if err != nil {
+			t.Fatalf("Failed to cleanup local container: %s", err)
+		}
+	}
+
+	retURL := fmt.Sprintf("root:secret@(localhost:%s)/mysql?parseTime=true", resource.GetPort("3306/tcp"))
+
+	// exponential backoff-retry
+	if err = pool.Retry(func() error {
+		var err error
+		var db *sql.DB
+		db, err = sql.Open("mysql", retURL)
+		if err != nil {
+			return err
+		}
+		return db.Ping()
+	}); err != nil {
+		cleanup()
+		t.Fatalf("Could not connect to MySQL docker container: %s", err)
+	}
+
+	return cleanup, retURL
 }
 
 func TestBackend_config_connection(t *testing.T) {
@@ -119,10 +105,9 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cid, connURL := prepareTestContainer(t, config.StorageView, b)
-	if cid != "" {
-		defer cleanupTestContainer(t, cid)
-	}
+	cleanup, connURL := prepareTestContainer(t)
+	defer cleanup()
+
 	connData := map[string]interface{}{
 		"connection_url": connURL,
 	}
@@ -146,10 +131,9 @@ func TestBackend_basicHostRevoke(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cid, connURL := prepareTestContainer(t, config.StorageView, b)
-	if cid != "" {
-		defer cleanupTestContainer(t, cid)
-	}
+	cleanup, connURL := prepareTestContainer(t)
+	defer cleanup()
+
 	connData := map[string]interface{}{
 		"connection_url": connURL,
 	}
@@ -173,10 +157,9 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cid, connURL := prepareTestContainer(t, config.StorageView, b)
-	if cid != "" {
-		defer cleanupTestContainer(t, cid)
-	}
+	cleanup, connURL := prepareTestContainer(t)
+	defer cleanup()
+
 	connData := map[string]interface{}{
 		"connection_url": connURL,
 	}
@@ -205,10 +188,9 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cid, connURL := prepareTestContainer(t, config.StorageView, b)
-	if cid != "" {
-		defer cleanupTestContainer(t, cid)
-	}
+	cleanup, connURL := prepareTestContainer(t)
+	defer cleanup()
+
 	connData := map[string]interface{}{
 		"connection_url": connURL,
 	}
