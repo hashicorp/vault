@@ -828,7 +828,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 	}
 
 	if entity != nil && entity.Disabled {
-		return nil, te, logical.ErrEntityDisabled
+		return nil, te, logical.ErrPermissionDenied
 	}
 
 	// Check if this is a root protected path
@@ -1391,7 +1391,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	}
 
 	if entity != nil && entity.Disabled {
-		retErr = multierror.Append(retErr, logical.ErrEntityDisabled)
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		c.stateLock.RUnlock()
 		return retErr
 	}
@@ -1507,7 +1507,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	}
 
 	if entity != nil && entity.Disabled {
-		retErr = multierror.Append(retErr, logical.ErrEntityDisabled)
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		c.stateLock.RUnlock()
 		return retErr
 	}

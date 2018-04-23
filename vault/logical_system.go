@@ -3450,7 +3450,7 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	}
 
 	if entity != nil && entity.Disabled {
-		return logical.ErrorResponse(logical.ErrEntityDisabled.Error()), nil
+		return logical.ErrorResponse(logical.ErrPermissionDenied.Error()), nil
 	}
 
 	resp := &logical.Response{
