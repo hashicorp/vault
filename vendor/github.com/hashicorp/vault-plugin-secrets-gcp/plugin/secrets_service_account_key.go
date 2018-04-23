@@ -143,7 +143,7 @@ func (b *backend) verifySecretServiceKeyExists(ctx context.Context, req *logical
 	if k, err := iamAdmin.Projects.ServiceAccounts.Keys.Get(keyName.(string)).Do(); err != nil || k == nil {
 		return logical.ErrorResponse(fmt.Sprintf("could not confirm key still exists in GCP: %v", err)), nil
 	}
-	return nil, nil
+	return &logical.Response{}, nil
 }
 
 func secretKeyRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
