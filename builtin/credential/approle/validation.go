@@ -383,6 +383,7 @@ func (b *backend) nonLockedSetSecretIDStorageEntry(ctx context.Context, s logica
 	}
 
 	entryIndex := fmt.Sprintf("%s%s/%s", roleSecretIDPrefix, roleNameHMAC, secretIDHMAC)
+	fmt.Printf("secret ID being stored at %q\n", entryIndex)
 
 	if entry, err := logical.StorageEntryJSON(entryIndex, secretEntry); err != nil {
 		return err
@@ -478,7 +479,7 @@ func (b *backend) secretIDAccessorEntry(ctx context.Context, s logical.Storage, 
 	if err != nil {
 		return nil, err
 	}
-	entryIndex := "accessor/" + salt.SaltID(secretIDAccessor)
+	entryIndex := secretIDAccessorPrefix + salt.SaltID(secretIDAccessor)
 
 	accessorLock := b.secretIDAccessorLock(secretIDAccessor)
 	accessorLock.RLock()
@@ -511,7 +512,7 @@ func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 	if err != nil {
 		return err
 	}
-	entryIndex := "accessor/" + salt.SaltID(entry.SecretIDAccessor)
+	entryIndex := secretIDAccessorPrefix + salt.SaltID(entry.SecretIDAccessor)
 
 	accessorLock := b.secretIDAccessorLock(accessorUUID)
 	accessorLock.Lock()
@@ -534,7 +535,7 @@ func (b *backend) deleteSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 	if err != nil {
 		return err
 	}
-	accessorEntryIndex := "accessor/" + salt.SaltID(secretIDAccessor)
+	accessorEntryIndex := secretIDAccessorPrefix + salt.SaltID(secretIDAccessor)
 
 	accessorLock := b.secretIDAccessorLock(secretIDAccessor)
 	accessorLock.Lock()
