@@ -9,16 +9,18 @@ body.layout-downloads {
 
       .download {
         align-items: center;
-        border-bottom: 1px solid #b2b2b2;
         display: flex;
-        padding: 15px;
+        padding: 3px;
+        width: 25%;
 
         .details {
-          padding-left: 20px;
+          text-align: center;
+          width: 100%;
 
           h2 {
             margin-top: 4px;
             border: none;
+            font-size: 24px;
           }
 
           ul {
@@ -37,9 +39,7 @@ body.layout-downloads {
               content: "";
             }
           }
-        }
 
-        .icon {
           svg {
             width: 75px;
           }
@@ -54,6 +54,14 @@ body.layout-downloads {
       .poweredby {
         margin-top: 20px;
         text-align: center;
+
+        color: #bbb;
+        font-size: 12px;
+
+        a {
+            display: block;
+            margin-top: 3px;
+        }
       }
     }
   }
