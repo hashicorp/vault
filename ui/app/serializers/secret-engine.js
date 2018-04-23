@@ -38,7 +38,13 @@ export default DS.RESTSerializer.extend({
     } else if (isQueryRecord) {
       backends = this.normalizeBackend(null, payload);
     } else {
-      backends = Object.keys(payload.data).map(id => this.normalizeBackend(id, payload[id]));
+      if (payload.data.secret) {
+        backends = Object.keys(payload.data.secret).map(id =>
+          this.normalizeBackend(id, payload.data.secret[id])
+        );
+      } else {
+        backends = [this.normalizeBackend(payload.data.path, payload.data)];
+      }
     }
 
     const transformedPayload = { [primaryModelClass.modelName]: backends };
