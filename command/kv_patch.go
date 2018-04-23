@@ -16,12 +16,11 @@ var _ cli.CommandAutocomplete = (*KVPatchCommand)(nil)
 type KVPatchCommand struct {
 	*BaseCommand
 
-	flagCAS   int
 	testStdin io.Reader // for tests
 }
 
 func (c *KVPatchCommand) Synopsis() string {
-	return "Sets or updates data in the KV store without ovewriting."
+	return "Sets or updates data in the KV store without overwriting."
 }
 
 func (c *KVPatchCommand) Help() string {
