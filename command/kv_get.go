@@ -91,16 +91,25 @@ func (c *KVGetCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
-	path, err = addPrefixToVKVPath(path, "data")
+	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
 	var versionParam map[string]string
-	if c.flagVersion > 0 {
-		versionParam = map[string]string{
-			"version": fmt.Sprintf("%d", c.flagVersion),
+
+	if v2 {
+		path = addPrefixToVKVPath(path, mountPath, "data")
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+
+		if c.flagVersion > 0 {
+			versionParam = map[string]string{
+				"version": fmt.Sprintf("%d", c.flagVersion),
+			}
 		}
 	}
 
@@ -138,8 +147,17 @@ func (c *KVGetCommand) Run(args []string) int {
 		OutputData(c.UI, metadata)
 		c.UI.Info("")
 	}
-	if data, ok := secret.Data["data"]; ok && data != nil {
-		c.UI.Info(getHeaderForMap("Data", data.(map[string]interface{})))
+
+	data := secret.Data
+	if v2 && data != nil {
+		dataRaw := secret.Data["data"]
+		if dataRaw != nil {
+			data = dataRaw.(map[string]interface{})
+		}
+	}
+
+	if data != nil {
+		c.UI.Info(getHeaderForMap("Data", data))
 		OutputData(c.UI, data)
 	}
 

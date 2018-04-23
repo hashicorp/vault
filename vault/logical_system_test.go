@@ -2218,7 +2218,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 }
 
 func TestSystemBackend_InternalUIMounts(t *testing.T) {
-	b := testSystemBackend(t)
+	_, b, rootToken := testCoreSystemBackend(t)
 
 	// Ensure no entries are in the endpoint as a starting point
 	req := logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
@@ -2230,6 +2230,48 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	exp := map[string]interface{}{
 		"secret": map[string]interface{}{},
 		"auth":   map[string]interface{}{},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
+	req.ClientToken = rootToken
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp = map[string]interface{}{
+		"secret": map[string]interface{}{
+			"secret/": map[string]interface{}{
+				"type":        "kv",
+				"description": "key/value secret storage",
+				"options":     map[string]string{"version": "1"},
+			},
+			"cubbyhole/": map[string]interface{}{
+				"type":        "cubbyhole",
+				"description": "per-token private secret storage",
+				"options":     map[string]string(nil),
+			},
+			"identity/": map[string]interface{}{
+				"options":     map[string]string(nil),
+				"type":        "identity",
+				"description": "identity store",
+			},
+			"sys/": map[string]interface{}{
+				"type":        "system",
+				"description": "system endpoints used for control, policy and debugging",
+				"options":     map[string]string(nil),
+			},
+		},
+		"auth": map[string]interface{}{
+			"token/": map[string]interface{}{
+				"type":        "token",
+				"description": "token based credentials",
+				"options":     map[string]string(nil),
+			},
+		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -2256,16 +2298,90 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 			"secret/": map[string]interface{}{
 				"type":        "kv",
 				"description": "key/value secret storage",
+				"options":     map[string]string{"version": "1"},
 			},
 		},
 		"auth": map[string]interface{}{
 			"token/": map[string]interface{}{
 				"type":        "token",
 				"description": "token based credentials",
+				"options":     map[string]string(nil),
 			},
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+}
+
+func TestSystemBackend_InternalUIMount(t *testing.T) {
+	core, b, rootToken := testCoreSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "policy/secret")
+	req.ClientToken = rootToken
+	req.Data = map[string]interface{}{
+		"rules": `path "secret/foo/*" {
+    capabilities = ["create", "read", "update", "delete", "list"]
+}`,
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("Bad %#v %#v", err, resp)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/kv")
+	req.ClientToken = rootToken
+	req.Data = map[string]interface{}{
+		"type": "kv",
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("Bad %#v %#v", err, resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/kv/bar")
+	req.ClientToken = rootToken
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("Bad %#v %#v", err, resp)
+	}
+	if resp.Data["type"] != "kv" {
+		t.Fatalf("Bad Response: %#v", resp)
+	}
+
+	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"secret"})
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/kv")
+	req.ClientToken = "tokenid"
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != logical.ErrPermissionDenied {
+		t.Fatal("expected permission denied error")
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/secret")
+	req.ClientToken = "tokenid"
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("Bad %#v %#v", err, resp)
+	}
+	if resp.Data["type"] != "kv" {
+		t.Fatalf("Bad Response: %#v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/sys")
+	req.ClientToken = "tokenid"
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("Bad %#v %#v", err, resp)
+	}
+	if resp.Data["type"] != "system" {
+		t.Fatalf("Bad Response: %#v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/non-existent")
+	req.ClientToken = "tokenid"
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != logical.ErrPermissionDenied {
+		t.Fatal("expected permission denied error")
 	}
 }

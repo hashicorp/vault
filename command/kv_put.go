@@ -97,14 +97,19 @@ func (c *KVPutCommand) Run(args []string) int {
 		stdin = c.testStdin
 	}
 
-	if len(args) < 1 {
+	switch {
+	case len(args) < 1:
 		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		return 1
+	case len(args) == 1:
+		c.UI.Error("Must supply data")
 		return 1
 	}
 
 	var err error
 	path := sanitizePath(args[0])
-	path, err = addPrefixToVKVPath(path, "data")
+
+	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -116,22 +121,25 @@ func (c *KVPutCommand) Run(args []string) int {
 		return 1
 	}
 
-	data = map[string]interface{}{
-		"data":    data,
-		"options": map[string]interface{}{},
-	}
-
-	if c.flagCAS > -1 {
-		data["options"].(map[string]interface{})["cas"] = c.flagCAS
-	}
-
-	client, err := c.Client()
+	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
-	secret, err := kvWriteRequest(client, path, data)
+	if v2 {
+		path = addPrefixToVKVPath(path, mountPath, "data")
+		data = map[string]interface{}{
+			"data":    data,
+			"options": map[string]interface{}{},
+		}
+
+		if c.flagCAS > -1 {
+			data["options"].(map[string]interface{})["cas"] = c.flagCAS
+		}
+	}
+
+	secret, err := client.Logical().Write(path, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
 		return 2

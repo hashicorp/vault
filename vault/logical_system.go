@@ -12,6 +12,7 @@ import (
 	"hash"
 	"net/http"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,7 +23,9 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -92,6 +95,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"wrapping/pubkey",
 				"replication/status",
 				"internal/ui/mounts",
+				"internal/ui/mount/*",
 			},
 		},
 
@@ -1071,6 +1075,20 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				Pattern: "internal/ui/mounts",
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: b.pathInternalUIMountsRead,
+				},
+				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
+			},
+			&framework.Path{
+				Pattern: "internal/ui/mount/(?P<path>.+)",
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The path of the mount.",
+					},
+				},
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.pathInternalUIMountRead,
 				},
 				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
@@ -3402,10 +3420,49 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
-func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.Core.mountsLock.RLock()
-	defer b.Core.mountsLock.RUnlock()
+func hasMountAccess(acl *ACL, path string) bool {
+	// If an ealier policy is giving us access to the mount path then we can do
+	// a fast return.
+	capabilities := acl.Capabilities(path)
+	sort.Strings(capabilities)
+	if !strutil.StrListContains(capabilities, DenyCapability) {
+		return true
+	}
 
+	var aclCapabilitiesGiven bool
+	walkFn := func(s string, v interface{}) bool {
+		if v == nil {
+			return false
+		}
+
+		perms := v.(*ACLPermissions)
+
+		switch {
+		case perms.CapabilitiesBitmap&DenyCapabilityInt > 0:
+			return false
+
+		case perms.CapabilitiesBitmap&CreateCapabilityInt > 0,
+			perms.CapabilitiesBitmap&DeleteCapabilityInt > 0,
+			perms.CapabilitiesBitmap&ListCapabilityInt > 0,
+			perms.CapabilitiesBitmap&ReadCapabilityInt > 0,
+			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
+			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0:
+
+			aclCapabilitiesGiven = true
+			return true
+		}
+
+		return false
+	}
+	acl.exactRules.WalkPrefix(path, walkFn)
+	if !aclCapabilitiesGiven {
+		acl.globRules.WalkPrefix(path, walkFn)
+	}
+
+	return aclCapabilitiesGiven
+}
+
+func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{
 		Data: make(map[string]interface{}),
 	}
@@ -3415,24 +3472,97 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	resp.Data["secret"] = secretMounts
 	resp.Data["auth"] = authMounts
 
-	for _, entry := range b.Core.mounts.Entries {
-		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
-			info := map[string]interface{}{
-				"type":        entry.Type,
-				"description": entry.Description,
-			}
-			secretMounts[entry.Path] = info
+	var acl *ACL
+	var isAuthed bool
+	var err error
+	if req.ClientToken != "" {
+		isAuthed = true
+
+		var entity *identity.Entity
+		// Load the ACL policies so we can walk the prefix for this mount
+		acl, _, entity, err = b.Core.fetchACLTokenEntryAndEntity(req)
+		if err != nil {
+			return nil, err
 		}
+		if entity != nil && entity.Disabled {
+			return nil, logical.ErrEntityDisabled
+		}
+
 	}
 
-	for _, entry := range b.Core.auth.Entries {
-		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
-			info := map[string]interface{}{
+	hasAccess := func(me *MountEntry) bool {
+		if me.Config.ListingVisibility == ListingVisibilityUnauth {
+			return true
+		}
+
+		if isAuthed {
+			return hasMountAccess(acl, me.Path)
+		}
+
+		return false
+	}
+
+	b.Core.mountsLock.RLock()
+	for _, entry := range b.Core.mounts.Entries {
+		if hasAccess(entry) {
+			secretMounts[entry.Path] = map[string]interface{}{
 				"type":        entry.Type,
 				"description": entry.Description,
+				"options":     entry.Options,
 			}
-			authMounts[entry.Path] = info
 		}
+	}
+	b.Core.mountsLock.RUnlock()
+
+	b.Core.authLock.RLock()
+	for _, entry := range b.Core.auth.Entries {
+		if hasAccess(entry) {
+			authMounts[entry.Path] = map[string]interface{}{
+				"type":        entry.Type,
+				"description": entry.Description,
+				"options":     entry.Options,
+			}
+		}
+	}
+	b.Core.authLock.RUnlock()
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	path := d.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("path not set"), logical.ErrInvalidRequest
+	}
+	path = sanitizeMountPath(path)
+
+	me := b.Core.router.MatchingMountEntry(path)
+	if me == nil {
+		// Return a permission denied error here so this path cannot be used to
+		// brute force a list of mounts.
+		return nil, logical.ErrPermissionDenied
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"path":        me.Path,
+			"type":        me.Type,
+			"description": me.Description,
+			"options":     me.Options,
+		},
+	}
+
+	// Load the ACL policies so we can walk the prefix for this mount
+	acl, _, entity, err := b.Core.fetchACLTokenEntryAndEntity(req)
+	if err != nil {
+		return nil, err
+	}
+	if entity != nil && entity.Disabled {
+		return nil, logical.ErrPermissionDenied
+	}
+
+	if !hasMountAccess(acl, me.Path) {
+		return nil, logical.ErrPermissionDenied
 	}
 
 	return resp, nil

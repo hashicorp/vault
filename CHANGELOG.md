@@ -1,5 +1,15 @@
 ## 0.10.1 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * `vault kv` and Vault versions: In 0.10.1 some issues with `vault kv` against
+   v1 K/V engine mounts are fixed. However, using 0.10.1 for both the server
+   and CLI versions is required.
+ * Identity and Local Mounts: Local mounts would allow creating Identity
+   entities but these would not be able to be used successfully (even locally)
+   in replicated scenarios. We have now disallowed entities and groups from
+   being created for local mounts in the first place.
+
 FEATURES:
 
  * X-Forwarded-For support: `X-Forwarded-For` headers can now be used to set the
@@ -20,6 +30,10 @@ IMPROVEMENTS:
  * identity: Add the ability to disable an entity. Disabling an entity does not
    revoke associated tokens, but while the entity is disabled they cannot be
    used. [GH-4353]
+ * identity: Allow local mounts on secondary clusters to be able to perform
+   logins using authentication methods. This is achieved by disallowing
+   attachment of identity information for tokens issued on local mounts
+   [GH-4407] (enterprise)
  * physical/consul: Allow tuning of session TTL and lock wait time [GH-4352]
  * replication: Dynamically adjust WAL cleanup over a period of time based on
    the rate of writes committed

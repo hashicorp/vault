@@ -61,6 +61,7 @@ type validateMountResponse struct {
 	MountType     string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
 	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor"`
 	MountPath     string `json:"mount_path" structs:"mount_path" mapstructure:"mount_path"`
+	MountLocal    bool   `json:"mount_local" structs:"mount_local" mapstructure:"mount_local"`
 }
 
 // validateMountByAccessor returns the mount type and ID for a given mount
@@ -84,6 +85,7 @@ func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse
 		MountAccessor: mountEntry.Accessor,
 		MountType:     mountEntry.Type,
 		MountPath:     mountPath,
+		MountLocal:    mountEntry.Local,
 	}
 }
 
