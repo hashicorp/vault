@@ -30,6 +30,7 @@ BUG FIXES:
    pre-0.10 primary until the primary was upgraded
  * secret/gcp: Fix panic on rollback when a roleset wasn't created properly
    [GH-4344]
+ * secret/gcp: Fix panic on renewal
  * ui: Fix IE11 form submissions in a few parts of the application [GH-4378]
  * ui: Fix IE file saving on policy pages and init screens [GH-4376]
  * ui: Fixed an issue where the AWS secret backend would show the wrong menu [GH-4371]
