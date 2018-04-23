@@ -1538,6 +1538,41 @@ func (b *SystemBackend) handleRekeyDeleteRecovery(ctx context.Context, req *logi
 	return b.handleRekeyDelete(ctx, req, data, true)
 }
 
+func mountInfo(entry *MountEntry) map[string]interface{} {
+	info := map[string]interface{}{
+		"type":        entry.Type,
+		"description": entry.Description,
+		"accessor":    entry.Accessor,
+		"local":       entry.Local,
+		"seal_wrap":   entry.SealWrap,
+		"options":     entry.Options,
+	}
+	entryConfig := map[string]interface{}{
+		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+		"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+		"force_no_cache":    entry.Config.ForceNoCache,
+		"plugin_name":       entry.Config.PluginName,
+	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
+	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+		entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
+	}
+	// Even though empty value is valid for ListingVisibility, we can ignore
+	// this case during mount since there's nothing to unset/hide.
+	if len(entry.Config.ListingVisibility) > 0 {
+		entryConfig["listing_visibility"] = entry.Config.ListingVisibility
+	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
+		entryConfig["passthrough_request_headers"] = rawVal.([]string)
+	}
+
+	info["config"] = entryConfig
+
+	return info
+}
+
 // handleMountTable handles the "mounts" endpoint to provide the mount table
 func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.Core.mountsLock.RLock()
@@ -1549,36 +1584,7 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 
 	for _, entry := range b.Core.mounts.Entries {
 		// Populate mount info
-		info := map[string]interface{}{
-			"type":        entry.Type,
-			"description": entry.Description,
-			"accessor":    entry.Accessor,
-			"local":       entry.Local,
-			"seal_wrap":   entry.SealWrap,
-			"options":     entry.Options,
-		}
-		entryConfig := map[string]interface{}{
-			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-			"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-			"force_no_cache":    entry.Config.ForceNoCache,
-			"plugin_name":       entry.Config.PluginName,
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-			entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
-			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
-		}
-		// Even though empty value is valid for ListingVisibility, we can ignore
-		// this case during mount since there's nothing to unset/hide.
-		if len(entry.Config.ListingVisibility) > 0 {
-			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
-			entryConfig["passthrough_request_headers"] = rawVal.([]string)
-		}
-
-		info["config"] = entryConfig
+		info := mountInfo(entry)
 		resp.Data[entry.Path] = info
 	}
 
@@ -3454,6 +3460,7 @@ func hasMountAccess(acl *ACL, path string) bool {
 
 		return false
 	}
+
 	acl.exactRules.WalkPrefix(path, walkFn)
 	if !aclCapabilitiesGiven {
 		acl.globRules.WalkPrefix(path, walkFn)
@@ -3505,10 +3512,15 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	b.Core.mountsLock.RLock()
 	for _, entry := range b.Core.mounts.Entries {
 		if hasAccess(entry) {
-			secretMounts[entry.Path] = map[string]interface{}{
-				"type":        entry.Type,
-				"description": entry.Description,
-				"options":     entry.Options,
+			if isAuthed {
+				// If this is an authed request return all the mount info
+				secretMounts[entry.Path] = mountInfo(entry)
+			} else {
+				secretMounts[entry.Path] = map[string]interface{}{
+					"type":        entry.Type,
+					"description": entry.Description,
+					"options":     entry.Options,
+				}
 			}
 		}
 	}
@@ -3517,10 +3529,15 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	b.Core.authLock.RLock()
 	for _, entry := range b.Core.auth.Entries {
 		if hasAccess(entry) {
-			authMounts[entry.Path] = map[string]interface{}{
-				"type":        entry.Type,
-				"description": entry.Description,
-				"options":     entry.Options,
+			if isAuthed {
+				// If this is an authed request return all the mount info
+				authMounts[entry.Path] = mountInfo(entry)
+			} else {
+				authMounts[entry.Path] = map[string]interface{}{
+					"type":        entry.Type,
+					"description": entry.Description,
+					"options":     entry.Options,
+				}
 			}
 		}
 	}
@@ -3544,13 +3561,9 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"path":        me.Path,
-			"type":        me.Type,
-			"description": me.Description,
-			"options":     me.Options,
-		},
+		Data: mountInfo(me),
 	}
+	resp.Data["path"] = me.Path
 
 	// Load the ACL policies so we can walk the prefix for this mount
 	acl, _, entity, err := b.Core.fetchACLTokenEntryAndEntity(req)

@@ -2247,34 +2247,81 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 			"secret/": map[string]interface{}{
 				"type":        "kv",
 				"description": "key/value secret storage",
-				"options":     map[string]string{"version": "1"},
-			},
-			"cubbyhole/": map[string]interface{}{
-				"type":        "cubbyhole",
-				"description": "per-token private secret storage",
-				"options":     map[string]string(nil),
-			},
-			"identity/": map[string]interface{}{
-				"options":     map[string]string(nil),
-				"type":        "identity",
-				"description": "identity store",
+				"accessor":    resp.Data["secret"].(map[string]interface{})["secret/"].(map[string]interface{})["accessor"],
+				"config": map[string]interface{}{
+					"default_lease_ttl": resp.Data["secret"].(map[string]interface{})["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+					"plugin_name":       "",
+					"force_no_cache":    false,
+				},
+				"local":     false,
+				"seal_wrap": false,
+				"options": map[string]string{
+					"version": "1",
+				},
 			},
 			"sys/": map[string]interface{}{
 				"type":        "system",
 				"description": "system endpoints used for control, policy and debugging",
-				"options":     map[string]string(nil),
+				"accessor":    resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["accessor"],
+				"config": map[string]interface{}{
+					"default_lease_ttl": resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+					"plugin_name":       "",
+					"force_no_cache":    false,
+				},
+				"local":     false,
+				"seal_wrap": false,
+				"options":   map[string]string(nil),
+			},
+			"cubbyhole/": map[string]interface{}{
+				"description": "per-token private secret storage",
+				"type":        "cubbyhole",
+				"accessor":    resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["accessor"],
+				"config": map[string]interface{}{
+					"default_lease_ttl": resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+					"plugin_name":       "",
+					"force_no_cache":    false,
+				},
+				"local":     true,
+				"seal_wrap": false,
+				"options":   map[string]string(nil),
+			},
+			"identity/": map[string]interface{}{
+				"description": "identity store",
+				"type":        "identity",
+				"accessor":    resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["accessor"],
+				"config": map[string]interface{}{
+					"default_lease_ttl": resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+					"plugin_name":       "",
+					"force_no_cache":    false,
+				},
+				"local":     false,
+				"seal_wrap": false,
+				"options":   map[string]string(nil),
 			},
 		},
 		"auth": map[string]interface{}{
 			"token/": map[string]interface{}{
+				"options": map[string]string(nil),
+				"config": map[string]interface{}{
+					"default_lease_ttl": int64(0),
+					"max_lease_ttl":     int64(0),
+					"force_no_cache":    false,
+					"plugin_name":       "",
+				},
 				"type":        "token",
 				"description": "token based credentials",
-				"options":     map[string]string(nil),
+				"accessor":    resp.Data["auth"].(map[string]interface{})["token/"].(map[string]interface{})["accessor"],
+				"local":       false,
+				"seal_wrap":   false,
 			},
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+		t.Fatalf("got: %#v \n\n expect: %#v", resp.Data, exp)
 	}
 
 	// Mount-tune an auth mount
