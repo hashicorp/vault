@@ -124,7 +124,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	}
 
 	if c.flagField != "" {
-		if metadata, ok := secret.Data["metadata"]; ok && metadata != nil {
+		if v2 {
 			// This is a v2, pass in the data field
 			if data, ok := secret.Data["data"]; ok && data != nil {
 				return PrintRawField(c.UI, data, c.flagField)
