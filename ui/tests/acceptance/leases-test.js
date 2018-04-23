@@ -37,12 +37,8 @@ const createSecret = (context, isRenewable) => {
 
 const navToDetail = context => {
   visit('/vault/access/leases/');
-  // all the
   click(`[data-test-lease-link="${context.enginePath}/"]`);
-  // way down
-  click(`[data-test-lease-link="${context.enginePath}/data/"]`);
-  // the tree
-  click(`[data-test-lease-link="${context.enginePath}/data/${context.name}/"]`);
+  click(`[data-test-lease-link="${context.enginePath}/${context.name}/"]`);
   click(`[data-test-lease-link]:eq(0)`);
 };
 

@@ -17,6 +17,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 
 	"google.golang.org/grpc"
 
@@ -384,6 +385,9 @@ type Core struct {
 
 	// Stores the sealunwrapper for downgrade needs
 	sealUnwrapper physical.Backend
+
+	// Stores any funcs that should be run on successful postUnseal
+	postUnsealFuncs []func()
 }
 
 // CoreConfig is used to parameterize a core
@@ -535,7 +539,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if txnOK {
 		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.ResetNamed("storage.cache"))
 	} else {
-		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.Named("storage.cache"))
+		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.ResetNamed("storage.cache"))
 	}
 	c.physicalCache = c.physical.(physical.ToggleablePurgemonster)
 
@@ -737,11 +741,11 @@ func (c *Core) fetchEntityAndDerivedPolicies(entityID string) (*identity.Entity,
 	return entity, policies, err
 }
 
-func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntry, *identity.Entity, error) {
+func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *TokenEntry, *identity.Entity, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
 
 	// Ensure there is a client token
-	if clientToken == "" {
+	if req.ClientToken == "" {
 		return nil, nil, nil, fmt.Errorf("missing client token")
 	}
 
@@ -751,7 +755,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 	}
 
 	// Resolve the token policy
-	te, err := c.tokenStore.Lookup(c.activeContext, clientToken)
+	te, err := c.tokenStore.Lookup(c.activeContext, req.ClientToken)
 	if err != nil {
 		c.logger.Error("failed to lookup token", "error", err)
 		return nil, nil, nil, ErrInternalError
@@ -760,6 +764,27 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 	// Ensure the token is valid
 	if te == nil {
 		return nil, nil, nil, logical.ErrPermissionDenied
+	}
+
+	// CIDR checks bind all tokens except non-expiring root tokens
+	if te.TTL != 0 && len(te.BoundCIDRs) > 0 {
+		var valid bool
+		remoteSockAddr, err := sockaddr.NewSockAddr(req.Connection.RemoteAddr)
+		if err != nil {
+			if c.Logger().IsDebug() {
+				c.Logger().Debug("could not parse remote addr into sockaddr", "error", err, "remote_addr", req.Connection.RemoteAddr)
+			}
+			return nil, nil, nil, logical.ErrPermissionDenied
+		}
+		for _, cidr := range te.BoundCIDRs {
+			if cidr.Contains(remoteSockAddr) {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return nil, nil, nil, logical.ErrPermissionDenied
+		}
 	}
 
 	tokenPolicies := te.Policies
@@ -793,7 +818,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 	// gather as much info as possible for the audit log and to e.g. control
 	// trace mode for EGPs.
 	if !unauth || (unauth && req.ClientToken != "") {
-		acl, te, entity, err = c.fetchACLTokenEntryAndEntity(req.ClientToken)
+		acl, te, entity, err = c.fetchACLTokenEntryAndEntity(req)
 		// In the unauth case we don't want to fail the command, since it's
 		// unauth, we just have no information to attach to the request, so
 		// ignore errors...this was best-effort anyways
@@ -1336,7 +1361,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	}
 
 	// Validate the token is a root token
-	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
+	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
 		c.stateLock.RUnlock()
@@ -1454,7 +1479,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 
 	ctx := c.activeContext
 
-	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
+	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
 		return retErr
@@ -1616,6 +1641,9 @@ func (c *Core) sealInternal(keepLock bool) error {
 func (c *Core) postUnseal() (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
 
+	// Clear any out
+	c.postUnsealFuncs = nil
+
 	// Create a new request context
 	c.activeContext, c.activeContextCancelFunc = context.WithCancel(context.Background())
 
@@ -1703,6 +1731,14 @@ func (c *Core) postUnseal() (retErr error) {
 	}
 	c.metricsCh = make(chan struct{})
 	go c.emitMetrics(c.metricsCh)
+
+	// This is intentionally the last block in this function. We want to allow
+	// writes just before allowing client requests, to ensure everything has
+	// been set up properly before any writes can have happened.
+	for _, v := range c.postUnsealFuncs {
+		v()
+	}
+
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -1712,6 +1748,9 @@ func (c *Core) postUnseal() (retErr error) {
 func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Info("pre-seal teardown starting")
+
+	// Clear any pending funcs
+	c.postUnsealFuncs = nil
 
 	// Clear any rekey progress
 	c.barrierRekeyConfig = nil

@@ -5,16 +5,11 @@ import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import Pretender from 'pretender';
+import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
 moduleForAcceptance('Acceptance | secrets/secret/create', {
   beforeEach() {
-    this.server = new Pretender(function() {
-      this.post('/v1/**', this.passthrough);
-      this.put('/v1/**', this.passthrough);
-      this.get('/v1/**', this.passthrough);
-      this.delete('/v1/**', this.passthrough);
-    });
+    this.server = apiStub({ usePassthrough: true });
     return authLogin();
   },
   afterEach() {
@@ -34,7 +29,7 @@ test('it creates a secret and redirects', function(assert) {
   andThen(() => {
     let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
     assert.equal(
-      JSON.parse(capabilitiesReq.requestBody).path,
+      JSON.parse(capabilitiesReq.requestBody).paths,
       `secret/data/${path}`,
       'calls capabilites with the correct path'
     );
@@ -46,6 +41,7 @@ test('it creates a secret and redirects', function(assert) {
 test('version 1 performs the correct capabilities lookup', function(assert) {
   let enginePath = `kv-${new Date().getTime()}`;
   let secretPath = 'foo/bar';
+  // mount version 1 engine
   mountSecrets.visit().path(enginePath).type('kv').version(1).submit();
 
   listPage.create();
@@ -53,7 +49,7 @@ test('version 1 performs the correct capabilities lookup', function(assert) {
   andThen(() => {
     let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
     assert.equal(
-      JSON.parse(capabilitiesReq.requestBody).path,
+      JSON.parse(capabilitiesReq.requestBody).paths,
       `${enginePath}/${secretPath}`,
       'calls capabilites with the correct path'
     );

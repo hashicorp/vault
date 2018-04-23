@@ -667,6 +667,12 @@ tokens created against a role to be revoked using the
   The suffix can be changed, allowing new callers to have the new suffix as part
   of their path, and then tokens with the old suffix can be revoked via
   `/sys/leases/revoke-prefix`.
+- `bound_cidrs` `(string: "", or list: [])` – If set, restricts usage of the
+  generated token to client IPs falling within the range of the specified
+  CIDR(s). Unlike most other role parameters, this is not reevaluated from the
+  current role value at each usage; it is set on the token itself. Root tokens
+  with no TTL will not be bound by these CIDRs; root tokens with TTLs will be
+  bound by these CIDRs.
 
 ### Sample Payload
 
@@ -676,6 +682,7 @@ tokens created against a role to be revoked using the
   ],
   "name": "nomad",
   "orphan": false,
+  "bound_cidrs": ["127.0.0.1/32", "128.252.0.0/16"],
   "renewable": true
 ```
 

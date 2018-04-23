@@ -104,7 +104,7 @@ list of available configuration options, please see the API documentation.
 This auth method accesses the [Kubernetes TokenReview API][k8s-tokenreview] to
 validate the provided JWT is still valid. Kubernetes should be running with
 `--service-account-lookup`. This is defaulted to true in Kubernetes 1.7, but any
-versions prior should ensure the Kubernetes API server is started with with this
+versions prior should ensure the Kubernetes API server is started with this
 setting. Otherwise deleted tokens in Kubernetes will not be properly revoked and
 will be able to authenticate to this auth method.
 
