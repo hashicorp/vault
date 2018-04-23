@@ -59,6 +59,7 @@ func TestApprole_UpgradeBoundCIDRList(t *testing.T) {
 		Policies:         []string{"default"},
 		BindSecretID:     true,
 		BoundCIDRListOld: "127.0.0.1/18,192.178.1.2/24",
+		SecretIDPrefix:   secretIDPrefix,
 	}
 	err = b.setRoleEntry(context.Background(), storage, "testrole", role, "")
 	if err != nil {
@@ -120,10 +121,11 @@ func TestApprole_RoleNameLowerCasing(t *testing.T) {
 
 	// Save a role with out LowerCaseRoleName set
 	role := &roleStorageEntry{
-		RoleID:       "testroleid",
-		HMACKey:      "testhmackey",
-		Policies:     []string{"default"},
-		BindSecretID: true,
+		RoleID:         "testroleid",
+		HMACKey:        "testhmackey",
+		Policies:       []string{"default"},
+		BindSecretID:   true,
+		SecretIDPrefix: secretIDPrefix,
 	}
 	err = b.setRoleEntry(context.Background(), storage, "testRoleName", role, "")
 	if err != nil {
