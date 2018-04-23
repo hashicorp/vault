@@ -55,8 +55,9 @@ while an organization is facing a constant threat.
 ## Solution
 
 Vault centralizes management of cryptographic services used to protect your
-data.  Your system can communicate with Vault easily through Vault API and the
-encryption keys never have to leave the Vault.
+data.  Your system can communicate with Vault easily through Vault API to
+encrypt and decrypt your data, and the encryption keys never have to leave the
+Vault.
 
 ![Encryption as a Service](/assets/images/vault-eaas.png)
 
@@ -95,6 +96,7 @@ In this guide, you perform the following:
 1. [Review the demo application implementation](#step1)
 2. [Deploy and review the demo environment](#step2)
 3. [Run the demo application](#step3)
+4. [Reloading the Static Secrets](#tep4)
 
 ![Encryption as a Service](/assets/images/vault-java-demo-10.png)
 
@@ -174,6 +176,8 @@ public class VaultDemoOrderServiceApplication  {
 	}
 }
 ```
+
+The `OrderAPIController` class defines the API endpoint (`api/orders`).
 
 
 ### <a name="step2"></a>Step 2: Deploy and review the demo environment
@@ -483,7 +487,7 @@ manner (e.g. "James" and "John").
 Now, retrieve the order data via the orders API:
 
 ```plaintext
-[vagrant@demo ~]$ curl --request GET --header "Content-Type: application/json" \
+[vagrant@demo ~]$ curl --header "Content-Type: application/json" \
                        http://localhost:8080/api/orders | jq
 [
  {
@@ -528,6 +532,149 @@ Finally, click **Decode from base64** to reveal the customer name.
 ![Web UI](/assets/images/vault-java-demo-8.png)
 
 
+### <a name="step4"></a>Step 4: Reloading the Static Secrets
+
+Now, let's test another API endpoint, **`api/secret`** provided by the demo app.
+A plain old Java object, `Secret` defines a get method for `key` and `value`.
+The `SecretController.java` defines an API endpoint, **`api/secret`**.  
+
+```plaintext
+package com.hashicorp.vault.spring.demo;
+...
+
+@RefreshScope
+@RestController
+public class SecretController {
+
+	@Value("${secret:n/a}")
+	String secret;
+
+	@RequestMapping("/api/secret")
+	public Secret secret() {
+		return new Secret("secret", secret);
+	}
+}
+```
+
+Remember from [Step 2](#task-2-examine-the-vault-environment) that the
+**`order`** policy granted permissions on the `secret/spring-vault-demo` path.
+
+```plaintext
+path "secret/spring-vault-demo" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+...
+```
+<br>
+
+The demo app retrieved the secret from `secret/spring-vault-demo` and have a
+local copy.  If someone or perhaps another app updates the secret, it makes the
+secret held by the demo app to be obsolete.
+
+![Static Secret](/assets/images/vault-java-demo-11.png)
+
+Spring offers [Spring Boot
+Actuator](https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#production-ready)
+which can be used to facilitate the reloading of the static secret.
+
+#### Task 1: Read the secret
+
+The initial key-value was set by the Vagrant during the provisioning. (See the
+`Vagrantfile` at line 48.)
+
+Let's invoke the demo app's secret API (**`api/secret`**):
+
+```plaintext
+$ curl -s http://localhost:8080/api/secret | jq
+{
+  "key": "secret",
+  "value": "hello-vault"
+}
+```
+
+This is the secret that the demo app knows about.
+
+
+#### Task 2: Update the Secrets
+
+Now, update the secret stored in Vault using API:
+
+```shell
+# Update the value via API
+$ curl --header "X-Vault-Token: root" \
+       --request POST \
+       --data '{ "secret": "my-api-key" }' \
+       http://127.0.0.1:8200/v1/secret/spring-vault-demo
+
+# Verify that the secret value was updated
+$ curl --header "X-Vault-Token: root" \
+       http://127.0.0.1:8200/v1/secret/spring-vault-demo | jq
+{
+ "request_id": "514601e4-a790-3dc6-14b0-537d6982a6c6",
+ "lease_id": "",
+ "renewable": false,
+ "lease_duration": 2764800,
+ "data": {
+   "secret": "my-api-key"
+ },
+...
+}
+```
+
+
+#### Task 3: Refresh the secret on demo app
+
+Run the demo app's secret API again:
+
+```plaintext
+$ curl -s http://localhost:8080/api/secret | jq
+{
+  "key": "secret",
+  "value": "hello-vault"
+}
+```
+
+The current value stored in Vault is now `my-api-key`; however, the demo app
+still holds `hello-vault`.  
+
+
+Spring provides an
+[actuator](https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#production-ready)
+which can be leveraged to refresh the secret value.  At line 54 of the
+`vault-guides/secrets/spring-cloud-vault/pom.xml`, you see that the actuator was
+added to the project.
+
+```plaintext
+...
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+...
+```
+
+Let's refresh the secret using the actuator:
+
+```plaintext
+$ curl -s --request POST http://localhost:8080/actuator/refresh | jq
+[
+  "secret"
+]
+```
+
+Read back the secret from the demo app again:
+
+```plaintext
+$ curl -s http://localhost:8080/api/secret | jq
+{
+  "key": "secret",
+  "value": "my-api-key"
+}
+```
+
+It should display the correct value.
+
+---
 
 When you are done exploring the demo implementation, you can destroy the virtual
 machine:
@@ -539,11 +686,14 @@ demo: Are you sure you want to destroy the 'demo' VM? [y/N] y
 ==> demo: Destroying VM and associated drives...
 ```
 
-
 ~> In the webinar, the demo environment was running in a public cloud, and Nomad
 and Consul were also installed and configured.  If you wish to build a similar
 environment using Kubernetes, the assets in the `vault-guides/secrets/spring-cloud-vault/kubernetes`
 folder provides you with some guidance.
+
+
+
+
 
 
 ## Next steps
