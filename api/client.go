@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/sethgrid/pester"
 	"golang.org/x/net/http2"
+	"golang.org/x/time/rate"
 )
 
 const EnvVaultAddress = "VAULT_ADDR"
@@ -69,6 +70,13 @@ type Config struct {
 	// If there is an error when creating the configuration, this will be the
 	// error
 	Error error
+
+	// Limiter is the rate limiter used by the client.
+	// If this pointer is nil, then there will be no limit set.
+	// In contrast, if this pointer is set, even to an empty struct,
+	// then that limiter will be used. Note that an empty Limiter
+	// is equivalent blocking all events.
+	Limiter *rate.Limiter
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -312,6 +320,12 @@ func NewClient(c *Config) (*Client, error) {
 		c = def
 	}
 
+	// Check to see if the Limiter has been set.
+	// If is has not been set, then set it to have no limit.
+	if c.Limiter == nil {
+		c.Limiter = NewLimiter(rate.Inf, 0)
+	}
+
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
@@ -360,6 +374,14 @@ func (c *Client) Address() string {
 	defer c.modifyLock.RUnlock()
 
 	return c.addr.String()
+}
+
+// SetLimiter will set the rate limiter for this client.
+// This method is thread-safe.
+func (c *Client) SetLimiter(limit rate.Limiter) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.c.Limiter = limit
 }
 
 // SetMaxRetries sets the number of retries that will be used in the case of certain errors
@@ -449,6 +471,7 @@ func (c *Client) Clone() (*Client, error) {
 		HttpClient: config.HttpClient,
 		MaxRetries: config.MaxRetries,
 		Timeout:    config.Timeout,
+		Limiter:    config.Limiter,
 	}
 	config.modifyLock.RUnlock()
 
@@ -528,9 +551,11 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 func (c *Client) RawRequest(r *Request) (*Response, error) {
+	defer c.c.Limiter.Wait()
 	c.modifyLock.RLock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
+
 	token := c.token
 	c.modifyLock.RUnlock()
 
