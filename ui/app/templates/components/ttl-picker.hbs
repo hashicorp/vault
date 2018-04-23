@@ -6,7 +6,7 @@
        value={{time}}
        id="time-{{elementId}}"
        type="text"
-       name="time"
+       name="time-{{elementId}}"
        class="input"
        oninput={{action 'changedValue' 'time'}}
        />
@@ -15,8 +15,8 @@
     <div class="select is-fullwidth">
       <select
          data-test-ttl-unit
-         name="unit"
-         id="unit"
+         name="unit-{{elementId}}"
+         id="unit-{{elementId}}"
          onchange={{action 'changedValue' 'unit'}}
          >
          {{#each unitOptions as |unitOption|}}
