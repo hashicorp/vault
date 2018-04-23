@@ -2053,6 +2053,13 @@
 			"revisionTime": "2018-02-04T03:07:25Z"
 		},
 		{
+			"checksumSHA1": "CFdb1jcqp/puCfw/Bv5OKEXwoOE=",
+			"path": "golang.org/x/time/rate",
+			"revision": "fbb02b2291d28baffd63558aa44b4b56f178d650",
+			"revisionTime": "2018-04-12T16:56:04Z",
+			"tree": true
+		},
+		{
 			"checksumSHA1": "KyEmBCK45zndyQMJOYygiWCcwy0=",
 			"path": "google.golang.org/api/compute/v1",
 			"revision": "068431dcab1a5817548dd244d9795788a98329f4",
