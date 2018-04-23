@@ -235,6 +235,10 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 		return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
 	}
 
+	if mountValidationResp.MountLocal {
+		return logical.ErrorResponse(fmt.Sprintf("mount_accessor %q is of a local mount", mountAccessor)), nil
+	}
+
 	// Get alias metadata
 	metadata, ok, err := d.GetOkErr("metadata")
 	if err != nil {
