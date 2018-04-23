@@ -96,7 +96,7 @@ In this guide, you perform the following:
 1. [Review the demo application implementation](#step1)
 2. [Deploy and review the demo environment](#step2)
 3. [Run the demo application](#step3)
-4. [Reloading the Static Secrets](#tep4)
+4. [Reloading the Static Secrets](#step4)
 
 ![Encryption as a Service](/assets/images/vault-java-demo-10.png)
 
