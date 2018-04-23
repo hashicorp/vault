@@ -150,6 +150,7 @@ func (c *KVGetCommand) Run(args []string) int {
 
 	data := secret.Data
 	if v2 && data != nil {
+		data = nil
 		dataRaw := secret.Data["data"]
 		if dataRaw != nil {
 			data = dataRaw.(map[string]interface{})

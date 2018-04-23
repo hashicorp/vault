@@ -345,6 +345,19 @@ func TestKVGetCommand(t *testing.T) {
 			0,
 		},
 		{
+			"v1_field",
+			[]string{"-field", "foo", "secret/read/foo"},
+			"bar",
+			0,
+		},
+		{
+			"v2_field",
+			[]string{"-field", "foo", "kv/read/foo"},
+			"bar",
+			0,
+		},
+
+		{
 			"v2_not_found",
 			[]string{"kv/nope/not/once/never"},
 			"",
@@ -422,6 +435,95 @@ func TestKVGetCommand(t *testing.T) {
 		t.Parallel()
 
 		_, cmd := testKVGetCommand(t)
+		assertNoTabs(t, cmd)
+	})
+}
+
+func testKVMetadataGetCommand(tb testing.TB) (*cli.MockUi, *KVMetadataGetCommand) {
+	tb.Helper()
+
+	ui := cli.NewMockUi()
+	return ui, &KVMetadataGetCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+}
+
+func TestKVMetadataGetCommand(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"v1",
+			[]string{"secret/foo"},
+			"Metadata not supported on KV Version 1",
+			1,
+		},
+		{
+			"metadata_exists",
+			[]string{"kv/foo"},
+			"current_version",
+			0,
+		},
+		{
+			"versions_exist",
+			[]string{"kv/foo"},
+			"deletion_time",
+			0,
+		},
+	}
+
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
+
+		for _, tc := range cases {
+			tc := tc
+
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				client, closer := testVaultServer(t)
+				defer closer()
+				if err := client.Sys().Mount("kv/", &api.MountInput{
+					Type: "kv-v2",
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				if _, err := client.Logical().Write("kv/data/foo", map[string]interface{}{
+					"data": map[string]interface{}{
+						"foo": "bar",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				ui, cmd := testKVMetadataGetCommand(t)
+				cmd.client = client
+
+				code := cmd.Run(tc.args)
+				if code != tc.code {
+					t.Errorf("expected %d to be %d", code, tc.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				if !strings.Contains(combined, tc.out) {
+					t.Errorf("expected %q to contain %q", combined, tc.out)
+				}
+			})
+		}
+	})
+
+	t.Run("no_tabs", func(t *testing.T) {
+		t.Parallel()
+
+		_, cmd := testKVMetadataGetCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }
