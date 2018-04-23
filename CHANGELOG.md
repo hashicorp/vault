@@ -20,6 +20,10 @@ IMPROVEMENTS:
  * identity: Add the ability to disable an entity. Disabling an entity does not
    revoke associated tokens, but while the entity is disabled they cannot be
    used. [GH-4353]
+ * identity: Allow local mounts on secondary clusters to be able to perform
+   logins using authentication methods. This is achieved by disallowing
+   attachment of identity information for tokens issued on local mounts
+   [GH-4407] (enterprise)
  * physical/consul: Allow tuning of session TTL and lock wait time [GH-4352]
  * replication: Dynamically adjust WAL cleanup over a period of time based on
    the rate of writes committed
