@@ -2,13 +2,13 @@
 
 FEATURES:
 
- * X-Forwarded-For support: `X-Forwarded-For` headers can now be used to set
-   the client IP seen by Vault. See the [TCP listener configuration
+ * X-Forwarded-For support: `X-Forwarded-For` headers can now be used to set the
+   client IP seen by Vault. See the [TCP listener configuration
    page](https://www.vaultproject.io/docs/configuration/listener/tcp.html) for
    details.
  * CIDR IP Binding for Tokens: Tokens now support being bound to specific
-   CIDR(s) for usage. Currently this is implemented in Token Roles; usage can
-   be expanded to other authentication backends over time.
+   CIDR(s) for usage. Currently this is implemented in Token Roles; usage can be
+   expanded to other authentication backends over time.
 
 IMPROVEMENTS:
 
@@ -21,6 +21,8 @@ IMPROVEMENTS:
    revoke associated tokens, but while the entity is disabled they cannot be
    used. [GH-4353]
  * physical/consul: Allow tuning of session TTL and lock wait time [GH-4352]
+ * replication: Dynamically adjust WAL cleanup over a period of time based on
+   the rate of writes committed
 
 BUG FIXES:
 
@@ -33,8 +35,9 @@ BUG FIXES:
  * secret/gcp: Fix panic on renewal
  * ui: Fix IE11 form submissions in a few parts of the application [GH-4378]
  * ui: Fix IE file saving on policy pages and init screens [GH-4376]
- * ui: Fixed an issue where the AWS secret backend would show the wrong menu [GH-4371]
- * ui: Fixed an issue where policies with commas would not render in the 
+ * ui: Fixed an issue where the AWS secret backend would show the wrong menu
+   [GH-4371]
+ * ui: Fixed an issue where policies with commas would not render in the
    interface properly [GH-4398]
 
 ## 0.10.0 (April 10th, 2018)
