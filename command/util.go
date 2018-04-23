@@ -76,11 +76,18 @@ func RawField(secret *api.Secret, field string) (interface{}, bool) {
 }
 
 // PrintRawField prints raw field from the secret.
-func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
-	val, ok := RawField(secret, field)
-	if !ok {
-		ui.Error(fmt.Sprintf("Field %q not present in secret", field))
-		return 1
+func PrintRawField(ui cli.Ui, data interface{}, field string) int {
+	var val interface{}
+	switch data.(type) {
+	case *api.Secret:
+		var ok bool
+		val, ok = RawField(data.(*api.Secret), field)
+		if !ok {
+			ui.Error(fmt.Sprintf("Field %q not present in secret", field))
+			return 1
+		}
+	case map[string]interface{}:
+		val = data.(map[string]interface{})[field]
 	}
 
 	format := Format(ui)

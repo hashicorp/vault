@@ -55,7 +55,7 @@ Usage: vault kv put [options] KEY [DATA]
 }
 
 func (c *KVPutCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
@@ -142,6 +142,10 @@ func (c *KVPutCommand) Run(args []string) int {
 			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
 		}
 		return 0
+	}
+
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
 	}
 
 	return OutputSecret(c.UI, secret)
