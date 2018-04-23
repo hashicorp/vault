@@ -695,6 +695,13 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				},
 			}, nil
 		},
+		"kv patch": func() (cli.Command, error) {
+			return &KVPatchCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
 		"kv get": func() (cli.Command, error) {
 			return &KVGetCommand{
 				BaseCommand: &BaseCommand{
