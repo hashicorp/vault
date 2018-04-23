@@ -71,13 +71,18 @@ func (c *KVMetadataDeleteCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
-	path, err = addPrefixToVKVPath(path, "metadata")
+	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
+	if !v2 {
+		c.UI.Error("Metadata not supported on KV Version 1")
+		return 1
+	}
 
-	if _, err := kvDeleteRequest(client, path); err != nil {
+	path = addPrefixToVKVPath(path, mountPath, "metadata")
+	if _, err := client.Logical().Delete(path); err != nil {
 		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
 		return 2
 	}
