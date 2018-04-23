@@ -12,7 +12,6 @@ import (
 	"hash"
 	"net/http"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -3430,7 +3429,6 @@ func hasMountAccess(acl *ACL, path string) bool {
 	// If an ealier policy is giving us access to the mount path then we can do
 	// a fast return.
 	capabilities := acl.Capabilities(path)
-	sort.Strings(capabilities)
 	if !strutil.StrListContains(capabilities, DenyCapability) {
 		return true
 	}
