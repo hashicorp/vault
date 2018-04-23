@@ -44,7 +44,7 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 	}
 
 	if entity != nil && entity.Disabled {
-		return nil, logical.ErrEntityDisabled
+		return nil, logical.ErrPermissionDenied
 	}
 
 	for _, item := range derivedPolicies {

@@ -3490,7 +3490,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 			return nil, err
 		}
 		if entity != nil && entity.Disabled {
-			return nil, logical.ErrEntityDisabled
+			return nil, logical.ErrPermissionDenied
 		}
 
 	}
