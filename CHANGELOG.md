@@ -44,6 +44,8 @@ IMPROVEMENTS:
  * physical/consul: Allow tuning of session TTL and lock wait time [GH-4352]
  * replication: Dynamically adjust WAL cleanup over a period of time based on
    the rate of writes committed
+ * secret/ssh: Update dynamic key install script to use shell locking to avoid
+   concurrent modifications [GH-4358]
 
 BUG FIXES:
 
