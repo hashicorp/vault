@@ -34,9 +34,17 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 		return fmt.Errorf("SecretID tidy operation already running")
 	}
 
-	roleNameHMACs, err := s.List(ctx, "secret_id/")
+	roleSecretIDPrefix := secretIDPrefix
+	roleNameHMACs, err := s.List(ctx, roleSecretIDPrefix)
 	if err != nil {
 		return err
+	}
+	if len(roleNameHMACs) == 0 {
+		roleSecretIDPrefix = secretIDLocalPrefix
+		roleNameHMACs, err = s.List(ctx, roleSecretIDPrefix)
+		if err != nil {
+			return err
+		}
 	}
 
 	// List all the accessors and add them all to a map
@@ -52,7 +60,7 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 	var result error
 	for _, roleNameHMAC := range roleNameHMACs {
 		// roleNameHMAC will already have a '/' suffix. Don't append another one.
-		secretIDHMACs, err := s.List(ctx, fmt.Sprintf("secret_id/%s", roleNameHMAC))
+		secretIDHMACs, err := s.List(ctx, fmt.Sprintf("%s%s", roleSecretIDPrefix, roleNameHMAC))
 		if err != nil {
 			return err
 		}
@@ -62,7 +70,7 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 			lock := b.secretIDLock(secretIDHMAC)
 			lock.Lock()
 			// roleNameHMAC will already have a '/' suffix. Don't append another one.
-			entryIndex := fmt.Sprintf("secret_id/%s%s", roleNameHMAC, secretIDHMAC)
+			entryIndex := fmt.Sprintf("%s%s%s", roleSecretIDPrefix, roleNameHMAC, secretIDHMAC)
 			secretIDEntry, err := s.Get(ctx, entryIndex)
 			if err != nil {
 				lock.Unlock()

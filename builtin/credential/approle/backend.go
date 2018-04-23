@@ -11,6 +11,11 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const (
+	secretIDPrefix      = "secret_id/"
+	secretIDLocalPrefix = "local_secret_id/"
+)
+
 type backend struct {
 	*framework.Backend
 
