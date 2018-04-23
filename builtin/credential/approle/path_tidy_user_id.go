@@ -91,7 +91,7 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 				// ExpirationTime not being set indicates non-expiring SecretIDs
 				if !result.ExpirationTime.IsZero() && time.Now().After(result.ExpirationTime) {
 					// Clean up the accessor of the secret ID first
-					err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor)
+					err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
 					if err != nil {
 						lock.Unlock()
 						return err

@@ -234,7 +234,7 @@ func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request
 	// requests to use the same SecretID will fail.
 	if result.SecretIDNumUses == 1 {
 		// Delete the secret IDs accessor first
-		if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, result.SecretIDAccessor); err != nil {
+		if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, result.SecretIDAccessor, role.SecretIDPrefix); err != nil {
 			return false, nil, err
 		}
 		if err := req.Storage.Delete(ctx, entryIndex); err != nil {
@@ -383,7 +383,6 @@ func (b *backend) nonLockedSetSecretIDStorageEntry(ctx context.Context, s logica
 	}
 
 	entryIndex := fmt.Sprintf("%s%s/%s", roleSecretIDPrefix, roleNameHMAC, secretIDHMAC)
-	fmt.Printf("secret ID being stored at %q\n", entryIndex)
 
 	if entry, err := logical.StorageEntryJSON(entryIndex, secretEntry); err != nil {
 		return err
@@ -454,7 +453,7 @@ func (b *backend) registerSecretIDEntry(ctx context.Context, s logical.Storage, 
 	}
 
 	// Before storing the SecretID, store its accessor.
-	if err := b.createSecretIDAccessorEntry(ctx, s, secretEntry, secretIDHMAC); err != nil {
+	if err := b.createSecretIDAccessorEntry(ctx, s, secretEntry, secretIDHMAC, roleSecretIDPrefix); err != nil {
 		return nil, err
 	}
 
@@ -467,7 +466,7 @@ func (b *backend) registerSecretIDEntry(ctx context.Context, s logical.Storage, 
 
 // secretIDAccessorEntry is used to read the storage entry that maps an
 // accessor to a secret_id.
-func (b *backend) secretIDAccessorEntry(ctx context.Context, s logical.Storage, secretIDAccessor string) (*secretIDAccessorStorageEntry, error) {
+func (b *backend) secretIDAccessorEntry(ctx context.Context, s logical.Storage, secretIDAccessor, roleSecretIDPrefix string) (*secretIDAccessorStorageEntry, error) {
 	if secretIDAccessor == "" {
 		return nil, fmt.Errorf("missing secretIDAccessor")
 	}
@@ -479,7 +478,11 @@ func (b *backend) secretIDAccessorEntry(ctx context.Context, s logical.Storage, 
 	if err != nil {
 		return nil, err
 	}
-	entryIndex := secretIDAccessorPrefix + salt.SaltID(secretIDAccessor)
+	accessorPrefix := secretIDAccessorPrefix
+	if roleSecretIDPrefix == secretIDLocalPrefix {
+		accessorPrefix = secretIDAccessorLocalPrefix
+	}
+	entryIndex := accessorPrefix + salt.SaltID(secretIDAccessor)
 
 	accessorLock := b.secretIDAccessorLock(secretIDAccessor)
 	accessorLock.RLock()
@@ -499,7 +502,7 @@ func (b *backend) secretIDAccessorEntry(ctx context.Context, s logical.Storage, 
 // createSecretIDAccessorEntry creates an identifier for the SecretID. A storage index,
 // mapping the accessor to the SecretID is also created. This method should
 // be called when the lock for the corresponding SecretID is held.
-func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Storage, entry *secretIDStorageEntry, secretIDHMAC string) error {
+func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Storage, entry *secretIDStorageEntry, secretIDHMAC, roleSecretIDPrefix string) error {
 	// Create a random accessor
 	accessorUUID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -512,7 +515,12 @@ func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 	if err != nil {
 		return err
 	}
-	entryIndex := secretIDAccessorPrefix + salt.SaltID(entry.SecretIDAccessor)
+
+	accessorPrefix := secretIDAccessorPrefix
+	if roleSecretIDPrefix == secretIDLocalPrefix {
+		accessorPrefix = secretIDAccessorLocalPrefix
+	}
+	entryIndex := accessorPrefix + salt.SaltID(entry.SecretIDAccessor)
 
 	accessorLock := b.secretIDAccessorLock(accessorUUID)
 	accessorLock.Lock()
@@ -530,19 +538,24 @@ func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 }
 
 // deleteSecretIDAccessorEntry deletes the storage index mapping the accessor to a SecretID.
-func (b *backend) deleteSecretIDAccessorEntry(ctx context.Context, s logical.Storage, secretIDAccessor string) error {
+func (b *backend) deleteSecretIDAccessorEntry(ctx context.Context, s logical.Storage, secretIDAccessor, roleSecretIDPrefix string) error {
 	salt, err := b.Salt(ctx)
 	if err != nil {
 		return err
 	}
-	accessorEntryIndex := secretIDAccessorPrefix + salt.SaltID(secretIDAccessor)
+
+	accessorPrefix := secretIDAccessorPrefix
+	if roleSecretIDPrefix == secretIDLocalPrefix {
+		accessorPrefix = secretIDAccessorLocalPrefix
+	}
+	entryIndex := accessorPrefix + salt.SaltID(secretIDAccessor)
 
 	accessorLock := b.secretIDAccessorLock(secretIDAccessor)
 	accessorLock.Lock()
 	defer accessorLock.Unlock()
 
 	// Delete the accessor of the SecretID first
-	if err := s.Delete(ctx, accessorEntryIndex); err != nil {
+	if err := s.Delete(ctx, entryIndex); err != nil {
 		return errwrap.Wrapf("failed to delete accessor storage entry: {{err}}", err)
 	}
 

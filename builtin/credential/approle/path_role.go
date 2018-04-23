@@ -1178,7 +1178,7 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *
 	}
 
 	// Delete the accessor of the SecretID first
-	if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, result.SecretIDAccessor); err != nil {
+	if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, result.SecretIDAccessor, role.SecretIDPrefix); err != nil {
 		return nil, err
 	}
 
@@ -1219,7 +1219,7 @@ func (b *backend) pathRoleSecretIDAccessorLookupUpdate(ctx context.Context, req 
 		return nil, fmt.Errorf("role %q does not exist", roleName)
 	}
 
-	accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, secretIDAccessor)
+	accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, secretIDAccessor, role.SecretIDPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -1260,7 +1260,7 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 		return nil, fmt.Errorf("role %q does not exist", roleName)
 	}
 
-	accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, secretIDAccessor)
+	accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, secretIDAccessor, role.SecretIDPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -1280,7 +1280,7 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 	defer lock.Unlock()
 
 	// Delete the accessor of the SecretID first
-	if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, secretIDAccessor); err != nil {
+	if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, secretIDAccessor, role.SecretIDPrefix); err != nil {
 		return nil, err
 	}
 

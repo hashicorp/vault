@@ -99,6 +99,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			},
 			LocalStorage: []string{
 				secretIDLocalPrefix,
+				secretIDAccessorLocalPrefix,
 			},
 		},
 		Paths: framework.PathAppend(
