@@ -204,7 +204,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// return invalid request so that the status codes can be correct
 		errType := logical.ErrInvalidRequest
 		switch ctErr {
-		case ErrInternalError, logical.ErrPermissionDenied, logical.ErrEntityDisabled:
+		case ErrInternalError, logical.ErrPermissionDenied:
 			errType = ctErr
 		}
 
@@ -522,7 +522,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 
 			if entity.Disabled {
-				return nil, nil, logical.ErrEntityDisabled
+				return nil, nil, logical.ErrPermissionDenied
 			}
 
 			auth.EntityID = entity.ID
