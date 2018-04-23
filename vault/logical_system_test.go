@@ -2386,7 +2386,7 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/kv/bar")
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/kv/bar")
 	req.ClientToken = rootToken
 	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -2398,14 +2398,14 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 
 	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"secret"})
 
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/kv")
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/kv")
 	req.ClientToken = "tokenid"
 	resp, err = b.HandleRequest(context.Background(), req)
 	if err != logical.ErrPermissionDenied {
 		t.Fatal("expected permission denied error")
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/secret")
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/secret")
 	req.ClientToken = "tokenid"
 	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -2415,7 +2415,7 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/sys")
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/sys")
 	req.ClientToken = "tokenid"
 	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -2425,7 +2425,7 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mount/non-existent")
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/non-existent")
 	req.ClientToken = "tokenid"
 	resp, err = b.HandleRequest(context.Background(), req)
 	if err != logical.ErrPermissionDenied {

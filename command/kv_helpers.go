@@ -41,7 +41,7 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 }
 
 func kvPreflightVersionRequest(client *api.Client, path string) (string, int, error) {
-	r := client.NewRequest("GET", "/v1/sys/internal/ui/mount/"+path)
+	r := client.NewRequest("GET", "/v1/sys/internal/ui/mounts/"+path)
 	resp, err := client.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
