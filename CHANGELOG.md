@@ -19,12 +19,16 @@ FEATURES:
  * CIDR IP Binding for Tokens: Tokens now support being bound to specific
    CIDR(s) for usage. Currently this is implemented in Token Roles; usage can be
    expanded to other authentication backends over time.
+ * `vault kv patch` command: A new `kv patch` helper command that allows
+   modifying only some values in existing data at a K/V path, but uses
+   check-and-set to ensure that this modification happens safely.
 
 IMPROVEMENTS:
 
  * auth/token: Add to the token lookup response, the policies inherited due to
    identity associations [GH-4366]
  * auth/token: Add CIDR binding to token roles [GH-815]
+ * cli: Add `vault kv patch` [GH-4432]
  * core: Add X-Forwarded-For support [GH-4380]
  * core: Add token CIDR-binding support [GH-815]
  * identity: Add the ability to disable an entity. Disabling an entity does not
@@ -40,6 +44,8 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * cli: Fix `vault kv` backwards compatibility with KV v1 engine mounts
+   [GH-4430]
  * identity: Persist entity memberships in external identity groups across
    mounts [GH-4365]
  * replication: Fix issue causing secondaries to not connect properly to a
