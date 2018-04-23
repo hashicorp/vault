@@ -70,7 +70,7 @@ type roleStorageEntry struct {
 
 	// SecretIDPrefix is the storage prefix under which all the secret IDs will
 	// be persisted.
-	SecretIDPrefix string `json:"-"`
+	SecretIDPrefix string `json:"secret_id_prefix" mapstructure:"secret_id_prefix" structs:"secret_id_prefix"`
 }
 
 // roleIDStorageEntry represents the reverse mapping from RoleID to Role
@@ -186,7 +186,7 @@ be reset later.`,
 			HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
 		},
 		&framework.Path{
-			Pattern: "role/" + framework.GenericNameRegex("role_name"+"/local_secret_ids"),
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/local_secret_ids$",
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": &framework.FieldSchema{
 					Type:        framework.TypeString,
