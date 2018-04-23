@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -323,7 +324,7 @@ func NewClient(c *Config) (*Client, error) {
 	// Check to see if the Limiter has been set.
 	// If is has not been set, then set it to have no limit.
 	if c.Limiter == nil {
-		c.Limiter = NewLimiter(rate.Inf, 0)
+		c.Limiter = rate.NewLimiter(rate.Inf, 0)
 	}
 
 	c.modifyLock.Lock()
@@ -378,10 +379,10 @@ func (c *Client) Address() string {
 
 // SetLimiter will set the rate limiter for this client.
 // This method is thread-safe.
-func (c *Client) SetLimiter(limit rate.Limiter) {
+func (c *Client) SetLimiter(limit *rate.Limiter) {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
-	c.c.Limiter = limit
+	c.config.Limiter = limit
 }
 
 // SetMaxRetries sets the number of retries that will be used in the case of certain errors
@@ -551,7 +552,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 func (c *Client) RawRequest(r *Request) (*Response, error) {
-	defer c.c.Limiter.Wait()
+	defer c.config.Limiter.Wait(context.Background())
 	c.modifyLock.RLock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
