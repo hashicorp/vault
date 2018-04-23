@@ -68,8 +68,8 @@ type roleStorageEntry struct {
 	// roles that get created since this field was introduced.
 	LowerCaseRoleName bool `json:"lower_case_role_name" mapstructure:"lower_case_role_name" structs:"lower_case_role_name"`
 
-	// SecretIDPrefix is the storage prefix under which all the secret IDs will
-	// be persisted.
+	// SecretIDPrefix is the storage prefix for persisting secret IDs. This
+	// differs based on whether the secret IDs are cluster local or not.
 	SecretIDPrefix string `json:"secret_id_prefix" mapstructure:"secret_id_prefix" structs:"secret_id_prefix"`
 }
 
@@ -170,9 +170,8 @@ TTL will be set to the value of this parameter.`,
 				"enable_local_secret_ids": &framework.FieldSchema{
 					Type: framework.TypeBool,
 					Description: `
-If set, indicates that the secret IDs generated using this role should be
-cluster local. This can only be set during role creation and once set, it can't
-be reset later.`,
+If set, the secret IDs generated using this role will be cluster local. This
+can only be set during role creation and once set, it can't be reset later.`,
 				},
 			},
 			ExistenceCheck: b.pathRoleExistenceCheck,
@@ -195,9 +194,8 @@ be reset later.`,
 				"enable_local_secret_ids": &framework.FieldSchema{
 					Type: framework.TypeBool,
 					Description: `
-If set, indicates that the secret IDs generated using this role should be
-cluster local. This can only be set during role creation and once set, it can't
-be reset later.`,
+If set, the secret IDs generated using this role will be cluster local. This
+can only be set during role creation and once set, it can't be reset later.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -817,10 +815,14 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	}
 
 	localSecretIDsRaw, ok := data.GetOk("enable_local_secret_ids")
-	if ok && req.Operation == logical.CreateOperation {
-		localSecretIDs := localSecretIDsRaw.(bool)
-		if localSecretIDs {
-			role.SecretIDPrefix = secretIDLocalPrefix
+	if ok {
+		if req.Operation == logical.CreateOperation {
+			localSecretIDs := localSecretIDsRaw.(bool)
+			if localSecretIDs {
+				role.SecretIDPrefix = secretIDLocalPrefix
+			}
+		} else {
+			return logical.ErrorResponse("enable_local_secret_ids can only be modified during role creation"), nil
 		}
 	}
 	if role.SecretIDPrefix == "" {
