@@ -2,20 +2,27 @@
 
 FEATURES:
 
- * X-Forwarded-For support: `X-Forwarded-For` headers can now be used to set
-   the client IP seen by Vault. See the [TCP listener configuration
+ * X-Forwarded-For support: `X-Forwarded-For` headers can now be used to set the
+   client IP seen by Vault. See the [TCP listener configuration
    page](https://www.vaultproject.io/docs/configuration/listener/tcp.html) for
    details.
+ * CIDR IP Binding for Tokens: Tokens now support being bound to specific
+   CIDR(s) for usage. Currently this is implemented in Token Roles; usage can be
+   expanded to other authentication backends over time.
 
 IMPROVEMENTS:
 
  * auth/token: Add to the token lookup response, the policies inherited due to
    identity associations [GH-4366]
+ * auth/token: Add CIDR binding to token roles [GH-815]
  * core: Add X-Forwarded-For support [GH-4380]
+ * core: Add token CIDR-binding support [GH-815]
  * identity: Add the ability to disable an entity. Disabling an entity does not
    revoke associated tokens, but while the entity is disabled they cannot be
    used. [GH-4353]
  * physical/consul: Allow tuning of session TTL and lock wait time [GH-4352]
+ * replication: Dynamically adjust WAL cleanup over a period of time based on
+   the rate of writes committed
 
 BUG FIXES:
 
@@ -25,10 +32,12 @@ BUG FIXES:
    pre-0.10 primary until the primary was upgraded
  * secret/gcp: Fix panic on rollback when a roleset wasn't created properly
    [GH-4344]
+ * secret/gcp: Fix panic on renewal
  * ui: Fix IE11 form submissions in a few parts of the application [GH-4378]
  * ui: Fix IE file saving on policy pages and init screens [GH-4376]
- * ui: Fixed an issue where the AWS secret backend would show the wrong menu [GH-4371]
- * ui: Fixed an issue where policies with commas would not render in the 
+ * ui: Fixed an issue where the AWS secret backend would show the wrong menu
+   [GH-4371]
+ * ui: Fixed an issue where policies with commas would not render in the
    interface properly [GH-4398]
 
 ## 0.10.0 (April 10th, 2018)

@@ -1,15 +1,7 @@
 import Ember from 'ember';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 const BACKENDS = supportedAuthBackends();
-const { computed, inject } = Ember;
-
-const attributesForSelectedAuthBackend = {
-  token: ['token'],
-  userpass: ['username', 'password'],
-  ldap: ['username', 'password'],
-  github: ['username', 'password'],
-  okta: ['username', 'password'],
-};
+const { computed, inject, get } = Ember;
 
 const DEFAULTS = {
   token: null,
@@ -81,16 +73,16 @@ export default Ember.Component.extend(DEFAULTS, {
         error: null,
       });
       let targetRoute = this.get('redirectTo') || 'vault.cluster';
-      let backend = this.get('selectedAuthBackend.type');
+      let backend = this.get('selectedAuthBackend');
       let path = this.get('customPath');
-      let attributes = attributesForSelectedAuthBackend[backend];
+      let attributes = get(backend, 'formAttributes');
 
       data = Ember.assign(data, this.getProperties(...attributes));
       if (this.get('useCustomPath') && path) {
         data.path = path;
       }
       const clusterId = this.get('cluster.id');
-      this.get('auth').authenticate({ clusterId, backend, data }).then(
+      this.get('auth').authenticate({ clusterId, backend: get(backend, 'type'), data }).then(
         ({ isRoot }) => {
           this.set('loading', false);
           const transition = this.get('routing.router').transitionTo(targetRoute);

@@ -29,7 +29,7 @@ test('it creates a secret and redirects', function(assert) {
   andThen(() => {
     let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
     assert.equal(
-      JSON.parse(capabilitiesReq.requestBody).path,
+      JSON.parse(capabilitiesReq.requestBody).paths,
       `secret/data/${path}`,
       'calls capabilites with the correct path'
     );
@@ -49,7 +49,7 @@ test('version 1 performs the correct capabilities lookup', function(assert) {
   andThen(() => {
     let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
     assert.equal(
-      JSON.parse(capabilitiesReq.requestBody).path,
+      JSON.parse(capabilitiesReq.requestBody).paths,
       `${enginePath}/${secretPath}`,
       'calls capabilites with the correct path'
     );
