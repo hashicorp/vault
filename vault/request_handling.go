@@ -496,7 +496,9 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		var entity *identity.Entity
 		auth = resp.Auth
 
-		if auth.Alias != nil {
+		mEntry := c.router.MatchingMountEntry(req.Path)
+
+		if auth.Alias != nil && mEntry != nil && !mEntry.Local {
 			// Overwrite the mount type and mount path in the alias
 			// information
 			auth.Alias.MountType = req.MountType
