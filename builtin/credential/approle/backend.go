@@ -95,6 +95,9 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			Unauthenticated: []string{
 				"login",
 			},
+			LocalStorage: []string{
+				secretIDLocalPrefix,
+			},
 		},
 		Paths: framework.PathAppend(
 			rolePaths(b),
