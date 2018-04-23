@@ -113,7 +113,7 @@ application provided in this guide:
 - [Docker](https://docs.docker.com/install/)
 
 Download the sample application code from
-[vault-guides](https://github.com/hashicorp/vault-guides/tree/master/encryption/vault-transit-rewrap-example)
+[vault-guides](https://github.com/hashicorp/vault-guides/tree/master/encryption/vault-transit-rewrap)
 repository to perform the steps described in this guide.
 
 The `vault-transit-rewrap-example` contains the following:
