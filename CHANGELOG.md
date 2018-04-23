@@ -5,6 +5,9 @@ DEPRECATIONS/CHANGES:
  * `vault kv` and Vault versions: In 0.10.1 some issues with `vault kv` against
    v1 K/V engine mounts are fixed. However, using 0.10.1 for both the server
    and CLI versions is required.
+ * Mount information visiblity: Users that have access to any path within a
+   mount can now see information about that mount, such as its type and
+   options, via some API calls.
  * Identity and Local Mounts: Local mounts would allow creating Identity
    entities but these would not be able to be used successfully (even locally)
    in replicated scenarios. We have now disallowed entities and groups from
