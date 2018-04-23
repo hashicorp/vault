@@ -531,7 +531,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.seal.SetCore(c)
 
-	c.sealUnwrapper = NewSealUnwrapper(phys, conf.Logger.Named("sealunwrapper"))
+	c.sealUnwrapper = NewSealUnwrapper(phys, conf.Logger.ResetNamed("storage.sealunwrapper"))
 
 	var ok bool
 
