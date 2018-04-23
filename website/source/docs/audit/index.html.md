@@ -8,10 +8,10 @@ description: |-
 
 # Audit Devices
 
-Audit devices are the components in Vault that keep a detailed log
-of all requests and response to Vault. Because _every_ operation with
-Vault is an API request/response, the audit log contains _every_ interaction
-with Vault, including errors.
+Audit devices are the components in Vault that keep a detailed log of all
+requests and response to Vault. Because every operation with Vault is an API
+request/response, the audit log contains _every authenticated_ interaction with
+Vault, including errors.
 
 Multiple audit devices can be enabled and Vault will send the audit logs to
 both. This allows you to not only have a redundant copy, but also a second copy
