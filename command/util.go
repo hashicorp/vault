@@ -20,7 +20,7 @@ func DefaultTokenHelper() (token.TokenHelper, error) {
 
 // RawField extracts the raw field from the given data and returns it as a
 // string for printing purposes.
-func RawField(secret *api.Secret, field string) (interface{}, bool) {
+func RawField(secret *api.Secret, field string) interface{} {
 	var val interface{}
 	switch {
 	case secret.Auth != nil:
@@ -72,13 +72,20 @@ func RawField(secret *api.Secret, field string) (interface{}, bool) {
 		}
 	}
 
-	return val, val != nil
+	return val
 }
 
 // PrintRawField prints raw field from the secret.
-func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
-	val, ok := RawField(secret, field)
-	if !ok {
+func PrintRawField(ui cli.Ui, data interface{}, field string) int {
+	var val interface{}
+	switch data.(type) {
+	case *api.Secret:
+		val = RawField(data.(*api.Secret), field)
+	case map[string]interface{}:
+		val = data.(map[string]interface{})[field]
+	}
+
+	if val == nil {
 		ui.Error(fmt.Sprintf("Field %q not present in secret", field))
 		return 1
 	}

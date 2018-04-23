@@ -43,7 +43,7 @@ Usage: vault kv get [options] KEY
 }
 
 func (c *KVGetCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
@@ -124,7 +124,17 @@ func (c *KVGetCommand) Run(args []string) int {
 	}
 
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		if v2 {
+			// This is a v2, pass in the data field
+			if data, ok := secret.Data["data"]; ok && data != nil {
+				return PrintRawField(c.UI, data, c.flagField)
+			} else {
+				c.UI.Error(fmt.Sprintf("No data found at %s", path))
+				return 2
+			}
+		} else {
+			return PrintRawField(c.UI, secret, c.flagField)
+		}
 	}
 
 	// If we have wrap info print the secret normally.
