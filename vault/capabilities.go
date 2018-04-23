@@ -38,9 +38,13 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 		policies = append(policies, policy)
 	}
 
-	_, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(te.EntityID)
+	entity, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(te.EntityID)
 	if err != nil {
 		return nil, err
+	}
+
+	if entity != nil && entity.Disabled {
+		return nil, logical.ErrPermissionDenied
 	}
 
 	for _, item := range derivedPolicies {
