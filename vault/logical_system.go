@@ -94,7 +94,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"wrapping/pubkey",
 				"replication/status",
 				"internal/ui/mounts",
-				"internal/ui/mount/*",
+				"internal/ui/mounts/*",
 			},
 		},
 
@@ -1079,7 +1079,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
 			},
 			&framework.Path{
-				Pattern: "internal/ui/mount/(?P<path>.+)",
+				Pattern: "internal/ui/mounts/(?P<path>.+)",
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
 						Type:        framework.TypeString,
