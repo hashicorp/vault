@@ -99,7 +99,7 @@ func (c *KVPutCommand) Run(args []string) int {
 
 	switch {
 	case len(args) < 1:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected >1, got %d)", len(args)))
 		return 1
 	case len(args) == 1:
 		c.UI.Error("Must supply data")
