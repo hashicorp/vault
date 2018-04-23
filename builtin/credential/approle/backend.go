@@ -13,9 +13,9 @@ import (
 
 const (
 	secretIDPrefix              = "secret_id/"
-	secretIDLocalPrefix         = "local_secret_id/"
+	secretIDLocalPrefix         = "secret_id_local/"
 	secretIDAccessorPrefix      = "accessor/"
-	secretIDAccessorLocalPrefix = "local_accessor/"
+	secretIDAccessorLocalPrefix = "accessor_local/"
 )
 
 type backend struct {

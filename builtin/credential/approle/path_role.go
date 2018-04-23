@@ -167,7 +167,7 @@ TTL will be set to the value of this parameter.`,
 					Type:        framework.TypeString,
 					Description: "Identifier of the role. Defaults to a UUID.",
 				},
-				"local_secret_ids": &framework.FieldSchema{
+				"enable_local_secret_ids": &framework.FieldSchema{
 					Type: framework.TypeBool,
 					Description: `
 If set, indicates that the secret IDs generated using this role should be
@@ -186,13 +186,13 @@ be reset later.`,
 			HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
 		},
 		&framework.Path{
-			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/local_secret_ids$",
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/enable_local_secret_ids$",
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"local_secret_ids": &framework.FieldSchema{
+				"enable_local_secret_ids": &framework.FieldSchema{
 					Type: framework.TypeBool,
 					Description: `
 If set, indicates that the secret IDs generated using this role should be
@@ -816,7 +816,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(fmt.Sprintf("invalid role name")), nil
 	}
 
-	localSecretIDsRaw, ok := data.GetOk("local_secret_ids")
+	localSecretIDsRaw, ok := data.GetOk("enable_local_secret_ids")
 	if ok && req.Operation == logical.CreateOperation {
 		localSecretIDs := localSecretIDsRaw.(bool)
 		if localSecretIDs {
@@ -1473,7 +1473,7 @@ func (b *backend) pathRoleLocalSecretIDsRead(ctx context.Context, req *logical.R
 		}
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"local_secret_ids": localSecretIDs,
+				"enable_local_secret_ids": localSecretIDs,
 			},
 		}, nil
 	}
@@ -2341,7 +2341,7 @@ be fixed. If the Period in the role is modified, the token
 will pick up the new value during its next renewal.`,
 	},
 	"role-local-secret-ids": {
-		"Sets the cluster local setting for secret IDs",
+		"Enables cluster local secret IDs",
 		`If set, indicates that the secret IDs generated using this role should be
 cluster local. This can only be set during role creation and once set, it can't
 be reset later.`,
