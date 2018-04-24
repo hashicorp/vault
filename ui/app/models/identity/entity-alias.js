@@ -16,7 +16,7 @@ export default IdentityModel.extend({
     label: 'Auth Backend',
     editType: 'mountAccessor',
   }),
-  metadata: attr('object', {
+  metadata: attr({
     editType: 'kv',
   }),
   mountPath: attr('string', {

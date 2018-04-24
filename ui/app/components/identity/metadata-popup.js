@@ -10,8 +10,7 @@ export default Ember.Component.extend({
     removeKey(model, key) {
       let metadata = model.get('metadata');
       delete metadata[key];
-      model.set('metadata', null);
-      model.set('metadata', metadata);
+      model.set('metadata', { ...metadata });
 
       return model
         .save()

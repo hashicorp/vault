@@ -10,7 +10,7 @@ export default IdentityModel.extend({
   formFields: ['name', 'policies', 'metadata'],
   name: attr('string'),
   mergedEntityIds: attr(),
-  metadata: attr('object', {
+  metadata: attr({
     editType: 'kv',
   }),
   policies: attr({
