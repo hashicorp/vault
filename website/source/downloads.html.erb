@@ -34,68 +34,29 @@ description: |-
     </div>
   </div>
 
-  <div class="row">
-    <div class="col-md-12">
-
   <% product_versions.each do |os, arches| %>
     <% next if os == "web" %>
-
-
-        <div class="col-md-4 download">
-          <div class="details">
-            <%= system_icon(os) %>
-            <h2 class="os-name"><%= pretty_os(os) %></h2>
-            <ul>
-              <% arches.each do |arch, url| %>
+    <div class="row">
+      <div class="col-md-12 download">
+        <div class="icon pull-left"><%= system_icon(os) %></div>
+        <div class="details">
+          <h2 class="os-name"><%= pretty_os(os) %></h2>
+          <ul>
+            <% arches.each do |arch, url| %>
               <li><a href="<%= url %>"><%= pretty_arch(arch) %></a></li>
-              <% end %>
-            </ul>
-          </div>
+            <% end %>
+          </ul>
+          <div class="clearfix"></div>
         </div>
-
-  <% end %>
+      </div>
     </div>
-  </div>
+  <% end %>
 
   <div class="row">
     <div class="col-md-12 poweredby">
-        Downloads powered by
       <a href="https://www.fastly.com?utm_source=hashicorp" target="_blank" rel="nofollow noopener noreferrer">
         <%= inline_svg "fastly.svg", height: 50 %>
       </a>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="col-md-12">
-    <h2>Community and Resources</h2>
-
-    <p>
-      Vault is an open source project with a growing community. There are active,
-      dedicated users willing to help you through various mediums.
-    </p>
-    <p>
-      <strong>IRC:</strong> <code>#vault-tool</code> on Freenode
-    </p>
-    <p>
-      <strong>Announcement list:</strong>
-      <a href="https://groups.google.com/group/hashicorp-announce">HashiCorp Announcement Google Group</a>
-    </p>
-    <p>
-      <strong>Discussion list:</strong>
-      <a href="https://groups.google.com/group/vault-tool">Vault Google Group</a>
-    </p>
-    <p>
-      <strong>Bug Tracker:</strong>
-      <a href="https://github.com/hashicorp/vault/issues">Issue tracker
-        on GitHub</a>. Please only use this for reporting bugs. Do not ask
-      for general help here. Use IRC or the mailing list for that.
-    </p>
-    <p>
-      <strong>Training:</strong>
-      Paid <a href="https://www.hashicorp.com/training.html">HashiCorp training courses</a>
-      are also available in a city near you. Private training courses are also available.
-    </p>
     </div>
   </div>
 </section>
