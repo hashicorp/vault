@@ -14,7 +14,7 @@ export default ApplicationAdapter.extend({
   query(store, type, query) {
     let url = `/${this.urlPrefix()}/internal/ui/mounts`;
     if (query.path) {
-      url = `/${this.urlPrefix()}/internal/ui/mount/${query.path}`;
+      url = `${url}/${query.path}`;
     }
     return this.ajax(url, 'GET');
   },
