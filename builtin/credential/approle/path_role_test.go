@@ -12,6 +12,39 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+func TestAppRole_EnableLocalSecretIDsRead(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"enable_local_secret_ids": true,
+		"bind_secret_id":          true,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "role/testrole",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+		Path:      "role/testrole/enable-local-secret-ids",
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if !resp.Data["enable_local_secret_ids"].(bool) {
+		t.Fatalf("expected enable_local_secret_ids to be returned")
+	}
+}
+
 func TestApprole_LocalNonLocalSecretIDs(t *testing.T) {
 	var resp *logical.Response
 	var err error
