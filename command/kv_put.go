@@ -142,6 +142,9 @@ func (c *KVPutCommand) Run(args []string) int {
 	secret, err := client.Logical().Write(path, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
+		if secret != nil {
+			OutputSecret(c.UI, secret)
+		}
 		return 2
 	}
 	if secret == nil {
