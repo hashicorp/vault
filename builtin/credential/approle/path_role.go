@@ -167,7 +167,7 @@ TTL will be set to the value of this parameter.`,
 					Type:        framework.TypeString,
 					Description: "Identifier of the role. Defaults to a UUID.",
 				},
-				"enable_local_secret_ids": &framework.FieldSchema{
+				"local_secret_ids": &framework.FieldSchema{
 					Type: framework.TypeBool,
 					Description: `If set, the secret IDs generated using this role will be cluster local. This
 can only be set during role creation and once set, it can't be reset later.`,
@@ -184,7 +184,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
 		},
 		&framework.Path{
-			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/enable-local-secret-ids$",
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/local-secret-ids$",
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": &framework.FieldSchema{
 					Type:        framework.TypeString,
@@ -192,7 +192,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: b.pathRoleEnableLocalSecretIDsRead,
+				logical.ReadOperation: b.pathRoleLocalSecretIDsRead,
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-local-secret-ids"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-local-secret-ids"][1]),
@@ -807,7 +807,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(fmt.Sprintf("role name %q doesn't exist", roleName)), nil
 	}
 
-	localSecretIDsRaw, ok := data.GetOk("enable_local_secret_ids")
+	localSecretIDsRaw, ok := data.GetOk("local_secret_ids")
 	if ok {
 		switch {
 		case req.Operation == logical.CreateOperation:
@@ -816,7 +816,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 				role.SecretIDPrefix = secretIDLocalPrefix
 			}
 		default:
-			return logical.ErrorResponse("enable_local_secret_ids can only be modified during role creation"), nil
+			return logical.ErrorResponse("local_secret_ids can only be modified during role creation"), nil
 		}
 	}
 
@@ -948,20 +948,20 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	}
 
 	respData := map[string]interface{}{
-		"bind_secret_id":          role.BindSecretID,
-		"bound_cidr_list":         role.BoundCIDRList,
-		"period":                  role.Period / time.Second,
-		"policies":                role.Policies,
-		"secret_id_num_uses":      role.SecretIDNumUses,
-		"secret_id_ttl":           role.SecretIDTTL / time.Second,
-		"token_max_ttl":           role.TokenMaxTTL / time.Second,
-		"token_num_uses":          role.TokenNumUses,
-		"token_ttl":               role.TokenTTL / time.Second,
-		"enable_local_secret_ids": false,
+		"bind_secret_id":     role.BindSecretID,
+		"bound_cidr_list":    role.BoundCIDRList,
+		"period":             role.Period / time.Second,
+		"policies":           role.Policies,
+		"secret_id_num_uses": role.SecretIDNumUses,
+		"secret_id_ttl":      role.SecretIDTTL / time.Second,
+		"token_max_ttl":      role.TokenMaxTTL / time.Second,
+		"token_num_uses":     role.TokenNumUses,
+		"token_ttl":          role.TokenTTL / time.Second,
+		"local_secret_ids":   false,
 	}
 
 	if role.SecretIDPrefix == secretIDLocalPrefix {
-		respData["enable_local_secret_ids"] = true
+		respData["local_secret_ids"] = true
 	}
 
 	resp := &logical.Response{
@@ -1450,7 +1450,7 @@ func (b *backend) pathRoleBindSecretIDDelete(ctx context.Context, req *logical.R
 	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRoleEnableLocalSecretIDsRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleLocalSecretIDsRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1471,7 +1471,7 @@ func (b *backend) pathRoleEnableLocalSecretIDsRead(ctx context.Context, req *log
 		}
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"enable_local_secret_ids": localSecretIDs,
+				"local_secret_ids": localSecretIDs,
 			},
 		}, nil
 	}
