@@ -64,6 +64,7 @@ BUG FIXES:
    [GH-4371]
  * ui: Fixed an issue where policies with commas would not render in the
    interface properly [GH-4398]
+ * ui: Corrected the saving of mount tune ttls for auth methods [GH-4431]
 
 ## 0.10.0 (April 10th, 2018)
 

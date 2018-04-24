@@ -400,7 +400,7 @@ Reads out the properties of a SecretID.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --payload @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id/lookup
 ```
 
@@ -431,7 +431,7 @@ Destroy an AppRole secret ID.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --payload @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id/destroy
 ```
 
@@ -462,7 +462,7 @@ Reads out the properties of a SecretID.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --payload @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id-accessor/lookup
 ```
 
@@ -493,7 +493,7 @@ Destroy an AppRole secret ID by its accessor.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --payload @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id-accessor/destroy
 ```
 
