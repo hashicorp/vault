@@ -57,6 +57,9 @@ module.exports = function(environment) {
     ENV.contentSecurityPolicyMeta = true;
     ENV.contentSecurityPolicy = {
       'connect-src': ["'self'"],
+      'img-src': ["'self'", 'data:'],
+      'form-action': ["'none'"],
+      'script-src': ["'self'"],
       'style-src': ["'unsafe-inline'", "'self'"],
     };
   }
