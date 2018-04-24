@@ -28,6 +28,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * auth/approle: Support for cluster local secret IDs. This enables secondaries
+   to generate secret IDs without contacting the primary [GH-4427] (enterprise)
  * auth/token: Add to the token lookup response, the policies inherited due to
    identity associations [GH-4366]
  * auth/token: Add CIDR binding to token roles [GH-815]
