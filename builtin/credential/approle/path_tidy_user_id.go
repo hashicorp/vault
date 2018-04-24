@@ -53,13 +53,10 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 		}
 
 		secretIDCleanupFunc := func(secretIDHMAC, roleNameHMAC, secretIDPrefixToUse string) error {
-			// In order to avoid lock swapping in case there is need to delete,
-			// grab the write lock.
 			lock := b.secretIDLock(secretIDHMAC)
 			lock.Lock()
 			defer lock.Unlock()
 
-			// roleNameHMAC will already have a '/' suffix. Don't append another one.
 			entryIndex := fmt.Sprintf("%s%s%s", secretIDPrefixToUse, roleNameHMAC, secretIDHMAC)
 			secretIDEntry, err := s.Get(ctx, entryIndex)
 			if err != nil {
@@ -107,7 +104,6 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 		}
 
 		for _, roleNameHMAC := range roleNameHMACs {
-			// roleNameHMAC will already have a '/' suffix. Don't append another one.
 			secretIDHMACs, err := s.List(ctx, fmt.Sprintf("%s%s", secretIDPrefixToUse, roleNameHMAC))
 			if err != nil {
 				return err
