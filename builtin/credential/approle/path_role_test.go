@@ -2,6 +2,7 @@ package approle
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -11,6 +12,35 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/mapstructure"
 )
+
+func TestApprole_UpgradeSecretIDPrefix(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, storage := createBackendWithStorage(t)
+
+	role := &roleStorageEntry{
+		RoleID:           "testroleid",
+		HMACKey:          "testhmackey",
+		Policies:         []string{"default"},
+		BindSecretID:     true,
+		BoundCIDRListOld: "127.0.0.1/18,192.178.1.2/24",
+	}
+	err = b.setRoleEntry(context.Background(), storage, "testrole", role, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\n resp: %#v", err, resp)
+	}
+	fmt.Printf("resp: %#v\n", resp)
+}
 
 func TestApprole_UpgradeBoundCIDRList(t *testing.T) {
 	var resp *logical.Response

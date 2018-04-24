@@ -957,15 +957,20 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	}
 
 	respData := map[string]interface{}{
-		"bind_secret_id":     role.BindSecretID,
-		"bound_cidr_list":    role.BoundCIDRList,
-		"period":             role.Period / time.Second,
-		"policies":           role.Policies,
-		"secret_id_num_uses": role.SecretIDNumUses,
-		"secret_id_ttl":      role.SecretIDTTL / time.Second,
-		"token_max_ttl":      role.TokenMaxTTL / time.Second,
-		"token_num_uses":     role.TokenNumUses,
-		"token_ttl":          role.TokenTTL / time.Second,
+		"bind_secret_id":          role.BindSecretID,
+		"bound_cidr_list":         role.BoundCIDRList,
+		"period":                  role.Period / time.Second,
+		"policies":                role.Policies,
+		"secret_id_num_uses":      role.SecretIDNumUses,
+		"secret_id_ttl":           role.SecretIDTTL / time.Second,
+		"token_max_ttl":           role.TokenMaxTTL / time.Second,
+		"token_num_uses":          role.TokenNumUses,
+		"token_ttl":               role.TokenTTL / time.Second,
+		"enable_local_secret_ids": false,
+	}
+
+	if role.SecretIDPrefix == secretIDLocalPrefix {
+		respData["enable_local_secret_ids"] = true
 	}
 
 	resp := &logical.Response{
