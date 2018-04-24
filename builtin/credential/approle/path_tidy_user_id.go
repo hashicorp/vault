@@ -59,7 +59,7 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 				return err
 			}
 			for _, secretIDHMAC := range secretIDHMACs {
-				// In order to avoid lock swroleing in case there is need to delete,
+				// In order to avoid lock swapping in case there is need to delete,
 				// grab the write lock.
 				lock := b.secretIDLock(secretIDHMAC)
 				lock.Lock()
