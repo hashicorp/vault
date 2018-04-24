@@ -52,6 +52,60 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 			accessorMap[accessorHash] = true
 		}
 
+		secretIDCleanupFunc := func(secretIDHMAC, roleNameHMAC, secretIDPrefixToUse string) error {
+			// In order to avoid lock swapping in case there is need to delete,
+			// grab the write lock.
+			lock := b.secretIDLock(secretIDHMAC)
+			lock.Lock()
+			defer lock.Unlock()
+
+			// roleNameHMAC will already have a '/' suffix. Don't append another one.
+			entryIndex := fmt.Sprintf("%s%s%s", secretIDPrefixToUse, roleNameHMAC, secretIDHMAC)
+			secretIDEntry, err := s.Get(ctx, entryIndex)
+			if err != nil {
+				return errwrap.Wrapf(fmt.Sprintf("error fetching SecretID %q: {{err}}", secretIDHMAC), err)
+			}
+
+			if secretIDEntry == nil {
+				result = multierror.Append(result, fmt.Errorf("entry for SecretID %q is nil", secretIDHMAC))
+				return nil
+			}
+
+			if secretIDEntry.Value == nil || len(secretIDEntry.Value) == 0 {
+				return fmt.Errorf("found entry for SecretID %q but actual SecretID is empty", secretIDHMAC)
+			}
+
+			var result secretIDStorageEntry
+			if err := secretIDEntry.DecodeJSON(&result); err != nil {
+				return err
+			}
+
+			// ExpirationTime not being set indicates non-expiring SecretIDs
+			if !result.ExpirationTime.IsZero() && time.Now().After(result.ExpirationTime) {
+				// Clean up the accessor of the secret ID first
+				err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
+				if err != nil {
+					return err
+				}
+
+				if err := s.Delete(ctx, entryIndex); err != nil {
+					return errwrap.Wrapf(fmt.Sprintf("error deleting SecretID %q from storage: {{err}}", secretIDHMAC), err)
+				}
+			}
+
+			// At this point, the secret ID is not expired and is valid. Delete
+			// the corresponding accessor from the accessorMap. This will leave
+			// only the dangling accessors in the map which can then be cleaned
+			// up later.
+			salt, err := b.Salt(ctx)
+			if err != nil {
+				return err
+			}
+			delete(accessorMap, salt.SaltID(result.SecretIDAccessor))
+
+			return nil
+		}
+
 		for _, roleNameHMAC := range roleNameHMACs {
 			// roleNameHMAC will already have a '/' suffix. Don't append another one.
 			secretIDHMACs, err := s.List(ctx, fmt.Sprintf("%s%s", secretIDPrefixToUse, roleNameHMAC))
@@ -59,62 +113,10 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 				return err
 			}
 			for _, secretIDHMAC := range secretIDHMACs {
-				// In order to avoid lock swapping in case there is need to delete,
-				// grab the write lock.
-				lock := b.secretIDLock(secretIDHMAC)
-				lock.Lock()
-				// roleNameHMAC will already have a '/' suffix. Don't append another one.
-				entryIndex := fmt.Sprintf("%s%s%s", secretIDPrefixToUse, roleNameHMAC, secretIDHMAC)
-				secretIDEntry, err := s.Get(ctx, entryIndex)
+				err = secretIDCleanupFunc(secretIDHMAC, roleNameHMAC, secretIDPrefixToUse)
 				if err != nil {
-					lock.Unlock()
-					return errwrap.Wrapf(fmt.Sprintf("error fetching SecretID %q: {{err}}", secretIDHMAC), err)
-				}
-
-				if secretIDEntry == nil {
-					result = multierror.Append(result, fmt.Errorf("entry for SecretID %q is nil", secretIDHMAC))
-					lock.Unlock()
-					continue
-				}
-
-				if secretIDEntry.Value == nil || len(secretIDEntry.Value) == 0 {
-					lock.Unlock()
-					return fmt.Errorf("found entry for SecretID %q but actual SecretID is empty", secretIDHMAC)
-				}
-
-				var result secretIDStorageEntry
-				if err := secretIDEntry.DecodeJSON(&result); err != nil {
-					lock.Unlock()
 					return err
 				}
-
-				// ExpirationTime not being set indicates non-expiring SecretIDs
-				if !result.ExpirationTime.IsZero() && time.Now().After(result.ExpirationTime) {
-					// Clean up the accessor of the secret ID first
-					err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
-					if err != nil {
-						lock.Unlock()
-						return err
-					}
-
-					if err := s.Delete(ctx, entryIndex); err != nil {
-						lock.Unlock()
-						return errwrap.Wrapf(fmt.Sprintf("error deleting SecretID %q from storage: {{err}}", secretIDHMAC), err)
-					}
-				}
-
-				// At this point, the secret ID is not expired and is valid. Delete
-				// the corresponding accessor from the accessorMap. This will leave
-				// only the dangling accessors in the map which can then be cleaned
-				// up later.
-				salt, err := b.Salt(ctx)
-				if err != nil {
-					lock.Unlock()
-					return err
-				}
-				delete(accessorMap, salt.SaltID(result.SecretIDAccessor))
-
-				lock.Unlock()
 			}
 		}
 
