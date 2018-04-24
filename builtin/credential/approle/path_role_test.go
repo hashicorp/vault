@@ -2,7 +2,6 @@ package approle
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -39,7 +38,44 @@ func TestApprole_UpgradeSecretIDPrefix(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\n resp: %#v", err, resp)
 	}
-	fmt.Printf("resp: %#v\n", resp)
+	_, ok := resp.Data["enable_local_secret_ids"]
+	if !ok {
+		t.Fatalf("expected enable_local_secret_ids to be present in the response")
+	}
+}
+
+func TestApprole_LocalSecretIDImmutability(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"policies":                []string{"default"},
+		"bind_secret_id":          true,
+		"bound_cidr_list":         []string{"127.0.0.1/18", "192.178.1.2/24"},
+		"enable_local_secret_ids": true,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if err == nil {
+		t.Fatalf("expected an error since enable_local_secret_ids can't be overwritten")
+	}
 }
 
 func TestApprole_UpgradeBoundCIDRList(t *testing.T) {

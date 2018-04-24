@@ -811,7 +811,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 			LowerCaseRoleName: true,
 		}
 	} else if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("invalid role name")), nil
+		return logical.ErrorResponse(fmt.Sprintf("role name %q doesn't exist", roleName)), nil
 	}
 
 	localSecretIDsRaw, ok := data.GetOk("enable_local_secret_ids")
