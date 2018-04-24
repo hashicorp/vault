@@ -43,7 +43,7 @@ export default {
       // we use name in the label `for` attribute
       // this is consistent across all types of fields
       //(otherwise we'd have to use name on select or input or textarea)
-      return this.filterBy('for', name)[0];
+      return this.toArray().findBy('for', name);
     },
     fillIn(name, value) {
       return this.findByName(name).input(value);
