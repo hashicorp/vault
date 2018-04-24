@@ -12,24 +12,120 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+func TestApprole_LocalNonLocalSecretIDs(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, storage := createBackendWithStorage(t)
+
+	// Create a role with enable_local_secret_ids set
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole1",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"policies":                []string{"default", "role1policy"},
+			"bind_secret_id":          true,
+			"enable_local_secret_ids": true,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\n resp: %#v", err, resp)
+	}
+
+	// Create another role without setting enable_local_secret_ids
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole2",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"policies":       []string{"default", "role1policy"},
+			"bind_secret_id": true,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\n resp: %#v", err, resp)
+	}
+
+	count := 10
+	// Create secret IDs on testrole1
+	for i := 0; i < count; i++ {
+		resp, err = b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "role/testrole1/secret-id",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+	}
+
+	// Check the number of secret IDs generated
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole1/secret-id",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if len(resp.Data["keys"].([]string)) != count {
+		t.Fatalf("failed to list secret IDs")
+	}
+
+	// Create secret IDs on testrole1
+	for i := 0; i < count; i++ {
+		resp, err = b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "role/testrole2/secret-id",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole2/secret-id",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if len(resp.Data["keys"].([]string)) != count {
+		t.Fatalf("failed to list secret IDs")
+	}
+}
+
 func TestApprole_UpgradeSecretIDPrefix(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
 	b, storage := createBackendWithStorage(t)
 
-	role := &roleStorageEntry{
+	// Create a role entry directly in storage without SecretIDPrefix
+	err = b.setRoleEntry(context.Background(), storage, "testrole", &roleStorageEntry{
 		RoleID:           "testroleid",
 		HMACKey:          "testhmackey",
 		Policies:         []string{"default"},
 		BindSecretID:     true,
 		BoundCIDRListOld: "127.0.0.1/18,192.178.1.2/24",
-	}
-	err = b.setRoleEntry(context.Background(), storage, "testrole", role, "")
+	}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// Reading the role entry should upgrade it to contain SecretIDPrefix
+	role, err := b.roleEntry(context.Background(), storage, "testrole")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if role.SecretIDPrefix == "" {
+		t.Fatalf("expected SecretIDPrefix to be set")
+	}
+
+	// Ensure that the API response contains enable_local_secret_ids
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "role/testrole",
 		Operation: logical.ReadOperation,
@@ -57,6 +153,7 @@ func TestApprole_LocalSecretIDImmutability(t *testing.T) {
 		"enable_local_secret_ids": true,
 	}
 
+	// Create a role with enable_local_secret_ids set
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "role/testrole",
 		Operation: logical.CreateOperation,
@@ -67,13 +164,14 @@ func TestApprole_LocalSecretIDImmutability(t *testing.T) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
 
+	// Attempt to modify enable_local_secret_ids should fail
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "role/testrole",
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
 		Data:      roleData,
 	})
-	if err == nil {
+	if resp == nil || !resp.IsError() {
 		t.Fatalf("expected an error since enable_local_secret_ids can't be overwritten")
 	}
 }
