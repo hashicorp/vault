@@ -124,7 +124,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got %#v", *resp)
 	}
-	if !strings.Contains(err.Error(), logical.ErrEntityDisabled.Error()) {
+	if !strings.Contains(err.Error(), logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("expected to see entity disabled error, got %v", err)
 	}
 
@@ -137,7 +137,7 @@ func TestIdentityStore_EntityDisabled(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got %#v", *resp)
 	}
-	if !strings.Contains(err.Error(), logical.ErrEntityDisabled.Error()) {
+	if !strings.Contains(err.Error(), logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("expected to see entity disabled error, got %v", err)
 	}
 

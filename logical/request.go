@@ -273,10 +273,6 @@ var (
 	// ErrPermissionDenied is returned if the client is not authorized
 	ErrPermissionDenied = errors.New("permission denied")
 
-	// ErrDisabledEntity is returned if the entity tied to a token is marked as
-	// disabled
-	ErrEntityDisabled = errors.New("entity associated with token is disabled")
-
 	// ErrMultiAuthzPending is returned if the the request needs more
 	// authorizations
 	ErrMultiAuthzPending = errors.New("request needs further approval")

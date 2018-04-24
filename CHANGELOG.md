@@ -1,5 +1,18 @@
 ## 0.10.1 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * `vault kv` and Vault versions: In 0.10.1 some issues with `vault kv` against
+   v1 K/V engine mounts are fixed. However, using 0.10.1 for both the server
+   and CLI versions is required.
+ * Mount information visiblity: Users that have access to any path within a
+   mount can now see information about that mount, such as its type and
+   options, via some API calls.
+ * Identity and Local Mounts: Local mounts would allow creating Identity
+   entities but these would not be able to be used successfully (even locally)
+   in replicated scenarios. We have now disallowed entities and groups from
+   being created for local mounts in the first place.
+
 FEATURES:
 
  * X-Forwarded-For support: `X-Forwarded-For` headers can now be used to set the
@@ -9,12 +22,16 @@ FEATURES:
  * CIDR IP Binding for Tokens: Tokens now support being bound to specific
    CIDR(s) for usage. Currently this is implemented in Token Roles; usage can be
    expanded to other authentication backends over time.
+ * `vault kv patch` command: A new `kv patch` helper command that allows
+   modifying only some values in existing data at a K/V path, but uses
+   check-and-set to ensure that this modification happens safely.
 
 IMPROVEMENTS:
 
  * auth/token: Add to the token lookup response, the policies inherited due to
    identity associations [GH-4366]
  * auth/token: Add CIDR binding to token roles [GH-815]
+ * cli: Add `vault kv patch` [GH-4432]
  * core: Add X-Forwarded-For support [GH-4380]
  * core: Add token CIDR-binding support [GH-815]
  * identity: Add the ability to disable an entity. Disabling an entity does not
@@ -27,9 +44,13 @@ IMPROVEMENTS:
  * physical/consul: Allow tuning of session TTL and lock wait time [GH-4352]
  * replication: Dynamically adjust WAL cleanup over a period of time based on
    the rate of writes committed
+ * secret/ssh: Update dynamic key install script to use shell locking to avoid
+   concurrent modifications [GH-4358]
 
 BUG FIXES:
 
+ * cli: Fix `vault kv` backwards compatibility with KV v1 engine mounts
+   [GH-4430]
  * identity: Persist entity memberships in external identity groups across
    mounts [GH-4365]
  * replication: Fix issue causing secondaries to not connect properly to a

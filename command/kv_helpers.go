@@ -1,25 +1,17 @@
 package command
 
 import (
-	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"path"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/strutil"
 )
 
 func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {
 	r := client.NewRequest("GET", "/v1/"+path)
-	if r.Headers == nil {
-		r.Headers = http.Header{}
-	}
-	r.Headers.Add(consts.VaultKVCLIClientHeader, "v2")
-
 	for k, v := range params {
 		r.Params.Set(k, v)
 	}
@@ -48,121 +40,55 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 	return api.ParseSecret(resp.Body)
 }
 
-func kvListRequest(client *api.Client, path string) (*api.Secret, error) {
-	r := client.NewRequest("LIST", "/v1/"+path)
-	if r.Headers == nil {
-		r.Headers = http.Header{}
-	}
-	r.Headers.Add(consts.VaultKVCLIClientHeader, "v2")
-
-	// Set this for broader compatibility, but we use LIST above to be able to
-	// handle the wrapping lookup function
-	r.Method = "GET"
-	r.Params.Set("list", "true")
+func kvPreflightVersionRequest(client *api.Client, path string) (string, int, error) {
+	r := client.NewRequest("GET", "/v1/sys/internal/ui/mounts/"+path)
 	resp, err := client.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if resp != nil && resp.StatusCode == 404 {
-		secret, parseErr := api.ParseSecret(resp.Body)
-		switch parseErr {
-		case nil:
-		case io.EOF:
-			return nil, nil
-		default:
-			return nil, err
-		}
-		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
-			return secret, nil
-		}
-		return nil, nil
-	}
 	if err != nil {
-		return nil, err
+		return "", 0, err
 	}
 
-	return api.ParseSecret(resp.Body)
+	secret, err := api.ParseSecret(resp.Body)
+	if err != nil {
+		return "", 0, err
+	}
+	var mountPath string
+	if mountPathRaw, ok := secret.Data["path"]; ok {
+		mountPath = mountPathRaw.(string)
+	}
+	options := secret.Data["options"]
+	if options == nil {
+		return mountPath, 1, nil
+	}
+	versionRaw := options.(map[string]interface{})["version"]
+	if versionRaw == nil {
+		return mountPath, 1, nil
+	}
+	version := versionRaw.(string)
+	switch version {
+	case "", "1":
+		return mountPath, 1, nil
+	case "2":
+		return mountPath, 2, nil
+	}
+
+	return mountPath, 1, nil
 }
 
-func kvWriteRequest(client *api.Client, path string, data map[string]interface{}) (*api.Secret, error) {
-	r := client.NewRequest("PUT", "/v1/"+path)
-	if r.Headers == nil {
-		r.Headers = http.Header{}
-	}
-	r.Headers.Add(consts.VaultKVCLIClientHeader, "v2")
-	if err := r.SetJSONBody(data); err != nil {
-		return nil, err
-	}
-
-	resp, err := client.RawRequest(r)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-	if resp != nil && resp.StatusCode == 404 {
-		secret, parseErr := api.ParseSecret(resp.Body)
-		switch parseErr {
-		case nil:
-		case io.EOF:
-			return nil, nil
-		default:
-			return nil, err
-		}
-		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
-			return secret, err
-		}
-	}
+func isKVv2(path string, client *api.Client) (string, bool, error) {
+	mountPath, version, err := kvPreflightVersionRequest(client, path)
 	if err != nil {
-		return nil, err
+		return "", false, err
 	}
 
-	if resp.StatusCode == 200 {
-		return api.ParseSecret(resp.Body)
-	}
-
-	return nil, nil
+	return mountPath, version == 2, nil
 }
 
-func kvDeleteRequest(client *api.Client, path string) (*api.Secret, error) {
-	r := client.NewRequest("DELETE", "/v1/"+path)
-	if r.Headers == nil {
-		r.Headers = http.Header{}
-	}
-	r.Headers.Add(consts.VaultKVCLIClientHeader, "v2")
-	resp, err := client.RawRequest(r)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-	if resp != nil && resp.StatusCode == 404 {
-		secret, parseErr := api.ParseSecret(resp.Body)
-		switch parseErr {
-		case nil:
-		case io.EOF:
-			return nil, nil
-		default:
-			return nil, err
-		}
-		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
-			return secret, err
-		}
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode == 200 {
-		return api.ParseSecret(resp.Body)
-	}
-
-	return nil, nil
-}
-
-func addPrefixToVKVPath(p, apiPrefix string) (string, error) {
-	parts := strings.SplitN(p, "/", 2)
-	if len(parts) != 2 {
-		return "", errors.New("invalid path")
-	}
-
-	return path.Join(parts[0], apiPrefix, parts[1]), nil
+func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
+	p = strings.TrimPrefix(p, mountPath)
+	return path.Join(mountPath, apiPrefix, p)
 }
 
 func getHeaderForMap(header string, data map[string]interface{}) string {

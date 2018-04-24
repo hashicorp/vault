@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -87,13 +88,25 @@ func (c *KVDeleteCommand) Run(args []string) int {
 		return 1
 	}
 
-	path := sanitizePath(args[0])
-	var err error
-	if len(c.flagVersions) > 0 {
-		err = c.deleteVersions(path, kvParseVersionsFlags(c.flagVersions))
-	} else {
-		err = c.deleteLatest(path)
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
 	}
+
+	path := sanitizePath(args[0])
+	mountPath, v2, err := isKVv2(path, client)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	if v2 {
+		err = c.deleteV2(path, mountPath, client)
+	} else {
+		_, err = client.Logical().Delete(path)
+	}
+
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
 		return 2
@@ -103,39 +116,29 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *KVDeleteCommand) deleteLatest(path string) error {
+func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) error {
 	var err error
-	path, err = addPrefixToVKVPath(path, "data")
-	if err != nil {
-		return err
+	switch {
+	case len(c.flagVersions) > 0:
+		path = addPrefixToVKVPath(path, mountPath, "delete")
+		if err != nil {
+			return err
+		}
+
+		data := map[string]interface{}{
+			"versions": kvParseVersionsFlags(c.flagVersions),
+		}
+
+		_, err = client.Logical().Write(path, data)
+	default:
+
+		path = addPrefixToVKVPath(path, mountPath, "data")
+		if err != nil {
+			return err
+		}
+
+		_, err = client.Logical().Delete(path)
 	}
 
-	client, err := c.Client()
-	if err != nil {
-		return err
-	}
-
-	_, err = kvDeleteRequest(client, path)
-
-	return err
-}
-
-func (c *KVDeleteCommand) deleteVersions(path string, versions []string) error {
-	var err error
-	path, err = addPrefixToVKVPath(path, "delete")
-	if err != nil {
-		return err
-	}
-
-	data := map[string]interface{}{
-		"versions": versions,
-	}
-
-	client, err := c.Client()
-	if err != nil {
-		return err
-	}
-
-	_, err = kvWriteRequest(client, path, data)
 	return err
 }

@@ -60,6 +60,10 @@ type versionedKVBackend struct {
 	// upgrading is an atomic value denoting if the backend is in the process of
 	// upgrading its data.
 	upgrading *uint32
+
+	// globalConfig is a cached value for fast lookup
+	globalConfig     *Configuration
+	globalConfigLock *sync.RWMutex
 }
 
 // Factory will return a logical backend of type versionedKVBackend or
@@ -85,7 +89,8 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 // Factory returns a new backend as logical.Backend.
 func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := &versionedKVBackend{
-		upgrading: new(uint32),
+		upgrading:        new(uint32),
+		globalConfigLock: new(sync.RWMutex),
 	}
 	if conf.BackendUUID == "" {
 		return nil, errors.New("could not initialize versioned K/V Store, no UUID was provided")
@@ -207,6 +212,10 @@ func (b *versionedKVBackend) Invalidate(ctx context.Context, key string) {
 		b.l.Lock()
 		b.keyEncryptedWrapper = nil
 		b.l.Unlock()
+	case path.Join(b.storagePrefix, configPath):
+		b.globalConfigLock.Lock()
+		b.globalConfig = nil
+		b.globalConfigLock.Unlock()
 	}
 }
 
@@ -301,19 +310,40 @@ func (b *versionedKVBackend) getKeyEncryptor(ctx context.Context, s logical.Stor
 
 // config takes a storage object and returns a configuration object
 func (b *versionedKVBackend) config(ctx context.Context, s logical.Storage) (*Configuration, error) {
+	b.globalConfigLock.RLock()
+	if b.globalConfig != nil {
+		defer b.globalConfigLock.RUnlock()
+		return &Configuration{
+			CasRequired: b.globalConfig.CasRequired,
+			MaxVersions: b.globalConfig.MaxVersions,
+		}, nil
+	}
+
+	b.globalConfigLock.RUnlock()
+	b.globalConfigLock.Lock()
+	defer b.globalConfigLock.Unlock()
+
+	// Verify this hasn't already changed
+	if b.globalConfig != nil {
+		return &Configuration{
+			CasRequired: b.globalConfig.CasRequired,
+			MaxVersions: b.globalConfig.MaxVersions,
+		}, nil
+	}
+
 	raw, err := s.Get(ctx, path.Join(b.storagePrefix, configPath))
 	if err != nil {
 		return nil, err
 	}
 
 	conf := &Configuration{}
-	if raw == nil {
-		return conf, nil
+	if raw != nil {
+		if err := proto.Unmarshal(raw.Value, conf); err != nil {
+			return nil, err
+		}
 	}
 
-	if err := proto.Unmarshal(raw.Value, conf); err != nil {
-		return nil, err
-	}
+	b.globalConfig = conf
 
 	return conf, nil
 }
