@@ -169,8 +169,7 @@ TTL will be set to the value of this parameter.`,
 				},
 				"enable_local_secret_ids": &framework.FieldSchema{
 					Type: framework.TypeBool,
-					Description: `
-If set, the secret IDs generated using this role will be cluster local. This
+					Description: `If set, the secret IDs generated using this role will be cluster local. This
 can only be set during role creation and once set, it can't be reset later.`,
 				},
 			},
@@ -810,17 +809,15 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 	localSecretIDsRaw, ok := data.GetOk("enable_local_secret_ids")
 	if ok {
-		if req.Operation == logical.CreateOperation {
+		switch {
+		case req.Operation == logical.CreateOperation:
 			localSecretIDs := localSecretIDsRaw.(bool)
 			if localSecretIDs {
 				role.SecretIDPrefix = secretIDLocalPrefix
 			}
-		} else {
+		default:
 			return logical.ErrorResponse("enable_local_secret_ids can only be modified during role creation"), nil
 		}
-	}
-	if role.SecretIDPrefix == "" {
-		role.SecretIDPrefix = secretIDPrefix
 	}
 
 	previousRoleID := role.RoleID
@@ -2343,8 +2340,8 @@ will pick up the new value during its next renewal.`,
 	},
 	"role-local-secret-ids": {
 		"Enables cluster local secret IDs",
-		`If set, indicates that the secret IDs generated using this role should be
-cluster local. This can only be set during role creation and once set, it can't
-be reset later.`,
+		`If set, the secret IDs generated using this role will be cluster local.
+This can only be set during role creation and once set, it can't be
+reset later.`,
 	},
 }
