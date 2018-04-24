@@ -185,21 +185,15 @@ can only be set during role creation and once set, it can't be reset later.`,
 			HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
 		},
 		&framework.Path{
-			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/enable_local_secret_ids$",
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/enable-local-secret-ids$",
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"enable_local_secret_ids": &framework.FieldSchema{
-					Type: framework.TypeBool,
-					Description: `
-If set, the secret IDs generated using this role will be cluster local. This
-can only be set during role creation and once set, it can't be reset later.`,
-				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: b.pathRoleLocalSecretIDsRead,
+				logical.ReadOperation: b.pathRoleEnableLocalSecretIDsRead,
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-local-secret-ids"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-local-secret-ids"][1]),
@@ -1459,7 +1453,7 @@ func (b *backend) pathRoleBindSecretIDDelete(ctx context.Context, req *logical.R
 	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRoleLocalSecretIDsRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleEnableLocalSecretIDsRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
