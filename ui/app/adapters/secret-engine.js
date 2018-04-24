@@ -1,6 +1,5 @@
 import Ember from 'ember';
 import ApplicationAdapter from './application';
-import DS from 'ember-data';
 
 export default ApplicationAdapter.extend({
   url(path) {
@@ -8,30 +7,16 @@ export default ApplicationAdapter.extend({
     return path ? url + '/' + path : url;
   },
 
-  pathForType(type) {
-    let path;
-    switch (type) {
-      case 'cluster':
-        path = 'clusters';
-        break;
-      case 'secret-engine':
-        path = 'mounts';
-        break;
-      default:
-        path = Ember.String.pluralize(type);
-        break;
-    }
-    return path;
+  pathForType() {
+    return 'mounts';
   },
 
-  query() {
-    return this.ajax(this.url(), 'GET').catch(e => {
-      if (e instanceof DS.AdapterError) {
-        Ember.set(e, 'policyPath', 'sys/mounts');
-      }
-
-      throw e;
-    });
+  query(store, type, query) {
+    let url = `/${this.urlPrefix()}/internal/ui/mounts`;
+    if (query.path) {
+      url = `${url}/${query.path}`;
+    }
+    return this.ajax(url, 'GET');
   },
 
   createRecord(store, type, snapshot) {

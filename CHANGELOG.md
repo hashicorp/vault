@@ -46,6 +46,9 @@ IMPROVEMENTS:
    the rate of writes committed
  * secret/ssh: Update dynamic key install script to use shell locking to avoid
    concurrent modifications [GH-4358]
+ * ui: Access to `sys/mounts` is no longer needed to use the UI - the list of 
+   engines will show you the ones you implicitly have access to (because you have
+   access to to secrets in those engines) [GH-4439]
 
 BUG FIXES:
 
