@@ -25,6 +25,13 @@ FEATURES:
  * `vault kv patch` command: A new `kv patch` helper command that allows
    modifying only some values in existing data at a K/V path, but uses
    check-and-set to ensure that this modification happens safely.
+ * AES-GCM Support for PKCS#11 [BETA] (Enterprise): For supporting HSMs,
+   AES-GCM can now be used in lieu of AES-CBC/HMAC-SHA256. This has currently
+   only been fully tested on AWS CloudHSM.
+ * Auto Unseal/Seal Wrap Key Rotation Support (Enterprise): Auto Unseal
+   mechanisms, including PKCS#11 HSMs, now support rotation of encryption keys,
+   and migration between key and encryption types, such as from AES-CBC to
+   AES-GCM, can be performed at the same time (where supported).
 
 IMPROVEMENTS:
 
@@ -39,10 +46,6 @@ IMPROVEMENTS:
  * identity: Add the ability to disable an entity. Disabling an entity does not
    revoke associated tokens, but while the entity is disabled they cannot be
    used. [GH-4353]
- * identity: Allow local mounts on secondary clusters to be able to perform
-   logins using authentication methods. This is achieved by disallowing
-   attachment of identity information for tokens issued on local mounts
-   [GH-4407] (enterprise)
  * physical/consul: Allow tuning of session TTL and lock wait time [GH-4352]
  * replication: Dynamically adjust WAL cleanup over a period of time based on
    the rate of writes committed
@@ -58,6 +61,8 @@ BUG FIXES:
    [GH-4430]
  * identity: Persist entity memberships in external identity groups across
    mounts [GH-4365]
+ * identity: Fix error preventing authentication using local mounts on
+   performance secondary replication clusters [GH-4407]
  * replication: Fix issue causing secondaries to not connect properly to a
    pre-0.10 primary until the primary was upgraded
  * secret/gcp: Fix panic on rollback when a roleset wasn't created properly
