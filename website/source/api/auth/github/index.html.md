@@ -125,7 +125,7 @@ Reads the GitHub team policy mapping.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/github/map/teams:team_name`        | `200 application/json` |
+| `GET`    | `/auth/github/map/teams/:team_name`        | `200 application/json` |
 
 ### Sample Request
 
@@ -194,7 +194,7 @@ Reads the GitHub user policy mapping.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/github/map/users:user_name`        | `200 application/json` |
+| `GET`    | `/auth/github/map/users/:user_name`        | `200 application/json` |
 
 ### Sample Request
 
