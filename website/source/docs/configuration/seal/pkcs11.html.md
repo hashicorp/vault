@@ -105,7 +105,6 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   Currently supported mechanisms (in order of precedence):
   * `0x1082` `CKM_AES_CBC` (HMAC mechanism required)
   * `0x1087` `CKM_AES_GCM` **_BETA_**
-  * `0x8000011c` Safenet Luna specific AES-GCM support **_BETA_**
 
 - `hmac_mechanism` `(string: "0x0251")`: The encryption/decryption mechanism to
   use, specified as a decimal or hexadecimal (prefixed by `0x`) string.
