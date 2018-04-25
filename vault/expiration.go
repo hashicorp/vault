@@ -599,9 +599,18 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error 
 		defer m.restoreRequestLock.Unlock()
 	}
 
-	// Ensure there is a trailing slash
+	// Ensure there is a trailing slash; or, if there is no slash, see if there
+	// is a matching specific ID
 	if !strings.HasSuffix(prefix, "/") {
-		prefix = prefix + "/"
+		le, err := m.loadEntry(prefix)
+		if err == nil && le != nil {
+			if err := m.revokeCommon(prefix, force, false); err != nil {
+				return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q: {{err}}", prefix), err)
+			}
+			return nil
+		} else {
+			prefix = prefix + "/"
+		}
 	}
 
 	// Accumulate existing leases
