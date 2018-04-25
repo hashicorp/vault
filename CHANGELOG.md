@@ -1,3 +1,10 @@
+## 0.10.2 (Unreleased)
+
+IMPROVEMENTS:
+
+ * cli: `vault login` now supports a `-no-print` flag to suppress printing
+   token information but still allow storing into the token helper [GH-4454]
+
 ## 0.10.1/0.9.7 (April 25th, 2018)
 
 The following two items are in both 0.9.7 and 0.10.1. They only affect
