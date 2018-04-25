@@ -1,4 +1,4 @@
-## 0.9.7/0.10.1 (April 26th, 2018)
+## 0.10.1/0.9.7 (April 25th, 2018)
 
 The following two items are in both 0.9.7 and 0.10.1. They only affect
 Enterprise, and as such 0.9.7 is an Enterprise-only release:
