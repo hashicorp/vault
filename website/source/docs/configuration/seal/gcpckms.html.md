@@ -86,3 +86,11 @@ environment variables:
 * `VAULT_GCPCKMS_SEAL_KEY_RING`
 * `VAULT_GCPCKMS_SEAL_CRYPTO_KEY`
 ```
+
+## Key Rotation
+
+This seal supports rotating keys defined in Google Cloud KMS 
+[doc](https://cloud.google.com/kms/docs/rotating-keys). Both scheduled rotation and manual 
+rotation is supported for CKMS since the key information. Old keys version must not be 
+disabled or deleted and are used to decrypt older data. Any new or updated data will be 
+encrypted with the primate key version.
