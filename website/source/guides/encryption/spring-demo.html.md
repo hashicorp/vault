@@ -6,7 +6,7 @@ description: |-
   This guide discusses the concepts necessary to help users
   understand Vault's AppRole authentication pattern and how to use it to
   securely introduce a Vault authentication token to a target server,
-  application, container, etc.
+  application, container, etc. in a Java environment.
 ---
 
 # Java Sample App using Spring Cloud Vault
@@ -22,8 +22,8 @@ webinar.
 
 [![YouTube](/assets/images/vault-java-demo-1.png)](https://youtu.be/NxL2-XuZ3kc)
 
-The Java application in this demo leverages [_Spring Cloud
-Vault_](https://cloud.spring.io/spring-cloud-vault/) library which provides a
+The Java application in this demo leverages the [_Spring Cloud
+Vault_](https://cloud.spring.io/spring-cloud-vault/) library which provides
 lightweight client-side support for connecting to Vault in a distributed
 environment.
 
@@ -35,7 +35,7 @@ the public cloud with
 Vault](https://www.hashicorp.com/resources/solutions-engineering-webinar-series-episode-2-vault)
 - [Spring Cloud Vault](https://cloud.spring.io/spring-cloud-vault/)
 - [Transit Secrets Engine](/docs/secrets/transit/index.html)
-- [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets.html)
+- [Secrets as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets.html)
 
 
 ## Estimated Time to Complete
@@ -45,17 +45,17 @@ Vault](https://www.hashicorp.com/resources/solutions-engineering-webinar-series-
 
 ## Challenge
 
-Incidents of data breach exposing sensitive information make a headline more
+Incidents of data breaches which expose sensitive information make headlines more
 often than we like to hear. It becomes more and more important to protect data
-by encrypting them whether the data is in-transit or at-rest. However, creating
-a highly secure and sophisticated solution yourself requires time and resources
-while an organization is facing a constant threat.
+by encrypting it whether the data is in-transit or at-rest. However, creating
+a highly secure and sophisticated solution by yourself requires time and resources
+which are in demand when an organization is facing a constant threat.
 
 
 ## Solution
 
 Vault centralizes management of cryptographic services used to protect your
-data.  Your system can communicate with Vault easily through Vault API to
+data.  Your system can communicate with Vault easily through the Vault API to
 encrypt and decrypt your data, and the encryption keys never have to leave the
 Vault.
 
@@ -73,11 +73,11 @@ GitHub repository
 
 ## Steps
 
--> For the purpose of this guide, you are going to provision a Linux machine
+-> For the purposes of this guide, you are going to provision a Linux machine
 locally using Vagrant.  However, the GitHub repository provides supporting files
 to provision the environment demonstrated in the webinar.
 
-After downloaded the [demo assets](#prerequisites) from the GitHub repository,
+After downloading the [demo assets](#prerequisites) from the GitHub repository,
 you should find the following folders:
 
 | Folder           | Description                                               |
@@ -91,12 +91,12 @@ you should find the following folders:
 
 <br>
 
-In this guide, you perform the following:
+In this guide, you will perform the following:
 
 1. [Review the demo application implementation](#step1)
-2. [Deploy and review the demo environment](#step2)
-3. [Run the demo application](#step3)
-4. [Reloading the Static Secrets](#step4)
+1. [Deploy and review the demo environment](#step2)
+1. [Run the demo application](#step3)
+1. [Reload the Static Secrets](#step4)
 
 ![Encryption as a Service](/assets/images/vault-java-demo-10.png)
 
@@ -182,7 +182,7 @@ The `OrderAPIController` class defines the API endpoint (`api/orders`).
 
 ### <a name="step2"></a>Step 2: Deploy and review the demo environment
 
-Now, let's run the demo app and examine how it behaves.
+Now let's run the demo app and examine how it behaves.
 
 ~> To keep it simple and lightweight, you are going to run a Linux virtual
 machine locally using Vagrant.
@@ -216,7 +216,7 @@ $ vagrant ssh demo
 ```
 
 
-There are 3 docker containers running on the machine: `spring`, `vault`, and `postgres`.
+There are 3 Docker containers running on the machine: `spring`, `vault`, and `postgres`.
 
 ```plaintext
 [vagrant@demo ~]$ docker ps
@@ -266,11 +266,11 @@ Root Token: root
 Notice that the log indicates that the Vault server is running in the `dev`
 mode, and the root token is `root`.  
 
-You can launch the Vault UI at http://localhost:8200/ui.  Enter **`root`** and
+You can visit the Vault UI at http://localhost:8200/ui.  Enter **`root`** and
 click **Sign In**.
 
 
-Select **`transit/`** secrets engine, and you should find an encryption key
+Select the **`transit/`** secrets engine, and you should find an encryption key
 named, "`order`".
 
 ![Vault UI](/assets/images/vault-java-demo-2.png)
@@ -308,7 +308,7 @@ path "transit/encrypt/order" {
 
 
 
-#### Task 3: Examine the Sprig container
+#### Task 3: Examine the Spring container
 
 Remember that the `VaultDemoOrderServiceApplication` class logs messages during
 the successful execution of `initIt()`:
@@ -415,7 +415,7 @@ Notice that there is a role name starting with `v-token-order-` which was
 dynamically created by the database secret engine.
 
 ~> **NOTE:** To learn more
-about the database secret engine, read the [Secret as a Service: Dynamic
+about the database secret engine, read the [Secrets as a Service: Dynamic
 Secrets](/guides/secret-mgmt/dynamic-secrets.html) guide.
 
 Enter `\q` to exit out of the `psql` session, or you can open another terminal
@@ -433,7 +433,7 @@ You have [verified in the `spring` log](#task-3-examine-the-sprig-container)
 that the demo app successfully retrieved a database credential from the Vault
 server during its initialization.
 
-The next step is to send a new order request via demo app's _orders_ API
+The next step is to send a new order request via the demo app's _orders_ API
 (http://localhost:8080/api/orders).  
 
 ```shell
@@ -465,7 +465,7 @@ you prefer.
 
 The order data you sent gets encrypted by Vault. The database only sees the
 ciphertext. Let's verify that the order information stored in the database
-are encrypted.
+is encrypted.
 
 ```plaintext
 [vagrant@demo ~]$ docker exec -it postgres psql -U postgres -d postgres
@@ -567,8 +567,8 @@ path "secret/spring-vault-demo" {
 ```
 <br>
 
-The demo app retrieved the secret from `secret/spring-vault-demo` and have a
-local copy.  If someone or perhaps another app updates the secret, it makes the
+The demo app retrieved the secret from `secret/spring-vault-demo` and has a
+local copy.  If someone (or perhaps another app) updates the secret, it makes the
 secret held by the demo app to be obsolete.
 
 ![Static Secret](/assets/images/vault-java-demo-11.png)
@@ -579,7 +579,7 @@ which can be used to facilitate the reloading of the static secret.
 
 #### Task 1: Read the secret
 
-The initial key-value was set by the Vagrant during the provisioning. (See the
+The initial key-value was set by Vagrant during the provisioning. (See the
 `Vagrantfile` at line 48.)
 
 Let's invoke the demo app's secret API (**`api/secret`**):
@@ -690,11 +690,6 @@ demo: Are you sure you want to destroy the 'demo' VM? [y/N] y
 and Consul were also installed and configured.  If you wish to build a similar
 environment using Kubernetes, the assets in the `vault-guides/secrets/spring-cloud-vault/kubernetes`
 folder provides you with some guidance.
-
-
-
-
-
 
 ## Next steps
 
