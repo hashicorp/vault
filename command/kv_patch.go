@@ -25,7 +25,7 @@ func (c *KVPatchCommand) Synopsis() string {
 
 func (c *KVPatchCommand) Help() string {
 	helpText := `
-Usage: vault kv put [options] KEY [DATA]
+Usage: vault kv patch [options] KEY [DATA]
 
   *NOTE*: This is only supported for KV v2 engine mounts.
 
