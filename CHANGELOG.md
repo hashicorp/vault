@@ -75,6 +75,9 @@ BUG FIXES:
  * ui: Fixed an issue where policies with commas would not render in the
    interface properly [GH-4398]
  * ui: Corrected the saving of mount tune ttls for auth methods [GH-4431]
+ * ui: Credentials generation no longer checks capabilities before making
+   api calls. This should fix needing "update" capabilites to read IAM 
+   credentials in the AWS secrets engine [GH-4446]
 
 ## 0.10.0 (April 10th, 2018)
 
