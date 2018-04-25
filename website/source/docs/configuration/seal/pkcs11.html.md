@@ -76,6 +76,12 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   to the generated key. May also be specified by the `VAULT_HSM_KEY_LABEL`
   environment variable.
 
+- `default_key_label` `(string: "")`: This is the default key label to use for
+  HSM installation that started before 0.10.1.  Seal entries now track the label
+  used in encryption and defaults to the `key_label`.  If `key_label` is rotated
+  and this value is not set, decryption may fail. May also be specified by the 
+  `VAULT_HSM_DEFAULT_KEY_LABEL` environment variable.
+
 - `hmac_key_label` `(string: <required>)`: The label of the key to use for
   HMACing. This needs to be a suitable type. If Vault tries to create this it
   will attempt to use CKK_GENERIC_SECRET_KEY. If the key does not exist and
@@ -83,11 +89,20 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   key. May also be specified by the `VAULT_HSM_HMAC_KEY_LABEL` environment
   variable.
 
+- `hmac_default_key_label` `(string: "")`: This is the default HMAC key label to 
+  use for HSM installation that started before 0.10.1.  Seal entries now track 
+  the label used in signing and defaults to the `hmac_key_label`.  If `hmac_key_label`
+  is rotated and this value is not set, verifying may fail. May also be specified by the 
+  `VAULT_HSM_HMAC_DEFAULT_KEY_LABEL` environment variable.
+
 - `mechanism` `(string: "0x1082")`: The encryption/decryption mechanism to use,
-  specified as a decimal or hexadecimal (prefixed by `0x`) string. Currently
-  only `0x1082` (corresponding to `CKM_AES_CBC` from the specification) is
-  supported. May also be specified by the `VAULT_HSM_MECHANISM` environment
-  variable.
+  specified as a decimal or hexadecimal (prefixed by `0x`) string. May also be 
+  specified by the `VAULT_HSM_MECHANISM` environment variable.
+  
+  Currently supported mechanisms (in order of precedence):
+  * `0x1082` `CKM_AES_CBC` (HMAC mechanism required)
+  * `0x1087` `CKM_AES_GCM` **_BETA_**
+  * `0x8000011c` Safenet Luna specific AES-GCM support **_BETA_**
 
 - `hmac_mechanism` `(string: "0x0251")`: The encryption/decryption mechanism to
   use, specified as a decimal or hexadecimal (prefixed by `0x`) string.
@@ -124,8 +139,9 @@ environment variables:
 * `VAULT_HSM_SLOT`
 * `VAULT_HSM_PIN`
 * `VAULT_HSM_KEY_LABEL`
+* `VAULT_HSM_DEFAULT_KEY_LABEL`
 * `VAULT_HSM_HMAC_KEY_LABEL`
-* `VAULT_HSM_HMAC_KEY_LABEL`
+* `VAULT_HSM_HMAC_DEFAULT_KEY_LABEL`
 * `VAULT_HSM_MECHANISM`
 * `VAULT_HSM_HMAC_MECHANISM`
 * `VAULT_HSM_GENERATE_KEY`
