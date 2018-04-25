@@ -9,7 +9,7 @@
       </div>
       <div class="column has-text-right">
         {{#if model.canEdit}}
-          {{identity/metadata-popup model=model key=key}}
+          {{identity/popup-metadata params=(array model key)}}
         {{/if}}
       </div>
     </div>
@@ -23,7 +23,7 @@
             There is no metadata associated with {{model.name}}.
           </p>
         </div>
-      </div>
+      </div>item
     </div>
   </div>
 {{/each-in}}

@@ -6,7 +6,7 @@
           confirmButtonClasses="button is-primary"
           confirmButtonText="Remove"
           buttonClasses="link"
-          onConfirmAction=(action "removeKey" model key)
+          onConfirmAction=(action "performTransaction" model key)
           confirmMessage=(concat "Are you sure you want to remove " key "?")
           showConfirm=(get this (concat "shouldDelete-" key))
           class=(if (get this (concat "shouldDelete-" key)) "message is-block is-warning is-outline")
