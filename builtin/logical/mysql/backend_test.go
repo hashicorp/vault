@@ -47,6 +47,7 @@ func prepareTestContainer(t *testing.T) (func(), string) {
 		if err != nil {
 			return err
 		}
+		defer db.Close()
 		return db.Ping()
 	}); err != nil {
 		cleanup()
