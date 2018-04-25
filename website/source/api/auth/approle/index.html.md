@@ -94,6 +94,9 @@ enabled while creating or updating a role.
   but the TTL set on the token at each renewal is fixed to the value specified
   here. If this value is modified, the token will pick up the new value at its
   next renewal.
+- `enable_local_secret_ids` `(bool: false)` - If set, the secret IDs generated
+  using this role will be cluster local. This can only be set during role
+  creation and once set, it can't be reset later.
 
 ### Sample Payload
 

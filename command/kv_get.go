@@ -116,6 +116,9 @@ func (c *KVGetCommand) Run(args []string) int {
 	secret, err := kvReadRequest(client, path, versionParam)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading %s: %s", path, err))
+		if secret != nil {
+			OutputSecret(c.UI, secret)
+		}
 		return 2
 	}
 	if secret == nil {
@@ -140,6 +143,11 @@ func (c *KVGetCommand) Run(args []string) int {
 	// If we have wrap info print the secret normally.
 	if secret.WrapInfo != nil || c.flagFormat != "table" {
 		return OutputSecret(c.UI, secret)
+	}
+
+	if len(secret.Warnings) > 0 {
+		tf := TableFormatter{}
+		tf.printWarnings(c.UI, secret)
 	}
 
 	if metadata, ok := secret.Data["metadata"]; ok && metadata != nil {

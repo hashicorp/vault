@@ -28,6 +28,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * auth/approle: Support for cluster local secret IDs. This enables secondaries
+   to generate secret IDs without contacting the primary [GH-4427] (enterprise)
  * auth/token: Add to the token lookup response, the policies inherited due to
    identity associations [GH-4366]
  * auth/token: Add CIDR binding to token roles [GH-815]
@@ -46,6 +48,9 @@ IMPROVEMENTS:
    the rate of writes committed
  * secret/ssh: Update dynamic key install script to use shell locking to avoid
    concurrent modifications [GH-4358]
+ * ui: Access to `sys/mounts` is no longer needed to use the UI - the list of 
+   engines will show you the ones you implicitly have access to (because you have
+   access to to secrets in those engines) [GH-4439]
 
 BUG FIXES:
 

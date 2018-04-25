@@ -38,7 +38,17 @@ export default DS.RESTSerializer.extend({
     } else if (isQueryRecord) {
       backends = this.normalizeBackend(null, payload);
     } else {
-      backends = Object.keys(payload.data).map(id => this.normalizeBackend(id, payload[id]));
+      // this is terrible, I'm sorry
+      // TODO extract AWS and SSH config saving from the secret-engine model to simplify this
+      if (payload.data.secret) {
+        backends = Object.keys(payload.data.secret).map(id =>
+          this.normalizeBackend(id, payload.data.secret[id])
+        );
+      } else if (!payload.data.path) {
+        backends = Object.keys(payload.data).map(id => this.normalizeBackend(id, payload[id]));
+      } else {
+        backends = [this.normalizeBackend(payload.data.path, payload.data)];
+      }
     }
 
     const transformedPayload = { [primaryModelClass.modelName]: backends };
