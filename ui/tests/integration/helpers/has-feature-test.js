@@ -23,11 +23,11 @@ test('it asserts on unknown features', function(assert) {
 test('it is true with existing features', function(assert) {
   this.set('versionService.features', ['HSM']);
   this.render(hbs`{{if (has-feature 'HSM') 'It works' null}}`);
-  assert.equal(this._element.textContent.trim(), 'It works', 'present features evaluate to true');
+  assert.dom(this._element).hasText('It works', 'present features evaluate to true');
 });
 
 test('it is false with missing features', function(assert) {
   this.set('versionService.features', ['MFA']);
   this.render(hbs`{{if (has-feature 'HSM') 'It works' null}}`);
-  assert.equal(this._element.textContent.trim(), '', 'missing features evaluate to false');
+  assert.dom(this._element).hasText('', 'missing features evaluate to false');
 });

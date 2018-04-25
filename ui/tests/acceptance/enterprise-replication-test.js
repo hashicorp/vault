@@ -87,11 +87,7 @@ test('replication', function(assert) {
       find('[data-test-mount-config-mode]').text().trim().toLowerCase().includes(mode),
       'show page renders the correct mode'
     );
-    assert.equal(
-      find('[data-test-mount-config-paths]').text().trim(),
-      mountPath,
-      'show page renders the correct mount path'
-    );
+    assert.dom('[data-test-mount-config-paths]').hasText(mountPath, 'show page renders the correct mount path');
   });
   // click edit
 
@@ -105,9 +101,7 @@ test('replication', function(assert) {
       `/vault/replication/performance/secondaries`,
       'redirects to the secondaries page'
     );
-    assert.equal(
-      //TODO re-work error message test selectors
-      find('[data-test-flash-message-body]:contains(The performance mount filter)').text().trim(),
+    assert.dom('[data-test-flash-message-body]:contains(The performance mount filter)').hasText(
       `The performance mount filter config for the secondary ${secondaryName} was successfully deleted.`,
       'renders success flash upon deletion'
     );
@@ -155,8 +149,7 @@ test('replication', function(assert) {
   });
   click('[data-test-replication-link="secondaries"]');
   andThen(() => {
-    assert.equal(
-      find('[data-test-secondary-name]').text().trim(),
+    assert.dom('[data-test-secondary-name]').hasText(
       secondaryName,
       'it displays the secondary in the list of known secondaries'
     );
