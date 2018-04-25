@@ -41,6 +41,9 @@ FEATURES:
  * `vault kv patch` command: A new `kv patch` helper command that allows
    modifying only some values in existing data at a K/V path, but uses
    check-and-set to ensure that this modification happens safely.
+ * AppRole Local Secret IDs: Roles can now be configured to generate secret IDs
+   local to the cluster. This enables performance secondaries to generate and
+   consume secret IDs without contacting the primary.
  * AES-GCM Support for PKCS#11 [BETA] (Enterprise): For supporting HSMs,
    AES-GCM can now be used in lieu of AES-CBC/HMAC-SHA256. This has currently
    only been fully tested on AWS CloudHSM.
@@ -52,7 +55,7 @@ FEATURES:
 IMPROVEMENTS:
 
  * auth/approle: Support for cluster local secret IDs. This enables secondaries
-   to generate secret IDs without contacting the primary [GH-4427] (enterprise)
+   to generate secret IDs without contacting the primary [GH-4427]
  * auth/token: Add to the token lookup response, the policies inherited due to
    identity associations [GH-4366]
  * auth/token: Add CIDR binding to token roles [GH-815]
