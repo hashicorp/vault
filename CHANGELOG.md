@@ -1,4 +1,20 @@
-## 0.10.1 (Unreleased)
+## 0.9.7/0.10.1 (April 26th, 2018)
+
+The following two items are in both 0.9.7 and 0.10.1. They only affect
+Enterprise, and as such 0.9.7 is an Enterprise-only release:
+
+SECURITY:
+
+ * EGPs: A regression affecting 0.9.6 and 0.10.0 causes EGPs to not be applied
+   correctly if an EGP is updated in a running Vault after initial write or
+   after it is loaded on unseal. This has been fixed.
+
+BUG FIXES:
+
+ * Fixed an upgrade issue affecting performance secondaries when migrating from
+   a version that did not include Identity to one that did.
+
+All other content in this release is for 0.10.1 only.
 
 DEPRECATIONS/CHANGES:
 
