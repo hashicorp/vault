@@ -364,7 +364,8 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		resp != nil &&
 		resp.Auth != nil &&
 		resp.Auth.EntityID != "" &&
-		resp.Auth.GroupAliases != nil {
+		resp.Auth.GroupAliases != nil &&
+		c.identityStore != nil {
 		err := c.identityStore.refreshExternalGroupMembershipsByEntityID(resp.Auth.EntityID, resp.Auth.GroupAliases)
 		if err != nil {
 			c.logger.Error("failed to refresh external group memberships", "error", err)
@@ -498,7 +499,10 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		mEntry := c.router.MatchingMountEntry(req.Path)
 
-		if auth.Alias != nil && mEntry != nil && !mEntry.Local {
+		if auth.Alias != nil &&
+			mEntry != nil &&
+			!mEntry.Local &&
+			c.identityStore != nil {
 			// Overwrite the mount type and mount path in the alias
 			// information
 			auth.Alias.MountType = req.MountType

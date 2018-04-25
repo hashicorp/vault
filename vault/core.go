@@ -697,7 +697,7 @@ func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 // This list includes the policies from the entity itself and from all the
 // groups in which the given entity ID is a member of.
 func (c *Core) fetchEntityAndDerivedPolicies(entityID string) (*identity.Entity, []string, error) {
-	if entityID == "" {
+	if entityID == "" || c.identityStore == nil {
 		return nil, nil, nil
 	}
 
