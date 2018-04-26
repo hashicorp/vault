@@ -56,9 +56,9 @@ throughout, but it is more secure to use files if possible. Sending
 data via the CLI is often logged in shell history. For real secrets,
 please use files. See the link above about reading in from `STDIN` for more information.
 
-## Reading a Secret
+## Getting a Secret
 
-As you might expect, secrets can be read with `vault read`:
+As you might expect, secrets can be gotten with `vault get`:
 
 ```text
 $ vault kv get secret/hello
@@ -69,7 +69,7 @@ excited             yes
 foo                world
 ```
 
-As you can see, the values we wrote are given back to us. Vault reads
+As you can see, the values we wrote are given back to us. Vault gets
 the data from storage and decrypts it.
 
 The output format is purposefully whitespace separated to make it easy
