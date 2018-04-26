@@ -34,6 +34,23 @@ Sets a CA cert and associated parameters in a role name.
   (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
   a comma-separated list of patterns. Authentication requires at least one Name
   matching at least one pattern. If not set, defaults to allowing all names.
+  Note: This parameter is deprecated please use allowed_uris, allowed_common_names, 
+  allowed_dns, allowed_emails, allowed_uris, required_extensions 
+- `allowed_common_names` `(string: "")` - Constrain the Common Names in
+  the client certificate with a [globbed pattern]
+  (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
+  a comma-separated list of patterns. Authentication requires at least one Name
+  matching at least one pattern. If not set, defaults to allowing all names.
+- `allowed_dns` `(string: "")` - Constrain the Alternative Names in
+  the client certificate with a [globbed pattern]
+  (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
+  a comma-separated list of patterns. Authentication requires at least one DNS
+  matching at least one pattern. If not set, defaults to allowing all dns.
+- `allowed_email` `(string: "")` - Constrain the Alternative Names in
+  the client certificate with a [globbed pattern]
+  (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
+  a comma-separated list of patterns. Authentication requires at least one Email
+  matching at least one pattern. If not set, defaults to allowing all emails.
 - `allowed_uris` `(string: "")` - Constrain the Alternative Names in
   the client certificate with a [globbed pattern]
   (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
