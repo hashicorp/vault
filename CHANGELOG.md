@@ -4,6 +4,8 @@ IMPROVEMENTS:
 
  * cli: `vault login` now supports a `-no-print` flag to suppress printing
    token information but still allow storing into the token helper [GH-4454]
+ * expiration: Allow revoke-prefix and revoke-force to work on single leases as
+   well as prefixes [GH-4450]
 
 ## 0.10.1/0.9.7 (April 25th, 2018)
 
