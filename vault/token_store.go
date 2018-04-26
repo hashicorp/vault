@@ -1072,12 +1072,14 @@ func (ts *TokenStore) Revoke(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	return ts.revokeSalted(ctx, saltedID)
+	return ts.revokeSalted(ctx, saltedID, false)
 }
 
-// revokeSalted is used to invalidate a given salted token,
-// any child tokens will be orphaned.
-func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret error) {
+// revokeSalted is used to invalidate a given salted token, any child tokens
+// will be orphaned unless otherwise specified. skipOrphan should be used
+// whenever we are revoking the entire tree starting from a particular parent
+// (e.g. revokeTreeSalted).
+func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string, skipOrphan bool) (ret error) {
 	// Protect the entry lookup/writing with locks. The rub here is that we
 	// don't know the ID until we look it up once, so first we look it up, then
 	// do a locked lookup.
@@ -1186,43 +1188,45 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 		}
 	}
 
-	// Mark all children token as orphan by removing
-	// their parent index, and clear the parent entry.
-	//
-	// Marking the token as orphan is the correct behavior in here since
-	// revokeTreeSalted will ensure that they are deleted anyways if it's not an
-	// explicit call to orphan the child tokens (the delete occurs at the leaf
-	// node and uses parent prefix, not entry.Parent, to build the tree for
-	// traversal).
-	parentPath := parentPrefix + saltedID + "/"
-	children, err := ts.view.List(ctx, parentPath)
-	if err != nil {
-		return errwrap.Wrapf("failed to scan for children: {{err}}", err)
-	}
-	for _, child := range children {
-		entry, err := ts.lookupSalted(ctx, child, true)
+	if !skipOrphan {
+		// Mark all children token as orphan by removing
+		// their parent index, and clear the parent entry.
+		//
+		// Marking the token as orphan is the correct behavior in here since
+		// revokeTreeSalted will ensure that they are deleted anyways if it's not an
+		// explicit call to orphan the child tokens (the delete occurs at the leaf
+		// node and uses parent prefix, not entry.Parent, to build the tree for
+		// traversal).
+		parentPath := parentPrefix + saltedID + "/"
+		children, err := ts.view.List(ctx, parentPath)
 		if err != nil {
-			return errwrap.Wrapf("failed to get child token: {{err}}", err)
+			return errwrap.Wrapf("failed to scan for children: {{err}}", err)
 		}
-		lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
-		lock.Lock()
+		for _, child := range children {
+			entry, err := ts.lookupSalted(ctx, child, true)
+			if err != nil {
+				return errwrap.Wrapf("failed to get child token: {{err}}", err)
+			}
+			lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
+			lock.Lock()
 
-		entry.Parent = ""
-		err = ts.store(ctx, entry)
-		if err != nil {
+			entry.Parent = ""
+			err = ts.store(ctx, entry)
+			if err != nil {
+				lock.Unlock()
+				return errwrap.Wrapf("failed to update child token: {{err}}", err)
+			}
 			lock.Unlock()
-			return errwrap.Wrapf("failed to update child token: {{err}}", err)
-		}
-		lock.Unlock()
 
-		// Delete the the child storage entry after we update the token entry Since
-		// paths are not deeply nested (i.e. they are simply
-		// parenPrefix/<parentID>/<childID>), we can simply call view.Delete instead
-		// of logical.ClearView
-		index := parentPath + child
-		err = ts.view.Delete(ctx, index)
-		if err != nil {
-			return errwrap.Wrapf("failed to delete child entry: {{err}}", err)
+			// Delete the the child storage entry after we update the token entry Since
+			// paths are not deeply nested (i.e. they are simply
+			// parenPrefix/<parentID>/<childID>), we can simply call view.Delete instead
+			// of logical.ClearView
+			index := parentPath + child
+			err = ts.view.Delete(ctx, index)
+			if err != nil {
+				return errwrap.Wrapf("failed to delete child entry: {{err}}", err)
+			}
 		}
 	}
 
@@ -1272,7 +1276,7 @@ func (ts *TokenStore) revokeTreeSalted(ctx context.Context, saltedID string) err
 		// If the length of the children array is zero,
 		// then we are at a leaf node.
 		if len(children) == 0 {
-			if err := ts.revokeSalted(ctx, id); err != nil {
+			if err := ts.revokeSalted(ctx, id, true); err != nil {
 				return errwrap.Wrapf("failed to revoke entry: {{err}}", err)
 			}
 			// If the length of l is equal to 1, then the last token has been deleted

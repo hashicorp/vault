@@ -309,7 +309,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts.revokeSalted(context.Background(), salted)
+	ts.revokeSalted(context.Background(), salted, false)
 
 	req := logical.TestRequest(t, logical.ListOperation, "accessors/")
 
@@ -3369,7 +3369,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		return fmt.Errorf("keep it frosty")
 	}
 
-	err = ts.revokeSalted(context.Background(), saltTut)
+	err = ts.revokeSalted(context.Background(), saltTut, false)
 	if err == nil {
 		t.Fatalf("expected err")
 	}
@@ -3395,7 +3395,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	go func() {
 		cubbyFuncLock.RLock()
-		err := ts.revokeSalted(context.Background(), saltTut)
+		err := ts.revokeSalted(context.Background(), saltTut, false)
 		cubbyFuncLock.RUnlock()
 		if err == nil {
 			t.Fatalf("expected error")
@@ -3423,7 +3423,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	defer cubbyFuncLock.Unlock()
 	ts.cubbyholeDestroyer = origDestroyCubbyhole
 
-	err = ts.revokeSalted(context.Background(), saltTut)
+	err = ts.revokeSalted(context.Background(), saltTut, false)
 	if err != nil {
 		t.Fatal(err)
 	}
