@@ -27,16 +27,20 @@
 
     <title><%= title_for(current_page) %></title>
 
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="https://use.typekit.net/wxf7mfi.css">
     <%= stylesheet_link_tag "application" %>
 
-    <!--[if lt IE 9]>
-      <%= javascript_include_tag "ie-compat" %>
-    <![endif]-->
-    <%= javascript_include_tag "application" %>
+    <!-- Site scripts -->
+    <!--[if lt IE 9]><%= javascript_include_tag "ie-compat", defer: true %><![endif]-->
+    <%= javascript_include_tag "application", defer: true %>
 
-    <!-- Typekit script to import Klavika font -->
-    <script src="https://use.typekit.net/wxf7mfi.js"></script>
-    <script>try{Typekit.load({ async: true });}catch(e){}</script>
+    <%= yield_content :scripts %>
+
+    <!-- Analytics scrpts -->
+    <script defer>
+      !function(){var e=window.analytics=window.analytics||[];if(!e.initialize)if(e.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{e.invoked=!0,e.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on"],e.factory=function(t){return function(){var a=Array.prototype.slice.call(arguments);return a.unshift(t),e.push(a),e}};for(var t=0;t<e.methods.length;t++){var a=e.methods[t];e[a]=e.factory(a)}e.load=function(e){var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src=("https:"===document.location.protocol?"https://":"http://")+"cdn.segment.com/analytics.js/v1/"+e+"/analytics.min.js";var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(t,a)},e.SNIPPET_VERSION="4.0.0",e.load("<%= segmentId %>")}}();var om597a24292a958,om597a24292a958_poll=function(){var e=0;return function(t,a){clearInterval(e),e=setInterval(t,a)}}();!function(e,t,a){if(e.getElementById(a))om597a24292a958_poll(function(){if(window.om_loaded&&!om597a24292a958)return(om597a24292a958=new OptinMonsterApp).init({s:"35109.597a24292a958",staging:0,dev:0,beta:0})},25);else{var n=!1,o=e.createElement("script");o.id=a,o.src="//a.optnmstr.com/app/js/api.min.js",o.async=!0,o.onload=o.onreadystatechange=function(){if(!(n||this.readyState&&"loaded"!==this.readyState&&"complete"!==this.readyState))try{n=om_loaded=!0,(om597a24292a958=new OptinMonsterApp).init({s:"35109.597a24292a958",staging:0,dev:0,beta:0}),o.onload=o.onreadystatechange=null}catch(e){}},(document.getElementsByTagName("head")[0]||document.documentElement).appendChild(o)}}(document,0,"omapi-script");
+    </script>
 
     <%= yield_content :head %>
   </head>
@@ -115,25 +119,6 @@
         </div>
       </div>
     </div>
-
-    <script>
-      // ga async load
-      window['GoogleAnalyticsObject'] = 'ga';
-      window['ga'] = window['ga'] || function() {
-        (window['ga'].q = window['ga'].q || []).push(arguments)
-      };
-      // analytics.js
-      !function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on"];analytics.factory=function(t){return function(){var e=Array.prototype.slice.call(arguments);e.unshift(t);analytics.push(e);return analytics}};for(var t=0;t<analytics.methods.length;t++){var e=analytics.methods[t];analytics[e]=analytics.factory(e)}analytics.load=function(t){var e=document.createElement("script");e.type="text/javascript";e.async=!0;e.src=("https:"===document.location.protocol?"https://":"http://")+"cdn.segment.com/analytics.js/v1/"+t+"/analytics.min.js";var n=document.getElementsByTagName("script")[0];n.parentNode.insertBefore(e,n)};analytics.SNIPPET_VERSION="4.0.0";
-      analytics.load("<%= segmentId %>");
-      analytics.page();
-      }}();
-      // optinmonster
-      var om597a24292a958,om597a24292a958_poll=function(){var b=0;return function(d,c){clearInterval(b);b=setInterval(d,c)}}();
-      !function(b,d,c){if(b.getElementById(c))om597a24292a958_poll(function(){if(window.om_loaded&&!om597a24292a958)return om597a24292a958=new OptinMonsterApp,om597a24292a958.init({s:"35109.597a24292a958",staging:0,dev:0,beta:0})},25);else{var e=!1,a=b.createElement(d);a.id=c;a.src="//a.optnmstr.com/app/js/api.min.js";a.async=!0;a.onload=a.onreadystatechange=function(){if(!(e||this.readyState&&"loaded"!==this.readyState&&"complete"!==this.readyState))try{e=om_loaded=!0,om597a24292a958=new OptinMonsterApp,
-      om597a24292a958.init({s:"35109.597a24292a958",staging:0,dev:0,beta:0}),a.onload=a.onreadystatechange=null}catch(f){}};(document.getElementsByTagName("head")[0]||document.documentElement).appendChild(a)}}(document,"script","omapi-script");
-    </script>
-
-    <%= yield_content :scripts %>
 
     <script type="application/ld+json">
       {
