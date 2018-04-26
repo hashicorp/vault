@@ -1192,11 +1192,10 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string, skipOrp
 		// Mark all children token as orphan by removing
 		// their parent index, and clear the parent entry.
 		//
-		// Marking the token as orphan is the correct behavior in here since
-		// revokeTreeSalted will ensure that they are deleted anyways if it's not an
-		// explicit call to orphan the child tokens (the delete occurs at the leaf
-		// node and uses parent prefix, not entry.Parent, to build the tree for
-		// traversal).
+		// Marking the token as orphan should be skipped if it's called by
+		// revokeTreeSalted to avoid unnecessary view.List operations. Since
+		// the deletion occurs in a DFS fashion we don't need to perform a delete
+		// on child prefixes as there will be none (as saltedID entry is a leaf node).
 		parentPath := parentPrefix + saltedID + "/"
 		children, err := ts.view.List(ctx, parentPath)
 		if err != nil {
