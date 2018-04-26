@@ -105,7 +105,7 @@ func (c *AuthCommand) Run(args []string) int {
 		"WARNING! The \"vault auth ARG\" command is deprecated and is now a "+
 			"subcommand for interacting with auth methods. To authenticate "+
 			"locally to Vault, use \"vault login\" instead. This backwards "+
-			"compatability will be removed in Vault 0.11 (or later).") + "\n")
+			"compatibility will be removed in Vault 0.11 (or later).") + "\n")
 	return (&LoginCommand{
 		BaseCommand: &BaseCommand{
 			UI:          c.UI,

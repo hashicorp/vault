@@ -204,7 +204,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// return invalid request so that the status codes can be correct
 		errType := logical.ErrInvalidRequest
 		switch ctErr {
-		case ErrInternalError, logical.ErrPermissionDenied, logical.ErrEntityDisabled:
+		case ErrInternalError, logical.ErrPermissionDenied:
 			errType = ctErr
 		}
 
@@ -364,7 +364,8 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		resp != nil &&
 		resp.Auth != nil &&
 		resp.Auth.EntityID != "" &&
-		resp.Auth.GroupAliases != nil {
+		resp.Auth.GroupAliases != nil &&
+		c.identityStore != nil {
 		err := c.identityStore.refreshExternalGroupMembershipsByEntityID(resp.Auth.EntityID, resp.Auth.GroupAliases)
 		if err != nil {
 			c.logger.Error("failed to refresh external group memberships", "error", err)
@@ -496,7 +497,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		var entity *identity.Entity
 		auth = resp.Auth
 
-		if auth.Alias != nil {
+		mEntry := c.router.MatchingMountEntry(req.Path)
+
+		if auth.Alias != nil &&
+			mEntry != nil &&
+			!mEntry.Local &&
+			c.identityStore != nil {
 			// Overwrite the mount type and mount path in the alias
 			// information
 			auth.Alias.MountType = req.MountType
@@ -520,7 +526,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 
 			if entity.Disabled {
-				return nil, nil, logical.ErrEntityDisabled
+				return nil, nil, logical.ErrPermissionDenied
 			}
 
 			auth.EntityID = entity.ID
