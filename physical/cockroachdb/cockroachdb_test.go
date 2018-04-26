@@ -58,6 +58,7 @@ func prepareCockroachDBTestContainer(t *testing.T) (cleanup func(), retURL, tabl
 		if err != nil {
 			return err
 		}
+		defer db.Close()
 		_, err = db.Exec("CREATE DATABASE database")
 		return err
 	}); err != nil {
