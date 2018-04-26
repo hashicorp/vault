@@ -1218,7 +1218,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 		// Delete the the child storage entry after we update the token entry Since
 		// paths are not deeply nested (i.e. they are simply
 		// parenPrefix/<parentID>/<childID>), we can simply call view.Delete instead
-		// of view.ClearView
+		// of logical.ClearView
 		index := parentPath + child
 		err = ts.view.Delete(ctx, index)
 		if err != nil {
