@@ -7,6 +7,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+        "encoding/json"
 	"encoding/pem"
 	"fmt"
 	"net"
@@ -213,6 +214,15 @@ func convertMapToStringValue(initial map[string]interface{}) map[string]string {
 		result[key] = fmt.Sprintf("%v", value)
 	}
 	return result
+}
+
+func convertMapToIntValue(initial map[string]interface{}) map[string]int {
+        result := map[string]int{}
+        for key, value := range initial {
+                i, _ := value.(json.Number).Int64()
+                result[key] = int(i)
+        }
+        return result
 }
 
 // Serve a template processor for custom format inputs
