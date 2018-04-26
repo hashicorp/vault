@@ -37,11 +37,8 @@ to not split the master key, so that the single key share is itself the master
 key. (Vault does not do this automatically as it generally prefers to error
 rather than change parameters set by an operator.)
 
-Vault does not currently support rekeying the master key when protected by an
-HSM; however, it _does_ continue to support rotation of the underlying data
-encryption key that the master key protects via the
-[`/sys/rotate`](/api/system/rotate.html) API
-endpoint.
+Both rekeying the master key and rotation of the underlying data
+encryption key are supported when using an HSM.
 
 ## Recovery Key
 
