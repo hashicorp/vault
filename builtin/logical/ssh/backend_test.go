@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os/user"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"strings"
 
@@ -685,6 +687,58 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 					"additional": "value",
 				},
 			}),
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
+func TestBackend_SignedKeyConstraints(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+	testCase := logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(),
+			createRoleStep("weakkey", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_certificates": true,
+				"signed_key_constraints": map[string]interface{}{
+					"rsa": json.Number(strconv.FormatInt(4096, 10)),
+				},
+			}),
+			logicaltest.TestStep{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/weakkey",
+				Data: map[string]interface{}{
+					"public_key": publicKey,
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != "public_key failed to meet the key requirements: your key is of an invalid size: 2048" {
+						return errors.New("a smaller key (2048) was allowed, when the minimum was set for 4096")
+					}
+					return nil
+				},
+			},
+			createRoleStep("stdkey", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_certificates": true,
+				"signed_key_constraints": map[string]interface{}{
+					"rsa": json.Number(strconv.FormatInt(2048, 10)),
+				},
+			}),
+			logicaltest.TestStep{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/stdkey",
+				Data: map[string]interface{}{
+					"public_key": publicKey,
+				},
+			},
 		},
 	}
 
