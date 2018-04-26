@@ -1,22 +1,11 @@
-import Pretender from 'pretender';
 import { moduleFor, test } from 'ember-qunit';
 import testCases from './_test-cases';
-
-const noop = response => {
-  return function() {
-    return [response, { 'Content-Type': 'application/json' }, JSON.stringify({})];
-  };
-};
+import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
 moduleFor('adapter:identity/group', 'Unit | Adapter | identity/group', {
   needs: ['service:auth', 'service:flash-messages'],
   beforeEach() {
-    this.server = new Pretender(function() {
-      this.post('/v1/**', noop());
-      this.put('/v1/**', noop());
-      this.get('/v1/**', noop());
-      this.delete('/v1/**', noop(204));
-    });
+    this.server = apiStub();
   },
   afterEach() {
     this.server.shutdown();

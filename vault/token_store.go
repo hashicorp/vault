@@ -13,6 +13,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 
 	"github.com/armon/go-metrics"
 	memdb "github.com/hashicorp/go-memdb"
@@ -267,6 +268,11 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 						Type:        framework.TypeBool,
 						Default:     true,
 						Description: tokenRenewableHelp,
+					},
+
+					"bound_cidrs": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
 					},
 				},
 
@@ -629,6 +635,9 @@ type TokenEntry struct {
 
 	// EntityID is the identifier to the identity information of this token
 	EntityID string `json:"entity_id" mapstructure:"entity_id" structs:"entity_id"`
+
+	// The set of CIDRs that this token can be used with
+	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
 }
 
 func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {
@@ -711,6 +720,9 @@ type tsRoleEntry struct {
 	// If set, the token entry will have an explicit maximum TTL set, rather
 	// than deferring to role/mount values
 	ExplicitMaxTTL time.Duration `json:"explicit_max_ttl" mapstructure:"explicit_max_ttl" structs:"explicit_max_ttl"`
+
+	// The set of CIDRs that tokens generated using this role will be bound to
+	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
 }
 
 type accessorEntry struct {
@@ -1997,6 +2009,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			te.Parent = ""
 		}
 
+		if len(role.BoundCIDRs) > 0 {
+			te.BoundCIDRs = role.BoundCIDRs
+		}
+
 	case data.NoParent:
 		// Only allow an orphan token if the client has sudo policy
 		if !isSudo {
@@ -2121,12 +2137,14 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		te.TTL = explicitMaxTTLToUse
 	}
 
-	// Don't advertise non-expiring root tokens as renewable, as attempts to renew them are denied
+	// Don't advertise non-expiring root tokens as renewable, as attempts to
+	// renew them are denied. Don't CIDR-restrict these either.
 	if te.TTL == 0 {
 		if parent.TTL != 0 {
 			return logical.ErrorResponse("expiring root tokens cannot create non-expiring root tokens"), logical.ErrInvalidRequest
 		}
 		renewable = false
+		te.BoundCIDRs = nil
 	}
 
 	// Create the token
@@ -2315,8 +2333,13 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	if out.Role != "" {
 		resp.Data["role"] = out.Role
 	}
+
 	if out.Period != 0 {
 		resp.Data["period"] = int64(out.Period.Seconds())
+	}
+
+	if len(out.BoundCIDRs) > 0 {
+		resp.Data["bound_cidrs"] = out.BoundCIDRs
 	}
 
 	// Fetch the last renewal time
@@ -2492,6 +2515,10 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 		},
 	}
 
+	if len(role.BoundCIDRs) > 0 {
+		resp.Data["bound_cidrs"] = role.BoundCIDRs
+	}
+
 	return resp, nil
 }
 
@@ -2549,6 +2576,22 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		entry.Renewable = renewableInt.(bool)
 	} else if req.Operation == logical.CreateOperation {
 		entry.Renewable = data.Get("renewable").(bool)
+	}
+
+	boundCIDRsRaw, ok := data.GetOk("bound_cidrs")
+	if ok {
+		boundCIDRs := boundCIDRsRaw.([]string)
+		if len(boundCIDRs) > 0 {
+			var parsedCIDRs []*sockaddr.SockAddrMarshaler
+			for _, v := range boundCIDRs {
+				parsedCIDR, err := sockaddr.NewSockAddr(v)
+				if err != nil {
+					return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("invalid value %q when parsing bound cidrs: {{err}}", v), err).Error()), nil
+				}
+				parsedCIDRs = append(parsedCIDRs, &sockaddr.SockAddrMarshaler{parsedCIDR})
+			}
+			entry.BoundCIDRs = parsedCIDRs
+		}
 	}
 
 	var resp *logical.Response

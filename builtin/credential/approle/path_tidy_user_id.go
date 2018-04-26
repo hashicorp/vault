@@ -34,69 +34,58 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 		return fmt.Errorf("SecretID tidy operation already running")
 	}
 
-	roleNameHMACs, err := s.List(ctx, "secret_id/")
-	if err != nil {
-		return err
-	}
-
-	// List all the accessors and add them all to a map
-	accessorHashes, err := s.List(ctx, "accessor/")
-	if err != nil {
-		return err
-	}
-	accessorMap := make(map[string]bool, len(accessorHashes))
-	for _, accessorHash := range accessorHashes {
-		accessorMap[accessorHash] = true
-	}
-
 	var result error
-	for _, roleNameHMAC := range roleNameHMACs {
-		// roleNameHMAC will already have a '/' suffix. Don't append another one.
-		secretIDHMACs, err := s.List(ctx, fmt.Sprintf("secret_id/%s", roleNameHMAC))
+
+	tidyFunc := func(secretIDPrefixToUse, accessorIDPrefixToUse string) error {
+		roleNameHMACs, err := s.List(ctx, secretIDPrefixToUse)
 		if err != nil {
 			return err
 		}
-		for _, secretIDHMAC := range secretIDHMACs {
-			// In order to avoid lock swroleing in case there is need to delete,
-			// grab the write lock.
+
+		// List all the accessors and add them all to a map
+		accessorHashes, err := s.List(ctx, accessorIDPrefixToUse)
+		if err != nil {
+			return err
+		}
+		accessorMap := make(map[string]bool, len(accessorHashes))
+		for _, accessorHash := range accessorHashes {
+			accessorMap[accessorHash] = true
+		}
+
+		secretIDCleanupFunc := func(secretIDHMAC, roleNameHMAC, secretIDPrefixToUse string) error {
 			lock := b.secretIDLock(secretIDHMAC)
 			lock.Lock()
-			// roleNameHMAC will already have a '/' suffix. Don't append another one.
-			entryIndex := fmt.Sprintf("secret_id/%s%s", roleNameHMAC, secretIDHMAC)
+			defer lock.Unlock()
+
+			entryIndex := fmt.Sprintf("%s%s%s", secretIDPrefixToUse, roleNameHMAC, secretIDHMAC)
 			secretIDEntry, err := s.Get(ctx, entryIndex)
 			if err != nil {
-				lock.Unlock()
 				return errwrap.Wrapf(fmt.Sprintf("error fetching SecretID %q: {{err}}", secretIDHMAC), err)
 			}
 
 			if secretIDEntry == nil {
 				result = multierror.Append(result, fmt.Errorf("entry for SecretID %q is nil", secretIDHMAC))
-				lock.Unlock()
-				continue
+				return nil
 			}
 
 			if secretIDEntry.Value == nil || len(secretIDEntry.Value) == 0 {
-				lock.Unlock()
 				return fmt.Errorf("found entry for SecretID %q but actual SecretID is empty", secretIDHMAC)
 			}
 
 			var result secretIDStorageEntry
 			if err := secretIDEntry.DecodeJSON(&result); err != nil {
-				lock.Unlock()
 				return err
 			}
 
 			// ExpirationTime not being set indicates non-expiring SecretIDs
 			if !result.ExpirationTime.IsZero() && time.Now().After(result.ExpirationTime) {
 				// Clean up the accessor of the secret ID first
-				err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor)
+				err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
 				if err != nil {
-					lock.Unlock()
 					return err
 				}
 
 				if err := s.Delete(ctx, entryIndex); err != nil {
-					lock.Unlock()
 					return errwrap.Wrapf(fmt.Sprintf("error deleting SecretID %q from storage: {{err}}", secretIDHMAC), err)
 				}
 			}
@@ -107,25 +96,48 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 			// up later.
 			salt, err := b.Salt(ctx)
 			if err != nil {
-				lock.Unlock()
 				return err
 			}
 			delete(accessorMap, salt.SaltID(result.SecretIDAccessor))
 
-			lock.Unlock()
+			return nil
 		}
+
+		for _, roleNameHMAC := range roleNameHMACs {
+			secretIDHMACs, err := s.List(ctx, fmt.Sprintf("%s%s", secretIDPrefixToUse, roleNameHMAC))
+			if err != nil {
+				return err
+			}
+			for _, secretIDHMAC := range secretIDHMACs {
+				err = secretIDCleanupFunc(secretIDHMAC, roleNameHMAC, secretIDPrefixToUse)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		// Accessor indexes were not getting cleaned up until 0.9.3. This is a fix
+		// to clean up the dangling accessor entries.
+		for accessorHash, _ := range accessorMap {
+			// Ideally, locking should be performed here. But for that, accessors
+			// are required in plaintext, which are not available. Hence performing
+			// a racy cleanup.
+			err = s.Delete(ctx, secretIDAccessorPrefix+accessorHash)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
 
-	// Accessor indexes were not getting cleaned up until 0.9.3. This is a fix
-	// to clean up the dangling accessor entries.
-	for accessorHash, _ := range accessorMap {
-		// Ideally, locking should be performed here. But for that, accessors
-		// are required in plaintext, which are not available. Hence performing
-		// a racy cleanup.
-		err = s.Delete(ctx, "accessor/"+accessorHash)
-		if err != nil {
-			return err
-		}
+	err := tidyFunc(secretIDPrefix, secretIDAccessorPrefix)
+	if err != nil {
+		return err
+	}
+	err = tidyFunc(secretIDLocalPrefix, secretIDAccessorLocalPrefix)
+	if err != nil {
+		return err
 	}
 
 	return result

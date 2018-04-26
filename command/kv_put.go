@@ -55,7 +55,7 @@ Usage: vault kv put [options] KEY [DATA]
 }
 
 func (c *KVPutCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
@@ -97,9 +97,19 @@ func (c *KVPutCommand) Run(args []string) int {
 		stdin = c.testStdin
 	}
 
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected >1, got %d)", len(args)))
+		return 1
+	case len(args) == 1:
+		c.UI.Error("Must supply data")
+		return 1
+	}
+
 	var err error
 	path := sanitizePath(args[0])
-	path, err = addPrefixToVKVPath(path, "data")
+
+	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -111,24 +121,30 @@ func (c *KVPutCommand) Run(args []string) int {
 		return 1
 	}
 
-	data = map[string]interface{}{
-		"data":    data,
-		"options": map[string]interface{}{},
-	}
-
-	if c.flagCAS > -1 {
-		data["options"].(map[string]interface{})["cas"] = c.flagCAS
-	}
-
-	client, err := c.Client()
+	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
-	secret, err := kvWriteRequest(client, path, data)
+	if v2 {
+		path = addPrefixToVKVPath(path, mountPath, "data")
+		data = map[string]interface{}{
+			"data":    data,
+			"options": map[string]interface{}{},
+		}
+
+		if c.flagCAS > -1 {
+			data["options"].(map[string]interface{})["cas"] = c.flagCAS
+		}
+	}
+
+	secret, err := client.Logical().Write(path, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
+		if secret != nil {
+			OutputSecret(c.UI, secret)
+		}
 		return 2
 	}
 	if secret == nil {
@@ -137,6 +153,10 @@ func (c *KVPutCommand) Run(args []string) int {
 			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
 		}
 		return 0
+	}
+
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
 	}
 
 	return OutputSecret(c.UI, secret)

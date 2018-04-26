@@ -311,6 +311,8 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 	// ensure that it is reset after. This ensures that there will be no
 	// writes during the construction of the backend.
 	view.setReadOnlyErr(logical.ErrSetupReadOnly)
+	// We defer this because we're already up and running so we don't need to
+	// time it for after postUnseal
 	defer view.setReadOnlyErr(nil)
 
 	var backend logical.Backend
@@ -628,6 +630,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 
 	var needPersist bool
 	if c.mounts == nil {
+		c.logger.Info("no mounts; adding default mount table")
 		c.mounts = c.defaultMountTable()
 		needPersist = true
 	}
@@ -818,7 +821,13 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
-		defer view.setReadOnlyErr(nil)
+		if strutil.StrListContains(singletonMounts, entry.Type) {
+			defer view.setReadOnlyErr(nil)
+		} else {
+			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				view.setReadOnlyErr(nil)
+			})
+		}
 
 		var backend logical.Backend
 		var err error

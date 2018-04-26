@@ -10,6 +10,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/logical/pki"
@@ -41,6 +42,7 @@ var (
 		"pki":            pki.Factory,
 		"ssh":            ssh.Factory,
 		"transit":        transit.Factory,
+		"kv":             kv.Factory,
 	}
 )
 

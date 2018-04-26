@@ -335,6 +335,10 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 		return nil, fmt.Errorf("invalid mount accessor %q", alias.MountAccessor)
 	}
 
+	if mountValidationResp.MountLocal {
+		return nil, fmt.Errorf("mount_accessor %q is of a local mount", alias.MountAccessor)
+	}
+
 	if mountValidationResp.MountType != alias.MountType {
 		return nil, fmt.Errorf("mount accessor %q is not a mount of type %q", alias.MountAccessor, alias.MountType)
 	}

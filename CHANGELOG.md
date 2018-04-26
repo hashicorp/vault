@@ -1,27 +1,109 @@
-## 0.10.1 (Unreleased)
-
-FEATURES:
-
- * X-Forwarded-For support: `X-Forwarded-For` headers can now be used to set
-   the client IP seen by Vault. See the [TCP listener configuration
-   page](https://www.vaultproject.io/docs/configuration/listener/tcp.html) for
-   details.
+## 0.10.2 (Unreleased)
 
 IMPROVEMENTS:
 
- * auth/token: Add to the token lookup response, the policies inherited due to
-   identity associations [GH-4366]
- * core: Add X-Forwarded-For support [GH-4380]
- * identity: Add the ability to disable an entity. Disabling an entity does not
-   revoke associated tokens, but while the entity is disabled they cannot be
-   used. [GH-4353]
+ * cli: `vault login` now supports a `-no-print` flag to suppress printing
+   token information but still allow storing into the token helper [GH-4454]
+
+## 0.10.1/0.9.7 (April 25th, 2018)
+
+The following two items are in both 0.9.7 and 0.10.1. They only affect
+Enterprise, and as such 0.9.7 is an Enterprise-only release:
+
+SECURITY:
+
+ * EGPs: A regression affecting 0.9.6 and 0.10.0 causes EGPs to not be applied
+   correctly if an EGP is updated in a running Vault after initial write or
+   after it is loaded on unseal. This has been fixed.
 
 BUG FIXES:
 
+ * Fixed an upgrade issue affecting performance secondaries when migrating from
+   a version that did not include Identity to one that did.
+
+All other content in this release is for 0.10.1 only.
+
+DEPRECATIONS/CHANGES:
+
+ * `vault kv` and Vault versions: In 0.10.1 some issues with `vault kv` against
+   v1 K/V engine mounts are fixed. However, using 0.10.1 for both the server
+   and CLI versions is required.
+ * Mount information visibility: Users that have access to any path within a
+   mount can now see information about that mount, such as its type and
+   options, via some API calls.
+ * Identity and Local Mounts: Local mounts would allow creating Identity
+   entities but these would not be able to be used successfully (even locally)
+   in replicated scenarios. We have now disallowed entities and groups from
+   being created for local mounts in the first place.
+
+FEATURES:
+
+ * X-Forwarded-For support: `X-Forwarded-For` headers can now be used to set the
+   client IP seen by Vault. See the [TCP listener configuration
+   page](https://www.vaultproject.io/docs/configuration/listener/tcp.html) for
+   details.
+ * CIDR IP Binding for Tokens: Tokens now support being bound to specific
+   CIDR(s) for usage. Currently this is implemented in Token Roles; usage can be
+   expanded to other authentication backends over time.
+ * `vault kv patch` command: A new `kv patch` helper command that allows
+   modifying only some values in existing data at a K/V path, but uses
+   check-and-set to ensure that this modification happens safely.
+ * AppRole Local Secret IDs: Roles can now be configured to generate secret IDs
+   local to the cluster. This enables performance secondaries to generate and
+   consume secret IDs without contacting the primary.
+ * AES-GCM Support for PKCS#11 [BETA] (Enterprise): For supporting HSMs,
+   AES-GCM can now be used in lieu of AES-CBC/HMAC-SHA256. This has currently
+   only been fully tested on AWS CloudHSM.
+ * Auto Unseal/Seal Wrap Key Rotation Support (Enterprise): Auto Unseal
+   mechanisms, including PKCS#11 HSMs, now support rotation of encryption keys,
+   and migration between key and encryption types, such as from AES-CBC to
+   AES-GCM, can be performed at the same time (where supported).
+
+IMPROVEMENTS:
+
+ * auth/approle: Support for cluster local secret IDs. This enables secondaries
+   to generate secret IDs without contacting the primary [GH-4427]
+ * auth/token: Add to the token lookup response, the policies inherited due to
+   identity associations [GH-4366]
+ * auth/token: Add CIDR binding to token roles [GH-815]
+ * cli: Add `vault kv patch` [GH-4432]
+ * core: Add X-Forwarded-For support [GH-4380]
+ * core: Add token CIDR-binding support [GH-815]
+ * identity: Add the ability to disable an entity. Disabling an entity does not
+   revoke associated tokens, but while the entity is disabled they cannot be
+   used. [GH-4353]
+ * physical/consul: Allow tuning of session TTL and lock wait time [GH-4352]
+ * replication: Dynamically adjust WAL cleanup over a period of time based on
+   the rate of writes committed
+ * secret/ssh: Update dynamic key install script to use shell locking to avoid
+   concurrent modifications [GH-4358]
+ * ui: Access to `sys/mounts` is no longer needed to use the UI - the list of 
+   engines will show you the ones you implicitly have access to (because you have
+   access to to secrets in those engines) [GH-4439]
+
+BUG FIXES:
+
+ * cli: Fix `vault kv` backwards compatibility with KV v1 engine mounts
+   [GH-4430]
  * identity: Persist entity memberships in external identity groups across
    mounts [GH-4365]
+ * identity: Fix error preventing authentication using local mounts on
+   performance secondary replication clusters [GH-4407]
+ * replication: Fix issue causing secondaries to not connect properly to a
+   pre-0.10 primary until the primary was upgraded
  * secret/gcp: Fix panic on rollback when a roleset wasn't created properly
    [GH-4344]
+ * secret/gcp: Fix panic on renewal
+ * ui: Fix IE11 form submissions in a few parts of the application [GH-4378]
+ * ui: Fix IE file saving on policy pages and init screens [GH-4376]
+ * ui: Fixed an issue where the AWS secret backend would show the wrong menu
+   [GH-4371]
+ * ui: Fixed an issue where policies with commas would not render in the
+   interface properly [GH-4398]
+ * ui: Corrected the saving of mount tune ttls for auth methods [GH-4431]
+ * ui: Credentials generation no longer checks capabilities before making
+   api calls. This should fix needing "update" capabilites to read IAM 
+   credentials in the AWS secrets engine [GH-4446]
 
 ## 0.10.0 (April 10th, 2018)
 

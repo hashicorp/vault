@@ -5,7 +5,7 @@ import UnloadModelRoute from 'vault/mixins/unload-model-route';
 export default Ember.Route.extend(UnloadModelRoute, {
   capabilities(secret) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    let backendModel = this.store.peekRecord('secret-engine', backend);
+    let backendModel = this.modelFor('vault.cluster.secrets.backend');
     let backendType = backendModel.get('type');
     let version = backendModel.get('options.version');
     let path;
@@ -21,8 +21,8 @@ export default Ember.Route.extend(UnloadModelRoute, {
     return this.store.findRecord('capabilities', path);
   },
 
-  backendType(path) {
-    return this.store.peekRecord('secret-engine', path).get('type');
+  backendType() {
+    return this.modelFor('vault.cluster.secrets.backend').get('type');
   },
 
   templateName: 'vault/cluster/secrets/backend/secretEditLayout',
@@ -44,14 +44,18 @@ export default Ember.Route.extend(UnloadModelRoute, {
   },
 
   modelType(backend, secret) {
-    const models = {
+    let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
       aws: 'role-aws',
-      cubbyhole: 'secret-cubbyhole',
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
     };
-    return models[this.backendType(backend)] || 'secret';
+    let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
+    let defaultType = 'secret';
+    if (backendModel.get('type') === 'kv' && backendModel.get('options.version') === 2) {
+      defaultType = 'secret-v2';
+    }
+    return types[backendModel.get('type')] || defaultType;
   },
 
   model(params) {
@@ -77,7 +81,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     const preferAdvancedEdit =
       this.controllerFor('vault.cluster.secrets.backend').get('preferAdvancedEdit') || false;
-    const backendType = this.backendType(backend);
+    const backendType = this.backendType();
     model.secret.setProperties({ backend });
     controller.setProperties({
       model: model.secret,
@@ -101,10 +105,8 @@ export default Ember.Route.extend(UnloadModelRoute, {
     error(error) {
       const { secret } = this.paramsFor(this.routeName);
       const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-      const backends = this.modelFor('vault.cluster.secrets').mapBy('id');
       Ember.set(error, 'keyId', backend + '/' + secret);
       Ember.set(error, 'backend', backend);
-      Ember.set(error, 'hasBackend', backends.includes(backend));
       return true;
     },
 

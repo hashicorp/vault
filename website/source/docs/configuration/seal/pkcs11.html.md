@@ -76,6 +76,13 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   to the generated key. May also be specified by the `VAULT_HSM_KEY_LABEL`
   environment variable.
 
+- `default_key_label` `(string: "")`: This is the default key label for decryption
+  operations.  Prior to 0.10.1, key labels were not stored with the ciphertext.
+  Seal entries now track the label used in encryption operations.  The default value
+  for this field is the `key_label`.  If `key_label` is rotated and this value is not 
+  set, decryption may fail. May also be specified by the `VAULT_HSM_DEFAULT_KEY_LABEL` 
+  environment variable.  This value is ignored in new installations.
+
 - `hmac_key_label` `(string: <required>)`: The label of the key to use for
   HMACing. This needs to be a suitable type. If Vault tries to create this it
   will attempt to use CKK_GENERIC_SECRET_KEY. If the key does not exist and
@@ -83,17 +90,28 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   key. May also be specified by the `VAULT_HSM_HMAC_KEY_LABEL` environment
   variable.
 
+- `default_key_label` `(string: "")`: This is the default HMAC key label for signing
+  operations.  Prior to 0.10.1, HMAC key labels were not stored with the signature.
+  Seal entries now track the label used in signing operations.  The default value
+  for this field is the `hmac_key_label`.  If `hmac_key_label` is rotated and this 
+  value is not set, signature verification may fail. May also be specified by the 
+  `VAULT_HSM_HMAC_DEFAULT_KEY_LABEL` environment variable.  This value is ignored in 
+  new installations.
+ 
 - `mechanism` `(string: "0x1082")`: The encryption/decryption mechanism to use,
-  specified as a decimal or hexadecimal (prefixed by `0x`) string. Currently
-  only `0x1082` (corresponding to `CKM_AES_CBC` from the specification) is
-  supported. May also be specified by the `VAULT_HSM_MECHANISM` environment
-  variable.
+  specified as a decimal or hexadecimal (prefixed by `0x`) string. May also be 
+  specified by the `VAULT_HSM_MECHANISM` environment variable.  
+  Currently supported mechanisms (in order of precedence):
+
+    - `0x1082` `CKM_AES_CBC` (HMAC mechanism required)
+    - `0x1087` `CKM_AES_GCM` **_BETA_**
 
 - `hmac_mechanism` `(string: "0x0251")`: The encryption/decryption mechanism to
   use, specified as a decimal or hexadecimal (prefixed by `0x`) string.
   Currently only `0x0251` (corresponding to `CKM_SHA256_HMAC` from the
   specification) is supported. May also be specified by the
-  `VAULT_HSM_HMAC_MECHANISM` environment variable.
+  `VAULT_HSM_HMAC_MECHANISM` environment variable. This value is only required
+  for specific mechanisms.
 
 - `generate_key` `(string: "false")`: If no existing key with the label
   specified by `key_label` can be found at Vault initialization time, instructs
@@ -124,8 +142,9 @@ environment variables:
 * `VAULT_HSM_SLOT`
 * `VAULT_HSM_PIN`
 * `VAULT_HSM_KEY_LABEL`
+* `VAULT_HSM_DEFAULT_KEY_LABEL`
 * `VAULT_HSM_HMAC_KEY_LABEL`
-* `VAULT_HSM_HMAC_KEY_LABEL`
+* `VAULT_HSM_HMAC_DEFAULT_KEY_LABEL`
 * `VAULT_HSM_MECHANISM`
 * `VAULT_HSM_HMAC_MECHANISM`
 * `VAULT_HSM_GENERATE_KEY`
@@ -168,3 +187,15 @@ identifiers.
 * `CKA_SIGN`: `true` (Key can be used for signing)
 * `CKA_VERIFY`: `true` (Key can be used for verifying)
 * `CKA_EXTRACTABLE`: `false` (Key cannot be exported)
+
+## Key Rotation
+
+This seal supports rotating keys by using different key labels to track key versions. To rotate
+the key value, generate a new key in a different key label in the HSM and update Vault's
+configuration with the new key label value.  Restart your vault instance to pick up the new key
+label and all new encryption operations will use the updated key label. Old keys must not be disabled 
+or deleted and are used to decrypt older data.
+
+**NOTE**: Prior to version 0.10.1, key information was not tracked with the ciphertext. If 
+rotation is desired for data that was seal wrapped prior to this version must also set 
+`default_key_label` and `hmac_default_key_label` to allow for decryption of older values.

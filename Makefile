@@ -3,6 +3,8 @@
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
 TEST?=$$(go list ./... | grep -v /vendor/ | grep -v /integ)
+TEST_TIMEOUT?=20m
+EXTENDED_TEST_TIMEOUT=45m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
 	github.com/elazarl/go-bindata-assetfs/... \
@@ -37,7 +39,7 @@ test: prep
 	VAULT_TOKEN= \
 	VAULT_DEV_ROOT_TOKEN_ID= \
 	VAULT_ACC= \
-	go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=200m -parallel=20
+	go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=$(TEST_TIMEOUT) -parallel=20
 
 testcompile: prep
 	@for pkg in $(TEST) ; do \
@@ -50,7 +52,7 @@ testacc: prep
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
 	fi
-	VAULT_ACC=1 go test -tags='$(BUILD_TAGS)' $(TEST) -v $(TESTARGS) -timeout 45m
+	VAULT_ACC=1 go test -tags='$(BUILD_TAGS)' $(TEST) -v $(TESTARGS) -timeout=$(EXTENDED_TEST_TIMEOUT)
 
 # testrace runs the race checker
 testrace: prep
@@ -59,7 +61,7 @@ testrace: prep
 	VAULT_TOKEN= \
 	VAULT_DEV_ROOT_TOKEN_ID= \
 	VAULT_ACC= \
-	go test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS) -timeout=45m -parallel=20
+	go test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS) -timeout=$(EXTENDED_TEST_TIMEOUT) -parallel=20
 
 cover:
 	./scripts/coverage.sh --html
@@ -94,7 +96,7 @@ update-plugins:
 
 static-assets:
 	@echo "--> Generating static assets"
-	@go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 ./pkg/web_ui/...
+	@go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
 	@mv bindata_assetfs.go http
 	@$(MAKE) -f $(THIS_FILE) fmt
 

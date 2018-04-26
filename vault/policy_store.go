@@ -68,6 +68,13 @@ path "sys/capabilities-self" {
     capabilities = ["update"]
 }
 
+# Allow a token to look up its resultant ACL from all policies. This is useful
+# for UIs. It is an internal path because the format may change at any time
+# based on how the internal ACL features and capabilities change.
+path "sys/internal/ui/resultant-acl" {
+    capabilities = ["read"]
+}
+
 # Allow a token to renew a lease via lease_id in the request body; old path for
 # old clients, new path for newer
 path "sys/renew" {
