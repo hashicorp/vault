@@ -68,32 +68,6 @@ type secretIDAccessorStorageEntry struct {
 	SecretIDHMAC string `json:"secret_id_hmac" structs:"secret_id_hmac" mapstructure:"secret_id_hmac"`
 }
 
-// Checks if the Role represented by the RoleID still exists
-func (b *backend) validateRoleID(ctx context.Context, s logical.Storage, roleID string) (*roleStorageEntry, string, error) {
-	// Look for the storage entry that maps the roleID to role
-	roleIDIndex, err := b.roleIDEntry(ctx, s, roleID)
-	if err != nil {
-		return nil, "", err
-	}
-	if roleIDIndex == nil {
-		return nil, "", fmt.Errorf("invalid role_id %q", roleID)
-	}
-
-	lock := b.roleLock(roleIDIndex.Name)
-	lock.RLock()
-	defer lock.RUnlock()
-
-	role, err := b.roleEntry(ctx, s, roleIDIndex.Name)
-	if err != nil {
-		return nil, "", err
-	}
-	if role == nil {
-		return nil, "", fmt.Errorf("role %q referred by the role_id %q does not exist anymore", roleIDIndex.Name, roleID)
-	}
-
-	return role, roleIDIndex.Name, nil
-}
-
 // Validates the supplied RoleID and SecretID
 func (b *backend) validateCredentials(ctx context.Context, req *logical.Request, data *framework.FieldData) (*roleStorageEntry, string, map[string]string, string, error, error) {
 	metadata := make(map[string]string)
@@ -103,13 +77,25 @@ func (b *backend) validateCredentials(ctx context.Context, req *logical.Request,
 		return nil, "", metadata, "", fmt.Errorf("missing role_id"), nil
 	}
 
-	// Validate the RoleID and get the Role entry
-	role, roleName, err := b.validateRoleID(ctx, req.Storage, roleID)
+	// Look for the storage entry that maps the roleID to role
+	roleIDIndex, err := b.roleIDEntry(ctx, req.Storage, roleID)
 	if err != nil {
 		return nil, "", metadata, "", nil, err
 	}
-	if role == nil || roleName == "" {
-		return nil, "", metadata, "", fmt.Errorf("failed to validate role_id"), nil
+	if roleIDIndex == nil {
+		return nil, "", metadata, "", fmt.Errorf("invalid role_id %q", roleID), nil
+	}
+
+	lock := b.roleLock(roleIDIndex.Name)
+	lock.RLock()
+	defer lock.RUnlock()
+
+	role, err := b.roleEntry(ctx, req.Storage, roleIDIndex.Name)
+	if err != nil {
+		return nil, "", metadata, "", nil, err
+	}
+	if role == nil {
+		return nil, "", metadata, "", fmt.Errorf("invalid role_id %q", roleID), nil
 	}
 
 	var secretID string
@@ -122,13 +108,13 @@ func (b *backend) validateCredentials(ctx context.Context, req *logical.Request,
 		}
 
 		if role.LowerCaseRoleName {
-			roleName = strings.ToLower(roleName)
+			roleIDIndex.Name = strings.ToLower(roleIDIndex.Name)
 		}
 
 		// Check if the SecretID supplied is valid. If use limit was specified
 		// on the SecretID, it will be decremented in this call.
 		var valid bool
-		valid, metadata, err = b.validateBindSecretID(ctx, req, roleName, secretID, role)
+		valid, metadata, err = b.validateBindSecretID(ctx, req, roleIDIndex.Name, secretID, role)
 		if err != nil {
 			return nil, "", metadata, "", nil, err
 		}
@@ -152,7 +138,7 @@ func (b *backend) validateCredentials(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	return role, roleName, metadata, secretID, nil, nil
+	return role, roleIDIndex.Name, metadata, secretID, nil, nil
 }
 
 // validateBindSecretID is used to determine if the given SecretID is a valid one.
