@@ -16,7 +16,7 @@ action on that data, and they return a result.
 Some secrets engines simply store and read data - like encrypted
 Redis/Memcached. Other secrets engines connect to other services and generate
 dynamic credentials on demand. Other secrets engines provide encryption as a
-service, totp generation, certificates, and much more.
+service, token generation, certificates, and much more.
 
 Secrets engines are enabled at a "path" in Vault. When a request comes to Vault,
 the router automatically routes anything with the route prefix to the secrets
