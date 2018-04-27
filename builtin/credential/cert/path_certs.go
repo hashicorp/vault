@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -87,6 +88,11 @@ issued token can no longer be renewed.`,
 should never expire. The token should be renewed within the
 duration specified by this value. At each renewal, the token's
 TTL will be set to the value of this parameter.`,
+			},
+			"bound_cidrs": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
+IP addresses which can perform the login operation.`,
 			},
 		},
 
@@ -228,6 +234,25 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
+	var parsedCIDRs []*sockaddr.SockAddrMarshaler
+	if boundCIDRListRaw, ok := d.GetOk("bound_cidrs"); ok {
+
+		var boundCIDRList []string
+		if boundCIDRs, ok := boundCIDRListRaw.([]string); ok {
+			boundCIDRList = boundCIDRs
+		} else if boundCIDRListStr, ok := boundCIDRListRaw.(string); ok {
+			boundCIDRList = strings.Split(boundCIDRListStr, ",")
+		}
+
+		for _, v := range boundCIDRList {
+			parsedCIDR, err := sockaddr.NewSockAddr(v)
+			if err != nil {
+				return nil, err
+			}
+			parsedCIDRs = append(parsedCIDRs, &sockaddr.SockAddrMarshaler{parsedCIDR})
+		}
+	}
+
 	certEntry := &CertEntry{
 		Name:               name,
 		Certificate:        certificate,
@@ -238,6 +263,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 		TTL:                ttl,
 		MaxTTL:             maxTTL,
 		Period:             period,
+		BoundCIDRs:         parsedCIDRs,
 	}
 
 	// Store it
@@ -266,6 +292,7 @@ type CertEntry struct {
 	Period             time.Duration
 	AllowedNames       []string
 	RequiredExtensions []string
+	BoundCIDRs         []*sockaddr.SockAddrMarshaler
 }
 
 const pathCertHelpSyn = `

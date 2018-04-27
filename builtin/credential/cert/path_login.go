@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/ryanuber/go-glob"
 )
 
@@ -69,6 +70,10 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 
 	if matched == nil {
 		return nil, nil
+	}
+
+	if err := b.checkCIDR(matched.Entry, req); err != nil {
+		return nil, err
 	}
 
 	clientCerts := req.Connection.ConnState.PeerCertificates
@@ -150,6 +155,10 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	if cert == nil {
 		// User no longer exists, do not renew
 		return nil, nil
+	}
+
+	if err := b.checkCIDR(cert, req); err != nil {
+		return nil, err
 	}
 
 	if !policyutil.EquivalentPolicies(cert.Policies, req.Auth.Policies) {
@@ -369,6 +378,33 @@ func (b *backend) checkForValidChain(chains [][]*x509.Certificate) bool {
 		}
 	}
 	return false
+}
+
+func (b *backend) checkCIDR(cert *CertEntry, req *logical.Request) error {
+
+	if len(cert.BoundCIDRs) <= 0 {
+		// short-circuit the below logic
+		return nil
+	}
+
+	var valid bool
+	remoteSockAddr, err := sockaddr.NewSockAddr(req.Connection.RemoteAddr)
+	if err != nil {
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("could not parse remote addr into sockaddr", "error", err, "remote_addr", req.Connection.RemoteAddr)
+		}
+		return logical.ErrPermissionDenied
+	}
+	for _, cidr := range cert.BoundCIDRs {
+		if cidr.Contains(remoteSockAddr) {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return logical.ErrPermissionDenied
+	}
+	return nil
 }
 
 // parsePEM parses a PEM encoded x509 certificate
