@@ -214,8 +214,9 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 					return nil, fmt.Errorf("failed to get connection information")
 				}
 
-				if belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, entry.CIDRList); !belongs || err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized through CIDR restrictions on the secret ID: {{err}}", req.Connection.RemoteAddr), err)
+				belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, entry.CIDRList)
+				if err != nil || !belongs {
+					return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the secret ID: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
 				}
 			}
 		}
@@ -224,17 +225,13 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	}
 
 	if len(role.BoundCIDRList) != 0 {
-		// If 'bound_cidr_list' was set, verify the CIDR restrictions
 		if req.Connection == nil || req.Connection.RemoteAddr == "" {
 			return nil, fmt.Errorf("failed to get connection information")
 		}
 
 		belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, role.BoundCIDRList)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to verify the CIDR restrictions set on the role: {{err}}", err)
-		}
-		if !belongs {
-			return logical.ErrorResponse(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the role", req.Connection.RemoteAddr)), nil
+		if err != nil || !belongs {
+			return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the role: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
 		}
 	}
 
