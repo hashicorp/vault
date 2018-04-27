@@ -452,19 +452,19 @@ configuration for the generated auth tokens.
 
 We also expose a helper path for updating the service accounts attached to an existing `iam` role:
 
-    ```sh
-    vault write auth/gcp/role/iam-role/service-accounts \
-      add='serviceAccountToAdd,...' \
-      remove='serviceAccountToRemove,...' \
-    ```
+```
+$ vault write auth/gcp/role/iam-role/service-accounts \
+    add='serviceAccountToAdd,...' \
+    remove='serviceAccountToRemove,...' \
+```
 
 and for updating the labels attached to an existing `gce` role:
 
-    ```sh
-    vault write auth/gcp/role/gce-role/labels \
-      add='label1:value1,foo:bar,...' \
-      remove='key1,key2,...' \
-    ```
+```
+$ vault write auth/gcp/role/gce-role/labels \
+    add='label1:value1,foo:bar,...' \
+    remove='key1,key2,...' \
+```
 
 
 See [API docs](/api/auth/gcp/index.html#create-role) to view
