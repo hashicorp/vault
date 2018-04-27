@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -51,24 +52,84 @@ func (b *backend) pathLoginUpdateAliasLookahead(ctx context.Context, req *logica
 // Returns the Auth object indicating the authentication and authorization information
 // if the credentials provided are validated by the backend.
 func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, roleName, metadata, _, userErr, intErr := b.validateCredentials(ctx, req, data)
-	switch {
-	case intErr != nil:
-		return nil, errwrap.Wrapf("failed to validate credentials: {{err}}", intErr)
-	case userErr != nil:
-		return logical.ErrorResponse(fmt.Sprintf("failed to validate credentials: %v", userErr)), nil
-	case role == nil:
-		return logical.ErrorResponse("failed to validate credentials; could not find role"), nil
+
+	metadata := make(map[string]string)
+
+	// RoleID must be supplied during every login
+	roleID := strings.TrimSpace(data.Get("role_id").(string))
+	if roleID == "" {
+		return logical.ErrorResponse("missing role_id"), nil
+	}
+
+	// Look for the storage entry that maps the roleID to role
+	roleIDIndex, err := b.roleIDEntry(ctx, req.Storage, roleID)
+	if err != nil {
+		return nil, err
+	}
+	if roleIDIndex == nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid role_id %q", roleID)), nil
+	}
+
+	lock := b.roleLock(roleIDIndex.Name)
+	lock.RLock()
+	defer lock.RUnlock()
+
+	role, err := b.roleEntry(ctx, req.Storage, roleIDIndex.Name)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid role_id %q", roleID)), nil
+	}
+
+	var secretID string
+	if role.BindSecretID {
+		// If 'bind_secret_id' was set on role, look for the field 'secret_id'
+		// to be specified and validate it.
+		secretID = strings.TrimSpace(data.Get("secret_id").(string))
+		if secretID == "" {
+			return logical.ErrorResponse("missing secret_id"), nil
+		}
+
+		if role.LowerCaseRoleName {
+			roleIDIndex.Name = strings.ToLower(roleIDIndex.Name)
+		}
+
+		// Check if the SecretID supplied is valid. If use limit was specified
+		// on the SecretID, it will be decremented in this call.
+		var valid bool
+		valid, metadata, err = b.validateBindSecretID(ctx, req, roleIDIndex.Name, secretID, role)
+		if err != nil {
+			return nil, err
+		}
+		if !valid {
+			return logical.ErrorResponse(fmt.Sprintf("invalid secret_id %q", secretID)), nil
+		}
+	}
+
+	if len(role.BoundCIDRList) != 0 {
+		// If 'bound_cidr_list' was set, verify the CIDR restrictions
+		if req.Connection == nil || req.Connection.RemoteAddr == "" {
+			return nil, fmt.Errorf("failed to get connection information")
+		}
+
+		belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, role.BoundCIDRList)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to verify the CIDR restrictions set on the role: {{err}}", err)
+		}
+		if !belongs {
+			return logical.ErrorResponse(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the role", req.Connection.RemoteAddr)), nil
+		}
 	}
 
 	// Always include the role name, for later filtering
-	metadata["role_name"] = roleName
+	metadata["role_name"] = roleIDIndex.Name
 
 	auth := &logical.Auth{
 		NumUses: role.TokenNumUses,
 		Period:  role.Period,
 		InternalData: map[string]interface{}{
-			"role_name": roleName,
+			"role_name": roleIDIndex.Name,
 		},
 		Metadata: metadata,
 		Policies: role.Policies,

@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -14,7 +13,6 @@ import (
 	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
 )
 
 // secretIDStorageEntry represents the information stored in storage
@@ -68,79 +66,6 @@ type secretIDAccessorStorageEntry struct {
 	SecretIDHMAC string `json:"secret_id_hmac" structs:"secret_id_hmac" mapstructure:"secret_id_hmac"`
 }
 
-// Validates the supplied RoleID and SecretID
-func (b *backend) validateCredentials(ctx context.Context, req *logical.Request, data *framework.FieldData) (*roleStorageEntry, string, map[string]string, string, error, error) {
-	metadata := make(map[string]string)
-	// RoleID must be supplied during every login
-	roleID := strings.TrimSpace(data.Get("role_id").(string))
-	if roleID == "" {
-		return nil, "", metadata, "", fmt.Errorf("missing role_id"), nil
-	}
-
-	// Look for the storage entry that maps the roleID to role
-	roleIDIndex, err := b.roleIDEntry(ctx, req.Storage, roleID)
-	if err != nil {
-		return nil, "", metadata, "", nil, err
-	}
-	if roleIDIndex == nil {
-		return nil, "", metadata, "", fmt.Errorf("invalid role_id %q", roleID), nil
-	}
-
-	lock := b.roleLock(roleIDIndex.Name)
-	lock.RLock()
-	defer lock.RUnlock()
-
-	role, err := b.roleEntry(ctx, req.Storage, roleIDIndex.Name)
-	if err != nil {
-		return nil, "", metadata, "", nil, err
-	}
-	if role == nil {
-		return nil, "", metadata, "", fmt.Errorf("invalid role_id %q", roleID), nil
-	}
-
-	var secretID string
-	if role.BindSecretID {
-		// If 'bind_secret_id' was set on role, look for the field 'secret_id'
-		// to be specified and validate it.
-		secretID = strings.TrimSpace(data.Get("secret_id").(string))
-		if secretID == "" {
-			return nil, "", metadata, "", fmt.Errorf("missing secret_id"), nil
-		}
-
-		if role.LowerCaseRoleName {
-			roleIDIndex.Name = strings.ToLower(roleIDIndex.Name)
-		}
-
-		// Check if the SecretID supplied is valid. If use limit was specified
-		// on the SecretID, it will be decremented in this call.
-		var valid bool
-		valid, metadata, err = b.validateBindSecretID(ctx, req, roleIDIndex.Name, secretID, role)
-		if err != nil {
-			return nil, "", metadata, "", nil, err
-		}
-		if !valid {
-			return nil, "", metadata, "", fmt.Errorf("invalid secret_id %q", secretID), nil
-		}
-	}
-
-	if len(role.BoundCIDRList) != 0 {
-		// If 'bound_cidr_list' was set, verify the CIDR restrictions
-		if req.Connection == nil || req.Connection.RemoteAddr == "" {
-			return nil, "", metadata, "", fmt.Errorf("failed to get connection information"), nil
-		}
-
-		belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, role.BoundCIDRList)
-		if err != nil {
-			return nil, "", metadata, "", nil, errwrap.Wrapf("failed to verify the CIDR restrictions set on the role: {{err}}", err)
-		}
-		if !belongs {
-			return nil, "", metadata, "", fmt.Errorf("source address %q unauthorized through CIDR restrictions on the role", req.Connection.RemoteAddr), nil
-		}
-	}
-
-	return role, roleIDIndex.Name, metadata, secretID, nil, nil
-}
-
 // validateBindSecretID is used to determine if the given SecretID is a valid one.
 func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request, roleName, secretID string,
 	role *roleStorageEntry) (bool, map[string]string, error) {
@@ -179,6 +104,7 @@ func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request
 		// role's
 		if err := verifyCIDRRoleSecretIDSubset(result.CIDRList,
 			role.BoundCIDRList); err != nil {
+			lock.RUnlock()
 			return false, nil, err
 		}
 
@@ -186,10 +112,12 @@ func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request
 		// source IP complies to it
 		if len(result.CIDRList) != 0 {
 			if req.Connection == nil || req.Connection.RemoteAddr == "" {
+				lock.RUnlock()
 				return false, nil, fmt.Errorf("failed to get connection information")
 			}
 
 			if belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, result.CIDRList); !belongs || err != nil {
+				lock.RUnlock()
 				return false, nil, errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized through CIDR restrictions on the secret ID: {{err}}", req.Connection.RemoteAddr), err)
 			}
 		}
