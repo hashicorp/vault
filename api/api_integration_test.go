@@ -152,6 +152,7 @@ func testPostgresDB(t testing.TB) (string, func()) {
 		if err != nil {
 			return err
 		}
+		defer db.Close()
 		return db.Ping()
 	}); err != nil {
 		t.Fatalf("postgresdb: could not connect: %s", err)

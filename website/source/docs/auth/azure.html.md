@@ -26,7 +26,7 @@ The following documentation assumes that the method has been
 * A configured [Azure AD application](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-integrating-applications) which is used as the resource for generating MSI access tokens.
 * Client credentials (shared secret) for accessing the Azure Resource Manager with read access to compute endpoints. See [Azure AD Service to Service Client Credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service)
 
-If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shared secret.  MSI must be [enabled]((https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm) on the VMs hosting Vault. 
+If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shared secret.  MSI must be [enabled](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm) on the VMs hosting Vault. 
 
 The next sections review how the authN/Z workflows work. If you
 have already reviewed these sections, here are some quick links to:
@@ -61,7 +61,7 @@ at a different path, use that value instead of `azure`.
 $ curl \
     --request POST \
     --data '{"role": "dev-role", "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}' \
-    https://vault.rocks/v1/auth/azure/login
+    https://127.0.0.1:8200/v1/auth/azure/login
 ```
 
 The response will contain the token at `auth.client_token`:
@@ -123,7 +123,7 @@ tool.
     authentication type, as well as overall constraints and configuration for
     the generated auth tokens.
 
-    For the complete list of role options, please see the API documentation.
+    For the complete list of role options, please see the [API documentation](/api/auth/azure/index.html).
 
 ### Via the API
 
@@ -134,7 +134,7 @@ tool.
         --header "X-Vault-Token: ..." \
         --request POST \
         --data '{"type": "azure"}' \
-        https://vault.rocks/v1/sys/auth/azure
+        https://127.0.0.1:8200/v1/sys/auth/azure
     ```
 
 1. Configure the Azure auth method:
@@ -144,7 +144,7 @@ tool.
         --header "X-Vault-Token: ..." \
         --request POST \
         --data '{"tenant_id": "...", "resource": "..."}' \
-        https://vault.rocks/v1/auth/azure/config
+        https://127.0.0.1:8200/v1/auth/azure/config
     ```
 
 1. Create a role:
@@ -154,7 +154,7 @@ tool.
         --header "X-Vault-Token: ..." \
         --request POST \
         --data '{"policies": ["dev", "prod"], ...}' \
-        https://vault.rocks/v1/auth/azure/role/dev-role
+        https://127.0.0.1:8200/v1/auth/azure/role/dev-role
     ```
 
 ### Plugin Setup
@@ -184,6 +184,6 @@ for your server at `path/to/plugins`:
 
 ## API
 
-The Azure Auth Plugin has a full HTTP API. Please see the [API docs]
+The Azure Auth Plugin has a full HTTP API. Please see the [API documentation]
 (/api/auth/azure/index.html) for more details.
 

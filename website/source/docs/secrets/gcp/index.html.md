@@ -59,12 +59,12 @@ Success! Enabled the gcp secrets engine at: gcp/
 You will need to set up the secrets engine with:
 
 * **[Config](#config)**: General config, including credentials that Vault will need to make calls 
-    to GCP APIs (either explicitly or using Application Default Credentials), lease defaults, etc. Example:
+    to GCP APIs (either explicitly or using Application Default Credentials), lease defaults, etc.
 
 * **[Rolesets](#rolesets)**: Generated credentials will need to be associated with sets of 
     [IAM roles](https://cloud.google.com/iam/docs/understanding-roles) on specific GCP resources. Rolesets
     have an associated `secret_type` that determines a secret type that can be generated 
-    under this role set. Example:
+    under this role set.
 
 ### Usage - Secret Generation
 
