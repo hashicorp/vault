@@ -1078,6 +1078,7 @@ func (ts *TokenStore) Revoke(ctx context.Context, id string) error {
 // revokeSalted is used to invalidate a given salted token,
 // any child tokens will be orphaned.
 func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret error) {
+	entryDeleted := false
 	// Protect the entry lookup/writing with locks. The rub here is that we
 	// don't know the ID until we look it up once, so first we look it up, then
 	// do a locked lookup.
@@ -1131,16 +1132,9 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 			lock.Lock()
 			defer lock.Unlock()
 
-			// Lookup the token again to make sure something else didn't
-			// revoke in the interim
-			entry, err := ts.lookupSalted(ctx, saltedID, true)
-			if err != nil {
-				return
-			}
-
 			// If it exists just taint to -3 rather than trying to figure
 			// out what it means if it's already -3 after the -2 above
-			if entry != nil {
+			if !entryDeleted {
 				entry.NumUses = tokenRevocationFailed
 				ts.storeCommon(ctx, entry, false)
 			}
@@ -1224,6 +1218,8 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 	if err = ts.view.Delete(ctx, path); err != nil {
 		return errwrap.Wrapf("failed to delete entry: {{err}}", err)
 	}
+	// Mark the deletion as successful for the defer function
+	entryDeleted = true
 
 	return nil
 }
