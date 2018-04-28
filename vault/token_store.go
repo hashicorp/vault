@@ -1078,7 +1078,7 @@ func (ts *TokenStore) Revoke(ctx context.Context, id string) error {
 // revokeSalted is used to invalidate a given salted token,
 // any child tokens will be orphaned.
 func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret error) {
-	entryDeleted := false
+	deleteEntry := false
 	// Protect the entry lookup/writing with locks. The rub here is that we
 	// don't know the ID until we look it up once, so first we look it up, then
 	// do a locked lookup.
@@ -1128,16 +1128,23 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 	// failed revocation. This way we don't try to clean up during active
 	// revocation (-2).
 	defer func() {
-		if ret != nil {
-			lock.Lock()
-			defer lock.Unlock()
+		lock.Lock()
+		defer lock.Unlock()
 
-			// If it exists just taint to -3 rather than trying to figure
-			// out what it means if it's already -3 after the -2 above
-			if !entryDeleted {
-				entry.NumUses = tokenRevocationFailed
-				ts.storeCommon(ctx, entry, false)
+		if deleteEntry {
+			path := lookupPrefix + saltedID
+			if err := ts.view.Delete(ctx, path); err != nil {
+				ret = err
+			} else {
+				// If the delete was sucessful, then we short-circuit and don't mark the
+				// revocation as failed.
+				return
 			}
+		}
+
+		if ret != nil {
+			entry.NumUses = tokenRevocationFailed
+			ts.storeCommon(ctx, entry, false)
 		}
 	}()
 
@@ -1213,13 +1220,8 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 		return errwrap.Wrapf("failed to delete entry: {{err}}", err)
 	}
 
-	// Now that the entry is not usable for any revocation tasks, nuke it
-	path := lookupPrefix + saltedID
-	if err = ts.view.Delete(ctx, path); err != nil {
-		return errwrap.Wrapf("failed to delete entry: {{err}}", err)
-	}
-	// Mark the deletion as successful for the defer function
-	entryDeleted = true
+	// Mark the entry for deletion in the defer function
+	deleteEntry = true
 
 	return nil
 }
