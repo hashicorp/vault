@@ -423,3 +423,34 @@ func TestStrUtil_RemoveDuplicates(t *testing.T) {
 		}
 	}
 }
+
+func TestStrUtil_BitMaskedIndex(t *testing.T) {
+	input := []byte("foo") // []byte{0x66, 0x6f, 0x6f}
+
+	checkFunc := func(t *testing.T, input []byte, bitCount int, expected string) {
+		t.Helper()
+		index, err := BitMaskedIndexHex(input, bitCount)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if index != expected {
+			t.Fatalf("bad: bit masked value; expected: %q, actual: %q", expected, index)
+		}
+	}
+
+	checkFunc(t, input, 1, "0")
+	checkFunc(t, input, 2, "1")
+	checkFunc(t, input, 3, "3")
+	checkFunc(t, input, 4, "6")
+	checkFunc(t, input, 5, "12")
+	checkFunc(t, input, 6, "25")
+	checkFunc(t, input, 7, "51")
+	checkFunc(t, input, 8, "102")
+	checkFunc(t, input, 9, "204")
+	checkFunc(t, input, 10, "409")
+	checkFunc(t, input, 12, "1638")
+	checkFunc(t, input, 15, "13111")
+	checkFunc(t, input, 16, "26223")
+	checkFunc(t, input, 18, "199bd")
+	checkFunc(t, input, 24, "666f6f")
+}

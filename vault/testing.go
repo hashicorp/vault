@@ -324,6 +324,8 @@ func testTokenStore(t testing.T, c *Core) *TokenStore {
 	tokenstore, _ := c.newCredentialBackend(context.Background(), me, sysView, view)
 	ts := tokenstore.(*TokenStore)
 
+	c.tokenStore = ts
+
 	err = c.router.Unmount(context.Background(), "auth/token/")
 	if err != nil {
 		t.Fatal(err)

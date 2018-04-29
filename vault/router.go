@@ -16,11 +16,13 @@ import (
 
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
-	l                  sync.RWMutex
-	root               *radix.Tree
-	mountUUIDCache     *radix.Tree
-	mountAccessorCache *radix.Tree
-	tokenStoreSaltFunc func(context.Context) (*salt.Salt, error)
+	l                        sync.RWMutex
+	root                     *radix.Tree
+	mountUUIDCache           *radix.Tree
+	mountAccessorCache       *radix.Tree
+	tokenStoreSaltFunc       func(context.Context) (*salt.Salt, error)
+	cubbyholeIDByTokenIDFunc func(string) (string, error)
+
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
@@ -82,9 +84,16 @@ func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse
 	}
 }
 
-// SaltID is used to apply a salt and hash to an ID to make sure its not reversible
-func (re *routeEntry) SaltID(id string) string {
+// SaltIDSHA1 is used to apply a salt and hash to an ID to make sure its not
+// reversible. This is only here for backwards compatibility.
+func (re *routeEntry) SaltIDSHA1(id string) string {
 	return salt.SaltID(re.mountEntry.UUID, id, salt.SHA1Hash)
+}
+
+// SaltIDSHA256 is used to salt to the given ID by the mount entry's identifier
+// and hash the combination using SHA2-256
+func (re *routeEntry) SaltIDSHA256(id string) string {
+	return salt.SaltID(re.mountEntry.UUID, id, salt.SHA256Hash)
 }
 
 // Mount is used to expose a logical backend at a given prefix, using a unique salt,
@@ -453,15 +462,29 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	case strings.HasPrefix(originalPath, "auth/token/"):
 	case strings.HasPrefix(originalPath, "sys/"):
 	case strings.HasPrefix(originalPath, "cubbyhole/"):
-		// In order for the token store to revoke later, we need to have the same
-		// salted ID, so we double-salt what's going to the cubbyhole backend
-		salt, err := r.tokenStoreSaltFunc(ctx)
+		cubbyholeID, err := r.cubbyholeIDByTokenIDFunc(req.ClientToken)
 		if err != nil {
 			return nil, false, false, err
 		}
-		req.ClientToken = re.SaltID(salt.SaltID(req.ClientToken))
+		if cubbyholeID != "" {
+			req.ClientToken = cubbyholeID
+		} else {
+			// This is only here for backwards compatibility
+
+			// In order for the token store to revoke later, we need to have the same
+			// salted ID, so we double-salt what's going to the cubbyhole backend
+			salt, err := r.tokenStoreSaltFunc(ctx)
+			if err != nil {
+				return nil, false, false, err
+			}
+			// `salt.SaltID` here will use SHA1 as the salt for token store is
+			// configured to use SHA1
+			req.ClientToken = re.SaltIDSHA1(salt.SaltID(req.ClientToken))
+		}
 	default:
-		req.ClientToken = re.SaltID(req.ClientToken)
+		// As of today, there are no use cases that would require ClientToken
+		// to be sent to other backends.
+		req.ClientToken = ""
 	}
 
 	// Cache the pointer to the original connection object

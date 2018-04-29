@@ -1409,12 +1409,12 @@ func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *log
 		return logical.ErrorResponse("missing accessor"), nil
 	}
 
-	aEntry, err := b.Core.tokenStore.lookupByAccessor(ctx, accessor, false)
+	tokenID, err := b.Core.tokenStore.lookupByAccessor(ctx, accessor, false)
 	if err != nil {
 		return nil, err
 	}
 
-	d.Raw["token"] = aEntry.TokenID
+	d.Raw["token"] = tokenID
 	return b.handleCapabilities(ctx, req, d)
 }
 
