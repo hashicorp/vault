@@ -772,13 +772,13 @@ func (ts *TokenStore) createAccessor(ctx context.Context, entry *TokenEntry) err
 	}
 	entry.Accessor = accessorUUID
 
-	idHMAC, err := ts.hmac(ctx, entry.Accessor)
+	accessorHMAC, err := ts.hmac(ctx, entry.Accessor)
 	if err != nil {
 		return err
 	}
 
 	// Create index entry, mapping the accessor to the token ID
-	path := accessorPrefix + idHMAC
+	path := accessorPrefix + accessorHMAC
 	aEntry := &accessorEntry{
 		TokenID:    entry.ID,
 		AccessorID: entry.Accessor,
@@ -1579,34 +1579,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		lock := locksutil.LockForKey(ts.tokenLocks, accessorEntry.TokenID)
 		lock.RLock()
 
-		idHMAC, err := ts.hmac(ctx, accessorEntry.TokenID)
-		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to HMAC token ID: {{err}}", err))
-			lock.RUnlock()
-			continue
-		}
-		obfuscatedID := idHMAC
-		te, err := ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
+		te, err := ts.lookupTokenNonLocked(ctx, accessorEntry.TokenID, true)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup tainted ID: {{err}}", err))
 			lock.RUnlock()
 			continue
-		}
-		if te == nil {
-			// This is only here for backwards compatibility
-			saltedID, err := ts.SaltID(ctx, accessorEntry.TokenID)
-			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to hash token ID: {{err}}", err))
-				lock.RUnlock()
-				continue
-			}
-			obfuscatedID = saltedID
-			te, err = ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
-			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup tainted ID: {{err}}", err))
-				lock.RUnlock()
-				continue
-			}
 		}
 
 		lock.RUnlock()
@@ -1615,7 +1592,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		// more and conclude that accessor, leases, and secondary index entries
 		// for this token should not exist as well.
 		if te == nil {
-			ts.logger.Info("deleting token with nil entry", "obfuscated_id", obfuscatedID)
+			ts.logger.Info("deleting token with nil entry")
 
 			// RevokeByToken expects a '*TokenEntry'. For the
 			// purposes of tidying, it is sufficient if the token

@@ -1331,7 +1331,6 @@ func (m *ExpirationManager) lookupByToken(tokenID string) ([]string, error) {
 	return append(leaseIDs, ids...), nil
 }
 
-// lookupByToken is used to lookup all the leaseID's via the
 func (m *ExpirationManager) scanLeaseIDsByPrefix(prefix string) ([]string, error) {
 	// Scan via the index for sub-leases
 	subKeys, err := m.tokenView.List(m.quitContext, prefix)
