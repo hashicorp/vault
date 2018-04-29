@@ -44,7 +44,7 @@ func (c *ListCommand) Flags() *FlagSets {
 }
 
 func (c *ListCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFolders()
+	return c.PredictVaultFolders(mountFilterExceptKV2())
 }
 
 func (c *ListCommand) AutocompleteFlags() complete.Flags {

@@ -43,7 +43,7 @@ func (c *ReadCommand) Flags() *FlagSets {
 }
 
 func (c *ReadCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFiles()
+	return c.PredictVaultFiles(mountFilterExceptKV2())
 }
 
 func (c *ReadCommand) AutocompleteFlags() complete.Flags {

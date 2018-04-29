@@ -23,7 +23,7 @@ func (c *KVMetadataDeleteCommand) Help() string {
 	helpText := `
 Usage: vault kv metadata delete [options] PATH
 
-  Deletes all versions and metadata for the provided key. 
+  Deletes all versions and metadata for the provided key.
 
       $ vault kv metadata delete secret/foo
 
@@ -39,7 +39,7 @@ func (c *KVMetadataDeleteCommand) Flags() *FlagSets {
 }
 
 func (c *KVMetadataDeleteCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFiles()
+	return c.PredictVaultFiles(mountFilterOnlyKV())
 }
 
 func (c *KVMetadataDeleteCommand) AutocompleteFlags() complete.Flags {

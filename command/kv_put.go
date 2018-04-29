@@ -75,7 +75,7 @@ func (c *KVPutCommand) Flags() *FlagSets {
 }
 
 func (c *KVPutCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultFiles(mountFilterOnlyKV())
 }
 
 func (c *KVPutCommand) AutocompleteFlags() complete.Flags {
