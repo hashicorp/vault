@@ -747,21 +747,32 @@ func (m *ExpirationManager) RestoreObfuscatedTokenCheck(source string, obfuscate
 
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
-func (m *ExpirationManager) RenewToken(req *logical.Request, source string, token string,
+func (m *ExpirationManager) RenewToken(req *logical.Request, source string, tokenID string,
 	increment time.Duration) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 
 	// Compute the Lease ID
-	idHMAC, err := m.tokenStore.hmac(m.quitContext, token)
+	idHMAC, err := m.tokenStore.hmac(m.quitContext, tokenID)
 	if err != nil {
 		return nil, err
 	}
-	leaseID := path.Join(source, idHMAC)
 
-	// Load the entry
-	le, err := m.loadEntry(leaseID)
+	le, err := m.loadEntry(path.Join(source, idHMAC))
 	if err != nil {
 		return nil, err
+	}
+
+	if le == nil {
+		// This is only here for backwards compatibility
+		saltedID, err := m.tokenStore.SaltID(m.quitContext, tokenID)
+		if err != nil {
+			return nil, err
+		}
+
+		le, err = m.loadEntry(path.Join(source, saltedID))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Check if the lease is renewable. Note that this also checks for a nil
@@ -803,7 +814,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	resp.Auth.TTL = ttl
 
 	// Attach the ClientToken
-	resp.Auth.ClientToken = token
+	resp.Auth.ClientToken = tokenID
 
 	// Update the lease entry
 	le.Auth = resp.Auth
