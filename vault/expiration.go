@@ -550,7 +550,7 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 // RevokeByToken is used to revoke all the secrets issued with a given token.
 // This is done by using the secondary index. It also removes the lease entry
 // for the token itself. As a result it should *ONLY* ever be called from the
-// token store's revokeSalted function.
+// token store's revokeObfuscatedToken function.
 func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
 
@@ -706,10 +706,10 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	return resp, nil
 }
 
-// RestoreSaltedTokenCheck verifies that the token is not expired while running
+// RestoreObfuscatedTokenCheck verifies that the token is not expired while running
 // in restore mode.  If we are not in restore mode, the lease has already been
 // restored or the lease still has time left, it returns true.
-func (m *ExpirationManager) RestoreSaltedTokenCheck(source string, obfuscatedID string) (bool, error) {
+func (m *ExpirationManager) RestoreObfuscatedTokenCheck(source string, obfuscatedID string) (bool, error) {
 	defer metrics.MeasureSince([]string{"expire", "restore-token-check"}, time.Now())
 
 	// Return immediately if we are not in restore mode, expiration manager is

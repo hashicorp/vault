@@ -3307,7 +3307,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	te, err := ts.lookupSalted(context.Background(), idHMAC, false)
+	te, err := ts.lookupObfuscatedToken(context.Background(), idHMAC, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3330,7 +3330,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	// Should return no entry because it's tainted
-	te, err = ts.lookupSalted(context.Background(), idHMAC, false)
+	te, err = ts.lookupObfuscatedToken(context.Background(), idHMAC, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3356,7 +3356,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	// Should return tainted entries
-	te, err = ts.lookupSalted(context.Background(), idHMAC, true)
+	te, err = ts.lookupObfuscatedToken(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3373,13 +3373,13 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		return fmt.Errorf("keep it frosty")
 	}
 
-	err = ts.revokeSalted(context.Background(), idHMAC, nil)
+	err = ts.revokeObfuscatedToken(context.Background(), idHMAC, nil)
 	if err == nil {
 		t.Fatalf("expected err")
 	}
 
 	// Since revocation failed we should see the tokenRevocationFailed canary value
-	te, err = ts.lookupSalted(context.Background(), idHMAC, true)
+	te, err = ts.lookupObfuscatedToken(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3399,7 +3399,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	go func() {
 		cubbyFuncLock.RLock()
-		err := ts.revokeSalted(context.Background(), idHMAC, nil)
+		err := ts.revokeObfuscatedToken(context.Background(), idHMAC, nil)
 		cubbyFuncLock.RUnlock()
 		if err == nil {
 			t.Fatalf("expected error")
@@ -3408,7 +3408,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	// Give time for the function to start and grab locks
 	time.Sleep(200 * time.Millisecond)
-	te, err = ts.lookupSalted(context.Background(), idHMAC, true)
+	te, err = ts.lookupObfuscatedToken(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3427,12 +3427,12 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	defer cubbyFuncLock.Unlock()
 	ts.cubbyholeDestroyer = origDestroyCubbyhole
 
-	err = ts.revokeSalted(context.Background(), idHMAC, nil)
+	err = ts.revokeObfuscatedToken(context.Background(), idHMAC, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	te, err = ts.lookupSalted(context.Background(), idHMAC, true)
+	te, err = ts.lookupObfuscatedToken(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3496,15 +3496,15 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		}
 
 		// Revoke the token while leaking other items associated with the
-		// token. Do this by doing what revokeSalted used to do before it was
-		// fixed, i.e., by deleting the storage entry for token and its
+		// token. Do this by doing what revokeObfuscatedToken used to do before
+		// it was fixed, i.e., by deleting the storage entry for token and its
 		// cubbyhole and by not deleting its secondary index, its accessor and
 		// associated leases.
 		idHMAC, err := ts.hmac(context.Background(), clientToken)
 		if err != nil {
 			t.Fatal(err)
 		}
-		te, err := ts.lookupSalted(context.Background(), idHMAC, true)
+		te, err := ts.lookupObfuscatedToken(context.Background(), idHMAC, true)
 		if err != nil {
 			t.Fatalf("failed to lookup token: %v", err)
 		}
@@ -3632,8 +3632,8 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 		}
 
 		// Revoke the token while leaking other items associated with the
-		// token. Do this by doing what revokeSalted used to do before it was
-		// fixed, i.e., by deleting the storage entry for token and its
+		// token. Do this by doing what revokeObfuscatedToken used to do before
+		// it was fixed, i.e., by deleting the storage entry for token and its
 		// cubbyhole and by not deleting its secondary index, its accessor and
 		// associated leases.
 		idHMAC, err := ts.hmac(context.Background(), clientToken)
@@ -3641,7 +3641,7 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		te, err := ts.lookupSalted(context.Background(), idHMAC, true)
+		te, err := ts.lookupObfuscatedToken(context.Background(), idHMAC, true)
 		if err != nil {
 			t.Fatalf("failed to lookup token: %v", err)
 		}
@@ -3806,7 +3806,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	te, err := ts.lookupSalted(context.Background(), idHMAC, true)
+	te, err := ts.lookupObfuscatedToken(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatalf("failed to lookup token: %v", err)
 	}
@@ -3819,7 +3819,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	if ts.view.Delete(context.Background(), path); err != nil {
 		t.Fatalf("failed to delete token entry: %v", err)
 	}
-	te, err = ts.lookupSalted(context.Background(), idHMAC, true)
+	te, err = ts.lookupObfuscatedToken(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatalf("failed to lookup token: %v", err)
 	}

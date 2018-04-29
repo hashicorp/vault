@@ -980,7 +980,7 @@ func (ts *TokenStore) lookupTokenNonLocked(ctx context.Context, id string, taint
 		return nil, err
 	}
 
-	te, err := ts.lookupSalted(ctx, idHMAC, tainted)
+	te, err := ts.lookupObfuscatedToken(ctx, idHMAC, tainted)
 	if err != nil {
 		return nil, err
 	}
@@ -991,7 +991,7 @@ func (ts *TokenStore) lookupTokenNonLocked(ctx context.Context, id string, taint
 		if err != nil {
 			return nil, err
 		}
-		te, err = ts.lookupSalted(ctx, saltedID, tainted)
+		te, err = ts.lookupObfuscatedToken(ctx, saltedID, tainted)
 	}
 
 	return te, err
@@ -1012,10 +1012,10 @@ func (ts *TokenStore) lookupTainted(ctx context.Context, id string) (*TokenEntry
 	return ts.lookupTokenNonLocked(ctx, id, true)
 }
 
-// lookupSalted is used to find a token given its obfuscated ID. If tainted is
+// lookupObfuscatedToken is used to find a token given its obfuscated ID. If tainted is
 // true, entries that are in some revocation state (currently, indicated by num
 // uses < 0), the entry will be returned anyways
-func (ts *TokenStore) lookupSalted(ctx context.Context, obfuscatedID string, tainted bool) (*TokenEntry, error) {
+func (ts *TokenStore) lookupObfuscatedToken(ctx context.Context, obfuscatedID string, tainted bool) (*TokenEntry, error) {
 	// Lookup token
 	path := lookupPrefix + obfuscatedID
 	raw, err := ts.view.Get(ctx, path)
@@ -1044,7 +1044,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, obfuscatedID string, tai
 	if ts.expiration == nil {
 		return nil, nil
 	}
-	check, err := ts.expiration.RestoreSaltedTokenCheck(entry.Path, obfuscatedID)
+	check, err := ts.expiration.RestoreObfuscatedTokenCheck(entry.Path, obfuscatedID)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to check token in restore mode: {{err}}", err)
 	}
@@ -1111,7 +1111,7 @@ func (ts *TokenStore) Revoke(ctx context.Context, tokenID string) error {
 	}
 	obfuscatedID := idHMAC
 
-	te, err := ts.lookupSalted(ctx, idHMAC, true)
+	te, err := ts.lookupObfuscatedToken(ctx, idHMAC, true)
 	if err != nil {
 		return err
 	}
@@ -1123,7 +1123,7 @@ func (ts *TokenStore) Revoke(ctx context.Context, tokenID string) error {
 			return err
 		}
 		obfuscatedID = saltedID
-		te, err = ts.lookupSalted(ctx, saltedID, true)
+		te, err = ts.lookupObfuscatedToken(ctx, saltedID, true)
 	}
 	if err != nil {
 		return err
@@ -1133,16 +1133,16 @@ func (ts *TokenStore) Revoke(ctx context.Context, tokenID string) error {
 		return nil
 	}
 
-	return ts.revokeSalted(ctx, obfuscatedID, te)
+	return ts.revokeObfuscatedToken(ctx, obfuscatedID, te)
 }
 
-func (ts *TokenStore) revokeSalted(ctx context.Context, obfuscatedID string, entry *TokenEntry) (ret error) {
+func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID string, entry *TokenEntry) (ret error) {
 	var err error
 	// Protect the entry lookup/writing with locks. The rub here is that we
 	// don't know the ID until we look it up once, so first we look it up, then
 	// do a locked lookup.
 	if entry == nil {
-		entry, err = ts.lookupSalted(ctx, obfuscatedID, true)
+		entry, err = ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
 		if err != nil {
 			return err
 		}
@@ -1155,7 +1155,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, obfuscatedID string, ent
 	lock.Lock()
 
 	// Lookup the token first
-	entry, err = ts.lookupSalted(ctx, obfuscatedID, true)
+	entry, err = ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
 	if err != nil {
 		lock.Unlock()
 		return err
@@ -1174,10 +1174,10 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, obfuscatedID string, ent
 		return nil
 	}
 
-	// This acts as a WAL. lookupSalted will no longer return this entry,
-	// so the token cannot be used, but this way we can keep the entry
-	// around until after the rest of this function is attempted, and a
-	// tidy function can key off of this value to try again.
+	// This acts as a WAL. lookupObfuscatedToken will no longer return this
+	// entry, so the token cannot be used, but this way we can keep the entry
+	// around until after the rest of this function is attempted, and a tidy
+	// function can key off of this value to try again.
 	entry.NumUses = tokenRevocationInProgress
 	err = ts.storeCommon(ctx, entry, false)
 	lock.Unlock()
@@ -1195,7 +1195,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, obfuscatedID string, ent
 
 			// Lookup the token again to make sure something else didn't
 			// revoke in the interim
-			entry, err := ts.lookupSalted(ctx, obfuscatedID, true)
+			entry, err := ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
 			if err != nil {
 				return
 			}
@@ -1282,7 +1282,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, obfuscatedID string, ent
 		return errwrap.Wrapf("failed to scan for children: {{err}}", err)
 	}
 	for _, child := range children {
-		entry, err := ts.lookupSalted(ctx, child, true)
+		entry, err := ts.lookupObfuscatedToken(ctx, child, true)
 		if err != nil {
 			return errwrap.Wrapf("failed to get child token: {{err}}", err)
 		}
@@ -1356,7 +1356,7 @@ func (ts *TokenStore) revokeTreeObfuscated(ctx context.Context, obfuscatedID str
 		// If the length of the children array is zero,
 		// then we are at a leaf node.
 		if len(children) == 0 {
-			if err := ts.revokeSalted(ctx, id, nil); err != nil {
+			if err := ts.revokeObfuscatedToken(ctx, id, nil); err != nil {
 				return errwrap.Wrapf("failed to revoke entry: {{err}}", err)
 			}
 			// If the length of l is equal to 1, then the last token has been deleted
@@ -1487,7 +1487,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		// that deletion of children later with this loop below applies to all
 		// children
 		originalChildrenCount := int64(len(children))
-		exists, _ := ts.lookupSalted(ctx, strings.TrimSuffix(parent, "/"), true)
+		exists, _ := ts.lookupObfuscatedToken(ctx, strings.TrimSuffix(parent, "/"), true)
 		if exists == nil {
 			ts.logger.Debug("deleting invalid parent prefix entry", "index", parentPrefix+parent)
 		}
@@ -1503,7 +1503,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			// found, it doesn't exist. Doing the following without locking
 			// since appropriate locks cannot be held with salted token IDs.
 			// Also perform deletion if the parent doesn't exist any more.
-			te, _ := ts.lookupSalted(ctx, child, true)
+			te, _ := ts.lookupObfuscatedToken(ctx, child, true)
 			// If the child entry is not nil, but the parent doesn't exist, then turn
 			// that child token into an orphan token. Theres no deletion in this case.
 			if te != nil && exists == nil {
@@ -1586,7 +1586,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			continue
 		}
 		obfuscatedID := idHMAC
-		te, err := ts.lookupSalted(ctx, obfuscatedID, true)
+		te, err := ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup tainted ID: {{err}}", err))
 			lock.RUnlock()
@@ -1601,7 +1601,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				continue
 			}
 			obfuscatedID = saltedID
-			te, err = ts.lookupSalted(ctx, obfuscatedID, true)
+			te, err = ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
 			if err != nil {
 				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup tainted ID: {{err}}", err))
 				lock.RUnlock()
