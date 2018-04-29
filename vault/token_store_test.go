@@ -301,12 +301,10 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 		testMakeToken(t, ts, root, key, "", []string{"foo"})
 	}
 
-	// Revoke root to make the number of accessors match
-	salted, err := ts.SaltID(context.Background(), root)
+	err := ts.Revoke(context.Background(), root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts.revokeSalted(context.Background(), salted)
 
 	req := logical.TestRequest(t, logical.ListOperation, "accessors/")
 
@@ -520,13 +518,13 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 	}
 
 	// Replace the lease with a lease with an expire time in the past
-	saltedID, err := ts.SaltID(context.Background(), ent.ID)
+	idHMAC, err := ts.hmac(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Create a lease entry
-	leaseID := path.Join(ent.Path, saltedID)
+	leaseID := path.Join(ent.Path, idHMAC)
 	le := &leaseEntry{
 		LeaseID:     leaseID,
 		ClientToken: ent.ID,
@@ -939,6 +937,7 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 		Path:        "auth/token/create",
 		DisplayName: "token-foo-bar-baz",
 		TTL:         0,
+		Version:     2,
 	}
 	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if err != nil {
@@ -971,6 +970,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 		DisplayName: "token",
 		NumUses:     1,
 		TTL:         0,
+		Version:     2,
 	}
 	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if err != nil {
@@ -991,7 +991,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses_Invalid(t *testing.T) {
 
 	resp, err := ts.HandleRequest(context.Background(), req)
 	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v resp: %#v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 }
 
@@ -1011,7 +1011,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses_Restricted(t *testing.T) {
 	req.ClientToken = resp.Auth.ClientToken
 	_, err = ts.HandleRequest(context.Background(), req)
 	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v resp: %#v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 }
 
@@ -1034,6 +1034,7 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 		Path:        "auth/token/create",
 		DisplayName: "token",
 		TTL:         0,
+		Version:     2,
 	}
 	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if err != nil {
@@ -1053,7 +1054,7 @@ func TestTokenStore_HandleRequest_CreateToken_BadParent(t *testing.T) {
 
 	resp, err := ts.HandleRequest(context.Background(), req)
 	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v resp: %#v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 	if resp.Data["error"] != "parent token lookup failed" {
 		t.Fatalf("bad: %#v", resp)
@@ -1105,7 +1106,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRootID(t *testing.T) {
 
 	resp, err := ts.HandleRequest(context.Background(), req)
 	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v resp: %#v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 	if resp.Data["error"] != "root or sudo privileges required to specify token id" {
 		t.Fatalf("bad: %#v", resp)
@@ -1139,7 +1140,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_InvalidSubset(t *testing.T
 
 	resp, err := ts.HandleRequest(context.Background(), req)
 	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v resp: %#v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 	if resp.Data["error"] != "child policies must be subset of parent" {
 		t.Fatalf("bad: %#v", resp)
@@ -1237,7 +1238,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_NoParent(t *testing.T) {
 
 	resp, err := ts.HandleRequest(context.Background(), req)
 	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v resp: %#v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 	if resp.Data["error"] != "root or sudo privileges required to create orphan token" {
 		t.Fatalf("bad: %#v", resp)
@@ -1999,13 +2000,13 @@ func TestTokenStore_RoleDisallowedPoliciesWithRoot(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = ts.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	expected := []string{"root", "testpolicy"}
@@ -2049,7 +2050,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "roles/test23")
@@ -2059,7 +2060,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "roles/test123")
@@ -2069,7 +2070,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	// Create a token that has all the policies defined above
@@ -2078,7 +2079,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	req.Data["policies"] = []string{"test1", "test2", "test3"}
 	resp, err = ts.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 	if resp == nil || resp.Auth == nil {
 		t.Fatal("got nil response")
@@ -2116,7 +2117,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	req.ClientToken = parentToken
 	resp, err = ts.HandleRequest(context.Background(), req)
 	if err != nil || resp == nil || resp.IsError() {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	// Create a role to have 'default' policy disallowed
@@ -2127,7 +2128,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "create/default")
@@ -2192,7 +2193,7 @@ func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 	req.Data["policies"] = []string{"test1", "test2", "test3"}
 	resp, err = ts.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 	if resp == nil || resp.Auth == nil {
 		t.Fatal("got nil response")
@@ -3003,7 +3004,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
 		t.Fatalf("bad: policies: expected: [policy, default]; actual: %s", resp.Auth.Policies)
@@ -3017,7 +3018,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	tokenData["no_default_policy"] = true
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
@@ -3030,7 +3031,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	tokenReq.Data = nil
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
@@ -3045,7 +3046,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
@@ -3059,7 +3060,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
@@ -3074,7 +3075,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
@@ -3088,7 +3089,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	tokenReq.ClientToken = newToken
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
@@ -3102,7 +3103,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 	tokenReq.Path = "create/role1"
 	tokenReq.Data = map[string]interface{}{
@@ -3110,7 +3111,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
 		t.Fatalf("bad: policies: expected: [policy1]; actual: %s", resp.Auth.Policies)
@@ -3125,12 +3126,12 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
 		t.Fatalf("bad: policies: expected: [default policy1]; actual: %s", resp.Auth.Policies)
@@ -3146,12 +3147,12 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
 		t.Fatalf("bad: policies: expected: [policy1]; actual: %s", resp.Auth.Policies)
@@ -3163,12 +3164,12 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
 		t.Fatalf("bad: policies: expected: [policy1]; actual: %s", resp.Auth.Policies)
@@ -3181,13 +3182,13 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 
 	delete(tokenReq.Data, "policies")
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err == nil || (resp != nil && !resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 }
 
@@ -3208,7 +3209,7 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 
 	tokenReq := &logical.Request{
@@ -3221,7 +3222,7 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	expected := []string{"allowed1", "default"}
@@ -3241,7 +3242,7 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	expected = []string{"allowed1"}
@@ -3264,7 +3265,7 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v, resp: %v", err, resp)
+		t.Fatalf("err: %v, resp: %#v", err, resp)
 	}
 
 	tokenReq.Data = map[string]interface{}{
@@ -3297,15 +3298,16 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
-	tut := resp.Auth.ClientToken
-	saltTut, err := ts.SaltID(context.Background(), tut)
+	clientToken := resp.Auth.ClientToken
+	idHMAC, err := ts.hmac(context.Background(), clientToken)
 	if err != nil {
 		t.Fatal(err)
 	}
-	te, err := ts.lookupSalted(context.Background(), saltTut, false)
+
+	te, err := ts.lookupSalted(context.Background(), idHMAC, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3328,7 +3330,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	// Should return no entry because it's tainted
-	te, err = ts.lookupSalted(context.Background(), saltTut, false)
+	te, err = ts.lookupSalted(context.Background(), idHMAC, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3339,7 +3341,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	// But it should show up in an API lookup call
 	req := &logical.Request{
 		Path:        "lookup-self",
-		ClientToken: tut,
+		ClientToken: clientToken,
 		Operation:   logical.UpdateOperation,
 	}
 	resp, err = ts.HandleRequest(context.Background(), req)
@@ -3354,7 +3356,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	// Should return tainted entries
-	te, err = ts.lookupSalted(context.Background(), saltTut, true)
+	te, err = ts.lookupSalted(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3367,17 +3369,17 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	origDestroyCubbyhole := ts.cubbyholeDestroyer
 
-	ts.cubbyholeDestroyer = func(context.Context, *TokenStore, string) error {
+	ts.cubbyholeDestroyer = func(context.Context, *TokenStore, *TokenEntry) error {
 		return fmt.Errorf("keep it frosty")
 	}
 
-	err = ts.revokeSalted(context.Background(), saltTut)
+	err = ts.revokeSalted(context.Background(), idHMAC, nil)
 	if err == nil {
 		t.Fatalf("expected err")
 	}
 
 	// Since revocation failed we should see the tokenRevocationFailed canary value
-	te, err = ts.lookupSalted(context.Background(), saltTut, true)
+	te, err = ts.lookupSalted(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3389,7 +3391,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	// Check the race condition situation by making the process sleep
-	ts.cubbyholeDestroyer = func(context.Context, *TokenStore, string) error {
+	ts.cubbyholeDestroyer = func(context.Context, *TokenStore, *TokenEntry) error {
 		time.Sleep(1 * time.Second)
 		return fmt.Errorf("keep it frosty")
 	}
@@ -3397,7 +3399,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	go func() {
 		cubbyFuncLock.RLock()
-		err := ts.revokeSalted(context.Background(), saltTut)
+		err := ts.revokeSalted(context.Background(), idHMAC, nil)
 		cubbyFuncLock.RUnlock()
 		if err == nil {
 			t.Fatalf("expected error")
@@ -3406,7 +3408,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	// Give time for the function to start and grab locks
 	time.Sleep(200 * time.Millisecond)
-	te, err = ts.lookupSalted(context.Background(), saltTut, true)
+	te, err = ts.lookupSalted(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3425,12 +3427,12 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	defer cubbyFuncLock.Unlock()
 	ts.cubbyholeDestroyer = origDestroyCubbyhole
 
-	err = ts.revokeSalted(context.Background(), saltTut)
+	err = ts.revokeSalted(context.Background(), idHMAC, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	te, err = ts.lookupSalted(context.Background(), saltTut, true)
+	te, err = ts.lookupSalted(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3456,7 +3458,7 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	numberOfAccessors := len(resp.Data["keys"].([]string))
@@ -3476,16 +3478,16 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		}
 		resp, err = ts.HandleRequest(context.Background(), tokenReq)
 		if err != nil || (resp != nil && resp.IsError()) {
-			t.Fatalf("err:%v resp:%v", err, resp)
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
-		tut := resp.Auth.ClientToken
+		clientToken := resp.Auth.ClientToken
 
 		// Creation of another token should end up with incrementing
 		// the number of accessors
 		// the storage
 		resp, err = ts.HandleRequest(context.Background(), accessorListReq)
 		if err != nil || (resp != nil && resp.IsError()) {
-			t.Fatalf("err:%v resp:%v", err, resp)
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		numberOfAccessors = len(resp.Data["keys"].([]string))
@@ -3498,33 +3500,32 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		// fixed, i.e., by deleting the storage entry for token and its
 		// cubbyhole and by not deleting its secondary index, its accessor and
 		// associated leases.
-
-		saltedTut, err := ts.SaltID(context.Background(), tut)
+		idHMAC, err := ts.hmac(context.Background(), clientToken)
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = ts.lookupSalted(context.Background(), saltedTut, true)
+		te, err := ts.lookupSalted(context.Background(), idHMAC, true)
 		if err != nil {
 			t.Fatalf("failed to lookup token: %v", err)
 		}
 
 		// Destroy the token index
-		path := lookupPrefix + saltedTut
+		path := lookupPrefix + idHMAC
 		if ts.view.Delete(context.Background(), path); err != nil {
 			t.Fatalf("failed to delete token entry: %v", err)
 		}
 
 		// Destroy the cubby space
-		err = ts.destroyCubbyhole(context.Background(), saltedTut)
+		err = ts.cubbyholeDestroyer(context.Background(), ts, te)
 		if err != nil {
-			t.Fatalf("failed to destroyCubbyhole: %v", err)
+			t.Fatalf("failed to destroy cubbyhole: %v", err)
 		}
 
 		// Leaking of accessor should have resulted in no change to the number
 		// of accessors
 		resp, err = ts.HandleRequest(context.Background(), accessorListReq)
 		if err != nil || (resp != nil && resp.IsError()) {
-			t.Fatalf("err:%v resp:%v", err, resp)
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		numberOfAccessors = len(resp.Data["keys"].([]string))
@@ -3546,13 +3547,13 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		t.Fatalf("resp: %#v", resp)
 	}
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	// Tidy should have removed all the dangling accessor entries
 	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	numberOfAccessors = len(resp.Data["keys"].([]string))
@@ -3580,7 +3581,7 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 	}
 	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	numberOfAccessors := len(resp.Data["keys"].([]string))
@@ -3600,29 +3601,29 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 		}
 		resp, err = ts.HandleRequest(context.Background(), tokenReq)
 		if err != nil || (resp != nil && resp.IsError()) {
-			t.Fatalf("err:%v resp:%v", err, resp)
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
-		tut := resp.Auth.ClientToken
+		clientToken := resp.Auth.ClientToken
 
 		// Create a child token
 		tokenReq = &logical.Request{
 			Operation:   logical.UpdateOperation,
 			Path:        "create",
-			ClientToken: tut,
+			ClientToken: clientToken,
 			Data: map[string]interface{}{
 				"policies": []string{"policy1"},
 			},
 		}
 		resp, err = ts.HandleRequest(context.Background(), tokenReq)
 		if err != nil || (resp != nil && resp.IsError()) {
-			t.Fatalf("err:%v resp:%v", err, resp)
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		// Creation of another token should end up with incrementing the number of
 		// accessors the storage
 		resp, err = ts.HandleRequest(context.Background(), accessorListReq)
 		if err != nil || (resp != nil && resp.IsError()) {
-			t.Fatalf("err:%v resp:%v", err, resp)
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		numberOfAccessors = len(resp.Data["keys"].([]string))
@@ -3635,24 +3636,24 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 		// fixed, i.e., by deleting the storage entry for token and its
 		// cubbyhole and by not deleting its secondary index, its accessor and
 		// associated leases.
-
-		saltedTut, err := ts.SaltID(context.Background(), tut)
+		idHMAC, err := ts.hmac(context.Background(), clientToken)
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = ts.lookupSalted(context.Background(), saltedTut, true)
+
+		te, err := ts.lookupSalted(context.Background(), idHMAC, true)
 		if err != nil {
 			t.Fatalf("failed to lookup token: %v", err)
 		}
 
 		// Destroy the token index
-		path := lookupPrefix + saltedTut
+		path := lookupPrefix + idHMAC
 		if ts.view.Delete(context.Background(), path); err != nil {
 			t.Fatalf("failed to delete token entry: %v", err)
 		}
 
 		// Destroy the cubby space
-		err = ts.destroyCubbyhole(context.Background(), saltedTut)
+		err = ts.cubbyholeDestroyer(context.Background(), ts, te)
 		if err != nil {
 			t.Fatalf("failed to destroyCubbyhole: %v", err)
 		}
@@ -3661,7 +3662,7 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 		// of accessors
 		resp, err = ts.HandleRequest(context.Background(), accessorListReq)
 		if err != nil || (resp != nil && resp.IsError()) {
-			t.Fatalf("err:%v resp:%v", err, resp)
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		numberOfAccessors = len(resp.Data["keys"].([]string))
@@ -3683,13 +3684,13 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 		t.Fatalf("resp: %#v", resp)
 	}
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	// Tidy should have removed all the dangling accessor entries
 	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	// The number of accessors should be equal to number of valid child tokens
@@ -3765,11 +3766,11 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	tut := resp.Auth.ClientToken
+	clientToken := resp.Auth.ClientToken
 
 	req = &logical.Request{
 		Path:        "prod/aws/foo",
-		ClientToken: tut,
+		ClientToken: clientToken,
 	}
 	resp = &logical.Response{
 		Secret: &logical.Secret{
@@ -3791,7 +3792,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 
 	sort.Strings(leases)
 
-	storedLeases, err := exp.lookupByToken(tut)
+	storedLeases, err := exp.lookupByToken(clientToken)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3801,11 +3802,11 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Now, delete the token entry. The leases should still exist.
-	saltedTut, err := ts.SaltID(context.Background(), tut)
+	idHMAC, err := ts.hmac(context.Background(), clientToken)
 	if err != nil {
 		t.Fatal(err)
 	}
-	te, err := ts.lookupSalted(context.Background(), saltedTut, true)
+	te, err := ts.lookupSalted(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatalf("failed to lookup token: %v", err)
 	}
@@ -3814,11 +3815,11 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Destroy the token index
-	path := lookupPrefix + saltedTut
+	path := lookupPrefix + idHMAC
 	if ts.view.Delete(context.Background(), path); err != nil {
 		t.Fatalf("failed to delete token entry: %v", err)
 	}
-	te, err = ts.lookupSalted(context.Background(), saltedTut, true)
+	te, err = ts.lookupSalted(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatalf("failed to lookup token: %v", err)
 	}
@@ -3827,7 +3828,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Verify leases still exist
-	storedLeases, err = exp.lookupByToken(tut)
+	storedLeases, err = exp.lookupByToken(clientToken)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3840,7 +3841,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	ts.handleTidy(context.Background(), nil, nil)
 
 	// Verify leases are gone
-	storedLeases, err = exp.lookupByToken(tut)
+	storedLeases, err = exp.lookupByToken(clientToken)
 	if err != nil {
 		t.Fatal(err)
 	}
