@@ -240,8 +240,6 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 		var boundCIDRList []string
 		if boundCIDRs, ok := boundCIDRListRaw.([]string); ok {
 			boundCIDRList = boundCIDRs
-		} else if boundCIDRListStr, ok := boundCIDRListRaw.(string); ok {
-			boundCIDRList = strings.Split(boundCIDRListStr, ",")
 		}
 
 		for _, v := range boundCIDRList {

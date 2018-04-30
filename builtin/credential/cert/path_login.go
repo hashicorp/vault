@@ -106,6 +106,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			Alias: &logical.Alias{
 				Name: clientCerts[0].SerialNumber.String(),
 			},
+			BoundCIDRs: matched.Entry.BoundCIDRs,
 		},
 	}
 
@@ -169,6 +170,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	resp.Auth.TTL = cert.TTL
 	resp.Auth.MaxTTL = cert.MaxTTL
 	resp.Auth.Period = cert.Period
+	resp.Auth.BoundCIDRs = cert.BoundCIDRs
 	return resp, nil
 }
 

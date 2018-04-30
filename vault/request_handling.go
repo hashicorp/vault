@@ -8,6 +8,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
@@ -494,6 +495,28 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 	// If the response generated an authentication, then generate the token
 	if resp != nil && resp.Auth != nil {
+
+		// First ensure the login request originated from a white-listed CIDR, if provided
+		if len(resp.Auth.BoundCIDRs) > 0 {
+			var valid bool
+			remoteSockAddr, err := sockaddr.NewSockAddr(req.Connection.RemoteAddr)
+			if err != nil {
+				if c.Logger().IsDebug() {
+					c.Logger().Debug("could not parse remote addr into sockaddr", "error", err, "remote_addr", req.Connection.RemoteAddr)
+				}
+				return nil, nil, logical.ErrPermissionDenied
+			}
+			for _, cidr := range auth.BoundCIDRs {
+				if cidr.Contains(remoteSockAddr) {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				return nil, nil, logical.ErrPermissionDenied
+			}
+		}
+
 		var entity *identity.Entity
 		auth = resp.Auth
 
@@ -574,6 +597,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			TTL:          tokenTTL,
 			NumUses:      auth.NumUses,
 			EntityID:     auth.EntityID,
+			BoundCIDRs:   auth.BoundCIDRs,
 		}
 
 		te.Policies = policyutil.SanitizePolicies(te.Policies, true)
