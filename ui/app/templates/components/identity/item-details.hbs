@@ -1,3 +1,15 @@
+{{#if model.disabled}}
+  <div class="box is-shadowless is-marginless">
+    {{#message-in-page type="warning" messageClass="message-body is-marginless"}}
+      This {{model.identityType}} is disabled. All associated tokens cannot be used, but are not revoked.
+      {{#if model.canEdit}}
+        <button type="button" class="button is-warning">
+          Enable
+        </button>
+      {{/if}}
+    {{/message-in-page}}
+  </div>
+{{/if}}
 {{info-table-row label="Name" value=model.name }}
 {{info-table-row label="Type" value=model.type }}
 {{info-table-row label="ID" value=model.id }}

@@ -7,8 +7,11 @@ const { computed } = Ember;
 const { attr, hasMany } = DS;
 
 export default IdentityModel.extend({
-  formFields: ['name', 'policies', 'metadata'],
+  formFields: ['name', 'policies', 'metadata', 'disabled'],
   name: attr('string'),
+  disabled: attr('boolean', {
+    defaultValue: false,
+  }),
   mergedEntityIds: attr(),
   metadata: attr({
     editType: 'kv',
