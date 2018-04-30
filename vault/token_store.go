@@ -1124,16 +1124,17 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 		return err
 	}
 
-	// If we are returning an error, mark the entry with -3 to indicate
-	// failed revocation. This way we don't try to clean up during active
-	// revocation (-2).
 	defer func() {
-		lock.Lock()
-		defer lock.Unlock()
+		if deleteEntry || ret != nil {
+			lock.Lock()
+			defer lock.Unlock()
+		}
 
 		if deleteEntry {
 			path := lookupPrefix + saltedID
 			if err := ts.view.Delete(ctx, path); err != nil {
+				// We set ret like so since ret can be from other errors and we don't
+				// want to override with nil
 				ret = err
 			} else {
 				// If the delete was sucessful, then we short-circuit and don't mark the
@@ -1142,6 +1143,9 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 			}
 		}
 
+		// If we are returning an error, mark the entry with -3 to indicate
+		// failed revocation. This way we don't try to clean up during active
+		// revocation (-2).
 		if ret != nil {
 			entry.NumUses = tokenRevocationFailed
 			ts.storeCommon(ctx, entry, false)
