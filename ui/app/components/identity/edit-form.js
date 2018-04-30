@@ -6,17 +6,18 @@ const { computed } = Ember;
 export default Ember.Component.extend({
   'data-test-component': 'identity-edit-form',
   model: null,
+
+  // 'create', 'edit', 'merge'
   mode: 'create',
   /*
    * @param Function
    * @public
    *
-   * Optional param to call a function upon successfully mounting a backend
-   *
+   * Optional param to call a function upon successfully saving an entity
    */
   onSave: () => {},
 
-  cancelLink: computed('mode', 'model', function() {
+  cancelLink: computed('mode', 'model.identityType', function() {
     let { model, mode } = this.getProperties('model', 'mode');
     let key = `${mode}-${model.get('identityType')}`;
     let routes = {

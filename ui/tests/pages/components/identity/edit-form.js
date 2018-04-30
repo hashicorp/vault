@@ -3,8 +3,8 @@ import fields from '../form-field';
 
 export default {
   ...fields,
-
   cancelLinkHref: attribute('href', '[data-test-cancel-link]'),
+  cancelLink: clickable('[data-test-cancel-link]'),
   name: fillable('[data-test-input="name"]'),
   disabled: clickable('[data-test-input="disabled"]'),
   submit: clickable('[data-test-identity-submit]'),
