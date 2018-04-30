@@ -8,9 +8,16 @@ moduleForAcceptance('Acceptance | /access/identity/entities', {
   },
 });
 
-test('it renders the page', function(assert) {
+test('it renders the entities page', function(assert) {
   page.visit({ item_type: 'entities' });
   andThen(() => {
-    assert.ok(currentRouteName(), 'vault.cluster.access.identity.index', 'navigates to the correct route');
+    assert.equal(currentRouteName(), 'vault.cluster.access.identity.index', 'navigates to the correct route');
+  });
+});
+
+test('it renders the groups page', function(assert) {
+  page.visit({ item_type: 'groups' });
+  andThen(() => {
+    assert.equal(currentRouteName(), 'vault.cluster.access.identity.index', 'navigates to the correct route');
   });
 });

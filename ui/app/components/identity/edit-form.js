@@ -4,6 +4,7 @@ import { humanize } from 'vault/helpers/humanize';
 
 const { computed } = Ember;
 export default Ember.Component.extend({
+  'data-test-component': 'identity-edit-form',
   model: null,
   mode: 'create',
   /*
