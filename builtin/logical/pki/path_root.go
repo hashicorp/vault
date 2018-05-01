@@ -260,7 +260,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		Province:              data.Get("province").([]string),
 		StreetAddress:         data.Get("street_address").([]string),
 		PostalCode:            data.Get("postal_code").([]string),
-		TTL:                   (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
+		TTLDuration:           time.Duration(data.Get("ttl").(int)) * time.Second,
 		AllowLocalhost:        true,
 		AllowAnyName:          true,
 		AllowIPSANs:           true,

@@ -23,7 +23,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -860,24 +859,12 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 	{
 		ttl = time.Duration(data.apiData.Get("ttl").(int)) * time.Second
 
-		if ttl == 0 {
-			roleTTL, err := parseutil.ParseDurationSecond(data.role.TTL)
-			if err != nil {
-				return errutil.UserError{Err: fmt.Sprintf(
-					"invalid role ttl: %s", err)}
-			}
-			if roleTTL != 0 {
-				ttl = roleTTL
-			}
+		if ttl == 0 && data.role.TTLDuration > 0 {
+			ttl = data.role.TTLDuration
 		}
 
-		roleMaxTTL, err := parseutil.ParseDurationSecond(data.role.MaxTTL)
-		if err != nil {
-			return errutil.UserError{Err: fmt.Sprintf(
-				"invalid role max_ttl: %s", err)}
-		}
-		if roleMaxTTL != 0 {
-			maxTTL = roleMaxTTL
+		if data.role.MaxTTLDuration > 0 {
+			maxTTL = data.role.MaxTTLDuration
 		}
 
 		if ttl == 0 {

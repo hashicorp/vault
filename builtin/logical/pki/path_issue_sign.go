@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -125,8 +124,8 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 	}
 
 	entry := &roleEntry{
-		TTL:              b.System().DefaultLeaseTTL().String(),
-		MaxTTL:           b.System().MaxLeaseTTL().String(),
+		TTLDuration:      b.System().DefaultLeaseTTL(),
+		MaxTTLDuration:   b.System().MaxLeaseTTL(),
 		AllowLocalhost:   true,
 		AllowAnyName:     true,
 		AllowIPSANs:      true,
@@ -138,26 +137,14 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 	}
 
 	if role != nil {
-		if role.TTL != "" {
-			ttl, err := parseutil.ParseDurationSecond(role.TTL)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("could not parse role ttl: %s", err)), nil
-			}
-			if ttl != 0 {
-				entry.TTL = role.TTL
-			}
+		if role.TTLDuration > 0 {
+			entry.TTLDuration = role.TTLDuration
 		}
-		if role.MaxTTL != "" {
-			ttl, err := parseutil.ParseDurationSecond(role.MaxTTL)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("could not parse role max ttl: %s", err)), nil
-			}
-			if ttl != 0 {
-				entry.MaxTTL = role.MaxTTL
-			}
+		if role.MaxTTLDuration > 0 {
+			entry.MaxTTLDuration = role.MaxTTLDuration
 		}
-		if entry.TTL > entry.MaxTTL {
-			return logical.ErrorResponse(fmt.Sprintf("requested ttl of %s is greater than max ttl of %s", entry.TTL, entry.MaxTTL)), nil
+		if entry.MaxTTLDuration > 0 && entry.TTLDuration > entry.MaxTTLDuration {
+			return logical.ErrorResponse(fmt.Sprintf("requested ttl of %s is greater than max ttl of %s", entry.TTLDuration.String(), entry.MaxTTLDuration.String())), nil
 		}
 		entry.NoStore = role.NoStore
 	}

@@ -294,9 +294,27 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 		result.Lease = ""
 		modified = true
 	}
+	if result.TTLDuration == 0 && len(result.TTL) != 0 {
+		parsed, err := parseutil.ParseDurationSecond(result.TTL)
+		if err != nil {
+			return nil, err
+		}
+		result.TTLDuration = parsed
+		result.TTL = ""
+		modified = true
+	}
 	if len(result.MaxTTL) == 0 && len(result.LeaseMax) != 0 {
 		result.MaxTTL = result.LeaseMax
 		result.LeaseMax = ""
+		modified = true
+	}
+	if result.MaxTTLDuration == 0 && len(result.MaxTTL) != 0 {
+		parsed, err := parseutil.ParseDurationSecond(result.MaxTTL)
+		if err != nil {
+			return nil, err
+		}
+		result.MaxTTLDuration = parsed
+		result.MaxTTL = ""
 		modified = true
 	}
 	if result.AllowBaseDomain {
@@ -394,19 +412,6 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		return nil, nil
 	}
 
-	hasMax := true
-	if len(role.MaxTTL) == 0 {
-		role.MaxTTL = "(system default)"
-		hasMax = false
-	}
-	if len(role.TTL) == 0 {
-		if hasMax {
-			role.TTL = "(system default, capped to role max)"
-		} else {
-			role.TTL = "(system default)"
-		}
-	}
-
 	resp := &logical.Response{
 		Data: role.ToResponseData(),
 	}
@@ -427,8 +432,8 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	name := data.Get("name").(string)
 
 	entry := &roleEntry{
-		MaxTTL:                        (time.Duration(data.Get("max_ttl").(int)) * time.Second).String(),
-		TTL:                           (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
+		MaxTTLDuration:                time.Duration(data.Get("max_ttl").(int)) * time.Second,
+		TTLDuration:                   time.Duration(data.Get("ttl").(int)) * time.Second,
 		AllowLocalhost:                data.Get("allow_localhost").(bool),
 		AllowedDomains:                data.Get("allowed_domains").([]string),
 		AllowBareDomains:              data.Get("allow_bare_domains").(bool),
@@ -480,17 +485,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		return logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported"), nil
 	}
 
-	maxTTL, err := parseutil.ParseDurationSecond(entry.MaxTTL)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Invalid max ttl: %s", err)), nil
-	}
-	ttl, err := parseutil.ParseDurationSecond(entry.TTL)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Invalid ttl: %s", err)), nil
-	}
-	if maxTTL != 0 && ttl > maxTTL {
+	if entry.MaxTTLDuration > 0 && entry.TTLDuration > entry.MaxTTLDuration {
 		return logical.ErrorResponse(
 			`"ttl" value must be less than "max_ttl" value`,
 		), nil
@@ -550,48 +545,50 @@ func parseKeyUsages(input []string) int {
 }
 
 type roleEntry struct {
-	LeaseMax                      string   `json:"lease_max"`
-	Lease                         string   `json:"lease"`
-	MaxTTL                        string   `json:"max_ttl" mapstructure:"max_ttl"`
-	TTL                           string   `json:"ttl" mapstructure:"ttl"`
-	AllowLocalhost                bool     `json:"allow_localhost" mapstructure:"allow_localhost"`
-	AllowedBaseDomain             string   `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
-	AllowedDomainsOld             string   `json:"allowed_domains,omit_empty"`
-	AllowedDomains                []string `json:"allowed_domains_list" mapstructure:"allowed_domains"`
-	AllowBaseDomain               bool     `json:"allow_base_domain"`
-	AllowBareDomains              bool     `json:"allow_bare_domains" mapstructure:"allow_bare_domains"`
-	AllowTokenDisplayName         bool     `json:"allow_token_displayname" mapstructure:"allow_token_displayname"`
-	AllowSubdomains               bool     `json:"allow_subdomains" mapstructure:"allow_subdomains"`
-	AllowGlobDomains              bool     `json:"allow_glob_domains" mapstructure:"allow_glob_domains"`
-	AllowAnyName                  bool     `json:"allow_any_name" mapstructure:"allow_any_name"`
-	EnforceHostnames              bool     `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
-	AllowIPSANs                   bool     `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
-	ServerFlag                    bool     `json:"server_flag" mapstructure:"server_flag"`
-	ClientFlag                    bool     `json:"client_flag" mapstructure:"client_flag"`
-	CodeSigningFlag               bool     `json:"code_signing_flag" mapstructure:"code_signing_flag"`
-	EmailProtectionFlag           bool     `json:"email_protection_flag" mapstructure:"email_protection_flag"`
-	UseCSRCommonName              bool     `json:"use_csr_common_name" mapstructure:"use_csr_common_name"`
-	UseCSRSANs                    bool     `json:"use_csr_sans" mapstructure:"use_csr_sans"`
-	KeyType                       string   `json:"key_type" mapstructure:"key_type"`
-	KeyBits                       int      `json:"key_bits" mapstructure:"key_bits"`
-	MaxPathLength                 *int     `json:",omitempty" mapstructure:"max_path_length"`
-	KeyUsageOld                   string   `json:"key_usage,omitempty"`
-	KeyUsage                      []string `json:"key_usage_list" mapstructure:"key_usage"`
-	OUOld                         string   `json:"ou,omitempty"`
-	OU                            []string `json:"ou_list" mapstructure:"ou"`
-	OrganizationOld               string   `json:"organization,omitempty"`
-	Organization                  []string `json:"organization_list" mapstructure:"organization"`
-	Country                       []string `json:"country" mapstructure:"country"`
-	Locality                      []string `json:"locality" mapstructure:"locality"`
-	Province                      []string `json:"province" mapstructure:"province"`
-	StreetAddress                 []string `json:"street_address" mapstructure:"street_address"`
-	PostalCode                    []string `json:"postal_code" mapstructure:"postal_code"`
-	GenerateLease                 *bool    `json:"generate_lease,omitempty"`
-	NoStore                       bool     `json:"no_store" mapstructure:"no_store"`
-	RequireCN                     bool     `json:"require_cn" mapstructure:"require_cn"`
-	AllowedOtherSANs              []string `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
-	PolicyIdentifiers             []string `json:"policy_identifiers" mapstructure:"policy_identifiers"`
-	BasicConstraintsValidForNonCA bool     `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
+	LeaseMax                      string        `json:"lease_max"`
+	Lease                         string        `json:"lease"`
+	MaxTTL                        string        `json:"max_ttl" mapstructure:"max_ttl"`
+	TTL                           string        `json:"ttl" mapstructure:"ttl"`
+	TTLDuration                   time.Duration `json:"ttl_duration" mapstructure:"ttl_duration"`
+	MaxTTLDuration                time.Duration `json:"max_ttl_duration" mapstructure:"max_ttl_duration"`
+	AllowLocalhost                bool          `json:"allow_localhost" mapstructure:"allow_localhost"`
+	AllowedBaseDomain             string        `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
+	AllowedDomainsOld             string        `json:"allowed_domains,omit_empty"`
+	AllowedDomains                []string      `json:"allowed_domains_list" mapstructure:"allowed_domains"`
+	AllowBaseDomain               bool          `json:"allow_base_domain"`
+	AllowBareDomains              bool          `json:"allow_bare_domains" mapstructure:"allow_bare_domains"`
+	AllowTokenDisplayName         bool          `json:"allow_token_displayname" mapstructure:"allow_token_displayname"`
+	AllowSubdomains               bool          `json:"allow_subdomains" mapstructure:"allow_subdomains"`
+	AllowGlobDomains              bool          `json:"allow_glob_domains" mapstructure:"allow_glob_domains"`
+	AllowAnyName                  bool          `json:"allow_any_name" mapstructure:"allow_any_name"`
+	EnforceHostnames              bool          `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
+	AllowIPSANs                   bool          `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
+	ServerFlag                    bool          `json:"server_flag" mapstructure:"server_flag"`
+	ClientFlag                    bool          `json:"client_flag" mapstructure:"client_flag"`
+	CodeSigningFlag               bool          `json:"code_signing_flag" mapstructure:"code_signing_flag"`
+	EmailProtectionFlag           bool          `json:"email_protection_flag" mapstructure:"email_protection_flag"`
+	UseCSRCommonName              bool          `json:"use_csr_common_name" mapstructure:"use_csr_common_name"`
+	UseCSRSANs                    bool          `json:"use_csr_sans" mapstructure:"use_csr_sans"`
+	KeyType                       string        `json:"key_type" mapstructure:"key_type"`
+	KeyBits                       int           `json:"key_bits" mapstructure:"key_bits"`
+	MaxPathLength                 *int          `json:",omitempty" mapstructure:"max_path_length"`
+	KeyUsageOld                   string        `json:"key_usage,omitempty"`
+	KeyUsage                      []string      `json:"key_usage_list" mapstructure:"key_usage"`
+	OUOld                         string        `json:"ou,omitempty"`
+	OU                            []string      `json:"ou_list" mapstructure:"ou"`
+	OrganizationOld               string        `json:"organization,omitempty"`
+	Organization                  []string      `json:"organization_list" mapstructure:"organization"`
+	Country                       []string      `json:"country" mapstructure:"country"`
+	Locality                      []string      `json:"locality" mapstructure:"locality"`
+	Province                      []string      `json:"province" mapstructure:"province"`
+	StreetAddress                 []string      `json:"street_address" mapstructure:"street_address"`
+	PostalCode                    []string      `json:"postal_code" mapstructure:"postal_code"`
+	GenerateLease                 *bool         `json:"generate_lease,omitempty"`
+	NoStore                       bool          `json:"no_store" mapstructure:"no_store"`
+	RequireCN                     bool          `json:"require_cn" mapstructure:"require_cn"`
+	AllowedOtherSANs              []string      `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
+	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
+	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
@@ -599,8 +596,8 @@ type roleEntry struct {
 
 func (r *roleEntry) ToResponseData() map[string]interface{} {
 	responseData := map[string]interface{}{
-		"ttl":                                r.TTL,
-		"max_ttl":                            r.MaxTTL,
+		"ttl":                                int64(r.TTLDuration.Seconds()),
+		"max_ttl":                            int64(r.MaxTTLDuration.Seconds()),
 		"allow_localhost":                    r.AllowLocalhost,
 		"allowed_domains":                    r.AllowedDomains,
 		"allow_bare_domains":                 r.AllowBareDomains,
