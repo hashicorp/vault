@@ -136,6 +136,8 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		GenerateLease:    new(bool),
 	}
 
+	*entry.GenerateLease = false
+
 	if role != nil {
 		if role.TTLDuration > 0 {
 			entry.TTLDuration = role.TTLDuration
@@ -143,15 +145,14 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		if role.MaxTTLDuration > 0 {
 			entry.MaxTTLDuration = role.MaxTTLDuration
 		}
-		if entry.MaxTTLDuration > 0 && entry.TTLDuration > entry.MaxTTLDuration {
-			return logical.ErrorResponse(fmt.Sprintf("requested ttl of %s is greater than max ttl of %s", entry.TTLDuration.String(), entry.MaxTTLDuration.String())), nil
+		if role.GenerateLease != nil {
+			*entry.GenerateLease = *role.GenerateLease
 		}
 		entry.NoStore = role.NoStore
 	}
 
-	*entry.GenerateLease = false
-	if role != nil && role.GenerateLease != nil {
-		*entry.GenerateLease = *role.GenerateLease
+	if entry.MaxTTLDuration > 0 && entry.TTLDuration > entry.MaxTTLDuration {
+		return logical.ErrorResponse(fmt.Sprintf("requested ttl of %s is greater than max ttl of %s", entry.TTLDuration.String(), entry.MaxTTLDuration.String())), nil
 	}
 
 	return b.pathIssueSignCert(ctx, req, data, entry, true, true)
