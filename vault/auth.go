@@ -526,6 +526,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 			// this is loaded *after* the normal mounts, including cubbyhole
 			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
+			c.router.tokenStoreLookupObfuscatedFunc = c.tokenStore.lookupObfuscatedToken
 			c.tokenStore.cubbyholeBackend = c.router.MatchingBackend("cubbyhole/").(*CubbyholeBackend)
 		}
 	}
