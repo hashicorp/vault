@@ -465,20 +465,14 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		if err != nil {
 			return nil, false, false, err
 		}
-
-		te, err := r.tokenStoreLookup(ctx, req.ClientToken)
-		if err != nil {
-			return nil, false, false, err
-		}
-
 		switch {
-		case te == nil || te.Version > 1:
-			req.ClientToken = re.SaltIDSHA256("h" + salt.GetHMAC(req.ClientToken))
-		default:
+		case req.TokenEntryVersion() < 2:
 			// This is only here for backwards compatibility
 			// In order for the token store to revoke later, we need to have the same
 			// salted ID, so we double-salt what's going to the cubbyhole backend
 			req.ClientToken = re.SaltIDSHA1(salt.SaltID(req.ClientToken))
+		default:
+			req.ClientToken = re.SaltIDSHA256("h" + salt.GetHMAC(req.ClientToken))
 		}
 	default:
 		// There are no use cases yet that would require client token to be

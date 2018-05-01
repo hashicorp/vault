@@ -144,6 +144,16 @@ type Request struct {
 	// For replication, contains the last WAL on the remote side after handling
 	// the request, used for best-effort avoidance of stale read-after-write
 	lastRemoteWAL uint64
+
+	tokenEntryVersion int
+}
+
+func (r *Request) TokenEntryVersion() int {
+	return r.tokenEntryVersion
+}
+
+func (r *Request) SetTokenEntryVersion(version int) {
+	r.tokenEntryVersion = version
 }
 
 // Get returns a data field and guards for nil Data

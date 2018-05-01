@@ -766,6 +766,10 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *TokenEn
 		return nil, nil, nil, logical.ErrPermissionDenied
 	}
 
+	// Populate the token entry's version in the request to help appropriately
+	// obfuscate the client token while routing
+	req.SetTokenEntryVersion(te.Version)
+
 	// CIDR checks bind all tokens except non-expiring root tokens
 	if te.TTL != 0 && len(te.BoundCIDRs) > 0 {
 		var valid bool
