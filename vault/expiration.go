@@ -567,12 +567,27 @@ func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
 	}
 
 	// Revoke all the keys
-	for idx, leaseID := range existing {
-		if err := m.revokeCommon(leaseID, false, false); err != nil {
-			return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
+	for _, leaseID := range existing {
+		// Load the entry
+		le, err := m.loadEntry(leaseID)
+		if err != nil {
+			return err
+		}
+
+		// If there's a lease, set expiration to now, persist, and call
+		// updatePending to hand off revocation to the expiration manager
+		if le != nil {
+			le.ExpireTime = time.Now()
+
+			if err := m.persistEntry(le); err != nil {
+				return err
+			}
+
+			m.updatePending(le, 0)
 		}
 	}
 
+	// te.Path should never be empty, but we check just in case
 	if te.Path != "" {
 		saltedID, err := m.tokenStore.SaltID(m.quitContext, te.ID)
 		if err != nil {
