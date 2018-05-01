@@ -16,12 +16,12 @@ import (
 
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
-	l                              sync.RWMutex
-	root                           *radix.Tree
-	mountUUIDCache                 *radix.Tree
-	mountAccessorCache             *radix.Tree
-	tokenStoreLookupObfuscatedFunc func(context.Context, string, bool) (*TokenEntry, error)
-	tokenStoreSaltFunc             func(context.Context) (*salt.Salt, error)
+	l                  sync.RWMutex
+	root               *radix.Tree
+	mountUUIDCache     *radix.Tree
+	mountAccessorCache *radix.Tree
+	tokenStoreLookup   func(context.Context, string) (*TokenEntry, error)
+	tokenStoreSaltFunc func(context.Context) (*salt.Salt, error)
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
@@ -454,11 +454,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.EntityID = ""
 	}
 
-	// Hash the request token unless the request is being routed to the token
-	// or system backend.
 	clientToken := req.ClientToken
 	switch {
+	// Passthrough the client token for token store
 	case strings.HasPrefix(originalPath, "auth/token/"):
+	// Passthrough the client token for system engine
 	case strings.HasPrefix(originalPath, "sys/"):
 	case strings.HasPrefix(originalPath, "cubbyhole/"):
 		salt, err := r.tokenStoreSaltFunc(ctx)
@@ -466,13 +466,13 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 			return nil, false, false, err
 		}
 
-		te, err := r.tokenStoreLookupObfuscatedFunc(ctx, req.ClientToken, false)
+		te, err := r.tokenStoreLookup(ctx, req.ClientToken)
 		if err != nil {
 			return nil, false, false, err
 		}
 
 		if te == nil {
-			return nil, false, false, fmt.Errorf("nil token entry")
+			return nil, false, false, fmt.Errorf("invalid token while routing")
 		}
 
 		switch {
@@ -485,8 +485,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 			req.ClientToken = re.SaltIDSHA256("h" + salt.GetHMAC(req.ClientToken))
 		}
 	default:
-		// As of today, there are no use cases that would require ClientToken
-		// to be sent to other backends.
+		// There are no use cases yet that would require client token to be
+		// passed through to backends.
 		req.ClientToken = ""
 	}
 
