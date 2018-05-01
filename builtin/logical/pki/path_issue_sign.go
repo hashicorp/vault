@@ -152,7 +152,7 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 	}
 
 	if entry.MaxTTLDuration > 0 && entry.TTLDuration > entry.MaxTTLDuration {
-		return logical.ErrorResponse(fmt.Sprintf("requested ttl of %s is greater than max ttl of %s", entry.TTLDuration.String(), entry.MaxTTLDuration.String())), nil
+		return logical.ErrorResponse(fmt.Sprintf("requested ttl of %s is greater than max ttl of %s", entry.TTLDuration, entry.MaxTTLDuration)), nil
 	}
 
 	return b.pathIssueSignCert(ctx, req, data, entry, true, true)
