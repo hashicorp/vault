@@ -6291,6 +6291,13 @@ quick-temp@^0.1.0, quick-temp@^0.1.2, quick-temp@^0.1.3, quick-temp@^0.1.5, quic
     rimraf "^2.5.4"
     underscore.string "~3.3.4"
 
+qunit-dom@^0.6.2:
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/qunit-dom/-/qunit-dom-0.6.2.tgz#0b37012cbbc838f09eba760b3d39924ad5ccbccb"
+  dependencies:
+    broccoli-funnel "^2.0.0"
+    broccoli-merge-trees "^2.0.0"
+
 qunit-notifications@^0.1.1:
   version "0.1.1"
   resolved "https://registry.yarnpkg.com/qunit-notifications/-/qunit-notifications-0.1.1.tgz#3001afc6a6a77dfbd962ccbcddde12dec5286c09"
