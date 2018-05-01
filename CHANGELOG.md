@@ -7,6 +7,11 @@ IMPROVEMENTS:
  * expiration: Allow revoke-prefix and revoke-force to work on single leases as
    well as prefixes [GH-4450]
 
+BUG FIXES:
+
+ * secret/pki: Fix path length parameter being ignored when using
+   `use_csr_values` and signing an intermediate CA cert [GH-4459]
+
 ## 0.10.1/0.9.7 (April 25th, 2018)
 
 The following two items are in both 0.9.7 and 0.10.1. They only affect
