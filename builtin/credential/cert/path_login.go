@@ -384,7 +384,7 @@ func (b *backend) checkForValidChain(chains [][]*x509.Certificate) bool {
 
 func (b *backend) checkCIDR(cert *CertEntry, req *logical.Request) error {
 
-	if len(cert.BoundCIDRs) <= 0 {
+	if len(cert.BoundCIDRs) == 0 {
 		// short-circuit the below logic
 		return nil
 	}

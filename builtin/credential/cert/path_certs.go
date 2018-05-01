@@ -235,20 +235,12 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	var parsedCIDRs []*sockaddr.SockAddrMarshaler
-	if boundCIDRListRaw, ok := d.GetOk("bound_cidrs"); ok {
-
-		var boundCIDRList []string
-		if boundCIDRs, ok := boundCIDRListRaw.([]string); ok {
-			boundCIDRList = boundCIDRs
+	for _, v := range d.Get("bound_cidrs").([]string) {
+		parsedCIDR, err := sockaddr.NewSockAddr(v)
+		if err != nil {
+			return nil, err
 		}
-
-		for _, v := range boundCIDRList {
-			parsedCIDR, err := sockaddr.NewSockAddr(v)
-			if err != nil {
-				return nil, err
-			}
-			parsedCIDRs = append(parsedCIDRs, &sockaddr.SockAddrMarshaler{parsedCIDR})
-		}
+		parsedCIDRs = append(parsedCIDRs, &sockaddr.SockAddrMarshaler{parsedCIDR})
 	}
 
 	certEntry := &CertEntry{
