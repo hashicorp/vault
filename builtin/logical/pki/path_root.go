@@ -123,7 +123,9 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		return nil, err
 	}
 	if entry != nil {
-		return nil, nil
+		resp := &logical.Response{}
+		resp.AddWarning(fmt.Sprintf("Refusing to generate a root certificate over an existing root certificate. If you really want to destroy the original root certificate, please issue a delete against %sroot.", req.MountPoint))
+		return resp, nil
 	}
 
 	exported, format, role, errorResp := b.getGenerationParams(data)
