@@ -2,8 +2,9 @@ import Ember from 'ember';
 import { task } from 'ember-concurrency';
 import { humanize } from 'vault/helpers/humanize';
 
-const { computed } = Ember;
+const { computed, inject } = Ember;
 export default Ember.Component.extend({
+  flashMessages: inject.service(),
   'data-test-component': 'identity-edit-form',
   model: null,
 
@@ -35,16 +36,17 @@ export default Ember.Component.extend({
     return routes[key];
   }),
 
-  getMessage(model) {
+  getMessage(model, isDelete = false) {
     let mode = this.get('mode');
     let typeDisplay = humanize([model.get('identityType')]);
+    let action = isDelete ? 'deleted' : 'saved';
     if (mode === 'merge') {
       return 'Successfully merged entities';
     }
     if (model.get('id')) {
-      return `Successfully saved ${typeDisplay} ${model.id}.`;
+      return `Successfully ${action} ${typeDisplay} ${model.id}.`;
     }
-    return `Successfully saved ${typeDisplay}.`;
+    return `Successfully ${action} ${typeDisplay}.`;
   },
 
   save: task(function*() {
@@ -66,5 +68,22 @@ export default Ember.Component.extend({
     if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {
       model.rollbackAttributes();
     }
+  },
+
+  actions: {
+    deleteItem(model) {
+      let message = this.getMessage(model, true);
+      let flash = this.get('flashMessages');
+      let typeDisplay = humanize([model.get('identityType')]);
+      return model
+        .destroyRecord()
+        .then(() => {
+          flash.success(message);
+        })
+        .catch(e => {
+          let error = e.errors ? e.errors.join(' ') : e.message;
+          flash.danger(`There was an error deleting ${typeDisplay}: ${error}`);
+        });
+    },
   },
 });
