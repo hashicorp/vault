@@ -73,9 +73,9 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 
 	roleLock := b.roleLock(roleName)
 	roleLock.RLock()
-	defer roleLock.RUnlock()
 
 	role, err := b.roleEntry(ctx, req.Storage, roleName)
+	roleLock.RUnlock()
 	if err != nil {
 		return nil, err
 	}
@@ -108,20 +108,19 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 
 		secretIDLock := b.secretIDLock(secretIDHMAC)
 		secretIDLock.RLock()
-		secretIDUnlockFunc := secretIDLock.RUnlock
-		defer func() {
-			secretIDUnlockFunc()
-		}()
 
 		entry, err := b.nonLockedSecretIDStorageEntry(ctx, req.Storage, role.SecretIDPrefix, roleNameHMAC, secretIDHMAC)
 		if err != nil {
+			secretIDLock.RUnlock()
 			return nil, err
 		} else if entry == nil {
+			secretIDLock.RUnlock()
 			return logical.ErrorResponse(fmt.Sprintf("invalid secret_id %q", secretID)), nil
 		}
 
 		switch {
 		case entry.SecretIDNumUses == 0:
+			defer secretIDLock.RUnlock()
 			//
 			// SecretIDNumUses will be zero only if the usage limit was not set at all,
 			// in which case, the SecretID will remain to be valid as long as it is not
@@ -154,13 +153,9 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 			// the storage entry.
 			//
 
-			// Release the read lock
-			secretIDUnlockFunc()
-
+			secretIDLock.RUnlock()
 			secretIDLock.Lock()
-
-			// Set a write unlock to be called in the defer func
-			secretIDUnlockFunc = secretIDLock.Unlock
+			defer secretIDLock.Unlock()
 
 			// Lock switching may change the data. Refresh the contents.
 			entry, err = b.nonLockedSecretIDStorageEntry(ctx, req.Storage, role.SecretIDPrefix, roleNameHMAC, secretIDHMAC)
