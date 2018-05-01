@@ -3102,7 +3102,7 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	var response string
 	switch te.Policies[0] {
 	case responseWrappingPolicyName:
-		response, err = b.responseWrappingUnwrap(ctx, token, thirdParty)
+		response, err = b.responseWrappingUnwrap(ctx, te, thirdParty)
 	}
 	if err != nil {
 		var respErr *logical.Response
@@ -3129,22 +3129,23 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 
 // responseWrappingUnwrap will read the stored response in the cubbyhole and
 // return the raw HTTP response.
-func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, token string, thirdParty bool) (string, error) {
+func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *TokenEntry, thirdParty bool) (string, error) {
 	if thirdParty {
 		// Use the token to decrement the use count to avoid a second operation on the token.
-		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
+		_, err := b.Core.tokenStore.UseTokenByID(ctx, te.ID)
 		if err != nil {
 			return "", errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
 		}
 
-		defer b.Core.tokenStore.Revoke(ctx, token)
+		defer b.Core.tokenStore.Revoke(ctx, te.ID)
 	}
 
 	cubbyReq := &logical.Request{
 		Operation:   logical.ReadOperation,
 		Path:        "cubbyhole/response",
-		ClientToken: token,
+		ClientToken: te.ID,
 	}
+	cubbyReq.SetTokenEntryVersion(te.Version)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return "", errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
@@ -3187,6 +3188,8 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 		Path:        "cubbyhole/wrapinfo",
 		ClientToken: token,
 	}
+	// TODO: Figure out a better way to set the version
+	cubbyReq.SetTokenEntryVersion(2)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
@@ -3256,6 +3259,8 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		Path:        "cubbyhole/wrapinfo",
 		ClientToken: token,
 	}
+	// TODO: Figure out a better way to set the version
+	cubbyReq.SetTokenEntryVersion(2)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
@@ -3293,6 +3298,8 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		Path:        "cubbyhole/response",
 		ClientToken: token,
 	}
+	// TODO: Figure out a better way to set the version
+	cubbyReq.SetTokenEntryVersion(2)
 	cubbyResp, err = b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, errwrap.Wrapf("error looking up response: {{err}}", err)

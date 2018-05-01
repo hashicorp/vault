@@ -179,6 +179,7 @@ DONELISTHANDLING:
 			SealWrap: true,
 		}
 	}
+	cubbyReq.SetTokenEntryVersion(te.Version)
 
 	// During a rewrap, store the original response, don't wrap it again.
 	if req.Path == "sys/wrapping/rewrap" {
