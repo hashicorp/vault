@@ -1246,7 +1246,12 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		certTemplate.EmailAddresses = data.csr.EmailAddresses
 		certTemplate.IPAddresses = data.csr.IPAddresses
 
-		certTemplate.ExtraExtensions = data.csr.Extensions
+		for _, name := range data.csr.Extensions {
+			if !name.Id.Equal(oidExtensionBasicConstraints) {
+				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
+			}
+		}
+
 	} else {
 		certTemplate.DNSNames = data.params.DNSNames
 		certTemplate.EmailAddresses = data.params.EmailAddresses
