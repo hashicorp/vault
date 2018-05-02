@@ -43,7 +43,7 @@
     "ember-api-actions": "^0.1.8",
     "ember-basic-dropdown": "^0.33.5",
     "ember-basic-dropdown-hover": "^0.2.0",
-    "ember-cli": "~2.14.0",
+    "ember-cli": "~2.15.0",
     "ember-cli-autoprefixer": "^0.8.1",
     "ember-cli-babel": "^6.3.0",
     "ember-cli-clipboard": "^0.8.0",
