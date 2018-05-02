@@ -24,6 +24,7 @@
         {{#if item.canDelete}}
           <li class="action">
             {{#confirm-action
+              data-test-item-delete=true
               confirmButtonClasses="button is-primary"
               buttonClasses="link"
               onConfirmAction=(action "performTransaction" item)

@@ -78,7 +78,7 @@ export default Ember.Component.extend({
       model
         .destroyRecord()
         .then(() => {
-          return this.get('onSave')({saveType: 'delete'});
+          return this.get('onSave')({saveType: 'delete', model});
         });
     },
   },

@@ -6,10 +6,10 @@ export default Ember.Controller.extend({
   showTab: 'details',
   navAfterSave: task(function*({saveType, model}) {
     let isDelete = saveType === 'delete';
-    let type = model && model.get('identityType');
+    let type = model.get('identityType');
     let listRoutes= {
-      'entity-alias': 'vault.cluster.access.identity.aliases',
-      'group-alias': 'vault.cluster.access.identity.aliases',
+      'entity-alias': 'vault.cluster.access.identity.aliases.index',
+      'group-alias': 'vault.cluster.access.identity.aliases.index',
       'group': 'vault.cluster.access.identity.index',
       'entity': 'vault.cluster.access.identity.index',
     };
@@ -23,7 +23,7 @@ export default Ember.Controller.extend({
       return;
     }
     yield this.transitionToRoute(
-      'vault.cluster.access.identity.index'
+      routeName
     );
   }),
 });
