@@ -3,7 +3,7 @@
     {{#message-in-page type="warning" messageClass="message-body is-marginless"}}
       This {{model.identityType}} is disabled. All associated tokens cannot be used, but are not revoked.
       {{#if model.canEdit}}
-        <button type="button" class="button is-warning">
+        <button type="button" class="button is-orange" {{action "enable" model}}>
           Enable
         </button>
       {{/if}}
