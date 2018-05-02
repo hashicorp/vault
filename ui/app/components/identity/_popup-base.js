@@ -16,6 +16,7 @@ export default Component.extend({
       model.rollbackAttributes();
     }
   },
+  onSuccess(){},
   // override and return a promise
   transaction() {
     assert('override transaction call in an extension of popup-base', false);
@@ -27,6 +28,7 @@ export default Component.extend({
       let messageArgs = this.messageArgs(...args);
       return this.transaction(...args)
         .then(() => {
+          this.get('onSuccess')();
           this.get('flashMessages').success(this.successMessage(...messageArgs));
         })
         .catch(e => {
