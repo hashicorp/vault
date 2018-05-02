@@ -1275,6 +1275,10 @@ func (m *ExpirationManager) indexByToken(tokenID, leaseID string) (*logical.Stor
 
 	// This is only here for backwards compatibility
 	indexPath, err = m.hashIndexPath(tokenID, leaseID)
+	if err != nil {
+		return err
+	}
+
 	entry, err = m.tokenView.Get(m.quitContext, indexPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to look up secondary index entry")
@@ -1295,6 +1299,10 @@ func (m *ExpirationManager) removeIndexByToken(tokenID, leaseID string) error {
 
 	// This is only here for backwards compatibility
 	indexPath, err = m.hashIndexPath(tokenID, leaseID)
+	if err != nil {
+		return err
+	}
+
 	err = m.tokenView.Delete(m.quitContext, indexPath)
 	if err != nil {
 		return errwrap.Wrapf("failed to delete lease index entry: {{err}}", err)

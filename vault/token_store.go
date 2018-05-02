@@ -700,7 +700,8 @@ func (ts *TokenStore) SetExpirationManager(exp *ExpirationManager) {
 	ts.expiration = exp
 }
 
-// SaltID is used to apply a salt and hash to an ID to make sure its not reversible
+// Deprecated: SaltID is used to apply a salt and hash to an ID to make sure
+// its not reversible
 func (ts *TokenStore) SaltID(ctx context.Context, id string) (string, error) {
 	s, err := ts.Salt(ctx)
 	if err != nil {
