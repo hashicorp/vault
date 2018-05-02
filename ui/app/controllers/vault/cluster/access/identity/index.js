@@ -22,6 +22,23 @@ export default Ember.Controller.extend(ListController, {
           );
         });
     },
+
+    toggleDisabled(model) {
+      let action = model.get('disabled') ? ['enabled', 'enabling'] : ['disabled', 'disabling'];
+      let type = model.get('identityType');
+      let id = model.id;
+      model.toggleProperty('disabled');
+
+      model.save().
+        then(() => {
+          this.get('flashMessages').success(`Successfully ${action[0]} ${type}: ${id}`);
+        })
+        .catch(e => {
+          this.get('flashMessages').success(
+            `There was a problem ${action[1]} ${type}: ${id} - ${e.error.join(' ') || e.message}`
+          );
+        });
+    },
     reloadRecord(model) {
       model.reload();
     },
