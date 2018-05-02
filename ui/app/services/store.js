@@ -131,13 +131,19 @@ export default DS.Store.extend({
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
-    this.unloadAll(modelName);
-    this.push(
-      this.serializerFor(modelName).normalizeResponse(this, this.modelFor(modelName), response, null, 'query')
-    );
-    const model = this.peekAll(modelName);
-    model.set('meta', response.meta);
-    return model;
+    this.peekAll(modelName).forEach(record => {
+      record.unloadRecord();
+    });
+    return new Ember.RSVP.Promise((resolve) => {
+      Ember.run.schedule('destroy', () => {
+        this.push(
+          this.serializerFor(modelName).normalizeResponse(this, this.modelFor(modelName), response, null, 'query')
+        );
+        let model = this.peekAll(modelName);
+        model.set('meta', response.meta);
+        resolve(model);
+      });
+    });
   },
 
   // get cached data
