@@ -139,7 +139,7 @@ export default DS.Store.extend({
         this.push(
           this.serializerFor(modelName).normalizeResponse(this, this.modelFor(modelName), response, null, 'query')
         );
-        let model = this.peekAll(modelName);
+        let model = this.peekAll(modelName).toArray();
         model.set('meta', response.meta);
         resolve(model);
       });
