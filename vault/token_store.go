@@ -98,6 +98,12 @@ type TokenStore struct {
 
 	tokenLocks []*locksutil.LockEntry
 
+	// tokenPendingDeletion stores tokens that are being revoked. If the token is
+	// not in the map, it means that there's no deletion in progress. If the value
+	// is true it means deletion is in progress, and if false it means deletion
+	// failed. Revocation needs to handle these states accordingly.
+	tokensPendingDeletion *sync.Map
+
 	cubbyholeDestroyer func(context.Context, *TokenStore, string) error
 
 	logger log.Logger
@@ -122,6 +128,7 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 		cubbyholeDestroyer:          destroyCubbyhole,
 		logger:                      logger,
 		tokenLocks:                  locksutil.CreateLocks(),
+		tokensPendingDeletion:       &sync.Map{},
 		saltLock:                    sync.RWMutex{},
 		identityPoliciesDeriverFunc: c.fetchEntityAndDerivedPolicies,
 	}
@@ -1078,9 +1085,18 @@ func (ts *TokenStore) Revoke(ctx context.Context, id string) error {
 // revokeSalted is used to invalidate a given salted token,
 // any child tokens will be orphaned.
 func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret error) {
-	// Protect the entry lookup/writing with locks. The rub here is that we
-	// don't know the ID until we look it up once, so first we look it up, then
-	// do a locked lookup.
+	// Check and set the token deletion state. We only proceed with the deletion
+	// if we don't have a pending deletion (empty), or if the deletion previously
+	// failed (state is false)
+	state, loaded := ts.tokensPendingDeletion.LoadOrStore(saltedID, true)
+
+	// If the entry was loaded and it's state is true, we shortcircuit
+	if loaded && state == true {
+		return nil
+	}
+
+	// The map check above should protect use from any concurrent revocations, so
+	// doing a bare lookup here should be fine.
 	entry, err := ts.lookupSalted(ctx, saltedID, true)
 	if err != nil {
 		return err
@@ -1089,61 +1105,13 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 		return nil
 	}
 
-	lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
-	lock.Lock()
-
-	// Lookup the token first
-	entry, err = ts.lookupSalted(ctx, saltedID, true)
-	if err != nil {
-		lock.Unlock()
-		return err
-	}
-
-	if entry == nil {
-		lock.Unlock()
-		return nil
-	}
-
-	// On failure we write -3, so if we hit -2 here we're already running a
-	// revocation operation. This can happen due to e.g. recursion into this
-	// function via the expiration manager's RevokeByToken.
-	if entry.NumUses == tokenRevocationInProgress {
-		lock.Unlock()
-		return nil
-	}
-
-	// This acts as a WAL. lookupSalted will no longer return this entry,
-	// so the token cannot be used, but this way we can keep the entry
-	// around until after the rest of this function is attempted, and a
-	// tidy function can key off of this value to try again.
-	entry.NumUses = tokenRevocationInProgress
-	err = ts.storeCommon(ctx, entry, false)
-	lock.Unlock()
-	if err != nil {
-		return err
-	}
-
-	// If we are returning an error, mark the entry with -3 to indicate
-	// failed revocation. This way we don't try to clean up during active
-	// revocation (-2).
 	defer func() {
 		if ret != nil {
-			lock.Lock()
-			defer lock.Unlock()
-
-			// Lookup the token again to make sure something else didn't
-			// revoke in the interim
-			entry, err := ts.lookupSalted(ctx, saltedID, true)
-			if err != nil {
-				return
-			}
-
-			// If it exists just taint to -3 rather than trying to figure
-			// out what it means if it's already -3 after the -2 above
-			if entry != nil {
-				entry.NumUses = tokenRevocationFailed
-				ts.storeCommon(ctx, entry, false)
-			}
+			// If we failed we store the state as false, so that the next call to
+			// revokeSalted will retry
+			ts.tokensPendingDeletion.Store(saltedID, false)
+		} else {
+			ts.tokensPendingDeletion.Delete(saltedID)
 		}
 	}()
 
@@ -1265,6 +1233,11 @@ func (ts *TokenStore) revokeTreeSalted(ctx context.Context, saltedID string) err
 		// If the length of the children array is zero,
 		// then we are at a leaf node.
 		if len(children) == 0 {
+			// Whenever revokeSalted is called, the token will be removed immediately and
+			// any underlying secrets will be handed off to the expiration manager which will
+			// take care of expiring them. If Vault is restarted, any revoked tokens
+			// would have been deleted, and any pending leases for deletion will be restored
+			// by the expiration manager.
 			if err := ts.revokeSalted(ctx, id); err != nil {
 				return errwrap.Wrapf("failed to revoke entry: {{err}}", err)
 			}

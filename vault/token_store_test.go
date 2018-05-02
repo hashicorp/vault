@@ -3837,6 +3837,8 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	// Call tidy
 	ts.handleTidy(context.Background(), nil, nil)
 
+	time.Sleep(1 * time.Second)
+
 	// Verify leases are gone
 	storedLeases, err = exp.lookupByToken(tut)
 	if err != nil {
