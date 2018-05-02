@@ -87,7 +87,14 @@
     "normalize.css": "4.1.1",
     "prettier": "^1.5.3",
     "prettier-eslint-cli": "^4.2.1",
-    "qunit-dom": "^0.6.2"
+    "qunit-dom": "^0.6.2",
+    "text-encoder-lite": "1.0.0",
+    "base64-js": "1.2.1",
+    "autosize": "3.0.17",
+    "jsonlint": "1.6.0",
+    "codemirror": "5.15.2",
+    "Duration.js": "icholy/Duration.js#golang_compatible",
+    "string.prototype.startswith": "mathiasbynens/String.prototype.startsWith"
   },
   "engines": {
     "node": "^4.5 || 6.* || >= 7.*"
