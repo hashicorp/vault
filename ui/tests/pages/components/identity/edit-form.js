@@ -8,4 +8,6 @@ export default {
   name: fillable('[data-test-input="name"]'),
   disabled: clickable('[data-test-input="disabled"]'),
   submit: clickable('[data-test-identity-submit]'),
+  delete: clickable('[data-test-confirm-action-trigger]'),
+  confirmDelete: clickable('[data-test-confirm-button]'),
 };

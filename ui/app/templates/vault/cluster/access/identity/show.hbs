@@ -22,7 +22,7 @@
           {{i-con glyph="chevron-right" size=11}}
         </a>
       {{/unless}}
-      <a href="{{href-to 'vault.cluster.access.identity.edit' (pluralize model.identityType) model.id}}" class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true>
+      <a href="{{href-to 'vault.cluster.access.identity.edit' (pluralize model.identityType) model.id}}" class="button has-icon-right is-ghost is-compact" data-test-entity-edit-link=true>
         Edit {{model.identityType}}
         {{i-con glyph="chevron-right" size=11}}
       </a>

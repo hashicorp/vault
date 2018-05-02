@@ -13,7 +13,7 @@ export default Ember.Controller.extend(ListController, {
       return model
         .destroyRecord()
         .then(() => {
-          this.send('willTransition');
+          this.send('reload');
           this.get('flashMessages').success(`Successfully deleted ${type}: ${id}`);
         })
         .catch(e => {

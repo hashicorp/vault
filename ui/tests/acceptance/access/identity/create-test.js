@@ -21,7 +21,7 @@ test('it visits the correct page', function(assert) {
   });
 });
 
-test('it creates an entity', function(assert) {
+test('it allows create, list, delete of an entity', function(assert) {
   let name = `entity-${Date.now()}`;
   let id;
   page.visit({ item_type: 'entities' });
@@ -39,8 +39,35 @@ test('it creates an entity', function(assert) {
   indexPage.visit({ item_type: 'entities' });
   andThen(() => {
     assert.equal(indexPage.items.filterBy('id', id).length, 1, 'lists the entity in the entity list');
+    indexPage.items.filterBy('id', id)[0].menu();
+  });
+  indexPage.delete().confirmDelete();
+
+  andThen(() => {
+    assert.equal(indexPage.items.filterBy('id', id).length, 0, 'the row is deleted');
+    indexPage.flashMessage.latestMessage.startsWith('Successfully deleted', 'shows flash message');
   });
 });
+test('it can be deleted from the edit form', function(assert) {
+  let name = `entity-${Date.now()}`;
+  let id;
+  page.visit({ item_type: 'entities' });
+  page.editForm.name(name).submit();
+  andThen(() => {
+    id = showPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0].rowValue
+  });
+  showPage.edit();
+  andThen(() => {
+    assert.equal(currentRouteName(), 'vault.cluster.access.identity.edit', 'navigates to edit on create');
+  });
+  page.editForm.delete().confirmDelete();
+  andThen(() => {
+    assert.equal(currentRouteName(), 'vault.cluster.access.identity.index', 'navigates to list page on delete');
+    assert.equal(indexPage.items.filterBy('id', id).length, 0, 'the row does not show in the list');
+    indexPage.flashMessage.latestMessage.startsWith('Successfully deleted', 'shows flash message');
+  });
+});
+
 
 test('it visits the correct page', function(assert) {
   page.visit({ item_type: 'groups' });

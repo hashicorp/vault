@@ -6,6 +6,7 @@
       item.id
       "details"
       class="box is-sideless is-marginless"
+      data-test-identity-row=true
       }}
       <div class="columns is-mobile">
         <div class="column is-10">
@@ -15,7 +16,7 @@
             "details"
             }}
             class="is-block has-text-black has-text-weight-semibold"
-            data-test-lease-link={{item.id}}
+            data-test-identity-link=true
           >{{i-con
               glyph="role"
               size=14
@@ -55,6 +56,7 @@
                   {{#if item.canDelete}}
                     <li class="action">
                       {{#confirm-action
+                        data-test-item-delete=true
                         confirmButtonClasses="button is-primary"
                         buttonClasses="link"
                         onConfirmAction=(action "delete" item)

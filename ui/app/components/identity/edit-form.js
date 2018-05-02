@@ -60,7 +60,7 @@ export default Ember.Component.extend({
       return;
     }
     this.get('flashMessages').success(message);
-    yield this.get('onSave')(model);
+    yield this.get('onSave')({saveType: 'save', model});
   }).drop(),
 
   willDestroy() {
@@ -75,14 +75,10 @@ export default Ember.Component.extend({
       let message = this.getMessage(model, true);
       let flash = this.get('flashMessages');
       let typeDisplay = humanize([model.get('identityType')]);
-      return model
+      model
         .destroyRecord()
         .then(() => {
-          flash.success(message);
-        })
-        .catch(e => {
-          let error = e.errors ? e.errors.join(' ') : e.message;
-          flash.danger(`There was an error deleting ${typeDisplay}: ${error}`);
+          return this.get('onSave')({saveType: 'delete'});
         });
     },
   },
