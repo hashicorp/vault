@@ -1412,9 +1412,8 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, accessor string, tai
 }
 
 func (ts *TokenStore) lookupByObfuscatedAccessor(ctx context.Context, obfuscatedAccessor string, tainted bool) (accessorEntry, error) {
-	entry, err := ts.view.Get(ctx, accessorPrefix+obfuscatedAccessor)
 	var aEntry accessorEntry
-
+	entry, err := ts.view.Get(ctx, accessorPrefix+obfuscatedAccessor)
 	if err != nil {
 		return aEntry, errwrap.Wrapf("failed to read index using accessor: {{err}}", err)
 	}

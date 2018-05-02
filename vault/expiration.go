@@ -1276,7 +1276,7 @@ func (m *ExpirationManager) indexByToken(tokenID, leaseID string) (*logical.Stor
 	// This is only here for backwards compatibility
 	indexPath, err = m.hashIndexPath(tokenID, leaseID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	entry, err = m.tokenView.Get(m.quitContext, indexPath)
