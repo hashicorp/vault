@@ -295,7 +295,7 @@ result in data loss!
 
 ```json
 {
-  "key": "ijH8tphEHaBtgx+IvPfxDsSi2LV4j9k+Lad6eqT5cJw="
+  "dr_operation_token": "ijH8tphEHaBtgx+IvPfxDsSi2LV4j9k+Lad6eqT5cJw="
 }
 ```
 
