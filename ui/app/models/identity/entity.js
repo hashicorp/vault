@@ -7,7 +7,7 @@ const { computed } = Ember;
 const { attr, hasMany } = DS;
 
 export default IdentityModel.extend({
-  formFields: ['name', 'policies', 'metadata', 'disabled'],
+  formFields: ['name', 'disabled', 'policies', 'metadata'],
   name: attr('string'),
   disabled: attr('boolean', {
     defaultValue: false,
