@@ -390,7 +390,7 @@ $ curl \
 The `/sys/replication/dr/secondary/generate-operation-token` endpoint is used to create a new Disaster
 Recovery operation token for a DR secondary. These tokens are used to authorize
 certain DR Operation. They should be treated like traditional root tokens by
-being generated with needed and deleted soon after.
+being generated when needed and deleted soon after.
 
 ## Read Generation Progress
 
