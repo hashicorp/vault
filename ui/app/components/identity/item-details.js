@@ -1,6 +1,6 @@
 import Ember from 'ember';
 
-const { computed, inject } = Ember;
+const { inject } = Ember;
 
 export default Ember.Component.extend({
   flashMessages: inject.service(),

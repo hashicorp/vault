@@ -74,10 +74,10 @@ export default Ember.Component.extend({
     deleteItem(model) {
       let message = this.getMessage(model, true);
       let flash = this.get('flashMessages');
-      let typeDisplay = humanize([model.get('identityType')]);
       model
         .destroyRecord()
         .then(() => {
+          flash.success(message);
           return this.get('onSave')({saveType: 'delete', model});
         });
     },

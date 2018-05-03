@@ -1,7 +1,9 @@
 import IdentityModel from './_base';
 import DS from 'ember-data';
-const { attr, belongsTo } = DS;
+import Ember from 'ember';
 import { queryRecord } from 'ember-computed-query';
+
+const { attr, belongsTo } = DS;
 const { computed } = Ember;
 
 export default IdentityModel.extend({

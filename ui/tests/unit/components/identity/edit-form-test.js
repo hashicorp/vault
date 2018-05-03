@@ -4,6 +4,7 @@ import Ember from 'ember';
 
 moduleForComponent('identity/edit-form', 'Unit | Component | identity/edit-form', {
   unit: true,
+  needs: ['service:auth', 'service:flash-messages'],
 });
 
 let testCases = [
