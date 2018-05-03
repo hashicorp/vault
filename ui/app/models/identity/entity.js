@@ -11,6 +11,8 @@ export default IdentityModel.extend({
   name: attr('string'),
   disabled: attr('boolean', {
     defaultValue: false,
+    label: 'Disable entity',
+    helpText: 'All associated tokens cannot be used, but are not revoked.',
   }),
   mergedEntityIds: attr(),
   metadata: attr({

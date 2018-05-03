@@ -8,11 +8,15 @@
         excludeIconClass=true
       }}
     </div>
-    <div class="column">
-      <p>
-      <strong>{{alertType.text}}</strong>
+    {{#if yieldWithoutColumn}}
       {{yield}}
-      </p>
-    </div>
+    {{else}}
+      <div class="column">
+        <p>
+        <strong>{{alertType.text}}</strong>
+        {{yield}}
+        </p>
+      </div>
+    {{/if}}
   </div>
 </div>
