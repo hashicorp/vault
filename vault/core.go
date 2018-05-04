@@ -1429,7 +1429,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		return retErr
 	}
 
-	if te != nil && te.NumUses == -1 {
+	if te != nil && te.NumUses == tokenRevocationDeferred {
 		// Token needs to be revoked. We do this immediately here because
 		// we won't have a token store after sealing.
 		err = c.tokenStore.Revoke(c.activeContext, te.ID)
@@ -1540,7 +1540,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		return retErr
 	}
 
-	if te != nil && te.NumUses == -1 {
+	if te != nil && te.NumUses == tokenRevocationDeferred {
 		// Token needs to be revoked. We do this immediately here because
 		// we won't have a token store after sealing.
 		err = c.tokenStore.Revoke(c.activeContext, te.ID)

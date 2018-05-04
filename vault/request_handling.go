@@ -178,12 +178,15 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 			return nil, nil, retErr
 		}
-		if te.NumUses == -1 {
+		if te.NumUses == tokenRevocationDeferred {
 			// We defer a revocation until after logic has run, since this is a
 			// valid request (this is the token's final use). We pass the ID in
 			// directly just to be safe in case something else modifies te later.
 			defer func(id string) {
-				err = c.tokenStore.Revoke(ctx, id)
+				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
+				if err == nil {
+					err = c.expiration.Revoke(leaseID)
+				}
 				if err != nil {
 					c.logger.Error("failed to revoke token", "error", err)
 					retResp = nil

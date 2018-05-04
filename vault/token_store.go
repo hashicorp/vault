@@ -54,16 +54,6 @@ const (
 	// tokenRevocationDeferred indicates that the token should not be used
 	// again but is currently fulfilling its final use
 	tokenRevocationDeferred = -1
-
-	// tokenRevocationInProgress indicates that revocation of that token/its
-	// leases is ongoing
-	tokenRevocationInProgress = -2
-
-	// tokenRevocationFailed indicates that revocation failed; the entry is
-	// kept around so that when the tidy function is run it can be tried
-	// again (or when the revocation function is run again), but all other uses
-	// will report the token invalid
-	tokenRevocationFailed = -3
 )
 
 var (
@@ -923,9 +913,9 @@ func (ts *TokenStore) UseToken(ctx context.Context, te *TokenEntry) (*TokenEntry
 	// manager revoking children) attempting to acquire the same lock
 	// repeatedly.
 	if te.NumUses == 1 {
-		te.NumUses = -1
+		te.NumUses = tokenRevocationDeferred
 	} else {
-		te.NumUses -= 1
+		te.NumUses--
 	}
 
 	err = ts.storeCommon(ctx, te, false)
@@ -1590,9 +1580,16 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 		return nil, err
 	}
 
-	// Revoke the token and its children
-	if err := ts.RevokeTree(ctx, aEntry.TokenID); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	te, err := ts.Lookup(ctx, aEntry.TokenID)
+	if err != nil {
+		return nil, err
+	}
+
+	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(te)
+
+	err = ts.expiration.Revoke(leaseID)
+	if err != nil {
+		return nil, err
 	}
 
 	if urlaccessor {
