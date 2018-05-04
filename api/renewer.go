@@ -166,10 +166,7 @@ func (r *Renewer) Renew() {
 		result = r.renewLease()
 	}
 
-	select {
-	case r.doneCh <- result:
-	case <-r.stopCh:
-	}
+	r.doneCh <- result
 }
 
 // renewAuth is a helper for renewing authentication.
