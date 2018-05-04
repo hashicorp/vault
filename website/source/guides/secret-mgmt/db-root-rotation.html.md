@@ -343,6 +343,16 @@ and created a new user based on the privilege defined by `readonly.sql`.
 configuration (`default_ttl`). In addition, you can revoke them if you suspect
 that it was compromised.
 
+**NOTE:** The `pg_hba.conf` is configured to prompt for password to
+demonstrate this feature.
+
+```plaintext
+TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+local   all             all                                   trust
+host    all             all           0.0.0.0/0               password
+```
+
 
 ### <a name="step4"></a>Step 4: Rotate the root credentials
 
@@ -377,16 +387,17 @@ $ psql -h postgres.host.address -p 5432 -U root postgres
 Password for user root:
 ```
 
-Entering the initial password (e.g. `rootpassword`) will not work since the
-password was rotated by the Vault. You can invoke the
-**`database/rotate-root/:name`** endpoint periodically to secure the root
-credential.
+Entering the initial password (e.g. `rootpassword`) will ***not*** work since
+the password was rotated by the Vault.
+
+You can invoke the **`database/rotate-root/:name`** endpoint periodically to
+secure the root credential.
 
 
-~> For the purpose of this guide, PostgreSQL is used to demonstrate the feature.
-However, the steps are the same for all other supported databases. Be sure to
-use the templated credentials (**`{{username}}`** and **`{{password}}`**) when
-you configure the database connection.
+~> **NOTE:** Once the root password was rotated, only the Vault knows the new
+password. This is the same for all root database credentials given to Vault.
+Therefore, you should create a separate superuser dedicated to the Vault usage
+and not used for other purposes.  
 
 
 ## Next steps
