@@ -67,29 +67,14 @@ unsealed](/intro/getting-started/deploy.html).
 
 ### PostgreSQL
 
-This guide requires that you have PostgreSQL that you can connect to,
-and have a database named **`myapp`**. You can download and install
-[PostgreSQL](https://www.postgresql.org/download/) locally, or connect to a
-remote host.
+This guide requires that you have a PostgreSQL server to connect to. If you
+don't have one, install [PostgreSQL](https://www.postgresql.org/download/) to
+perform the steps described in this guide.
 
-**Example on Ubuntu:**
-
-```shell
-# Install PostgreSQL
-$ sudo apt-get install -y postgresql postgresql-contrib
-
-# Initialize PostgreSQL
-$ sudo postgresql-setup initdb
-
-# Switch to postgres user
-$ su - postgres
-
-# Create myapp database
-$ psql -U postgres -c 'CREATE DATABASE myapp;'
-```
-
-[PostgreSQL Wiki](https://wiki.postgresql.org/wiki/First_steps) gives you a
+- Refer to the [PostgreSQL documentation](https://www.postgresql.org/docs/online-resources/) for details
+- [PostgreSQL Wiki](https://wiki.postgresql.org/wiki/First_steps) gives you a
 summary of basic commands to get started.
+
 
 ### Policy requirements
 
@@ -240,6 +225,13 @@ $ cat payload.json
 	"connection_url": "postgresql://root:rootpassword@localhost:5432/myapp"
 }
 ```
+
+<br>
+
+~> **NOTE:** Read the [Database Root Credential Rotation](/guides/secret-mgmt/db-root-rotation.html)
+guide to learn about rotating the root credential immediately after the initial
+configuration of each database.
+
 
 ### <a name="step3"></a>Step 3: Create a role
 (**Persona:** admin)
@@ -502,7 +494,3 @@ This guide discussed how to generate credentials on-demand so that the access
 credentials no longer need to be written to disk. Next, learn about the
 [Tokens and Leases](/guides/identity/lease.html) so that you can control the
 lifecycle of those credentials.
-
-Also, read the [Database Root Credential
-Rotation](/guides/secret-mgmt/db-root-rotation.html) guide to learn about
-programmatically rotating the root credential for enhanced security.
