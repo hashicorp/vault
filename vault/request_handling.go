@@ -105,14 +105,18 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		resp.Data[logical.HTTPRawBody] != nil {
 
 		// Decode the JSON
-		httpResp := &logical.HTTPResponse{}
-		err := jsonutil.DecodeJSON(resp.Data[logical.HTTPRawBody].([]byte), httpResp)
-		if err != nil {
-			c.logger.Error("failed to unmarshal wrapped HTTP response for audit logging", "error", err)
-			return nil, ErrInternalError
-		}
+		if resp.Data[logical.HTTPRawBodyAlreadyJSONDecoded] != nil {
+			delete(resp.Data, logical.HTTPRawBodyAlreadyJSONDecoded)
+		} else {
+			httpResp := &logical.HTTPResponse{}
+			err := jsonutil.DecodeJSON(resp.Data[logical.HTTPRawBody].([]byte), httpResp)
+			if err != nil {
+				c.logger.Error("failed to unmarshal wrapped HTTP response for audit logging", "error", err)
+				return nil, ErrInternalError
+			}
 
-		auditResp = logical.HTTPResponseToLogicalResponse(httpResp)
+			auditResp = logical.HTTPResponseToLogicalResponse(httpResp)
+		}
 	}
 
 	var nonHMACReqDataKeys []string

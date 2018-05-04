@@ -382,6 +382,15 @@ func (c *Client) SetClientTimeout(timeout time.Duration) {
 	c.config.Timeout = timeout
 }
 
+// CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
+// for a given operation and path
+func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
+	return c.wrappingLookupFunc
+}
+
 // SetWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
 // for a given operation and path
 func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {

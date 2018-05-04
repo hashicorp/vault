@@ -1,5 +1,12 @@
 ## 0.10.2 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * As of this release, the Vault CLI (via `vault unwrap`) and Go API (via
+   `Logical().Unwrap()`) can no longer unwrap response-wrapped tokens produced
+   by Vault prior to 0.6.2. These can still be read manually by performing a
+   read on `cubbyhole/response` and decoding the JSON-encoded value.
+
 IMPROVEMENTS:
 
  * cli: `vault login` now supports a `-no-print` flag to suppress printing
