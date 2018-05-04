@@ -24,18 +24,19 @@ export default Service.extend({
     return getOwner(this).lookup('adapter:console');
   },
 
-  ajax(operation, path, options) {
+  ajax(operation, path, options ={}) {
     let verb = VERBS[operation];
-    let url = `${this.urlPrefix()}/${path}`;
+    let adapter = this.adapter();
+    let url = adapter.buildURL(path);
     let { data, wrapTTL } = options;
-    return this.adapter().ajax(url, verb, {
+    return adapter.ajax(url, verb, {
       data,
       wrapTTL,
     });
   },
 
-  read(path) {
-    return this.ajax('read', sanitizePath(path));
+  read(path, wrapTTL) {
+    return this.ajax('read', sanitizePath(path), {wrapTTL});
   },
 
   write(path, data) {
@@ -46,12 +47,13 @@ export default Service.extend({
     return this.ajax('delete', sanitizePath(path));
   },
 
-  list(path) {
+  list(path, wrapTTL) {
     let listPath = ensureTrailingSlash(sanitizePath(path));
     return this.ajax('list', listPath, {
       data: {
         list: true,
       },
+      wrapTTL,
     });
   },
 });
