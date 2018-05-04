@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+type HandlerFunc func(context.Context, *logical.Request) (*logical.Response, error)
+
 type NoopBackend struct {
 	sync.Mutex
 
@@ -22,6 +24,7 @@ type NoopBackend struct {
 	Paths           []string
 	Requests        []*logical.Request
 	Response        *logical.Response
+	RequestHandler  HandlerFunc
 	Invalidations   []string
 	DefaultLeaseTTL time.Duration
 	MaxLeaseTTL     time.Duration
@@ -31,6 +34,12 @@ func (n *NoopBackend) HandleRequest(ctx context.Context, req *logical.Request) (
 	n.Lock()
 	defer n.Unlock()
 
+	var err error
+	resp := n.Response
+	if n.RequestHandler != nil {
+		resp, err = n.RequestHandler(ctx, req)
+	}
+
 	requestCopy := *req
 	n.Paths = append(n.Paths, req.Path)
 	n.Requests = append(n.Requests, &requestCopy)
@@ -38,7 +47,7 @@ func (n *NoopBackend) HandleRequest(ctx context.Context, req *logical.Request) (
 		return nil, fmt.Errorf("missing view")
 	}
 
-	return n.Response, nil
+	return resp, err
 }
 
 func (n *NoopBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
