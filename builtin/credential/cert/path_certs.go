@@ -44,8 +44,8 @@ Must be x509 PEM encoded.`,
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
 At least one must exist in either the Common Name or SANs. Supports globbing.  
-This parameter is deprecated, please use allowed_common_names, allowed_dns, 
-allowed_email, allowed_uris.`,
+This parameter is deprecated, please use allowed_common_names, allowed_dns_sans, 
+allowed_email_sans, allowed_uri_sans.`,
 			},
 
 			"allowed_common_names": &framework.FieldSchema{
@@ -54,19 +54,19 @@ allowed_email, allowed_uris.`,
 At least one must exist in the Common Name. Supports globbing.`,
 			},
 
-			"allowed_dns": &framework.FieldSchema{
+			"allowed_dns_sans": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of DNS names.
 At least one must exist in the SANs. Supports globbing.`,
 			},
 
-			"allowed_emails": &framework.FieldSchema{
+			"allowed_email_sans": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of Email Addresses.
 At least one must exist in the SANs. Supports globbing.`,
 			},
 
-			"allowed_uris": &framework.FieldSchema{
+			"allowed_uri_sans": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of URIs.
 At least one must exist in the SANs. Supports globbing.`,
@@ -180,9 +180,9 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 			"period":               cert.Period / time.Second,
 			"allowed_names":        cert.AllowedNames,
 			"allowed_common_names": cert.AllowedCommonNames,
-			"allowed_dns":          cert.AllowedDNS,
-			"allowed_emails":       cert.AllowedEmails,
-			"allowed_uris":         cert.AllowedURIs,
+			"allowed_dns_sans":     cert.AllowedDNSSans,
+			"allowed_email_sans":   cert.AllowedEmailSans,
+			"allowed_uri_sans":     cert.AllowedURISans,
 			"required_extensions":  cert.RequiredExtensions,
 		},
 	}, nil
@@ -195,9 +195,9 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	policies := policyutil.ParsePolicies(d.Get("policies"))
 	allowedNames := d.Get("allowed_names").([]string)
 	allowedCommonNames := d.Get("allowed_common_names").([]string)
-	allowedDNS := d.Get("allowed_dns").([]string)
-	allowedEmails := d.Get("allowed_emails").([]string)
-	allowedURIs := d.Get("allowed_uris").([]string)
+	allowedDNSSans := d.Get("allowed_dns_sans").([]string)
+	allowedEmailSans := d.Get("allowed_email_sans").([]string)
+	allowedURISans := d.Get("allowed_uri_sans").([]string)
 	requiredExtensions := d.Get("required_extensions").([]string)
 
 	var resp logical.Response
@@ -272,9 +272,9 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 		Policies:           policies,
 		AllowedNames:       allowedNames,
 		AllowedCommonNames: allowedCommonNames,
-		AllowedDNS:         allowedDNS,
-		AllowedEmails:      allowedEmails,
-		AllowedURIs:        allowedURIs,
+		AllowedDNSSans:     allowedDNSSans,
+		AllowedEmailSans:   allowedEmailSans,
+		AllowedURISans:     allowedURISans,
 		RequiredExtensions: requiredExtensions,
 		TTL:                ttl,
 		MaxTTL:             maxTTL,
@@ -307,9 +307,9 @@ type CertEntry struct {
 	Period             time.Duration
 	AllowedNames       []string
 	AllowedCommonNames []string
-	AllowedDNS         []string
-	AllowedEmails      []string
-	AllowedURIs        []string
+	AllowedDNSSans     []string
+	AllowedEmailSans   []string
+	AllowedURISans     []string
 	RequiredExtensions []string
 }
 

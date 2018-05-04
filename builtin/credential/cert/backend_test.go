@@ -1037,6 +1037,8 @@ func TestBackend_dns_singleCert(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
 			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{dns: "*ample.com"}, false),
+			testAccStepLogin(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "notincert.com"}, false),
 			testAccStepLoginInvalid(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "abc"}, false),
@@ -1065,6 +1067,8 @@ func TestBackend_email_singleCert(t *testing.T) {
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{emails: "valid@example.com"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{emails: "*@example.com"}, false),
 			testAccStepLogin(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{emails: "invalid@notincert.com"}, false),
 			testAccStepLoginInvalid(t, connState),
@@ -1305,9 +1309,9 @@ func testAccStepListCerts(
 type allowed struct {
 	names        string // allowed names in the certificate, looks at common, name, dns, email [depricated]
 	common_names string // allowed common names in the certificate
-	dns          string // allowed dns names in the certificate
-	emails       string // allowed email names in the certificate
-	uris         string // allowed uris in SAN section of the certificate
+	dns          string // allowed dns names in the SAN extension of the certificate
+	emails       string // allowed email names in SAN extension of the certificate
+	uris         string // allowed uris in SAN extension of the certificate
 	ext          string // required extensions in the certificate
 }
 
@@ -1323,9 +1327,9 @@ func testAccStepCert(
 			"display_name":         name,
 			"allowed_names":        testData.names,
 			"allowed_common_names": testData.common_names,
-			"allowed_dns":          testData.dns,
-			"allowed_emails":       testData.emails,
-			"allowed_uris":         testData.uris,
+			"allowed_dns_sans":     testData.dns,
+			"allowed_email_sans":   testData.emails,
+			"allowed_uri_sans":     testData.uris,
 			"required_extensions":  testData.ext,
 			"lease":                1000,
 		},
