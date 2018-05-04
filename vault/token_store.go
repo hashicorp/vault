@@ -1096,9 +1096,19 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 	}
 
 	defer func() {
+		// If we succeeded in all other revocation operations after this defer and
+		// before we return, we can remove the token store entry
+		if ret == nil {
+			path := lookupPrefix + saltedID
+			if err := ts.view.Delete(ctx, path); err != nil {
+				ret = errwrap.Wrapf("failed to delete entry: {{err}}", err)
+			}
+		}
+
+		// Check on ret again and update the sync.Map accordingly
 		if ret != nil {
-			// If we failed we store the state as false, so that the next call to
-			// revokeSalted will retry
+			// If we failed on any of the calls within, we store the state as false
+			// so that the next call to revokeSalted will retry
 			ts.tokensPendingDeletion.Store(saltedID, false)
 		} else {
 			ts.tokensPendingDeletion.Delete(saltedID)
@@ -1174,12 +1184,6 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 		lock.Unlock()
 	}
 	if err = logical.ClearView(ctx, ts.view.SubView(parentPath)); err != nil {
-		return errwrap.Wrapf("failed to delete entry: {{err}}", err)
-	}
-
-	// Now that the entry is not usable for any revocation tasks, nuke it
-	path := lookupPrefix + saltedID
-	if err = ts.view.Delete(ctx, path); err != nil {
 		return errwrap.Wrapf("failed to delete entry: {{err}}", err)
 	}
 
