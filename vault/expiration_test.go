@@ -742,6 +742,8 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	time.Sleep(200 * time.Millisecond)
+
 	if len(noop.Requests) != 3 {
 		t.Fatalf("Bad: %v", noop.Requests)
 	}
@@ -1238,6 +1240,8 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	time.Sleep(200 * time.Millisecond)
 
 	out, err := exp.tokenStore.Lookup(context.Background(), le.ClientToken)
 	if err != nil {

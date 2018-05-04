@@ -727,6 +727,8 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	time.Sleep(200 * time.Millisecond)
+
 	// Verify the lease is gone
 	out, err := ts.expiration.loadEntry(leaseID)
 	if err != nil {
@@ -3374,16 +3376,13 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		t.Fatalf("expected err")
 	}
 
-	// Since revocation failed we should see the tokenRevocationFailed canary value
+	// Since revocation failed we should still be able to get a token
 	te, err = ts.lookupSalted(context.Background(), saltTut, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if te == nil {
-		t.Fatal("nil entry")
-	}
-	if te.NumUses != tokenRevocationFailed {
-		t.Fatalf("bad: %d", te.NumUses)
+		t.Fatal("nil token entry")
 	}
 
 	// Check the race condition situation by making the process sleep
@@ -3409,10 +3408,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	if te == nil {
-		t.Fatal("nil entry")
-	}
-	if te.NumUses != tokenRevocationInProgress {
-		t.Fatalf("bad: %d", te.NumUses)
+		t.Fatal("nil token entry")
 	}
 
 	// Let things catch up
@@ -3789,7 +3785,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 
 	sort.Strings(leases)
 
-	storedLeases, err := exp.lookupByToken(tut)
+	storedLeases, err := exp.lookupLeasesByToken(tut)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3825,7 +3821,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Verify leases still exist
-	storedLeases, err = exp.lookupByToken(tut)
+	storedLeases, err = exp.lookupLeasesByToken(tut)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3837,10 +3833,10 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	// Call tidy
 	ts.handleTidy(context.Background(), nil, nil)
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(200 * time.Millisecond)
 
 	// Verify leases are gone
-	storedLeases, err = exp.lookupByToken(tut)
+	storedLeases, err = exp.lookupLeasesByToken(tut)
 	if err != nil {
 		t.Fatal(err)
 	}
