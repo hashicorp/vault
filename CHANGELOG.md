@@ -2,6 +2,8 @@
 
 IMPROVEMENTS:
 
+ * api: Close renewer's doneCh when the renewer is stopped, so that programs
+   expecting a final value through doneCh behave correctly [GH-4472]
  * cli: `vault login` now supports a `-no-print` flag to suppress printing
    token information but still allow storing into the token helper [GH-4454]
  * expiration: Allow revoke-prefix and revoke-force to work on single leases as
