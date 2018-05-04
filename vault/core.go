@@ -1660,11 +1660,6 @@ func (c *Core) postUnseal() (retErr error) {
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
-	c.physicalCache.Purge(c.activeContext)
-	if !c.cachingDisabled {
-		c.physicalCache.SetEnabled(true)
-	}
-
 	switch c.sealUnwrapper.(type) {
 	case *sealUnwrapper:
 		c.sealUnwrapper.(*sealUnwrapper).runUnwraps()
@@ -1731,6 +1726,12 @@ func (c *Core) postUnseal() (retErr error) {
 	}
 	c.metricsCh = make(chan struct{})
 	go c.emitMetrics(c.metricsCh)
+
+	// Enable the cache
+	c.physicalCache.Purge(c.activeContext)
+	if !c.cachingDisabled {
+		c.physicalCache.SetEnabled(true)
+	}
 
 	// This is intentionally the last block in this function. We want to allow
 	// writes just before allowing client requests, to ensure everything has

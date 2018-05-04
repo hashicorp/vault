@@ -7,12 +7,22 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/helper/locksutil"
+	"github.com/hashicorp/vault/helper/pathmanager"
 )
 
 const (
 	// DefaultCacheSize is used if no cache size is specified for NewCache
 	DefaultCacheSize = 128 * 1024
 )
+
+// These paths don't need to be cached by the LRU cache. This should
+// particularly help memory pressure when unsealing.
+var noCachePaths = []string{
+	"wal/logs/",
+	"index/pages",
+	"index-dr/pages",
+	"sys/expire/",
+}
 
 // Cache is used to wrap an underlying physical backend
 // and provide an LRU cache layer on top. Most of the reads done by
@@ -24,6 +34,7 @@ type Cache struct {
 	locks   []*locksutil.LockEntry
 	logger  log.Logger
 	enabled *uint32
+	noCache *pathmanager.PathManager
 }
 
 // TransactionalCache is a Cache that wraps the physical that is transactional
@@ -48,6 +59,9 @@ func NewCache(b Backend, size int, logger log.Logger) *Cache {
 		size = DefaultCacheSize
 	}
 
+	pm := pathmanager.New()
+	pm.AddPaths(noCachePaths)
+
 	cache, _ := lru.New2Q(size)
 	c := &Cache{
 		backend: b,
@@ -56,6 +70,7 @@ func NewCache(b Backend, size int, logger log.Logger) *Cache {
 		logger:  logger,
 		// This fails safe.
 		enabled: new(uint32),
+		noCache: pm,
 	}
 	return c
 }
@@ -66,6 +81,14 @@ func NewTransactionalCache(b Backend, size int, logger log.Logger) *Transactiona
 		Transactional: b.(Transactional),
 	}
 	return c
+}
+
+func (c *Cache) shouldCache(key string) bool {
+	if atomic.LoadUint32(c.enabled) == 0 {
+		return false
+	}
+
+	return !c.noCache.HasPath(key)
 }
 
 // SetEnabled is used to toggle whether the cache is on or off. It must be
@@ -90,7 +113,7 @@ func (c *Cache) Purge(ctx context.Context) {
 }
 
 func (c *Cache) Put(ctx context.Context, entry *Entry) error {
-	if atomic.LoadUint32(c.enabled) == 0 {
+	if entry != nil && !c.shouldCache(entry.Key) {
 		return c.backend.Put(ctx, entry)
 	}
 
@@ -106,7 +129,7 @@ func (c *Cache) Put(ctx context.Context, entry *Entry) error {
 }
 
 func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
-	if atomic.LoadUint32(c.enabled) == 0 {
+	if !c.shouldCache(key) {
 		return c.backend.Get(ctx, key)
 	}
 
@@ -137,7 +160,7 @@ func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
 }
 
 func (c *Cache) Delete(ctx context.Context, key string) error {
-	if atomic.LoadUint32(c.enabled) == 0 {
+	if !c.shouldCache(key) {
 		return c.backend.Delete(ctx, key)
 	}
 
@@ -160,6 +183,11 @@ func (c *Cache) List(ctx context.Context, prefix string) ([]string, error) {
 }
 
 func (c *TransactionalCache) Transaction(ctx context.Context, txns []*TxnEntry) error {
+	// Bypass the locking below
+	if atomic.LoadUint32(c.enabled) == 0 {
+		return c.Transactional.Transaction(ctx, txns)
+	}
+
 	// Collect keys that need to be locked
 	var keys []string
 	for _, curr := range txns {
@@ -175,14 +203,16 @@ func (c *TransactionalCache) Transaction(ctx context.Context, txns []*TxnEntry) 
 		return err
 	}
 
-	if atomic.LoadUint32(c.enabled) == 1 {
-		for _, txn := range txns {
-			switch txn.Operation {
-			case PutOperation:
-				c.lru.Add(txn.Entry.Key, txn.Entry)
-			case DeleteOperation:
-				c.lru.Remove(txn.Entry.Key)
-			}
+	for _, txn := range txns {
+		if !c.shouldCache(txn.Entry.Key) {
+			continue
+		}
+
+		switch txn.Operation {
+		case PutOperation:
+			c.lru.Add(txn.Entry.Key, txn.Entry)
+		case DeleteOperation:
+			c.lru.Remove(txn.Entry.Key)
 		}
 	}
 
