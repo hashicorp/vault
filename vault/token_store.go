@@ -1585,7 +1585,14 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 		return nil, err
 	}
 
+	if te == nil {
+		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
+	}
+
 	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(te)
+	if err != nil {
+		return nil, err
+	}
 
 	err = ts.expiration.Revoke(leaseID)
 	if err != nil {
@@ -2024,10 +2031,25 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
 func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// Revoke the token and its children
-	if err := ts.RevokeTree(ctx, req.ClientToken); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	te, err := ts.Lookup(ctx, req.ClientToken)
+	if err != nil {
+		return nil, err
 	}
+
+	if te == nil {
+		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
+	}
+
+	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(te)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ts.expiration.Revoke(leaseID)
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -2045,9 +2067,23 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 		urltoken = true
 	}
 
-	// Revoke the token and its children
-	if err := ts.RevokeTree(ctx, id); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	te, err := ts.Lookup(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if te == nil {
+		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
+	}
+
+	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(te)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ts.expiration.Revoke(leaseID)
+	if err != nil {
+		return nil, err
 	}
 
 	if urltoken {

@@ -1262,8 +1262,9 @@ func (m *ExpirationManager) removeIndexByToken(token, leaseID string) error {
 	return nil
 }
 
-// CreateOrFetchRevocationLeaseByToken is used to create or fetch the matching leaseID for a particular token.
-// The lease is set to expire immediately after it's created, or updated to immediately expire after it's fetched
+// CreateOrFetchRevocationLeaseByToken is used to create or fetch the matching
+// leaseID for a particular token. The lease is set to expire immediately after
+// it's created.
 func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(te *TokenEntry) (string, error) {
 	// Fetch the saltedID of the token and construct the leaseID
 	saltedID, err := m.tokenStore.SaltID(m.quitContext, te.ID)
