@@ -48,7 +48,7 @@ The response will contain a token at `auth.client_token`:
       "default"
     ],
     "metadata": {
-      "role": "test",
+      "role": "demo",
       "service_account_name": "vault-auth",
       "service_account_namespace": "default",
       "service_account_secret_name": "vault-auth-token-pd21c",
