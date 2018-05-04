@@ -9,10 +9,11 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
- * secret/pki: Fix path length parameter being ignored when using
-   `use_csr_values` and signing an intermediate CA cert [GH-4459]
+ * auth/approle: Make invalid role_id a 400 error instead of 500 [GH-4470]
  * auth/cert: Fix Identity alias using serial number instead of common name
    [GH-4475]
+ * secret/pki: Fix path length parameter being ignored when using
+   `use_csr_values` and signing an intermediate CA cert [GH-4459]
 
 ## 0.10.1/0.9.7 (April 25th, 2018)
 
