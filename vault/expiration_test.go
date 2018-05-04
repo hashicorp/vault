@@ -832,7 +832,6 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 	// Lock and check that no requests has gone through yet
 	noop.Lock()
 	if len(noop.Requests) != 0 {
-		t.Logf("%v", noop.Requests[0].Path)
 		t.Fatalf("Bad: %v", noop.Requests)
 	}
 	noop.Unlock()
