@@ -744,6 +744,9 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 
 	time.Sleep(200 * time.Millisecond)
 
+	noop.Lock()
+	defer noop.Unlock()
+
 	if len(noop.Requests) != 3 {
 		t.Fatalf("Bad: %v", noop.Requests)
 	}
