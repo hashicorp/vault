@@ -1,11 +1,11 @@
 package credsutil
 
 import (
-	"crypto/rand"
 	"time"
 
 	"fmt"
 
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/keysutil"
 )
@@ -38,8 +38,7 @@ func RandomAlphaNumeric(length int, prependA1a bool) (string, error) {
 		prefix = reqStr
 	}
 
-	buf := make([]byte, length-len(prefix))
-	_, err := rand.Read(buf)
+	buf, err := uuid.GenerateRandomBytes(length - len(prefix))
 	if err != nil {
 		return "", err
 	}
