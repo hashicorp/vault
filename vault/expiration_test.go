@@ -773,7 +773,7 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 	noop := &NoopBackend{}
 	// Request handle with a timeout context that simulates blocking lease revocation.
 	noop.RequestHandler = func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
-		ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 		defer cancel()
 
 		select {
@@ -836,8 +836,9 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 	}
 	noop.Unlock()
 
-	// Wait for some time, and relock
-	time.Sleep(3 * time.Second)
+	// Wait for a bit for timeouts to trigger and pending revocations to go
+	// through and then we relock
+	time.Sleep(200 * time.Millisecond)
 
 	noop.Lock()
 	defer noop.Unlock()

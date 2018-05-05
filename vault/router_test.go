@@ -31,14 +31,14 @@ type NoopBackend struct {
 }
 
 func (n *NoopBackend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
-	n.Lock()
-	defer n.Unlock()
-
 	var err error
 	resp := n.Response
 	if n.RequestHandler != nil {
 		resp, err = n.RequestHandler(ctx, req)
 	}
+
+	n.Lock()
+	defer n.Unlock()
 
 	requestCopy := *req
 	n.Paths = append(n.Paths, req.Path)
