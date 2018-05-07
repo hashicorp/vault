@@ -15,6 +15,7 @@ const testCommands = [
     region=us-east-1`,
     expected: [
       'write',
+      [],
       'aws/config/root',
       [
         'access_key=AKIAJWVN5Z4FOFT7NLNA',
@@ -24,14 +25,14 @@ const testCommands = [
     ]
   },
   {
-    command:`vault read aws/creds/my-role -field=access_key`,
+    command:`vault read -field=access_key aws/creds/my-role`,
     expected: [
       'read',
+      ['-field=access_key'],
       'aws/creds/my-role',
-      ['-field=access_key']
+      []
     ]
   },
-
 ];
 
 test('#parseCommand', function(assert) {
@@ -57,9 +58,12 @@ const testExtractCases = [
   {
     name: 'data fields',
     input: [
-      'access_key=AKIAJWVN5Z4FOFT7NLNA',
-      'secret_key=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',
-      'region=us-east-1'
+      [
+        'access_key=AKIAJWVN5Z4FOFT7NLNA',
+        'secret_key=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',
+        'region=us-east-1'
+      ],
+      []
     ],
     expected: {
       data: {
@@ -73,9 +77,11 @@ const testExtractCases = [
  {
    name: 'repeated data and a flag',
    input: [
+    [
      'allowed_domains=example.com',
      'allowed_domains=foo.example.com',
-     '-wrap-ttl=2h',
+    ],
+    ['-wrap-ttl=2h']
    ],
    expected: {
      data: {
@@ -89,9 +95,12 @@ const testExtractCases = [
  {
    name: 'data with more than one equals sign',
    input: [
-     'foo=bar=baz',
-     'foo=baz=bop',
-     'some=value=val'
+      [
+       'foo=bar=baz',
+       'foo=baz=bop',
+       'some=value=val'
+      ],
+      []
    ],
    expected: {
      data: {
@@ -106,7 +115,7 @@ const testExtractCases = [
 test('#extractDataAndFlags', function(assert) {
  let panel = this.subject();
   testExtractCases.forEach(test => {
-    let {data, flags} = panel.extractDataAndFlags(test.input);
+    let {data, flags} = panel.extractDataAndFlags(...test.input);
     assert.deepEqual(data, test.expected.data, `${test.name}: has expected data`);
     assert.deepEqual(flags, test.expected.flags, `${test.name}: has expected flags`);
   });

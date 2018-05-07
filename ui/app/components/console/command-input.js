@@ -4,20 +4,18 @@ import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 
 
 export default Ember.Component.extend({
-  tagName: 'input',
   onExecuteCommand() {},
   onValueUpdate() {},
   value: null,
 
   actions: {
-    handleKeyUp: function(val, event) {
+    handleKeyUp: function(event) {
       var keyCode = event.keyCode;
       if (keyCode === keys.ENTER) {
-        this.get('onExecuteCommand')(val);
+        this.get('onExecuteCommand')(event.target.value);
       }
-      this.get('onValueUpdate')(val);
+      this.get('onValueUpdate')(event.target.value);
     }
-
   }
 });
 
