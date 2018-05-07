@@ -95,6 +95,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			Metadata: map[string]string{
 				"cert_name":        matched.Entry.Name,
 				"common_name":      clientCerts[0].Subject.CommonName,
+				"serial_number":    clientCerts[0].SerialNumber.String(),
 				"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
 				"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
 			},
@@ -104,7 +105,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 				MaxTTL:    matched.Entry.MaxTTL,
 			},
 			Alias: &logical.Alias{
-				Name: clientCerts[0].SerialNumber.String(),
+				Name: clientCerts[0].Subject.CommonName,
 			},
 			BoundCIDRs: matched.Entry.BoundCIDRs,
 		},

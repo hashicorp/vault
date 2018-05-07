@@ -166,6 +166,8 @@ func (r *Renewer) Renew() {
 		result = r.renewLease()
 	}
 
+	defer close(r.doneCh)
+
 	select {
 	case r.doneCh <- result:
 	case <-r.stopCh:
