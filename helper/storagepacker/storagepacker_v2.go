@@ -584,7 +584,7 @@ func (s *StoragePackerV2) Walk(fn WalkFunc) error {
 	var err error
 	for base := 0; base < s.config.BucketBaseCount; base++ {
 		baseKey := s.config.ViewPrefix + strconv.FormatInt(int64(base), 16)
-		err = s.BucketWalk(baseKey, fn)
+		err = s.bucketWalk(baseKey, fn)
 		if err != nil {
 			return err
 		}
@@ -592,10 +592,10 @@ func (s *StoragePackerV2) Walk(fn WalkFunc) error {
 	return nil
 }
 
-// BucketWalk is a pre-order traversal of the bucket hierarchy starting from
+// bucketWalk is a pre-order traversal of the bucket hierarchy starting from
 // the bucket corresponding to the given key. The function fn will be called on
 // all the items in the hierarchy.
-func (s *StoragePackerV2) BucketWalk(key string, fn WalkFunc) error {
+func (s *StoragePackerV2) bucketWalk(key string, fn WalkFunc) error {
 	bucket, err := s.GetBucket(key)
 	if err != nil {
 		return err
@@ -618,7 +618,7 @@ func (s *StoragePackerV2) BucketWalk(key string, fn WalkFunc) error {
 
 	for i := 0; i < s.config.BucketShardCount; i++ {
 		shardKey := bucket.Key + "/" + strconv.FormatInt(int64(i), 16)
-		err = s.BucketWalk(shardKey, fn)
+		err = s.bucketWalk(shardKey, fn)
 		if err != nil {
 			return err
 		}

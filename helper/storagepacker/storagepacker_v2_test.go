@@ -22,6 +22,43 @@ const (
 	testBucketMaxSize    = defaultBucketMaxSize
 )
 
+func TestStoragePackerV2_Walk(t *testing.T) {
+	sp, err := NewStoragePackerV2(&Config{
+		BucketBaseCount:  testBucketBaseCount,
+		BucketShardCount: testBucketShardCount,
+		BucketMaxSize:    testBucketMaxSize,
+		View:             &logical.InmemStorage{},
+		Logger:           logging.NewVaultLogger(log.Trace),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entity := &identity.Entity{
+		Metadata: map[string]string{
+			"samplekey1": "samplevalue1",
+			"samplekey2": "samplevalue2",
+			"samplekey3": "samplevalue3",
+			"samplekey4": "samplevalue4",
+			"samplekey5": "samplevalue5",
+		},
+	}
+
+	testPutItem(t, sp, entity)
+
+	collected := []string{}
+
+	walkFunc := func(item *Item) error {
+		collected = append(collected, item.ID)
+		return nil
+	}
+
+	sp.Walk(walkFunc)
+	if len(collected) != testIterationCount {
+		t.Fatalf("unable to walk on all the items in the packer")
+	}
+}
+
 func TestStoragePackerV2_Inmem(t *testing.T) {
 	sp, err := NewStoragePackerV2(&Config{
 		BucketBaseCount:  testBucketBaseCount,
