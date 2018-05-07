@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	testIterationCount   = 30
+	testIterationCount   = 5000
 	testBucketBaseCount  = defaultBucketBaseCount
 	testBucketShardCount = defaultBucketShardCount
 	testBucketMaxSize    = defaultBucketMaxSize
@@ -154,7 +154,7 @@ func testGetItem(t *testing.T, sp *StoragePackerV2, expectNil bool) {
 
 		switch expectNil {
 		case itemFetched == nil:
-			return
+			continue
 		default:
 			t.Fatalf("expected nil for item %q\n", id)
 		}

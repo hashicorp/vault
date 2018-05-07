@@ -40,11 +40,12 @@ type Config struct {
 	// Logger for output
 	Logger log.Logger
 
-	// BucketBaseCount is the number of buckets to create at the base level
+	// BucketBaseCount is the number of buckets to create at the base level.
+	// The value should be a power of 2.
 	BucketBaseCount int
 
 	// BucketShardCount is the number of sub-buckets a bucket gets sharded into
-	// when it reaches the maximum threshold
+	// when it reaches the maximum threshold. The value should be a power of 2.
 	BucketShardCount int
 
 	// BucketMaxSize (in bytes) is the maximum allowed size per bucket. When
@@ -575,12 +576,26 @@ func isPowerOfTwo(val int) bool {
 	return val != 0 && (val&(val-1) == 0)
 }
 
-type BucketWalkFunc func(item *Item) error
+type WalkFunc func(item *Item) error
+
+// Walk traverses through all the buckets and all the items in each bucket and
+// invokes the given function on each item.
+func (s *StoragePackerV2) Walk(fn WalkFunc) error {
+	var err error
+	for base := 0; base < s.config.BucketBaseCount; base++ {
+		baseKey := s.config.ViewPrefix + strconv.FormatInt(int64(base), 16)
+		err = s.BucketWalk(baseKey, fn)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // BucketWalk is a pre-order traversal of the bucket hierarchy starting from
 // the bucket corresponding to the given key. The function fn will be called on
 // all the items in the hierarchy.
-func (s *StoragePackerV2) BucketWalk(key string, fn BucketWalkFunc) error {
+func (s *StoragePackerV2) BucketWalk(key string, fn WalkFunc) error {
 	bucket, err := s.GetBucket(key)
 	if err != nil {
 		return err
