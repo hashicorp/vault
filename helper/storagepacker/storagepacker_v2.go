@@ -559,7 +559,18 @@ func (s *StoragePackerV2) shardBucketIndex(itemID string, depth int) (string, er
 // bitsNeeded returns the minimum number of bits required to enumerate the
 // natural numbers below the given value
 func bitsNeeded(value int) int {
-	return int(math.Ceil(math.Log2(float64(value))))
+	if value < 2 {
+		return 1
+	}
+	bitCount := int(math.Ceil(math.Log2(float64(value))))
+	if isPowerOfTwo(value) {
+		bitCount++
+	}
+	return bitCount
+}
+
+func isPowerOfTwo(val int) bool {
+	return val != 0 && (val&(val-1) == 0)
 }
 
 func (s *StoragePackerV2) newBucket(key string) *LockedBucket {
@@ -570,10 +581,6 @@ func (s *StoragePackerV2) newBucket(key string) *LockedBucket {
 			Items:   make(map[string]*Item),
 		},
 	}
-}
-
-func isPowerOfTwo(val int) bool {
-	return val != 0 && (val&(val-1) == 0)
 }
 
 type WalkFunc func(item *Item) error

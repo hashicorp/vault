@@ -16,11 +16,37 @@ import (
 )
 
 const (
-	testIterationCount   = 5000
-	testBucketBaseCount  = defaultBucketBaseCount
-	testBucketShardCount = defaultBucketShardCount
-	testBucketMaxSize    = defaultBucketMaxSize
+	testIterationCount = 5000
+	//testBucketBaseCount  = defaultBucketBaseCount
+	//testBucketShardCount = defaultBucketShardCount
+	testBucketMaxSize = defaultBucketMaxSize
+
+	testBucketBaseCount  = 1
+	testBucketShardCount = 2
 )
+
+func TestStoragePacker_bitsNeeded(t *testing.T) {
+	testData := map[int]int{
+		-1: 1,
+		0:  1,
+		1:  1,
+		2:  2,
+		3:  2,
+		4:  3,
+		7:  3,
+		8:  4,
+		15: 4,
+		16: 5,
+		25: 5,
+		32: 6,
+		64: 7,
+	}
+	for value, expected := range testData {
+		if bitsNeeded(value) != expected {
+			t.Fatalf("expected bit count of %d for %d", expected, value)
+		}
+	}
+}
 
 func TestStoragePackerV2_Walk(t *testing.T) {
 	sp, err := NewStoragePackerV2(&Config{
