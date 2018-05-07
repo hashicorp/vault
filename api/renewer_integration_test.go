@@ -130,7 +130,9 @@ func TestRenewer_Renew(t *testing.T) {
 			defer v.Stop()
 
 			done, renewed := false, false
+			timeout := time.After(5 * time.Second)
 			for {
+
 				if done {
 					break
 				}
@@ -141,6 +143,8 @@ func TestRenewer_Renew(t *testing.T) {
 						if err != nil {
 							t.Fatalf("renewal failed with an error: %v", err)
 						}
+						// We can break out early here
+						done = true
 					} else {
 						t.Errorf("should have renewed once before returning: %s", err)
 					}
@@ -155,7 +159,7 @@ func TestRenewer_Renew(t *testing.T) {
 						t.Errorf("expected lease to <= 5s: %#v", renew)
 					}
 					renewed = true
-				case <-time.After(5 * time.Second):
+				case <-timeout:
 					if !renewed {
 						t.Errorf("no renewal")
 					}
@@ -186,6 +190,7 @@ func TestRenewer_Renew(t *testing.T) {
 			defer v.Stop()
 
 			renewed, done := false, false
+			timeout := time.After(10 * time.Second)
 			for {
 				if done {
 					break
@@ -197,6 +202,8 @@ func TestRenewer_Renew(t *testing.T) {
 						if err != nil {
 							t.Fatalf("renewal failed with an error: %v", err)
 						}
+						// We can break out early here
+						done = true
 					} else {
 						t.Errorf("should have renewed once before returning: %s", err)
 					}
@@ -221,7 +228,7 @@ func TestRenewer_Renew(t *testing.T) {
 						t.Error("expected an accessor")
 					}
 					renewed = true
-				case <-time.After(10 * time.Second):
+				case <-timeout:
 					if !renewed {
 						t.Errorf("no renewal")
 					}
