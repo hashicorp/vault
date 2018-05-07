@@ -1,9 +1,9 @@
 package storagepacker
 
 import (
-	"reflect"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
@@ -166,7 +166,7 @@ func TestStoragePacker_SerializeDeserializeComplexItem(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(&itemDecoded, entity) {
+	if !proto.Equal(&itemDecoded, entity) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v\n", entity, itemDecoded)
 	}
 }
