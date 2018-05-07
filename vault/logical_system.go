@@ -3188,8 +3188,16 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 		Path:        "cubbyhole/wrapinfo",
 		ClientToken: token,
 	}
-	// TODO: Figure out a better way to set the version
-	cubbyReq.SetTokenEntryVersion(2)
+
+	te, err := b.Core.tokenStore.lookupTokenNonLocked(ctx, token, false)
+	if err != nil {
+		return nil, err
+	}
+	if te == nil {
+		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
+	}
+
+	cubbyReq.SetTokenEntryVersion(te.Version)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
@@ -3259,8 +3267,16 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		Path:        "cubbyhole/wrapinfo",
 		ClientToken: token,
 	}
-	// TODO: Figure out a better way to set the version
-	cubbyReq.SetTokenEntryVersion(2)
+
+	te, err := b.Core.tokenStore.lookupTokenNonLocked(ctx, token, false)
+	if err != nil {
+		return nil, err
+	}
+	if te == nil {
+		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
+	}
+
+	cubbyReq.SetTokenEntryVersion(te.Version)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)

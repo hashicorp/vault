@@ -839,7 +839,14 @@ func (ts *TokenStore) store(ctx context.Context, entry *TokenEntry) error {
 // storeCommon handles the actual storage of an entry, possibly generating
 // secondary indexes
 func (ts *TokenStore) storeCommon(ctx context.Context, entry *TokenEntry, writeSecondary bool) error {
-	idHMAC, err := ts.hmac(ctx, entry.ID)
+	var obfuscatedID string
+	var err error
+	switch {
+	case entry.Version < 2:
+		obfuscatedID, err = ts.SaltID(ctx, entry.ID)
+	default:
+		obfuscatedID, err = ts.hmac(ctx, entry.ID)
+	}
 	if err != nil {
 		return err
 	}
@@ -865,12 +872,19 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *TokenEntry, writeS
 				return fmt.Errorf("parent token not found")
 			}
 
-			// Create the index entry
-			parentIDHMAC, err := ts.hmac(ctx, entry.Parent)
+			var obfuscatedParentID string
+			switch {
+			case entry.Version < 2:
+				obfuscatedParentID, err = ts.SaltID(ctx, entry.Parent)
+			default:
+				obfuscatedParentID, err = ts.hmac(ctx, entry.Parent)
+			}
 			if err != nil {
 				return err
 			}
-			path := parentPrefix + parentIDHMAC + "/" + idHMAC
+
+			// Create the index entry
+			path := parentPrefix + obfuscatedParentID + "/" + obfuscatedID
 			le := &logical.StorageEntry{Key: path}
 			if err := ts.view.Put(ctx, le); err != nil {
 				return errwrap.Wrapf("failed to persist entry: {{err}}", err)
@@ -879,7 +893,7 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *TokenEntry, writeS
 	}
 
 	// Write the primary ID
-	path := lookupPrefix + idHMAC
+	path := lookupPrefix + obfuscatedID
 	le := &logical.StorageEntry{Key: path, Value: enc}
 	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
 		le.SealWrap = true
@@ -1579,11 +1593,29 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		lock := locksutil.LockForKey(ts.tokenLocks, accessorEntry.TokenID)
 		lock.RLock()
 
-		te, err := ts.lookupTokenNonLocked(ctx, accessorEntry.TokenID, true)
+		obfuscatedID, err := ts.hmac(ctx, accessorEntry.TokenID)
 		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup tainted ID: {{err}}", err))
+			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to HMAC token ID: {{err}}", err))
 			lock.RUnlock()
 			continue
+		}
+
+		te, err := ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup ID HMAC: {{err}}", err))
+			lock.RUnlock()
+			continue
+		}
+
+		if te == nil {
+			// This is only here for backwards compatibility
+			obfuscatedID, err = ts.SaltID(ctx, accessorEntry.TokenID)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup token ID hash: {{err}}", err))
+				lock.RUnlock()
+				continue
+			}
+			te, err = ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
 		}
 
 		lock.RUnlock()
@@ -1592,7 +1624,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		// more and conclude that accessor, leases, and secondary index entries
 		// for this token should not exist as well.
 		if te == nil {
-			ts.logger.Info("deleting token with nil entry")
+			ts.logger.Info("deleting token with nil entry", "obfuscated_id", obfuscatedID)
 
 			// RevokeByToken expects a '*TokenEntry'. For the
 			// purposes of tidying, it is sufficient if the token
