@@ -1,14 +1,5 @@
 ## 0.10.2 (Unreleased)
 
-DEPRECATIONS/CHANGES:
-
- * Golang API Renew DoneCh Closed: When Stop() is called on a Renewer or it
-   otherwise is finished (due to an error condition or a lease no longer being
-   renewable) the done channel is now closed. Ensure, if your program is
-   relying on reads from the done channel before other checks, that you are
-   using the multi-valued variant of a read to check if the channel has been
-   closed.
-
 IMPROVEMENTS:
 
  * api: Close renewer's doneCh when the renewer is stopped, so that programs
