@@ -17,16 +17,16 @@ import (
 )
 
 const (
-	bucketCount                = 256
-	StoragePackerBucketsPrefix = "packer/buckets/"
+	bucketCount                       = 256
+	DefaultStoragePackerBucketsPrefix = "packer/buckets/"
 )
 
-// StoragePacker packs the objects into a specific number of buckets by hashing
-// its ID and indexing it. Currently this supports only 256 bucket entries and
-// hence relies on the first byte of the hash value for indexing. The items
-// that gets inserted into the packer should implement StorageBucketItem
-// interface.
-type StoragePacker struct {
+// StoragePackerV1 packs the objects into a specific number of buckets by
+// hashing its ID and indexing it. Currently this supports only 256 bucket
+// entries and hence relies on the first byte of the hash value for indexing.
+// This is only here for backwards compatibility. Use StoragePackerV2 for any
+// newer implementations which allows for infinite storage capacity.
+type StoragePackerV1 struct {
 	view         logical.Storage
 	logger       log.Logger
 	storageLocks []*locksutil.LockEntry
@@ -34,31 +34,31 @@ type StoragePacker struct {
 }
 
 // BucketPath returns the storage entry key for a given bucket key
-func (s *StoragePacker) BucketPath(bucketKey string) string {
+func (s *StoragePackerV1) BucketPath(bucketKey string) string {
 	return s.viewPrefix + bucketKey
 }
 
 // BucketKeyHash returns the MD5 hash of the bucket storage key in which
 // the item will be stored. The choice of MD5 is only for hash performance
 // reasons since its value is not used for any security sensitive operation.
-func (s *StoragePacker) BucketKeyHashByItemID(itemID string) string {
+func (s *StoragePackerV1) BucketKeyHashByItemID(itemID string) string {
 	return s.BucketKeyHashByKey(s.BucketPath(s.BucketKey(itemID)))
 }
 
 // BucketKeyHashByKey returns the MD5 hash of the bucket storage key
-func (s *StoragePacker) BucketKeyHashByKey(bucketKey string) string {
+func (s *StoragePackerV1) BucketKeyHashByKey(bucketKey string) string {
 	hf := md5.New()
 	hf.Write([]byte(bucketKey))
 	return hex.EncodeToString(hf.Sum(nil))
 }
 
 // View returns the storage view configured to be used by the packer
-func (s *StoragePacker) View() logical.Storage {
+func (s *StoragePackerV1) View() logical.Storage {
 	return s.view
 }
 
 // Get returns a bucket for a given key
-func (s *StoragePacker) GetBucket(key string) (*Bucket, error) {
+func (s *StoragePackerV1) GetBucket(key string) (*Bucket, error) {
 	if key == "" {
 		return nil, fmt.Errorf("missing bucket key")
 	}
@@ -129,20 +129,20 @@ func (s *Bucket) upsert(item *Item) error {
 }
 
 // BucketIndex returns the bucket key index for a given storage key
-func (s *StoragePacker) BucketIndex(key string) uint8 {
+func (s *StoragePackerV1) BucketIndex(key string) uint8 {
 	hf := md5.New()
 	hf.Write([]byte(key))
 	return uint8(hf.Sum(nil)[0])
 }
 
 // BucketKey returns the bucket key for a given item ID
-func (s *StoragePacker) BucketKey(itemID string) string {
+func (s *StoragePackerV1) BucketKey(itemID string) string {
 	return strconv.Itoa(int(s.BucketIndex(itemID)))
 }
 
 // DeleteItem removes the storage entry which the given key refers to from its
 // corresponding bucket.
-func (s *StoragePacker) DeleteItem(itemID string) error {
+func (s *StoragePackerV1) DeleteItem(itemID string) error {
 
 	if itemID == "" {
 		return fmt.Errorf("empty item ID")
@@ -202,7 +202,7 @@ func (s *StoragePacker) DeleteItem(itemID string) error {
 }
 
 // Put stores a packed bucket entry
-func (s *StoragePacker) PutBucket(bucket *Bucket) error {
+func (s *StoragePackerV1) PutBucket(bucket *Bucket) error {
 	if bucket == nil {
 		return fmt.Errorf("nil bucket entry")
 	}
@@ -241,7 +241,7 @@ func (s *StoragePacker) PutBucket(bucket *Bucket) error {
 
 // GetItem fetches the storage entry for a given key from its corresponding
 // bucket.
-func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
+func (s *StoragePackerV1) GetItem(itemID string) (*Item, error) {
 	if itemID == "" {
 		return nil, fmt.Errorf("empty item ID")
 	}
@@ -269,7 +269,7 @@ func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
 }
 
 // PutItem stores a storage entry in its corresponding bucket
-func (s *StoragePacker) PutItem(item *Item) error {
+func (s *StoragePackerV1) PutItem(item *Item) error {
 	if item == nil {
 		return fmt.Errorf("nil item")
 	}
@@ -329,14 +329,14 @@ func (s *StoragePacker) PutItem(item *Item) error {
 	return s.PutBucket(bucket)
 }
 
-// NewStoragePacker creates a new storage packer for a given view
-func NewStoragePacker(view logical.Storage, logger log.Logger, viewPrefix string) (*StoragePacker, error) {
+// NewStoragePackerV1 creates a new storage packer for a given view
+func NewStoragePackerV1(view logical.Storage, logger log.Logger, viewPrefix string) (*StoragePackerV1, error) {
 	if view == nil {
 		return nil, fmt.Errorf("nil view")
 	}
 
 	if viewPrefix == "" {
-		viewPrefix = StoragePackerBucketsPrefix
+		viewPrefix = DefaultStoragePackerBucketsPrefix
 	}
 
 	if !strings.HasSuffix(viewPrefix, "/") {
@@ -344,7 +344,7 @@ func NewStoragePacker(view logical.Storage, logger log.Logger, viewPrefix string
 	}
 
 	// Create a new packer object for the given view
-	packer := &StoragePacker{
+	packer := &StoragePackerV1{
 		view:         view,
 		viewPrefix:   viewPrefix,
 		logger:       logger.Named("storagepacker"),
