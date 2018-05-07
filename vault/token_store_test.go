@@ -402,6 +402,8 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	time.Sleep(200 * time.Millisecond)
+
 	out, err = ts.Lookup(context.Background(), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -885,6 +887,8 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
+
+	time.Sleep(200 * time.Millisecond)
 
 	lookup := []string{ent1.ID, ent2.ID, ent3.ID, ent4.ID}
 	for _, id := range lookup {
@@ -1380,6 +1384,8 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
+	time.Sleep(200 * time.Millisecond)
+
 	out, err := ts.Lookup(context.Background(), "child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1415,6 +1421,8 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: %#v", resp)
 	}
+
+	time.Sleep(200 * time.Millisecond)
 
 	out, err := ts.Lookup(context.Background(), "child")
 	if err != nil {
@@ -1468,6 +1476,8 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("did not get error when non-root revoking itself with orphan flag; resp is %#v", resp)
 	}
+
+	time.Sleep(200 * time.Millisecond)
 
 	// Should still exist
 	out, err = ts.Lookup(context.Background(), "child")
