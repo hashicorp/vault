@@ -30,9 +30,9 @@ export default Ember.Component.extend({
     if (serviceArgs === false) {
       return;
     }
-    let [method, path, dataAndFlags] = serviceArgs;
-    if (dataAndFlags) {
-      var {data, flags} = this.extractDataAndFlags(dataAndFlags);
+    let [method, flagArray, path, dataArray] = serviceArgs;
+    if (dataArray || flagArray) {
+      var {data, flags} = this.extractDataAndFlags(dataArray, flagArray);
     }
     this.get('console')[method](path, data, flags.wrapTTL)
       .then(resp => this.processResponse(resp, command, path, method, flags))
@@ -95,7 +95,25 @@ export default Ember.Component.extend({
     if (args[0] === 'vault') {
       args.shift();
     }
-    let [method, path, ...dataAndFlags] = args;
+    
+    let [method, ...rest] = args;
+    let path;
+    let flags = [];
+    let data = [];
+    
+    rest.forEach((arg, index) => {
+      if(arg.startsWith('-')){
+        flags.push(arg);
+      }
+      else{
+        if(path){
+          data.push(arg);
+        }
+        else{
+          path = arg;
+        }
+      }
+    });
 
     if(!supportedCommands.includes(method)) {
       if(shouldThrow) {
@@ -103,12 +121,12 @@ export default Ember.Component.extend({
       }
       return false;
     }
-    return [method, path, dataAndFlags];
+    return [method, flags, path, data];
 
   },
 
-  extractDataAndFlags(dataAndFlags) {
-    return dataAndFlags.reduce((accumulator, val) => {
+  extractDataAndFlags(data, flags) {
+    return data.concat(flags).reduce((accumulator, val) => {
       // will be "key=value" or "-flag=value" or "foo=bar=baz"
       // split on the first =
       let [ item, value ] = val.split(/=(.+)/);
@@ -139,6 +157,9 @@ export default Ember.Component.extend({
   actions: {
     setValue(val){
       this.set('inputValue', val);
+    },
+    executeCommand(val){
+      this.executeCommand(val, true);
     }
   },
 
