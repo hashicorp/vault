@@ -85,38 +85,38 @@ user or machine is allowed to access.
 [hcl]: https://github.com/hashicorp/hcl
 
 Here is a very simple policy which grants read capabilities to the path
-"secret/foo":
+"secret/data/foo":
 
 ```ruby
-path "secret/foo" {
+path "secret/data/foo" {
   capabilities = ["read"]
 }
 ```
 
-When this policy is assigned to a token, the token can read from `"secret/foo"`.
-However, the token could not update or delete `"secret/foo"`, since the
+When this policy is assigned to a token, the token can read from `"secret/data/foo"`.
+However, the token could not update or delete `"secret/data/foo"`, since the
 capabilities do not allow it. Because policies are **deny by default**, the
 token would have no other access in Vault.
 
 Here is a more detailed policy, and it is documented inline:
 
 ```ruby
-# This section grants all access on "secret/*". Further restrictions can be
+# This section grants all access on "secret/data/*". Further restrictions can be
 # applied to this broad policy, as shown below.
-path "secret/*" {
+path "secret/data/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
 }
 
-# Even though we allowed secret/*, this line explicitly denies
-# secret/super-secret. This takes precedence.
-path "secret/super-secret" {
+# Even though we allowed secret/data/*, this line explicitly denies
+# secret/data/super-secret. This takes precedence.
+path "secret/data/super-secret" {
   capabilities = ["deny"]
 }
 
 # Policies can also specify allowed, disallowed, and required parameters. Here
-# the key "secret/restricted" can only contain "foo" (any value) and "bar" (one
+# the key "secret/data/restricted" can only contain "foo" (any value) and "bar" (one
 # of "zip" or "zap").
-path "secret/restricted" {
+path "secret/data/restricted" {
   capabilities = ["create"]
   allowed_parameters = {
     "foo" = []
@@ -130,21 +130,21 @@ request. A policy `path` may specify an exact path to match, or it could specify
 a glob pattern which instructs Vault to use a prefix match:
 
 ```ruby
-# Permit reading only "secret/foo". An attached token cannot read "secret/food"
-# or "secret/foo/bar".
-path "secret/foo" {
+# Permit reading only "secret/data/foo". An attached token cannot read "secret/data/food"
+# or "secret/data/foo/bar".
+path "secret/data/foo" {
   capabilities = ["read"]  
 }
 
-# Permit reading everything under "secret/bar". An attached token could read
-# "secret/bar/zip", "secret/bar/zip/zap", but not "secret/bars/zip".
-path "secret/bar/*" {
+# Permit reading everything under "secret/data/bar". An attached token could read
+# "secret/data/bar/zip", "secret/data/bar/zip/zap", but not "secret/data/bars/zip".
+path "secret/data/bar/*" {
   capabilities = ["read"]
 }
 
 # Permit reading everything prefixed with "zip-". An attached token could read
-# "secret/zip-zap" or "secret/zip-zap/zong", but not "secret/zip/zap
-path "secret/zip-*" {
+# "secret/data/zip-zap" or "secret/data/zip-zap/zong", but not "secret/data/zip/zap
+path "secret/data/zip-*" {
   capabilities = ["read"]
 }
 ```
@@ -156,7 +156,7 @@ capabilities, which controls a token's access to credentials in Vault.
 
 ~> Policy paths are matched using the **most specific path match**. This may be
 an exact match or the longest-prefix match of a glob. This means if you define a
-policy for `"secret/foo*"`, the policy would also match `"secret/foobar"`.
+policy for `"secret/data/foo*"`, the policy would also match `"secret/data/foobar"`.
 
 !> The glob character is only supported as the **last character of the path**,
 and **is not a regular expression**!
@@ -166,11 +166,11 @@ always operates on a prefix, policies must operate on a prefix because Vault
 will sanitize request paths to be prefixes:
 
 ```ruby
-path "secret/foo" {
+path "secret/data/foo" {
   capabilities = ["read"]
 }
 
-path "secret/foo/" {
+path "secret/data/foo/" {
   capabilities = ["list"]
 }
 ```
@@ -241,9 +241,9 @@ options are:
   * `required_parameters` - A list of parameters that must be specified.
 
       ```ruby
-      # This requires the user to create "secret/foo" with a parameter named
+      # This requires the user to create "secret/data/foo" with a parameter named
       # "bar" and "baz".
-      path "secret/foo" {
+      path "secret/data/foo" {
         capabilities = ["create"]
         required_parameters = ["bar", "baz"]
       }
@@ -256,10 +256,10 @@ options are:
       contain any value.
 
         ```ruby
-        # This allows the user to create "secret/foo" with a parameter named
+        # This allows the user to create "secret/data/foo" with a parameter named
         # "bar". It cannot contain any other parameters, but "bar" can contain
         # any value.
-        path "secret/foo" {
+        path "secret/data/foo" {
           capabilities = ["create"]
           allowed_parameters = {
             "bar" = []
@@ -271,10 +271,10 @@ options are:
       to contain only those values.
 
         ```ruby
-        # This allows the user to create "secret/foo" with a parameter named
+        # This allows the user to create "secret/data/foo" with a parameter named
         # "bar". It cannot contain any other parameters, and "bar" can only
         # contain the values "zip" or "zap".
-        path "secret/foo" {
+        path "secret/data/foo" {
           capabilities = ["create"]
           allowed_parameters = {
             "bar" = ["zip", "zap"]
@@ -288,10 +288,10 @@ options are:
       will still be restricted to those values.
 
         ```ruby
-        # This allows the user to create "secret/foo" with a parameter named
+        # This allows the user to create "secret/data/foo" with a parameter named
         # "bar". The parameter "bar" can only contain the values "zip" or "zap",
         # but any other parameters may be created with any value.
-        path "secret/foo" {
+        path "secret/data/foo" {
           capabilities = ["create"]
           allowed_parameters = {
             "bar" = ["zip", "zap"]
@@ -307,9 +307,9 @@ options are:
       that parameter.
 
         ```ruby
-        # This allows the user to create "secret/foo" with any parameters not
+        # This allows the user to create "secret/data/foo" with any parameters not
         # named "bar".
-        path "secret/foo" {
+        path "secret/data/foo" {
           capabilities = ["create"]
           denied_parameters = {
             "bar" = []
@@ -321,10 +321,10 @@ options are:
       containing those values.
 
         ```ruby
-        # This allows the user to create "secret/foo" with a parameter named
+        # This allows the user to create "secret/data/foo" with a parameter named
         # "bar". It can contain any other parameters, but "bar" cannot contain
         # the values "zip" or "zap".
-        path "secret/foo" {
+        path "secret/data/foo" {
           capabilities = ["create"]
           denied_parameters = {
             "bar" = ["zip", "zap"]
@@ -335,9 +335,9 @@ options are:
     * Setting to `"*"` will deny any parameter.
 
         ```ruby
-        # This allows the user to create "secret/foo", but it cannot have any
+        # This allows the user to create "secret/data/foo", but it cannot have any
         # parameters.
-        path "secret/foo" {
+        path "secret/data/foo" {
           capabilities = ["create"]
           denied_parameters = {
             "*" = []
@@ -353,7 +353,7 @@ prepending or appending or prepending a splat (`*`) to the value:
 
 ```ruby
 # Only allow a parameter named "bar" with a value starting with "foo-*".
-path "secret/foo" {
+path "secret/data/foo" {
   capabilities = ["create"]
   allowed_parameters = {
     "bar" = ["foo-*"]
