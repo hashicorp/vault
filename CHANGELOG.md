@@ -6,6 +6,11 @@ IMPROVEMENTS:
    expecting a final value through doneCh behave correctly [GH-4472]
  * cli: `vault login` now supports a `-no-print` flag to suppress printing
    token information but still allow storing into the token helper [GH-4454]
+ * core/pkcs11 (enterprise): Add support for CKM_AES_CBS_PAD, CKM_RSA_PKCS, and 
+   CKM_RSA_PKCS_OAEP mechanisms
+ * core/pkcs11 (enterprise): HSM slots can now be selected by token label instead
+   of just slot number
+ * core/seal (enterprise): Lazily rewrap data when seal keys are rotated
  * expiration: Allow revoke-prefix and revoke-force to work on single leases as
    well as prefixes [GH-4450]
 
