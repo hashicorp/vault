@@ -3141,11 +3141,11 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *TokenEnt
 	}
 
 	cubbyReq := &logical.Request{
-		Operation:   logical.ReadOperation,
-		Path:        "cubbyhole/response",
-		ClientToken: te.ID,
+		Operation:         logical.ReadOperation,
+		Path:              "cubbyhole/response",
+		ClientToken:       te.ID,
+		TokenEntryVersion: te.Version,
 	}
-	cubbyReq.SetTokenEntryVersion(te.Version)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return "", errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
@@ -3197,7 +3197,8 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 	}
 
-	cubbyReq.SetTokenEntryVersion(te.Version)
+	cubbyReq.TokenEntryVersion = te.Version
+
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
@@ -3276,7 +3277,8 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 	}
 
-	cubbyReq.SetTokenEntryVersion(te.Version)
+	cubbyReq.TokenEntryVersion = te.Version
+
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
@@ -3310,12 +3312,12 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 
 	// Fetch the original response and return it as the data for the new response
 	cubbyReq = &logical.Request{
-		Operation:   logical.ReadOperation,
-		Path:        "cubbyhole/response",
-		ClientToken: token,
+		Operation:         logical.ReadOperation,
+		Path:              "cubbyhole/response",
+		ClientToken:       token,
+		TokenEntryVersion: te.Version,
 	}
-	// TODO: Figure out a better way to set the version
-	cubbyReq.SetTokenEntryVersion(2)
+
 	cubbyResp, err = b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, errwrap.Wrapf("error looking up response: {{err}}", err)

@@ -1211,6 +1211,9 @@ func (m *ExpirationManager) deleteEntry(leaseID string) error {
 	return nil
 }
 
+// hmacIndexPath takes in a token ID and lease ID and returns the storage path
+// to be used for the lease's secondary index. The storage path is created by
+// SHA2-256 HMACing the IDs using the token store's salt.
 func (m *ExpirationManager) hmacIndexPath(tokenID, leaseID string) (string, error) {
 	tokenIDHMAC, err := m.tokenStore.hmac(m.quitContext, tokenID)
 	if err != nil {
@@ -1225,6 +1228,10 @@ func (m *ExpirationManager) hmacIndexPath(tokenID, leaseID string) (string, erro
 	return path.Join(tokenIDHMAC, leaseIDHMAC), nil
 }
 
+// Deprecated: hashIndexPath takes in a token ID and lease ID and returns the
+// storage path to be used for the lease's secondary index. The storage path is
+// created by SHA1 hashing the IDs using the token store's salt. This is only
+// here for backwards compatibility.
 func (m *ExpirationManager) hashIndexPath(tokenID, leaseID string) (string, error) {
 	saltedID, err := m.tokenStore.SaltID(m.quitContext, tokenID)
 	if err != nil {

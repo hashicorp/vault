@@ -170,16 +170,16 @@ DONELISTHANDLING:
 	}
 
 	cubbyReq := &logical.Request{
-		Operation:   logical.CreateOperation,
-		Path:        "cubbyhole/response",
-		ClientToken: te.ID,
+		Operation:         logical.CreateOperation,
+		Path:              "cubbyhole/response",
+		ClientToken:       te.ID,
+		TokenEntryVersion: te.Version,
 	}
 	if sealWrap {
 		cubbyReq.WrapInfo = &logical.RequestWrapInfo{
 			SealWrap: true,
 		}
 	}
-	cubbyReq.SetTokenEntryVersion(te.Version)
 
 	// During a rewrap, store the original response, don't wrap it again.
 	if req.Path == "sys/wrapping/rewrap" {

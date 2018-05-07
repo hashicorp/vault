@@ -145,15 +145,12 @@ type Request struct {
 	// the request, used for best-effort avoidance of stale read-after-write
 	lastRemoteWAL uint64
 
-	tokenEntryVersion int
-}
-
-func (r *Request) TokenEntryVersion() int {
-	return r.tokenEntryVersion
-}
-
-func (r *Request) SetTokenEntryVersion(version int) {
-	r.tokenEntryVersion = version
+	// TokenEntryVersion indicates the version of the token. Tokens with
+	// version 2 will have its path SHA2-256 HMACed while getting persisted.
+	// After checking the token while request handling, the token entry version
+	// is set in the request object to avoid another lookup of the same during
+	// routing.
+	TokenEntryVersion int
 }
 
 // Get returns a data field and guards for nil Data

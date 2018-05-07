@@ -465,7 +465,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 			return nil, false, false, err
 		}
 		switch {
-		case req.TokenEntryVersion() < 2:
+		case req.TokenEntryVersion < 2:
 			// This is only here for backwards compatibility
 			// In order for the token store to revoke later, we need to have the same
 			// salted ID, so we double-salt what's going to the cubbyhole backend
