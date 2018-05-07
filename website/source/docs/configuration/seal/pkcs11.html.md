@@ -62,9 +62,12 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   Vault binary is currently running on (e.g.: a Linux system may require other
   libraries to interpret Windows .dll files).
 
-- `slot` `(string: <required>)`: The slot number to use, specified as a string
-  (e.g. `"0"`). May also be specified by the `VAULT_HSM_SLOT` environment
-  variable.
+- `slot` `(string: <slot or token label required>)`: The slot number to use, 
+  specified as a string (e.g. `"0"`). May also be specified by the `VAULT_HSM_SLOT`
+  environment variable.
+
+- `token_label` `(string: <slot or token label required>)`: The slot token label to 
+  use. May also be specified by the `VAULT_HSM_TOKEN_LABEL` environment variable.
 
 - `pin` `(string: <required>)`: The PIN for login. May also be specified by the
   `VAULT_HSM_PIN` environment variable. _If set via the environment variable,
@@ -154,6 +157,7 @@ environment variables:
 VAULT_HSM_LIB
 VAULT_HSM_TYPE
 VAULT_HSM_SLOT
+VAULT_HSM_TOKEN_LABEL
 VAULT_HSM_PIN
 VAULT_HSM_KEY_LABEL
 VAULT_HSM_DEFAULT_KEY_LABEL
