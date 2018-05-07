@@ -101,7 +101,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   `VAULT_HSM_HMAC_DEFAULT_KEY_LABEL` environment variable.  This value is ignored in 
   new installations.
  
-- `mechanism` `(string: "<best available>)`: The encryption/decryption mechanism to use,
+- `mechanism` `(string: <best available>)`: The encryption/decryption mechanism to use,
   specified as a decimal or hexadecimal (prefixed by `0x`) string. May also be 
   specified by the `VAULT_HSM_MECHANISM` environment variable.  
   Currently supported mechanisms (in order of precedence):
