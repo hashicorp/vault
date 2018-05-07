@@ -1283,20 +1283,44 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 		}
 	}
 
-	// Mark all children token as orphan by removing
-	// their parent index, and clear the parent entry.
+	// Mark all child tokens as orphans by removing their parent index, and
+	// clear the parent entry.
 	//
 	// Marking the token as orphan is the correct behavior in here since
-	// revokeTreeSalted will ensure that they are deleted anyways if it's not an
-	// explicit call to orphan the child tokens (the delete occurs at the leaf
-	// node and uses parent prefix, not entry.Parent, to build the tree for
-	// traversal).
-	parentPath := parentPrefix + obfuscatedID + "/"
-	children, err := ts.view.List(ctx, parentPath)
+	// revokeTreeSalted will ensure that they are deleted anyways if it's not
+	// an explicit call to orphan the child tokens (the delete occurs at the
+	// leaf node and uses parent prefix, not entry.Parent, to build the tree
+	// for traversal).
+	idHMAC, err := ts.hmac(ctx, entry.ID)
+	if err != nil {
+		return errwrap.Wrapf("failed to HMAC token ID: {{err}}", err)
+	}
+	idHMACParentPath := parentPrefix + idHMAC + "/"
+
+	allChildren := []string{}
+
+	children, err := ts.view.List(ctx, idHMACParentPath)
+	if err != nil {
+		return errwrap.Wrapf("failed to scan for children using HMAC token ID: {{err}}", err)
+	}
+
+	allChildren = append(allChildren, children...)
+
+	// This is only here for backwards compatibility
+	saltedID, err := ts.SaltID(ctx, entry.ID)
+	if err != nil {
+		return errwrap.Wrapf("failed to hash token ID: {{err}}", err)
+	}
+	saltedIDParentPath := parentPrefix + saltedID + "/"
+
+	children, err = ts.view.List(ctx, saltedIDParentPath)
 	if err != nil {
 		return errwrap.Wrapf("failed to scan for children: {{err}}", err)
 	}
-	for _, child := range children {
+
+	allChildren = append(allChildren, children...)
+
+	for _, child := range allChildren {
 		entry, err := ts.lookupObfuscatedToken(ctx, child, true)
 		if err != nil {
 			return errwrap.Wrapf("failed to get child token: {{err}}", err)
@@ -1312,8 +1336,11 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 		}
 		lock.Unlock()
 	}
-	if err = logical.ClearView(ctx, ts.view.SubView(parentPath)); err != nil {
-		return errwrap.Wrapf("failed to delete entry: {{err}}", err)
+	if err = logical.ClearView(ctx, ts.view.SubView(idHMACParentPath)); err != nil {
+		return errwrap.Wrapf("failed to delete HMACed parent path: {{err}}", err)
+	}
+	if err = logical.ClearView(ctx, ts.view.SubView(saltedIDParentPath)); err != nil {
+		return errwrap.Wrapf("failed to delete hashed parent path: {{err}}", err)
 	}
 
 	// Now that the entry is not usable for any revocation tasks, nuke it
