@@ -54,10 +54,26 @@ export default Ember.Component.extend({
 
       // print something here
       this.appendToLog({type: 'text', content: message});
+      return;
     }
     let { wrapTTL, format, field } = flags;
-    if (wrapTTL) {
-      this.appendToLog({type: 'object', content: response.wrap_info });
+    let secret = response.data || response.wrap_info;
+
+    if (field) {
+      let fieldValue = secret[field];
+      if (fieldValue) {
+        switch (typeof fieldValue) {
+          case 'string':
+            this.appendToLog({type: 'text', content: fieldValue});
+            break;
+          default:
+            this.appendToLog({type: 'object', content: fieldValue});
+            break;
+        }
+      } else {
+        this.appendToLog({type: 'error', content: `Field "${field}" not present in secret`});
+      }
+      return;
     }
 
     if (format && format === 'json') {
@@ -66,16 +82,12 @@ export default Ember.Component.extend({
       return;
     }
 
-    let secret = response.data;
-    if (field) {
-      if (secret.field) {
-        this.appendToLog({type: 'text', content: secret.field});
-      } else {
-        this.appendToLog({type: 'error', content: `There is no field ${field} in the response.`});
-      }
+    if (wrapTTL) {
+      this.appendToLog({type: 'object', content: response.wrap_info });
+      return;
     }
 
-    this.appendToLog({type: 'object', response.data });
+    this.appendToLog({type: 'object', content: response.data });
   },
 
   parseCommand(command, shouldThrow) {
