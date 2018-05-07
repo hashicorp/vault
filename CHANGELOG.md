@@ -10,6 +10,7 @@ IMPROVEMENTS:
    CKM_RSA_PKCS_OAEP mechanisms
  * core/pkcs11 (enterprise): HSM slots can now be selected by token label instead
    of just slot number
+ * core/seal (enterprise): Lazily rewrap data when seal keys are rotated
  * expiration: Allow revoke-prefix and revoke-force to work on single leases as
    well as prefixes [GH-4450]
 
