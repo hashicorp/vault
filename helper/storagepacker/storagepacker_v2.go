@@ -569,6 +569,8 @@ func bitsNeeded(value int) int {
 	return bitCount
 }
 
+// isPowerOfTwo returns true if the given value is a power of two, false
+// otherwise.
 func isPowerOfTwo(val int) bool {
 	return val != 0 && (val&(val-1) == 0)
 }
