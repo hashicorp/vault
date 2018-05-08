@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/ldaputil"
 	"github.com/hashicorp/vault/helper/mfa"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -67,7 +68,12 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		return nil, logical.ErrorResponse("ldap backend not configured"), nil, nil
 	}
 
-	c, err := cfg.DialLDAP()
+	ldapClient := ldaputil.Client{
+		Logger: b.Logger(),
+		LDAP:   ldaputil.NewLDAP(),
+	}
+
+	c, err := ldapClient.DialLDAP(cfg)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
@@ -78,7 +84,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	// Clean connection
 	defer c.Close()
 
-	userBindDN, err := cfg.GetUserBindDN(cfg, c, username)
+	userBindDN, err := ldapClient.GetUserBindDN(cfg, c, username)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
@@ -112,12 +118,12 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		}
 	}
 
-	userDN, err := cfg.GetUserDN(cfg, c, userBindDN)
+	userDN, err := ldapClient.GetUserDN(cfg, c, userBindDN)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 
-	ldapGroups, err := cfg.GetLdapGroups(cfg, c, userDN, username)
+	ldapGroups, err := ldapClient.GetLdapGroups(cfg, c, userDN, username)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}

@@ -182,8 +182,6 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldaputil.C
 		}
 	}
 
-	result.Logger = b.Logger()
-
 	return result, nil
 }
 
@@ -225,8 +223,6 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
  */
 func (b *backend) newConfigEntry(d *framework.FieldData) (*ldaputil.ConfigEntry, error) {
 	cfg := new(ldaputil.ConfigEntry)
-
-	cfg.Logger = b.Logger()
 
 	url := d.Get("url").(string)
 	if url != "" {
