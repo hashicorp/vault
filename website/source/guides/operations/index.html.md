@@ -33,6 +33,10 @@ walks you through the commands to activate the Vault servers in replication mode
 Please note that [Vault Replication](/docs/vault-enterprise/replication/index.html)
 is a Vault Enterprise feature.
 
+- **[Enterprise Only]** [Mount Filter](/guides/operations/mount-filter.html)
+guide demonstrates how to selectively filter out secret mounts for Performance
+Replication.
+
 - **[Enterprise Only]** [Vault Auto-unseal using AWS Key Management Service (KMS)](/guides/operations/autounseal-aws-kms.html) guide demonstrates an example of
 how to use Terraform to provision an instance that utilizes an encryption key
 from AWS Key Management Service (KMS).
