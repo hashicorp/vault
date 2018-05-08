@@ -42,7 +42,7 @@ European Union.  It requires that personally identifiable data not be physically
 transferred to locations outside the European Union unless the region or country
 has an equal rigor of data protection regulation as the EU.
 
-Failure to abide by GDPR will result in fines as much as 20 million EUR or 4% of
+Failure to abide by GDPR will result in fines as high as 20 million EUR or 4% of
 the global annual revenue (whichever greater).
 
 
