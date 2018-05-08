@@ -2215,36 +2215,34 @@ func (b *SystemBackend) handleLeaseLookup(ctx context.Context, req *logical.Requ
 			logical.ErrInvalidRequest
 	}
 
-	le, err := b.Core.expiration.FetchLeaseTimes(leaseID)
+	leaseTimes, err := b.Core.expiration.FetchLeaseTimes(leaseID)
 	if err != nil {
 		b.Backend.Logger().Error("error retrieving lease", "lease_id", leaseID, "error", err)
 		return handleError(err)
 	}
-
-	if le == nil || le.ttl() < 0 {
+	if leaseTimes == nil {
 		return logical.ErrorResponse("invalid lease"), logical.ErrInvalidRequest
 	}
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"id":           leaseID,
-			"issue_time":   le.IssueTime,
+			"issue_time":   leaseTimes.IssueTime,
 			"expire_time":  nil,
 			"last_renewal": nil,
 			"ttl":          int64(0),
 		},
 	}
-	renewable, _ := le.renewable()
+	renewable, _ := leaseTimes.renewable()
 	resp.Data["renewable"] = renewable
 
-	if !le.LastRenewalTime.IsZero() {
-		resp.Data["last_renewal"] = le.LastRenewalTime
+	if !leaseTimes.LastRenewalTime.IsZero() {
+		resp.Data["last_renewal"] = leaseTimes.LastRenewalTime
 	}
-	if !le.ExpireTime.IsZero() {
-		resp.Data["expire_time"] = le.ExpireTime
-		resp.Data["ttl"] = le.ttl()
+	if !leaseTimes.ExpireTime.IsZero() {
+		resp.Data["expire_time"] = leaseTimes.ExpireTime
+		resp.Data["ttl"] = leaseTimes.ttl()
 	}
-
 	return resp, nil
 }
 
