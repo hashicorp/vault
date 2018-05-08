@@ -82,7 +82,7 @@
     "ember-source": "~2.14.0",
     "ember-test-selectors": "^0.3.6",
     "ember-truth-helpers": "1.2.0",
-    "ivy-codemirror": "2.0.3",
+    "ivy-codemirror": "2.1.0",
     "loader.js": "^4.2.3",
     "normalize.css": "4.1.1",
     "prettier": "^1.5.3",

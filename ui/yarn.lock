@@ -2043,7 +2043,7 @@ code-point-at@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
 
-codemirror@5.15.2:
+codemirror@5.15.2, codemirror@~5.15.0:
   version "5.15.2"
   resolved "https://registry.yarnpkg.com/codemirror/-/codemirror-5.15.2.tgz#58b3dc732c6d10d7aae806f4c7cdd56a9b87fe8f"
 
@@ -4914,11 +4914,13 @@ istextorbinary@2.1.0:
     editions "^1.1.1"
     textextensions "1 || 2"
 
-ivy-codemirror@2.0.3:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/ivy-codemirror/-/ivy-codemirror-2.0.3.tgz#a5b26d343be2031dead036e2be794c46f1b157d9"
+ivy-codemirror@2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/ivy-codemirror/-/ivy-codemirror-2.1.0.tgz#c06f1606c375610bf62b007a21a9e63f5854175e"
   dependencies:
-    ember-cli-babel "^5.1.7"
+    codemirror "~5.15.0"
+    ember-cli-babel "^6.0.0"
+    ember-cli-node-assets "^0.2.2"
 
 jade@0.26.3:
   version "0.26.3"
