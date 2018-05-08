@@ -11,15 +11,15 @@ description: |-
 
 ## Database Secrets Engine
 
-Vault's [database secrets engine](/docs/secrets/databases/index.html) is used to
-dynamically generate role-based database credentials for various database
-systems. The generation of dynamic database credentials allows every service
-instance to have a unique set of database credentials instead of sharing one.
-Since the credentials are tied directly to each service instance and live only
-for the life of the service, any abnormal access pattern can be mapped to a
-specific service instance and its credential can be revoked immediately.
+Vault's [database secrets engine](/docs/secrets/databases/index.html) provides a
+centralized workflow for managing credentials for various database systems. By
+leveraging this, every service instance gets a unique set of database
+credentials instead of sharing one.  Having those credentials tied directly to
+each service instance and live only for the life of the service, any abnormal
+access pattern can be mapped to a specific service instance and its credential
+can be revoked immediately.
 
-This reduced the manual tasks performed by the database administrator and made
+This reduces the manual tasks performed by the database administrator and make
 the access to the database to be more efficient and secure.
 
 The [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets.html)
@@ -38,10 +38,10 @@ guide demonstrates the basic working of it.
 
 ## Challenge
 
-Because Vault is managing credentials on behalf of the database administrator,
-it must also be given a set of highly privileged credentials which can grant and
-revoke access to the database system.  Therefore, it is very common to give
-Vault the **root** credentials.
+Because Vault is managing the database credentials on behalf of the database
+administrator, it must also be given a set of highly privileged credentials
+which can grant and revoke access to the database system.  Therefore, it is very
+common to give Vault the **root** credentials.
 
 However, these credentials are often long-lived and never change once configured
 on Vault. This may violate the _Governance, Risk and Compliance_ (GRC)
@@ -69,8 +69,7 @@ unsealed](/intro/getting-started/deploy.html).
 ### PostgreSQL
 
 This guide requires that you have a PostgreSQL server to connect to. If you
-don't have one, install [PostgreSQL](https://www.postgresql.org/download/) to
-perform the steps described in this guide.
+don't have one, install [PostgreSQL](https://www.postgresql.org/download/).
 
 - Refer to the [PostgreSQL documentation](https://www.postgresql.org/docs/online-resources/) for details
 - [PostgreSQL Wiki](https://wiki.postgresql.org/wiki/First_steps) gives you a
@@ -104,11 +103,11 @@ If you are not familiar with policies, complete the
 
 ## Steps
 
-Using Vault, you can easily rotate the root credentials for your database through the  
-**`database/rotate-root/:name`** endpoint.
+Using Vault, you can easily rotate the root credentials for your database
+through the **`database/rotate-root/:name`** endpoint.
 
-This guide demonstrates the steps to programmatically rotate the root
-credentials of the databases that were managed by Vault.
+This guide demonstrates the overall workflow to manage the database credentials
+including the root.
 
 You are going to perform the following:
 
@@ -147,8 +146,10 @@ and passes the secret engine type ("`database`") in the request payload.
 
 ### <a name="step2"></a>Step 2: Configure PostgreSQL secret engine
 
-In the [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets.html#step2)
-guide, the PostgreSQL plugin was configured as follow:
+In the [Secret as a Service: Dynamic
+Secrets](/guides/secret-mgmt/dynamic-secrets.html#step2) guide, the PostgreSQL
+plugin was configured with its root credentials embedded in the `connection_url`
+(`root` and `rootpassword`) as below:
 
 ```plaintext
 $ vault write database/config/postgresql \
@@ -157,7 +158,6 @@ $ vault write database/config/postgresql \
       connection_url=postgresql://root:rootpassword@postgres.host.address:5432/postgres
 ```
 
-The `connection_url` contains the root credentials (`root` and `rootpassword`).
 The username and password can be templated using the format,
 **`{{<field-name>}}`**.
 
