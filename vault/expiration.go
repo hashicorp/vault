@@ -575,7 +575,8 @@ func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
 		}
 
 		// If there's a lease, set expiration to now, persist, and call
-		// updatePending to hand off revocation to the expiration manager
+		// updatePending to hand off revocation to the expiration manager's pending
+		// timer map
 		if le != nil {
 			le.ExpireTime = time.Now()
 
@@ -1292,15 +1293,10 @@ func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(te *TokenEntry) 
 			return "", consts.ErrPathContainsParentReferences
 		}
 
-		saltedID, err := m.tokenStore.SaltID(m.quitContext, auth.ClientToken)
-		if err != nil {
-			return "", err
-		}
-
 		// Create a lease entry
 		now := time.Now()
 		le = &leaseEntry{
-			LeaseID:     path.Join(te.Path, saltedID),
+			LeaseID:     leaseID,
 			ClientToken: auth.ClientToken,
 			Auth:        auth,
 			Path:        te.Path,

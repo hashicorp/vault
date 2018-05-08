@@ -1082,7 +1082,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 	// failed (state is false)
 	state, loaded := ts.tokensPendingDeletion.LoadOrStore(saltedID, true)
 
-	// If the entry was loaded and it's state is true, we shortcircuit
+	// If the entry was loaded and its state is true, we short-circuit
 	if loaded && state == true {
 		return nil
 	}
