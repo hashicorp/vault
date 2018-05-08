@@ -13,8 +13,9 @@ export default Ember.Component.extend({
       var keyCode = event.keyCode;
       if (keyCode === keys.ENTER) {
         this.get('onExecuteCommand')(event.target.value);
+      } else {
+        this.get('onValueUpdate')(event.target.value);
       }
-      this.get('onValueUpdate')(event.target.value);
     }
   }
 });
