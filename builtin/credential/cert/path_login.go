@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 
-	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/ryanuber/go-glob"
 )
 
@@ -384,30 +384,10 @@ func (b *backend) checkForValidChain(chains [][]*x509.Certificate) bool {
 }
 
 func (b *backend) checkCIDR(cert *CertEntry, req *logical.Request) error {
-
-	if len(cert.BoundCIDRs) == 0 {
-		// short-circuit the below logic
+	if cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cert.BoundCIDRs) {
 		return nil
 	}
-
-	var valid bool
-	remoteSockAddr, err := sockaddr.NewSockAddr(req.Connection.RemoteAddr)
-	if err != nil {
-		if b.Logger().IsDebug() {
-			b.Logger().Debug("could not parse remote addr into sockaddr", "error", err, "remote_addr", req.Connection.RemoteAddr)
-		}
-		return logical.ErrPermissionDenied
-	}
-	for _, cidr := range cert.BoundCIDRs {
-		if cidr.Contains(remoteSockAddr) {
-			valid = true
-			break
-		}
-	}
-	if !valid {
-		return logical.ErrPermissionDenied
-	}
-	return nil
+	return logical.ErrPermissionDenied
 }
 
 // parsePEM parses a PEM encoded x509 certificate

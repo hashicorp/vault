@@ -238,7 +238,10 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	for _, v := range d.Get("bound_cidrs").([]string) {
 		parsedCIDR, err := sockaddr.NewSockAddr(v)
 		if err != nil {
-			return nil, err
+			if b.Logger().IsDebug() {
+				b.Logger().Debug(fmt.Sprintf("unable to parse %s as a cidr: %s", v, err))
+			}
+			return nil, logical.ErrPermissionDenied
 		}
 		parsedCIDRs = append(parsedCIDRs, &sockaddr.SockAddrMarshaler{parsedCIDR})
 	}
