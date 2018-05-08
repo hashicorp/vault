@@ -638,10 +638,10 @@ func TestTokenStore_UseToken(t *testing.T) {
 	if te == nil {
 		t.Fatalf("token entry for use #2 was nil")
 	}
-	if te.NumUses != tokenRevocationDeferred {
+	if te.NumUses != tokenRevocationPending {
 		t.Fatalf("token entry after use #2 did not have revoke flag")
 	}
-	ts.Revoke(context.Background(), te.ID)
+	ts.revokeOrphan(context.Background(), te.ID)
 
 	// Lookup the token
 	ent2, err = ts.Lookup(context.Background(), ent.ID)
@@ -663,11 +663,11 @@ func TestTokenStore_Revoke(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	err := ts.Revoke(context.Background(), "")
+	err := ts.revokeOrphan(context.Background(), "")
 	if err.Error() != "cannot revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
-	err = ts.Revoke(context.Background(), ent.ID)
+	err = ts.revokeOrphan(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -721,7 +721,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 	}
 
 	// Revoke the token
-	err = ts.Revoke(context.Background(), ent.ID)
+	err = ts.revokeOrphan(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -751,7 +751,7 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	err := ts.Revoke(context.Background(), ent.ID)
+	err := ts.revokeOrphan(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -782,14 +782,14 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 	root, children := buildTokenTree(t, ts, depth)
-	err := ts.RevokeTree(context.Background(), "")
+	err := ts.revokeTree(context.Background(), "")
 
 	if err.Error() != "cannot tree-revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Nuke tree non recursively.
-	err = ts.RevokeTree(context.Background(), root.ID)
+	err = ts.revokeTree(context.Background(), root.ID)
 
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -3335,7 +3335,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	if te == nil {
 		t.Fatal("nil entry")
 	}
-	if te.NumUses != tokenRevocationDeferred {
+	if te.NumUses != tokenRevocationPending {
 		t.Fatalf("bad: %d", te.NumUses)
 	}
 
@@ -3373,7 +3373,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	if te == nil {
 		t.Fatal("nil entry")
 	}
-	if te.NumUses != tokenRevocationDeferred {
+	if te.NumUses != tokenRevocationPending {
 		t.Fatalf("bad: %d", te.NumUses)
 	}
 

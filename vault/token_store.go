@@ -51,9 +51,11 @@ const (
 	// rolesPrefix is the prefix used to store role information
 	rolesPrefix = "roles/"
 
-	// tokenRevocationDeferred indicates that the token should not be used
-	// again but is currently fulfilling its final use
-	tokenRevocationDeferred = -1
+	// tokenRevocationPending indicates that the token should not be used
+	// again. If this is encountered during an existing request flow, it means
+	// that the token is but is currently fulfilling its final use; after this
+	// request it will not be able to be looked up as being valid.
+	tokenRevocationPending = -1
 )
 
 var (
@@ -913,12 +915,12 @@ func (ts *TokenStore) UseToken(ctx context.Context, te *TokenEntry) (*TokenEntry
 	// manager revoking children) attempting to acquire the same lock
 	// repeatedly.
 	if te.NumUses == 1 {
-		te.NumUses = tokenRevocationDeferred
+		te.NumUses = tokenRevocationPending
 	} else {
 		te.NumUses--
 	}
 
-	err = ts.storeCommon(ctx, te, false)
+	err = ts.store(ctx, te)
 	if err != nil {
 		return nil, err
 	}
@@ -1049,7 +1051,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 
 	// If fields are getting upgraded, store the changes
 	if persistNeeded {
-		if err := ts.storeCommon(ctx, entry, false); err != nil {
+		if err := ts.store(ctx, entry); err != nil {
 			return nil, errwrap.Wrapf("failed to persist token upgrade: {{err}}", err)
 		}
 	}
@@ -1059,7 +1061,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 
 // Revoke is used to invalidate a given token, any child tokens
 // will be orphaned.
-func (ts *TokenStore) Revoke(ctx context.Context, id string) error {
+func (ts *TokenStore) revokeOrphan(ctx context.Context, id string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke"}, time.Now())
 	if id == "" {
 		return fmt.Errorf("cannot revoke blank token")
@@ -1093,6 +1095,19 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 	}
 	if entry == nil {
 		return nil
+	}
+
+	if entry.NumUses != tokenRevocationPending {
+		entry.NumUses = tokenRevocationPending
+		if err := ts.store(ctx, entry); err != nil {
+			// The only real reason for this is an underlying storage error
+			// which also means that nothing else in this func or expmgr will
+			// really work either. So we clear revocation state so the user can
+			// try again.
+			ts.logger.Error("failed to mark token as revoked")
+			ts.tokensPendingDeletion.Store(saltedID, false)
+			return err
+		}
 	}
 
 	defer func() {
@@ -1190,9 +1205,9 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 	return nil
 }
 
-// RevokeTree is used to invalidate a given token and all
+// revokeTree is used to invalidate a given token and all
 // child tokens.
-func (ts *TokenStore) RevokeTree(ctx context.Context, id string) error {
+func (ts *TokenStore) revokeTree(ctx context.Context, id string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke-tree"}, time.Now())
 	// Verify the token is not blank
 	if id == "" {
@@ -2131,7 +2146,7 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 	}
 
 	// Revoke and orphan
-	if err := ts.Revoke(ctx, id); err != nil {
+	if err := ts.revokeOrphan(ctx, id); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 

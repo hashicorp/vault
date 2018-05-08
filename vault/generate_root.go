@@ -44,7 +44,7 @@ func (g generateStandardRootToken) generate(ctx context.Context, c *Core) (strin
 	}
 
 	cleanupFunc := func() {
-		c.tokenStore.Revoke(ctx, te.ID)
+		c.tokenStore.revokeOrphan(ctx, te.ID)
 	}
 
 	return te.ID, cleanupFunc, nil

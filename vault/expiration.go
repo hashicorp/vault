@@ -1069,7 +1069,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 	// Revocation of login tokens is special since we can by-pass the
 	// backend and directly interact with the token store
 	if le.Auth != nil {
-		if err := m.tokenStore.RevokeTree(m.quitContext, le.ClientToken); err != nil {
+		if err := m.tokenStore.revokeTree(m.quitContext, le.ClientToken); err != nil {
 			return errwrap.Wrapf("failed to revoke token: {{err}}", err)
 		}
 
