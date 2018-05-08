@@ -151,12 +151,22 @@ identifier can later be used to revoke a DR secondary's access.
 - `ttl` `(string: "30m")` – Specifies the TTL for the secondary activation
   token.
 
+### Sample Payload
+
+```json
+{
+  "id": "us-east-1"
+}
+```
+
 ### Sample Request
 
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/sys/replication/dr/primary/secondary-token?id=us-east-1
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/primary/secondary-token
 ```
 
 ### Sample Response
