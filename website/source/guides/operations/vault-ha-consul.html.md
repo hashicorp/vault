@@ -460,17 +460,18 @@ by a label as well:
 
 In our configuration file, we'll set up the following:
 
-- [**`tcp` listener**](/docs/configuration/listener/tcp.html)
-- [**`consul` storage backend**](/docs/configuration/storage/consul.html)
+- [**`tcp`**](/docs/configuration/listener/tcp.html) listener
+- [**`consul`**](/docs/configuration/storage/consul.html)  storage backend
 - [High Availability parameters](/docs/configuration/index.html#high-availability-parameters)
 
-This section assumes the Vault binary is located at **`/usr/local/bin/vault`**.
+This section assumes the Vault binary is located at **`/usr/local/bin/vault`**
 
 #### Vault Configuration
 
     listener "tcp" {
-      address = "0.0.0.0:8200"
-      tls_disable = "true"
+      address          = "0.0.0.0:8200"
+      cluster_address  = "0.0.0.0:8201"
+      tls_disable      = "true"
     }
 
     storage "consul" {
@@ -482,8 +483,13 @@ This section assumes the Vault binary is located at **`/usr/local/bin/vault`**.
     cluster_addr = "$CLUSTER_ADDR"
 
 
+We're setting the following parameters for our `tcp` listener:
+
+- `address` (string: "127.0.0.1:8200") – Specifies the address to bind to for listening.
+- `cluster_address` (string: "127.0.0.1:8201") – Specifies the address to bind to for cluster server-to-server requests. This defaults to one port higher than the value of address. This does not usually need to be set, but can be useful in case Vault servers are isolated from each other in such a way that they need to hop through a TCP load balancer or some other scheme in order to talk.
+
 This configuration allows for listening on all interfaces (such that a Vault
-command against the loopback address would succeed, for example).
+command against the loopback address would succeed, for example). Specifical
 
 We're also explicitly setting Vault's [HA parameters](/docs/configuration/index.html#high-availability-parameters) (`api_addr` and `cluster_addr`). Often, it's not necessary to configure these two parameters when using Consul as Vault's storage backend, as Consul will attempt to automatically discover and advertise the address of the active Vault node. However, certain cluster configurations might require them to be explicitly set (accesing Vault through a load balancer, for example).
 
@@ -506,8 +512,9 @@ use TLS with a private key/certificate.
 #### `vault_s1.hcl` Example
 
     listener "tcp" {
-      address = "0.0.0.0:8200"
-      tls_disable = "true"
+      address          = "0.0.0.0:8200"
+      cluster_address  = "0.0.0.0:8201"
+      tls_disable      = "true"
     }
 
     storage "consul" {
@@ -522,8 +529,9 @@ use TLS with a private key/certificate.
 #### `vault_s2.hcl` Example
 
     listener "tcp" {
-      address = "0.0.0.0:8200"
-      tls_disable = "true"
+      address          = "0.0.0.0:8200"
+      cluster_address  = "0.0.0.0:8201"
+      tls_disable      = "true"
     }
 
     storage "consul" {
