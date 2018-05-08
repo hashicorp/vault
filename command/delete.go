@@ -51,7 +51,7 @@ func (c *DeleteCommand) Flags() *FlagSets {
 }
 
 func (c *DeleteCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFiles()
+	return c.PredictVaultFiles(mountFilterExceptKV2())
 }
 
 func (c *DeleteCommand) AutocompleteFlags() complete.Flags {

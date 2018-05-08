@@ -31,9 +31,25 @@ func TestPredictVaultPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := client.Sys().Mount("kv", &api.MountInput{
+		Type:    "kv",
+		Options: map[string]string{"version": "2"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	kv2Data := map[string]interface{}{"data": map[string]interface{}{"a": "b"}}
+	if _, err := client.Logical().Write("kv/data/bar", kv2Data); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.Logical().Write("kv/data/foo", kv2Data); err != nil {
+		t.Fatal(err)
+	}
+
 	cases := []struct {
 		name         string
 		args         complete.Args
+		fs           []mountFilter
 		includeFiles bool
 		exp          []string
 	}{
@@ -43,6 +59,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "secret/foo", "a=b"},
 				Last: "a=b",
 			},
+			nil,
 			true,
 			nil,
 		},
@@ -52,6 +69,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "secret/foo", "a=b"},
 				Last: "a=b",
 			},
+			nil,
 			false,
 			nil,
 		},
@@ -61,6 +79,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "s"},
 				Last: "s",
 			},
+			nil,
 			true,
 			[]string{"secret/", "sys/"},
 		},
@@ -70,6 +89,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "s"},
 				Last: "s",
 			},
+			nil,
 			false,
 			[]string{"secret/", "sys/"},
 		},
@@ -79,6 +99,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "sec"},
 				Last: "sec",
 			},
+			nil,
 			true,
 			[]string{"secret/bar", "secret/foo", "secret/zip/"},
 		},
@@ -88,6 +109,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "sec"},
 				Last: "sec",
 			},
+			nil,
 			false,
 			[]string{"secret/zip/"},
 		},
@@ -97,6 +119,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "secret"},
 				Last: "secret",
 			},
+			nil,
 			true,
 			[]string{"secret/bar", "secret/foo", "secret/zip/"},
 		},
@@ -106,6 +129,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "secret"},
 				Last: "secret",
 			},
+			nil,
 			false,
 			[]string{"secret/zip/"},
 		},
@@ -115,6 +139,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "secret/"},
 				Last: "secret/",
 			},
+			nil,
 			true,
 			[]string{"secret/bar", "secret/foo", "secret/zip/"},
 		},
@@ -124,6 +149,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "secret/"},
 				Last: "secret/",
 			},
+			nil,
 			false,
 			[]string{"secret/zip/"},
 		},
@@ -133,6 +159,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "secret/z"},
 				Last: "secret/z",
 			},
+			nil,
 			true,
 			[]string{"secret/zip/twoot", "secret/zip/zap", "secret/zip/zonk"},
 		},
@@ -142,6 +169,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "secret/z"},
 				Last: "secret/z",
 			},
+			nil,
 			false,
 			[]string{"secret/zip/"},
 		},
@@ -151,6 +179,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "secret/zip/z"},
 				Last: "secret/zip/z",
 			},
+			nil,
 			true,
 			[]string{"secret/zip/zap", "secret/zip/zonk"},
 		},
@@ -160,6 +189,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "secret/zip/z"},
 				Last: "secret/zip/z",
 			},
+			nil,
 			false,
 			[]string{"secret/zip/z"},
 		},
@@ -169,6 +199,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "secret/zip/t"},
 				Last: "secret/zip/t",
 			},
+			nil,
 			true,
 			[]string{"secret/zip/twoot"},
 		},
@@ -178,8 +209,29 @@ func TestPredictVaultPaths(t *testing.T) {
 				All:  []string{"read", "secret/zip/t"},
 				Last: "secret/zip/t",
 			},
+			nil,
 			false,
 			[]string{"secret/zip/t"},
+		},
+		{
+			"kv2_except",
+			complete.Args{
+				All:  []string{"read", "k"},
+				Last: "k",
+			},
+			[]mountFilter{mountFilterExceptKV2()},
+			true,
+			nil,
+		},
+		{
+			"kv2_only",
+			complete.Args{
+				All:  []string{"kv", "get", "kv"},
+				Last: "kv",
+			},
+			[]mountFilter{mountFilterOnlyKV2()},
+			true,
+			[]string{"kv/bar", "kv/foo"},
 		},
 	}
 
@@ -192,7 +244,7 @@ func TestPredictVaultPaths(t *testing.T) {
 				p := NewPredict()
 				p.client = client
 
-				f := p.vaultPaths(tc.includeFiles)
+				f := p.vaultPaths(p.mounts(tc.fs...), tc.includeFiles)
 				act := f(tc.args)
 				if !reflect.DeepEqual(act, tc.exp) {
 					t.Errorf("expected %q to be %q", act, tc.exp)
@@ -487,6 +539,21 @@ func TestPredict_ListPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := client.Sys().Mount("kv", &api.MountInput{
+		Type:    "kv",
+		Options: map[string]string{"version": "2"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	kv2Data := map[string]interface{}{"data": map[string]interface{}{"a": "b"}}
+	if _, err := client.Logical().Write("kv/data/bar", kv2Data); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.Logical().Write("kv/data/foo", kv2Data); err != nil {
+		t.Fatal(err)
+	}
+
 	cases := []struct {
 		name   string
 		client *api.Client
@@ -503,6 +570,12 @@ func TestPredict_ListPaths(t *testing.T) {
 			"good_path",
 			client,
 			"secret/",
+			[]string{"bar", "foo"},
+		},
+		{
+			"kv2",
+			client,
+			"kv/",
 			[]string{"bar", "foo"},
 		},
 		{

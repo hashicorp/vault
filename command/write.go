@@ -81,9 +81,7 @@ func (c *WriteCommand) Flags() *FlagSets {
 }
 
 func (c *WriteCommand) AutocompleteArgs() complete.Predictor {
-	// Return an anything predictor here. Without a way to access help
-	// information, we don't know what paths we could write to.
-	return complete.PredictAnything
+	return c.PredictVaultFiles(mountFilterExceptKV2())
 }
 
 func (c *WriteCommand) AutocompleteFlags() complete.Flags {

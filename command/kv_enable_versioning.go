@@ -41,7 +41,7 @@ func (c *KVEnableVersioningCommand) Flags() *FlagSets {
 }
 
 func (c *KVEnableVersioningCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultMounts(mountFilterOnlyKV())
 }
 
 func (c *KVEnableVersioningCommand) AutocompleteFlags() complete.Flags {

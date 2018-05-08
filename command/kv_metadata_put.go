@@ -30,16 +30,16 @@ Usage: vault metadata kv put [options] KEY [DATA]
 
   This command can be used to create a blank key in the key-value store or to
   update key configuration for a specified key.
-  
-  Create a key in the key-value store with no data: 
+
+  Create a key in the key-value store with no data:
 
       $ vault kv metadata put secret/foo
 
-  Set a max versions setting on the key: 
+  Set a max versions setting on the key:
 
       $ vault kv metadata put -max-versions=5 secret/foo
 
-  Require Check-and-Set for this key: 
+  Require Check-and-Set for this key:
 
       $ vault kv metadata put -require-cas secret/foo
 
@@ -73,7 +73,7 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 }
 
 func (c *KVMetadataPutCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultFiles(mountFilterOnlyKV())
 }
 
 func (c *KVMetadataPutCommand) AutocompleteFlags() complete.Flags {

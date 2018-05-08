@@ -30,7 +30,7 @@ Usage: vault kv delete [options] PATH
   versioned data will not be fully removed, but marked as deleted and will no
   longer be returned in normal get requests.
 
-  To delete the latest version of the key "foo": 
+  To delete the latest version of the key "foo":
 
       $ vault kv delete secret/foo
 
@@ -63,7 +63,7 @@ func (c *KVDeleteCommand) Flags() *FlagSets {
 }
 
 func (c *KVDeleteCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFiles()
+	return c.PredictVaultFiles(mountFilterOnlyKV())
 }
 
 func (c *KVDeleteCommand) AutocompleteFlags() complete.Flags {

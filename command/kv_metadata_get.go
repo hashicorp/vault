@@ -43,7 +43,7 @@ func (c *KVMetadataGetCommand) Flags() *FlagSets {
 }
 
 func (c *KVMetadataGetCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultFiles(mountFilterOnlyKV())
 }
 
 func (c *KVMetadataGetCommand) AutocompleteFlags() complete.Flags {

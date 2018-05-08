@@ -29,7 +29,7 @@ Usage: vault kv undelete [options] KEY
   This restores the data, allowing it to be returned on get requests.
 
   To undelete version 3 of key "foo":
-  
+
       $ vault kv undelete -versions=3 secret/foo
 
   Additional flags and more advanced use cases are detailed below.
@@ -55,7 +55,7 @@ func (c *KVUndeleteCommand) Flags() *FlagSets {
 }
 
 func (c *KVUndeleteCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultFiles(mountFilterOnlyKV())
 }
 
 func (c *KVUndeleteCommand) AutocompleteFlags() complete.Flags {

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"path"
 	"sort"
 	"strings"
 	"sync"
@@ -12,6 +13,9 @@ import (
 type Predict struct {
 	client     *api.Client
 	clientOnce sync.Once
+
+	kv2s     []string
+	kv2sOnce sync.Once
 }
 
 func NewPredict() *Predict {
@@ -66,6 +70,69 @@ func PredictClient() *api.Client {
 	return predictClient
 }
 
+// mountFilter is a function that filters mounts.
+type mountFilter func(map[string]*api.MountOutput)
+
+// mountFilterOnlyKV is a mount filter that returns only mount points of type
+// "kv".
+func mountFilterOnlyKV() mountFilter {
+	return func(m map[string]*api.MountOutput) {
+		for k, v := range m {
+			if v.Type != "kv" {
+				delete(m, k)
+			}
+		}
+	}
+}
+
+// mountFilterOnlyKV is a mount filter that returns all mount points except type
+// "kv".
+func mountFilterExceptKV() mountFilter {
+	return func(m map[string]*api.MountOutput) {
+		for k, v := range m {
+			if v.Type == "kv" {
+				delete(m, k)
+			}
+		}
+	}
+}
+
+// mountFilterOnlyKV2 is a mount filter that returns only KV v2 mounts.
+func mountFilterOnlyKV2() mountFilter {
+	return func(m map[string]*api.MountOutput) {
+		for k, v := range m {
+			if !mountFilterIsKV2(v) {
+				delete(m, k)
+			}
+		}
+	}
+}
+
+// mountFilterExceptKV2 is a mount filter that returns all mounts except those
+// that are KV v2.
+func mountFilterExceptKV2() mountFilter {
+	return func(m map[string]*api.MountOutput) {
+		for k, v := range m {
+			if mountFilterIsKV2(v) {
+				delete(m, k)
+			}
+		}
+	}
+}
+
+// mountFilterIsKV2 is a helper to check if a given mount is type kv v2.
+func mountFilterIsKV2(o *api.MountOutput) bool {
+	if o.Type != "kv" {
+		return false
+	}
+
+	if v, ok := o.Options["version"]; ok && v == "2" {
+		return true
+	}
+
+	return false
+}
+
 // PredictVaultAvailableMounts returns a predictor for the available mounts in
 // Vault. For now, there is no way to programmatically get this list. If, in the
 // future, such a list exists, we can adapt it here. Until then, it's
@@ -111,20 +178,20 @@ func (b *BaseCommand) PredictVaultAvailableAuths() complete.Predictor {
 // configured client for the base command. Unfortunately this happens pre-flag
 // parsing, so users must rely on environment variables for autocomplete if they
 // are not using Vault at the default endpoints.
-func (b *BaseCommand) PredictVaultFiles() complete.Predictor {
-	return NewPredict().VaultFiles()
+func (b *BaseCommand) PredictVaultFiles(fs ...mountFilter) complete.Predictor {
+	return NewPredict().VaultFiles(fs...)
 }
 
 // PredictVaultFolders returns a predictor for "folders". See PredictVaultFiles
 // for more information and restrictions.
-func (b *BaseCommand) PredictVaultFolders() complete.Predictor {
-	return NewPredict().VaultFolders()
+func (b *BaseCommand) PredictVaultFolders(fs ...mountFilter) complete.Predictor {
+	return NewPredict().VaultFolders(fs...)
 }
 
 // PredictVaultMounts returns a predictor for "folders". See PredictVaultFiles
 // for more information and restrictions.
-func (b *BaseCommand) PredictVaultMounts() complete.Predictor {
-	return NewPredict().VaultMounts()
+func (b *BaseCommand) PredictVaultMounts(fs ...mountFilter) complete.Predictor {
+	return NewPredict().VaultMounts(fs...)
 }
 
 // PredictVaultAudits returns a predictor for "folders". See PredictVaultFiles
@@ -152,22 +219,22 @@ func (b *BaseCommand) PredictVaultPolicies() complete.Predictor {
 
 // VaultFiles returns a predictor for Vault "files". This is a public API for
 // consumers, but you probably want BaseCommand.PredictVaultFiles instead.
-func (p *Predict) VaultFiles() complete.Predictor {
-	return p.vaultPaths(true)
+func (p *Predict) VaultFiles(fs ...mountFilter) complete.Predictor {
+	return p.vaultPaths(p.mounts(fs...), true)
 }
 
 // VaultFolders returns a predictor for Vault "folders". This is a public
 // API for consumers, but you probably want BaseCommand.PredictVaultFolders
 // instead.
-func (p *Predict) VaultFolders() complete.Predictor {
-	return p.vaultPaths(false)
+func (p *Predict) VaultFolders(fs ...mountFilter) complete.Predictor {
+	return p.vaultPaths(p.mounts(fs...), false)
 }
 
 // VaultMounts returns a predictor for Vault "folders". This is a public
 // API for consumers, but you probably want BaseCommand.PredictVaultMounts
 // instead.
-func (p *Predict) VaultMounts() complete.Predictor {
-	return p.filterFunc(p.mounts)
+func (p *Predict) VaultMounts(fs ...mountFilter) complete.Predictor {
+	return p.filterFunc(p.mountsFn(fs...))
 }
 
 // VaultAudits returns a predictor for Vault "folders". This is a public API for
@@ -198,15 +265,10 @@ func (p *Predict) VaultPolicies() complete.Predictor {
 // vaultPaths parses the CLI options and returns the "best" list of possible
 // paths. If there are any errors, this function returns an empty result. All
 // errors are suppressed since this is a prediction function.
-func (p *Predict) vaultPaths(includeFiles bool) complete.PredictFunc {
+func (p *Predict) vaultPaths(mounts []string, includeFiles bool) complete.PredictFunc {
 	return func(args complete.Args) []string {
 		// Do not predict more than one paths
 		if p.hasPathArg(args.All) {
-			return nil
-		}
-
-		client := p.Client()
-		if client == nil {
 			return nil
 		}
 
@@ -216,7 +278,7 @@ func (p *Predict) vaultPaths(includeFiles bool) complete.PredictFunc {
 		if strings.Contains(path, "/") {
 			predictions = p.paths(path, includeFiles)
 		} else {
-			predictions = p.filter(p.mounts(), path)
+			predictions = p.filter(mounts, path)
 		}
 
 		// Either no results or many results, so return.
@@ -237,7 +299,7 @@ func (p *Predict) vaultPaths(includeFiles bool) complete.PredictFunc {
 
 		// Re-predict with the remaining path
 		args.Last = predictions[0]
-		return p.vaultPaths(includeFiles).Predict(args)
+		return p.vaultPaths(mounts, includeFiles).Predict(args)
 	}
 }
 
@@ -357,7 +419,9 @@ func (p *Predict) policies() []string {
 // mounts returns a sorted list of the mount paths for Vault server for
 // which the client is configured to communicate with. This function returns the
 // default list of mounts if an error occurs.
-func (p *Predict) mounts() []string {
+//
+// If any filters are given, they are executed in order.
+func (p *Predict) mounts(fs ...mountFilter) []string {
 	client := p.Client()
 	if client == nil {
 		return nil
@@ -368,6 +432,10 @@ func (p *Predict) mounts() []string {
 		return defaultPredictVaultMounts
 	}
 
+	for _, f := range fs {
+		f(mounts)
+	}
+
 	list := make([]string, 0, len(mounts))
 	for m := range mounts {
 		list = append(list, m)
@@ -376,32 +444,72 @@ func (p *Predict) mounts() []string {
 	return list
 }
 
+// mountFn is a wrapper around the mount func to return a slice of string
+// with no args for filterFunc
+func (p *Predict) mountsFn(fs ...mountFilter) func() []string {
+	return func() []string {
+		return p.mounts(fs...)
+	}
+}
+
 // listPaths returns a list of paths (HTTP LIST) for the given path. This
 // function returns an empty list of any errors occur.
-func (p *Predict) listPaths(path string) []string {
+func (p *Predict) listPaths(pth string) []string {
 	client := p.Client()
 	if client == nil {
 		return nil
 	}
 
-	secret, err := client.Logical().List(path)
+	// Handle listing for kv v2
+	if mountPath, ok := p.kv2Path(pth); ok {
+		pth = strings.TrimPrefix(pth, mountPath)
+		pth = path.Join(mountPath, "metadata", pth)
+	}
+
+	secret, err := client.Logical().List(pth)
 	if err != nil || secret == nil || secret.Data == nil {
 		return nil
 	}
 
-	paths, ok := secret.Data["keys"].([]interface{})
+	pths, ok := secret.Data["keys"].([]interface{})
 	if !ok {
 		return nil
 	}
 
-	list := make([]string, 0, len(paths))
-	for _, p := range paths {
+	list := make([]string, 0, len(pths))
+	for _, p := range pths {
 		if str, ok := p.(string); ok {
 			list = append(list, str)
 		}
 	}
 	sort.Strings(list)
 	return list
+}
+
+// kv2Path returns the mount point and "true" if the given path is a KV v2
+// mount. Otherwise it returns the empty string and false.
+func (p *Predict) kv2Path(pth string) (string, bool) {
+	for _, v := range p.kv2Paths() {
+		if !strings.HasSuffix(v, "/") {
+			v = v + "/"
+		}
+
+		if strings.HasPrefix(pth, v) {
+			return v, true
+		}
+	}
+
+	return "", false
+}
+
+// kv2Paths is the list of mounts that are of type "kv" with version "2". This
+// is cached for performance.
+func (p *Predict) kv2Paths() []string {
+	p.kv2sOnce.Do(func() {
+		p.kv2s = p.mounts(mountFilterOnlyKV2())
+		sort.Strings(p.kv2s)
+	})
+	return p.kv2s
 }
 
 // hasPathArg determines if the args have already accepted a path.
@@ -413,6 +521,16 @@ func (p *Predict) hasPathArg(args []string) bool {
 		}
 	}
 
+	includesKV := false
+	for _, v := range nonFlags {
+		if v == "kv" {
+			includesKV = true
+		}
+	}
+
+	if includesKV {
+		return len(nonFlags) > 3
+	}
 	return len(nonFlags) > 2
 }
 
