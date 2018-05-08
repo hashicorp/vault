@@ -37,12 +37,28 @@ export default Ember.Component.extend({
     }
     this.get('console')[method](path, data, flags.wrapTTL)
       .then(resp => this.processResponse(resp, command, path, method, flags))
-      .catch(this.handleServiceError);
+      .catch((error) => this.handleServiceError(method, path, error));
   },
 
-  handleServiceError(error) {
-    //TODO
-    throw error;
+  handleServiceError(method, vaultPath, error) {
+    this.set('inputValue', '');
+    
+    let content;
+    let { httpStatus, path } = error;
+    let verb = {
+      'read': 'reading',
+      'write': 'writing',
+      'list': 'listing',
+      'delete': 'deleting'
+    }[method];
+
+    content = `Error ${verb} to ${vaultPath}.\nURL: ${path}\nCode: ${httpStatus}`;
+
+    if(typeof error.errors[0]){
+      content = `${content}\nErrors:\n  ${error.errors.join('\n')}`;
+    }
+    
+    this.appendToLog({ type: 'error', content });
   },
 
   processResponse(response, command, path, method, flags) {
