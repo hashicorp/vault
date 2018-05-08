@@ -513,7 +513,7 @@ use TLS with a private key/certificate.
 
     listener "tcp" {
       address          = "0.0.0.0:8200"
-      cluster_address  = "0.0.0.0:8201"
+      cluster_address  = "10.1.42.201:8201"
       tls_disable      = "true"
     }
 
@@ -530,7 +530,7 @@ use TLS with a private key/certificate.
 
     listener "tcp" {
       address          = "0.0.0.0:8200"
-      cluster_address  = "0.0.0.0:8201"
+      cluster_address  = "10.1.42.202:8201"
       tls_disable      = "true"
     }
 
