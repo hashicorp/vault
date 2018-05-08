@@ -55,6 +55,12 @@ module.exports = function(defaults) {
   app.import('node_modules/text-encoder-lite/index.js');
   app.import('node_modules/Duration.js/duration.js');
 
+  app.import('node_modules/columnify/columnify.js', {
+    using: [
+      { transformation: 'cjs', as: 'columnify' }
+    ]
+  });
+
   // Use `app.import` to add additional libraries to the generated
   // output files.
   //
