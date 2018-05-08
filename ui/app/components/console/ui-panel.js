@@ -25,6 +25,7 @@ export default Ember.Component.extend({
       this.set('inputValue', '');
       this.appendToLog({type: 'command', content: command});
       this.appendToLog({type: 'help'});
+      return;
     }
     // we have a invalid command but don't want to throw
     if (serviceArgs === false) {
@@ -84,6 +85,11 @@ export default Ember.Component.extend({
 
     if (wrapTTL) {
       this.appendToLog({type: 'object', content: response.wrap_info });
+      return;
+    }
+
+    if(method === 'list'){
+      this.appendToLog({type: 'list', content: response.data});
       return;
     }
 
