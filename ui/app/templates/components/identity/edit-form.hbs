@@ -35,7 +35,7 @@
 
       {{#if (and (eq mode "edit") model.canDelete)}}
         {{#confirm-action
-          buttonClasses="button is-link is-outlined is-inverted"
+          buttonClasses="button is-ghost"
           onConfirmAction=(action "deleteItem" model)
           confirmMessage=(concat "Are you sure you want to delete " model.id "?")
           data-test-entity-item-delete=true
