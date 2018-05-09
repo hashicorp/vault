@@ -59,7 +59,7 @@ func FindCredentials(credsJson string, ctx context.Context, scopes ...string) (*
 	if credsJson == "" {
 		// 4. JSON from ~/.gcp/credentials
 		home, err := homedir.Dir()
-		if err == nil {
+		if err != nil {
 			return nil, nil, errors.New("could not find home directory")
 		}
 		credBytes, err := ioutil.ReadFile(filepath.Join(home, defaultHomeCredentialsFile))
