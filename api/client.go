@@ -578,7 +578,7 @@ START:
 	client := &retryablehttp.Client{
 		HTTPClient:   c.config.HttpClient,
 		RetryWaitMin: 1000 * time.Millisecond,
-		RetryWaitMax: 1750 * time.Millisecond,
+		RetryWaitMax: 1500 * time.Millisecond,
 		RetryMax:     c.config.MaxRetries,
 		CheckRetry:   retryablehttp.DefaultRetryPolicy,
 		Backoff:      backoff,
