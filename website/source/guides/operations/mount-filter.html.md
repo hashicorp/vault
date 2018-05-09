@@ -11,7 +11,7 @@ description: |-
 
 ~> **Enterprise Only:** Mount filter feature is a part of _Vault Enterprise Premium_.
 
-Mount filters are new way of controlling which secrets are moved across clusters
+Mount filters are a new way of controlling which secrets are moved across clusters
 and physical regions as a result of replication. With mount filters, users can
 select which mounts will be replicated as part of a performance replication
 relationship.
@@ -37,7 +37,7 @@ control the movement of secrets across their infrastructure.
 ## Challenge
 
 [General Data Protection Regulation (GDPR)](https://www.eugdpr.org/) is designed
-to strengthen data protections and privacy for all individuals within the
+to strengthen data protection and privacy for all individuals within the
 European Union.  It requires that personally identifiable data not be physically
 transferred to locations outside the European Union unless the region or country
 has an equal rigor of data protection regulation as the EU.
@@ -378,5 +378,6 @@ the cluster.
 
 ## Next steps
 
-Read [Production Hardening](/guides/operations/production.html) to learn best
-practices for a production hardening deployment of Vault.
+Read [Vault Deployment Reference
+Architecture](/guides/operations/reference-architecture.html) to learn more
+about the recommended deployment practices. 
