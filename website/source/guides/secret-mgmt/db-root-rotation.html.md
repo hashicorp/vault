@@ -23,7 +23,7 @@ This reduces the manual tasks performed by the database administrator and make
 the access to the database to be more efficient and secure.
 
 The [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets.html)
-guide demonstrates the basic working of it.
+guide demonstrates the primary workflow.
 
 ## Reference Material
 
