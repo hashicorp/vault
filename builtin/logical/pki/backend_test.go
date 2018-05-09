@@ -2096,7 +2096,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		addTests(nil)
 
 		roleTestStep.ErrorOk = false
-		roleVals.TTL = ""
+		roleVals.TTL = 0
 		roleVals.MaxTTL = 12 * time.Hour
 	}
 
