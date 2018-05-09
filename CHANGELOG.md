@@ -1,5 +1,11 @@
 ## 0.10.2 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * PKI duration return types: The PKI backend now returns durations (e.g. when
+   reading a role) as an integer number of seconds instead of a Go-style
+   string, in line with how the rest of Vault's API returns durations.
+
 IMPROVEMENTS:
 
  * api: Close renewer's doneCh when the renewer is stopped, so that programs
@@ -19,6 +25,8 @@ BUG FIXES:
  * auth/approle: Make invalid role_id a 400 error instead of 500 [GH-4470]
  * auth/cert: Fix Identity alias using serial number instead of common name
    [GH-4475]
+ * core: When using the `use_always` option with PROXY protocol support, do not
+   require `authorized_addrs` to be set [GH-4065]
  * secret/pki: Fix path length parameter being ignored when using
    `use_csr_values` and signing an intermediate CA cert [GH-4459]
 
