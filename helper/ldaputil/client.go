@@ -99,6 +99,8 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
  */
 func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username string) (string, error) {
 	bindDN := ""
+	// Note: The logic below drives the logic in ConfigEntry.Validate().
+	// If updated, please update there as well.
 	if cfg.DiscoverDN || (cfg.BindDN != "" && cfg.BindPassword != "") {
 		var err error
 		if cfg.BindPassword != "" {
