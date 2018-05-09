@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -112,6 +113,12 @@ type CheckRetry func(resp *http.Response, err error) (bool, error)
 // that should pass before trying again.
 type Backoff func(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration
 
+// ErrorHandler is called if retries are expired, containing the last status
+// from the http library. The default will close the body and return an error
+// indicating how many tries were attempted. If overriding this, be sure to
+// close the body if needed.
+type ErrorHandler func(resp *http.Response, err error, numTries int) (*http.Response, error)
+
 // Client is used to make HTTP requests. It adds additional functionality
 // like automatic retries to tolerate minor outages.
 type Client struct {
@@ -136,6 +143,9 @@ type Client struct {
 
 	// Backoff specifies the policy for how long to wait between retries
 	Backoff Backoff
+
+	// ErrorHandler specifies the custom error handler to use, if any
+	ErrorHandler ErrorHandler
 }
 
 // NewClient creates a new Client with default settings.
@@ -180,9 +190,31 @@ func DefaultBackoff(min, max time.Duration, attemptNum int, resp *http.Response)
 	return sleep
 }
 
+// LinearJitterBackoff provides a callback for Client.Backoff which will
+// perform linear backoff based on the attempt number and limited by the
+// provided minimum and maximum, which are applied *prior to linear
+// adjustment*. Jitter will be applied to prevent a thundering herd.
+func LinearJitterBackoff(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
+	if max <= min {
+		// Unclear what to do here, so return min
+		return min
+	}
+	// Seed rand; doing this every time is fine
+	rand := rand.New(rand.NewSource(int64(time.Now().Nanosecond())))
+	// Pick a random number that lies somewhere between the min and max and
+	// multiply by the attemptNum. attemptNum starts at zero so we always
+	// increment here.
+	return time.Duration((int64(rand.Int63()) % int64(max-min)) * int64((attemptNum + 1)))
+}
+
 // Do wraps calling an HTTP method with retries.
 func (c *Client) Do(req *Request) (*http.Response, error) {
-	c.Logger.Printf("[DEBUG] %s %s", req.Method, req.URL)
+	if c.Logger != nil {
+		c.Logger.Printf("[DEBUG] %s %s", req.Method, req.URL)
+	}
+
+	var resp *http.Response
+	var err error
 
 	for i := 0; ; i++ {
 		var code int // HTTP response code
@@ -199,13 +231,18 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		}
 
 		// Attempt the request
-		resp, err := c.HTTPClient.Do(req.Request)
+		resp, err = c.HTTPClient.Do(req.Request)
+		if resp != nil {
+			code = resp.StatusCode
+		}
 
 		// Check if we should continue with retries.
 		checkOK, checkErr := c.CheckRetry(resp, err)
 
 		if err != nil {
-			c.Logger.Printf("[ERR] %s %s request failed: %v", req.Method, req.URL, err)
+			if c.Logger != nil {
+				c.Logger.Printf("[ERR] %s %s request failed: %v", req.Method, req.URL, err)
+			}
 		} else {
 			// Call this here to maintain the behavior of logging all requests,
 			// even if CheckRetry signals to stop.
@@ -223,25 +260,38 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 			return resp, err
 		}
 
-		// We're going to retry, consume any response to reuse the connection.
-		if err == nil {
-			c.drainBody(resp.Body)
-		}
-
+		// We do this before drainBody beause there's no need for the I/O if
+		// we're breaking out
 		remain := c.RetryMax - i
 		if remain == 0 {
 			break
 		}
+
+		// We're going to retry, consume any response to reuse the connection.
+		if err == nil && resp != nil {
+			c.drainBody(resp.Body)
+		}
+
 		wait := c.Backoff(c.RetryWaitMin, c.RetryWaitMax, i, resp)
 		desc := fmt.Sprintf("%s %s", req.Method, req.URL)
 		if code > 0 {
 			desc = fmt.Sprintf("%s (status: %d)", desc, code)
 		}
-		c.Logger.Printf("[DEBUG] %s: retrying in %s (%d left)", desc, wait, remain)
+		if c.Logger != nil {
+			c.Logger.Printf("[DEBUG] %s: retrying in %s (%d left)", desc, wait, remain)
+		}
 		time.Sleep(wait)
 	}
 
-	// Return an error if we fall out of the retry loop
+	if c.ErrorHandler != nil {
+		return c.ErrorHandler(resp, err, c.RetryMax+1)
+	}
+
+	// By default, we close the response body and return an error without
+	// returning the response
+	if resp != nil {
+		resp.Body.Close()
+	}
 	return nil, fmt.Errorf("%s %s giving up after %d attempts",
 		req.Method, req.URL, c.RetryMax+1)
 }
@@ -251,7 +301,9 @@ func (c *Client) drainBody(body io.ReadCloser) {
 	defer body.Close()
 	_, err := io.Copy(ioutil.Discard, io.LimitReader(body, respReadLimit))
 	if err != nil {
-		c.Logger.Printf("[ERR] error reading response body: %v", err)
+		if c.Logger != nil {
+			c.Logger.Printf("[ERR] error reading response body: %v", err)
+		}
 	}
 }
 
