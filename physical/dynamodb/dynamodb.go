@@ -311,7 +311,7 @@ func (d *DynamoDBBackend) Get(ctx context.Context, key string) (*physical.Entry,
 	}
 
 	record := &DynamoDBRecord{}
-	if err := dynamodbattribute.ConvertFromMap(resp.Item, record); err != nil {
+	if err := dynamodbattribute.UnmarshalMap(resp.Item, record); err != nil {
 		return nil, err
 	}
 
@@ -385,7 +385,7 @@ func (d *DynamoDBBackend) List(ctx context.Context, prefix string) ([]string, er
 	err := d.client.QueryPages(queryInput, func(out *dynamodb.QueryOutput, lastPage bool) bool {
 		var record DynamoDBRecord
 		for _, item := range out.Items {
-			dynamodbattribute.ConvertFromMap(item, &record)
+			dynamodbattribute.UnmarshalMap(item, &record)
 			if !strings.HasPrefix(record.Key, DynamoDBLockPrefix) {
 				keys = append(keys, record.Key)
 			}
