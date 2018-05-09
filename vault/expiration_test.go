@@ -742,7 +742,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	noop.Lock()
 	defer noop.Unlock()
@@ -773,7 +773,7 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 	noop := &NoopBackend{}
 	// Request handle with a timeout context that simulates blocking lease revocation.
 	noop.RequestHandler = func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
-		ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
 		defer cancel()
 
 		select {
@@ -838,7 +838,7 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 
 	// Wait for a bit for timeouts to trigger and pending revocations to go
 	// through and then we relock
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	noop.Lock()
 	defer noop.Unlock()
@@ -1341,7 +1341,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	out, err := exp.tokenStore.Lookup(context.Background(), le.ClientToken)
 	if err != nil {

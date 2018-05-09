@@ -399,7 +399,7 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	out, err = ts.Lookup(context.Background(), "tokenid")
 	if err != nil {
@@ -726,7 +726,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	// Verify the lease is gone
 	out, err := ts.expiration.loadEntry(leaseID)
@@ -885,7 +885,7 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	lookup := []string{ent1.ID, ent2.ID, ent3.ID, ent4.ID}
 	for _, id := range lookup {
@@ -1383,7 +1383,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	out, err := ts.Lookup(context.Background(), "child")
 	if err != nil {
@@ -1421,7 +1421,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	out, err := ts.Lookup(context.Background(), "child")
 	if err != nil {
@@ -1476,7 +1476,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 		t.Fatalf("did not get error when non-root revoking itself with orphan flag; resp is %#v", resp)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	// Should still exist
 	out, err = ts.Lookup(context.Background(), "child")
@@ -3845,7 +3845,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	// Call tidy
 	ts.handleTidy(context.Background(), nil, nil)
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	// Verify leases are gone
 	storedLeases, err = exp.lookupLeasesByToken(tut)
