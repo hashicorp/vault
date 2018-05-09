@@ -585,9 +585,7 @@ START:
 		RetryMax:     maxRetries,
 		CheckRetry:   retryablehttp.DefaultRetryPolicy,
 		Backoff:      backoff,
-		ErrorHandler: func(resp *http.Response, err error, numTries int) (*http.Response, error) {
-			return resp, err
-		},
+		ErrorHandler: retryablehttp.PassthroughErrorHandler,
 	}
 
 	var result *Response

@@ -1141,10 +1141,10 @@
 			"revisionTime": "2018-03-31T00:25:53Z"
 		},
 		{
-			"checksumSHA1": "dWD+1wzyeQJnmdfFORXX7vU3xs4=",
+			"checksumSHA1": "9wtqkj8gcOZM8m2Z6evHuycPRds=",
 			"path": "github.com/hashicorp/go-retryablehttp",
-			"revision": "ba24e6e2765455196ea08f97ca8b2a5587d704ec",
-			"revisionTime": "2018-05-09T21:39:37Z"
+			"revision": "3a7bc5d961c8d17e40dea1350c95405824891a50",
+			"revisionTime": "2018-05-09T22:09:15Z"
 		},
 		{
 			"checksumSHA1": "A1PcINvF3UiwHRKn8UcgARgvGRs=",
