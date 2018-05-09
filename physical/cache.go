@@ -17,10 +17,10 @@ const (
 
 // These paths don't need to be cached by the LRU cache. This should
 // particularly help memory pressure when unsealing.
-var noCachePaths = []string{
+var cacheExceptionsPaths = []string{
 	"wal/logs/",
-	"index/pages",
-	"index-dr/pages",
+	"index/pages/",
+	"index-dr/pages/",
 	"sys/expire/",
 }
 
@@ -29,12 +29,12 @@ var noCachePaths = []string{
 // Vault are for policy objects so there is a large read reduction
 // by using a simple write-through cache.
 type Cache struct {
-	backend Backend
-	lru     *lru.TwoQueueCache
-	locks   []*locksutil.LockEntry
-	logger  log.Logger
-	enabled *uint32
-	noCache *pathmanager.PathManager
+	backend         Backend
+	lru             *lru.TwoQueueCache
+	locks           []*locksutil.LockEntry
+	logger          log.Logger
+	enabled         *uint32
+	cacheExceptions *pathmanager.PathManager
 }
 
 // TransactionalCache is a Cache that wraps the physical that is transactional
@@ -60,7 +60,7 @@ func NewCache(b Backend, size int, logger log.Logger) *Cache {
 	}
 
 	pm := pathmanager.New()
-	pm.AddPaths(noCachePaths)
+	pm.AddPaths(cacheExceptionsPaths)
 
 	cache, _ := lru.New2Q(size)
 	c := &Cache{
@@ -69,8 +69,8 @@ func NewCache(b Backend, size int, logger log.Logger) *Cache {
 		locks:   locksutil.CreateLocks(),
 		logger:  logger,
 		// This fails safe.
-		enabled: new(uint32),
-		noCache: pm,
+		enabled:         new(uint32),
+		cacheExceptions: pm,
 	}
 	return c
 }
@@ -88,7 +88,7 @@ func (c *Cache) shouldCache(key string) bool {
 		return false
 	}
 
-	return !c.noCache.HasPath(key)
+	return !c.cacheExceptions.HasPath(key)
 }
 
 // SetEnabled is used to toggle whether the cache is on or off. It must be
