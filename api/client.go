@@ -59,8 +59,9 @@ type Config struct {
 	// (or http.DefaultClient).
 	HttpClient *http.Client
 
-	// MaxRetries controls the maximum number of times to retry when a 5xx error
-	// occurs. Set to 0 or less to disable retrying. Defaults to 0.
+	// MaxRetries controls the maximum number of times to retry when a 5xx
+	// error occurs. Set to 0 to disable retrying. Defaults to 2 (for a total
+	// of three tries).
 	MaxRetries int
 
 	// Timeout is for setting custom timeout parameter in the HttpClient
@@ -141,6 +142,7 @@ func DefaultConfig() *Config {
 	}
 
 	config.Backoff = retryablehttp.LinearJitterBackoff
+	config.MaxRetries = 2
 
 	return config
 }
@@ -274,7 +276,7 @@ func (c *Config) ReadEnvironment() error {
 	}
 
 	if envMaxRetries != nil {
-		c.MaxRetries = int(*envMaxRetries) + 1
+		c.MaxRetries = int(*envMaxRetries)
 	}
 
 	if envClientTimeout != 0 {
@@ -573,16 +575,11 @@ START:
 		backoff = retryablehttp.LinearJitterBackoff
 	}
 
-	maxRetries := c.config.MaxRetries
-	if maxRetries == 0 {
-		maxRetries = 2
-	}
-
 	client := &retryablehttp.Client{
 		HTTPClient:   c.config.HttpClient,
-		RetryWaitMin: 1 * time.Second,
-		RetryWaitMax: 5 * time.Second,
-		RetryMax:     maxRetries,
+		RetryWaitMin: 1000 * time.Millisecond,
+		RetryWaitMax: 1750 * time.Millisecond,
+		RetryMax:     c.config.MaxRetries,
 		CheckRetry:   retryablehttp.DefaultRetryPolicy,
 		Backoff:      backoff,
 		ErrorHandler: retryablehttp.PassthroughErrorHandler,
