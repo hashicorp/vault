@@ -259,7 +259,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 		Key:   recordKeyForVaultKey(entry.Key),
 		Value: entry.Value,
 	}
-	item, err := dynamodbattribute.ConvertToMap(record)
+	item, err := dynamodbattribute.MarshalMap(record)
 	if err != nil {
 		return errwrap.Wrapf("could not convert prefix record to DynamoDB item: {{err}}", err)
 	}
@@ -274,7 +274,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 			Path: recordPathForVaultKey(prefix),
 			Key:  fmt.Sprintf("%s/", recordKeyForVaultKey(prefix)),
 		}
-		item, err := dynamodbattribute.ConvertToMap(record)
+		item, err := dynamodbattribute.MarshalMap(record)
 		if err != nil {
 			return errwrap.Wrapf("could not convert prefix record to DynamoDB item: {{err}}", err)
 		}
