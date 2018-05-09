@@ -36,7 +36,7 @@ export default Service.extend({
   },
 
   read(path, data, wrapTTL) {
-    return this.ajax('read', sanitizePath(path), {wrapTTL});
+    return this.ajax('read', sanitizePath(path), { wrapTTL });
   },
 
   write(path, data) {

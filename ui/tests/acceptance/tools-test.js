@@ -172,5 +172,8 @@ test('ensure unwrap with auth block works properly', function(assert) {
       'unwrapped data equals input data'
     );
     this.server.shutdown();
+    assert
+      .dom('[data-test-tools-input="sum"]')
+      .hasValue('JmSi2Hhbgu2WYOrcOyTqqMdym7KT3sohCwAwaMonVrc=', 'hashes the data, passes b64 input through');
   });
 });

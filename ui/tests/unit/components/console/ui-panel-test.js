@@ -1,6 +1,5 @@
 import { moduleForComponent, test } from 'ember-qunit';
 import sinon from 'sinon';
-import Ember from 'ember';
 
 moduleForComponent('console/ui-panel', 'Unit | Component | console/ui-panel', {
   unit: true,
@@ -280,5 +279,51 @@ test('#processResponse', function(assert) {
     let appendArgs = spy.lastCall.args;
     assert.deepEqual(commandArgs[0], {type: 'command', content: test.expectedCommand}, `${test.name}: calls appendToLog with the expected args`);
     assert.deepEqual(appendArgs, test.expectedLogArgs, `${test.name}: calls appendToLog with the expected args`);
+  });
+});
+
+let testErrorCases = [
+  {
+    name: 'AdapterError',
+    args: ['write', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
+    expectedContent: "Error writing to: sys/foo.\nURL: v1/sys/foo\nCode: 404"
+  },
+  {
+    name: 'AdapterError',
+    args: ['read', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
+    expectedContent: "Error reading from: sys/foo.\nURL: v1/sys/foo\nCode: 404"
+  },
+  {
+    name: 'AdapterError',
+    args: ['list', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],    
+    expectedContent: "Error listing: sys/foo.\nURL: v1/sys/foo\nCode: 404"
+  },
+  {
+    name: 'AdapterError',
+    args: ['delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
+    expectedContent: "Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404"
+  },
+  {
+    name: 'VaultError',
+    args: ['delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token']}],
+    expectedContent: "Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404\nErrors:\n  no client token"
+  },
+  {
+    name: 'VaultErrors',
+    args: ['delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token', 'this is an error']}],
+    expectedContent: "Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404\nErrors:\n  no client token\n  this is an error"
+  }
+];
+
+test('#handleServiceError', function(assert) {
+  let panel = this.subject({
+    appendToLog: sinon.spy()
+  });
+  testErrorCases.forEach(test => {
+    panel.handleServiceError(...test.args);
+
+    let spy = panel.appendToLog;
+    let appendArgs = spy.lastCall.args;
+    assert.deepEqual(appendArgs[0].content, test.expectedContent, `${test.name}: calls appendToLog with the expected error content`);
   });
 });
