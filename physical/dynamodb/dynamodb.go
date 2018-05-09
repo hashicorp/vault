@@ -217,7 +217,13 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 			Transport: pooledTransport,
 		}).
 		WithMaxRetries(dynamodbMaxRetry)
-	client := dynamodb.New(session.New(awsConf))
+
+	awsSession, err := session.NewSession(awsConf)
+	if err != nil {
+		return nil, errwrap.Wrapf("Could not establish AWS session: {{err}}", err)
+	}
+
+	client := dynamodb.New(awsSession)
 
 	if err := ensureTableExists(client, table, readCapacity, writeCapacity); err != nil {
 		return nil, err
