@@ -241,7 +241,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 			if b.Logger().IsDebug() {
 				b.Logger().Debug(fmt.Sprintf("unable to parse %s as a cidr: %s", v, err))
 			}
-			return nil, logical.ErrPermissionDenied
+			return nil, logical.ErrInvalidRequest
 		}
 		parsedCIDRs = append(parsedCIDRs, &sockaddr.SockAddrMarshaler{parsedCIDR})
 	}
