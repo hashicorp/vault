@@ -2494,8 +2494,11 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp != nil {
-		t.Fatal("expected no ca info")
+	if resp == nil {
+		t.Fatal("expected a warning")
+	}
+	if resp.Data != nil || len(resp.Warnings) == 0 {
+		t.Fatalf("bad response: %#v", *resp)
 	}
 	resp, err = client.Logical().Read("pki/cert/ca_chain")
 	if err != nil {
