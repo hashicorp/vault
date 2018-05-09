@@ -39,8 +39,10 @@ listener "tcp" {
   - *deny_unauthorized* - The traffic will be rejected if the source IP
   address is not in the `proxy_protocol_authorized_addrs` list.
 
-- `proxy_protocol_authorized_addrs` `(string: <required-if-enabled>)` – Specifies
-  the list of allowed source IP addresses to be used with the PROXY protocol.
+- `proxy_protocol_authorized_addrs` `(string: <required-if-enabled> or array: <required-if-enabled> )` – 
+  Specifies the list of allowed source IP addresses to be used with the PROXY protocol.
+  Not required if `proxy_protocol_behavior` is set to `use_always`. Source IPs should 
+  be comma-delimited if provided as a string.
 
 - `tls_disable` `(string: "false")` – Specifies if TLS will be disabled. Vault
   assumes TLS by default, so you must explicitly disable TLS to opt-in to
