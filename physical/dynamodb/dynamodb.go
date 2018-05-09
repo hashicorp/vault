@@ -703,8 +703,8 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 	_, err := client.DescribeTable(&dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
-	if awserr, ok := err.(awserr.Error); ok {
-		if awserr.Code() == "ResourceNotFoundException" {
+	if awsError, ok := err.(awserr.Error); ok {
+		if awsError.Code() == "ResourceNotFoundException" {
 			_, err = client.CreateTable(&dynamodb.CreateTableInput{
 				TableName: aws.String(table),
 				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
