@@ -48,7 +48,7 @@ The response will contain a token at `auth.client_token`:
       "default"
     ],
     "metadata": {
-      "role": "test",
+      "role": "demo",
       "service_account_name": "vault-auth",
       "service_account_namespace": "default",
       "service_account_secret_name": "vault-auth-token-pd21c",
@@ -134,4 +134,4 @@ subjects:
 The Kubernetes Auth Plugin has a full HTTP API. Please see the
 [API docs](/api/auth/kubernetes/index.html) for more details.
 
-[k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.9/#tokenreview-v1-authentication
+[k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#tokenreview-v1-authentication-k8s-io

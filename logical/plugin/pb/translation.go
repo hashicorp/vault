@@ -222,7 +222,7 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 
 	headers := map[string]*Header{}
 	for k, v := range r.Headers {
-		headers[k] = &Header{v}
+		headers[k] = &Header{Header: v}
 	}
 
 	return &Request{
