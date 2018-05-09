@@ -494,6 +494,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 	// If the response generated an authentication, then generate the token
 	if resp != nil && resp.Auth != nil {
+
 		var entity *identity.Entity
 		auth = resp.Auth
 
@@ -574,6 +575,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			TTL:          tokenTTL,
 			NumUses:      auth.NumUses,
 			EntityID:     auth.EntityID,
+			BoundCIDRs:   auth.BoundCIDRs,
 		}
 
 		te.Policies = policyutil.SanitizePolicies(te.Policies, true)
