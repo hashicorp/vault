@@ -117,19 +117,17 @@ test('tools functionality', function(assert) {
   click('[data-test-tools-b64-toggle="input"]');
   click('[data-test-tools-submit]');
   andThen(() => {
-    assert.dom('[data-test-tools-input="sum"]').hasValue(
-      'LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=',
-      'hashes the data, encodes input'
-    );
+    assert
+      .dom('[data-test-tools-input="sum"]')
+      .hasValue('LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=', 'hashes the data, encodes input');
   });
   click('[data-test-tools-back]');
   fillIn('[data-test-tools-input="hash-input"]', 'e2RhdGE6ImZvbyJ9');
 
   click('[data-test-tools-submit]');
   andThen(() => {
-    assert.dom('[data-test-tools-input="sum"]').hasValue(
-      'JmSi2Hhbgu2WYOrcOyTqqMdym7KT3sohCwAwaMonVrc=',
-      'hashes the data, passes b64 input through'
-    );
+    assert
+      .dom('[data-test-tools-input="sum"]')
+      .hasValue('JmSi2Hhbgu2WYOrcOyTqqMdym7KT3sohCwAwaMonVrc=', 'hashes the data, passes b64 input through');
   });
 });

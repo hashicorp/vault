@@ -37,7 +37,9 @@ $border: $grey-light;
 $hr-margin: 1rem 0;
 
 //typography
-$family-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+$family-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+  "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+  sans-serif;
 $family-primary: $family-sans;
 $body-size: 14px;
 $size-3: (24/14) + 0rem;

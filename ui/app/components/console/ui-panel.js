@@ -45,17 +45,17 @@ export default Ember.Component.extend({
     
     let content;
     let { httpStatus, path } = error;
-    let verb = {
-      'read': 'reading',
-      'write': 'writing',
+    let verbClause = {
+      'read': 'reading from',
+      'write': 'writing to',
       'list': 'listing',
-      'delete': 'deleting'
+      'delete': 'deleting at'
     }[method];
 
-    content = `Error ${verb} to ${vaultPath}.\nURL: ${path}\nCode: ${httpStatus}`;
+    content = `Error ${verbClause}: ${vaultPath}.\nURL: ${path}\nCode: ${httpStatus}`;
 
-    if(typeof error.errors[0]){
-      content = `${content}\nErrors:\n  ${error.errors.join('\n')}`;
+    if(typeof error.errors[0] === 'string'){
+      content = `${content}\nErrors:\n  ${error.errors.join('\n  ')}`;
     }
     
     this.appendToLog({ type: 'error', content });
@@ -123,7 +123,7 @@ export default Ember.Component.extend({
     let flags = [];
     let data = [];
     
-    rest.forEach((arg, index) => {
+    rest.forEach((arg) => {
       if(arg.startsWith('-')){
         flags.push(arg);
       }
