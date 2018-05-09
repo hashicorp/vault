@@ -194,24 +194,34 @@ func DefaultBackoff(min, max time.Duration, attemptNum int, resp *http.Response)
 // perform linear backoff based on the attempt number and with jitter to
 // prevent a thundering herd. The final backoff time is the attempt number
 // multiplied by the random chosen value between min/max.
-func LinearJitterBackoff(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
+func LinearJitterBackoff(min, max time.Duration, attemptNum int, _ *http.Response) time.Duration {
 	if max <= min {
 		// Unclear what to do here, so return min
 		return min
 	}
-	// Seed rand; doing this every time is fine
-	rand := rand.New(rand.NewSource(int64(time.Now().Nanosecond())))
-	// Pick a random number that lies somewhere between the min and max and
-	// multiply by the attemptNum. attemptNum starts at zero so we always
-	// increment here.
-	rawWait := (min + time.Duration(int64(rand.Int63())%int64(max-min))) * time.Duration(attemptNum+1)
-	if rawWait < min {
+	minNano := min.Nanoseconds()
+	maxNano := max.Nanoseconds()
+	triesUntilMax := int64(10)
+
+	// First, determine how long we would wait without jitter in a linear model.
+	interval := (maxNano - minNano) / triesUntilMax
+	linearWait := minNano + int64(attemptNum) * interval
+
+	// Now add or subtract some jitter that's proportionate to the interval.
+	r := rand.New(rand.NewSource(int64(time.Now().Nanosecond())))
+	jitter := r.Intn(int(interval))
+	jitteryWait := time.Duration(linearWait + int64(jitter)) * time.Nanosecond
+	if jitter % 2 == 0 {
+		jitteryWait = time.Duration(linearWait - int64(jitter)) * time.Nanosecond
+	}
+	// It's possible for the
+	if jitteryWait < min {
 		return min
 	}
-	if rawWait > max {
+	if jitteryWait > max {
 		return max
 	}
-	return rawWait
+	return jitteryWait
 }
 
 // PassthroughErrorHandler is an ErrorHandler that directly passes through the
