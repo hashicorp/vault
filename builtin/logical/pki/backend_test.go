@@ -1487,10 +1487,10 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 // Generates steps to test out various role permutations
 func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	roleVals := roleEntry{
-		MaxTTLDuration: 12 * time.Hour,
-		KeyType:        "rsa",
-		KeyBits:        2048,
-		RequireCN:      true,
+		MaxTTL:    12 * time.Hour,
+		KeyType:   "rsa",
+		KeyBits:   2048,
+		RequireCN: true,
 	}
 	issueVals := certutil.IssueData{}
 	ret := []logicaltest.TestStep{}
@@ -1866,7 +1866,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 			issueTestStep.ErrorOk = !allowed
 
-			validity := roleVals.MaxTTLDuration
+			validity := roleVals.MaxTTL
 
 			var testBitSize int
 
@@ -2088,16 +2088,16 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	{
 		roleTestStep.ErrorOk = true
 		roleVals.Lease = ""
-		roleVals.MaxTTLDuration = 0
+		roleVals.MaxTTL = 0
 		addTests(nil)
 
 		roleVals.Lease = "12h"
-		roleVals.MaxTTLDuration = 6 * time.Hour
+		roleVals.MaxTTL = 6 * time.Hour
 		addTests(nil)
 
 		roleTestStep.ErrorOk = false
 		roleVals.TTL = ""
-		roleVals.MaxTTLDuration = 12 * time.Hour
+		roleVals.MaxTTL = 12 * time.Hour
 	}
 
 	// Listing test

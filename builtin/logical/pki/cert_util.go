@@ -859,12 +859,12 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 	{
 		ttl = time.Duration(data.apiData.Get("ttl").(int)) * time.Second
 
-		if ttl == 0 && data.role.TTLDuration > 0 {
-			ttl = data.role.TTLDuration
+		if ttl == 0 && data.role.TTL > 0 {
+			ttl = data.role.TTL
 		}
 
-		if data.role.MaxTTLDuration > 0 {
-			maxTTL = data.role.MaxTTLDuration
+		if data.role.MaxTTL > 0 {
+			maxTTL = data.role.MaxTTL
 		}
 
 		if ttl == 0 {

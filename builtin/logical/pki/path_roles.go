@@ -289,32 +289,32 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 
 	// Migrate existing saved entries and save back if changed
 	modified := false
-	if len(result.TTL) == 0 && len(result.Lease) != 0 {
-		result.TTL = result.Lease
+	if len(result.DeprecatedTTL) == 0 && len(result.Lease) != 0 {
+		result.DeprecatedTTL = result.Lease
 		result.Lease = ""
 		modified = true
 	}
-	if result.TTLDuration == 0 && len(result.TTL) != 0 {
-		parsed, err := parseutil.ParseDurationSecond(result.TTL)
+	if result.TTL == 0 && len(result.DeprecatedTTL) != 0 {
+		parsed, err := parseutil.ParseDurationSecond(result.DeprecatedTTL)
 		if err != nil {
 			return nil, err
 		}
-		result.TTLDuration = parsed
-		result.TTL = ""
+		result.TTL = parsed
+		result.DeprecatedTTL = ""
 		modified = true
 	}
-	if len(result.MaxTTL) == 0 && len(result.LeaseMax) != 0 {
-		result.MaxTTL = result.LeaseMax
+	if len(result.DeprecatedMaxTTL) == 0 && len(result.LeaseMax) != 0 {
+		result.DeprecatedMaxTTL = result.LeaseMax
 		result.LeaseMax = ""
 		modified = true
 	}
-	if result.MaxTTLDuration == 0 && len(result.MaxTTL) != 0 {
-		parsed, err := parseutil.ParseDurationSecond(result.MaxTTL)
+	if result.MaxTTL == 0 && len(result.DeprecatedMaxTTL) != 0 {
+		parsed, err := parseutil.ParseDurationSecond(result.DeprecatedMaxTTL)
 		if err != nil {
 			return nil, err
 		}
-		result.MaxTTLDuration = parsed
-		result.MaxTTL = ""
+		result.MaxTTL = parsed
+		result.DeprecatedMaxTTL = ""
 		modified = true
 	}
 	if result.AllowBaseDomain {
@@ -432,8 +432,8 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	name := data.Get("name").(string)
 
 	entry := &roleEntry{
-		MaxTTLDuration:                time.Duration(data.Get("max_ttl").(int)) * time.Second,
-		TTLDuration:                   time.Duration(data.Get("ttl").(int)) * time.Second,
+		MaxTTL:                        time.Duration(data.Get("max_ttl").(int)) * time.Second,
+		TTL:                           time.Duration(data.Get("ttl").(int)) * time.Second,
 		AllowLocalhost:                data.Get("allow_localhost").(bool),
 		AllowedDomains:                data.Get("allowed_domains").([]string),
 		AllowBareDomains:              data.Get("allow_bare_domains").(bool),
@@ -485,7 +485,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		return logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported"), nil
 	}
 
-	if entry.MaxTTLDuration > 0 && entry.TTLDuration > entry.MaxTTLDuration {
+	if entry.MaxTTL > 0 && entry.TTL > entry.MaxTTL {
 		return logical.ErrorResponse(
 			`"ttl" value must be less than "max_ttl" value`,
 		), nil
@@ -547,10 +547,10 @@ func parseKeyUsages(input []string) int {
 type roleEntry struct {
 	LeaseMax                      string        `json:"lease_max"`
 	Lease                         string        `json:"lease"`
-	MaxTTL                        string        `json:"max_ttl" mapstructure:"max_ttl"`
-	TTL                           string        `json:"ttl" mapstructure:"ttl"`
-	TTLDuration                   time.Duration `json:"ttl_duration" mapstructure:"ttl_duration"`
-	MaxTTLDuration                time.Duration `json:"max_ttl_duration" mapstructure:"max_ttl_duration"`
+	DeprecatedMaxTTL              string        `json:"max_ttl" mapstructure:"max_ttl"`
+	DeprecatedTTL                 string        `json:"ttl" mapstructure:"ttl"`
+	TTL                           time.Duration `json:"ttl_duration" mapstructure:"ttl_duration"`
+	MaxTTL                        time.Duration `json:"max_ttl_duration" mapstructure:"max_ttl_duration"`
 	AllowLocalhost                bool          `json:"allow_localhost" mapstructure:"allow_localhost"`
 	AllowedBaseDomain             string        `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
 	AllowedDomainsOld             string        `json:"allowed_domains,omit_empty"`
@@ -596,8 +596,8 @@ type roleEntry struct {
 
 func (r *roleEntry) ToResponseData() map[string]interface{} {
 	responseData := map[string]interface{}{
-		"ttl":                                int64(r.TTLDuration.Seconds()),
-		"max_ttl":                            int64(r.MaxTTLDuration.Seconds()),
+		"ttl":                                int64(r.TTL.Seconds()),
+		"max_ttl":                            int64(r.MaxTTL.Seconds()),
 		"allow_localhost":                    r.AllowLocalhost,
 		"allowed_domains":                    r.AllowedDomains,
 		"allow_bare_domains":                 r.AllowBareDomains,
