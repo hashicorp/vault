@@ -1711,12 +1711,6 @@
 			"revisionTime": "2017-03-13T16:33:22Z"
 		},
 		{
-			"checksumSHA1": "t2yP3EKVt3Iqn5QP2K7Qah+YK0c=",
-			"path": "github.com/sethgrid/pester",
-			"revision": "ed9870dad3170c0b25ab9b11830cc57c3a7798fb",
-			"revisionTime": "2018-02-27T22:34:04Z"
-		},
-		{
 			"checksumSHA1": "7VrRVHHEc37zSSPAQaj+5jRWhzo=",
 			"path": "github.com/sirupsen/logrus",
 			"revision": "9f91ab2ef97544cdca176a1fb9165f2cf6fd709b",
