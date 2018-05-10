@@ -2,6 +2,10 @@
 
 DEPRECATIONS/CHANGES:
 
+ * As of this release, the Vault CLI (via `vault unwrap`) and Go API (via
+   `Logical().Unwrap()`) can no longer unwrap response-wrapped tokens produced
+   by Vault prior to 0.6.2. These can still be read manually by performing a
+   read on `cubbyhole/response` and decoding the JSON-encoded value.
  * PKI duration return types: The PKI backend now returns durations (e.g. when
    reading a role) as an integer number of seconds instead of a Go-style
    string, in line with how the rest of Vault's API returns durations.
