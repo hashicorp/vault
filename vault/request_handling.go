@@ -105,14 +105,18 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		resp.Data[logical.HTTPRawBody] != nil {
 
 		// Decode the JSON
-		httpResp := &logical.HTTPResponse{}
-		err := jsonutil.DecodeJSON(resp.Data[logical.HTTPRawBody].([]byte), httpResp)
-		if err != nil {
-			c.logger.Error("failed to unmarshal wrapped HTTP response for audit logging", "error", err)
-			return nil, ErrInternalError
-		}
+		if resp.Data[logical.HTTPRawBodyAlreadyJSONDecoded] != nil {
+			delete(resp.Data, logical.HTTPRawBodyAlreadyJSONDecoded)
+		} else {
+			httpResp := &logical.HTTPResponse{}
+			err := jsonutil.DecodeJSON(resp.Data[logical.HTTPRawBody].([]byte), httpResp)
+			if err != nil {
+				c.logger.Error("failed to unmarshal wrapped HTTP response for audit logging", "error", err)
+				return nil, ErrInternalError
+			}
 
-		auditResp = logical.HTTPResponseToLogicalResponse(httpResp)
+			auditResp = logical.HTTPResponseToLogicalResponse(httpResp)
+		}
 	}
 
 	var nonHMACReqDataKeys []string
@@ -178,12 +182,15 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 			return nil, nil, retErr
 		}
-		if te.NumUses == -1 {
+		if te.NumUses == tokenRevocationPending {
 			// We defer a revocation until after logic has run, since this is a
 			// valid request (this is the token's final use). We pass the ID in
 			// directly just to be safe in case something else modifies te later.
 			defer func(id string) {
-				err = c.tokenStore.Revoke(ctx, id)
+				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
+				if err == nil {
+					err = c.expiration.Revoke(leaseID)
+				}
 				if err != nil {
 					c.logger.Error("failed to revoke token", "error", err)
 					retResp = nil
@@ -394,7 +401,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		if err := c.expiration.RegisterAuth(te.Path, resp.Auth); err != nil {
-			c.tokenStore.Revoke(ctx, te.ID)
+			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
@@ -600,7 +607,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
-			c.tokenStore.Revoke(ctx, te.ID)
+			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			return nil, auth, ErrInternalError
 		}

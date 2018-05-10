@@ -561,18 +561,34 @@ func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
 
 	// Lookup the leases
-	existing, err := m.lookupByToken(te.ID)
+	existing, err := m.lookupLeasesByToken(te.ID)
 	if err != nil {
 		return errwrap.Wrapf("failed to scan for leases: {{err}}", err)
 	}
 
 	// Revoke all the keys
-	for idx, leaseID := range existing {
-		if err := m.revokeCommon(leaseID, false, false); err != nil {
-			return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
+	for _, leaseID := range existing {
+		// Load the entry
+		le, err := m.loadEntry(leaseID)
+		if err != nil {
+			return err
+		}
+
+		// If there's a lease, set expiration to now, persist, and call
+		// updatePending to hand off revocation to the expiration manager's pending
+		// timer map
+		if le != nil {
+			le.ExpireTime = time.Now()
+
+			if err := m.persistEntry(le); err != nil {
+				return err
+			}
+
+			m.updatePending(le, 0)
 		}
 	}
 
+	// te.Path should never be empty, but we check just in case
 	if te.Path != "" {
 		saltedID, err := m.tokenStore.SaltID(m.quitContext, te.ID)
 		if err != nil {
@@ -1054,7 +1070,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 	// Revocation of login tokens is special since we can by-pass the
 	// backend and directly interact with the token store
 	if le.Auth != nil {
-		if err := m.tokenStore.RevokeTree(m.quitContext, le.ClientToken); err != nil {
+		if err := m.tokenStore.revokeTree(m.quitContext, le.ClientToken); err != nil {
 			return errwrap.Wrapf("failed to revoke token: {{err}}", err)
 		}
 
@@ -1247,8 +1263,58 @@ func (m *ExpirationManager) removeIndexByToken(token, leaseID string) error {
 	return nil
 }
 
-// lookupByToken is used to lookup all the leaseID's via the
-func (m *ExpirationManager) lookupByToken(token string) ([]string, error) {
+// CreateOrFetchRevocationLeaseByToken is used to create or fetch the matching
+// leaseID for a particular token. The lease is set to expire immediately after
+// it's created.
+func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(te *TokenEntry) (string, error) {
+	// Fetch the saltedID of the token and construct the leaseID
+	saltedID, err := m.tokenStore.SaltID(m.quitContext, te.ID)
+	if err != nil {
+		return "", err
+	}
+	leaseID := path.Join(te.Path, saltedID)
+
+	// Load the entry
+	le, err := m.loadEntry(leaseID)
+	if err != nil {
+		return "", err
+	}
+
+	// If there's no associated leaseEntry for the token, we create one
+	if le == nil {
+		auth := &logical.Auth{
+			ClientToken: te.ID,
+			LeaseOptions: logical.LeaseOptions{
+				TTL: time.Nanosecond,
+			},
+		}
+
+		if strings.Contains(te.Path, "..") {
+			return "", consts.ErrPathContainsParentReferences
+		}
+
+		// Create a lease entry
+		now := time.Now()
+		le = &leaseEntry{
+			LeaseID:     leaseID,
+			ClientToken: auth.ClientToken,
+			Auth:        auth,
+			Path:        te.Path,
+			IssueTime:   now,
+			ExpireTime:  now.Add(time.Nanosecond),
+		}
+
+		// Encode the entry
+		if err := m.persistEntry(le); err != nil {
+			return "", err
+		}
+	}
+
+	return le.LeaseID, nil
+}
+
+// lookupLeasesByToken is used to lookup all the leaseID's via the tokenID
+func (m *ExpirationManager) lookupLeasesByToken(token string) ([]string, error) {
 	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
 	if err != nil {
 		return nil, err
