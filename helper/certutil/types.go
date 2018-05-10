@@ -43,7 +43,7 @@ const (
 )
 
 // TLSUsage controls whether the intended usage of a *tls.Config
-// returned from ParsedCertBundle.GetTLSConfig is for server use,
+// returned from ParsedCertBundle.getTLSConfig is for server use,
 // client use, or both, which affects which values are set
 type TLSUsage int
 
@@ -523,7 +523,7 @@ func (p *ParsedCSRBundle) SetParsedPrivateKey(privateKey crypto.Signer, privateK
 	p.PrivateKeyBytes = privateKeyBytes
 }
 
-// GetTLSConfig returns a TLS config generally suitable for client
+// getTLSConfig returns a TLS config generally suitable for client
 // authentication. The returned TLS config can be modified slightly
 // to be made suitable for a server requiring client authentication;
 // specifically, you should set the value of ClientAuth in the returned
