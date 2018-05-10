@@ -419,7 +419,9 @@ func (c *Client) Address() string {
 // rateLimit and burst are specified according to https://godoc.org/golang.org/x/time/rate#NewLimiter
 func (c *Client) SetLimiter(rateLimit float64, burst int) {
 	c.modifyLock.RLock()
+	c.config.modifyLock.Lock()
 	defer c.modifyLock.RUnlock()
+	defer c.config.modifyLock.Unlock()
 	c.config.Limiter = rate.NewLimiter(rate.Limit(rateLimit), burst)
 }
 
