@@ -173,7 +173,15 @@ export default Ember.Component.extend({
     if (serviceArgs === false) {
       return;
     }
+
     let [method, flagArray, path, dataArray] = serviceArgs;
+
+    if(path === undefined){
+      this.pushCommand(command);
+      this.appendToLog({type: 'error', content: 'A path is required to make a request.'});
+      return;
+    }
+
     if (dataArray || flagArray) {
       var {data, flags} = this.extractDataAndFlags(dataArray, flagArray);
     }
@@ -194,7 +202,7 @@ export default Ember.Component.extend({
         index = commandHistoryLength - 1;
       }
     }
-    else{ //DOWN
+    else{
       index += 1;
       if(index === commandHistoryLength){
         newInputValue = "";

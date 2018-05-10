@@ -327,3 +327,24 @@ test('#handleServiceError', function(assert) {
     assert.deepEqual(appendArgs[0].content, test.expectedContent, `${test.name}: calls appendToLog with the expected error content`);
   });
 });
+
+const testCommandCases = [
+  {
+    name: 'errors when command does not include a path',
+    command: `list`,
+    expectedContent: 'A path is required to make a request.'
+  }
+];
+
+test('#executeCommand', function(assert) {
+  let panel = this.subject({
+    appendToLog: sinon.spy()
+  });
+  testCommandCases.forEach(test => {
+    panel.executeCommand(test.command);
+
+    let spy = panel.appendToLog;
+    let appendArgs = spy.lastCall.args;
+    assert.deepEqual(appendArgs[0].content, test.expectedContent, `${test.name}: calls appendToLog with the expected error content`);
+  });
+});
