@@ -31,6 +31,7 @@ BUG FIXES:
    [GH-4475]
  * core: When using the `use_always` option with PROXY protocol support, do not
    require `authorized_addrs` to be set [GH-4065]
+ * secret/kv: Fix response wrapping for KV v2 [GH-4511]
  * secret/pki: Fix path length parameter being ignored when using
    `use_csr_values` and signing an intermediate CA cert [GH-4459]
 
