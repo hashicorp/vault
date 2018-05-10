@@ -25,7 +25,7 @@ let testCases = [
 
   {
     method: 'read',
-    args: ['/sys/health'],
+    args: ['/sys/health', {}],
     expectedURL: 'sys/health',
     expectedVerb: 'GET',
     expectedOptions: {data: undefined, wrapTTL: undefined},
@@ -33,7 +33,7 @@ let testCases = [
 
   {
     method: 'read',
-    args: ['/secrets/foo/bar', '30m'],
+    args: ['/secrets/foo/bar', {}, '30m'],
     expectedURL: 'secrets/foo/bar',
     expectedVerb: 'GET',
     expectedOptions: {data: undefined, wrapTTL: '30m'},
@@ -49,7 +49,7 @@ let testCases = [
 
   {
     method: 'list',
-    args: ['secret/mounts'],
+    args: ['secret/mounts', {}],
     expectedURL: 'secret/mounts/',
     expectedVerb: 'GET',
     expectedOptions: {data: {list: true}, wrapTTL: undefined},
@@ -57,7 +57,7 @@ let testCases = [
 
   {
     method: 'list',
-    args: ['secret/mounts', '1h'],
+    args: ['secret/mounts', {}, '1h'],
     expectedURL: 'secret/mounts/',
     expectedVerb: 'GET',
     expectedOptions: {data: {list: true}, wrapTTL: '1h'},

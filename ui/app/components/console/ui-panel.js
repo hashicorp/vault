@@ -1,5 +1,6 @@
 import Ember from 'ember';
 import cliArgParser from 'vault/lib/tokenize-cli-arg-string';
+import keys from 'vault/lib/keycodes';
 
 
 const { inject, computed } = Ember;
@@ -11,37 +12,14 @@ export default Ember.Component.extend({
   commandHistory: computed('log.[]', function() {
     return this.get('log').filterBy('type', 'command');
   }),
-
   log: computed(function() {
     return [];
   }),
+  commandIndex: null,
 
-  executeCommand(command, shouldThrow=false) {
-    let serviceArgs;
-    // parse to verify it's valid
-    try {
-      serviceArgs = this.parseCommand(command, shouldThrow);
-    } catch (e) {
-      this.set('inputValue', '');
-      this.appendToLog({type: 'command', content: command});
-      this.appendToLog({type: 'help'});
-      return;
-    }
-    // we have a invalid command but don't want to throw
-    if (serviceArgs === false) {
-      return;
-    }
-    let [method, flagArray, path, dataArray] = serviceArgs;
-    if (dataArray || flagArray) {
-      var {data, flags} = this.extractDataAndFlags(dataArray, flagArray);
-    }
-    this.get('console')[method](path, data, flags.wrapTTL)
-      .then(resp => this.processResponse(resp, command, path, method, flags))
-      .catch((error) => this.handleServiceError(method, path, error));
-  },
 
-  handleServiceError(method, vaultPath, error) {
-    this.set('inputValue', '');
+  handleServiceError(command, method, vaultPath, error) {
+    this.pushCommand(command);
     
     let content;
     let { httpStatus, path } = error;
@@ -62,8 +40,7 @@ export default Ember.Component.extend({
   },
 
   processResponse(response, command, path, method, flags) {
-    this.set('inputValue', '');
-    this.appendToLog({type: 'command', content: command});
+    this.pushCommand(command);
     if (!response) {
       let message = method === 'write' ?
         `Success! Data written to: ${path}` :
@@ -176,12 +153,74 @@ export default Ember.Component.extend({
     this.get('log').pushObject(logItem);
   },
 
+  pushCommand(command){
+    this.set('inputValue', '');
+    this.appendToLog({type: 'command', content: command});
+    this.set('commandIndex', null)
+  },
+
+  executeCommand(command, shouldThrow=false) {
+    let serviceArgs;
+    // parse to verify it's valid
+    try {
+      serviceArgs = this.parseCommand(command, shouldThrow);
+    } catch (e) {
+      this.pushCommand(command);
+      this.appendToLog({type: 'help'});
+      return;
+    }
+    // we have a invalid command but don't want to throw
+    if (serviceArgs === false) {
+      return;
+    }
+    let [method, flagArray, path, dataArray] = serviceArgs;
+    if (dataArray || flagArray) {
+      var {data, flags} = this.extractDataAndFlags(dataArray, flagArray);
+    }
+    this.get('console')[method](path, data, flags.wrapTTL)
+      .then(resp => this.processResponse(resp, command, path, method, flags))
+      .catch((error) => this.handleServiceError(command, method, path, error));
+  },
+
+  shiftCommandIndex(keyCode){
+    let newInputValue;
+    let commandHistory = this.get('commandHistory');
+    let commandHistoryLength = commandHistory.length;
+    let index = this.get('commandIndex');
+
+    if(keyCode === keys.UP){
+      index -= 1;
+      if(index < 0){
+        index = commandHistoryLength - 1;
+      }
+    }
+    else{ //DOWN
+      index += 1;
+      if(index === commandHistoryLength){
+        newInputValue = "";
+      }
+      if(index > commandHistoryLength){
+        index -= 1;
+      }
+    }
+
+    if(newInputValue !== ""){
+      newInputValue = commandHistory.objectAt(index).content;
+    }
+
+    this.set('commandIndex', index);
+    this.set('inputValue', newInputValue);
+  },
+
   actions: {
     setValue(val){
       this.set('inputValue', val);
     },
     executeCommand(val){
       this.executeCommand(val, true);
+    },
+    shiftCommandIndex(direction){
+      this.shiftCommandIndex(direction);
     }
   },
 

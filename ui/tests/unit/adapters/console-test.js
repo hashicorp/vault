@@ -1,5 +1,4 @@
 import { moduleFor, test } from 'ember-qunit';
-import Ember from 'ember';
 
 moduleFor('adapter:console', 'Unit | Adapter | console', {
   needs: ['service:auth', 'service:flash-messages', 'service:version'],
