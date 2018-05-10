@@ -379,8 +379,26 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
-	_, ts, _, root := TestCoreWithTokenStore(t)
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
+
+	rootToken, err := ts.rootToken(context.Background())
+	root := rootToken.ID
+
 	testMakeToken(t, ts, root, "tokenid", "", []string{"foo"})
+
+	auth := &logical.Auth{
+		ClientToken: "tokenid",
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+	}
+	err = exp.RegisterAuth("auth/token/create", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	out, err := ts.Lookup(context.Background(), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -1367,9 +1385,39 @@ func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
-	_, ts, _, root := TestCoreWithTokenStore(t)
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
+
+	rootToken, err := ts.rootToken(context.Background())
+	root := rootToken.ID
+
 	testMakeToken(t, ts, root, "child", "", []string{"root", "foo"})
+
+	auth := &logical.Auth{
+		ClientToken: "child",
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+	}
+	err = exp.RegisterAuth("auth/token/create", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	testMakeToken(t, ts, "child", "sub-child", "", []string{"foo"})
+
+	auth = &logical.Auth{
+		ClientToken: "sub-child",
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+	}
+	err = exp.RegisterAuth("auth/token/create", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "revoke")
 	req.Data = map[string]interface{}{
@@ -1390,7 +1438,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if out != nil {
-		t.Fatalf("bad: %v", out)
+		t.Fatalf("bad: %#v", out)
 	}
 
 	// Sub-child should not exist
