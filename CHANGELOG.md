@@ -1,9 +1,39 @@
 ## 0.10.2 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * As of this release, the Vault CLI (via `vault unwrap`) and Go API (via
+   `Logical().Unwrap()`) can no longer unwrap response-wrapped tokens produced
+   by Vault prior to 0.6.2. These can still be read manually by performing a
+   read on `cubbyhole/response` and decoding the JSON-encoded value.
+ * PKI duration return types: The PKI backend now returns durations (e.g. when
+   reading a role) as an integer number of seconds instead of a Go-style
+   string, in line with how the rest of Vault's API returns durations.
+
 IMPROVEMENTS:
 
+ * api: Close renewer's doneCh when the renewer is stopped, so that programs
+   expecting a final value through doneCh behave correctly [GH-4472]
  * cli: `vault login` now supports a `-no-print` flag to suppress printing
    token information but still allow storing into the token helper [GH-4454]
+ * core/pkcs11 (enterprise): Add support for CKM_AES_CBS_PAD, CKM_RSA_PKCS, and 
+   CKM_RSA_PKCS_OAEP mechanisms
+ * core/pkcs11 (enterprise): HSM slots can now be selected by token label instead
+   of just slot number
+ * core/seal (enterprise): Lazily rewrap data when seal keys are rotated
+ * expiration: Allow revoke-prefix and revoke-force to work on single leases as
+   well as prefixes [GH-4450]
+
+BUG FIXES:
+
+ * auth/approle: Make invalid role_id a 400 error instead of 500 [GH-4470]
+ * auth/cert: Fix Identity alias using serial number instead of common name
+   [GH-4475]
+ * core: When using the `use_always` option with PROXY protocol support, do not
+   require `authorized_addrs` to be set [GH-4065]
+ * secret/kv: Fix response wrapping for KV v2 [GH-4511]
+ * secret/pki: Fix path length parameter being ignored when using
+   `use_csr_values` and signing an intermediate CA cert [GH-4459]
 
 ## 0.10.1/0.9.7 (April 25th, 2018)
 

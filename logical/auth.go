@@ -3,6 +3,8 @@ package logical
 import (
 	"fmt"
 	"time"
+
+	"github.com/hashicorp/go-sockaddr"
 )
 
 // Auth is the resulting authentication information that is part of
@@ -69,6 +71,9 @@ type Auth struct {
 	// mappings groups for the group aliases in identity store. For all the
 	// matching groups, the entity ID of the user will be added.
 	GroupAliases []*Alias `json:"group_aliases" mapstructure:"group_aliases" structs:"group_aliases"`
+
+	// The set of CIDRs that this token can be used with
+	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
 }
 
 func (a *Auth) GoString() string {

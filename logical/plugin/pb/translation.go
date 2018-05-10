@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
@@ -222,7 +223,7 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 
 	headers := map[string]*Header{}
 	for k, v := range r.Headers {
-		headers[k] = &Header{v}
+		headers[k] = &Header{Header: v}
 	}
 
 	return &Request{
@@ -507,6 +508,11 @@ func LogicalAuthToProtoAuth(a *logical.Auth) (*Auth, error) {
 		return nil, err
 	}
 
+	boundCIDRs := make([]string, len(a.BoundCIDRs))
+	for i, cidr := range a.BoundCIDRs {
+		boundCIDRs[i] = cidr.String()
+	}
+
 	return &Auth{
 		LeaseOptions: lo,
 		InternalData: string(buf[:]),
@@ -520,6 +526,7 @@ func LogicalAuthToProtoAuth(a *logical.Auth) (*Auth, error) {
 		EntityID:     a.EntityID,
 		Alias:        LogicalAliasToProtoAlias(a.Alias),
 		GroupAliases: groupAliases,
+		BoundCidrs:   boundCIDRs,
 	}, nil
 }
 
@@ -544,6 +551,15 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 		return nil, err
 	}
 
+	var boundCIDRs []*sockaddr.SockAddrMarshaler
+	for _, cidr := range a.BoundCidrs {
+		parsedCIDR, err := sockaddr.NewSockAddr(cidr)
+		if err != nil {
+			return nil, err
+		}
+		boundCIDRs = append(boundCIDRs, &sockaddr.SockAddrMarshaler{parsedCIDR})
+	}
+
 	return &logical.Auth{
 		LeaseOptions: lo,
 		InternalData: data,
@@ -557,5 +573,6 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 		EntityID:     a.EntityID,
 		Alias:        ProtoAliasToLogicalAlias(a.Alias),
 		GroupAliases: groupAliases,
+		BoundCIDRs:   boundCIDRs,
 	}, nil
 }

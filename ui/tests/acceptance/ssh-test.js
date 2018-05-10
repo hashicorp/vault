@@ -24,10 +24,10 @@ const ROLES = [
     },
     assertAfterGenerate(assert, sshPath) {
       assert.equal(currentURL(), `/vault/secrets/${sshPath}/sign/${this.name}`, 'ca sign url is correct');
-      assert.equal(find('[data-test-row-label="Signed key"]').length, 1, 'renders the signed key');
-      assert.equal(find('[data-test-row-value="Signed key"]').length, 1, "renders the signed key's value");
-      assert.equal(find('[data-test-row-label="Serial number"]').length, 1, 'renders the serial');
-      assert.equal(find('[data-test-row-value="Serial number"]').length, 1, 'renders the serial value');
+      assert.dom('[data-test-row-label="Signed key"]').exists({ count: 1 }, 'renders the signed key');
+      assert.dom('[data-test-row-value="Signed key"]').exists({ count: 1 }, "renders the signed key's value");
+      assert.dom('[data-test-row-label="Serial number"]').exists({ count: 1 }, 'renders the serial');
+      assert.dom('[data-test-row-value="Serial number"]').exists({ count: 1 }, 'renders the serial value');
     },
   },
   {
@@ -48,10 +48,10 @@ const ROLES = [
         `/vault/secrets/${sshPath}/credentials/${this.name}`,
         'otp credential url is correct'
       );
-      assert.equal(find('[data-test-row-label="Key"]').length, 1, 'renders the key');
-      assert.equal(find('[data-test-row-value="Key"]').length, 1, "renders the key's value");
-      assert.equal(find('[data-test-row-label="Port"]').length, 1, 'renders the port');
-      assert.equal(find('[data-test-row-value="Port"]').length, 1, "renders the port's value");
+      assert.dom('[data-test-row-label="Key"]').exists({ count: 1 }, 'renders the key');
+      assert.dom('[data-test-row-value="Key"]').exists({ count: 1 }, "renders the key's value");
+      assert.dom('[data-test-row-label="Port"]').exists({ count: 1 }, 'renders the port');
+      assert.dom('[data-test-row-value="Port"]').exists({ count: 1 }, "renders the port's value");
     },
   },
 ];
@@ -143,11 +143,7 @@ test('ssh backend', function(assert) {
     click(`[data-test-confirm-button]`);
 
     andThen(() => {
-      assert.equal(
-        find(`[data-test-secret-link="${role.name}"]`).length,
-        0,
-        `${role.type}: role is no longer in the list`
-      );
+      assert.dom(`[data-test-secret-link="${role.name}"]`).doesNotExist(`${role.type}: role is no longer in the list`);
     });
   });
 });
