@@ -84,7 +84,7 @@ being replicated across the regions.
 
 1. [Segment GDPR and non-GDPR secret engines](#step1)
 1. [Enable performance replication with mount filter](#step2)
-1. [Verify the mount filter](#step3)
+1. [Verify the replication mount filter](#step3)
 1. [Enable a local secret engine](#step4)
 
 ~> Ensure GDPR data is segmented by secret mount and blacklist the movement of
@@ -284,53 +284,140 @@ cluster.
 
 
 
-### <a name="step3"></a>Step 3: Verify the mount filter
+### <a name="step3"></a>Step 3: Verify the replication mount filter
 
-Once the replication completes, verify that you can see the `US_NON_GDPR_data`
-but not `EU_GDPR_data`.
+Once the replication completes, verify that the secrets stored in the
+`EU_GDPR_data` never get replicated to the US cluster.
+
+1. Create some secrets in the EU cluster at `EU_GDPR_data/`
+2. Log in the US cluster and verify that you don't see the data at `EU_GDPR_data/`
 
 #### CLI command
 
-```plaintext
-$ vault read US_NON_GDPR_data/US
-Key                 Value
----                 -----
-refresh_interval    768h
-secret              bar
+On the **EU** cluster, write some secret:
 
-$ vault read EU_GDPR_data/UK
-No value found at EU_GDPR_data/UK
+```shell
+# Write some secret at EU_GDPR_data/secret
+$ vault kv put EU_GDPR_data/secret pswd="password"
+Key              Value
+---              -----
+created_time     2018-05-10T18:00:38.912587665Z
+deletion_time    n/a
+destroyed        false
+version          1
+
+# Write some secret at US_NON_GDPR_data/secret
+$ vault kv put US_NON_GDPR_data/secret apikey="my-api-key"
+Key              Value
+---              -----
+created_time     2018-05-10T18:04:37.554665851Z
+deletion_time    n/a
+destroyed        false
+version          1
 ```
+
+From the **US** cluster, read the secrets:
+
+```shell
+# Read the secrets at EU_GDPR_data/secret
+No value found at EU_GDPR_data/secret
+
+# Read the secrets at US_NON_GDPR_data/secret
+$ vault kv get US_NON_GDPR_data/secret
+====== Metadata ======
+Key              Value
+---              -----
+created_time     2018-05-10T18:09:07.717250408Z
+deletion_time    n/a
+destroyed        false
+version          1
+
+===== Data =====
+Key       Value
+---       -----
+apikey    my-api-key
+```
+
 
 #### API call using cURL
 
-```plaintext
-$ curl --header "X-Vault-Token: ..." \
-       https://eu-west-1.compute.com:8200/v1/sys/mounts | jq
+On the **EU** cluster, write some secret:
+
+```shell
+# Create the request payload
+$ tee payload.json <<EOF
 {
-   "US_NON_GDPR_data/": {
-     "accessor": "kv_a5f54d9a",
-     "config": {
-       "default_lease_ttl": 0,
-       "force_no_cache": false,
-       "max_lease_ttl": 0,
-       "plugin_name": ""
-     },
-     "description": "",
-     "local": false,
-     "options": {
-       "version": "2"
-     },
-     "seal_wrap": false,
-     "type": "kv"
-   },
-   ...
+  "data": {
+    "pswd": "password"
+  }
+}
+EOF
+
+# Write some secret at EU_GDPR_data/secret
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       --data @payload.json \
+       https://eu-west-1.compute.com:8200/v1/EU_GDPR_data/data/secret
+
+# Create the request payload
+$ tee payload-us.json <<EOF
+{
+ "data": {
+   "apikey": "my-api-key"
+ }
+}
+EOF
+
+# Write some secret at US_NON_GDPR_data/secret
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       --data @payload-us.json \
+       https://eu-west-1.compute.com:8200/v1/US_NON_GDPR_data/data/secret
+```
+
+From the **US** cluster, read the secrets:
+
+```shell
+# Read the secrets at EU_GDPR_data/secret
+$ curl --header "X-Vault-Token: ..." \
+       https://us-central.compute.com:8201/v1/EU_GDPR_data/data/secret | jq
+{
+  "errors": []
+}
+
+# Read the secrets at US_NON_GDPR_data/secret
+$ curl --header "X-Vault-Token: ..." \
+       https://us-central.compute.com:8201/v1/US_NON_GDPR_data/data/secret | jq
+{
+  "request_id": "f5eedb5b-9406-c519-f5a5-070336c10205",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": null,
+  "wrap_info": null,
+  "warnings": [
+    "Invalid path for a versioned K/V secrets engine. See the API docs for the appropriate API endpoints to use. If using the Vault CLI, use 'vault kv get' for this operation."
+  ],
+  "auth": null
 }
 ```
 
 #### Web UI
 
-![Secrets](/assets/images/vault-mount-filter-11.png)
+On the **EU** cluster, select **EU_GDPR_data** > **Create secret**:
+
+![Secrets](/assets/images/vault-mount-filter-12.png)
+
+Enter the values and click **Save**.  Repeat the step to write some secrets at
+the **US_NON_GDPR_data** path as well.
+
+
+On the **US** cluster, select **EU_GDPR_data**.
+![Secrets](/assets/images/vault-mount-filter-13.png)
+
+The data is not replicated, so the UI displays "There are currently no secrets
+in this backend" message. But you should be able to see the `apikey` in the
+`US_NON_GDPR_data/secret` key.
 
 
 ### <a name="step4"></a>Step 4: Enable a local secret engine
@@ -380,4 +467,4 @@ the cluster.
 
 Read [Vault Deployment Reference
 Architecture](/guides/operations/reference-architecture.html) to learn more
-about the recommended deployment practices. 
+about the recommended deployment practices.
