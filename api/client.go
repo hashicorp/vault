@@ -364,12 +364,6 @@ func NewClient(c *Config) (*Client, error) {
 		c = def
 	}
 
-	// Check to see if the Limiter has been set.
-	// If is has not been set, then set it to have no limit.
-	if c.Limiter == nil {
-		c.Limiter = rate.NewLimiter(rate.Inf, 0)
-	}
-
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
@@ -596,7 +590,10 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 func (c *Client) RawRequest(r *Request) (*Response, error) {
-	defer c.config.Limiter.Wait(context.Background())
+	if c.config.Limiter != nil {
+		c.config.Limiter.Wait(context.Background())
+	}
+
 	c.modifyLock.RLock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
