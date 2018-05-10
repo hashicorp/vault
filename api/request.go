@@ -63,14 +63,17 @@ func (r *Request) ToHTTP() (*http.Request, error) {
 	return req.Request, nil
 }
 
-func (r *Request) toRetryableHTTP(regular bool) (*retryablehttp.Request, error) {
+// legacy indicates whether we want to return a request derived from
+// http.NewRequest instead of retryablehttp.NewRequest, so that legacy clents
+// that might be using the public ToHTTP method still work
+func (r *Request) toRetryableHTTP(legacy bool) (*retryablehttp.Request, error) {
 	// Encode the query parameters
 	r.URL.RawQuery = r.Params.Encode()
 
 	// Create the HTTP request, defaulting to retryable
 	var req *retryablehttp.Request
 
-	if regular {
+	if legacy {
 		regReq, err := http.NewRequest(r.Method, r.URL.RequestURI(), r.Body)
 		if err != nil {
 			return nil, err
