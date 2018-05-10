@@ -706,7 +706,7 @@ DEPRECATIONS/CHANGES:
  * SSH role list changes: When listing roles from the `ssh` backend via the API,
    the response data will additionally return a `key_info` map that will contain
    a map of each key with a corresponding object containing the `key_type`.
- * More granularity in audit logs: Audit request and response entires are still
+ * More granularity in audit logs: Audit request and response entries are still
    in RFC3339 format but now have a granularity of nanoseconds.
  * High availability related values have been moved out of the `storage` and
    `ha_storage` stanzas, and into the top-level configuration. `redirect_addr`
