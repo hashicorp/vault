@@ -115,7 +115,7 @@ func (p *PathManager) HasPath(path string) bool {
 	return false
 }
 
-// HasExactPath returns if the longest match is a path or is an exact for the
+// HasExactPath returns if the longest match is an exact match for the
 // full path
 func (p *PathManager) HasExactPath(path string) bool {
 	p.l.RLock()
