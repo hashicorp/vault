@@ -282,6 +282,13 @@ cluster.
 
 1. Click **Enable replication**.
 
+<br>
+
+~> **NOTE:** If the secondary is in an HA cluster, ensure that each standby is
+sealed and unsealed **with the primary’s unseal keys**. The secondary cluster
+mirrors the configuration of its primary cluster's backends such as auth
+methods, secret engines, audit devices, etc. It uses the primary as the
+_source of truth_ and pass token requests to the primary.
 
 
 ### <a name="step3"></a>Step 3: Verify the replication mount filter
