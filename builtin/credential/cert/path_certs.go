@@ -237,7 +237,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 
 	parsedCIDRs, err := parseutil.ParseAddrs(d.Get("bound_cidrs"))
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	certEntry := &CertEntry{
