@@ -22,7 +22,8 @@ export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const params = this.paramsFor(this.routeName);
     const id = this.getClusterId(params);
     if (id) {
-      return this.get('auth').setCluster(id);
+      this.get('auth').setCluster(id);
+      return this.get('version').fetchFeatures();
     } else {
       return Ember.RSVP.reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
     }
@@ -31,9 +32,7 @@ export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
   model(params) {
     const id = this.getClusterId(params);
 
-    return this.get('version').fetchFeatures().then(() => {
       return this.get('store').findRecord('cluster', id);
-    });
   },
 
   stopPoll: Ember.on('deactivate', function() {
