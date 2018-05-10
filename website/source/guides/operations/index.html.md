@@ -37,6 +37,8 @@ is a Vault Enterprise feature.
 how to use Terraform to provision an instance that utilizes an encryption key
 from AWS Key Management Service (KMS).
 
+- **[Enterprise Only]** [HSM Auto-unseal and Seal Wrap (FIPS 140-2)](/guides/operations/autounseal-aws-kms.html)
+
 - [Root Token Generation](/guides/operations/generate-root.html) guide
 demonstrates the workflow of regenerating root tokens. It is considered to be a
 best practice not to persist the initial **root** token. If a root token needs
