@@ -20,9 +20,10 @@ var singleCollectionIds = map[string]struct{}{
 }
 
 type RelativeResourceName struct {
-	Name     string
-	TypeKey  string
-	IdTuples map[string]string
+	Name                 string
+	TypeKey              string
+	IdTuples             map[string]string
+	OrderedCollectionIds []string
 }
 
 func ParseRelativeName(resource string) (*RelativeResourceName, error) {
@@ -60,11 +61,14 @@ func ParseRelativeName(resource string) (*RelativeResourceName, error) {
 		}
 	}
 
+	typeKey = typeKey[:len(typeKey)-1]
+	collectionIds := strings.Split(typeKey, "/")
 	resourceName := tokens[len(tokens)-2]
 	return &RelativeResourceName{
-		Name:     resourceName,
-		TypeKey:  typeKey[:len(typeKey)-1],
-		IdTuples: ids,
+		Name:                 resourceName,
+		TypeKey:              typeKey,
+		OrderedCollectionIds: collectionIds,
+		IdTuples:             ids,
 	}, nil
 }
 

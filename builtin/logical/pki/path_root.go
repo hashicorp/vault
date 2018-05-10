@@ -123,7 +123,9 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		return nil, err
 	}
 	if entry != nil {
-		return nil, nil
+		resp := &logical.Response{}
+		resp.AddWarning(fmt.Sprintf("Refusing to generate a root certificate over an existing root certificate. If you really want to destroy the original root certificate, please issue a delete against %sroot.", req.MountPoint))
+		return resp, nil
 	}
 
 	exported, format, role, errorResp := b.getGenerationParams(data)
@@ -260,7 +262,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		Province:              data.Get("province").([]string),
 		StreetAddress:         data.Get("street_address").([]string),
 		PostalCode:            data.Get("postal_code").([]string),
-		TTL:                   (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
+		TTL:                   time.Duration(data.Get("ttl").(int)) * time.Second,
 		AllowLocalhost:        true,
 		AllowAnyName:          true,
 		AllowIPSANs:           true,
