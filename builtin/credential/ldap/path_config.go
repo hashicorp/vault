@@ -2,20 +2,15 @@ package ldap
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"net"
-	"net/url"
 	"strings"
 	"text/template"
 
-	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/ldaputil"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -137,7 +132,7 @@ Default: cn`,
 /*
  * Construct ConfigEntry struct using stored configuration.
  */
-func (b *backend) Config(ctx context.Context, req *logical.Request) (*ConfigEntry, error) {
+func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldaputil.ConfigEntry, error) {
 	// Schema for ConfigEntry
 	fd, err := b.getConfigFieldData()
 	if err != nil {
@@ -187,8 +182,6 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ConfigEntr
 		}
 	}
 
-	result.logger = b.Logger()
-
 	return result, nil
 }
 
@@ -228,10 +221,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
  * Creates and initializes a ConfigEntry object with its default values,
  * as specified by the passed schema.
  */
-func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
-	cfg := new(ConfigEntry)
-
-	cfg.logger = b.Logger()
+func (b *backend) newConfigEntry(d *framework.FieldData) (*ldaputil.ConfigEntry, error) {
+	cfg := new(ldaputil.ConfigEntry)
 
 	url := d.Get("url").(string)
 	if url != "" {
@@ -365,131 +356,6 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	return nil, nil
-}
-
-type ConfigEntry struct {
-	logger        log.Logger
-	Url           string `json:"url"`
-	UserDN        string `json:"userdn"`
-	GroupDN       string `json:"groupdn"`
-	GroupFilter   string `json:"groupfilter"`
-	GroupAttr     string `json:"groupattr"`
-	UPNDomain     string `json:"upndomain"`
-	UserAttr      string `json:"userattr"`
-	Certificate   string `json:"certificate"`
-	InsecureTLS   bool   `json:"insecure_tls"`
-	StartTLS      bool   `json:"starttls"`
-	BindDN        string `json:"binddn"`
-	BindPassword  string `json:"bindpass"`
-	DenyNullBind  bool   `json:"deny_null_bind"`
-	DiscoverDN    bool   `json:"discoverdn"`
-	TLSMinVersion string `json:"tls_min_version"`
-	TLSMaxVersion string `json:"tls_max_version"`
-
-	// This json tag deviates from snake case because there was a past issue
-	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames".
-	// To continue reading in users' previously stored values,
-	// we chose to carry that forward.
-	CaseSensitiveNames *bool `json:"CaseSensitiveNames,omitempty"`
-}
-
-func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
-	tlsConfig := &tls.Config{
-		ServerName: host,
-	}
-
-	if c.TLSMinVersion != "" {
-		tlsMinVersion, ok := tlsutil.TLSLookup[c.TLSMinVersion]
-		if !ok {
-			return nil, fmt.Errorf("invalid 'tls_min_version' in config")
-		}
-		tlsConfig.MinVersion = tlsMinVersion
-	}
-
-	if c.TLSMaxVersion != "" {
-		tlsMaxVersion, ok := tlsutil.TLSLookup[c.TLSMaxVersion]
-		if !ok {
-			return nil, fmt.Errorf("invalid 'tls_max_version' in config")
-		}
-		tlsConfig.MaxVersion = tlsMaxVersion
-	}
-
-	if c.InsecureTLS {
-		tlsConfig.InsecureSkipVerify = true
-	}
-	if c.Certificate != "" {
-		caPool := x509.NewCertPool()
-		ok := caPool.AppendCertsFromPEM([]byte(c.Certificate))
-		if !ok {
-			return nil, fmt.Errorf("could not append CA certificate")
-		}
-		tlsConfig.RootCAs = caPool
-	}
-	return tlsConfig, nil
-}
-
-func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
-	var retErr *multierror.Error
-	var conn *ldap.Conn
-	urls := strings.Split(c.Url, ",")
-	for _, uut := range urls {
-		u, err := url.Parse(uut)
-		if err != nil {
-			retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("error parsing url %q: {{err}}", uut), err))
-			continue
-		}
-		host, port, err := net.SplitHostPort(u.Host)
-		if err != nil {
-			host = u.Host
-		}
-
-		var tlsConfig *tls.Config
-		switch u.Scheme {
-		case "ldap":
-			if port == "" {
-				port = "389"
-			}
-			conn, err = ldap.Dial("tcp", net.JoinHostPort(host, port))
-			if err != nil {
-				break
-			}
-			if conn == nil {
-				err = fmt.Errorf("empty connection after dialing")
-				break
-			}
-			if c.StartTLS {
-				tlsConfig, err = c.GetTLSConfig(host)
-				if err != nil {
-					break
-				}
-				err = conn.StartTLS(tlsConfig)
-			}
-		case "ldaps":
-			if port == "" {
-				port = "636"
-			}
-			tlsConfig, err = c.GetTLSConfig(host)
-			if err != nil {
-				break
-			}
-			conn, err = ldap.DialTLS("tcp", net.JoinHostPort(host, port), tlsConfig)
-		default:
-			retErr = multierror.Append(retErr, fmt.Errorf("invalid LDAP scheme in url %q", net.JoinHostPort(host, port)))
-			continue
-		}
-		if err == nil {
-			if retErr != nil {
-				if c.logger.IsDebug() {
-					c.logger.Debug("errors connecting to some hosts: %s", retErr.Error())
-				}
-			}
-			retErr = nil
-			break
-		}
-		retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("error connecting to host %q: {{err}}", uut), err))
-	}
-
-	return conn, retErr.ErrorOrNil()
 }
 
 /*
