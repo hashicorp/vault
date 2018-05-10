@@ -202,6 +202,10 @@ message Auth {
 	// mappings groups for the group aliases in identity store. For all the
 	// matching groups, the entity ID of the user will be added.
 	repeated Alias group_aliases = 12;
+
+	// If set, restricts usage of the certificates to client IPs falling within
+	// the range of the specified CIDR(s).
+	repeated string bound_cidrs = 13;
 }
 
 message LeaseOptions {
