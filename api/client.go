@@ -300,35 +300,18 @@ func (c *Config) ReadEnvironment() error {
 }
 
 func parseRateLimit(val string) (rate float64, burst int, err error) {
-	// First, check to see if the limit has a colon in it.
-	const delimiter = ':'
-	var position = strings.IndexRune(val, delimiter)
-	if position == -1 {
-		rate, err = strconv.ParseFloat(val, 64)
-		burst = int(rate)
-		if err != nil {
-			err = fmt.Errorf("%v was provided by incorrectly formatted", EnvRateLimit)
-		}
-		return rate, burst, err
-	}
-	// Env variable contains both a rate and a burst.
-	// the rate segment of val is up to and excluding
-	// the index of the delimiter
-	rateStr := string(val[position])
-	burstStr := string(val[burst+1:])
 
-	rate, err = strconv.ParseFloat(rateStr, 64)
+	_, err = fmt.Sscanf(val, "%f:%d", &rate, &burst)
 	if err != nil {
-		err = fmt.Errorf("%v was provided by incorrectly formatted", EnvRateLimit)
-		return 0.0, 0, err
-	}
-	burst64, err := strconv.ParseInt(burstStr, 10, 0)
-	burst = int(burst64)
-	if err != nil {
-		err = fmt.Errorf("%v was provided by incorrectly formatted", EnvRateLimit)
+		rate, err = strconv.ParseFloat(val, 64)
+		if err != nil {
+			err = fmt.Errorf("%v was provided but incorrectly formatted", EnvRateLimit)
+		}
+		burst = int(rate)
 	}
 
 	return rate, burst, err
+
 }
 
 // Client is the client to the Vault API. Create a client with NewClient.
