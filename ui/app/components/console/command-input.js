@@ -1,20 +1,26 @@
 import Ember from 'ember';
 import keys from 'vault/lib/keycodes';
-import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
-
 
 export default Ember.Component.extend({
+  'data-test-component': 'console/command-input',
   onExecuteCommand() {},
   onValueUpdate() {},
+  onShiftCommand() {},
   value: null,
 
   actions: {
     handleKeyUp: function(event) {
       var keyCode = event.keyCode;
-      if (keyCode === keys.ENTER) {
-        this.get('onExecuteCommand')(event.target.value);
-      } else {
-        this.get('onValueUpdate')(event.target.value);
+      switch(keyCode){
+        case keys.ENTER:
+          this.get('onExecuteCommand')(event.target.value);
+          break;
+        case keys.UP:
+        case keys.DOWN:
+          this.get('onShiftCommand')(keyCode);
+          break;
+        default:
+          this.get('onValueUpdate')(event.target.value);
       }
     }
   }

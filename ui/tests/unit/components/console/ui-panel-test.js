@@ -285,32 +285,32 @@ test('#processResponse', function(assert) {
 let testErrorCases = [
   {
     name: 'AdapterError',
-    args: ['write', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
+    args: ['command', 'write', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
     expectedContent: "Error writing to: sys/foo.\nURL: v1/sys/foo\nCode: 404"
   },
   {
     name: 'AdapterError',
-    args: ['read', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
+    args: ['command', 'read', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
     expectedContent: "Error reading from: sys/foo.\nURL: v1/sys/foo\nCode: 404"
   },
   {
     name: 'AdapterError',
-    args: ['list', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],    
+    args: ['command', 'list', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],    
     expectedContent: "Error listing: sys/foo.\nURL: v1/sys/foo\nCode: 404"
   },
   {
     name: 'AdapterError',
-    args: ['delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
+    args: ['command', 'delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
     expectedContent: "Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404"
   },
   {
     name: 'VaultError',
-    args: ['delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token']}],
+    args: ['command', 'delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token']}],
     expectedContent: "Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404\nErrors:\n  no client token"
   },
   {
     name: 'VaultErrors',
-    args: ['delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token', 'this is an error']}],
+    args: ['command', 'delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token', 'this is an error']}],
     expectedContent: "Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404\nErrors:\n  no client token\n  this is an error"
   }
 ];
