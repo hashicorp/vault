@@ -6,6 +6,7 @@ const POLL_INTERVAL_MS = 10000;
 const { inject } = Ember;
 
 export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
+  version: inject.service(),
   store: inject.service(),
   auth: inject.service(),
   currentCluster: Ember.inject.service(),
@@ -29,7 +30,10 @@ export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   model(params) {
     const id = this.getClusterId(params);
-    return this.get('store').findRecord('cluster', id);
+
+    return this.get('version').fetchFeatures().then(() => {
+      return this.get('store').findRecord('cluster', id);
+    });
   },
 
   stopPoll: Ember.on('deactivate', function() {
