@@ -24,7 +24,7 @@ export default Service.extend({
 
   hasSentinel: hasFeature('Sentinel'),
 
-  isEnterprise: computed.match('version', /\+\w+$/),
+  isEnterprise: computed.match('version', /\+.+$/),
 
   isOSS: computed.not('isEnterprise'),
 
