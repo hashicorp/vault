@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -234,16 +235,9 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	var parsedCIDRs []*sockaddr.SockAddrMarshaler
-	for _, v := range d.Get("bound_cidrs").([]string) {
-		parsedCIDR, err := sockaddr.NewSockAddr(v)
-		if err != nil {
-			if b.Logger().IsDebug() {
-				b.Logger().Debug(fmt.Sprintf("unable to parse %s as a cidr: %s", v, err))
-			}
-			return logical.ErrorResponse(fmt.Sprintf("unable to parse %s as a cidr", v)), logical.ErrInvalidRequest
-		}
-		parsedCIDRs = append(parsedCIDRs, &sockaddr.SockAddrMarshaler{parsedCIDR})
+	parsedCIDRs, err := parseutil.ParseAddrs(d.Get("bound_cidrs"))
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	certEntry := &CertEntry{

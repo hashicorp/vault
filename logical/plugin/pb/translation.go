@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 )
@@ -551,13 +551,14 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 		return nil, err
 	}
 
-	var boundCIDRs []*sockaddr.SockAddrMarshaler
-	for _, cidr := range a.BoundCidrs {
-		parsedCIDR, err := sockaddr.NewSockAddr(cidr)
-		if err != nil {
-			return nil, err
-		}
-		boundCIDRs = append(boundCIDRs, &sockaddr.SockAddrMarshaler{parsedCIDR})
+	boundCIDRs, err := parseutil.ParseAddrs(a.BoundCidrs)
+	if err != nil {
+		return nil, err
+	}
+	if len(boundCIDRs) == 0 {
+		// On inbound auths, if auth.BoundCIDRs is empty, it will be nil.
+		// Let's match that behavior outbound.
+		boundCIDRs = nil
 	}
 
 	return &logical.Auth{
