@@ -1660,6 +1660,7 @@ func (c *Core) postUnseal() (retErr error) {
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
+	// Enable the cache
 	c.physicalCache.Purge(c.activeContext)
 	if !c.cachingDisabled {
 		c.physicalCache.SetEnabled(true)
