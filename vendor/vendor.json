@@ -1099,10 +1099,10 @@
 			"revisionTime": "2017-12-18T14:54:08Z"
 		},
 		{
-			"checksumSHA1": "mxGkRISfv2EldeYihuciIYrKNjI=",
+			"checksumSHA1": "Zyex8Uj6m39MULS5GkYbNrgxMe0=",
 			"path": "github.com/hashicorp/go-gcp-common/gcputil",
-			"revision": "4b38f46ac60aebc9c67f2548aec1ff5bc1e9a4eb",
-			"revisionTime": "2018-02-23T19:15:17Z"
+			"revision": "763e39302965f115fba738b409b320563267b8df",
+			"revisionTime": "2018-04-25T17:39:46Z"
 		},
 		{
 			"checksumSHA1": "qhjAx0nMYBeQqRTaf7sQYpfUIq0=",
