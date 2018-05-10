@@ -427,6 +427,37 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 	if out != nil {
 		t.Fatalf("bad:\ngot %#v\nexpected: nil\n", out)
 	}
+
+	// Now test without registering the token through the expiration manager
+	testMakeToken(t, ts, root, "tokenid", "", []string{"foo"})
+	out, err = ts.Lookup(context.Background(), "tokenid")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if out == nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "revoke-accessor")
+	req.Data = map[string]interface{}{
+		"accessor": out.Accessor,
+	}
+
+	_, err = ts.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	time.Sleep(300 * time.Millisecond)
+
+	out, err = ts.Lookup(context.Background(), "tokenid")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if out != nil {
+		t.Fatalf("bad:\ngot %#v\nexpected: nil\n", out)
+	}
 }
 
 func TestTokenStore_RootToken(t *testing.T) {
@@ -1434,6 +1465,41 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 
 	out, err := ts.Lookup(context.Background(), "child")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("bad: %#v", out)
+	}
+
+	// Sub-child should not exist
+	out, err = ts.Lookup(context.Background(), "sub-child")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("bad: %v", out)
+	}
+
+	// Now test without registering the tokens through the expiration manager
+	testMakeToken(t, ts, root, "child", "", []string{"root", "foo"})
+	testMakeToken(t, ts, "child", "sub-child", "", []string{"foo"})
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "revoke")
+	req.Data = map[string]interface{}{
+		"token": "child",
+	}
+	resp, err = ts.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	time.Sleep(300 * time.Millisecond)
+
+	out, err = ts.Lookup(context.Background(), "child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -3836,11 +3902,11 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	leases := []string{}
 
 	for i := 0; i < 10; i++ {
-		leaseId, err := exp.Register(req, resp)
+		leaseID, err := exp.Register(req, resp)
 		if err != nil {
 			t.Fatal(err)
 		}
-		leases = append(leases, leaseId)
+		leases = append(leases, leaseID)
 	}
 
 	sort.Strings(leases)
