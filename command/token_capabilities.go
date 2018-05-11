@@ -33,6 +33,10 @@ Usage: vault token capabilities [options] [TOKEN] PATH
 
       $ vault token capabilities secret/foo
 
+  List capabilities for the local token on the "secret/foo" path and the "secret/bar" path:
+
+      $ vault token capabilities secret/foo,secret/bar
+
   List capabilities for a token on the "cubbyhole/foo" path:
 
       $ vault token capabilities 96ddf4bc-d217-f3ba-f9bd-017055595017 cubbyhole/foo
@@ -83,11 +87,11 @@ func (c *TokenCapabilitiesCommand) Run(args []string) int {
 		return 2
 	}
 
-	var capabilities []string
+	var capabilities map[string][]string
 	if token == "" {
-		capabilities, err = client.Sys().CapabilitiesSelf(path)
+		capabilities, err = client.Sys().CapabilitiesSelfMultiple(path)
 	} else {
-		capabilities, err = client.Sys().Capabilities(token, path)
+		capabilities, err = client.Sys().CapabilitiesMultiple(token, path)
 	}
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing capabilities: %s", err))
@@ -98,12 +102,41 @@ func (c *TokenCapabilitiesCommand) Run(args []string) int {
 		return 1
 	}
 
+	// if "capabilities" is present, i.e. we only passed one path
+	if capabilities["capabilities"] != nil {
+		capabilitiesSinglePath := capabilities["capabilities"]
+
+		switch Format(c.UI) {
+		case "table":
+			sort.Strings(capabilitiesSinglePath)
+			c.UI.Output(strings.Join(capabilitiesSinglePath, ", "))
+			return 0
+		default:
+			return OutputData(c.UI, capabilitiesSinglePath)
+		}
+	}
+
 	switch Format(c.UI) {
 	case "table":
-		sort.Strings(capabilities)
-		c.UI.Output(strings.Join(capabilities, ", "))
+		c.UI.Output(tableOutput(c.capabilitiesTable(capabilities), nil))
 		return 0
 	default:
 		return OutputData(c.UI, capabilities)
 	}
+}
+
+func (c *TokenCapabilitiesCommand) capabilitiesTable(capabilities map[string][]string) []string {
+	paths := make([]string, 0, len(capabilities))
+	for path := range capabilities {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	out := []string{"Path | Capabilities"}
+	for _, path := range paths {
+		pathCapabilities := capabilities[path]
+		out = append(out, fmt.Sprintf("%s | %s ", path, strings.Join(pathCapabilities, ", ")))
+	}
+
+	return out
 }
