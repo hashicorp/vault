@@ -131,9 +131,9 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 		bindDN = result.Entries[0].DN
 	} else {
 		if cfg.UPNDomain != "" {
-			bindDN = fmt.Sprintf("%s@%s", escapeLDAPValue(username), cfg.UPNDomain)
+			bindDN = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
 		} else {
-			bindDN = fmt.Sprintf("%s=%s,%s", cfg.UserAttr, escapeLDAPValue(username), cfg.UserDN)
+			bindDN = fmt.Sprintf("%s=%s,%s", cfg.UserAttr, EscapeLDAPValue(username), cfg.UserDN)
 		}
 	}
 
@@ -272,7 +272,8 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 	return ldapGroups, nil
 }
 
-func escapeLDAPValue(input string) string {
+// EscapeLDAPValue is exported because a plugin uses it outside this package.
+func EscapeLDAPValue(input string) string {
 	// RFC4514 forbids un-escaped:
 	// - leading space or hash
 	// - trailing space
