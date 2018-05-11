@@ -522,7 +522,7 @@ func (c *Client) Clone() (*Client, error) {
 		MaxRetries: config.MaxRetries,
 		Timeout:    config.Timeout,
 		Backoff:    config.Backoff,
-    Limiter:    config.Limiter,
+		Limiter:    config.Limiter,
 	}
 	config.modifyLock.RUnlock()
 
