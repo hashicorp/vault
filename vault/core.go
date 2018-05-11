@@ -1433,10 +1433,13 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		return retErr
 	}
 
-	if te != nil && te.NumUses == -1 {
+	if te != nil && te.NumUses == tokenRevocationPending {
 		// Token needs to be revoked. We do this immediately here because
 		// we won't have a token store after sealing.
-		err = c.tokenStore.Revoke(c.activeContext, te.ID)
+		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
+		if err == nil {
+			err = c.expiration.Revoke(leaseID)
+		}
 		if err != nil {
 			c.logger.Error("token needed revocation before seal but failed to revoke", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -1544,10 +1547,13 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		return retErr
 	}
 
-	if te != nil && te.NumUses == -1 {
+	if te != nil && te.NumUses == tokenRevocationPending {
 		// Token needs to be revoked. We do this immediately here because
 		// we won't have a token store after sealing.
-		err = c.tokenStore.Revoke(c.activeContext, te.ID)
+		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
+		if err == nil {
+			err = c.expiration.Revoke(leaseID)
+		}
 		if err != nil {
 			c.logger.Error("token needed revocation before step-down but failed to revoke", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -1664,6 +1670,7 @@ func (c *Core) postUnseal() (retErr error) {
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
+	// Enable the cache
 	c.physicalCache.Purge(c.activeContext)
 	if !c.cachingDisabled {
 		c.physicalCache.SetEnabled(true)

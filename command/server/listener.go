@@ -49,16 +49,19 @@ func listenerWrapProxy(ln net.Listener, config map[string]interface{}) (net.List
 		return nil, fmt.Errorf("failed parsing proxy_protocol_behavior value: not a string")
 	}
 
-	authorizedAddrsRaw, ok := config["proxy_protocol_authorized_addrs"]
-	if !ok {
-		return nil, fmt.Errorf("proxy_protocol_behavior set but no proxy_protocol_authorized_addrs value")
-	}
-
 	proxyProtoConfig := &proxyutil.ProxyProtoConfig{
 		Behavior: behavior,
 	}
-	if err := proxyProtoConfig.SetAuthorizedAddrs(authorizedAddrsRaw); err != nil {
-		return nil, errwrap.Wrapf("failed parsing proxy_protocol_authorized_addrs: {{err}}", err)
+
+	if proxyProtoConfig.Behavior == "allow_authorized" || proxyProtoConfig.Behavior == "deny_unauthorized" {
+		authorizedAddrsRaw, ok := config["proxy_protocol_authorized_addrs"]
+		if !ok {
+			return nil, fmt.Errorf("proxy_protocol_behavior set but no proxy_protocol_authorized_addrs value")
+		}
+
+		if err := proxyProtoConfig.SetAuthorizedAddrs(authorizedAddrsRaw); err != nil {
+			return nil, errwrap.Wrapf("failed parsing proxy_protocol_authorized_addrs: {{err}}", err)
+		}
 	}
 
 	newLn, err := proxyutil.WrapInProxyProto(ln, proxyProtoConfig)

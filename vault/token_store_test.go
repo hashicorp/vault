@@ -377,8 +377,26 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
-	_, ts, _, root := TestCoreWithTokenStore(t)
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
+
+	rootToken, err := ts.rootToken(context.Background())
+	root := rootToken.ID
+
 	testMakeToken(t, ts, root, "tokenid", "", []string{"foo"})
+
+	auth := &logical.Auth{
+		ClientToken: "tokenid",
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+	}
+	err = exp.RegisterAuth("auth/token/create", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	out, err := ts.Lookup(context.Background(), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -396,6 +414,8 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	time.Sleep(300 * time.Millisecond)
 
 	out, err = ts.Lookup(context.Background(), "tokenid")
 	if err != nil {
@@ -634,10 +654,10 @@ func TestTokenStore_UseToken(t *testing.T) {
 	if te == nil {
 		t.Fatalf("token entry for use #2 was nil")
 	}
-	if te.NumUses != tokenRevocationDeferred {
+	if te.NumUses != tokenRevocationPending {
 		t.Fatalf("token entry after use #2 did not have revoke flag")
 	}
-	ts.Revoke(context.Background(), te.ID)
+	ts.revokeOrphan(context.Background(), te.ID)
 
 	// Lookup the token
 	ent2, err = ts.Lookup(context.Background(), ent.ID)
@@ -659,11 +679,11 @@ func TestTokenStore_Revoke(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	err := ts.Revoke(context.Background(), "")
+	err := ts.revokeOrphan(context.Background(), "")
 	if err.Error() != "cannot revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
-	err = ts.Revoke(context.Background(), ent.ID)
+	err = ts.revokeOrphan(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -717,10 +737,12 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 	}
 
 	// Revoke the token
-	err = ts.Revoke(context.Background(), ent.ID)
+	err = ts.revokeOrphan(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	time.Sleep(300 * time.Millisecond)
 
 	// Verify the lease is gone
 	out, err := ts.expiration.loadEntry(leaseID)
@@ -745,7 +767,7 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	err := ts.Revoke(context.Background(), ent.ID)
+	err := ts.revokeOrphan(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -776,14 +798,14 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 	root, children := buildTokenTree(t, ts, depth)
-	err := ts.RevokeTree(context.Background(), "")
+	err := ts.revokeTree(context.Background(), "")
 
 	if err.Error() != "cannot tree-revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Nuke tree non recursively.
-	err = ts.RevokeTree(context.Background(), root.ID)
+	err = ts.revokeTree(context.Background(), root.ID)
 
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -878,6 +900,8 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
+
+	time.Sleep(300 * time.Millisecond)
 
 	lookup := []string{ent1.ID, ent2.ID, ent3.ID, ent4.ID}
 	for _, id := range lookup {
@@ -1362,9 +1386,39 @@ func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
-	_, ts, _, root := TestCoreWithTokenStore(t)
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
+
+	rootToken, err := ts.rootToken(context.Background())
+	root := rootToken.ID
+
 	testMakeToken(t, ts, root, "child", "", []string{"root", "foo"})
+
+	auth := &logical.Auth{
+		ClientToken: "child",
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+	}
+	err = exp.RegisterAuth("auth/token/create", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	testMakeToken(t, ts, "child", "sub-child", "", []string{"foo"})
+
+	auth = &logical.Auth{
+		ClientToken: "sub-child",
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+	}
+	err = exp.RegisterAuth("auth/token/create", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "revoke")
 	req.Data = map[string]interface{}{
@@ -1378,12 +1432,14 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
+	time.Sleep(300 * time.Millisecond)
+
 	out, err := ts.Lookup(context.Background(), "child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if out != nil {
-		t.Fatalf("bad: %v", out)
+		t.Fatalf("bad: %#v", out)
 	}
 
 	// Sub-child should not exist
@@ -1413,6 +1469,8 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: %#v", resp)
 	}
+
+	time.Sleep(300 * time.Millisecond)
 
 	out, err := ts.Lookup(context.Background(), "child")
 	if err != nil {
@@ -1466,6 +1524,8 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("did not get error when non-root revoking itself with orphan flag; resp is %#v", resp)
 	}
+
+	time.Sleep(300 * time.Millisecond)
 
 	// Should still exist
 	out, err = ts.Lookup(context.Background(), "child")
@@ -3325,7 +3385,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	if te == nil {
 		t.Fatal("nil entry")
 	}
-	if te.NumUses != tokenRevocationDeferred {
+	if te.NumUses != tokenRevocationPending {
 		t.Fatalf("bad: %d", te.NumUses)
 	}
 
@@ -3363,7 +3423,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	if te == nil {
 		t.Fatal("nil entry")
 	}
-	if te.NumUses != tokenRevocationDeferred {
+	if te.NumUses != tokenRevocationPending {
 		t.Fatalf("bad: %d", te.NumUses)
 	}
 
@@ -3378,16 +3438,13 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		t.Fatalf("expected err")
 	}
 
-	// Since revocation failed we should see the tokenRevocationFailed canary value
+	// Since revocation failed we should still be able to get a token
 	te, err = ts.lookupObfuscatedToken(context.Background(), idHMAC, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if te == nil {
-		t.Fatal("nil entry")
-	}
-	if te.NumUses != tokenRevocationFailed {
-		t.Fatalf("bad: %d", te.NumUses)
+		t.Fatal("nil token entry")
 	}
 
 	// Check the race condition situation by making the process sleep
@@ -3413,10 +3470,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	if te == nil {
-		t.Fatal("nil entry")
-	}
-	if te.NumUses != tokenRevocationInProgress {
-		t.Fatalf("bad: %d", te.NumUses)
+		t.Fatal("nil token entry")
 	}
 
 	// Let things catch up
@@ -3792,7 +3846,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 
 	sort.Strings(leases)
 
-	storedLeases, err := exp.lookupByToken(clientToken)
+	storedLeases, err := exp.lookupLeasesByToken(clientToken)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3828,7 +3882,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Verify leases still exist
-	storedLeases, err = exp.lookupByToken(clientToken)
+	storedLeases, err = exp.lookupLeasesByToken(clientToken)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3840,8 +3894,10 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	// Call tidy
 	ts.handleTidy(context.Background(), nil, nil)
 
+	time.Sleep(300 * time.Millisecond)
+
 	// Verify leases are gone
-	storedLeases, err = exp.lookupByToken(clientToken)
+	storedLeases, err = exp.lookupLeasesByToken(clientToken)
 	if err != nil {
 		t.Fatal(err)
 	}

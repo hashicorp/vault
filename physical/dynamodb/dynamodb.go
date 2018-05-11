@@ -217,7 +217,13 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 			Transport: pooledTransport,
 		}).
 		WithMaxRetries(dynamodbMaxRetry)
-	client := dynamodb.New(session.New(awsConf))
+
+	awsSession, err := session.NewSession(awsConf)
+	if err != nil {
+		return nil, errwrap.Wrapf("Could not establish AWS session: {{err}}", err)
+	}
+
+	client := dynamodb.New(awsSession)
 
 	if err := ensureTableExists(client, table, readCapacity, writeCapacity); err != nil {
 		return nil, err
@@ -259,7 +265,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 		Key:   recordKeyForVaultKey(entry.Key),
 		Value: entry.Value,
 	}
-	item, err := dynamodbattribute.ConvertToMap(record)
+	item, err := dynamodbattribute.MarshalMap(record)
 	if err != nil {
 		return errwrap.Wrapf("could not convert prefix record to DynamoDB item: {{err}}", err)
 	}
@@ -274,7 +280,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 			Path: recordPathForVaultKey(prefix),
 			Key:  fmt.Sprintf("%s/", recordKeyForVaultKey(prefix)),
 		}
-		item, err := dynamodbattribute.ConvertToMap(record)
+		item, err := dynamodbattribute.MarshalMap(record)
 		if err != nil {
 			return errwrap.Wrapf("could not convert prefix record to DynamoDB item: {{err}}", err)
 		}
@@ -311,7 +317,7 @@ func (d *DynamoDBBackend) Get(ctx context.Context, key string) (*physical.Entry,
 	}
 
 	record := &DynamoDBRecord{}
-	if err := dynamodbattribute.ConvertFromMap(resp.Item, record); err != nil {
+	if err := dynamodbattribute.UnmarshalMap(resp.Item, record); err != nil {
 		return nil, err
 	}
 
@@ -385,7 +391,7 @@ func (d *DynamoDBBackend) List(ctx context.Context, prefix string) ([]string, er
 	err := d.client.QueryPages(queryInput, func(out *dynamodb.QueryOutput, lastPage bool) bool {
 		var record DynamoDBRecord
 		for _, item := range out.Items {
-			dynamodbattribute.ConvertFromMap(item, &record)
+			dynamodbattribute.UnmarshalMap(item, &record)
 			if !strings.HasPrefix(record.Key, DynamoDBLockPrefix) {
 				keys = append(keys, record.Key)
 			}
@@ -697,8 +703,8 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 	_, err := client.DescribeTable(&dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
-	if awserr, ok := err.(awserr.Error); ok {
-		if awserr.Code() == "ResourceNotFoundException" {
+	if awsError, ok := err.(awserr.Error); ok {
+		if awsError.Code() == "ResourceNotFoundException" {
 			_, err = client.CreateTable(&dynamodb.CreateTableInput{
 				TableName: aws.String(table),
 				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{

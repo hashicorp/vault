@@ -172,10 +172,10 @@ $ curl \
 
 This endpoint returns a list of available group aliases by their identifiers.
 
-| Method   | Path                                 | Produces               |
-| :------- | :----------------------------------- | :--------------------- |
-| `LIST`   | `/identity/group-alias/id`           | `200 application/json` |
-| `GET`    | `/identity/entity/id?list=true`      | `200 application/json` |
+| Method   | Path                                      | Produces               |
+| :------- | :---------------------------------------- | :--------------------- |
+| `LIST`   | `/identity/group-alias/id`                | `200 application/json` |
+| `GET`    | `/identity/group-alias/id?list=true`      | `200 application/json` |
 
 ### Sample Request
 

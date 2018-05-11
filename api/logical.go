@@ -1,14 +1,8 @@
 package api
 
 import (
-	"bytes"
-	"fmt"
 	"io"
-	"net/http"
 	"os"
-
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
 const (
@@ -188,49 +182,23 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-
-	// Return all errors except those that are from a 404 as we handle the not
-	// found error as a special case.
-	if err != nil && (resp == nil || resp.StatusCode != 404) {
+	if resp != nil && resp.StatusCode == 404 {
+		secret, parseErr := ParseSecret(resp.Body)
+		switch parseErr {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
+		return nil, nil
+	}
+	if err != nil {
 		return nil, err
 	}
-	if resp == nil {
-		return nil, nil
-	}
 
-	switch resp.StatusCode {
-	case http.StatusOK: // New method is supported
-		return ParseSecret(resp.Body)
-	case http.StatusNotFound: // Fall back to old method
-	default:
-		return nil, nil
-	}
-
-	if wrappingToken != "" {
-		origToken := c.c.Token()
-		defer c.c.SetToken(origToken)
-		c.c.SetToken(wrappingToken)
-	}
-
-	secret, err := c.Read(wrappedResponseLocation)
-	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("error reading %q: {{err}}", wrappedResponseLocation), err)
-	}
-	if secret == nil {
-		return nil, fmt.Errorf("no value found at %q", wrappedResponseLocation)
-	}
-	if secret.Data == nil {
-		return nil, fmt.Errorf("\"data\" not found in wrapping response")
-	}
-	if _, ok := secret.Data["response"]; !ok {
-		return nil, fmt.Errorf("\"response\" not found in wrapping response \"data\" map")
-	}
-
-	wrappedSecret := new(Secret)
-	buf := bytes.NewBufferString(secret.Data["response"].(string))
-	if err := jsonutil.DecodeJSONFromReader(buf, wrappedSecret); err != nil {
-		return nil, errwrap.Wrapf("error unmarshalling wrapped secret: {{err}}", err)
-	}
-
-	return wrappedSecret, nil
+	return ParseSecret(resp.Body)
 }
