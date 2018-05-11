@@ -134,7 +134,7 @@ export default Ember.Component.extend({
         if (flagName === 'wrap-ttl') {
           flagName = 'wrapTTL';
         }
-        accumulator.flags[flagName] = value;
+        accumulator.flags[flagName] = value || true;
         return accumulator;
       }
       // if it exists in data already, then we have multiple
@@ -182,8 +182,14 @@ export default Ember.Component.extend({
       return;
     }
 
-    if (dataArray || flagArray) {
+    if(dataArray || flagArray) {
       var {data, flags} = this.extractDataAndFlags(dataArray, flagArray);
+    }
+    
+    if(method === 'write' && !flags.force && dataArray.length === 0){
+      this.pushCommand(command);
+      this.appendToLog({type: 'error', content: 'Must supply data or use -force'});
+      return;
     }
     this.get('console')[method](path, data, flags.wrapTTL)
       .then(resp => this.processResponse(resp, command, path, method, flags))

@@ -333,6 +333,11 @@ const testCommandCases = [
     name: 'errors when command does not include a path',
     command: `list`,
     expectedContent: 'A path is required to make a request.'
+  },
+  {
+    name: 'errors when write command does not include data and does not have force tag',
+    command: `write this/is/a/path`,
+    expectedContent: 'Must supply data or use -force'
   }
 ];
 
