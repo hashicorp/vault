@@ -102,17 +102,16 @@ static-assets:
 
 test-ember:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn install && bower install && yarn install phantomjs-prebuilt
+	@cd ui && yarn
 	@echo "--> Running ember tests"
-	@cd ui && node_modules/phantomjs-prebuilt/bin/phantomjs --version
-	@cd ui && npm test
+	@cd ui && yarn run test-oss
 
 ember-dist:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn install && bower install --allow-root
+	@cd ui && yarn
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
-	@cd ui && npm run build
+	@cd ui && yarn run build
 	@rm -rf ui/if-you-need-to-delete-this-open-an-issue-async-disk-cache
 
 static-dist: ember-dist static-assets

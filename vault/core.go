@@ -531,7 +531,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.seal.SetCore(c)
 
-	c.sealUnwrapper = NewSealUnwrapper(phys, conf.Logger.Named("sealunwrapper"))
+	c.sealUnwrapper = NewSealUnwrapper(phys, conf.Logger.ResetNamed("storage.sealunwrapper"))
 
 	var ok bool
 
@@ -539,7 +539,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if txnOK {
 		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.ResetNamed("storage.cache"))
 	} else {
-		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.Named("storage.cache"))
+		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.ResetNamed("storage.cache"))
 	}
 	c.physicalCache = c.physical.(physical.ToggleablePurgemonster)
 
@@ -697,7 +697,7 @@ func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 // This list includes the policies from the entity itself and from all the
 // groups in which the given entity ID is a member of.
 func (c *Core) fetchEntityAndDerivedPolicies(entityID string) (*identity.Entity, []string, error) {
-	if entityID == "" {
+	if entityID == "" || c.identityStore == nil {
 		return nil, nil, nil
 	}
 
@@ -828,7 +828,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 	}
 
 	if entity != nil && entity.Disabled {
-		return nil, te, logical.ErrEntityDisabled
+		return nil, te, logical.ErrPermissionDenied
 	}
 
 	// Check if this is a root protected path
@@ -1391,7 +1391,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	}
 
 	if entity != nil && entity.Disabled {
-		retErr = multierror.Append(retErr, logical.ErrEntityDisabled)
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		c.stateLock.RUnlock()
 		return retErr
 	}
@@ -1429,10 +1429,13 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		return retErr
 	}
 
-	if te != nil && te.NumUses == -1 {
+	if te != nil && te.NumUses == tokenRevocationPending {
 		// Token needs to be revoked. We do this immediately here because
 		// we won't have a token store after sealing.
-		err = c.tokenStore.Revoke(c.activeContext, te.ID)
+		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
+		if err == nil {
+			err = c.expiration.Revoke(leaseID)
+		}
 		if err != nil {
 			c.logger.Error("token needed revocation before seal but failed to revoke", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -1507,7 +1510,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	}
 
 	if entity != nil && entity.Disabled {
-		retErr = multierror.Append(retErr, logical.ErrEntityDisabled)
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		c.stateLock.RUnlock()
 		return retErr
 	}
@@ -1540,10 +1543,13 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		return retErr
 	}
 
-	if te != nil && te.NumUses == -1 {
+	if te != nil && te.NumUses == tokenRevocationPending {
 		// Token needs to be revoked. We do this immediately here because
 		// we won't have a token store after sealing.
-		err = c.tokenStore.Revoke(c.activeContext, te.ID)
+		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
+		if err == nil {
+			err = c.expiration.Revoke(leaseID)
+		}
 		if err != nil {
 			c.logger.Error("token needed revocation before step-down but failed to revoke", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -1660,6 +1666,7 @@ func (c *Core) postUnseal() (retErr error) {
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
+	// Enable the cache
 	c.physicalCache.Purge(c.activeContext)
 	if !c.cachingDisabled {
 		c.physicalCache.SetEnabled(true)

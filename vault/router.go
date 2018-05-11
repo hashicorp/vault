@@ -10,15 +10,8 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-radix"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
-)
-
-var (
-	whitelistedHeaders = []string{
-		consts.VaultKVCLIClientHeader,
-	}
 )
 
 // Router is used to do prefix based routing of a request to a logical backend
@@ -61,6 +54,7 @@ type validateMountResponse struct {
 	MountType     string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
 	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor"`
 	MountPath     string `json:"mount_path" structs:"mount_path" mapstructure:"mount_path"`
+	MountLocal    bool   `json:"mount_local" structs:"mount_local" mapstructure:"mount_local"`
 }
 
 // validateMountByAccessor returns the mount type and ID for a given mount
@@ -84,6 +78,7 @@ func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse
 		MountAccessor: mountEntry.Accessor,
 		MountType:     mountEntry.Type,
 		MountPath:     mountPath,
+		MountLocal:    mountEntry.Local,
 	}
 }
 
@@ -636,20 +631,6 @@ func pathsToRadix(paths []string) *radix.Tree {
 // origHeaders is done is a case-insensitive manner.
 func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHeaders []string) map[string][]string {
 	retHeaders := make(map[string][]string)
-
-	// Handle whitelisted values
-	for _, header := range whitelistedHeaders {
-		if val, ok := origHeaders[header]; ok {
-			retHeaders[header] = val
-		} else {
-			// Try to check if a lowercased version of the header exists in the
-			// originating request. The header key that gets used is the one from the
-			// whitelist.
-			if val, ok := origHeaders[strings.ToLower(header)]; ok {
-				retHeaders[header] = val
-			}
-		}
-	}
 
 	// Short-circuit if there's nothing to filter
 	if len(passthroughHeaders) == 0 {

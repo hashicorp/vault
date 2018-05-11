@@ -29,6 +29,10 @@ demonstrates the secret versioning capabilities provided by KV Secret Engine v2.
  on-demand so that each application or system can obtain its own credentials,
  and its permissions can be tightly controlled.
 
+- [Database Root Credential Rotation](/guides/secret-mgmt/db-root-rotation.html)
+guide walks you through the steps to enable the rotation of the database root
+credentials for those managed by Vault. 
+
 - [Cubbyhole Response Wrapping](/guides/secret-mgmt/cubbyhole.html) guide
 demonstrates a secure method to distribute secrets by wrapping them where only
 the expecting client can unwrap.

@@ -14,7 +14,7 @@
   a.pagination-link {
     width: 3ch;
   }
-  a:not('.is-current'):hover {
+  a:not(.is-current):hover {
     text-decoration: underline;
     color: $blue;
   }

@@ -260,7 +260,7 @@ the `-mode` argument. For example:
 $ vault token revoke -mode path auth/github
 ```
 
-Alternatively, if you want to complete disable the GitHub auth method:
+Alternatively, if you want to completely disable the GitHub auth method:
 
 ```text
 $ vault auth disable github

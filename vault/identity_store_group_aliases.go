@@ -158,6 +158,10 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(req *logical.Request, d *fr
 		return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
 	}
 
+	if mountValidationResp.MountLocal {
+		return logical.ErrorResponse(fmt.Sprintf("mount_accessor %q is of a local mount", mountAccessor)), nil
+	}
+
 	groupAliasByFactors, err := i.MemDBAliasByFactors(mountValidationResp.MountAccessor, groupAliasName, false, true)
 	if err != nil {
 		return nil, err

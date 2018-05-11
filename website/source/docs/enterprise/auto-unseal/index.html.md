@@ -21,7 +21,7 @@ specify the `seal` stanza in your Vault configuration file:
 
 ```hcl
 seal "awskms" {
-  aws_region = "us-east-1"
+  region = "us-east-1"
   access_key = "..."
   secret_key = "..."
   kms_key_id = "..."

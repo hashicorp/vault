@@ -1,4 +1,6 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('turbolinks:load', function() {
+  analytics.page()
+
   track('.downloads .download .details li a', function(el) {
     var m = el.href.match(/vault_(.*?)_(.*?)_(.*?)\.zip/)
     return {

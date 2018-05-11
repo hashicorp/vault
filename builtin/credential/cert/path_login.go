@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 
+	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/ryanuber/go-glob"
 )
 
@@ -71,6 +72,10 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		return nil, nil
 	}
 
+	if err := b.checkCIDR(matched.Entry, req); err != nil {
+		return nil, err
+	}
+
 	clientCerts := req.Connection.ConnState.PeerCertificates
 	if len(clientCerts) == 0 {
 		return logical.ErrorResponse("no client certificate found"), nil
@@ -90,6 +95,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			Metadata: map[string]string{
 				"cert_name":        matched.Entry.Name,
 				"common_name":      clientCerts[0].Subject.CommonName,
+				"serial_number":    clientCerts[0].SerialNumber.String(),
 				"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
 				"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
 			},
@@ -99,8 +105,9 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 				MaxTTL:    matched.Entry.MaxTTL,
 			},
 			Alias: &logical.Alias{
-				Name: clientCerts[0].SerialNumber.String(),
+				Name: clientCerts[0].Subject.CommonName,
 			},
+			BoundCIDRs: matched.Entry.BoundCIDRs,
 		},
 	}
 
@@ -152,6 +159,10 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
+	if err := b.checkCIDR(cert, req); err != nil {
+		return nil, err
+	}
+
 	if !policyutil.EquivalentPolicies(cert.Policies, req.Auth.Policies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
@@ -160,6 +171,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	resp.Auth.TTL = cert.TTL
 	resp.Auth.MaxTTL = cert.MaxTTL
 	resp.Auth.Period = cert.Period
+	resp.Auth.BoundCIDRs = cert.BoundCIDRs
 	return resp, nil
 }
 
@@ -369,6 +381,13 @@ func (b *backend) checkForValidChain(chains [][]*x509.Certificate) bool {
 		}
 	}
 	return false
+}
+
+func (b *backend) checkCIDR(cert *CertEntry, req *logical.Request) error {
+	if cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cert.BoundCIDRs) {
+		return nil
+	}
+	return logical.ErrPermissionDenied
 }
 
 // parsePEM parses a PEM encoded x509 certificate

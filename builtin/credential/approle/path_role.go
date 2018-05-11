@@ -67,6 +67,10 @@ type roleStorageEntry struct {
 	// LowerCaseRoleName enforces the lower casing of role names for all the
 	// roles that get created since this field was introduced.
 	LowerCaseRoleName bool `json:"lower_case_role_name" mapstructure:"lower_case_role_name" structs:"lower_case_role_name"`
+
+	// SecretIDPrefix is the storage prefix for persisting secret IDs. This
+	// differs based on whether the secret IDs are cluster local or not.
+	SecretIDPrefix string `json:"secret_id_prefix" mapstructure:"secret_id_prefix" structs:"secret_id_prefix"`
 }
 
 // roleIDStorageEntry represents the reverse mapping from RoleID to Role
@@ -163,6 +167,11 @@ TTL will be set to the value of this parameter.`,
 					Type:        framework.TypeString,
 					Description: "Identifier of the role. Defaults to a UUID.",
 				},
+				"local_secret_ids": &framework.FieldSchema{
+					Type: framework.TypeBool,
+					Description: `If set, the secret IDs generated using this role will be cluster local. This
+can only be set during role creation and once set, it can't be reset later.`,
+				},
 			},
 			ExistenceCheck: b.pathRoleExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -173,6 +182,20 @@ TTL will be set to the value of this parameter.`,
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
+		},
+		&framework.Path{
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/local-secret-ids$",
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the role.",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: b.pathRoleLocalSecretIDsRead,
+			},
+			HelpSynopsis:    strings.TrimSpace(roleHelp["role-local-secret-ids"][0]),
+			HelpDescription: strings.TrimSpace(roleHelp["role-local-secret-ids"][1]),
 		},
 		&framework.Path{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/policies$",
@@ -585,7 +608,7 @@ func (b *backend) pathRoleSecretIDList(ctx context.Context, req *logical.Request
 
 	// Listing works one level at a time. Get the first level of data
 	// which could then be used to get the actual SecretID storage entries.
-	secretIDHMACs, err := req.Storage.List(ctx, fmt.Sprintf("secret_id/%s/", roleNameHMAC))
+	secretIDHMACs, err := req.Storage.List(ctx, fmt.Sprintf("%s%s/", role.SecretIDPrefix, roleNameHMAC))
 	if err != nil {
 		return nil, err
 	}
@@ -598,7 +621,7 @@ func (b *backend) pathRoleSecretIDList(ctx context.Context, req *logical.Request
 		}
 
 		// Prepare the full index of the SecretIDs.
-		entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
+		entryIndex := fmt.Sprintf("%s%s/%s", role.SecretIDPrefix, roleNameHMAC, secretIDHMAC)
 
 		// SecretID locks are not indexed by SecretIDs itself.
 		// This is because SecretIDs are not stored in plaintext
@@ -731,6 +754,11 @@ func (b *backend) roleEntry(ctx context.Context, s logical.Storage, roleName str
 		needsUpgrade = true
 	}
 
+	if role.SecretIDPrefix == "" {
+		role.SecretIDPrefix = secretIDPrefix
+		needsUpgrade = true
+	}
+
 	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
 		entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(roleName), &role)
 		if err != nil {
@@ -776,7 +804,20 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 			LowerCaseRoleName: true,
 		}
 	} else if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("invalid role name")), nil
+		return logical.ErrorResponse(fmt.Sprintf("role name %q doesn't exist", roleName)), nil
+	}
+
+	localSecretIDsRaw, ok := data.GetOk("local_secret_ids")
+	if ok {
+		switch {
+		case req.Operation == logical.CreateOperation:
+			localSecretIDs := localSecretIDsRaw.(bool)
+			if localSecretIDs {
+				role.SecretIDPrefix = secretIDLocalPrefix
+			}
+		default:
+			return logical.ErrorResponse("local_secret_ids can only be modified during role creation"), nil
+		}
 	}
 
 	previousRoleID := role.RoleID
@@ -916,6 +957,11 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		"token_max_ttl":      role.TokenMaxTTL / time.Second,
 		"token_num_uses":     role.TokenNumUses,
 		"token_ttl":          role.TokenTTL / time.Second,
+		"local_secret_ids":   false,
+	}
+
+	if role.SecretIDPrefix == secretIDLocalPrefix {
+		respData["local_secret_ids"] = true
 	}
 
 	resp := &logical.Response{
@@ -985,7 +1031,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 	}
 
 	// Just before the role is deleted, remove all the SecretIDs issued as part of the role.
-	if err = b.flushRoleSecrets(ctx, req.Storage, roleName, role.HMACKey); err != nil {
+	if err = b.flushRoleSecrets(ctx, req.Storage, roleName, role.HMACKey, role.SecretIDPrefix); err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to invalidate the secrets belonging to role %q: {{err}}", roleName), err)
 	}
 
@@ -1044,7 +1090,7 @@ func (b *backend) pathRoleSecretIDLookupUpdate(ctx context.Context, req *logical
 	}
 
 	// Create the index at which the secret_id would've been stored
-	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
+	entryIndex := fmt.Sprintf("%s%s/%s", role.SecretIDPrefix, roleNameHMAC, secretIDHMAC)
 
 	return b.secretIDCommon(ctx, req.Storage, entryIndex, secretIDHMAC)
 }
@@ -1119,7 +1165,7 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *
 		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
 	}
 
-	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
+	entryIndex := fmt.Sprintf("%s%s/%s", role.SecretIDPrefix, roleNameHMAC, secretIDHMAC)
 
 	lock := b.secretIDLock(secretIDHMAC)
 	lock.Lock()
@@ -1135,7 +1181,7 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *
 	}
 
 	// Delete the accessor of the SecretID first
-	if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, result.SecretIDAccessor); err != nil {
+	if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, result.SecretIDAccessor, role.SecretIDPrefix); err != nil {
 		return nil, err
 	}
 
@@ -1176,7 +1222,7 @@ func (b *backend) pathRoleSecretIDAccessorLookupUpdate(ctx context.Context, req 
 		return nil, fmt.Errorf("role %q does not exist", roleName)
 	}
 
-	accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, secretIDAccessor)
+	accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, secretIDAccessor, role.SecretIDPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -1189,7 +1235,7 @@ func (b *backend) pathRoleSecretIDAccessorLookupUpdate(ctx context.Context, req 
 		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
 	}
 
-	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, accessorEntry.SecretIDHMAC)
+	entryIndex := fmt.Sprintf("%s%s/%s", role.SecretIDPrefix, roleNameHMAC, accessorEntry.SecretIDHMAC)
 
 	return b.secretIDCommon(ctx, req.Storage, entryIndex, accessorEntry.SecretIDHMAC)
 }
@@ -1217,7 +1263,7 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 		return nil, fmt.Errorf("role %q does not exist", roleName)
 	}
 
-	accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, secretIDAccessor)
+	accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, secretIDAccessor, role.SecretIDPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -1230,14 +1276,14 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
 	}
 
-	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, accessorEntry.SecretIDHMAC)
+	entryIndex := fmt.Sprintf("%s%s/%s", role.SecretIDPrefix, roleNameHMAC, accessorEntry.SecretIDHMAC)
 
 	lock := b.secretIDLock(accessorEntry.SecretIDHMAC)
 	lock.Lock()
 	defer lock.Unlock()
 
 	// Delete the accessor of the SecretID first
-	if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, secretIDAccessor); err != nil {
+	if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, secretIDAccessor, role.SecretIDPrefix); err != nil {
 		return nil, err
 	}
 
@@ -1402,6 +1448,33 @@ func (b *backend) pathRoleBindSecretIDDelete(ctx context.Context, req *logical.R
 	role.BindSecretID = data.GetDefaultOrZero("bind_secret_id").(bool)
 
 	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
+}
+
+func (b *backend) pathRoleLocalSecretIDsRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleName := data.Get("role_name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	lock := b.roleLock(roleName)
+	lock.RLock()
+	defer lock.RUnlock()
+
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
+		return nil, err
+	} else if role == nil {
+		return nil, nil
+	} else {
+		localSecretIDs := false
+		if role.SecretIDPrefix == secretIDLocalPrefix {
+			localSecretIDs = true
+		}
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"local_secret_ids": localSecretIDs,
+			},
+		}, nil
+	}
 }
 
 func (b *backend) pathRolePoliciesUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -2047,7 +2120,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		roleName = strings.ToLower(roleName)
 	}
 
-	if secretIDStorage, err = b.registerSecretIDEntry(ctx, req.Storage, roleName, secretID, role.HMACKey, secretIDStorage); err != nil {
+	if secretIDStorage, err = b.registerSecretIDEntry(ctx, req.Storage, roleName, secretID, role.HMACKey, role.SecretIDPrefix, secretIDStorage); err != nil {
 		return nil, errwrap.Wrapf("failed to store secret_id: {{err}}", err)
 	}
 
@@ -2264,5 +2337,11 @@ should never expire. The token should be renewed within the
 duration specified by this value. The renewal duration will
 be fixed. If the Period in the role is modified, the token
 will pick up the new value during its next renewal.`,
+	},
+	"role-local-secret-ids": {
+		"Enables cluster local secret IDs",
+		`If set, the secret IDs generated using this role will be cluster local.
+This can only be set during role creation and once set, it can't be
+reset later.`,
 	},
 }

@@ -33,11 +33,16 @@ func TestDynamoDBBackend(t *testing.T) {
 		region = "us-east-1"
 	}
 
-	conn := dynamodb.New(session.New(&aws.Config{
+	awsSession, err := session.NewSession(&aws.Config{
 		Credentials: credsProvider,
 		Endpoint:    aws.String(endpoint),
 		Region:      aws.String(region),
-	}))
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	conn := dynamodb.New(awsSession)
 
 	var randInt = rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	table := fmt.Sprintf("vault-dynamodb-testacc-%d", randInt)
@@ -80,11 +85,16 @@ func TestDynamoDBHABackend(t *testing.T) {
 		region = "us-east-1"
 	}
 
-	conn := dynamodb.New(session.New(&aws.Config{
+	awsSession, err := session.NewSession(&aws.Config{
 		Credentials: credsProvider,
 		Endpoint:    aws.String(endpoint),
 		Region:      aws.String(region),
-	}))
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	conn := dynamodb.New(awsSession)
 
 	var randInt = rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	table := fmt.Sprintf("vault-dynamodb-testacc-%d", randInt)

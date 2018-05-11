@@ -11,6 +11,13 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const (
+	secretIDPrefix              = "secret_id/"
+	secretIDLocalPrefix         = "secret_id_local/"
+	secretIDAccessorPrefix      = "accessor/"
+	secretIDAccessorLocalPrefix = "accessor_local/"
+)
+
 type backend struct {
 	*framework.Backend
 
@@ -89,6 +96,10 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"login",
+			},
+			LocalStorage: []string{
+				secretIDLocalPrefix,
+				secretIDAccessorLocalPrefix,
 			},
 		},
 		Paths: framework.PathAppend(

@@ -53,6 +53,7 @@ func prepareMSSQLTestContainer(t *testing.T) (func(), string) {
 		if err != nil {
 			return err
 		}
+		defer db.Close()
 		return db.Ping()
 	}); err != nil {
 		cleanup()
@@ -103,6 +104,10 @@ func TestBackend_config_connection(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+	}
+
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 
 	cleanup, connURL := prepareMSSQLTestContainer(t)
@@ -121,6 +126,10 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+	}
+
 	b := Backend()
 
 	cleanup, connURL := prepareMSSQLTestContainer(t)
@@ -141,6 +150,10 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 
 func TestBackend_leaseWriteRead(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+	}
+
 	b := Backend()
 
 	cleanup, connURL := prepareMSSQLTestContainer(t)

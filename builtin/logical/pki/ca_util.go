@@ -29,7 +29,7 @@ func (b *backend) getGenerationParams(
 	}
 
 	role = &roleEntry{
-		TTL:              (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
+		TTL:              time.Duration(data.Get("ttl").(int)) * time.Second,
 		KeyType:          data.Get("key_type").(string),
 		KeyBits:          data.Get("key_bits").(int),
 		AllowLocalhost:   true,

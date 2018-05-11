@@ -17,9 +17,9 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
+	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/sethgrid/pester"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
 )
@@ -62,8 +62,9 @@ type Config struct {
 	// (or http.DefaultClient).
 	HttpClient *http.Client
 
-	// MaxRetries controls the maximum number of times to retry when a 5xx error
-	// occurs. Set to 0 or less to disable retrying. Defaults to 0.
+	// MaxRetries controls the maximum number of times to retry when a 5xx
+	// error occurs. Set to 0 to disable retrying. Defaults to 2 (for a total
+	// of three tries).
 	MaxRetries int
 
 	// Timeout is for setting custom timeout parameter in the HttpClient
@@ -72,6 +73,9 @@ type Config struct {
 	// If there is an error when creating the configuration, this will be the
 	// error
 	Error error
+
+	// The Backoff function to use; a default is used if not provided
+	Backoff retryablehttp.Backoff
 
 	// Limiter is the rate limiter used by the client.
 	// If this pointer is nil, then there will be no limit set.
@@ -141,11 +145,14 @@ func DefaultConfig() *Config {
 	// but in e.g. http_test actual redirect handling is necessary
 	config.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		// Returning this value causes the Go net library to not close the
-		// response body and to nil out the error. Otherwise pester tries
-		// three times on every redirect because it sees an error from this
+		// response body and to nil out the error. Otherwise retry clients may
+		// try three times on every redirect because it sees an error from this
 		// function (to prevent redirects) passing through to it.
 		return http.ErrUseLastResponse
 	}
+
+	config.Backoff = retryablehttp.LinearJitterBackoff
+	config.MaxRetries = 2
 
 	return config
 }
@@ -289,7 +296,7 @@ func (c *Config) ReadEnvironment() error {
 	}
 
 	if envMaxRetries != nil {
-		c.MaxRetries = int(*envMaxRetries) + 1
+		c.MaxRetries = int(*envMaxRetries)
 	}
 
 	if envClientTimeout != 0 {
@@ -428,6 +435,15 @@ func (c *Client) SetClientTimeout(timeout time.Duration) {
 	c.config.Timeout = timeout
 }
 
+// CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
+// for a given operation and path
+func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
+	return c.wrappingLookupFunc
+}
+
 // SetWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
 // for a given operation and path
 func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {
@@ -480,6 +496,16 @@ func (c *Client) SetHeaders(headers http.Header) {
 	c.headers = headers
 }
 
+// SetBackoff sets the backoff function to be used for future requests.
+func (c *Client) SetBackoff(backoff retryablehttp.Backoff) {
+	c.modifyLock.RLock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+	c.modifyLock.RUnlock()
+
+	c.config.Backoff = backoff
+}
+
 // Clone creates a new client with the same configuration. Note that the same
 // underlying http.Client is used; modifying the client from more than one
 // goroutine at once may not be safe, so modify the client as needed and then
@@ -495,7 +521,8 @@ func (c *Client) Clone() (*Client, error) {
 		HttpClient: config.HttpClient,
 		MaxRetries: config.MaxRetries,
 		Timeout:    config.Timeout,
-		Limiter:    config.Limiter,
+		Backoff:    config.Backoff,
+    Limiter:    config.Limiter,
 	}
 	config.modifyLock.RUnlock()
 
@@ -597,14 +624,28 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 
 	redirectCount := 0
 START:
-	req, err := r.ToHTTP()
+	req, err := r.toRetryableHTTP(false)
 	if err != nil {
 		return nil, err
 	}
+	if req == nil {
+		return nil, fmt.Errorf("nil request created")
+	}
 
-	client := pester.NewExtendedClient(c.config.HttpClient)
-	client.Backoff = pester.LinearJitterBackoff
-	client.MaxRetries = c.config.MaxRetries
+	backoff := c.config.Backoff
+	if backoff == nil {
+		backoff = retryablehttp.LinearJitterBackoff
+	}
+
+	client := &retryablehttp.Client{
+		HTTPClient:   c.config.HttpClient,
+		RetryWaitMin: 1000 * time.Millisecond,
+		RetryWaitMax: 1500 * time.Millisecond,
+		RetryMax:     c.config.MaxRetries,
+		CheckRetry:   retryablehttp.DefaultRetryPolicy,
+		Backoff:      backoff,
+		ErrorHandler: retryablehttp.PassthroughErrorHandler,
+	}
 
 	var result *Response
 	resp, err := client.Do(req)

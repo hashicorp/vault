@@ -1,12 +1,13 @@
 package credsutil
 
 import (
-	"crypto/rand"
 	"time"
 
 	"fmt"
 
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/keysutil"
 )
 
 // CredentialsProducer can be used as an embeded interface in the Database
@@ -32,56 +33,17 @@ func RandomAlphaNumeric(length int, prependA1a bool) (string, error) {
 		return "", fmt.Errorf("minimum length of %d is required", minStrLen)
 	}
 
-	var size int
-	var retBytes []byte
+	var prefix string
 	if prependA1a {
-		size = len(reqStr)
-		retBytes = make([]byte, length-size)
-		// Enforce alphanumeric requirements
-		retBytes = append([]byte(reqStr), retBytes...)
-	} else {
-		retBytes = make([]byte, length)
+		prefix = reqStr
 	}
 
-	for size < length {
-		// Extend the len of the random byte slice to lower odds of having to
-		// re-roll.
-		c := length + len(reqStr)
-		bArr := make([]byte, c)
-		_, err := rand.Read(bArr)
-		if err != nil {
-			return "", err
-		}
-
-		for _, b := range bArr {
-			if size == length {
-				break
-			}
-
-			/**
-			 * Each byte will be in [0, 256), but we only care about:
-			 *
-			 * [48, 57]     0-9
-			 * [65, 90]     A-Z
-			 * [97, 122]    a-z
-			 *
-			 * Which means that the highest bit will always be zero, since the last byte with high bit
-			 * zero is 01111111 = 127 which is higher than 122. Lower our odds of having to re-roll a byte by
-			 * dividing by two (right bit shift of 1).
-			 */
-
-			b = b >> 1
-			// Bitwise OR to set min to 48, further reduces re-roll
-			b |= 0x30
-
-			// The byte is any of        0-9                  A-Z                      a-z
-			byteIsAllowable := (b >= 48 && b <= 57) || (b >= 65 && b <= 90) || (b >= 97 && b <= 122)
-			if byteIsAllowable {
-				retBytes[size] = b
-				size++
-			}
-		}
+	buf, err := uuid.GenerateRandomBytes(length - len(prefix))
+	if err != nil {
+		return "", err
 	}
 
-	return string(retBytes), nil
+	output := (prefix + keysutil.Base62Encode(buf))[:length]
+
+	return output, nil
 }

@@ -1033,6 +1033,132 @@ func TestBackend_untrusted(t *testing.T) {
 	})
 }
 
+func TestBackend_validCIDR(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connState, err := testConnState("test-fixtures/keys/cert.pem",
+		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	name := "web"
+
+	addCertReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "certs/" + name,
+		Data: map[string]interface{}{
+			"certificate":         string(ca),
+			"policies":            "foo",
+			"display_name":        name,
+			"allowed_names":       "",
+			"required_extensions": "",
+			"lease":               1000,
+			"bound_cidrs":         []string{"127.0.0.1/32", "128.252.0.0/16"},
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{ConnState: &connState},
+	}
+
+	_, err = b.HandleRequest(context.Background(), addCertReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	loginReq := &logical.Request{
+		Operation:       logical.UpdateOperation,
+		Path:            "login",
+		Unauthenticated: true,
+		Data: map[string]interface{}{
+			"name": name,
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{ConnState: &connState},
+	}
+
+	// override the remote address with an IPV4 that is authorized
+	loginReq.Connection.RemoteAddr = "127.0.0.1/32"
+
+	_, err = b.HandleRequest(context.Background(), loginReq)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func TestBackend_invalidCIDR(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connState, err := testConnState("test-fixtures/keys/cert.pem",
+		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	name := "web"
+
+	addCertReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "certs/" + name,
+		Data: map[string]interface{}{
+			"certificate":         string(ca),
+			"policies":            "foo",
+			"display_name":        name,
+			"allowed_names":       "",
+			"required_extensions": "",
+			"lease":               1000,
+			"bound_cidrs":         []string{"127.0.0.1/32", "128.252.0.0/16"},
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{ConnState: &connState},
+	}
+
+	_, err = b.HandleRequest(context.Background(), addCertReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	loginReq := &logical.Request{
+		Operation:       logical.UpdateOperation,
+		Path:            "login",
+		Unauthenticated: true,
+		Data: map[string]interface{}{
+			"name": name,
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{ConnState: &connState},
+	}
+
+	// override the remote address with an IPV4 that isn't authorized
+	loginReq.Connection.RemoteAddr = "127.0.0.1/8"
+
+	_, err = b.HandleRequest(context.Background(), loginReq)
+	if err == nil {
+		t.Fatal("expected \"ERROR: permission denied\"")
+	}
+}
+
 func testAccStepAddCRL(t *testing.T, crl []byte, connState tls.ConnectionState) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,

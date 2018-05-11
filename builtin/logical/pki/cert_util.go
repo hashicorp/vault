@@ -23,7 +23,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -860,24 +859,12 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 	{
 		ttl = time.Duration(data.apiData.Get("ttl").(int)) * time.Second
 
-		if ttl == 0 {
-			roleTTL, err := parseutil.ParseDurationSecond(data.role.TTL)
-			if err != nil {
-				return errutil.UserError{Err: fmt.Sprintf(
-					"invalid role ttl: %s", err)}
-			}
-			if roleTTL != 0 {
-				ttl = roleTTL
-			}
+		if ttl == 0 && data.role.TTL > 0 {
+			ttl = data.role.TTL
 		}
 
-		roleMaxTTL, err := parseutil.ParseDurationSecond(data.role.MaxTTL)
-		if err != nil {
-			return errutil.UserError{Err: fmt.Sprintf(
-				"invalid role max_ttl: %s", err)}
-		}
-		if roleMaxTTL != 0 {
-			maxTTL = roleMaxTTL
+		if data.role.MaxTTL > 0 {
+			maxTTL = data.role.MaxTTL
 		}
 
 		if ttl == 0 {
@@ -1246,7 +1233,12 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		certTemplate.EmailAddresses = data.csr.EmailAddresses
 		certTemplate.IPAddresses = data.csr.IPAddresses
 
-		certTemplate.ExtraExtensions = data.csr.Extensions
+		for _, name := range data.csr.Extensions {
+			if !name.Id.Equal(oidExtensionBasicConstraints) {
+				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
+			}
+		}
+
 	} else {
 		certTemplate.DNSNames = data.params.DNSNames
 		certTemplate.EmailAddresses = data.params.EmailAddresses

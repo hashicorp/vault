@@ -116,7 +116,6 @@ Router.map(function() {
         });
       });
 
-      this.route('response-wrapping');
       this.route('not-found', { path: '/*path' });
     });
     this.route('not-found', { path: '/*path' });
