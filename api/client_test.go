@@ -200,7 +200,7 @@ func TestParsingRateAndBurst(t *testing.T) {
 	var (
 		correctFormat                    = "400:400"
 		observedRate, observedBurst, err = parseRateLimit(correctFormat)
-		expectedRate, expectedBurst      = float(400), 400
+		expectedRate, expectedBurst      = float64(400), 400
 	)
 	if err != nil {
 		t.Error(err)
@@ -217,7 +217,7 @@ func TestParsingRateOnly(t *testing.T) {
 	var (
 		correctFormat                    = "400"
 		observedRate, observedBurst, err = parseRateLimit(correctFormat)
-		expectedRate, expectedBurst      = float(400), 400
+		expectedRate, expectedBurst      = float64(400), 400
 	)
 	if err != nil {
 		t.Error(err)
@@ -232,7 +232,7 @@ func TestParsingRateOnly(t *testing.T) {
 
 func TestParsingErrorCase(t *testing.T) {
 	var incorrectFormat = "foobar"
-	var _, _, err = parseRateLimit(correctFormat)
+	var _, _, err = parseRateLimit(incorrectFormat)
 	if err == nil {
 		t.Error("Expected error, found no error")
 	}
