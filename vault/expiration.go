@@ -1338,31 +1338,24 @@ func (m *ExpirationManager) removeIndexByToken(tokenID, leaseID string) error {
 // leaseID for a particular token. The lease is set to expire immediately after
 // it's created.
 func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(te *TokenEntry) (string, error) {
-	idHMAC, err := m.tokenStore.hmac(m.quitContext, te.ID)
+	var obfuscatedID string
+	var err error
+	switch {
+	case te.Version < 2:
+		// This is only here for backwards compatibility
+		obfuscatedID, err = m.tokenStore.SaltID(m.quitContext, te.ID)
+	default:
+		obfuscatedID, err = m.tokenStore.hmac(m.quitContext, te.ID)
+	}
 	if err != nil {
 		return "", err
 	}
-	leaseID := path.Join(te.Path, idHMAC)
+
+	leaseID := path.Join(te.Path, obfuscatedID)
 
 	le, err := m.loadEntry(leaseID)
 	if err != nil {
 		return "", err
-	}
-
-	if le == nil {
-		// This is only here for backwards compatibility
-		// Fetch the saltedID of the token and construct the leaseID
-		saltedID, err := m.tokenStore.SaltID(m.quitContext, te.ID)
-		if err != nil {
-			return "", err
-		}
-
-		leaseID = path.Join(te.Path, saltedID)
-
-		le, err = m.loadEntry(leaseID)
-		if err != nil {
-			return "", err
-		}
 	}
 
 	// If there's no associated leaseEntry for the token, we create one
