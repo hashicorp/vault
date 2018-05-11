@@ -7,6 +7,7 @@ import (
 	"path"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -33,6 +34,242 @@ type TokenEntryOld struct {
 	ExplicitMaxTTL time.Duration
 	Role           string
 	Period         time.Duration
+}
+
+func TestTokenStore_TokenEntryVersionUpgrade(t *testing.T) {
+	_, ts, _, _ := TestCoreWithTokenStore(t)
+
+	// Create a parent token entry with version 0
+	parentID := "parentid"
+	te := &TokenEntry{
+		ID:           parentID,
+		Path:         "test",
+		Policies:     []string{"testpolicy"},
+		CreationTime: time.Now().Unix(),
+	}
+
+	err := ts.storeCommon(context.Background(), te, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that its readable
+	out, err := ts.Lookup(context.Background(), te.ID)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if out.ID != parentID {
+		t.Fatalf("bad: token id; expected: 'tokenid' actual: %q", out.ID)
+	}
+
+	// Create children of version 0
+	for i := 0; i < 10; i++ {
+		childID := "oldchildid" + strconv.Itoa(i)
+		teChild := &TokenEntry{
+			Parent: te.ID,
+			ID:     childID,
+		}
+
+		err = ts.storeCommon(context.Background(), teChild, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Check that its readable
+		out, err := ts.Lookup(context.Background(), teChild.ID)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if out.ID != childID {
+			t.Fatalf("bad: token id; expcted: %q actual: %q", childID, out.ID)
+		}
+	}
+
+	ids, err := ts.view.List(context.Background(), lookupPrefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// root + parent + 10 children
+	if len(ids) != 12 {
+		t.Fatalf("bad: number of active tokens; expected: 12, actual: %d", len(ids))
+	}
+
+	parentIndexes, err := ts.view.List(context.Background(), parentPrefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// There should only be one hashed parent index
+	if len(parentIndexes) != 1 {
+		t.Fatalf("length of parent indexes; expected: 1, actual: %d", len(parentIndexes))
+	}
+
+	// Create children of version 2
+	for i := 0; i < 10; i++ {
+		childID := "newchildid" + strconv.Itoa(i)
+		teChild := &TokenEntry{
+			Parent:  te.ID,
+			ID:      childID,
+			Version: 2,
+		}
+
+		err = ts.storeCommon(context.Background(), teChild, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Check that its readable
+		out, err := ts.Lookup(context.Background(), teChild.ID)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if out.ID != childID {
+			t.Fatalf("bad: token id; expcted: %q actual: %q", childID, out.ID)
+		}
+	}
+
+	ids, err = ts.view.List(context.Background(), lookupPrefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// root + parent + 10 old children + 10 new children
+	if len(ids) != 22 {
+		t.Fatalf("bad: number of active tokens; expected: 22, actual: %d", len(ids))
+	}
+
+	parentIndexes, err = ts.view.List(context.Background(), parentPrefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// One hashed, one HMACed parent index
+	if len(parentIndexes) != 2 {
+		t.Fatalf("length of parent indexes; expected: 2, actual: %d", len(parentIndexes))
+	}
+
+	// Ensure that there are parent indexes for new children
+	parentIDHMAC, err := ts.hmac(context.Background(), parentID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hmacParentIndexes, err := ts.view.List(context.Background(), parentPrefix+parentIDHMAC+"/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hmacParentIndexes) != 10 {
+		t.Fatalf("bad: number of HMAC parent indexes; expected: 10, actual: %d", len(hmacParentIndexes))
+	}
+
+	// Ensure that there are parent indexes for old children
+	parentIDHash, err := ts.SaltID(context.Background(), parentID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hashedParentIndexes, err := ts.view.List(context.Background(), parentPrefix+parentIDHash+"/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hashedParentIndexes) != 10 {
+		t.Fatalf("bad: number of hashed parent indexes; expected: 10, actual: %d", len(hashedParentIndexes))
+	}
+
+	// Revoke all the children and check if parent indexes are removed or not
+	for i := 0; i < 10; i++ {
+		newChildID := "newchildid" + strconv.Itoa(i)
+		err = ts.revokeOrphan(context.Background(), newChildID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		oldChildID := "oldchildid" + strconv.Itoa(i)
+		err = ts.revokeOrphan(context.Background(), oldChildID)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	hashedParentIndexes, err = ts.view.List(context.Background(), parentPrefix+parentIDHash+"/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hashedParentIndexes) != 0 {
+		t.Fatalf("bad: number of hashed parent indexes; expected: 0, actual: %d", len(hashedParentIndexes))
+	}
+
+	hmacParentIndexes, err = ts.view.List(context.Background(), parentPrefix+parentIDHMAC+"/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hmacParentIndexes) != 0 {
+		t.Fatalf("bad: number of HMAC parent indexes; expected: 0, actual: %d", len(hmacParentIndexes))
+	}
+
+	// All the child tokens should now have been gone
+	ids, err = ts.view.List(context.Background(), lookupPrefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// root + parent
+	if len(ids) != 2 {
+		t.Fatalf("bad: number of active tokens; expected: 2, actual: %d", len(ids))
+	}
+
+	// Create old and new child tokens again
+	for i := 0; i < 10; i++ {
+		teChild := &TokenEntry{
+			Parent: te.ID,
+			ID:     "oldchildid" + strconv.Itoa(i),
+		}
+
+		err = ts.storeCommon(context.Background(), teChild, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		teChild = &TokenEntry{
+			Parent:  te.ID,
+			ID:      "newchildid" + strconv.Itoa(i),
+			Version: 2,
+		}
+
+		err = ts.storeCommon(context.Background(), teChild, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Now revoke the parent token and all its children
+	err = ts.revokeTree(context.Background(), te.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ids, err = ts.view.List(context.Background(), lookupPrefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// root
+	if len(ids) != 1 {
+		t.Fatalf("bad: number of active tokens; expected: 1, actual: %d", len(ids))
+	}
+
+	hashedParentIndexes, err = ts.view.List(context.Background(), parentPrefix+parentIDHash+"/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hashedParentIndexes) != 0 {
+		t.Fatalf("bad: number of hashed parent indexes; expected: 0, actual: %d", len(hashedParentIndexes))
+	}
+
+	hmacParentIndexes, err = ts.view.List(context.Background(), parentPrefix+parentIDHMAC+"/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hmacParentIndexes) != 0 {
+		t.Fatalf("bad: number of HMAC parent indexes; expected: 0, actual: %d", len(hmacParentIndexes))
+	}
 }
 
 func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
