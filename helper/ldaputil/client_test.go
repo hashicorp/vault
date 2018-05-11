@@ -14,7 +14,7 @@ func TestLDAPEscape(t *testing.T) {
 	}
 
 	for test, answer := range testcases {
-		res := escapeLDAPValue(test)
+		res := EscapeLDAPValue(test)
 		if res != answer {
 			t.Errorf("Failed to escape %s: %s != %s\n", test, res, answer)
 		}
