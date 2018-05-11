@@ -403,8 +403,8 @@ func (c *Client) Address() string {
 func (c *Client) SetLimiter(rateLimit float64, burst int) {
 	c.modifyLock.RLock()
 	c.config.modifyLock.Lock()
-	defer c.modifyLock.RUnlock()
 	defer c.config.modifyLock.Unlock()
+	defer c.modifyLock.RUnlock()
 	c.config.Limiter = rate.NewLimiter(rate.Limit(rateLimit), burst)
 }
 
@@ -575,13 +575,14 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 func (c *Client) RawRequest(r *Request) (*Response, error) {
-	if c.config.Limiter != nil {
-		c.config.Limiter.Wait(context.Background())
-	}
 
 	c.modifyLock.RLock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
+
+	if c.config.Limiter != nil {
+		c.config.Limiter.Wait(context.Background())
+	}
 
 	token := c.token
 	c.modifyLock.RUnlock()
