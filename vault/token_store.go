@@ -1161,14 +1161,17 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 		return nil
 	}
 
+	var err error
 	// The map check above should protect use from any concurrent revocations, so
 	// doing a bare lookup here should be fine.
-	entry, err = ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
-	if err != nil {
-		return err
-	}
 	if entry == nil {
-		return nil
+		entry, err = ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
+		if err != nil {
+			return err
+		}
+		if entry == nil {
+			return nil
+		}
 	}
 
 	if entry.NumUses != tokenRevocationPending {
@@ -1179,7 +1182,7 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 			// really work either. So we clear revocation state so the user can
 			// try again.
 			ts.logger.Error("failed to mark token as revoked")
-			ts.tokensPendingDeletion.Store(saltedID, false)
+			ts.tokensPendingDeletion.Store(obfuscatedID, false)
 			return err
 		}
 	}
@@ -1188,7 +1191,7 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 		// If we succeeded in all other revocation operations after this defer and
 		// before we return, we can remove the token store entry
 		if ret == nil {
-			path := lookupPrefix + saltedID
+			path := lookupPrefix + obfuscatedID
 			if err := ts.view.Delete(ctx, path); err != nil {
 				ret = errwrap.Wrapf("failed to delete entry: {{err}}", err)
 			}
@@ -1198,9 +1201,9 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 		if ret != nil {
 			// If we failed on any of the calls within, we store the state as false
 			// so that the next call to revokeSalted will retry
-			ts.tokensPendingDeletion.Store(saltedID, false)
+			ts.tokensPendingDeletion.Store(obfuscatedID, false)
 		} else {
-			ts.tokensPendingDeletion.Delete(saltedID)
+			ts.tokensPendingDeletion.Delete(obfuscatedID)
 		}
 	}()
 

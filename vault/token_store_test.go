@@ -301,7 +301,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 		testMakeToken(t, ts, root, key, "", []string{"foo"})
 	}
 
-	err := ts.Revoke(context.Background(), root)
+	err := ts.revokeOrphan(context.Background(), root)
 	if err != nil {
 		t.Fatal(err)
 	}
