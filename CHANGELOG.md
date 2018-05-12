@@ -29,6 +29,8 @@ BUG FIXES:
  * auth/approle: Make invalid role_id a 400 error instead of 500 [GH-4470]
  * auth/cert: Fix Identity alias using serial number instead of common name
    [GH-4475]
+ * cli: Fix panic running `vault token capabilities` with multiple paths
+   [GH-4552]
  * core: When using the `use_always` option with PROXY protocol support, do not
    require `authorized_addrs` to be set [GH-4065]
  * secret/kv: Fix response wrapping for KV v2 [GH-4511]
