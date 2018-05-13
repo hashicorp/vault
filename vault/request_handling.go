@@ -34,6 +34,34 @@ type HandlerProperties struct {
 	DisablePrintableCheck bool
 }
 
+func (c *Core) FetchEntity(entityID string) (*identity.Entity, error) {
+	if entityID == "" || c.identityStore == nil {
+		return identity.Anonymous(), nil
+	}
+
+	//c.logger.Debug("entity set on the token", "entity_id", te.EntityID)
+
+	// Fetch the entity
+	entity, err := c.identityStore.MemDBEntityByID(entityID, false)
+	if err != nil {
+		c.logger.Error("failed to lookup entity using its ID", "error", err)
+		return nil, err
+	}
+
+	if entity == nil {
+		// If there was no corresponding entity object found, it is
+		// possible that the entity got merged into another entity. Try
+		// finding entity based on the merged entity index.
+		entity, err = c.identityStore.MemDBEntityByMergedEntityID(entityID, false)
+		if err != nil {
+			c.logger.Error("failed to lookup entity in merged entity ID index", "error", err)
+			return nil, err
+		}
+	}
+
+	return entity, nil
+}
+
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity
 // ID. If the entity is merged into a different entity object, the entity into
 // which the given entity ID is merged into will be returned. This function
@@ -48,21 +76,9 @@ func (c *Core) fetchEntityAndDerivedPolicies(entityID string) (*identity.Entity,
 	//c.logger.Debug("entity set on the token", "entity_id", te.EntityID)
 
 	// Fetch the entity
-	entity, err := c.identityStore.MemDBEntityByID(entityID, false)
+	entity, err := c.FetchEntity(entityID)
 	if err != nil {
-		c.logger.Error("failed to lookup entity using its ID", "error", err)
 		return nil, nil, err
-	}
-
-	if entity == nil {
-		// If there was no corresponding entity object found, it is
-		// possible that the entity got merged into another entity. Try
-		// finding entity based on the merged entity index.
-		entity, err = c.identityStore.MemDBEntityByMergedEntityID(entityID, false)
-		if err != nil {
-			c.logger.Error("failed to lookup entity in merged entity ID index", "error", err)
-			return nil, nil, err
-		}
 	}
 
 	var policies []string
@@ -146,7 +162,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical
 	allPolicies := append(te.Policies, identityPolicies...)
 
 	// Construct the corresponding ACL object
-	acl, err := c.policyStore.ACL(c.activeContext, allPolicies...)
+	acl, err := c.policyStore.EntityACL(c.activeContext, entity, allPolicies...)
 	if err != nil {
 		c.logger.Error("failed to construct ACL", "error", err)
 		return nil, nil, nil, nil, ErrInternalError

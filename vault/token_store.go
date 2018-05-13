@@ -114,7 +114,7 @@ type TokenStore struct {
 
 	cubbyholeBackend *CubbyholeBackend
 
-	policyLookupFunc func(string) (*Policy, error)
+	policyLookupFunc func(string, *logical.TokenEntry) (*Policy, error)
 
 	tokenLocks []*locksutil.LockEntry
 
@@ -155,8 +155,13 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 	}
 
 	if c.policyStore != nil {
-		t.policyLookupFunc = func(name string) (*Policy, error) {
-			return c.policyStore.GetPolicy(ctx, name, PolicyTypeToken)
+		t.policyLookupFunc = func(name string, te *logical.TokenEntry) (*Policy, error) {
+			entity, err := c.FetchEntity(te.EntityID)
+			if err != nil {
+				return nil, err
+			}
+
+			return c.policyStore.GetEntityPolicy(ctx, entity, name, PolicyTypeToken)
 		}
 	}
 
@@ -2021,7 +2026,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	if ts.policyLookupFunc != nil {
 		for _, p := range te.Policies {
-			policy, err := ts.policyLookupFunc(p)
+			policy, err := ts.policyLookupFunc(p, &te)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("could not look up policy %s", p)), nil
 			}

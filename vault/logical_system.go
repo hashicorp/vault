@@ -2602,7 +2602,12 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 
-		policy, err := b.Core.policyStore.GetPolicy(ctx, name, policyType)
+		entity, err := b.Core.FetchEntity(req.EntityID)
+		if err != nil {
+			return handleError(err)
+		}
+
+		policy, err := b.Core.policyStore.GetEntityPolicy(ctx, entity, name, policyType)
 		if err != nil {
 			return handleError(err)
 		}
@@ -3778,7 +3783,7 @@ This path responds to the following HTTP methods.
         Sets the header value for the UI.
     DELETE /<header>
         Clears the header value for UI.
-        
+
     LIST /
         List the headers configured for the UI.
         `,

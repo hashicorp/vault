@@ -1,13 +1,98 @@
 package vault
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/logical"
 )
+
+var MountAccessors = map[string]int{}
+
+func getTestEntity(alias_maps ...map[string]string) *identity.Entity {
+	entity := new(identity.Entity)
+	entity.Name = "anonymous"
+
+	for _, alias_map := range alias_maps {
+		for name, mount_type := range alias_map {
+			// If entity.Name is nil, use the first name received
+			if strings.Compare(entity.GetName(), "anonymous") == 0 {
+				entity.Name = name
+			}
+
+			if _, ok := MountAccessors[mount_type]; ok {
+				MountAccessors[mount_type] += 1
+			} else {
+				MountAccessors[mount_type] = 1
+			}
+
+			alias := identity.Alias{
+				Name:          name,
+				MountType:     mount_type,
+				MountAccessor: fmt.Sprintf("%s_%d", mount_type, MountAccessors[mount_type]),
+			}
+
+			entity.Aliases = append(entity.Aliases, &alias)
+		}
+	}
+
+	return entity
+}
+
+func testEntitySpecificPath(t *testing.T, entity *identity.Entity, path string, expected []string) {
+
+	policies, err := ParseACLPolicy(aclPolicyRequestor)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if policies.Interpolated {
+		policies, err = policies.Interpolate(entity)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	acl, err := NewACL([]*Policy{policies})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	actual := acl.Capabilities(path)
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: path:%s\ngot\n%#v\nexpected\n%#v\n", path, actual, expected)
+	}
+}
+
+func TestACL_Interpolations(t *testing.T) {
+	// create test user entities
+	anon_entity := identity.Anonymous()
+	user_entity := getTestEntity(map[string]string{"john.doe": "ldap"})
+	multiuser_entity := getTestEntity(map[string]string{
+		"john.doe": "ldap",
+		"jdoe":     "github",
+	})
+
+	testEntitySpecificPath(t, user_entity, "subsite-admin/john.doe/test",
+		[]string{"read", "list", "update", "delete", "create"})
+
+	testEntitySpecificPath(t, user_entity, "subsite-admin/john.doe/test",
+		[]string{"read", "list", "update", "delete", "create"})
+
+	testEntitySpecificPath(t, multiuser_entity, "subsite-admin/jdoe/test",
+		[]string{"deny"})
+
+	testEntitySpecificPath(t, anon_entity, "subsite-admin/anonymous",
+		[]string{"deny"})
+
+	testEntitySpecificPath(t, anon_entity, "subsite-admin/anonymous/test",
+		[]string{"deny"})
+}
 
 func TestACL_Capabilities(t *testing.T) {
 	// Create the root policy ACL
@@ -458,6 +543,35 @@ path "auth/token/create*" {
 }
 `
 
+var aclPolicyRequestor = `
+name = "Requestor"
+path "subsite-admin/{{entity.name}}/*" {
+  policy = "write"
+  allowed_parameters = {
+    "state" = ["pending"]
+    "request_reason" = []
+  }
+  required_parameters = ["state", "comment"]
+}
+
+path "subsite-admin/anonymous/*" {
+  policy = "deny"
+}
+`
+
+var aclPolicyApprover = `
+name = "Approver"
+path "subsite-admin/*" {
+  policy = "write"
+  allowed_parameters = {
+    "state" = ["granted", "review", "pending", "rejected"]
+    "comment" = []
+    "expires_at" = []
+  }
+  required_parameters = ["state"]
+}
+`
+
 var aclPolicy = `
 name = "DeV"
 path "dev/*" {
@@ -635,7 +749,7 @@ var permissionsPolicy = `
 name = "dev"
 path "dev/*" {
 	policy = "write"
-	
+
 	allowed_parameters = {
 		"zip" = []
 	}
@@ -725,7 +839,7 @@ var valuePermissionsPolicy = `
 name = "op"
 path "dev/*" {
 	policy = "write"
-	
+
 	allowed_parameters = {
 		"allow" = ["good"]
 	}

@@ -1874,7 +1874,7 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 	}
 
 	// Policy should be gone
-	c.policyStore.tokenPoliciesLRU.Purge()
+	c.policyStore.policyCache.Purge()
 	out, err := c.policyStore.GetPolicy(context.Background(), "test", PolicyTypeToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)

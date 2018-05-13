@@ -21,6 +21,19 @@ path "stage/*" {
 	policy = "sudo"
 }
 
+path "subsite-admin/{{entity.name}}/*" {
+  policy = "write"
+  allowed_parameters = {
+    "state" = ["pending"]
+    "request_reason" = []
+  }
+  required_parameters = ["state", "comment"]
+}
+
+path "subsite-admin/anonymous/*" {
+  policy = "deny"
+}
+
 # Limited read privilege to production
 path "prod/version" {
 	policy = "read"
@@ -126,6 +139,43 @@ func TestPolicy_Parse(t *testing.T) {
 				CapabilitiesBitmap: (CreateCapabilityInt | ReadCapabilityInt | UpdateCapabilityInt | DeleteCapabilityInt | ListCapabilityInt | SudoCapabilityInt),
 			},
 			Glob: true,
+		},
+		// allowed_parameters = {
+		//   "state" = ["pending"]
+		//   "request_reason" = []
+		// }
+		// required_parameters = ["state", "comment"]
+		&PathRules{
+			Prefix: "subsite-admin/{{entity.name}}/",
+			Policy: "write",
+			Capabilities: []string{
+				"create",
+				"read",
+				"update",
+				"delete",
+				"list",
+			},
+			RequiredParametersHCL: []string{"state", "comment"},
+			AllowedParametersHCL: map[string][]interface{}{
+				"request_reason": []interface{}{},
+				"state":          []interface{}{"pending"},
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | ReadCapabilityInt | UpdateCapabilityInt | DeleteCapabilityInt | ListCapabilityInt),
+				AllowedParameters:  map[string][]interface{}{"request_reason": []interface{}{}, "state": []interface{}{"pending"}},
+				RequiredParameters: []string{"state", "comment"},
+			},
+			Interpolated: true,
+			Glob:         true,
+		},
+		&PathRules{
+			Prefix: "subsite-admin/anonymous/",
+			Policy: "deny",
+			Capabilities: []string{
+				"deny",
+			},
+			Permissions: &ACLPermissions{CapabilitiesBitmap: DenyCapabilityInt},
+			Glob:        true,
 		},
 		&PathRules{
 			Prefix: "prod/version",
@@ -246,6 +296,12 @@ func TestPolicy_Parse(t *testing.T) {
 	}
 	if !reflect.DeepEqual(p.Paths, expect) {
 		t.Errorf("expected \n\n%#v\n\n to be \n\n%#v\n\n", p.Paths, expect)
+		for idx, path := range p.Paths {
+			if !reflect.DeepEqual(path, expect[idx]) {
+				t.Errorf("expected \n\n%#v\n\n to be \n\n%#v\n\n", path, expect[idx])
+				t.Errorf("expected \n\n%#v\n\n to be \n\n%#v\n\n", path.Permissions, expect[idx].Permissions)
+			}
+		}
 	}
 }
 
