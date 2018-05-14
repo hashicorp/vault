@@ -110,7 +110,7 @@ have an ACL policy granting the `update` capability.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/data/:path`         | `204 (empty body)`     |
+| `POST`   | `/secret/data/:path`         | `200 application/json` |
 
 ### Parameters
 
