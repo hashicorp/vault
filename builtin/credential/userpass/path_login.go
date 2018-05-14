@@ -3,6 +3,7 @@ package userpass
 import (
 	"context"
 	"crypto/subtle"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -70,8 +71,9 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		return logical.ErrorResponse("invalid username or password"), nil
 	}
 
-	if err := checkCIDR(user, req); err != nil {
-		return nil, err
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.BoundCIDRs) {
+		return logical.ErrorResponse("login request originated from invalid CIDR"), nil
 	}
 
 	// Check for a password match. Check for a hash collision for Vault 0.2+,
@@ -122,8 +124,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	if err := checkCIDR(user, req); err != nil {
-		return nil, err
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.BoundCIDRs) {
+		return nil, errors.New("renewal request originated from invalid CIDR")
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
@@ -131,13 +134,6 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	resp.Auth.MaxTTL = user.MaxTTL
 	resp.Auth.BoundCIDRs = user.BoundCIDRs
 	return resp, nil
-}
-
-func checkCIDR(user *UserEntry, req *logical.Request) error {
-	if cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.BoundCIDRs) {
-		return nil
-	}
-	return logical.ErrPermissionDenied
 }
 
 const pathLoginSyn = `

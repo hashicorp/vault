@@ -143,10 +143,10 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"policies":   user.Policies,
-			"ttl":        user.TTL.Seconds(),
-			"max_ttl":    user.MaxTTL.Seconds(),
-			"bound_cidr": user.BoundCIDRs,
+			"policies":    user.Policies,
+			"ttl":         user.TTL.Seconds(),
+			"max_ttl":     user.MaxTTL.Seconds(),
+			"bound_cidrs": user.BoundCIDRs,
 		},
 	}, nil
 }
@@ -186,11 +186,11 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 		userEntry.MaxTTL = time.Duration(maxTTL.(int)) * time.Second
 	}
 
-	parsedCIDRs, err := parseutil.ParseAddrs(d.Get("bound_cidrs"))
+	boundCIDRs, err := parseutil.ParseAddrs(d.Get("bound_cidrs"))
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	userEntry.BoundCIDRs = parsedCIDRs
+	userEntry.BoundCIDRs = boundCIDRs
 
 	return nil, b.setUser(ctx, req.Storage, username, userEntry)
 }
