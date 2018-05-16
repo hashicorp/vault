@@ -6,6 +6,12 @@ DEPRECATIONS/CHANGES:
    reading a role) as an integer number of seconds instead of a Go-style
    string, in line with how the rest of Vault's API returns durations.
 
+FEATURES:
+
+ * Cert auth CIDR restrictions: When using the `cert` auth method you can now
+   limit authentication to specific CIDRs; these will also be encoded in
+   resultant tokens to limit their use.
+
 IMPROVEMENTS:
 
  * api: Close renewer's doneCh when the renewer is stopped, so that programs
