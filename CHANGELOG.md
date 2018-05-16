@@ -38,6 +38,8 @@ BUG FIXES:
  * secret/kv: Fix response wrapping for KV v2 [GH-4511]
  * secret/pki: Fix path length parameter being ignored when using
    `use_csr_values` and signing an intermediate CA cert [GH-4459]
+ * storage/dynamodb: Fix listing when one child is left within a nested path
+   [GH-4570]
 
 ## 0.10.1/0.9.7 (April 25th, 2018)
 
