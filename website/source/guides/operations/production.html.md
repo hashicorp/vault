@@ -109,13 +109,13 @@ and practical.
   backend should be restricted to only Vault to avoid unauthorized access or
   operations.
 
-* **Disable shell-commands history**. You may want the vault command itself to
+* **Disable Shell Command History**. You may want the `vault` command itself to
   not appear in history at all. Refer to [additional methods](/guides/secret-mgmt/static-secrets.html#additional-discussion)
-  for protecting your static secrets.
+  for guidance.
 
-* **Tweak ulimits**. It is possible that your Linux distribution have strict process `ulimits`.
+* **Tweak ulimits**. It is possible that your Linux distribution has strict process `ulimits`.
   Consider to review `ulimits` for maximum amount of open files, connections, etc. before
-  going into production.
+  going into production; they may need increasing.
 
-* **Docker containers**. To leverage ["memory lock"](/docs/configuration/index.html#disable_mlock)
-  feature inside the vault container you should use `overlayfs2` or similar storage driver.
+* **Docker Containers**. To leverage the ["memory lock"](/docs/configuration/index.html#disable_mlock)
+  feature inside the Vault container you will likely need to use the `overlayfs2` or another supporting driver.
