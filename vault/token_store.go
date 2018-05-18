@@ -1654,8 +1654,11 @@ func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d 
 func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
 	// Read the parent policy
 	parent, err := ts.Lookup(ctx, req.ClientToken)
-	if err != nil || parent == nil {
-		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("parent token lookup failed: %s", err.Error())), logical.ErrInvalidRequest
+	}
+	if parent == nil {
+		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
 	}
 
 	// A token with a restricted number of uses cannot create a new token
@@ -2145,7 +2148,7 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(fmt.Sprintf("parent token lookup failed: %s", err.Error())), logical.ErrInvalidRequest
 	}
 	if parent == nil {
-		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
 	}
 
 	// Check if the client token has sudo/root privileges for the requested path

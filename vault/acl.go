@@ -334,7 +334,7 @@ CHECK:
 
 	// Only check parameter permissions for operations that can modify
 	// parameters.
-	if op == logical.UpdateOperation || op == logical.CreateOperation {
+	if op == logical.ReadOperation || op == logical.UpdateOperation || op == logical.CreateOperation {
 		for _, parameter := range permissions.RequiredParameters {
 			if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
 				return

@@ -2,13 +2,15 @@
 
 DEPRECATIONS/CHANGES:
 
- * As of this release, the Vault CLI (via `vault unwrap`) and Go API (via
-   `Logical().Unwrap()`) can no longer unwrap response-wrapped tokens produced
-   by Vault prior to 0.6.2. These can still be read manually by performing a
-   read on `cubbyhole/response` and decoding the JSON-encoded value.
  * PKI duration return types: The PKI backend now returns durations (e.g. when
    reading a role) as an integer number of seconds instead of a Go-style
    string, in line with how the rest of Vault's API returns durations.
+
+FEATURES:
+
+ * Cert auth CIDR restrictions: When using the `cert` auth method you can now
+   limit authentication to specific CIDRs; these will also be encoded in
+   resultant tokens to limit their use.
 
 IMPROVEMENTS:
 
@@ -29,11 +31,15 @@ BUG FIXES:
  * auth/approle: Make invalid role_id a 400 error instead of 500 [GH-4470]
  * auth/cert: Fix Identity alias using serial number instead of common name
    [GH-4475]
+ * cli: Fix panic running `vault token capabilities` with multiple paths
+   [GH-4552]
  * core: When using the `use_always` option with PROXY protocol support, do not
    require `authorized_addrs` to be set [GH-4065]
  * secret/kv: Fix response wrapping for KV v2 [GH-4511]
  * secret/pki: Fix path length parameter being ignored when using
    `use_csr_values` and signing an intermediate CA cert [GH-4459]
+ * storage/dynamodb: Fix listing when one child is left within a nested path
+   [GH-4570]
 
 ## 0.10.1/0.9.7 (April 25th, 2018)
 
@@ -706,7 +712,7 @@ DEPRECATIONS/CHANGES:
  * SSH role list changes: When listing roles from the `ssh` backend via the API,
    the response data will additionally return a `key_info` map that will contain
    a map of each key with a corresponding object containing the `key_type`.
- * More granularity in audit logs: Audit request and response entires are still
+ * More granularity in audit logs: Audit request and response entries are still
    in RFC3339 format but now have a granularity of nanoseconds.
  * High availability related values have been moved out of the `storage` and
    `ha_storage` stanzas, and into the top-level configuration. `redirect_addr`

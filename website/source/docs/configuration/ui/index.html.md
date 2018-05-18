@@ -1,36 +1,31 @@
 ---
 layout: "docs"
-page_title: "UI - Vault Enterprise"
-sidebar_current: "docs-vault-enterprise-ui"
+page_title: "UI - Configuration"
+sidebar_current: "docs-configuration-ui"
 description: |-
-  Vault Enterprise features a user interface for interacting with Vault. Easily
-  create, read, update, and delete secrets, authenticate, unseal, and more with
-  the Vault Enterprise UI.
+  Vault features a user interface (web interface) for interacting with Vault.
+  Easily create, read, update, and delete secrets, authenticate, unseal, and
+  more with the Vault UI.
 ---
 
-# Vault Enterprise UI
+# Vault UI
 
-Vault Enterprise features a user interface for interacting with Vault. Easily
-create, read, update, and delete secrets, authenticate, unseal, and more with
-the Vault Enterprise UI.
+Vault features a user interface (web interface) for interacting with Vault.
+Easily create, read, update, and delete secrets, authenticate, unseal, and
+more with the Vault UI.
 
-To use the UI, you must have an active or trial license for Vault Enterprise or
-Vault Pro. To start a trial, contact [HashiCorp sales](mailto:sales@hashicorp.com).
+-> The UI requires **Vault 0.10 or higher** or Vault Enterprise.
 
 ## Activating the Vault UI
 
-The Vault Enterprise UI is not activated by default. To activate the UI, set the
-`ui` configuration option in the Vault server configuration. Vault clients do
-not need to set this option, since they will not be serving the UI.
+The Vault UI is not activated by default. To activate the UI, set the `ui`
+configuration option in the Vault server configuration. Vault clients do not
+need to set this option, since they will not be serving the UI.
 
 ```hcl
 ui = true
 
 listener "tcp" {
-  address = "10.0.1.35:8200"
-}
-
-storage "consul" {
   # ...
 }
 ```
