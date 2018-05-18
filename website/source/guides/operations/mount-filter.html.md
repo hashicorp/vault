@@ -11,13 +11,13 @@ description: |-
 
 ~> **Enterprise Only:** Mount filter feature is a part of _Vault Enterprise Premium_.
 
-Mount filters are a new way of controlling which secrets are moved across clusters
-and physical regions as a result of replication. With mount filters, users can
-select which mounts will be replicated as part of a performance replication
-relationship.
+Mount filters are a new way of controlling which secrets are moved across
+clusters and physical regions as a result of replication. With mount filters,
+users can select which secret engines will be replicated as part of a
+performance replication relationship.
 
 By default, all non-local secret engines and associated data are replicated as
-part of replication. The mount filter feature allows users to whitelist and/or
+part of replication. The mount filter feature allows users to whitelist or
 blacklist which secret engines are replicated, thereby allowing users to further
 control the movement of secrets across their infrastructure.
 
@@ -29,6 +29,7 @@ control the movement of secrets across their infrastructure.
 - Preparing for GDPR Compliance with HashiCorp Vault [webinar](https://www.hashicorp.com/resources/preparing-for-gdpr-compliance-with-hashicorp-vault)
 - Preparing for GDPR Compliance with HashiCorp Vault [blog post](https://www.hashicorp.com/blog/preparing-for-gdpr-compliance-with-hashicorp-vault)  
 - [Create Mounts Filter (API)](/api/system/replication-performance.html#create-mounts-filter)
+- [Performance Replication and Disaster Recovery (DR) Replication](/docs/enterprise/replication/index.html#performance-replication-and-disaster-recovery-dr-replication)
 
 ## Estimated Time to Complete
 
@@ -36,7 +37,7 @@ control the movement of secrets across their infrastructure.
 
 ## Challenge
 
-[General Data Protection Regulation (GDPR)](https://www.eugdpr.org/) is designed
+[**General Data Protection Regulation (GDPR)**](https://www.eugdpr.org/) is designed
 to strengthen data protection and privacy for all individuals within the
 European Union.  It requires that personally identifiable data not be physically
 transferred to locations outside the European Union unless the region or country
@@ -48,16 +49,13 @@ the global annual revenue (whichever greater).
 
 ## Solution
 
-Vault's mount filter feature allows users to specify which secret engines are
-replicated as a part of the [performance
-replication](/guides/operations/reference-architecture.html#vault-replication).
+Leverage Vault's **mount filter** feature to abide by data movements and
+sovereignty regulations while ensuring performance access across geographically
+distributed regions.
 
-Leverage this feature to abide by data movements and sovereignty regulations
-while ensuring performance access across geographically distributed regions.
-
-Watch the recording of [***Preparing for GDPR Compliance with HashiCorp
+The [***Preparing for GDPR Compliance with HashiCorp
 Vault***](https://www.hashicorp.com/resources/preparing-for-gdpr-compliance-with-hashicorp-vault)
-webinar.
+webinar discusses the GDPR compliance further in details.
 
 [![YouTube](/assets/images/vault-mount-filter.png)](https://youtu.be/hmf6sN4W8pE)
 
@@ -67,33 +65,33 @@ This intermediate Vault operations guide assumes that you have some working
 knowledge of Vault.
 
 You need two Vault Enterprise clusters: one representing the EU cluster, and
-another representing the US cluster.
+another representing the US cluster both backed by Consul for storage.
 
 
 ## Steps
 
-The scenario here is that you have a Vault cluster in EU and wish to span across
-the United States by setting up a secondary cluster and enable the performance
-replication. However, some data must remain in EU and should not be replicated
-to the US cluster.
+**Scenario:**  You have a Vault cluster in EU and wish to span across the United
+States by setting up a secondary cluster and enable the performance
+replication. However, some data must remain in EU and should ***not*** be
+replicated to the US cluster.
 
 ![Guide Scenario](/assets/images/vault-mount-filter-0.png)
 
-Leverage the mount filter feature to whitelist or blacklist secrets engines from
-being replicated across the regions.
+Leverage the mount filter feature to blacklist the secrets, that are subject to
+GDPR, from being replicated across the regions.
 
 1. [Segment GDPR and non-GDPR secret engines](#step1)
 1. [Enable performance replication with mount filter](#step2)
 1. [Verify the replication mount filter](#step3)
 1. [Enable a local secret engine](#step4)
 
-~> Ensure GDPR data is segmented by secret mount and blacklist the movement of
-those secret mounts to non-GDPR territories.
+~> **NOTE:** Ensure that GDPR data is segmented by secret mount and blacklist
+the movement of those secret mounts to non-GDPR territories.
 
 
 ### <a name="step1"></a>Step 1: Segment GDPR and non-GDPR secret engines
 
-Enable key/value secret engines:
+In the EU cluster (primary cluster), enable key/value secret engines:
 
 - At **`EU_GDPR_data`** for GDPR data
 - At **`US_NON_GDPR_data`** for non-GDPR data localized for US
@@ -166,7 +164,7 @@ Click **Enable Engine** to complete.
     wrapping_token_creation_path:    sys/replication/performance/primary/secondary-token
     ```
 
-1. Create a mount filter to blacklist `EU_GDPR_data`.
+1. Create a **mount filter** to blacklist `EU_GDPR_data`.
 
     ```plaintext
     $ vault write sys/replication/performance/primary/mount-filter/secondary  \
@@ -178,9 +176,9 @@ Click **Enable Engine** to complete.
     ```plaintext
     $ vault write sys/replication/performance/secondary/enable token="..."
     ```
-    Where the token is the token obtained from the primary cluster.
+    Where the `token` is the `wrapping_token` obtained from the primary cluster.
 
-
+    !> **NOTE:** This will immediately clear all data in the secondary cluster.
 
 #### API call using cURL
 
@@ -199,7 +197,7 @@ Click **Enable Engine** to complete.
     $ curl --header "X-Vault-Token: ..." \
            --request POST \
            --data '{ "id": "secondary"}' \
-           https://eu-west-1.compute.com:8200/v1/sys/replication/performance/primary/secondary-token
+           https://eu-west-1.compute.com:8200/v1/sys/replication/performance/primary/secondary-token | jq
       {
        "request_id": "",
        "lease_id": "",
@@ -218,7 +216,7 @@ Click **Enable Engine** to complete.
      }
     ```
 
-1. Create a mount filter to blacklist `EU_GDPR_data`.
+1. Create a **mount filter** to blacklist `EU_GDPR_data`.
 
     ```plaintext
     $ tee payload.json <<EOF
@@ -249,8 +247,11 @@ Click **Enable Engine** to complete.
            https://us-central.compute.com:8201/v1/sys/replication/performance/secondary/enable
     ```
 
-    Where the token in `payload.json` is the token obtained from the primary
+    Where the `token` in `payload.json` is the token obtained from the primary
     cluster.
+
+    !> **NOTE:** This will immediately clear all data in the secondary cluster.
+
 
 #### Web UI
 
@@ -284,11 +285,43 @@ cluster.
 
 <br>
 
-~> **NOTE:** If the secondary is in an HA cluster, ensure that each standby is
-sealed and unsealed **with the primary’s unseal keys**. The secondary cluster
-mirrors the configuration of its primary cluster's backends such as auth
-methods, secret engines, audit devices, etc. It uses the primary as the
-_source of truth_ and pass token requests to the primary.
+~> **NOTE:** At this point, the secondary cluster must be unsealed using the
+**primary cluster's unseal key**. If the secondary is in an HA cluster, ensure
+that each standby is sealed and unsealed with the primary’s unseal keys. The
+secondary cluster mirrors the configuration of its primary cluster's backends
+such as auth methods, secret engines, audit devices, etc. It uses the primary as
+the _source of truth_ and ass token requests to the primary.
+
+
+Restart the secondary vault server (e.g. `https://us-central.compute.com:8201`)
+and unseal it with the primary cluster's unseal key.
+
+```plaintext
+$ vault operator unseal
+Unseal Key (will be hidden): <primary_cluster_unseal_key>
+```
+
+The initial root token on the secondary no longer works. Use the auth methods
+configured on the primary cluster to log into the secondary.
+
+**Example:**
+
+Enable and configure the userpass auth method on the **primary** cluster and
+create a new username and password.
+
+```shell
+# Enable the userpass auth method on the primary
+$ vault auth enable userpass
+
+# Create a user with admin policy
+$ vault write auth/userpass/users/james password="passw0rd" policy="admin"
+```
+
+Log into the **secondary** cluster using the enabled auth method.
+
+```plaintext
+$ vault login -method=userpass username=james password="passw0rd"
+```
 
 
 ### <a name="step3"></a>Step 3: Verify the replication mount filter
@@ -296,12 +329,9 @@ _source of truth_ and pass token requests to the primary.
 Once the replication completes, verify that the secrets stored in the
 `EU_GDPR_data` never get replicated to the US cluster.
 
-1. Create some secrets in the EU cluster at `EU_GDPR_data/`
-2. Log in the US cluster and verify that you don't see the data at `EU_GDPR_data/`
-
 #### CLI command
 
-On the **EU** cluster, write some secret:
+On the **EU** cluster, write some secrets:
 
 ```shell
 # Write some secret at EU_GDPR_data/secret
@@ -327,6 +357,7 @@ From the **US** cluster, read the secrets:
 
 ```shell
 # Read the secrets at EU_GDPR_data/secret
+$ vault kv get EU_GDPR_data/secret
 No value found at EU_GDPR_data/secret
 
 # Read the secrets at US_NON_GDPR_data/secret
@@ -419,12 +450,13 @@ Enter the values and click **Save**.  Repeat the step to write some secrets at
 the **US_NON_GDPR_data** path as well.
 
 
-On the **US** cluster, select **EU_GDPR_data**.
+On the **US** cluster, select **US_NON_GDPR_data**. You should be able to see
+the `apikey` under `US_NON_GDPR_data/secret`.
+
 ![Secrets](/assets/images/vault-mount-filter-13.png)
 
-The data is not replicated, so the UI displays "There are currently no secrets
-in this backend" message. But you should be able to see the `apikey` in the
-`US_NON_GDPR_data/secret` key.
+The **EU_GDPR_data** data is not replicated, so you won't be able to see the
+secrets.
 
 
 ### <a name="step4"></a>Step 4: Enable a local secret engine
