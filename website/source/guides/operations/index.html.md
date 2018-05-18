@@ -34,8 +34,9 @@ Please note that [Vault Replication](/docs/vault-enterprise/replication/index.ht
 is a Vault Enterprise feature.
 
 - **[Enterprise Only]** [Mount Filter](/guides/operations/mount-filter.html)
-guide demonstrates how to selectively filter out secret mounts for Performance
-Replication.
+guide demonstrates how to selectively filter out secret engines from being
+replicated across clusters. This feature can help organizations to comply with
+***General Data Protection Regulation (GDPR)***. 
 
 - **[Enterprise Only]** [Vault Auto-unseal using AWS Key Management Service (KMS)](/guides/operations/autounseal-aws-kms.html) guide demonstrates an example of
 how to use Terraform to provision an instance that utilizes an encryption key

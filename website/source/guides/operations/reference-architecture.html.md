@@ -232,6 +232,9 @@ Vault performance replication allows for secrets management across many sites.
 Secrets, authentication methods, authorization policies and other details are
 replicated to be active and available in multiple locations.
 
+Refer to the [Vault Mount Filter](/guides/operations/mount-filter.html) guide
+about filtering out secret engines from being replicated across regions.
+
 #### Disaster Recovery Replication
 
 Vault disaster recovery replication ensures that a standby Vault cluster is kept
