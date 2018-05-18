@@ -334,7 +334,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 
 	// Ensure a rekey is in progress
 	if c.barrierRekeyConfig == nil {
-		return nil, fmt.Errorf("no rekey in progress")
+		return nil, fmt.Errorf("no barrier rekey in progress")
 	}
 
 	if nonce != c.barrierRekeyConfig.Nonce {
@@ -343,7 +343,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 
 	// Check if we already have this piece
 	for _, existing := range c.barrierRekeyProgress {
-		if bytes.Equal(existing, key) {
+		if subtle.ConstantTimeCompare(existing, key) == 1 {
 			return nil, fmt.Errorf("given key has already been provided during this generation operation")
 		}
 	}
@@ -562,7 +562,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 
 	// Ensure a rekey is in progress
 	if c.recoveryRekeyConfig == nil {
-		return nil, fmt.Errorf("no rekey in progress")
+		return nil, fmt.Errorf("no recovery rekey in progress")
 	}
 
 	if nonce != c.recoveryRekeyConfig.Nonce {
@@ -571,8 +571,8 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 
 	// Check if we already have this piece
 	for _, existing := range c.recoveryRekeyProgress {
-		if bytes.Equal(existing, key) {
-			return nil, nil
+		if subtle.ConstantTimeCompare(existing, key) == 1 {
+			return nil, fmt.Errorf("given key has already been provided during this rekey operation")
 		}
 	}
 
@@ -726,7 +726,7 @@ func (c *Core) performRecoveryRekey(ctx context.Context, newMasterKey []byte) er
 
 func (c *Core) RekeyVerify(ctx context.Context, key []byte, recovery bool) (*RekeyVerifyResult, error) {
 	if recovery {
-		//return c.RecoveryRekeyVerify(ctx, key)
+		return c.RecoveryRekeyVerify(ctx, key)
 	}
 	return c.BarrierRekeyVerify(ctx, key)
 }
@@ -757,12 +757,12 @@ func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte) (*RekeyVerify
 
 	// Ensure a rekey is in progress
 	if c.barrierRekeyConfig == nil {
-		return nil, fmt.Errorf("no rekey in progress")
+		return nil, fmt.Errorf("no barrier rekey in progress")
 	}
 
 	// Check if we already have this piece
 	for _, existing := range c.barrierRekeyVerifyProgress {
-		if bytes.Equal(existing, key) {
+		if subtle.ConstantTimeCompare(existing, key) == 1 {
 			return nil, fmt.Errorf("given key has already been provided during this verify operation")
 		}
 	}
@@ -818,7 +818,95 @@ func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte) (*RekeyVerify
 	return res, nil
 }
 
-// RekeyCancel is used to cancel an inprogress rekey
+func (c *Core) RecoveryRekeyVerify(ctx context.Context, key []byte) (*RekeyVerifyResult, error) {
+	// Ensure we are already unsealed
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return nil, consts.ErrSealed
+	}
+	if c.standby {
+		return nil, consts.ErrStandby
+	}
+
+	// Verify the key length
+	min, max := c.barrier.KeyLength()
+	max += shamir.ShareOverhead
+	if len(key) < min {
+		return nil, &ErrInvalidKey{fmt.Sprintf("key is shorter than minimum %d bytes", min)}
+	}
+	if len(key) > max {
+		return nil, &ErrInvalidKey{fmt.Sprintf("key is longer than maximum %d bytes", max)}
+	}
+
+	c.rekeyLock.Lock()
+	defer c.rekeyLock.Unlock()
+
+	// Ensure a rekey is in progress
+	if c.recoveryRekeyConfig == nil {
+		return nil, fmt.Errorf("no recovery rekey in progress")
+	}
+
+	// Check if we already have this piece
+	for _, existing := range c.recoveryRekeyVerifyProgress {
+		if subtle.ConstantTimeCompare(existing, key) == 1 {
+			return nil, fmt.Errorf("given key has already been provided during this verify operation")
+		}
+	}
+
+	// Store this key
+	c.recoveryRekeyVerifyProgress = append(c.recoveryRekeyVerifyProgress, key)
+
+	// Check if we don't have enough keys to unlock
+	if len(c.recoveryRekeyVerifyProgress) < c.recoveryRekeyConfig.SecretThreshold {
+		if c.logger.IsDebug() {
+			c.logger.Debug("cannot rekey yet, not enough keys", "keys", len(c.recoveryRekeyVerifyProgress), "threshold", c.recoveryRekeyConfig.SecretThreshold)
+		}
+		return nil, nil
+	}
+
+	// Schedule the rekey progress for forgetting
+	defer func() {
+		c.recoveryRekeyVerifyProgress = nil
+		if c.recoveryRekeyConfig != nil {
+			nonce, err := uuid.GenerateUUID()
+			if err == nil {
+				c.recoveryRekeyConfig.VerificationNonce = nonce
+			}
+		}
+	}()
+
+	// Recover the master key
+	var recoveryKey []byte
+	var err error
+	if c.recoveryRekeyConfig.SecretThreshold == 1 {
+		recoveryKey = c.recoveryRekeyVerifyProgress[0]
+	} else {
+		recoveryKey, err = shamir.Combine(c.recoveryRekeyVerifyProgress)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to compute recovery key: {{err}}", err)
+		}
+	}
+
+	// Verify the recovery key
+	if subtle.ConstantTimeCompare(recoveryKey, c.recoveryRekeyConfig.VerificationKey) != 1 {
+		c.logger.Error("rekey verification failed", "error", err)
+		return nil, errors.New("rekey verification failed")
+	}
+
+	if err := c.performRecoveryRekey(ctx, recoveryKey); err != nil {
+		return nil, err
+	}
+
+	res := &RekeyVerifyResult{
+		Nonce: c.recoveryRekeyConfig.VerificationNonce,
+	}
+
+	c.recoveryRekeyConfig = nil
+	return res, nil
+}
+
+// RekeyCancel is used to cancel an in-progress rekey
 func (c *Core) RekeyCancel(recovery bool) error {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
