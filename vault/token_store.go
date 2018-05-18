@@ -1644,7 +1644,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	// Read the parent policy
 	parent, err := ts.Lookup(ctx, req.ClientToken)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("parent token lookup failed: %s", err.Error())), logical.ErrInvalidRequest
+		return nil, errwrap.Wrapf("parent token lookup failed: {{err}}", err)
 	}
 	if parent == nil {
 		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
@@ -2134,7 +2134,7 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 
 	parent, err := ts.Lookup(ctx, req.ClientToken)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("parent token lookup failed: %s", err.Error())), logical.ErrInvalidRequest
+		return nil, errwrap.Wrapf("parent token lookup failed: {{err}}", err)
 	}
 	if parent == nil {
 		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
@@ -2301,7 +2301,7 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 	// Lookup the token
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return nil, errwrap.Wrapf("error looking up token: {{err}}", err)
 	}
 
 	// Verify the token exists
