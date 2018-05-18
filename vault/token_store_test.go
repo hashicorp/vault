@@ -1110,7 +1110,7 @@ func TestTokenStore_HandleRequest_CreateToken_BadParent(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v resp: %#v", err, resp)
 	}
-	if resp.Data["error"] != "parent token lookup failed" {
+	if resp.Data["error"] != "parent token lookup failed: no parent found" {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
