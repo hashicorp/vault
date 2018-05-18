@@ -34,7 +34,7 @@ This endpoint configures shared information for the secrets engine.
 - `ttl` (`int: 0 || string:"0s"`) – Specifies default config TTL for long-lived credentials
     (i.e. service account keys). Accepts integer number of seconds or Go duration format string.
 
-- `max_ttl` (`int: 0 || string:"0s"`)– Specifies default config TTL for long-lived credentials
+- `max_ttl` (`int: 0 || string:"0s"`)– Specifies the maximum config TTL for long-lived credentials
     (i.e. service account keys). Accepts integer number of seconds or Go duration format string.**
 
 ### Sample Payload

@@ -17,12 +17,12 @@
           DR Operation Token Command
         </h4>
         <code class="is-word-break">
-          vault generate-root -otp="[enter your otp here]" -decode="{{encoded_token}}"
+          vault operator generate-root -otp="[enter your otp here]" -decode="{{encoded_token}}"
         </code>
       </div>
     </div>
     {{#copy-button
-      clipboardText=(concat 'vault generate-root -otp="<enter your otp here>" -decode="' encoded_token '"')
+      clipboardText=(concat 'vault operator generate-root -otp="<enter your otp here>" -decode="' encoded_token '"')
       class="button is-compact"
       buttonType="button"
       success=(action (set-flash-message 'CLI command copied!'))

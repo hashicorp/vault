@@ -20,7 +20,7 @@ export default DS.Model.extend({
         return;
       }
       return {
-        id: `sys/${policyType}/policies/${id}`,
+        id: `sys/policies/${policyType}/${id}`,
       };
     },
     'id',
