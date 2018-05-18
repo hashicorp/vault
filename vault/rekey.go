@@ -3,8 +3,10 @@ package vault
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/errwrap"
@@ -31,10 +33,16 @@ const (
 // RekeyResult is used to provide the key parts back after
 // they are generated as part of the rekey.
 type RekeyResult struct {
-	SecretShares    [][]byte
-	PGPFingerprints []string
-	Backup          bool
-	RecoveryKey     bool
+	SecretShares         [][]byte
+	PGPFingerprints      []string
+	Backup               bool
+	RecoveryKey          bool
+	VerificationRequired bool
+	VerificationNonce    string
+}
+
+type RekeyVerifyResult struct {
+	Nonce string
 }
 
 // RekeyBackup stores the backup copy of PGP-encrypted keys
@@ -98,6 +106,27 @@ func (c *Core) RekeyProgress(recovery bool) (int, error) {
 	return len(c.barrierRekeyProgress), nil
 }
 
+// RekeyVerifyProgress is used to return the rekey progress (num shares) during
+// verification.
+func (c *Core) RekeyVerifyProgress(recovery bool) (int, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return 0, consts.ErrSealed
+	}
+	if c.standby {
+		return 0, consts.ErrStandby
+	}
+
+	c.rekeyLock.RLock()
+	defer c.rekeyLock.RUnlock()
+
+	if recovery {
+		return len(c.recoveryRekeyVerifyProgress), nil
+	}
+	return len(c.barrierRekeyVerifyProgress), nil
+}
+
 // RekeyConfig is used to read the rekey configuration
 func (c *Core) RekeyConfig(recovery bool) (*SealConfig, error) {
 	c.stateLock.RLock()
@@ -152,6 +181,9 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) error {
 
 	if c.seal.RecoveryKeySupported() && c.seal.RecoveryType() == config.Type {
 		c.logger.Debug("using recovery seal configuration to rekey barrier key")
+		if config.VerificationRequired {
+			return fmt.Errorf("requiring verification not supported when rekeying the barrier key with recovery keys")
+		}
 	}
 
 	// Check if the seal configuration is valid
@@ -189,7 +221,7 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) error {
 	c.barrierRekeyConfig.Nonce = nonce
 
 	if c.logger.IsInfo() {
-		c.logger.Info("rekey initialized", "nonce", c.barrierRekeyConfig.Nonce, "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold)
+		c.logger.Info("rekey initialized", "nonce", c.barrierRekeyConfig.Nonce, "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold, "validation_required", c.barrierRekeyConfig.VerificationRequired)
 	}
 	return nil
 }
@@ -239,7 +271,7 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) error {
 	c.recoveryRekeyConfig.Nonce = nonce
 
 	if c.logger.IsInfo() {
-		c.logger.Info("rekey initialized", "nonce", c.recoveryRekeyConfig.Nonce, "shares", c.recoveryRekeyConfig.SecretShares, "threshold", c.recoveryRekeyConfig.SecretThreshold)
+		c.logger.Info("rekey initialized", "nonce", c.recoveryRekeyConfig.Nonce, "shares", c.recoveryRekeyConfig.SecretShares, "threshold", c.recoveryRekeyConfig.SecretThreshold, "validation_required", c.recoveryRekeyConfig.VerificationRequired)
 	}
 	return nil
 }
@@ -327,14 +359,17 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		return nil, nil
 	}
 
+	// Schedule the rekey progress for forgetting
+	defer func() {
+		c.barrierRekeyProgress = nil
+	}()
+
 	// Recover the master key or recovery key
 	var recoveredKey []byte
 	if existingConfig.SecretThreshold == 1 {
 		recoveredKey = c.barrierRekeyProgress[0]
-		c.barrierRekeyProgress = nil
 	} else {
 		recoveredKey, err = shamir.Combine(c.barrierRekeyProgress)
-		c.barrierRekeyProgress = nil
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to compute master key: {{err}}", err)
 		}
@@ -436,17 +471,44 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		}
 	}
 
+	// If we are requiring validation, return now; otherwise rekey the barrier
+	if c.barrierRekeyConfig.VerificationRequired {
+		nonce, err := uuid.GenerateUUID()
+		if err != nil {
+			c.barrierRekeyConfig = nil
+			return nil, err
+		}
+		c.barrierRekeyConfig.VerificationNonce = nonce
+		c.barrierRekeyConfig.VerificationKey = newMasterKey
+
+		results.VerificationRequired = true
+		results.VerificationNonce = nonce
+		return results, nil
+	}
+
+	if err := c.performBarrierRekey(ctx, newMasterKey); err != nil {
+		return nil, err
+	}
+
+	c.barrierRekeyConfig = nil
+	return results, nil
+}
+
+func (c *Core) performBarrierRekey(ctx context.Context, newMasterKey []byte) error {
 	// Rekey the barrier
 	if err := c.barrier.Rekey(ctx, newMasterKey); err != nil {
 		c.logger.Error("failed to rekey barrier", "error", err)
-		return nil, errwrap.Wrapf("failed to rekey barrier: {{err}}", err)
+		return errwrap.Wrapf("failed to rekey barrier: {{err}}", err)
 	}
 	if c.logger.IsInfo() {
 		c.logger.Info("security barrier rekeyed", "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold)
 	}
+
+	c.barrierRekeyConfig.VerificationKey = nil
+
 	if err := c.seal.SetBarrierConfig(ctx, c.barrierRekeyConfig); err != nil {
 		c.logger.Error("error saving rekey seal configuration", "error", err)
-		return nil, errwrap.Wrapf("failed to save rekey seal configuration: {{err}}", err)
+		return errwrap.Wrapf("failed to save rekey seal configuration: {{err}}", err)
 	}
 
 	// Write to the canary path, which will force a synchronous truing during
@@ -456,13 +518,10 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		Value: []byte(c.barrierRekeyConfig.Nonce),
 	}); err != nil {
 		c.logger.Error("error saving keyring canary", "error", err)
-		return nil, errwrap.Wrapf("failed to save keyring canary: {{err}}", err)
+		return errwrap.Wrapf("failed to save keyring canary: {{err}}", err)
 	}
 
-	// Done!
-	c.barrierRekeyProgress = nil
-	c.barrierRekeyConfig = nil
-	return results, nil
+	return nil
 }
 
 // RecoveryRekeyUpdate is used to provide a new key part
@@ -528,14 +587,17 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		return nil, nil
 	}
 
+	// Schedule the rekey progress for forgetting
+	defer func() {
+		c.recoveryRekeyProgress = nil
+	}()
+
 	// Recover the master key
 	var recoveryKey []byte
 	if existingConfig.SecretThreshold == 1 {
 		recoveryKey = c.recoveryRekeyProgress[0]
-		c.recoveryRekeyProgress = nil
 	} else {
 		recoveryKey, err = shamir.Combine(c.recoveryRekeyProgress)
-		c.recoveryRekeyProgress = nil
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to compute recovery key: {{err}}", err)
 		}
@@ -612,14 +674,41 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		}
 	}
 
+	// If we are requiring validation, return now; otherwise save the recovery
+	// key
+	if c.recoveryRekeyConfig.VerificationRequired {
+		nonce, err := uuid.GenerateUUID()
+		if err != nil {
+			c.recoveryRekeyConfig = nil
+			return nil, err
+		}
+		c.recoveryRekeyConfig.VerificationNonce = nonce
+		c.recoveryRekeyConfig.VerificationKey = newMasterKey
+
+		results.VerificationRequired = true
+		results.VerificationNonce = nonce
+		return results, nil
+	}
+
+	if err := c.performRecoveryRekey(ctx, newMasterKey); err != nil {
+		return nil, err
+	}
+
+	c.recoveryRekeyConfig = nil
+	return results, nil
+}
+
+func (c *Core) performRecoveryRekey(ctx context.Context, newMasterKey []byte) error {
 	if err := c.seal.SetRecoveryKey(ctx, newMasterKey); err != nil {
 		c.logger.Error("failed to set recovery key", "error", err)
-		return nil, errwrap.Wrapf("failed to set recovery key: {{err}}", err)
+		return errwrap.Wrapf("failed to set recovery key: {{err}}", err)
 	}
+
+	c.recoveryRekeyConfig.VerificationKey = nil
 
 	if err := c.seal.SetRecoveryConfig(ctx, c.recoveryRekeyConfig); err != nil {
 		c.logger.Error("error saving rekey seal configuration", "error", err)
-		return nil, errwrap.Wrapf("failed to save rekey seal configuration: {{err}}", err)
+		return errwrap.Wrapf("failed to save rekey seal configuration: {{err}}", err)
 	}
 
 	// Write to the canary path, which will force a synchronous truing during
@@ -629,13 +718,104 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		Value: []byte(c.recoveryRekeyConfig.Nonce),
 	}); err != nil {
 		c.logger.Error("error saving keyring canary", "error", err)
-		return nil, errwrap.Wrapf("failed to save keyring canary: {{err}}", err)
+		return errwrap.Wrapf("failed to save keyring canary: {{err}}", err)
 	}
 
-	// Done!
-	c.recoveryRekeyProgress = nil
-	c.recoveryRekeyConfig = nil
-	return results, nil
+	return nil
+}
+
+func (c *Core) RekeyVerify(ctx context.Context, key []byte, recovery bool) (*RekeyVerifyResult, error) {
+	if recovery {
+		//return c.RecoveryRekeyVerify(ctx, key)
+	}
+	return c.BarrierRekeyVerify(ctx, key)
+}
+
+func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte) (*RekeyVerifyResult, error) {
+	// Ensure we are already unsealed
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return nil, consts.ErrSealed
+	}
+	if c.standby {
+		return nil, consts.ErrStandby
+	}
+
+	// Verify the key length
+	min, max := c.barrier.KeyLength()
+	max += shamir.ShareOverhead
+	if len(key) < min {
+		return nil, &ErrInvalidKey{fmt.Sprintf("key is shorter than minimum %d bytes", min)}
+	}
+	if len(key) > max {
+		return nil, &ErrInvalidKey{fmt.Sprintf("key is longer than maximum %d bytes", max)}
+	}
+
+	c.rekeyLock.Lock()
+	defer c.rekeyLock.Unlock()
+
+	// Ensure a rekey is in progress
+	if c.barrierRekeyConfig == nil {
+		return nil, fmt.Errorf("no rekey in progress")
+	}
+
+	// Check if we already have this piece
+	for _, existing := range c.barrierRekeyVerifyProgress {
+		if bytes.Equal(existing, key) {
+			return nil, fmt.Errorf("given key has already been provided during this verify operation")
+		}
+	}
+
+	// Store this key
+	c.barrierRekeyVerifyProgress = append(c.barrierRekeyVerifyProgress, key)
+
+	// Check if we don't have enough keys to unlock
+	if len(c.barrierRekeyVerifyProgress) < c.barrierRekeyConfig.SecretThreshold {
+		if c.logger.IsDebug() {
+			c.logger.Debug("cannot verify yet, not enough keys", "keys", len(c.barrierRekeyVerifyProgress), "threshold", c.barrierRekeyConfig.SecretThreshold)
+		}
+		return nil, nil
+	}
+
+	// Schedule the progress for forgetting and rotate the nonce if possible
+	defer func() {
+		c.barrierRekeyVerifyProgress = nil
+		if c.barrierRekeyConfig != nil {
+			nonce, err := uuid.GenerateUUID()
+			if err == nil {
+				c.barrierRekeyConfig.VerificationNonce = nonce
+			}
+		}
+	}()
+
+	// Recover the master key or recovery key
+	var recoveredKey []byte
+	var err error
+	if c.barrierRekeyConfig.SecretThreshold == 1 {
+		recoveredKey = c.barrierRekeyVerifyProgress[0]
+	} else {
+		recoveredKey, err = shamir.Combine(c.barrierRekeyVerifyProgress)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to compute master key for verification: {{err}}", err)
+		}
+	}
+
+	if subtle.ConstantTimeCompare(recoveredKey, c.barrierRekeyConfig.VerificationKey) != 1 {
+		c.logger.Error("rekey verification failed")
+		return nil, errors.New("rekey verification failed")
+	}
+
+	if err := c.performBarrierRekey(ctx, recoveredKey); err != nil {
+		return nil, err
+	}
+
+	res := &RekeyVerifyResult{
+		Nonce: c.barrierRekeyConfig.VerificationNonce,
+	}
+
+	c.barrierRekeyConfig = nil
+	return res, nil
 }
 
 // RekeyCancel is used to cancel an inprogress rekey
@@ -660,6 +840,40 @@ func (c *Core) RekeyCancel(recovery bool) error {
 		c.barrierRekeyConfig = nil
 		c.barrierRekeyProgress = nil
 	}
+	return nil
+}
+
+// RekeyVerifyCancel is used to start the verification process over
+func (c *Core) RekeyVerifyRestart(recovery bool) error {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return consts.ErrSealed
+	}
+	if c.standby {
+		return consts.ErrStandby
+	}
+
+	c.rekeyLock.Lock()
+	defer c.rekeyLock.Unlock()
+
+	// Attempt to generate a new nonce, but don't bail if it doesn't succeed
+	// (which is extraordinarily unlikely)
+	nonce, nonceErr := uuid.GenerateUUID()
+
+	// Clear any progress or config
+	if recovery {
+		c.recoveryRekeyVerifyProgress = nil
+		if nonceErr == nil {
+			c.recoveryRekeyConfig.VerificationNonce = nonce
+		}
+	} else {
+		c.barrierRekeyVerifyProgress = nil
+		if nonceErr == nil {
+			c.barrierRekeyConfig.VerificationNonce = nonce
+		}
+	}
+
 	return nil
 }
 

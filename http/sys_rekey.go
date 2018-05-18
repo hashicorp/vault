@@ -90,6 +90,7 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 		status.Started = true
 		status.T = rekeyConf.SecretThreshold
 		status.N = rekeyConf.SecretShares
+		status.VerificationRequired = rekeyConf.VerificationRequired
 		if rekeyConf.PGPKeys != nil && len(rekeyConf.PGPKeys) != 0 {
 			pgpFingerprints, err := pgpkeys.GetFingerprints(rekeyConf.PGPKeys, nil)
 			if err != nil {
@@ -137,11 +138,12 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 
 	// Initialize the rekey
 	err := core.RekeyInit(&vault.SealConfig{
-		SecretShares:    req.SecretShares,
-		SecretThreshold: req.SecretThreshold,
-		StoredShares:    req.StoredShares,
-		PGPKeys:         req.PGPKeys,
-		Backup:          req.Backup,
+		SecretShares:         req.SecretShares,
+		SecretThreshold:      req.SecretThreshold,
+		StoredShares:         req.StoredShares,
+		PGPKeys:              req.PGPKeys,
+		Backup:               req.Backup,
+		VerificationRequired: req.RequireVerification,
 	}, recovery)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, err)
@@ -214,6 +216,8 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			resp.Nonce = req.Nonce
 			resp.Backup = result.Backup
 			resp.PGPFingerprints = result.PGPFingerprints
+			resp.VerificationRequired = result.VerificationRequired
+			resp.VerificationNonce = result.VerificationNonce
 
 			// Encode the keys
 			keys := make([]string, 0, len(result.SecretShares))
@@ -231,23 +235,161 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 	})
 }
 
+func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		standby, _ := core.Standby()
+		if standby {
+			respondStandby(core, w, r.URL)
+			return
+		}
+
+		repState := core.ReplicationState()
+		if repState.HasState(consts.ReplicationPerformanceSecondary) {
+			respondError(w, http.StatusBadRequest,
+				fmt.Errorf("rekeying can only be performed on the primary cluster when replication is activated"))
+			return
+		}
+
+		ctx, cancel := core.GetContext()
+		defer cancel()
+
+		switch {
+		case recovery && !core.SealAccess().RecoveryKeySupported():
+			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"))
+		case r.Method == "GET":
+			handleSysRekeyVerifyGet(ctx, core, recovery, w, r)
+		case r.Method == "POST" || r.Method == "PUT":
+			handleSysRekeyVerifyPut(ctx, core, recovery, w, r)
+		case r.Method == "DELETE":
+			handleSysRekeyVerifyDelete(core, recovery, w, r)
+		default:
+			respondError(w, http.StatusMethodNotAllowed, nil)
+		}
+	})
+}
+
+func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
+	barrierConfig, err := core.SealAccess().BarrierConfig(ctx)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if barrierConfig == nil {
+		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"))
+		return
+	}
+
+	// Get the rekey configuration
+	rekeyConf, err := core.RekeyConfig(recovery)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if rekeyConf == nil {
+		respondError(w, http.StatusBadRequest, errors.New("no rekey configuration found"))
+		return
+	}
+
+	// Get the progress
+	progress, err := core.RekeyVerifyProgress(recovery)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// Format the status
+	status := &RekeyVerificationStatusResponse{
+		Nonce:    rekeyConf.Nonce,
+		T:        rekeyConf.SecretThreshold,
+		N:        rekeyConf.SecretShares,
+		Progress: progress,
+	}
+	respondOk(w, status)
+}
+
+func handleSysRekeyVerifyDelete(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
+	err := core.RekeyVerifyRestart(recovery)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	ctx, cancel := core.GetContext()
+	defer cancel()
+
+	handleSysRekeyVerifyGet(ctx, core, recovery, w, r)
+}
+
+func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
+	// Parse the request
+	var req RekeyVerificationUpdateRequest
+	if err := parseRequest(r, w, &req); err != nil {
+		respondError(w, http.StatusBadRequest, err)
+		return
+	}
+	if req.Key == "" {
+		respondError(
+			w, http.StatusBadRequest,
+			errors.New("'key' must be specified in request body as JSON"))
+		return
+	}
+
+	// Decode the key, which is base64 or hex encoded
+	min, max := core.BarrierKeyLength()
+	key, err := hex.DecodeString(req.Key)
+	// We check min and max here to ensure that a string that is base64
+	// encoded but also valid hex will not be valid and we instead base64
+	// decode it
+	if err != nil || len(key) < min || len(key) > max {
+		key, err = base64.StdEncoding.DecodeString(req.Key)
+		if err != nil {
+			respondError(
+				w, http.StatusBadRequest,
+				errors.New("'key' must be a valid hex or base64 string"))
+			return
+		}
+	}
+
+	ctx, cancel := core.GetContext()
+	defer cancel()
+
+	// Use the key to make progress on rekey
+	result, err := core.RekeyVerify(ctx, key, recovery)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	// Format the response
+	resp := &RekeyVerificationUpdateResponse{}
+	if result != nil {
+		resp.Complete = true
+		resp.Nonce = result.Nonce
+		respondOk(w, resp)
+	} else {
+		handleSysRekeyVerifyGet(ctx, core, recovery, w, r)
+	}
+}
+
 type RekeyRequest struct {
-	SecretShares    int      `json:"secret_shares"`
-	SecretThreshold int      `json:"secret_threshold"`
-	StoredShares    int      `json:"stored_shares"`
-	PGPKeys         []string `json:"pgp_keys"`
-	Backup          bool     `json:"backup"`
+	SecretShares        int      `json:"secret_shares"`
+	SecretThreshold     int      `json:"secret_threshold"`
+	StoredShares        int      `json:"stored_shares"`
+	PGPKeys             []string `json:"pgp_keys"`
+	Backup              bool     `json:"backup"`
+	RequireVerification bool     `json:"require_verification"`
 }
 
 type RekeyStatusResponse struct {
-	Nonce           string   `json:"nonce"`
-	Started         bool     `json:"started"`
-	T               int      `json:"t"`
-	N               int      `json:"n"`
-	Progress        int      `json:"progress"`
-	Required        int      `json:"required"`
-	PGPFingerprints []string `json:"pgp_fingerprints"`
-	Backup          bool     `json:"backup"`
+	Nonce                string   `json:"nonce"`
+	Started              bool     `json:"started"`
+	T                    int      `json:"t"`
+	N                    int      `json:"n"`
+	Progress             int      `json:"progress"`
+	Required             int      `json:"required"`
+	PGPFingerprints      []string `json:"pgp_fingerprints"`
+	Backup               bool     `json:"backup"`
+	VerificationRequired bool     `json:"verification_required"`
 }
 
 type RekeyUpdateRequest struct {
@@ -256,10 +398,28 @@ type RekeyUpdateRequest struct {
 }
 
 type RekeyUpdateResponse struct {
-	Nonce           string   `json:"nonce"`
-	Complete        bool     `json:"complete"`
-	Keys            []string `json:"keys"`
-	KeysB64         []string `json:"keys_base64"`
-	PGPFingerprints []string `json:"pgp_fingerprints"`
-	Backup          bool     `json:"backup"`
+	Nonce                string   `json:"nonce"`
+	Complete             bool     `json:"complete"`
+	Keys                 []string `json:"keys"`
+	KeysB64              []string `json:"keys_base64"`
+	PGPFingerprints      []string `json:"pgp_fingerprints"`
+	Backup               bool     `json:"backup"`
+	VerificationRequired bool     `json:"verification_required"`
+	VerificationNonce    string   `json:"verification_nonce"`
+}
+
+type RekeyVerificationUpdateRequest struct {
+	Key string
+}
+
+type RekeyVerificationStatusResponse struct {
+	Nonce    string `json:"nonce"`
+	T        int    `json:"t"`
+	N        int    `json:"n"`
+	Progress int    `json:"progress"`
+}
+
+type RekeyVerificationUpdateResponse struct {
+	Nonce    string `json:"nonce"`
+	Complete bool   `json:"complete"`
 }

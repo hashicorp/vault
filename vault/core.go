@@ -210,11 +210,13 @@ type Core struct {
 	// These variables holds the config and shares we have until we reach
 	// enough to verify the appropriate master key. Note that the same lock is
 	// used; this isn't time-critical so this shouldn't be a problem.
-	barrierRekeyConfig    *SealConfig
-	barrierRekeyProgress  [][]byte
-	recoveryRekeyConfig   *SealConfig
-	recoveryRekeyProgress [][]byte
-	rekeyLock             sync.RWMutex
+	barrierRekeyConfig          *SealConfig
+	barrierRekeyProgress        [][]byte
+	barrierRekeyVerifyProgress  [][]byte
+	recoveryRekeyConfig         *SealConfig
+	recoveryRekeyProgress       [][]byte
+	recoveryRekeyVerifyProgress [][]byte
+	rekeyLock                   sync.RWMutex
 
 	// mounts is loaded after unseal since it is a protected
 	// configuration
@@ -1762,8 +1764,10 @@ func (c *Core) preSeal() error {
 	// Clear any rekey progress
 	c.barrierRekeyConfig = nil
 	c.barrierRekeyProgress = nil
+	c.barrierRekeyVerifyProgress = nil
 	c.recoveryRekeyConfig = nil
 	c.recoveryRekeyProgress = nil
+	c.recoveryRekeyVerifyProgress = nil
 
 	if c.metricsCh != nil {
 		close(c.metricsCh)

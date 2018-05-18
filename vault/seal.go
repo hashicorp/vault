@@ -272,6 +272,19 @@ type SealConfig struct {
 
 	// How many keys to store, for seals that support storage.
 	StoredShares int `json:"stored_shares"`
+
+	// VerificationRequired indicates that after a rekey validation must be
+	// performed (via providing shares from the new key) before the new key is
+	// actually installed. This is ommitted from JSON as we don't persist the
+	// new key, it lives only in memory.
+	VerificationRequired bool `json:"-"`
+
+	// VerificationKey is the new key that we will roll to after successful
+	// validation
+	VerificationKey []byte `json:"-"`
+
+	// VerificationNonce stores the current operation nonce for verification
+	VerificationNonce string `json:"-"`
 }
 
 // Validate is used to sanity check the seal configuration
@@ -317,16 +330,21 @@ func (s *SealConfig) Validate() error {
 
 func (s *SealConfig) Clone() *SealConfig {
 	ret := &SealConfig{
-		Type:            s.Type,
-		SecretShares:    s.SecretShares,
-		SecretThreshold: s.SecretThreshold,
-		Nonce:           s.Nonce,
-		Backup:          s.Backup,
-		StoredShares:    s.StoredShares,
+		Type:                 s.Type,
+		SecretShares:         s.SecretShares,
+		SecretThreshold:      s.SecretThreshold,
+		Nonce:                s.Nonce,
+		Backup:               s.Backup,
+		StoredShares:         s.StoredShares,
+		VerificationRequired: s.VerificationRequired,
 	}
 	if len(s.PGPKeys) > 0 {
 		ret.PGPKeys = make([]string, len(s.PGPKeys))
 		copy(ret.PGPKeys, s.PGPKeys)
+	}
+	if len(s.VerificationKey) > 0 {
+		ret.VerificationKey = make([]byte, len(s.VerificationKey))
+		copy(ret.VerificationKey, s.VerificationKey)
 	}
 	return ret
 }
