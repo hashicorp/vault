@@ -112,9 +112,8 @@ export default Ember.Controller.extend({
 
       if (this.get('showConfig')) {
         attrs.config = {
-          default_lease_ttl,
-          max_lease_ttl,
-          force_no_cache,
+          defaultLeaseTtl: default_lease_ttl,
+          maxLeaseTtl: max_lease_ttl,
         };
       }
 
