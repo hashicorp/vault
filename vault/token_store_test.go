@@ -904,7 +904,8 @@ func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *TokenEntr
 }
 
 func TestTokenStore_RevokeSelf(t *testing.T) {
-	_, ts, _, _ := TestCoreWithTokenStore(t)
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
 
 	ent1 := &TokenEntry{}
 	if err := ts.create(context.Background(), ent1); err != nil {
