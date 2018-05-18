@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
+	"github.com/mitchellh/copystructure"
 )
 
 // ACL is used to wrap a set of policies to provide
@@ -136,7 +137,11 @@ func NewACL(policies []*Policy) (*ACL, error) {
 
 			if len(pc.Permissions.AllowedParameters) > 0 {
 				if existingPerms.AllowedParameters == nil {
-					existingPerms.AllowedParameters = pc.Permissions.AllowedParameters
+					clonedAllowed, err := copystructure.Copy(pc.Permissions.AllowedParameters)
+					if err != nil {
+						return nil, err
+					}
+					existingPerms.AllowedParameters = clonedAllowed.(map[string][]interface{})
 				} else {
 					for key, value := range pc.Permissions.AllowedParameters {
 						pcValue, ok := existingPerms.AllowedParameters[key]
@@ -154,7 +159,11 @@ func NewACL(policies []*Policy) (*ACL, error) {
 
 			if len(pc.Permissions.DeniedParameters) > 0 {
 				if existingPerms.DeniedParameters == nil {
-					existingPerms.DeniedParameters = pc.Permissions.DeniedParameters
+					clonedDenied, err := copystructure.Copy(pc.Permissions.DeniedParameters)
+					if err != nil {
+						return nil, err
+					}
+					existingPerms.DeniedParameters = clonedDenied.(map[string][]interface{})
 				} else {
 					for key, value := range pc.Permissions.DeniedParameters {
 						pcValue, ok := existingPerms.DeniedParameters[key]

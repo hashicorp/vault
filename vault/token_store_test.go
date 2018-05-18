@@ -306,7 +306,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts.revokeSalted(context.Background(), salted)
+	ts.revokeSalted(context.Background(), salted, false)
 
 	req := logical.TestRequest(t, logical.ListOperation, "accessors/")
 
@@ -904,7 +904,8 @@ func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *TokenEntr
 }
 
 func TestTokenStore_RevokeSelf(t *testing.T) {
-	_, ts, _, _ := TestCoreWithTokenStore(t)
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
 
 	ent1 := &TokenEntry{}
 	if err := ts.create(context.Background(), ent1); err != nil {
@@ -3497,7 +3498,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		return fmt.Errorf("keep it frosty")
 	}
 
-	err = ts.revokeSalted(context.Background(), saltTut)
+	err = ts.revokeSalted(context.Background(), saltTut, false)
 	if err == nil {
 		t.Fatalf("expected err")
 	}
@@ -3520,7 +3521,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	go func() {
 		cubbyFuncLock.RLock()
-		err := ts.revokeSalted(context.Background(), saltTut)
+		err := ts.revokeSalted(context.Background(), saltTut, false)
 		cubbyFuncLock.RUnlock()
 		if err == nil {
 			t.Fatalf("expected error")
@@ -3545,7 +3546,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	defer cubbyFuncLock.Unlock()
 	ts.cubbyholeDestroyer = origDestroyCubbyhole
 
-	err = ts.revokeSalted(context.Background(), saltTut)
+	err = ts.revokeSalted(context.Background(), saltTut, false)
 	if err != nil {
 		t.Fatal(err)
 	}
