@@ -80,6 +80,7 @@ func TestRequestHandling_LoginWrapping(t *testing.T) {
 		Data: map[string]interface{}{
 			"type": "userpass",
 		},
+		Connection: &logical.Connection{},
 	}
 	resp, err := core.HandleRequest(req)
 	if err != nil {
@@ -108,6 +109,7 @@ func TestRequestHandling_LoginWrapping(t *testing.T) {
 		Data: map[string]interface{}{
 			"password": "foo",
 		},
+		Connection: &logical.Connection{},
 	}
 	resp, err = core.HandleRequest(req)
 	if err != nil {
@@ -129,6 +131,7 @@ func TestRequestHandling_LoginWrapping(t *testing.T) {
 		Data: map[string]interface{}{
 			"password": "foo",
 		},
+		Connection: &logical.Connection{},
 	}
 	resp, err = core.HandleRequest(req)
 	if err != nil {
