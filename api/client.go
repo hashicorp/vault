@@ -388,9 +388,8 @@ func (c *Client) SetAddress(addr string) error {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
-	var err error
-	var parsedAddr *url.URL
-	if parsedAddr, err = url.Parse(addr); err != nil {
+	parsedAddr, err := url.Parse(addr)
+	if err != nil {
 		return errwrap.Wrapf("failed to set address: {{err}}", err)
 	}
 
