@@ -38,6 +38,7 @@ BUG FIXES:
  * core: Fix panic when certain combinations of policy paths and allowed/denied
    parameters were used [GH-4582]
  * secret/kv: Fix response wrapping for KV v2 [GH-4511]
+ * secret/pki: Fix `key_type` not being allowed to be set to `any` [GH-4595]
  * secret/pki: Fix path length parameter being ignored when using
    `use_csr_values` and signing an intermediate CA cert [GH-4459]
  * storage/dynamodb: Fix listing when one child is left within a nested path
