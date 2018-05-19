@@ -2,13 +2,15 @@
 
 DEPRECATIONS/CHANGES:
 
- * As of this release, the Vault CLI (via `vault unwrap`) and Go API (via
-   `Logical().Unwrap()`) can no longer unwrap response-wrapped tokens produced
-   by Vault prior to 0.6.2. These can still be read manually by performing a
-   read on `cubbyhole/response` and decoding the JSON-encoded value.
  * PKI duration return types: The PKI backend now returns durations (e.g. when
    reading a role) as an integer number of seconds instead of a Go-style
    string, in line with how the rest of Vault's API returns durations.
+
+FEATURES:
+
+ * Cert auth CIDR restrictions: When using the `cert` auth method you can now
+   limit authentication to specific CIDRs; these will also be encoded in
+   resultant tokens to limit their use.
 
 IMPROVEMENTS:
 
@@ -33,9 +35,13 @@ BUG FIXES:
    [GH-4552]
  * core: When using the `use_always` option with PROXY protocol support, do not
    require `authorized_addrs` to be set [GH-4065]
+ * core: Fix panic when certain combinations of policy paths and allowed/denied
+   parameters were used [GH-4582]
  * secret/kv: Fix response wrapping for KV v2 [GH-4511]
  * secret/pki: Fix path length parameter being ignored when using
    `use_csr_values` and signing an intermediate CA cert [GH-4459]
+ * storage/dynamodb: Fix listing when one child is left within a nested path
+   [GH-4570]
 
 ## 0.10.1/0.9.7 (April 25th, 2018)
 

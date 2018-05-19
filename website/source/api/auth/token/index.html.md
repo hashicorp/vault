@@ -428,7 +428,7 @@ $ curl \
 
 ## Revoke a Token
 
-Revokes a token and all child tokens. When the token is revoked, all secrets
+Revokes a token and all child tokens. When the token is revoked, all dynamic secrets
 generated with it are also revoked.
 
 | Method   | Path                         | Produces               |

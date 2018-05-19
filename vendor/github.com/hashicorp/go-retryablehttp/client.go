@@ -221,8 +221,11 @@ func LinearJitterBackoff(min, max time.Duration, attemptNum int, resp *http.Resp
 
 	// Pick a random number that lies somewhere between the min and max and
 	// multiply by the attemptNum. attemptNum starts at zero so we always
-	// increment here.
-	return time.Duration((rand.Int63() % int64(max-min)) * int64(attemptNum))
+	// increment here. We first get a random percentage, then apply that to the
+	// difference between min and max, and add to min.
+	jitter := rand.Float64() * float64(max-min)
+	jitterMin := int64(jitter) + int64(min)
+	return time.Duration(jitterMin * int64(attemptNum))
 }
 
 // PassthroughErrorHandler is an ErrorHandler that directly passes through the
