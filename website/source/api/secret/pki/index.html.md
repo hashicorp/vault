@@ -780,7 +780,10 @@ request is denied.
   flagged for email protection use.
 
 - `key_type` `(string: "rsa")` – Specifies the type of key to generate for
-  generated private keys. Currently, `rsa` and `ec` are supported.
+  generated private keys and the type of key expected for submitted CSRs.
+  Currently, `rsa` and `ec` are supported, or when signing CSRs `any` can be
+  specified to allow keys of either type and with any bit size (subject to >
+  1024 bits for RSA keys).
 
 - `key_bits` `(int: 2048)` – Specifies the number of bits to use for the
   generated keys. This will need to be changed for `ec` keys. See
