@@ -6,13 +6,14 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestSysRekey_Verification(t *testing.T) {
-	//testSysRekey_Verification(t, false)
+	testSysRekey_Verification(t, false)
 	testSysRekey_Verification(t, true)
 }
 
@@ -70,6 +71,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 			t.Fatal(err)
 		}
 	} else {
+		cluster.RecoveryKeys = cluster.BarrierKeys
 		sealTestingParams.PretendToAllowRecoveryKeys = true
 		recoveryKey, err := shamir.Combine(cluster.BarrierKeys)
 		if err != nil {
@@ -213,6 +215,10 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 		// Should be able to init again and get back to where we were
 		doRekeyInitialSteps()
 		doStartVerify()
+	} else {
+		// We haven't finished, so generating a root token should still be the
+		// old keys (which are still currently set)
+		testhelpers.GenerateRoot(t, cluster, false)
 	}
 
 	// Provide the final new key
@@ -248,5 +254,25 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 		if err := cluster.UnsealCoresWithError(); err != nil {
 			t.Fatal("expected error")
 		}
+	} else {
+		// The old keys should no longer work
+		_, err := testhelpers.GenerateRootWithError(t, cluster, false)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+
+		// Put tne new keys in place and run again
+		cluster.RecoveryKeys = nil
+		for _, key := range newKeys {
+			dec, err := base64.StdEncoding.DecodeString(key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cluster.RecoveryKeys = append(cluster.RecoveryKeys, dec)
+		}
+		if err := client.Sys().GenerateRootCancel(); err != nil {
+			t.Fatal(err)
+		}
+		testhelpers.GenerateRoot(t, cluster, false)
 	}
 }
