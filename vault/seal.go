@@ -3,6 +3,7 @@ package vault
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -86,14 +87,14 @@ type Seal interface {
 	VerifyRecoveryKey(context.Context, []byte) error
 }
 
-var (
-	DefaultSealPretendsToAllowRecoveryKeys bool
-	DefaultSealPretendsToAllowStoredShares bool
-)
+var ()
 
 type defaultSeal struct {
-	config atomic.Value
-	core   *Core
+	config                     atomic.Value
+	core                       *Core
+	PretendToAllowStoredShares bool
+	PretendToAllowRecoveryKeys bool
+	PretendRecoveryKey         []byte
 }
 
 func NewDefaultSeal() Seal {
@@ -126,11 +127,11 @@ func (d *defaultSeal) BarrierType() string {
 }
 
 func (d *defaultSeal) StoredKeysSupported() bool {
-	return DefaultSealPretendsToAllowStoredShares
+	return d.PretendToAllowStoredShares
 }
 
 func (d *defaultSeal) RecoveryKeySupported() bool {
-	return DefaultSealPretendsToAllowRecoveryKeys
+	return d.PretendToAllowRecoveryKeys
 }
 
 func (d *defaultSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
@@ -228,28 +229,44 @@ func (d *defaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 }
 
 func (d *defaultSeal) RecoveryType() string {
-	if DefaultSealPretendsToAllowRecoveryKeys {
+	if d.PretendToAllowRecoveryKeys {
 		return RecoveryTypeShamir
 	}
 	return RecoveryTypeUnsupported
 }
 
 func (d *defaultSeal) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
-	if DefaultSealPretendsToAllowRecoveryKeys {
-		return &SealConfig{}, nil
+	if d.PretendToAllowRecoveryKeys {
+		return &SealConfig{
+			SecretShares:    5,
+			SecretThreshold: 3,
+		}, nil
 	}
 	return nil, fmt.Errorf("recovery not supported")
 }
 
 func (d *defaultSeal) SetRecoveryConfig(ctx context.Context, config *SealConfig) error {
+	if d.PretendToAllowRecoveryKeys {
+		return nil
+	}
 	return fmt.Errorf("recovery not supported")
 }
 
-func (d *defaultSeal) VerifyRecoveryKey(context.Context, []byte) error {
+func (d *defaultSeal) VerifyRecoveryKey(ctx context.Context, key []byte) error {
+	if d.PretendToAllowRecoveryKeys {
+		if subtle.ConstantTimeCompare(key, d.PretendRecoveryKey) == 1 {
+			return nil
+		}
+		return fmt.Errorf("mismatch")
+	}
 	return fmt.Errorf("recovery not supported")
 }
 
 func (d *defaultSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
+	if d.PretendToAllowRecoveryKeys {
+		d.PretendRecoveryKey = key
+		return nil
+	}
 	return fmt.Errorf("recovery not supported")
 }
 

@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"context"
 	"encoding/base64"
 	"strings"
 	"testing"
@@ -39,12 +40,17 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 		verificationCancelFunc = client.Sys().RekeyRecoveryKeyVerificationCancel
 	}
 
+	seal, err := cluster.Cores[0].Core.SealAccess().BarrierConfig(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// This first block verifies that if we are using recovery keys to force a
 	// rekey of a stored-shares barrier that verification is not allowed since
 	// the keys aren't returned
 	if !recovery {
-		vault.DefaultSealPretendsToAllowRecoveryKeys = true
-		vault.DefaultSealPretendsToAllowStoredShares = true
+		seal.PretendToAllowStoredShares = true
+		seal.PretendToAllowRecoveryKeys = true
 		_, err := initFunc(&api.RekeyInitRequest{
 			StoredShares:        1,
 			RequireVerification: true,
@@ -56,8 +62,10 @@ func testSysRekey_Verification(t *testing.T, recovery bool) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		// Now we set things back and start a normal rekey with the verification process
-		vault.DefaultSealPretendsToAllowRecoveryKeys = false
-		vault.DefaultSealPretendsToAllowStoredShares = false
+		seal.PretendToAllowStoredShares = false
+		seal.PretendToAllowRecoveryKeys = false
+	} else {
+		seal.PretendToAllowRecoveryKeys = true
 	}
 
 	var verificationNonce string
