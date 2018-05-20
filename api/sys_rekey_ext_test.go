@@ -11,6 +11,11 @@ import (
 )
 
 func TestSysRekey_Verification(t *testing.T) {
+	testSysRekey_Verification(t, false)
+	testSysRekey_Verification(t, true)
+}
+
+func testSysRekey_Verification(t *testing.T, recovery bool) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -21,30 +26,44 @@ func TestSysRekey_Verification(t *testing.T) {
 	client := cluster.Cores[0].Client
 	client.SetMaxRetries(0)
 
+	initFunc := client.Sys().RekeyInit
+	updateFunc := client.Sys().RekeyUpdate
+	verificationUpdateFunc := client.Sys().RekeyVerificationUpdate
+	verificationStatusFunc := client.Sys().RekeyVerificationStatus
+	verificationCancelFunc := client.Sys().RekeyVerificationCancel
+	if recovery {
+		initFunc = client.Sys().RekeyRecoveryKeyInit
+		updateFunc = client.Sys().RekeyRecoveryKeyUpdate
+		verificationUpdateFunc = client.Sys().RekeyRecoveryKeyVerificationUpdate
+		verificationStatusFunc = client.Sys().RekeyRecoveryKeyVerificationStatus
+		verificationCancelFunc = client.Sys().RekeyRecoveryKeyVerificationCancel
+	}
+
 	// This first block verifies that if we are using recovery keys to force a
 	// rekey of a stored-shares barrier that verification is not allowed since
 	// the keys aren't returned
-	vault.DefaultSealPretendsToAllowRecoveryKeys = true
-	vault.DefaultSealPretendsToAllowStoredShares = true
-	status, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
-		StoredShares:        1,
-		RequireVerification: true,
-	})
-	if err == nil {
-		t.Fatal("expected error")
+	if !recovery {
+		vault.DefaultSealPretendsToAllowRecoveryKeys = true
+		vault.DefaultSealPretendsToAllowStoredShares = true
+		_, err := initFunc(&api.RekeyInitRequest{
+			StoredShares:        1,
+			RequireVerification: true,
+		})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if !strings.Contains(err.Error(), "requiring verification not supported") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// Now we set things back and start a normal rekey with the verification process
+		vault.DefaultSealPretendsToAllowRecoveryKeys = false
+		vault.DefaultSealPretendsToAllowStoredShares = false
 	}
-	if !strings.Contains(err.Error(), "requiring verification not supported") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Now we set things back and start a normal rekey with the verification process
-	vault.DefaultSealPretendsToAllowRecoveryKeys = false
-	vault.DefaultSealPretendsToAllowStoredShares = false
 
 	var verificationNonce string
 	var newKeys []string
 	doRekeyInitialSteps := func() {
-		status, err = client.Sys().RekeyInit(&api.RekeyInitRequest{
+		status, err := initFunc(&api.RekeyInitRequest{
 			SecretShares:        5,
 			SecretThreshold:     3,
 			RequireVerification: true,
@@ -61,7 +80,7 @@ func TestSysRekey_Verification(t *testing.T) {
 
 		var resp *api.RekeyUpdateResponse
 		for i := 0; i < 3; i++ {
-			resp, err = client.Sys().RekeyUpdate(base64.StdEncoding.EncodeToString(cluster.BarrierKeys[i]), status.Nonce)
+			resp, err = updateFunc(base64.StdEncoding.EncodeToString(cluster.BarrierKeys[i]), status.Nonce)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -82,7 +101,7 @@ func TestSysRekey_Verification(t *testing.T) {
 	doRekeyInitialSteps()
 
 	// We are still going, so should not be able to init again
-	_, err = client.Sys().RekeyInit(&api.RekeyInitRequest{
+	_, err := initFunc(&api.RekeyInitRequest{
 		SecretShares:        5,
 		SecretThreshold:     3,
 		RequireVerification: true,
@@ -100,7 +119,7 @@ func TestSysRekey_Verification(t *testing.T) {
 	doStartVerify := func() {
 		// Start the process
 		for i := 0; i < 2; i++ {
-			status, err := client.Sys().RekeyVerificationUpdate(newKeys[i], verificationNonce)
+			status, err := verificationUpdateFunc(newKeys[i], verificationNonce)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -113,7 +132,7 @@ func TestSysRekey_Verification(t *testing.T) {
 		}
 
 		// Check status
-		vStatus, err := client.Sys().RekeyVerificationStatus()
+		vStatus, err := verificationStatusFunc()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -133,12 +152,12 @@ func TestSysRekey_Verification(t *testing.T) {
 
 	// Cancel; this should still keep the rekey process going but just cancel
 	// the verification operation
-	err = client.Sys().RekeyVerificationCancel()
+	err = verificationCancelFunc()
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Verify cannot init again
-	_, err = client.Sys().RekeyInit(&api.RekeyInitRequest{
+	_, err = initFunc(&api.RekeyInitRequest{
 		SecretShares:        5,
 		SecretThreshold:     3,
 		RequireVerification: true,
@@ -146,7 +165,7 @@ func TestSysRekey_Verification(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	vStatus, err := client.Sys().RekeyVerificationStatus()
+	vStatus, err := verificationStatusFunc()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +193,7 @@ func TestSysRekey_Verification(t *testing.T) {
 	doStartVerify()
 
 	// Provide the final new key
-	vuStatus, err := client.Sys().RekeyVerificationUpdate(newKeys[2], verificationNonce)
+	vuStatus, err := verificationUpdateFunc(newKeys[2], verificationNonce)
 	if err != nil {
 		t.Fatal(err)
 	}
