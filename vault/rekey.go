@@ -181,12 +181,12 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
 		if config.Backup {
 			return logical.CodedError(http.StatusBadRequest, "key backup not supported when using stored keys")
 		}
-	}
 
-	if c.seal.RecoveryKeySupported() && c.seal.RecoveryType() == config.Type {
-		c.logger.Debug("using recovery seal configuration to rekey barrier key")
-		if config.VerificationRequired {
-			return logical.CodedError(http.StatusBadRequest, "requiring verification not supported when rekeying the barrier key with recovery keys")
+		if c.seal.RecoveryKeySupported() {
+			if config.VerificationRequired {
+				return logical.CodedError(http.StatusBadRequest, "requiring verification not supported when rekeying the barrier key with recovery keys")
+			}
+			c.logger.Debug("using recovery seal configuration to rekey barrier key")
 		}
 	}
 
