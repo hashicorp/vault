@@ -405,7 +405,7 @@ type RekeyUpdateResponse struct {
 	PGPFingerprints      []string `json:"pgp_fingerprints"`
 	Backup               bool     `json:"backup"`
 	VerificationRequired bool     `json:"verification_required"`
-	VerificationNonce    string   `json:"verification_nonce"`
+	VerificationNonce    string   `json:"verification_nonce,omitempty"`
 }
 
 type RekeyVerificationUpdateRequest struct {
