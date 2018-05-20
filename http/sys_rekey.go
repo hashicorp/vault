@@ -47,9 +47,9 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 }
 
 func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	barrierConfig, err := core.SealAccess().BarrierConfig(ctx)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+	barrierConfig, barrierConfErr := core.SealAccess().BarrierConfig(ctx)
+	if barrierConfErr != nil {
+		respondError(w, http.StatusInternalServerError, barrierConfErr)
 		return
 	}
 	if barrierConfig == nil {
@@ -60,20 +60,20 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 	// Get the rekey configuration
 	rekeyConf, err := core.RekeyConfig(recovery)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondError(w, err.Code(), err)
 		return
 	}
 
 	// Get the progress
 	progress, err := core.RekeyProgress(recovery)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondError(w, err.Code(), err)
 		return
 	}
 
 	sealThreshold, err := core.RekeyThreshold(ctx, recovery)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondError(w, err.Code(), err)
 		return
 	}
 
@@ -146,7 +146,7 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 		VerificationRequired: req.RequireVerification,
 	}, recovery)
 	if err != nil {
-		respondError(w, http.StatusBadRequest, err)
+		respondError(w, err.Code(), err)
 		return
 	}
 
@@ -156,7 +156,7 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 func handleSysRekeyInitDelete(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
 	err := core.RekeyCancel(recovery)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondError(w, err.Code(), err)
 		return
 	}
 	respondOk(w, nil)
@@ -203,9 +203,9 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 		defer cancel()
 
 		// Use the key to make progress on rekey
-		result, err := core.RekeyUpdate(ctx, key, req.Nonce, recovery)
-		if err != nil {
-			respondError(w, http.StatusBadRequest, err)
+		result, rekeyErr := core.RekeyUpdate(ctx, key, req.Nonce, recovery)
+		if rekeyErr != nil {
+			respondError(w, rekeyErr.Code(), err)
 			return
 		}
 
@@ -269,9 +269,9 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 }
 
 func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	barrierConfig, err := core.SealAccess().BarrierConfig(ctx)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+	barrierConfig, barrierConfErr := core.SealAccess().BarrierConfig(ctx)
+	if barrierConfErr != nil {
+		respondError(w, http.StatusInternalServerError, barrierConfErr)
 		return
 	}
 	if barrierConfig == nil {
@@ -282,7 +282,7 @@ func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery boo
 	// Get the rekey configuration
 	rekeyConf, err := core.RekeyConfig(recovery)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondError(w, err.Code(), err)
 		return
 	}
 	if rekeyConf == nil {
@@ -293,7 +293,7 @@ func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery boo
 	// Get the progress
 	progress, err := core.RekeyVerifyProgress(recovery)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondError(w, err.Code(), err)
 		return
 	}
 
@@ -310,7 +310,7 @@ func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery boo
 func handleSysRekeyVerifyDelete(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
 	err := core.RekeyVerifyRestart(recovery)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondError(w, err.Code(), err)
 		return
 	}
 
@@ -354,9 +354,9 @@ func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery boo
 	defer cancel()
 
 	// Use the key to make progress on rekey
-	result, err := core.RekeyVerify(ctx, key, recovery)
-	if err != nil {
-		respondError(w, http.StatusBadRequest, err)
+	result, rekeyErr := core.RekeyVerify(ctx, key, recovery)
+	if rekeyErr != nil {
+		respondError(w, rekeyErr.Code(), err)
 		return
 	}
 

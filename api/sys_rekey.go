@@ -169,35 +169,51 @@ func (c *Sys) RekeyDeleteRecoveryBackup() error {
 }
 
 type RekeyInitRequest struct {
-	SecretShares    int      `json:"secret_shares"`
-	SecretThreshold int      `json:"secret_threshold"`
-	StoredShares    int      `json:"stored_shares"`
-	PGPKeys         []string `json:"pgp_keys"`
-	Backup          bool
+	SecretShares        int      `json:"secret_shares"`
+	SecretThreshold     int      `json:"secret_threshold"`
+	StoredShares        int      `json:"stored_shares"`
+	PGPKeys             []string `json:"pgp_keys"`
+	Backup              bool
+	RequireVerification bool `json:"require_verification"`
 }
 
 type RekeyStatusResponse struct {
-	Nonce           string   `json:"nonce"`
-	Started         bool     `json:"started"`
-	T               int      `json:"t"`
-	N               int      `json:"n"`
-	Progress        int      `json:"progress"`
-	Required        int      `json:"required"`
-	PGPFingerprints []string `json:"pgp_fingerprints"`
-	Backup          bool     `json:"backup"`
+	Nonce                string   `json:"nonce"`
+	Started              bool     `json:"started"`
+	T                    int      `json:"t"`
+	N                    int      `json:"n"`
+	Progress             int      `json:"progress"`
+	Required             int      `json:"required"`
+	PGPFingerprints      []string `json:"pgp_fingerprints"`
+	Backup               bool     `json:"backup"`
+	VerificationRequired bool     `json:"verification_required"`
 }
 
 type RekeyUpdateResponse struct {
-	Nonce           string   `json:"nonce"`
-	Complete        bool     `json:"complete"`
-	Keys            []string `json:"keys"`
-	KeysB64         []string `json:"keys_base64"`
-	PGPFingerprints []string `json:"pgp_fingerprints"`
-	Backup          bool     `json:"backup"`
+	Nonce                string   `json:"nonce"`
+	Complete             bool     `json:"complete"`
+	Keys                 []string `json:"keys"`
+	KeysB64              []string `json:"keys_base64"`
+	PGPFingerprints      []string `json:"pgp_fingerprints"`
+	Backup               bool     `json:"backup"`
+	VerificationRequired bool     `json:"verification_required"`
+	VerificationNonce    string   `json:"verification_nonce,omitempty"`
 }
 
 type RekeyRetrieveResponse struct {
 	Nonce   string              `json:"nonce"`
 	Keys    map[string][]string `json:"keys"`
 	KeysB64 map[string][]string `json:"keys_base64"`
+}
+
+type RekeyVerificationStatusResponse struct {
+	Nonce    string `json:"nonce"`
+	T        int    `json:"t"`
+	N        int    `json:"n"`
+	Progress int    `json:"progress"`
+}
+
+type RekeyVerificationUpdateResponse struct {
+	Nonce    string `json:"nonce"`
+	Complete bool   `json:"complete"`
 }

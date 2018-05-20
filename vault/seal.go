@@ -86,6 +86,11 @@ type Seal interface {
 	VerifyRecoveryKey(context.Context, []byte) error
 }
 
+var (
+	DefaultSealPretendsToAllowRecoveryKeys bool
+	DefaultSealPretendsToAllowStoredShares bool
+)
+
 type defaultSeal struct {
 	config atomic.Value
 	core   *Core
@@ -121,11 +126,11 @@ func (d *defaultSeal) BarrierType() string {
 }
 
 func (d *defaultSeal) StoredKeysSupported() bool {
-	return false
+	return DefaultSealPretendsToAllowStoredShares
 }
 
 func (d *defaultSeal) RecoveryKeySupported() bool {
-	return false
+	return DefaultSealPretendsToAllowRecoveryKeys
 }
 
 func (d *defaultSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
