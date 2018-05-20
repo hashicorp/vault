@@ -89,7 +89,6 @@ type Seal interface {
 var (
 	DefaultSealPretendsToAllowRecoveryKeys bool
 	DefaultSealPretendsToAllowStoredShares bool
-	DefaultSealPretendRecoveryConfig       *SealConfig
 )
 
 type defaultSeal struct {
@@ -229,15 +228,15 @@ func (d *defaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 }
 
 func (d *defaultSeal) RecoveryType() string {
-	if DefaultSealPretendRecoveryConfig != nil {
+	if DefaultSealPretendsToAllowRecoveryKeys {
 		return RecoveryTypeShamir
 	}
 	return RecoveryTypeUnsupported
 }
 
 func (d *defaultSeal) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
-	if DefaultSealPretendRecoveryConfig != nil {
-		return DefaultSealPretendRecoveryConfig, nil
+	if DefaultSealPretendsToAllowRecoveryKeys {
+		return &SealConfig{}, nil
 	}
 	return nil, fmt.Errorf("recovery not supported")
 }
@@ -349,6 +348,7 @@ func (s *SealConfig) Clone() *SealConfig {
 		Backup:               s.Backup,
 		StoredShares:         s.StoredShares,
 		VerificationRequired: s.VerificationRequired,
+		VerificationNonce:    s.VerificationNonce,
 	}
 	if len(s.PGPKeys) > 0 {
 		ret.PGPKeys = make([]string, len(s.PGPKeys))

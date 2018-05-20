@@ -726,14 +726,14 @@ func (c *Core) performRecoveryRekey(ctx context.Context, newMasterKey []byte) lo
 	return nil
 }
 
-func (c *Core) RekeyVerify(ctx context.Context, key []byte, recovery bool) (*RekeyVerifyResult, logical.HTTPCodedError) {
+func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recovery bool) (*RekeyVerifyResult, logical.HTTPCodedError) {
 	if recovery {
-		return c.RecoveryRekeyVerify(ctx, key)
+		return c.RecoveryRekeyVerify(ctx, key, nonce)
 	}
-	return c.BarrierRekeyVerify(ctx, key)
+	return c.BarrierRekeyVerify(ctx, key, nonce)
 }
 
-func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte) (*RekeyVerifyResult, logical.HTTPCodedError) {
+func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte, nonce string) (ret *RekeyVerifyResult, retErr logical.HTTPCodedError) {
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
@@ -762,6 +762,10 @@ func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte) (*RekeyVerify
 		return nil, logical.CodedError(http.StatusBadRequest, "no barrier rekey in progress")
 	}
 
+	if nonce != c.barrierRekeyConfig.VerificationNonce {
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("incorrect nonce supplied; nonce for this verify operation is %q", c.barrierRekeyConfig.VerificationNonce))
+	}
+
 	// Check if we already have this piece
 	for _, existing := range c.barrierRekeyVerifyProgress {
 		if subtle.ConstantTimeCompare(existing, key) == 1 {
@@ -787,6 +791,9 @@ func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte) (*RekeyVerify
 			nonce, err := uuid.GenerateUUID()
 			if err == nil {
 				c.barrierRekeyConfig.VerificationNonce = nonce
+				if ret != nil {
+					ret.Nonce = nonce
+				}
 			}
 		}
 	}()
@@ -820,7 +827,7 @@ func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte) (*RekeyVerify
 	return res, nil
 }
 
-func (c *Core) RecoveryRekeyVerify(ctx context.Context, key []byte) (*RekeyVerifyResult, logical.HTTPCodedError) {
+func (c *Core) RecoveryRekeyVerify(ctx context.Context, key []byte, nonce string) (ret *RekeyVerifyResult, retErr logical.HTTPCodedError) {
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
@@ -849,6 +856,10 @@ func (c *Core) RecoveryRekeyVerify(ctx context.Context, key []byte) (*RekeyVerif
 		return nil, logical.CodedError(http.StatusBadRequest, "no recovery rekey in progress")
 	}
 
+	if nonce != c.recoveryRekeyConfig.VerificationNonce {
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("incorrect nonce supplied; nonce for this verify operation is %q", c.recoveryRekeyConfig.VerificationNonce))
+	}
+
 	// Check if we already have this piece
 	for _, existing := range c.recoveryRekeyVerifyProgress {
 		if subtle.ConstantTimeCompare(existing, key) == 1 {
@@ -874,6 +885,9 @@ func (c *Core) RecoveryRekeyVerify(ctx context.Context, key []byte) (*RekeyVerif
 			nonce, err := uuid.GenerateUUID()
 			if err == nil {
 				c.recoveryRekeyConfig.VerificationNonce = nonce
+				if ret != nil {
+					ret.Nonce = nonce
+				}
 			}
 		}
 	}()

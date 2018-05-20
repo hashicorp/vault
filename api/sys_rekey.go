@@ -26,6 +26,32 @@ func (c *Sys) RekeyRecoveryKeyStatus() (*RekeyStatusResponse, error) {
 	return &result, err
 }
 
+func (c *Sys) RekeyVerificationStatus() (*RekeyVerificationStatusResponse, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/rekey/verify")
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result RekeyVerificationStatusResponse
+	err = resp.DecodeJSON(&result)
+	return &result, err
+}
+
+func (c *Sys) RekeyRecoveryKeyVerificationStatus() (*RekeyVerificationStatusResponse, error) {
+	r := c.c.NewRequest("GET", "/v1/sys/rekey-recovery-key/verify")
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result RekeyVerificationStatusResponse
+	err = resp.DecodeJSON(&result)
+	return &result, err
+}
+
 func (c *Sys) RekeyInit(config *RekeyInitRequest) (*RekeyStatusResponse, error) {
 	r := c.c.NewRequest("PUT", "/v1/sys/rekey/init")
 	if err := r.SetJSONBody(config); err != nil {
@@ -71,6 +97,24 @@ func (c *Sys) RekeyCancel() error {
 
 func (c *Sys) RekeyRecoveryKeyCancel() error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/init")
+	resp, err := c.c.RawRequest(r)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+	return err
+}
+
+func (c *Sys) RekeyVerificationCancel() error {
+	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/verify")
+	resp, err := c.c.RawRequest(r)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+	return err
+}
+
+func (c *Sys) RekeyRecoveryKeyVerificationCancel() error {
+	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/verify")
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
 		defer resp.Body.Close()
@@ -166,6 +210,50 @@ func (c *Sys) RekeyDeleteRecoveryBackup() error {
 	}
 
 	return err
+}
+
+func (c *Sys) RekeyVerificationUpdate(shard, nonce string) (*RekeyVerificationUpdateResponse, error) {
+	body := map[string]interface{}{
+		"key":   shard,
+		"nonce": nonce,
+	}
+
+	r := c.c.NewRequest("PUT", "/v1/sys/rekey/verify")
+	if err := r.SetJSONBody(body); err != nil {
+		return nil, err
+	}
+
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result RekeyVerificationUpdateResponse
+	err = resp.DecodeJSON(&result)
+	return &result, err
+}
+
+func (c *Sys) RekeyRecoveryKeyVerificationUpdate(shard, nonce string) (*RekeyVerificationUpdateResponse, error) {
+	body := map[string]interface{}{
+		"key":   shard,
+		"nonce": nonce,
+	}
+
+	r := c.c.NewRequest("PUT", "/v1/sys/rekey-recovery-key/verify")
+	if err := r.SetJSONBody(body); err != nil {
+		return nil, err
+	}
+
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result RekeyVerificationUpdateResponse
+	err = resp.DecodeJSON(&result)
+	return &result, err
 }
 
 type RekeyInitRequest struct {
