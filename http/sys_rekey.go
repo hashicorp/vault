@@ -205,7 +205,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 		// Use the key to make progress on rekey
 		result, rekeyErr := core.RekeyUpdate(ctx, key, req.Nonce, recovery)
 		if rekeyErr != nil {
-			respondError(w, rekeyErr.Code(), err)
+			respondError(w, rekeyErr.Code(), rekeyErr)
 			return
 		}
 
@@ -356,7 +356,7 @@ func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery boo
 	// Use the key to make progress on rekey
 	result, rekeyErr := core.RekeyVerify(ctx, key, req.Nonce, recovery)
 	if rekeyErr != nil {
-		respondError(w, rekeyErr.Code(), err)
+		respondError(w, rekeyErr.Code(), rekeyErr)
 		return
 	}
 
