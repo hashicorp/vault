@@ -299,6 +299,9 @@ type SealConfig struct {
 	// How many keys to store, for seals that support storage.
 	StoredShares int `json:"stored_shares"`
 
+	// Stores the progress of the rekey operation (key shares)
+	RekeyProgress [][]byte `json:"-"`
+
 	// VerificationRequired indicates that after a rekey validation must be
 	// performed (via providing shares from the new key) before the new key is
 	// actually installed. This is omitted from JSON as we don't persist the
@@ -311,6 +314,9 @@ type SealConfig struct {
 
 	// VerificationNonce stores the current operation nonce for verification
 	VerificationNonce string `json:"-"`
+
+	// Stores the progress of the verification operation (key shares)
+	VerificationProgress [][]byte `json:"-"`
 }
 
 // Validate is used to sanity check the seal configuration

@@ -759,7 +759,7 @@ func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, 
 			status.T,
 			status.T)))
 		c.UI.Output("")
-		c.UI.Warn(wrapAtLEngth(
+		c.UI.Warn(wrapAtLength(
 			"Again, these key shares are _not_ valid until verification is performed. " +
 				"Do not lose or discard your current key shares until after verification " +
 				"is complete or you will be unable to unseal Vault.",
