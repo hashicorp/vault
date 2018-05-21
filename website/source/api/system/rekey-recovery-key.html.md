@@ -187,7 +187,7 @@ call.
 
 When the operation is complete, this will return a response like the example
 below; otherwise the response will be the same as the `GET` method against
-`sys/rekey/init`, providing status on the operation itself.
+`sys/rekey-recovery-key/init`, providing status on the operation itself.
 
 If verification was requested, successfully completing this flow will
 immediately put the operation into a verification state, and provide the nonce
@@ -255,7 +255,7 @@ verification attempt.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/sys/rekey/verify
+    http://127.0.0.1:8200/v1/sys/rekey-recovery-key/verify
 ```
 
 ### Sample Response
