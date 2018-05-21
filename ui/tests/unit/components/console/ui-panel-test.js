@@ -265,6 +265,18 @@ let testResponseCases = [
       }
     ]
   },
+
+  {
+    name: 'with response data and auth block',
+    args: [{data: {one: 'two'}, auth: {three: 'four'}}, 'vault write', 'auth/token/create', 'write', {}],
+    expectedCommand: 'vault write',
+    expectedLogArgs: [
+      {
+        type: 'object',
+        content: {three: 'four'}
+      }
+    ],
+  }
 ];
 
 test('#processResponse', function(assert) {
@@ -295,7 +307,7 @@ let testErrorCases = [
   },
   {
     name: 'AdapterError',
-    args: ['command', 'list', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],    
+    args: ['command', 'list', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
     expectedContent: "Error listing: sys/foo.\nURL: v1/sys/foo\nCode: 404"
   },
   {
