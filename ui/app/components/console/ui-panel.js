@@ -1,7 +1,6 @@
 import Ember from 'ember';
-import cliArgParser from 'vault/lib/tokenize-cli-arg-string';
+import argTokenizer from 'yargs-parser-tokenizer';
 import keys from 'vault/lib/keycodes';
-
 
 const { inject, computed } = Ember;
 const supportedCommands = ['read', 'write', 'list', 'delete'];
@@ -85,7 +84,7 @@ export default Ember.Component.extend({
   },
 
   parseCommand(command, shouldThrow) {
-    let args = cliArgParser(command);
+    let args = argTokenizer(command);
     if (args[0] === 'vault') {
       args.shift();
     }
