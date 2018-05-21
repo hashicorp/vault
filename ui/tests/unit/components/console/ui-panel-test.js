@@ -1,13 +1,14 @@
 import { moduleForComponent, test } from 'ember-qunit';
 import sinon from 'sinon';
 
-moduleForComponent('console/ui-panel', 'Unit | Component | console/ui-panel', {
+moduleForComponent('console/ui-panel', 'Unit | Component | console/ui panel', {
   unit: true,
   needs: ['service:auth', 'service:console', 'service:flash-messages'],
 });
 
 const testCommands = [
   {
+    name: 'write with data',
     command: `vault write aws/config/root \
     access_key=AKIAJWVN5Z4FOFT7NLNA \
     secret_key=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 \
@@ -24,6 +25,7 @@ const testCommands = [
     ]
   },
   {
+    name: 'read with field',
     command:`vault read -field=access_key aws/creds/my-role`,
     expected: [
       'read',
@@ -34,11 +36,11 @@ const testCommands = [
   },
 ];
 
-test('#parseCommand', function(assert) {
-  let panel = this.subject();
-  testCommands.forEach(test => {
-    let result = panel.parseCommand(test.command);
-    assert.deepEqual(result, test.expected);
+testCommands.forEach(function(testCase) {
+  test(`#parseCommand: ${testCase.name}`, function(assert) {
+    let panel = this.subject();
+    let result = panel.parseCommand(testCase.command);
+    assert.deepEqual(result, testCase.expected);
   });
 });
 
@@ -111,15 +113,14 @@ const testExtractCases = [
  },
 ];
 
-test('#extractDataAndFlags', function(assert) {
- let panel = this.subject();
-  testExtractCases.forEach(test => {
-    let {data, flags} = panel.extractDataAndFlags(...test.input);
-    assert.deepEqual(data, test.expected.data, `${test.name}: has expected data`);
-    assert.deepEqual(flags, test.expected.flags, `${test.name}: has expected flags`);
+testExtractCases.forEach(function(testCase) {
+  test(`#extractDataAndFlags: ${testCase.name}`, function(assert) {
+    let panel = this.subject();
+    let {data, flags} = panel.extractDataAndFlags(...testCase.input);
+    assert.deepEqual(data, testCase.expected.data, 'has expected data');
+    assert.deepEqual(flags, testCase.expected.flags, 'has expected flags');
   });
 });
-
 
 let testResponseCases = [
   {
@@ -265,7 +266,6 @@ let testResponseCases = [
       }
     ]
   },
-
   {
     name: 'with response data and auth block',
     args: [{data: {one: 'two'}, auth: {three: 'four'}}, 'vault write', 'auth/token/create', 'write', {}],
@@ -277,7 +277,6 @@ let testResponseCases = [
       }
     ],
   },
-
   {
     name: 'with -field and -format with an object field',
     args: [{data: {one: {three: 'two'}}}, 'vault read', 'sys/mounts', 'read', {field: 'one', format: 'json'}],
@@ -289,7 +288,6 @@ let testResponseCases = [
       }
     ],
   },
-
   {
     name: 'with -field and -format with a string field',
     args: [{data: {one: 'two'}}, 'vault read', 'sys/mounts', 'read', {field: 'one', format: 'json'}],
@@ -301,7 +299,6 @@ let testResponseCases = [
       }
     ],
   }
-
 ];
 
 testResponseCases.forEach(function(testCase) {
@@ -321,47 +318,47 @@ testResponseCases.forEach(function(testCase) {
 
 let testErrorCases = [
   {
-    name: 'AdapterError',
+    name: 'AdapterError write',
     args: ['command', 'write', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
     expectedContent: "Error writing to: sys/foo.\nURL: v1/sys/foo\nCode: 404"
   },
   {
-    name: 'AdapterError',
+    name: 'AdapterError read',
     args: ['command', 'read', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
     expectedContent: "Error reading from: sys/foo.\nURL: v1/sys/foo\nCode: 404"
   },
   {
-    name: 'AdapterError',
+    name: 'AdapterError list',
     args: ['command', 'list', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
     expectedContent: "Error listing: sys/foo.\nURL: v1/sys/foo\nCode: 404"
   },
   {
-    name: 'AdapterError',
+    name: 'AdapterError delete',
     args: ['command', 'delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}]}],
     expectedContent: "Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404"
   },
   {
-    name: 'VaultError',
+    name: 'VaultError single error',
     args: ['command', 'delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token']}],
     expectedContent: "Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404\nErrors:\n  no client token"
   },
   {
-    name: 'VaultErrors',
+    name: 'VaultErrors multiple errors',
     args: ['command', 'delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token', 'this is an error']}],
     expectedContent: "Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404\nErrors:\n  no client token\n  this is an error"
   }
 ];
 
-test('#handleServiceError', function(assert) {
-  let panel = this.subject({
-    appendToLog: sinon.spy()
-  });
-  testErrorCases.forEach(test => {
-    panel.handleServiceError(...test.args);
+testErrorCases.forEach(function(testCase) {
+  test(`#handleServiceError: ${testCase.name}`, function(assert) {
+    let panel = this.subject({
+      appendToLog: sinon.spy()
+    });
+    panel.handleServiceError(...testCase.args);
 
     let spy = panel.appendToLog;
     let appendArgs = spy.lastCall.args;
-    assert.deepEqual(appendArgs[0].content, test.expectedContent, `${test.name}: calls appendToLog with the expected error content`);
+    assert.deepEqual(appendArgs[0].content, testCase.expectedContent, 'calls appendToLog with the expected error content');
   });
 });
 
@@ -378,15 +375,15 @@ const testCommandCases = [
   }
 ];
 
-test('#executeCommand', function(assert) {
-  let panel = this.subject({
-    appendToLog: sinon.spy()
-  });
-  testCommandCases.forEach(test => {
-    panel.executeCommand(test.command);
+testCommandCases.forEach(function(testCase) {
+  test(`#executeCommand: ${testCase.name}`, function(assert) {
+    let panel = this.subject({
+      appendToLog: sinon.spy()
+    });
+    panel.executeCommand(testCase.command);
 
     let spy = panel.appendToLog;
     let appendArgs = spy.lastCall.args;
-    assert.deepEqual(appendArgs[0].content, test.expectedContent, `${test.name}: calls appendToLog with the expected error content`);
+    assert.deepEqual(appendArgs[0].content, testCase.expectedContent, 'calls appendToLog with the expected content');
   });
 });
