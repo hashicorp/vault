@@ -55,6 +55,10 @@ export default Ember.Component.extend({
     if (field) {
       let fieldValue = secret[field];
       if (fieldValue) {
+        if (format && format === 'json') {
+          this.appendToLog({type: 'json', content: fieldValue});
+          return;
+        }
         switch (typeof fieldValue) {
           case 'string':
             this.appendToLog({type: 'text', content: fieldValue});

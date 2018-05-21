@@ -183,7 +183,7 @@ let testResponseCases = [
     expectedCommand: 'vault read',
     expectedLogArgs: [
       {
-        type: 'text',
+        type: 'json',
         content:'two'
       }
     ]
@@ -194,7 +194,7 @@ let testResponseCases = [
     expectedCommand: 'vault read',
     expectedLogArgs: [
       {
-        type: 'text',
+        type: 'json',
         content: 'two'
       }
     ]
@@ -276,21 +276,46 @@ let testResponseCases = [
         content: {three: 'four'}
       }
     ],
+  },
+
+  {
+    name: 'with -field and -format with an object field',
+    args: [{data: {one: {three: 'two'}}}, 'vault read', 'sys/mounts', 'read', {field: 'one', format: 'json'}],
+    expectedCommand: 'vault read',
+    expectedLogArgs: [
+      {
+        type: 'json',
+        content: {three: 'two'}
+      }
+    ],
+  },
+
+  {
+    name: 'with -field and -format with a string field',
+    args: [{data: {one: 'two'}}, 'vault read', 'sys/mounts', 'read', {field: 'one', format: 'json'}],
+    expectedCommand: 'vault read',
+    expectedLogArgs: [
+      {
+        type: 'json',
+        content: 'two'
+      }
+    ],
   }
+
 ];
 
-test('#processResponse', function(assert) {
-  let panel = this.subject({
-    appendToLog: sinon.spy()
-  });
-  testResponseCases.forEach(test => {
-    panel.processResponse(...test.args);
+testResponseCases.forEach(function(testCase) {
+  test(`#processResponse: ${testCase.name}`, function(assert) {
+    let panel = this.subject({
+      appendToLog: sinon.spy()
+    });
+    panel.processResponse(...testCase.args);
 
     let spy = panel.appendToLog;
     let commandArgs = spy.getCall(spy.callCount - 2).args;
     let appendArgs = spy.lastCall.args;
-    assert.deepEqual(commandArgs[0], {type: 'command', content: test.expectedCommand}, `${test.name}: calls appendToLog with the expected args`);
-    assert.deepEqual(appendArgs, test.expectedLogArgs, `${test.name}: calls appendToLog with the expected args`);
+    assert.deepEqual(commandArgs[0], {type: 'command', content: testCase.expectedCommand}, 'appends command');
+    assert.deepEqual(appendArgs, testCase.expectedLogArgs, 'appends output');
   });
 });
 
