@@ -20,7 +20,7 @@ export default Ember.Component.extend({
 
   handleServiceError(command, method, vaultPath, error) {
     this.pushCommand(command);
-    
+
     let content;
     let { httpStatus, path } = error;
     let verbClause = {
@@ -35,7 +35,7 @@ export default Ember.Component.extend({
     if(typeof error.errors[0] === 'string'){
       content = `${content}\nErrors:\n  ${error.errors.join('\n  ')}`;
     }
-    
+
     this.appendToLog({ type: 'error', content });
   },
 
@@ -50,8 +50,8 @@ export default Ember.Component.extend({
       this.appendToLog({type: 'text', content: message});
       return;
     }
-    let { wrapTTL, format, field } = flags;
-    let secret = response.data || response.wrap_info;
+    let { format, field } = flags;
+    let secret = response.auth || response.data || response.wrap_info;
 
     if (field) {
       let fieldValue = secret[field];
@@ -76,17 +76,12 @@ export default Ember.Component.extend({
       return;
     }
 
-    if (wrapTTL) {
-      this.appendToLog({type: 'object', content: response.wrap_info });
-      return;
-    }
-
     if(method === 'list'){
-      this.appendToLog({type: 'list', content: response.data});
+      this.appendToLog({type: 'list', content: secret});
       return;
     }
 
-    this.appendToLog({type: 'object', content: response.data });
+    this.appendToLog({type: 'object', content: secret });
   },
 
   parseCommand(command, shouldThrow) {
@@ -94,12 +89,12 @@ export default Ember.Component.extend({
     if (args[0] === 'vault') {
       args.shift();
     }
-    
+
     let [method, ...rest] = args;
     let path;
     let flags = [];
     let data = [];
-    
+
     rest.forEach((arg) => {
       if(arg.startsWith('-')){
         flags.push(arg);
@@ -185,7 +180,7 @@ export default Ember.Component.extend({
     if(dataArray || flagArray) {
       var {data, flags} = this.extractDataAndFlags(dataArray, flagArray);
     }
-    
+
     if(method === 'write' && !flags.force && dataArray.length === 0){
       this.pushCommand(command);
       this.appendToLog({type: 'error', content: 'Must supply data or use -force'});
