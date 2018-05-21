@@ -317,6 +317,11 @@ $ vault auth enable userpass
 $ vault write auth/userpass/users/james password="passw0rd" policy="admin"
 ```
 
+-> Alternatively, you can [generate a new root token](/guides/operations/generate-root.html)
+using the primary cluster's unseal key. However, it is recommended that root
+tokens are only used for just enough initial setup or in emergencies.
+
+
 Log into the **secondary** cluster using the enabled auth method.
 
 ```plaintext
