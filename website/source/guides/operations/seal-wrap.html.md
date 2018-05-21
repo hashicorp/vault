@@ -23,6 +23,12 @@ allowing for automatic unsealing
 
 ![Unseal with HSM](/assets/images/vault-hsm-autounseal.png)
 
+In some large organizations, there is a fair amount of complexity in designating
+key officers, who might be available to unseal Vault installations as the most
+common pattern is to deploy Vault immutably. As such automating unseal using an
+HSM provides a simplified yet secure way of unsealing Vault nodes as they get
+deployed.
+
 Vault pulls its encrypted master key from storage and transit it through the
 HSM for decryption via  **PKCS \#11 API**. Once the master key is decrypted,
 Vault uses the master key to decrypt the encryption key to resume with Vault
@@ -77,7 +83,7 @@ HSM encryption and decryption.
 
 - General compliance of FIPS 140-2 as [certified by Leidos](/docs/enterprise/sealwrap/index.html#fips-140-2-compliance)
 - Supports FIPS level of security equal to HSM
-  * For example, if you use Level 3 hardware encryption on a HSM, Vault will be
+  * For example, if you use Level 3 hardware encryption on an HSM, Vault will be
   using FIPS 140-2 Level 3 cryptography
 - Allows Vault to be deployed in high security [GRC](https://en.wikipedia.org/wiki/Governance,_risk_management,_and_compliance)
 environments (e.g. PCI-DSS, HIPAA)
@@ -128,8 +134,8 @@ seal "pkcs11" {
   slot = "1"
   pin = "vault:Password1"
   key_label = "hsm_demo"
-  generate_key = "true"
   hmac_key_label = "hsm_hmac_demo"
+  generate_key = "true"
 }
 
 # Configure the storage backend for Vault
@@ -139,30 +145,36 @@ storage "file" {
 
 # Addresses and ports on which Vault will respond to requests
 listener "tcp" {
-  address     = "0.0.0.0:8200"
+  address     = "127.0.0.1:8200"
   tls_disable = 1
 }
 
 ui = true
-disable_mlock = true
 ```
 
-The example configuration defines the following in its `seal` stanza:
+> **NOTE:** For the purpose of this guide, the storage backend is set to the
+local file system (`/tmp/vault`) to make the verification step easy.
+
+The example configuration defines the following in its **`seal`** stanza:
 
 - **`lib`** is set to the path to the PKCS \#11 library on the virtual machine
   where Vault Enterprise is installed
 - **`slot`** should be set to the slot number to use
-- **`pin`** is the PKCS \#11 PIN which uses `<HSM_user_name>:<password>` format.
-  In the above example, the crypto user's name is `vault` and the password is
-  `Password1`
+- **`pin`** is the PKCS \#11 PIN for login
 - **`key_label`** defines the label of the key you want to use
+- **`hmac_key_label`** defines the label of the key you want to use for HMACing.
+  (NOTE: HMAC is optional and only used for mechanisms that do not support
+  authenticated data.)
 - **`generate_key`** is set to `true`.  If no existing key with the label
   specified by `key_label` can be found at Vault initialization time, Vault
   generates a key
-- **`hmac_key_label`** defines the label of the key you want to use for HMACing
 
-> **NOTE:** For the purpose of this guide, the storage backend is set to the
-local file system (`/tmp/vault`) to make the verification step easy.
+~> **IMPORTANT:** Having Vault generate its own key is the easiest way to get up
+and running, but for security, Vault marks the key as **non-exportable**. If
+your HSM key backup strategy requires the key to be exportable, you should
+generate the key yourself.  Refer to the [key generation  attributes](/docs/configuration/seal/pkcs11.html#vault-key-generation-attributes).
+
+
 
 
 #### Task 2: Initialize your Vault Enterprise server
@@ -204,8 +216,8 @@ In another terminal, set the `VAULT_ADDR` environment variable, and [initialize]
 # Set the VAULT_ADDR environment variable
 $ export VAULT_ADDR="http://127.0.0.1:8200"
 
-# Initialize Vault with 1 shared key
-$ vault operator init -key-shares=1 -key-threshold=1 -recovery-shares=1 -recovery-threshold=1
+# Initialize Vault
+$ vault operator init
 
 Recovery Key 1: 2bU2wOfmyMqYcsEYo4Mo9q4s/KAODgHHjcmZmFOo+XY=
 Initial Root Token: 8d726c6b-98ba-893f-23d5-be3d2fec480e
@@ -216,11 +228,17 @@ Recovery key initialized with 1 key shares and a key threshold of 1. Please
 securely distribute the key shares printed above.
 ```
 
-> By passing `-key-shares=1 -key-threshold=1` options upon `init`, there is
-only a single master key created which is encrypted by the HSM using
+There is only a single master key created which is encrypted by the HSM using
 PKCS \#11, and then placed in the storage. When Vault needs to be unsealed, it
 grabs the HSM encrypted master key from the storage, round trips it through the
 HSM to decrypt the master key.
+
+~> **NOTE:** When Vault is initialized while using an HSM, rather than unseal
+keys being returned to the operator, **recovery keys** are returned. These are
+generated from an internal recovery key that is [split via Shamir's Secret
+Sharing](/docs/enterprise/hsm/behavior.html#initialization), similar to Vault's
+treatment of unseal keys when running without an HSM. Some Vault operations such
+as generation of a root token require these recovery keys.
 
 Login to the Vault using the generated root token to verify.
 
@@ -253,11 +271,12 @@ unsealed upon its start. You can proceed with Vault operations.
 
 ### <a name="step2"></a>Step 2: Enable Seal Wrap
 
--> **NOTE:** Seal wrap can be enabled with KMS which is supported by
-_Vault Enterprise Pro_. For FIPS 140-2 compliance, seal wrap requires FIPS
-140-2 Certified HSM which is supported by _Vault Enterprise Premium_. To learn
-more about the KMS integration, read [Vault Auto-unseal using AW Key Management
-Service](/guides/operations/autounseal-aws-kms.html) guide.
+-> **NOTE:** For FIPS 140-2 compliance, seal wrap requires FIPS
+140-2 Certified HSM which is supported by _Vault Enterprise Premium_.
+
+For some values, seal wrapping is **always enabled** including the recovery key, any
+stored key shares, the master key, the keyring, and more. When working with the
+key/value secret engine, you can enable seal wrap to wrap all data.
 
 
 ### CLI command
