@@ -92,6 +92,17 @@
     </p>
 </script>
 
+<script type="text/x-handlebars" data-template-name="list">
+    <p>
+        Vault's Secrets engines are components which store, generate, or encrypt data.
+        List to see which secret engines have been enabled and ready to use.
+    </p>
+    <p>
+        <code>vault secrets list</code>
+    </p>
+</script>
+
+
 <script type="text/x-handlebars" data-template-name="secrets">
     <p>
         Now that Vault has been set-up, we can start reading and writing secrets
@@ -102,13 +113,13 @@
         it without Vault.
     </p>
     <p>
-        <code>vault write secret/hello value=world</code>
+        <code>vault kv put secret/hello value=world</code>
     </p>
     <p>
         Of course, you can then read this data too:
     </p>
     <p>
-        <code>vault read secret/hello</code>
+        <code>vault kv get secret/hello</code>
     </p>
 </script>
 

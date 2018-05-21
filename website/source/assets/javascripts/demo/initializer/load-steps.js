@@ -11,9 +11,10 @@ Ember.Application.initializer({
         { id: 2, name: 'init', humanName: "Step 2: Initialize your Vault"},
         { id: 3, name: 'unseal', humanName: "Step 3: Unsealing your Vault"},
         { id: 4, name: 'auth', humanName: "Step 4: Authorize your requests"},
-        { id: 5, name: 'secrets', humanName: "Step 6: Read and write secrets"},
-        { id: 6, name: 'seal', humanName: "Step 7: Seal your Vault"},
-        { id: 7, name: 'finish', humanName: "You're finished!"},
+        { id: 5, name: 'list', humanName: "Step 5: List available secret engines"},
+        { id: 6, name: 'secrets', humanName: "Step 6: Read and write secrets"},
+        { id: 7, name: 'seal', humanName: "Step 7: Seal your Vault"},
+        { id: 8, name: 'finish', humanName: "You're finished!"},
       ]
     };
 
