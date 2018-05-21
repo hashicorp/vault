@@ -4,7 +4,6 @@ moduleFor('adapter:console', 'Unit | Adapter | console', {
   needs: ['service:auth', 'service:flash-messages', 'service:version'],
 });
 
-
 test('it builds the correct URL', function(assert) {
   let adapter = this.subject();
   let sysPath = 'sys/health';
