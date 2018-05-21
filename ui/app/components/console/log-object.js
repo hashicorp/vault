@@ -8,11 +8,15 @@ export default Ember.Component.extend({
     columns: computed('content', function(){
         let data = this.get('content');
         Object.keys(data).forEach((item) => {
-            data[item] = JSON.stringify(data[item]);
+          let val = data[item];
+          if (typeof val !== 'string') {
+            val = JSON.stringify(val);
+          }
+          data[item] = val;
         });
 
-        return columnify(data, { 
-            preserveNewLines: true, 
+        return columnify(data, {
+            preserveNewLines: true,
             headingTransform: function(heading) {
                 return capitalize([heading]);
             }
