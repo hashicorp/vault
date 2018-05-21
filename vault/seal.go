@@ -301,7 +301,7 @@ type SealConfig struct {
 
 	// VerificationRequired indicates that after a rekey validation must be
 	// performed (via providing shares from the new key) before the new key is
-	// actually installed. This is ommitted from JSON as we don't persist the
+	// actually installed. This is omitted from JSON as we don't persist the
 	// new key, it lives only in memory.
 	VerificationRequired bool `json:"-"`
 
