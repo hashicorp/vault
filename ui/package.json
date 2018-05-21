@@ -107,6 +107,7 @@
     ]
   },
   "dependencies": {
-    "columnify": "^1.5.4"
+    "columnify": "^1.5.4",
+    "yargs-parser": "^10.0.0"
   }
 }
