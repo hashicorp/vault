@@ -11,7 +11,7 @@ export default Ember.Component.extend({
   actions: {
     handleKeyUp: function(event) {
       var keyCode = event.keyCode;
-      switch(keyCode){
+      switch (keyCode) {
         case keys.ENTER:
           this.get('onExecuteCommand')(event.target.value);
           break;
@@ -22,8 +22,8 @@ export default Ember.Component.extend({
         default:
           this.get('onValueUpdate')(event.target.value);
       }
-    }
-  }
+    },
+  },
 });
 
 // up cycles through history

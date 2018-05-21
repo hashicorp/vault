@@ -22,15 +22,15 @@ export default Ember.Component.extend({
     let content;
     let { httpStatus, path } = error;
     let verbClause = {
-      'read': 'reading from',
-      'write': 'writing to',
-      'list': 'listing',
-      'delete': 'deleting at'
+      read: 'reading from',
+      write: 'writing to',
+      list: 'listing',
+      delete: 'deleting at',
     }[method];
 
     content = `Error ${verbClause}: ${vaultPath}.\nURL: ${path}\nCode: ${httpStatus}`;
 
-    if(typeof error.errors[0] === 'string'){
+    if (typeof error.errors[0] === 'string') {
       content = `${content}\nErrors:\n  ${error.errors.join('\n  ')}`;
     }
 
@@ -40,12 +40,13 @@ export default Ember.Component.extend({
   processResponse(response, command, path, method, flags) {
     this.pushCommand(command);
     if (!response) {
-      let message = method === 'write' ?
-        `Success! Data written to: ${path}` :
-        `Success! Data deleted (if it existed) at: ${path}`;
+      let message =
+        method === 'write'
+          ? `Success! Data written to: ${path}`
+          : `Success! Data deleted (if it existed) at: ${path}`;
 
       // print something here
-      this.appendToLog({type: 'text', content: message});
+      this.appendToLog({ type: 'text', content: message });
       return;
     }
     let { format, field } = flags;
@@ -55,35 +56,35 @@ export default Ember.Component.extend({
       let fieldValue = secret[field];
       if (fieldValue) {
         if (format && format === 'json') {
-          this.appendToLog({type: 'json', content: fieldValue});
+          this.appendToLog({ type: 'json', content: fieldValue });
           return;
         }
         switch (typeof fieldValue) {
           case 'string':
-            this.appendToLog({type: 'text', content: fieldValue});
+            this.appendToLog({ type: 'text', content: fieldValue });
             break;
           default:
-            this.appendToLog({type: 'object', content: fieldValue});
+            this.appendToLog({ type: 'object', content: fieldValue });
             break;
         }
       } else {
-        this.appendToLog({type: 'error', content: `Field "${field}" not present in secret`});
+        this.appendToLog({ type: 'error', content: `Field "${field}" not present in secret` });
       }
       return;
     }
 
     if (format && format === 'json') {
       // just print whole response
-      this.appendToLog({type: 'json', content: response});
+      this.appendToLog({ type: 'json', content: response });
       return;
     }
 
-    if(method === 'list'){
-      this.appendToLog({type: 'list', content: secret});
+    if (method === 'list') {
+      this.appendToLog({ type: 'list', content: secret });
       return;
     }
 
-    this.appendToLog({type: 'object', content: secret });
+    this.appendToLog({ type: 'object', content: secret });
   },
 
   parseCommand(command, shouldThrow) {
@@ -97,35 +98,32 @@ export default Ember.Component.extend({
     let flags = [];
     let data = [];
 
-    rest.forEach((arg) => {
-      if(arg.startsWith('-')){
+    rest.forEach(arg => {
+      if (arg.startsWith('-')) {
         flags.push(arg);
-      }
-      else{
-        if(path){
+      } else {
+        if (path) {
           data.push(arg);
-        }
-        else{
+        } else {
           path = arg;
         }
       }
     });
 
-    if(!supportedCommands.includes(method)) {
-      if(shouldThrow) {
+    if (!supportedCommands.includes(method)) {
+      if (shouldThrow) {
         throw new Error('invalid command');
       }
       return false;
     }
     return [method, flags, path, data];
-
   },
 
   extractDataAndFlags(data, flags) {
     return data.concat(flags).reduce((accumulator, val) => {
       // will be "key=value" or "-flag=value" or "foo=bar=baz"
       // split on the first =
-      let [ item, value ] = val.split(/=(.+)/);
+      let [item, value] = val.split(/=(.+)/);
       if (item.startsWith('-')) {
         let flagName = item.replace(/^-/, '');
         if (flagName === 'wrap-ttl') {
@@ -143,10 +141,10 @@ export default Ember.Component.extend({
       accumulator.data[item] = value;
 
       return accumulator;
-    }, {data: {}, flags: {}});
+    }, { data: {}, flags: {} });
   },
 
-  appendToLog(logItem){
+  appendToLog(logItem) {
     this.get('log').pushObject(logItem);
   },
 
@@ -158,13 +156,13 @@ export default Ember.Component.extend({
     log.addObjects(history);
   },
 
-  pushCommand(command){
+  pushCommand(command) {
     this.set('inputValue', '');
-    this.appendToLog({type: 'command', content: command});
+    this.appendToLog({ type: 'command', content: command });
     this.set('commandIndex', null);
   },
 
-  executeCommand(command, shouldThrow=false) {
+  executeCommand(command, shouldThrow = false) {
     let serviceArgs;
     if (command === 'clear') {
       this.pushCommand(command);
@@ -176,7 +174,7 @@ export default Ember.Component.extend({
       serviceArgs = this.parseCommand(command, shouldThrow);
     } catch (e) {
       this.pushCommand(command);
-      this.appendToLog({type: 'help'});
+      this.appendToLog({ type: 'help' });
       return;
     }
     // we have a invalid command but don't want to throw
@@ -186,49 +184,49 @@ export default Ember.Component.extend({
 
     let [method, flagArray, path, dataArray] = serviceArgs;
 
-    if(path === undefined){
+    if (path === undefined) {
       this.pushCommand(command);
-      this.appendToLog({type: 'error', content: 'A path is required to make a request.'});
+      this.appendToLog({ type: 'error', content: 'A path is required to make a request.' });
       return;
     }
 
-    if(dataArray || flagArray) {
-      var {data, flags} = this.extractDataAndFlags(dataArray, flagArray);
+    if (dataArray || flagArray) {
+      var { data, flags } = this.extractDataAndFlags(dataArray, flagArray);
     }
 
-    if(method === 'write' && !flags.force && dataArray.length === 0){
+    if (method === 'write' && !flags.force && dataArray.length === 0) {
       this.pushCommand(command);
-      this.appendToLog({type: 'error', content: 'Must supply data or use -force'});
+      this.appendToLog({ type: 'error', content: 'Must supply data or use -force' });
       return;
     }
-    this.get('console')[method](path, data, flags.wrapTTL)
+    this.get('console')
+      [method](path, data, flags.wrapTTL)
       .then(resp => this.processResponse(resp, command, path, method, flags))
-      .catch((error) => this.handleServiceError(command, method, path, error));
+      .catch(error => this.handleServiceError(command, method, path, error));
   },
 
-  shiftCommandIndex(keyCode){
+  shiftCommandIndex(keyCode) {
     let newInputValue;
     let commandHistory = this.get('commandHistory');
     let commandHistoryLength = commandHistory.length;
     let index = this.get('commandIndex');
 
-    if(keyCode === keys.UP){
+    if (keyCode === keys.UP) {
       index -= 1;
-      if(index < 0){
+      if (index < 0) {
         index = commandHistoryLength - 1;
       }
-    }
-    else{
+    } else {
       index += 1;
-      if(index === commandHistoryLength){
-        newInputValue = "";
+      if (index === commandHistoryLength) {
+        newInputValue = '';
       }
-      if(index > commandHistoryLength){
+      if (index > commandHistoryLength) {
         index -= 1;
       }
     }
 
-    if(newInputValue !== ""){
+    if (newInputValue !== '') {
       newInputValue = commandHistory.objectAt(index).content;
     }
 
@@ -237,14 +235,14 @@ export default Ember.Component.extend({
   },
 
   actions: {
-    setValue(val){
+    setValue(val) {
       this.set('inputValue', val);
     },
-    executeCommand(val){
+    executeCommand(val) {
       this.executeCommand(val, true);
     },
-    shiftCommandIndex(direction){
+    shiftCommandIndex(direction) {
       this.shiftCommandIndex(direction);
-    }
+    },
   },
 });

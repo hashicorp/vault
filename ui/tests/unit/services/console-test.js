@@ -4,10 +4,8 @@ import sinon from 'sinon';
 
 moduleFor('service:console', 'Unit | Service | console', {
   needs: ['service:auth'],
-  beforeEach() {
-  },
-  afterEach() {
-  },
+  beforeEach() {},
+  afterEach() {},
 });
 
 test('#sanitizePath', function(assert) {
@@ -20,15 +18,13 @@ test('#ensureTrailingSlash', function(assert) {
   assert.equal(ensureTrailingSlash('baz/'), 'baz/', 'keeps trailing slash if there is one');
 });
 
-
 let testCases = [
-
   {
     method: 'read',
     args: ['/sys/health', {}],
     expectedURL: 'sys/health',
     expectedVerb: 'GET',
-    expectedOptions: {data: undefined, wrapTTL: undefined},
+    expectedOptions: { data: undefined, wrapTTL: undefined },
   },
 
   {
@@ -36,15 +32,18 @@ let testCases = [
     args: ['/secrets/foo/bar', {}, '30m'],
     expectedURL: 'secrets/foo/bar',
     expectedVerb: 'GET',
-    expectedOptions: {data: undefined, wrapTTL: '30m'},
+    expectedOptions: { data: undefined, wrapTTL: '30m' },
   },
 
   {
     method: 'write',
-    args: ['aws/roles/my-other-role', {arn:'arn=arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess'}],
+    args: ['aws/roles/my-other-role', { arn: 'arn=arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess' }],
     expectedURL: 'aws/roles/my-other-role',
     expectedVerb: 'POST',
-    expectedOptions: {data: {arn:'arn=arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess'}, wrapTTL: undefined},
+    expectedOptions: {
+      data: { arn: 'arn=arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess' },
+      wrapTTL: undefined,
+    },
   },
 
   {
@@ -52,7 +51,7 @@ let testCases = [
     args: ['secret/mounts', {}],
     expectedURL: 'secret/mounts/',
     expectedVerb: 'GET',
-    expectedOptions: {data: {list: true}, wrapTTL: undefined},
+    expectedOptions: { data: { list: true }, wrapTTL: undefined },
   },
 
   {
@@ -60,7 +59,7 @@ let testCases = [
     args: ['secret/mounts', {}, '1h'],
     expectedURL: 'secret/mounts/',
     expectedVerb: 'GET',
-    expectedOptions: {data: {list: true}, wrapTTL: '1h'},
+    expectedOptions: { data: { list: true }, wrapTTL: '1h' },
   },
 
   {
@@ -68,7 +67,7 @@ let testCases = [
     args: ['secret/secrets/kv'],
     expectedURL: 'secret/secrets/kv',
     expectedVerb: 'DELETE',
-    expectedOptions: {data: undefined, wrapTTL: undefined},
+    expectedOptions: { data: undefined, wrapTTL: undefined },
   },
 ];
 
@@ -77,10 +76,12 @@ test('it reads, writes, lists, deletes', function(assert) {
   let uiConsole = this.subject({
     adapter() {
       return {
-        buildURL(url) { return url; },
-        ajax
+        buildURL(url) {
+          return url;
+        },
+        ajax,
       };
-    }
+    },
   });
 
   testCases.forEach(testCase => {
@@ -90,5 +91,4 @@ test('it reads, writes, lists, deletes', function(assert) {
     assert.equal(verb, testCase.expectedVerb, `${testCase.method}: uses the correct verb`);
     assert.deepEqual(options, testCase.expectedOptions, `${testCase.method}: uses the correct options`);
   });
-
 });
