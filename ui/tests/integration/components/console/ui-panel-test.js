@@ -19,28 +19,37 @@ moduleForComponent('console/ui-panel', 'Integration | Component | console/ui pan
 });
 
 test('it renders', function(assert) {
-
   this.render(hbs`{{console/ui-panel}}`);
-
   assert.ok(component.hasInput);
-
 });
 
 test('it clears console input on enter', function(assert) {
-
   this.render(hbs`{{console/ui-panel}}`);
-
   component.consoleInput('list this/thing/here').enter();
-
   return wait().then(() => {
     assert.equal(component.consoleInputValue, "", 'empties input field on enter');
   });
 });
 
-test('it adds command to history on enter', function(assert) {
-
+test('it clears the log when using clear command', function(assert) {
   this.render(hbs`{{console/ui-panel}}`);
+  component.consoleInput('list this/thing/here').enter();
+  component.consoleInput('list this/other/thing').enter();
+  component.consoleInput('read another/thing').enter();
+  wait().then(() => {
+    assert.notEqual(component.logOutput, "", 'there is output in the log');
+    component.consoleInput('clear').enter();
+  });
 
+  wait().then(() => component.up());
+  return wait().then(() => {
+    assert.equal(component.logOutput, "", 'clears the output log');
+    assert.equal(component.consoleInputValue, "clear", 'populates console input with previous command on up after enter');
+  });
+});
+
+test('it adds command to history on enter', function(assert) {
+  this.render(hbs`{{console/ui-panel}}`);
   component.consoleInput('list this/thing/here').enter();
   wait().then(() => component.up());
   wait().then(() => {
@@ -53,9 +62,7 @@ test('it adds command to history on enter', function(assert) {
 });
 
 test('it cycles through history with more than one command', function(assert) {
-
   this.render(hbs`{{console/ui-panel}}`);
-
   component.consoleInput('list this/thing/here').enter();
   wait().then(() => component.consoleInput('read that/thing/there').enter());
   wait().then(() => component.consoleInput('qwerty').enter());

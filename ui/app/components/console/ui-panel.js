@@ -16,7 +16,6 @@ export default Ember.Component.extend({
   }),
   commandIndex: null,
 
-
   handleServiceError(command, method, vaultPath, error) {
     this.pushCommand(command);
 
@@ -151,14 +150,27 @@ export default Ember.Component.extend({
     this.get('log').pushObject(logItem);
   },
 
+  clearLog() {
+    let history = this.get('commandHistory').slice();
+    history.setEach('hidden', true);
+    let log = this.get('log');
+    log.clear();
+    log.addObjects(history);
+  },
+
   pushCommand(command){
     this.set('inputValue', '');
     this.appendToLog({type: 'command', content: command});
-    this.set('commandIndex', null)
+    this.set('commandIndex', null);
   },
 
   executeCommand(command, shouldThrow=false) {
     let serviceArgs;
+    if (command === 'clear') {
+      this.pushCommand(command);
+      this.clearLog();
+      return;
+    }
     // parse to verify it's valid
     try {
       serviceArgs = this.parseCommand(command, shouldThrow);
@@ -235,8 +247,4 @@ export default Ember.Component.extend({
       this.shiftCommandIndex(direction);
     }
   },
-
-
-
-
 });
