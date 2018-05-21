@@ -506,6 +506,13 @@ the cluster.
 
 ![Local Secret](/assets/images/vault-mount-filter-10.png)
 
+<br>
+
+-> **NOTE:** `US_ONLY_data` only exists locally in the secondary cluster that
+you won't be able to see it from the primary cluster.
+
+
+
 
 ## Next steps
 
