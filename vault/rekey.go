@@ -812,7 +812,7 @@ func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte, nonce string)
 
 	if subtle.ConstantTimeCompare(recoveredKey, c.barrierRekeyConfig.VerificationKey) != 1 {
 		c.logger.Error("rekey verification failed")
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("verification for barrier rekey failed: {{err}}", err).Error())
+		return nil, logical.CodedError(http.StatusInternalServerError, "verification for barrier rekey failed")
 	}
 
 	if err := c.performBarrierRekey(ctx, recoveredKey); err != nil {
@@ -907,7 +907,7 @@ func (c *Core) RecoveryRekeyVerify(ctx context.Context, key []byte, nonce string
 	// Verify the recovery key
 	if subtle.ConstantTimeCompare(recoveryKey, c.recoveryRekeyConfig.VerificationKey) != 1 {
 		c.logger.Error("rekey verification failed", "error", err)
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("verification for recovery rekey failed: {{err}}", err).Error())
+		return nil, logical.CodedError(http.StatusInternalServerError, "verification for recovery rekey failed")
 	}
 
 	if err := c.performRecoveryRekey(ctx, recoveryKey); err != nil {
