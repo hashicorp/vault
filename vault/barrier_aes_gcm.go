@@ -805,7 +805,12 @@ func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]
 	// Capture the parts
 	nonce := cipher[5 : 5+gcm.NonceSize()]
 	raw := cipher[5+gcm.NonceSize():]
-	out := make([]byte, 0, len(raw)-gcm.NonceSize())
+	// NOTE: gcm.Overhead() isn't 100% right here, the docs specify that it's the max
+	// overhead size, and NIST allows the GCM tag length to be smaller than 128 bits.
+	// However, the current golang implementation of GCM has Overhead being the 128-bit
+	// tag length, and changing the tag length "silently" would be pretty backwards-
+	// incompatible, so this should be OK.
+	out := make([]byte, 0, len(raw)-gcm.Overhead())
 
 	// Verify the cipher byte and attempt to open
 	switch cipher[4] {
@@ -836,7 +841,7 @@ func (b *AESGCMBarrier) decryptKeyring(path string, cipher []byte) ([]byte, erro
 
 	nonce := cipher[5 : 5+gcm.NonceSize()]
 	raw := cipher[5+gcm.NonceSize():]
-	out := make([]byte, 0, len(raw)-gcm.NonceSize())
+	out := make([]byte, 0, len(raw)-gcm.Overhead())
 
 	// Attempt to open
 	switch cipher[4] {
