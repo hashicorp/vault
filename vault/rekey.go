@@ -800,10 +800,10 @@ func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte, nonce string)
 
 	// Recover the master key or recovery key
 	var recoveredKey []byte
-	var err error
 	if c.barrierRekeyConfig.SecretThreshold == 1 {
 		recoveredKey = c.barrierRekeyVerifyProgress[0]
 	} else {
+		var err error
 		recoveredKey, err = shamir.Combine(c.barrierRekeyVerifyProgress)
 		if err != nil {
 			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute master key for verification: {{err}}", err).Error())

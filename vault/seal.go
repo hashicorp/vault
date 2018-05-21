@@ -87,8 +87,6 @@ type Seal interface {
 	VerifyRecoveryKey(context.Context, []byte) error
 }
 
-var ()
-
 type defaultSeal struct {
 	config                     atomic.Value
 	core                       *Core

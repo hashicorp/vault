@@ -39,7 +39,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 		case r.Method == "POST" || r.Method == "PUT":
 			handleSysRekeyInitPut(ctx, core, recovery, w, r)
 		case r.Method == "DELETE":
-			handleSysRekeyInitDelete(core, recovery, w, r)
+			handleSysRekeyInitDelete(ctx, core, recovery, w, r)
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 		}
@@ -153,9 +153,8 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 	handleSysRekeyInitGet(ctx, core, recovery, w, r)
 }
 
-func handleSysRekeyInitDelete(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	err := core.RekeyCancel(recovery)
-	if err != nil {
+func handleSysRekeyInitDelete(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
+	if err := core.RekeyCancel(recovery); err != nil {
 		respondError(w, err.Code(), err)
 		return
 	}
@@ -261,7 +260,7 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 		case r.Method == "POST" || r.Method == "PUT":
 			handleSysRekeyVerifyPut(ctx, core, recovery, w, r)
 		case r.Method == "DELETE":
-			handleSysRekeyVerifyDelete(core, recovery, w, r)
+			handleSysRekeyVerifyDelete(ctx, core, recovery, w, r)
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 		}
@@ -307,15 +306,11 @@ func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery boo
 	respondOk(w, status)
 }
 
-func handleSysRekeyVerifyDelete(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	err := core.RekeyVerifyRestart(recovery)
-	if err != nil {
+func handleSysRekeyVerifyDelete(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
+	if err := core.RekeyVerifyRestart(recovery); err != nil {
 		respondError(w, err.Code(), err)
 		return
 	}
-
-	ctx, cancel := core.GetContext()
-	defer cancel()
 
 	handleSysRekeyVerifyGet(ctx, core, recovery, w, r)
 }
