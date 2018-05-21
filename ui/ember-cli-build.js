@@ -61,6 +61,12 @@ module.exports = function(defaults) {
     ]
   });
 
+  app.import('node_modules/yargs-parser/lib/tokenize-arg-string.js', {
+    using: [
+      { transformation: 'cjs', as: 'yargs-parser-tokenizer' }
+    ]
+  });
+
   // Use `app.import` to add additional libraries to the generated
   // output files.
   //
