@@ -255,39 +255,6 @@ verification attempt.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/sys/rekey/verify
-```
-
-### Sample Response
-
-```json
-{
-  "nonce": "8b112c9e-2738-929d-bcc2-19aff249ff10",
-  "t": 3,
-  "n": 5,
-  "progress": 1
-}
-```
-
-`n` is the total number of new shares that were generated and `t` is the
-threshold required for the new shares to pass verification. `progress` is how
-many of the new unseal keys have been provided for this verification operation.
-The `nonce` for the current rekey operation is also displayed.
-
-## Read Rekey Recovery Key Verification Progress
-
-This endpoint reads the configuration and progress of the current rekey
-verification attempt.
-
-| Method   | Path                                        | Produces               |
-| :------- | :------------------------------------------ | :--------------------- |
-| `GET`    | `/sys/rekey-recovery-key/verify`            | `200 application/json` |
-
-### Sample Request
-
-```
-$ curl \
-    --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/rekey-recovery-key/verify
 ```
 

@@ -341,11 +341,12 @@ func (c *OperatorRekeyCommand) init(client *api.Client) int {
 
 	// Make the request
 	status, err := fn(&api.RekeyInitRequest{
-		SecretShares:    c.flagKeyShares,
-		SecretThreshold: c.flagKeyThreshold,
-		StoredShares:    c.flagStoredShares,
-		PGPKeys:         c.flagPGPKeys,
-		Backup:          c.flagBackup,
+		SecretShares:        c.flagKeyShares,
+		SecretThreshold:     c.flagKeyThreshold,
+		StoredShares:        c.flagStoredShares,
+		PGPKeys:             c.flagPGPKeys,
+		Backup:              c.flagBackup,
+		RequireVerification: c.flagVerify,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing rekey: %s", err))
@@ -668,6 +669,7 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 			out = append(out, fmt.Sprintf("Rekey Progress | %d/%d", status.Progress, status.Required))
 			out = append(out, fmt.Sprintf("New Shares | %d", status.N))
 			out = append(out, fmt.Sprintf("New Threshold | %d", status.T))
+			out = append(out, fmt.Sprintf("Verification Required | %t", status.VerificationRequired))
 		}
 		if len(status.PGPFingerprints) > 0 {
 			out = append(out, fmt.Sprintf("PGP Fingerprints | %s", status.PGPFingerprints))
