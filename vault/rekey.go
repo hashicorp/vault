@@ -772,24 +772,10 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 	defer func() {
 		config.VerificationProgress = nil
 		nonce, err := uuid.GenerateUUID()
-		switch recovery {
-		case false:
-			if c.barrierRekeyConfig != nil {
-				if err == nil {
-					c.barrierRekeyConfig.VerificationNonce = nonce
-					if ret != nil {
-						ret.Nonce = nonce
-					}
-				}
-			}
-		default:
-			if c.barrierRekeyConfig != nil {
-				if err == nil {
-					c.barrierRekeyConfig.VerificationNonce = nonce
-					if ret != nil {
-						ret.Nonce = nonce
-					}
-				}
+		if err == nil {
+			config.VerificationNonce = nonce
+			if ret != nil {
+				ret.Nonce = nonce
 			}
 		}
 	}()
