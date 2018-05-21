@@ -37,6 +37,7 @@ BUG FIXES:
    require `authorized_addrs` to be set [GH-4065]
  * core: Fix panic when certain combinations of policy paths and allowed/denied
    parameters were used [GH-4582]
+ * secret/gcp: Make `bound_region` able to use short names
  * secret/kv: Fix response wrapping for KV v2 [GH-4511]
  * secret/pki: Fix `key_type` not being allowed to be set to `any` [GH-4595]
  * secret/pki: Fix path length parameter being ignored when using
