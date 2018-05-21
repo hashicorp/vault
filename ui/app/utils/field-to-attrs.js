@@ -61,13 +61,15 @@ export const expandAttributeMeta = function(modelClass, attributeNames, namePref
   // so we'll replace each key in `fields` with the expanded meta
   fields = fields.map(field => {
     let meta = attributeMap.get(field);
-    const { type, options } = meta;
+    if (meta) {
+      var { type, options } = meta;
+    }
     return {
       // using field name here because it is the full path,
       // name on the attribute meta will be relative to the fragment it's on
       name: field,
-      type,
-      options,
+      type: type,
+      options: options,
     };
   });
   return fields;
