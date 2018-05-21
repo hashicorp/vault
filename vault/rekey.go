@@ -91,7 +91,7 @@ func (c *Core) RekeyThreshold(ctx context.Context, recovery bool) (int, logical.
 }
 
 // RekeyProgress is used to return the rekey progress (num shares).
-func (c *Core) RekeyProgress(recovery bool) (int, logical.HTTPCodedError) {
+func (c *Core) RekeyProgress(recovery, verification bool) (int, logical.HTTPCodedError) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
@@ -104,31 +104,17 @@ func (c *Core) RekeyProgress(recovery bool) (int, logical.HTTPCodedError) {
 	c.rekeyLock.RLock()
 	defer c.rekeyLock.RUnlock()
 
+	var conf *SealConfig
 	if recovery {
-		return len(c.recoveryRekeyProgress), nil
-	}
-	return len(c.barrierRekeyProgress), nil
-}
-
-// RekeyVerifyProgress is used to return the rekey progress (num shares) during
-// verification.
-func (c *Core) RekeyVerifyProgress(recovery bool) (int, logical.HTTPCodedError) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.sealed {
-		return 0, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
-	}
-	if c.standby {
-		return 0, logical.CodedError(http.StatusBadRequest, consts.ErrStandby.Error())
+		conf = c.recoveryRekeyConfig
+	} else {
+		conf = c.barrierRekeyConfig
 	}
 
-	c.rekeyLock.RLock()
-	defer c.rekeyLock.RUnlock()
-
-	if recovery {
-		return len(c.recoveryRekeyVerifyProgress), nil
+	if verification {
+		return len(conf.VerificationProgress), nil
 	}
-	return len(c.barrierRekeyVerifyProgress), nil
+	return len(conf.RekeyProgress), nil
 }
 
 // RekeyConfig is used to read the rekey configuration
@@ -345,34 +331,34 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	}
 
 	// Check if we already have this piece
-	for _, existing := range c.barrierRekeyProgress {
+	for _, existing := range c.barrierRekeyConfig.RekeyProgress {
 		if subtle.ConstantTimeCompare(existing, key) == 1 {
 			return nil, logical.CodedError(http.StatusBadRequest, "given key has already been provided during this generation operation")
 		}
 	}
 
 	// Store this key
-	c.barrierRekeyProgress = append(c.barrierRekeyProgress, key)
+	c.barrierRekeyConfig.RekeyProgress = append(c.barrierRekeyConfig.RekeyProgress, key)
 
 	// Check if we don't have enough keys to unlock
-	if len(c.barrierRekeyProgress) < existingConfig.SecretThreshold {
+	if len(c.barrierRekeyConfig.RekeyProgress) < existingConfig.SecretThreshold {
 		if c.logger.IsDebug() {
-			c.logger.Debug("cannot rekey yet, not enough keys", "keys", len(c.barrierRekeyProgress), "threshold", existingConfig.SecretThreshold)
+			c.logger.Debug("cannot rekey yet, not enough keys", "keys", len(c.barrierRekeyConfig.RekeyProgress), "threshold", existingConfig.SecretThreshold)
 		}
 		return nil, nil
 	}
 
 	// Schedule the rekey progress for forgetting
 	defer func() {
-		c.barrierRekeyProgress = nil
+		c.barrierRekeyConfig.RekeyProgress = nil
 	}()
 
 	// Recover the master key or recovery key
 	var recoveredKey []byte
 	if existingConfig.SecretThreshold == 1 {
-		recoveredKey = c.barrierRekeyProgress[0]
+		recoveredKey = c.barrierRekeyConfig.RekeyProgress[0]
 	} else {
-		recoveredKey, err = shamir.Combine(c.barrierRekeyProgress)
+		recoveredKey, err = shamir.Combine(c.barrierRekeyConfig.RekeyProgress)
 		if err != nil {
 			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute master key: {{err}}", err).Error())
 		}
@@ -572,34 +558,34 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	}
 
 	// Check if we already have this piece
-	for _, existing := range c.recoveryRekeyProgress {
+	for _, existing := range c.recoveryRekeyConfig.RekeyProgress {
 		if subtle.ConstantTimeCompare(existing, key) == 1 {
 			return nil, logical.CodedError(http.StatusBadRequest, "given key has already been provided during this rekey operation")
 		}
 	}
 
 	// Store this key
-	c.recoveryRekeyProgress = append(c.recoveryRekeyProgress, key)
+	c.recoveryRekeyConfig.RekeyProgress = append(c.recoveryRekeyConfig.RekeyProgress, key)
 
 	// Check if we don't have enough keys to unlock
-	if len(c.recoveryRekeyProgress) < existingConfig.SecretThreshold {
+	if len(c.recoveryRekeyConfig.RekeyProgress) < existingConfig.SecretThreshold {
 		if c.logger.IsDebug() {
-			c.logger.Debug("cannot rekey yet, not enough keys", "keys", len(c.recoveryRekeyProgress), "threshold", existingConfig.SecretThreshold)
+			c.logger.Debug("cannot rekey yet, not enough keys", "keys", len(c.recoveryRekeyConfig.RekeyProgress), "threshold", existingConfig.SecretThreshold)
 		}
 		return nil, nil
 	}
 
 	// Schedule the rekey progress for forgetting
 	defer func() {
-		c.recoveryRekeyProgress = nil
+		c.recoveryRekeyConfig.RekeyProgress = nil
 	}()
 
 	// Recover the master key
 	var recoveryKey []byte
 	if existingConfig.SecretThreshold == 1 {
-		recoveryKey = c.recoveryRekeyProgress[0]
+		recoveryKey = c.recoveryRekeyConfig.RekeyProgress[0]
 	} else {
-		recoveryKey, err = shamir.Combine(c.recoveryRekeyProgress)
+		recoveryKey, err = shamir.Combine(c.recoveryRekeyConfig.RekeyProgress)
 		if err != nil {
 			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute recovery key: {{err}}", err).Error())
 		}
@@ -726,14 +712,7 @@ func (c *Core) performRecoveryRekey(ctx context.Context, newMasterKey []byte) lo
 	return nil
 }
 
-func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recovery bool) (*RekeyVerifyResult, logical.HTTPCodedError) {
-	if recovery {
-		return c.RecoveryRekeyVerify(ctx, key, nonce)
-	}
-	return c.BarrierRekeyVerify(ctx, key, nonce)
-}
-
-func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte, nonce string) (ret *RekeyVerifyResult, retErr logical.HTTPCodedError) {
+func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recovery bool) (ret *RekeyVerifyResult, retErr logical.HTTPCodedError) {
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
@@ -757,42 +736,59 @@ func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte, nonce string)
 	c.rekeyLock.Lock()
 	defer c.rekeyLock.Unlock()
 
-	// Ensure a rekey is in progress
-	if c.barrierRekeyConfig == nil {
-		return nil, logical.CodedError(http.StatusBadRequest, "no barrier rekey in progress")
+	config := c.barrierRekeyConfig
+	if recovery {
+		config = c.recoveryRekeyConfig
 	}
 
-	if nonce != c.barrierRekeyConfig.VerificationNonce {
-		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("incorrect nonce supplied; nonce for this verify operation is %q", c.barrierRekeyConfig.VerificationNonce))
+	// Ensure a rekey is in progress
+	if config == nil {
+		return nil, logical.CodedError(http.StatusBadRequest, "no rekey in progress")
+	}
+
+	if nonce != config.VerificationNonce {
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("incorrect nonce supplied; nonce for this verify operation is %q", config.VerificationNonce))
 	}
 
 	// Check if we already have this piece
-	for _, existing := range c.barrierRekeyVerifyProgress {
+	for _, existing := range config.VerificationProgress {
 		if subtle.ConstantTimeCompare(existing, key) == 1 {
 			return nil, logical.CodedError(http.StatusBadRequest, "given key has already been provided during this verify operation")
 		}
 	}
 
 	// Store this key
-	c.barrierRekeyVerifyProgress = append(c.barrierRekeyVerifyProgress, key)
+	config.VerificationProgress = append(config.VerificationProgress, key)
 
 	// Check if we don't have enough keys to unlock
-	if len(c.barrierRekeyVerifyProgress) < c.barrierRekeyConfig.SecretThreshold {
+	if len(config.VerificationProgress) < config.SecretThreshold {
 		if c.logger.IsDebug() {
-			c.logger.Debug("cannot verify yet, not enough keys", "keys", len(c.barrierRekeyVerifyProgress), "threshold", c.barrierRekeyConfig.SecretThreshold)
+			c.logger.Debug("cannot verify yet, not enough keys", "keys", len(config.VerificationProgress), "threshold", config.SecretThreshold)
 		}
 		return nil, nil
 	}
 
 	// Schedule the progress for forgetting and rotate the nonce if possible
 	defer func() {
-		c.barrierRekeyVerifyProgress = nil
-		if c.barrierRekeyConfig != nil {
-			nonce, err := uuid.GenerateUUID()
-			if err == nil {
-				c.barrierRekeyConfig.VerificationNonce = nonce
-				if ret != nil {
-					ret.Nonce = nonce
+		config.VerificationProgress = nil
+		nonce, err := uuid.GenerateUUID()
+		switch recovery {
+		case false:
+			if c.barrierRekeyConfig != nil {
+				if err == nil {
+					c.barrierRekeyConfig.VerificationNonce = nonce
+					if ret != nil {
+						ret.Nonce = nonce
+					}
+				}
+			}
+		default:
+			if c.barrierRekeyConfig != nil {
+				if err == nil {
+					c.barrierRekeyConfig.VerificationNonce = nonce
+					if ret != nil {
+						ret.Nonce = nonce
+					}
 				}
 			}
 		}
@@ -800,125 +796,38 @@ func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte, nonce string)
 
 	// Recover the master key or recovery key
 	var recoveredKey []byte
-	if c.barrierRekeyConfig.SecretThreshold == 1 {
-		recoveredKey = c.barrierRekeyVerifyProgress[0]
+	if config.SecretThreshold == 1 {
+		recoveredKey = config.VerificationProgress[0]
 	} else {
 		var err error
-		recoveredKey, err = shamir.Combine(c.barrierRekeyVerifyProgress)
+		recoveredKey, err = shamir.Combine(config.VerificationProgress)
 		if err != nil {
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute master key for verification: {{err}}", err).Error())
+			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute key for verification: {{err}}", err).Error())
 		}
 	}
 
-	if subtle.ConstantTimeCompare(recoveredKey, c.barrierRekeyConfig.VerificationKey) != 1 {
+	if subtle.ConstantTimeCompare(recoveredKey, config.VerificationKey) != 1 {
 		c.logger.Error("rekey verification failed")
-		return nil, logical.CodedError(http.StatusInternalServerError, "verification for barrier rekey failed")
+		return nil, logical.CodedError(http.StatusInternalServerError, "rekey verification failed")
 	}
 
-	if err := c.performBarrierRekey(ctx, recoveredKey); err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to perform barrier rekey: {{err}}", err).Error())
+	switch recovery {
+	case false:
+		if err := c.performBarrierRekey(ctx, recoveredKey); err != nil {
+			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to perform rekey: {{err}}", err).Error())
+		}
+		c.barrierRekeyConfig = nil
+	default:
+		if err := c.performRecoveryRekey(ctx, recoveredKey); err != nil {
+			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to perform recovery key rekey: {{err}}", err).Error())
+		}
+		c.recoveryRekeyConfig = nil
 	}
 
 	res := &RekeyVerifyResult{
-		Nonce: c.barrierRekeyConfig.VerificationNonce,
+		Nonce: config.VerificationNonce,
 	}
 
-	c.barrierRekeyConfig = nil
-	return res, nil
-}
-
-func (c *Core) RecoveryRekeyVerify(ctx context.Context, key []byte, nonce string) (ret *RekeyVerifyResult, retErr logical.HTTPCodedError) {
-	// Ensure we are already unsealed
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.sealed {
-		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
-	}
-	if c.standby {
-		return nil, logical.CodedError(http.StatusBadRequest, consts.ErrStandby.Error())
-	}
-
-	// Verify the key length
-	min, max := c.barrier.KeyLength()
-	max += shamir.ShareOverhead
-	if len(key) < min {
-		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("key is shorter than minimum %d bytes", min))
-	}
-	if len(key) > max {
-		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("key is longer than maximum %d bytes", max))
-	}
-
-	c.rekeyLock.Lock()
-	defer c.rekeyLock.Unlock()
-
-	// Ensure a rekey is in progress
-	if c.recoveryRekeyConfig == nil {
-		return nil, logical.CodedError(http.StatusBadRequest, "no recovery rekey in progress")
-	}
-
-	if nonce != c.recoveryRekeyConfig.VerificationNonce {
-		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("incorrect nonce supplied; nonce for this verify operation is %q", c.recoveryRekeyConfig.VerificationNonce))
-	}
-
-	// Check if we already have this piece
-	for _, existing := range c.recoveryRekeyVerifyProgress {
-		if subtle.ConstantTimeCompare(existing, key) == 1 {
-			return nil, logical.CodedError(http.StatusBadRequest, "given key has already been provided during this verify operation")
-		}
-	}
-
-	// Store this key
-	c.recoveryRekeyVerifyProgress = append(c.recoveryRekeyVerifyProgress, key)
-
-	// Check if we don't have enough keys to unlock
-	if len(c.recoveryRekeyVerifyProgress) < c.recoveryRekeyConfig.SecretThreshold {
-		if c.logger.IsDebug() {
-			c.logger.Debug("cannot rekey yet, not enough keys", "keys", len(c.recoveryRekeyVerifyProgress), "threshold", c.recoveryRekeyConfig.SecretThreshold)
-		}
-		return nil, nil
-	}
-
-	// Schedule the rekey progress for forgetting
-	defer func() {
-		c.recoveryRekeyVerifyProgress = nil
-		if c.recoveryRekeyConfig != nil {
-			nonce, err := uuid.GenerateUUID()
-			if err == nil {
-				c.recoveryRekeyConfig.VerificationNonce = nonce
-				if ret != nil {
-					ret.Nonce = nonce
-				}
-			}
-		}
-	}()
-
-	// Recover the master key
-	var recoveryKey []byte
-	var err error
-	if c.recoveryRekeyConfig.SecretThreshold == 1 {
-		recoveryKey = c.recoveryRekeyVerifyProgress[0]
-	} else {
-		recoveryKey, err = shamir.Combine(c.recoveryRekeyVerifyProgress)
-		if err != nil {
-			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute recovery key: {{err}}", err).Error())
-		}
-	}
-
-	// Verify the recovery key
-	if subtle.ConstantTimeCompare(recoveryKey, c.recoveryRekeyConfig.VerificationKey) != 1 {
-		c.logger.Error("rekey verification failed", "error", err)
-		return nil, logical.CodedError(http.StatusInternalServerError, "verification for recovery rekey failed")
-	}
-
-	if err := c.performRecoveryRekey(ctx, recoveryKey); err != nil {
-		return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to perform recovery key rekey: {{err}}", err).Error())
-	}
-
-	res := &RekeyVerifyResult{
-		Nonce: c.recoveryRekeyConfig.VerificationNonce,
-	}
-
-	c.recoveryRekeyConfig = nil
 	return res, nil
 }
 
@@ -939,10 +848,8 @@ func (c *Core) RekeyCancel(recovery bool) logical.HTTPCodedError {
 	// Clear any progress or config
 	if recovery {
 		c.recoveryRekeyConfig = nil
-		c.recoveryRekeyProgress = nil
 	} else {
 		c.barrierRekeyConfig = nil
-		c.barrierRekeyProgress = nil
 	}
 	return nil
 }
@@ -967,12 +874,12 @@ func (c *Core) RekeyVerifyRestart(recovery bool) logical.HTTPCodedError {
 
 	// Clear any progress or config
 	if recovery {
-		c.recoveryRekeyVerifyProgress = nil
+		c.recoveryRekeyConfig.VerificationProgress = nil
 		if nonceErr == nil {
 			c.recoveryRekeyConfig.VerificationNonce = nonce
 		}
 	} else {
-		c.barrierRekeyVerifyProgress = nil
+		c.barrierRekeyConfig.VerificationProgress = nil
 		if nonceErr == nil {
 			c.barrierRekeyConfig.VerificationNonce = nonce
 		}
