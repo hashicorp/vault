@@ -736,15 +736,35 @@ func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, 
 		)))
 	}
 
-	c.UI.Output("")
-	c.UI.Output(wrapAtLength(fmt.Sprintf(
-		"Vault rekeyed with %d key shares an a key threshold of %d. Please "+
-			"securely distributed the key shares printed above. When the Vault is "+
-			"re-sealed, restarted, or stopped, you must supply at least %d of "+
-			"these keys to unseal it before it can start servicing requests.",
-		status.N,
-		status.T,
-		status.T)))
+	switch status.VerificationRequired {
+	case false:
+		c.UI.Output("")
+		c.UI.Output(wrapAtLength(fmt.Sprintf(
+			"Vault rekeyed with %d key shares and a key threshold of %d. Please "+
+				"securely distributed the key shares printed above. When Vault is "+
+				"re-sealed, restarted, or stopped, you must supply at least %d of "+
+				"these keys to unseal it before it can start servicing requests.",
+			status.N,
+			status.T,
+			status.T)))
+	default:
+		c.UI.Output("")
+		c.UI.Output(wrapAtLength(fmt.Sprintf(
+			"Vault is storing a new key, split into %d key shares and a key threshold "+
+				"of %d. These will not be active until after verification is complete. "+
+				"Please securely distributed the key shares printed above. When Vault "+
+				"is re-sealed, restarted, or stopped, you must supply at least %d of "+
+				"these keys to unseal it before it can start servicing requests.",
+			status.N,
+			status.T,
+			status.T)))
+		c.UI.Output("")
+		c.UI.Warn(wrapAtLEngth(
+			"Again, these key shares are _not_ valid until verification is performed. " +
+				"Do not lose or discard your current key shares until after verification " +
+				"is complete or you will be unable to unseal Vault.",
+		))
+	}
 
 	return 0
 }
