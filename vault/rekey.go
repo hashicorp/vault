@@ -112,23 +112,34 @@ func (c *Core) RekeyProgress(recovery bool) (int, logical.HTTPCodedError) {
 
 // RekeyVerifyProgress is used to return the rekey progress (num shares) during
 // verification.
-func (c *Core) RekeyVerifyProgress(recovery bool) (int, logical.HTTPCodedError) {
+func (c *Core) RekeyVerifyProgress(recovery bool) (bool, int, logical.HTTPCodedError) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return 0, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
+		return false, 0, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
-		return 0, logical.CodedError(http.StatusBadRequest, consts.ErrStandby.Error())
+		return false, 0, logical.CodedError(http.StatusBadRequest, consts.ErrStandby.Error())
 	}
 
 	c.rekeyLock.RLock()
 	defer c.rekeyLock.RUnlock()
 
+	var conf *SealConfig
 	if recovery {
-		return len(c.recoveryRekeyVerifyProgress), nil
+		conf = c.recoveryRekeyConfig
+	} else {
+		conf = c.barrierRekeyConfig
 	}
-	return len(c.barrierRekeyVerifyProgress), nil
+
+	if conf == nil {
+		return false, 0, logical.CodedError(http.StatusBadRequest, "rekey operation not in progress")
+	}
+
+	if recovery {
+		return len(conf.VerificationKey) > 0, len(c.recoveryRekeyVerifyProgress), nil
+	}
+	return len(conf.VerificationKey) > 0, len(c.barrierRekeyVerifyProgress), nil
 }
 
 // RekeyConfig is used to read the rekey configuration
@@ -762,6 +773,10 @@ func (c *Core) BarrierRekeyVerify(ctx context.Context, key []byte, nonce string)
 		return nil, logical.CodedError(http.StatusBadRequest, "no barrier rekey in progress")
 	}
 
+	if len(c.barrierRekeyConfig.VerificationKey) == 0 {
+		return nil, logical.CodedError(http.StatusBadRequest, "no barrier rekey verification in progress")
+	}
+
 	if nonce != c.barrierRekeyConfig.VerificationNonce {
 		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("incorrect nonce supplied; nonce for this verify operation is %q", c.barrierRekeyConfig.VerificationNonce))
 	}
@@ -856,6 +871,10 @@ func (c *Core) RecoveryRekeyVerify(ctx context.Context, key []byte, nonce string
 		return nil, logical.CodedError(http.StatusBadRequest, "no recovery rekey in progress")
 	}
 
+	if len(c.recoveryRekeyConfig.VerificationKey) == 0 {
+		return nil, logical.CodedError(http.StatusBadRequest, "no recovery rekey verification in progress")
+	}
+
 	if nonce != c.recoveryRekeyConfig.VerificationNonce {
 		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("incorrect nonce supplied; nonce for this verify operation is %q", c.recoveryRekeyConfig.VerificationNonce))
 	}
@@ -947,7 +966,7 @@ func (c *Core) RekeyCancel(recovery bool) logical.HTTPCodedError {
 	return nil
 }
 
-// RekeyVerifyCancel is used to start the verification process over
+// RekeyVerifyRestart is used to start the verification process over
 func (c *Core) RekeyVerifyRestart(recovery bool) logical.HTTPCodedError {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()

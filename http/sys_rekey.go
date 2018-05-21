@@ -290,7 +290,7 @@ func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery boo
 	}
 
 	// Get the progress
-	progress, err := core.RekeyVerifyProgress(recovery)
+	started, progress, err := core.RekeyVerifyProgress(recovery)
 	if err != nil {
 		respondError(w, err.Code(), err)
 		return
@@ -298,6 +298,7 @@ func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery boo
 
 	// Format the status
 	status := &RekeyVerificationStatusResponse{
+		Started:  started,
 		Nonce:    rekeyConf.VerificationNonce,
 		T:        rekeyConf.SecretThreshold,
 		N:        rekeyConf.SecretShares,
@@ -410,6 +411,7 @@ type RekeyVerificationUpdateRequest struct {
 
 type RekeyVerificationStatusResponse struct {
 	Nonce    string `json:"nonce"`
+	Started  bool   `json:"started"`
 	T        int    `json:"t"`
 	N        int    `json:"n"`
 	Progress int    `json:"progress"`
