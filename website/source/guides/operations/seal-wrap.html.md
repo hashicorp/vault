@@ -12,14 +12,15 @@ description: |-
 ~> **Enterprise Only:** Vault's HSM auto-unseal and Seal Wrap features are a
 part of _Vault Enterprise_.
 
-***Vault Enterprise*** integrates with [a number of HSM platforms]
-(/docs/enterprise/hsm/index.html) to opt-in automatic [unsealing](/docs/concepts/seal.html#unsealing).
-HSM integration provides two pieces of special functionality:
+***Vault Enterprise*** integrates with [HSM platforms](/docs/enterprise/hsm/index.html)
+to opt-in automatic [unsealing](/docs/concepts/seal.html#unsealing).
+HSM integration provides three pieces of special functionality:
 
 - **Master Key Wrapping**: Vault protects its master key by transiting it through
 the HSM for encryption rather than splitting into key shares
 - **Automatic Unsealing**: Vault stores its encrypted master key in storage,
 allowing for automatic unsealing
+- **Seal Wrapping** to provide FIPS KeyStorage-conforming functionality for Critical Security Parameters
 
 ![Unseal with HSM](/assets/images/vault-hsm-autounseal.png)
 
@@ -33,11 +34,6 @@ Vault pulls its encrypted master key from storage and transit it through the
 HSM for decryption via  **PKCS \#11 API**. Once the master key is decrypted,
 Vault uses the master key to decrypt the encryption key to resume with Vault
 operations.
-
-In addition, when integrated with a FIPS 140-2 certified HSM, Vault can take
-advantage of the HSM to ensure that the Critical Security Parameters (CSPs) are
-protected in a compliant fashion. This feature is called ***Seal Wrap***.
-
 
 
 ## Reference Material
@@ -111,7 +107,7 @@ This guide walks you through the following steps:
 
 
 
-### Step 1: Configure HSM Auto-unseal
+### <a name="step1"></a>Step 1: Configure HSM Auto-unseal
 
 When a Vault server is started, it normally starts in a sealed state where a
 quorum of existing unseal keys is required to unseal it. By integrating Vault
@@ -195,7 +191,7 @@ $ vault server -config=/home/ec2-user/config-hsm.hcl
    HSM Manufacturer ID: Cavium Networks
               HSM Type: pkcs11
                    Cgo: enabled
-            Listener 1: tcp (addr: "0.0.0.0:8200", cluster address: "0.0.0.0:8201", tls: "disabled")
+            Listener 1: tcp (addr: "127.0.0.1:8200", cluster address: "127.0.0.1:8201", tls: "disabled")
              Log Level: info
                  Mlock: supported: true, enabled: false
                Storage: file
@@ -281,7 +277,7 @@ key/value secret engine, you can enable seal wrap to wrap all data.
 
 ### CLI command
 
-Check the enabled [secret engines](https://www.vaultproject.io/docs/secrets/index.html).
+Check the enabled secret engines.
 
 ```plaintext
 $ vault secrets list -format=json
@@ -345,7 +341,7 @@ Notice that the `seal_wrap` parameter is set to **`true`** at `secret2/`.
 
 #### API call using cURL
 
-Check the enabled [secret engines](https://www.vaultproject.io/docs/secrets/index.html).
+Check the enabled secret engines.
 
 ```plaintext
 $ curl --header "X-Vault-Token: ..." \
@@ -583,9 +579,10 @@ Click **Save**.
 Using a valid token, you can write and read secrets the same way
 regardless of the seal wrap.
 
+
 #### View the encrypted secrets
 
-Remember that Vault was configured to use the local file system
+Remember that the Vault server was configured to use the local file system
 (`/tmp/vault`) as its storage backend in this example.
 
 ```shell
@@ -595,7 +592,8 @@ storage "file" {
 }
 ```
 
-Check the stored values in the `/tmp/vault` directory.
+SSH into the machine where the Vault server is running, and check the stored
+values in the `/tmp/vault` directory.
 
 ```plaintext
 $ cd /tmp/vault/logical
