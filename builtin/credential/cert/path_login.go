@@ -73,11 +73,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		return nil, nil
 	}
 
-	ttl := matched.Entry.TTL
-	if ttl == 0 {
-		ttl = b.System().DefaultLeaseTTL()
-	}
-
 	if err := b.checkCIDR(matched.Entry, req); err != nil {
 		return nil, err
 	}
@@ -107,27 +102,15 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
-				TTL:       ttl,
+				TTL:       matched.Entry.TTL,
+				MaxTTL:    matched.Entry.MaxTTL,
+				Period:    matched.Entry.Period,
 			},
 			Alias: &logical.Alias{
 				Name: clientCerts[0].Subject.CommonName,
 			},
 			BoundCIDRs: matched.Entry.BoundCIDRs,
 		},
-	}
-
-	if matched.Entry.MaxTTL > time.Duration(0) {
-		// Cap maxTTL to the sysview's max TTL
-		maxTTL := matched.Entry.MaxTTL
-		if maxTTL > b.System().MaxLeaseTTL() {
-			maxTTL = b.System().MaxLeaseTTL()
-		}
-
-		// Cap TTL to MaxTTL
-		if resp.Auth.TTL > maxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
-			resp.Auth.TTL = maxTTL
-		}
 	}
 
 	// Generate a response
@@ -422,7 +405,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 	trustedNonCAs = make([]*ParsedCert, 0)
 	names, err := storage.List(ctx, "cert/")
 	if err != nil {
-		b.Logger().Error("cert: failed to list trusted certs", "error", err)
+		b.Logger().Error("failed to list trusted certs", "error", err)
 		return
 	}
 	for _, name := range names {
@@ -432,12 +415,12 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 		}
 		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, "cert/"))
 		if err != nil {
-			b.Logger().Error("cert: failed to load trusted cert", "name", name, "error", err)
+			b.Logger().Error("failed to load trusted cert", "name", name, "error", err)
 			continue
 		}
 		parsed := parsePEM([]byte(entry.Certificate))
 		if len(parsed) == 0 {
-			b.Logger().Error("cert: failed to parse certificate", "name", name)
+			b.Logger().Error("failed to parse certificate", "name", name)
 			continue
 		}
 		if !parsed[0].IsCA {
