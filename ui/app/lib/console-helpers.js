@@ -67,7 +67,7 @@ export function logFromResponse(response, path, method, flags) {
         ? `Success! Data written to: ${path}`
         : `Success! Data deleted (if it existed) at: ${path}`;
 
-    return { type: 'text', content: message };
+    return { type: 'success', content: message };
   }
   let { format, field } = flags;
   let secret = response.auth || response.data || response.wrap_info;

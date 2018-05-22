@@ -1,1 +1,12 @@
+{{i-con glyph="chevron-right" size=12}}
 <input onkeyup={{action 'handleKeyUp'}} value={{value}} />
+{{#tool-tip renderInPlace=true as |d|}}
+  {{#d.trigger tagName="button" type="button" class=(concat "button is-compact") data-test-tool-tip-trigger=true}}
+    {{i-con glyph="fullscreen-open" aria-hidden="true" size=16}}
+  {{/d.trigger}}
+  {{#d.content class="tool-tip"}}
+    <div class="box">
+      Fullscreen
+    </div>
+  {{/d.content}}
+{{/tool-tip}}
