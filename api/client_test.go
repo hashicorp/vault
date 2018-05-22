@@ -243,7 +243,7 @@ func TestClientTimeoutSetting(t *testing.T) {
 	defer os.Setenv(EnvVaultClientTimeout, oldClientTimeout)
 	config := DefaultConfig()
 	config.ReadEnvironment()
-	client, err := NewClient(config)
+	_, err := NewClient(config)
 	if err != nil {
 		t.Fatal(err)
 	}
