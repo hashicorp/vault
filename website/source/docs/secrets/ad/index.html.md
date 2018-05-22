@@ -46,10 +46,22 @@ Most secrets engines must be configured in advance before they can perform their
 functions. These steps are usually completed by an operator or configuration
 management tool.
 
+0. Add the AD secrets plugin to your catalogue:
+
+    ```text
+    $ vault write sys/plugins/catalog/ad \
+        sha_256=7967092173cd96565870b8494f9e64dc29cf0f191e33a2f89b53674907c4ef20 \
+        command="vault-plugin-secrets-active-directory"
+    ```
+
+    To obtain the binary and current sha_256, visit [the plugin's Github repo](https://github.com/hashicorp/vault-plugin-secrets-active-directory)
+    and refer to its readme. The sha_256 can also be obtained by running `$ sha256sum vault-plugin-secrets-active-directory`
+    where "vault-plugin-secrets-active-directory" is the binary itself.
+    
 1. Enable the Active Directory secrets engine:
 
     ```text
-    $ vault secrets enable ad
+    $ vault secrets enable -plugin-name='ad' plugin
     Success! Enabled the ad secrets engine at: ad/
     ```
 
@@ -61,14 +73,18 @@ to generate passwords:
 
     ```text
     $ vault write ad/config \
-        username=$USERNAME \
-        password=$PASSWORD \
-        urls=ldap://138.91.247.105 \
-        dn='dc=example,dc=com'
+        binddn=$USERNAME \
+        bindpass=$PASSWORD \
+        url=ldap://138.91.247.105 \
+        userdn='dc=example,dc=com'
     ```
 
     The `$USERNAME` and `$PASSWORD` given must be of a high enough access level that
     they can be used for modifying passwords. Typically, this will be a domain admin.
+    
+    If you'd like to do a quick, insecure evaluation, also set `insecure_tls` to true. However, this is NOT RECOMMENDED
+    in a production environment. In production, we recommend `insecure_tls` is false (its default) and is used with a valid 
+    `certificate`.
 
 3. Configure a role that maps a name in Vault to an account in Active Directory.
 When applications request passwords, password rotation settings will be managed by
@@ -84,33 +100,27 @@ auth method like [AppRole](https://www.vaultproject.io/api/auth/approle/index.ht
 
 ## Configuration
 
-### Connection parameters
+The `config` endpoint configures the LDAP connection and binding parameters, as well as the password rotation configuration.
 
-* `urls` (string, required) - The LDAP server to connect to. Examples: `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. This can also be a comma-delineated list of URLs, e.g. `ldap://ldap.myorg.com,ldaps://ldap.myorg.com:636`, in which case the servers will be tried in-order if there are errors during the connection process.
-* `starttls` (bool, optional) - Defaults to true. If true, issues a `StartTLS` command after establishing an unencrypted connection.
-* `insecure_tls` - (bool, optional) - Defaults to false. If true, skips LDAP server SSL certificate verification - insecure, use with caution!
-* `certificate` - (string, optional) - CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.
-* `tls_min_version` - (string, optional) - Defaults to `tls12`. Designates the minimum TLS version to use when communicating. Example: `tls12`
-* `tls_max_version` - (string, optional) - Defaults to `tls12`. Designates the maximum TLS version to use when communicating. Example: `tls10`
-
-### Binding parameters
-
-* `dn` (string, required) - Distinguished name of object to bind when performing user and group search. Example: `cn=vault,ou=Users,dc=example,dc=com`
-* `username` (string, required) - Username to use along with `dn` of sufficient privilege to modify passwords.
-* `password` (string, required) - Password to use along with `dn`.
-
-### Password rotation parameters
+### Password parameters
 
 * `ttl` (string, optional) - The default password time-to-live in seconds. Once the ttl has passed, a password will be rotated the next time it's requested. Defaults to the number of seconds in 32 days.
 * `max_ttl` (string, optional) - The maximum password time-to-live in seconds. No role will be allowed to set a custom ttl greater than the `max_ttl`. Defaults to the number of seconds in 32 days.
 * `password_length` (string, optional) - The desired password length. Defaults to 64. Minimum is 14. Note: to meet complexity requirements, all passwords begin with "?@09AZ".
 
-## Roles
+### Connection parameters
 
-### Parameters
+* `url` (string, required) - The LDAP server to connect to. Examples: `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. This can also be a comma-delineated list of URLs, e.g. `ldap://ldap.myorg.com,ldaps://ldap.myorg.com:636`, in which case the servers will be tried in-order if there are errors during the connection process.
+* `starttls` (bool, optional) - If true, issues a `StartTLS` command after establishing an unencrypted connection.
+* `insecure_tls` - (bool, optional) - If true, skips LDAP server SSL certificate verification - insecure, use with caution!
+* `certificate` - (string, optional) - CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.
 
-* `service_account_name` (string, required) - The name of a pre-existing service account in Active Directory that maps to this role.
-* `ttl` (string, optional) - The password time-to-live in seconds. Defaults to the configuration `ttl` if not provided.
+### Binding parameters
+
+* `binddn` (string, required) - Distinguished name of object to bind when performing user and group search. Example: `cn=vault,ou=Users,dc=example,dc=com`
+* `bindpass` (string, required) - Password to use along with `binddn` when performing user search.
+* `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
+* `upndomain` (string, optional) - userPrincipalDomain used to construct the UPN string for the authenticating user. The constructed UPN will appear as `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind as `username@example.com`.
 
 ## FAQ
 

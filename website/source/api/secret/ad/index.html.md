@@ -10,7 +10,7 @@ description: |-
 
 This is the API documentation for the Vault AD secrets engine. For general
 information about the usage and operation of the AD secrets engine, please see
-the [Vault AWS documentation](/docs/secrets/ad/index.html).
+the [Vault Active Directory documentation](/docs/secrets/ad/index.html).
 
 This documentation assumes the AD secrets engine is enabled at the `/ad` path
 in Vault. Since it is possible to enable secrets engines at any location, please
@@ -18,23 +18,29 @@ update your API calls accordingly.
 
 ## Configuration
 
-The `config` endpoint configures the LDAP connection and binding parameters, as well as
-the password rotation configuration.
+The `config` endpoint configures the LDAP connection and binding parameters, as well as the password rotation configuration.
 
-### Parameters
+### Password parameters
 
-* `urls` (string, required) - The LDAP server to connect to. Examples: `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. This can also be a comma-delineated list of URLs, e.g. `ldap://ldap.myorg.com,ldaps://ldap.myorg.com:636`, in which case the servers will be tried in-order if there are errors during the connection process.
-* `username` (string, required) - Username to use along with `dn` of sufficient privilege to modify passwords.
-* `password` (string, required) - Password to use along with `dn`.
-* `dn` (string, optional) - Distinguished name of object to bind when performing user and group search. Example: `cn=vault,ou=Users,dc=example,dc=com`
-* `starttls` (bool, optional) - Defaults to true. If true, issues a `StartTLS` command after establishing an unencrypted connection.
-* `insecure_tls` - (bool, optional) - Defaults to false. If true, skips LDAP server SSL certificate verification - insecure, use with caution!
-* `certificate` - (string, optional) - CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.
-* `tls_min_version` - (string, optional) - Defaults to `tls12`. Designates the minimum TLS version to use when communicating. Example: `tls12`
-* `tls_max_version` - (string, optional) - Defaults to `tls12`. Designates the maximum TLS version to use when communicating. Example: `tls10`
 * `ttl` (string, optional) - The default password time-to-live in seconds. Once the ttl has passed, a password will be rotated the next time it's requested. Defaults to the number of seconds in 32 days.
 * `max_ttl` (string, optional) - The maximum password time-to-live in seconds. No role will be allowed to set a custom ttl greater than the `max_ttl`. Defaults to the number of seconds in 32 days.
 * `password_length` (string, optional) - The desired password length. Defaults to 64. Minimum is 14. Note: to meet complexity requirements, all passwords begin with "?@09AZ".
+
+### Connection parameters
+
+* `url` (string, required) - The LDAP server to connect to. Examples: `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. This can also be a comma-delineated list of URLs, e.g. `ldap://ldap.myorg.com,ldaps://ldap.myorg.com:636`, in which case the servers will be tried in-order if there are errors during the connection process.
+* `starttls` (bool, optional) - If true, issues a `StartTLS` command after establishing an unencrypted connection.
+* `insecure_tls` - (bool, optional) - If true, skips LDAP server SSL certificate verification - insecure, use with caution!
+* `certificate` - (string, optional) - CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.
+
+### Binding parameters
+
+* `binddn` (string, required) - Distinguished name of object to bind when performing user and group search. Example: `cn=vault,ou=Users,dc=example,dc=com`
+* `bindpass` (string, required) - Password to use along with `binddn` when performing user search.
+* `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
+* `upndomain` (string, optional) - userPrincipalDomain used to construct the UPN string for the authenticating user. The constructed UPN will appear as `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind as `username@example.com`.
+
+## Config management
 
 At present, this endpoint does not confirm that the provided AD credentials are
 valid AD credentials with proper permissions.
@@ -49,10 +55,10 @@ valid AD credentials with proper permissions.
 
 ```json
 {
-  "username": "domain-admin",
-  "password": "pa$$w0rd",
-  "urls": ["ldap://127.0.0.1"],
-  "dn": "dc=example,dc=com"
+  "binddn": "domain-admin",
+  "bindpass": "pa$$w0rd",
+  "url": "ldap://127.0.0.11",
+  "userdn": "dc=example,dc=com"
 }
 ```
 
@@ -69,10 +75,10 @@ $ curl \
 
 ```json
 {
-  "username": "domain-admin",
-  "urls": ["ldaps://example.com"],
+  "binddn": "domain-admin",
+  "url": "ldaps://example.com",
   "certificate": "-----BEGIN CERTIFICATE-----....",
-  "dn": "dc=example,dc=com",
+  "userdn": "dc=example,dc=com",
   "insecure_tls": false,
   "start_tls": true,
   "tls_min_version": "tls12",
@@ -132,10 +138,6 @@ $ curl \
 }
 ```
 
-The `last_vault_rotation` parameter will not be present if Vault hasn't rotated the password before.
-
-The `password_last_set` parameter will not be present if Active Directory has never rotated the password.
-
 ### Sample List Response
 
 Performing a `GET` on the `/ad/roles` endpoint will list the names of all the roles Vault contains.
@@ -167,6 +169,6 @@ $ curl \
 {
     "username": "my-application",
     "current_password": "?@09AZ2wR37xJf",
-    "previous_password": "?@09AZ7WEu9fu8"
+    "last_password": "?@09AZ7WEu9fu8"
 }
 ```
