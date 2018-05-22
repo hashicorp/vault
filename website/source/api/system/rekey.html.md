@@ -91,8 +91,10 @@ and starting a new rekey, which will also provide a new nonce.
   key is not actually rotated. The new keys must be provided to authorize the
   actual rotation of the master key. This ensures that the new keys have been
   successfully saved and protects against a risk of the keys being lost after
-  rotation but before they can be persisted. While this can be used with
-  `pgp_keys`, it also can be used without.
+  rotation but before they can be persisted. This can be used with without
+  `pgp_keys`, and when used with it, it allows ensuring that the returned keys
+  can be successfully decrypted before committing to the new shares, which the
+  backup functionality does not provide.
 
 ### Sample Payload
 
