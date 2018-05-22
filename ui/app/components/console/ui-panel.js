@@ -199,8 +199,7 @@ export default Ember.Component.extend({
       this.appendToLog({ type: 'error', content: 'Must supply data or use -force' });
       return;
     }
-    this.get('console')
-      [method](path, data, flags.wrapTTL)
+    this.get('console')[method](path, data, flags.wrapTTL)
       .then(resp => this.processResponse(resp, command, path, method, flags))
       .catch(error => this.handleServiceError(command, method, path, error));
   },
