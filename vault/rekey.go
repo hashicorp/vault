@@ -331,6 +331,10 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		return nil, logical.CodedError(http.StatusBadRequest, "no barrier rekey in progress")
 	}
 
+	if len(c.barrierRekeyConfig.VerificationKey) > 0 {
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("rekey operation already finished; verification must be performed; nonce for the verification operation is %q", c.barrierRekeyConfig.VerificationNonce))
+	}
+
 	if nonce != c.barrierRekeyConfig.Nonce {
 		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("incorrect nonce supplied; nonce for this rekey operation is %q", c.barrierRekeyConfig.Nonce))
 	}
@@ -556,6 +560,10 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	// Ensure a rekey is in progress
 	if c.recoveryRekeyConfig == nil {
 		return nil, logical.CodedError(http.StatusBadRequest, "no recovery rekey in progress")
+	}
+
+	if len(c.recoveryRekeyConfig.VerificationKey) > 0 {
+		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("rekey operation already finished; verification must be performed; nonce for the verification operation is %q", c.recoveryRekeyConfig.VerificationNonce))
 	}
 
 	if nonce != c.recoveryRekeyConfig.Nonce {
