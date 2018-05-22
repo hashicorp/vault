@@ -6,6 +6,7 @@ const { inject, computed } = Ember;
 const supportedCommands = ['read', 'write', 'list', 'delete'];
 
 export default Ember.Component.extend({
+  classNames: 'console-ui-panel',
   console: inject.service(),
   inputValue: null,
   commandHistory: computed('log.[]', function() {
