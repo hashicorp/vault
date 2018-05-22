@@ -9,8 +9,14 @@
         </div>
         <div class="navbar-end is-divider-list is-flex">
           <div class="navbar-item">
-            <button type="button" class="button has-color-white is-ghost" {{action 'toggleConsole'}}>
-              {{i-con glyph="wand" size=16}}
+            <button type="button" class="button is-transparent" {{action 'toggleConsole'}}>
+              {{#if consoleOpen}}
+                {{i-con glyph="console-active" size=24}}
+                {{i-con glyph="chevron-up" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
+              {{else}}
+                {{i-con glyph="console" size=24}}
+                {{i-con glyph="chevron-down" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
+              {{/if}}
             </button>
           </div>
           <div class="navbar-item">
@@ -135,7 +141,7 @@
     </div>
   </footer>
   {{#if (eq env "development") }}
-    <div class="level development">
+    <div class="env-banner level development">
       <div class="level-item notification has-background-dark has-text-white">
         {{i-con glyph="wand" class="type-icon"}}Local Development
       </div>
