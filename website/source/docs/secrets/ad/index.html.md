@@ -9,7 +9,9 @@ description: |-
 
 # Active Directory Secrets Engine
 
-The Active Directory (AD) secrets engine rotates AD passwords dynamically,
+The Active Directory (AD) secrets engine is a plugin residing [here](https://github.com/hashicorp/vault-plugin-secrets-active-directory).
+
+The AD secrets engine rotates AD passwords dynamically,
 and is designed for a high-load environment where many instances may be accessing
 a shared password simultaneously. With a simple set up and a simple creds API,
 it doesn't require instances to be manually registered in advance to gain access. 
