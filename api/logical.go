@@ -1,8 +1,13 @@
 package api
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"os"
+
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
 const (
@@ -182,23 +187,56 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if resp != nil && resp.StatusCode == 404 {
-		secret, parseErr := ParseSecret(resp.Body)
-		switch parseErr {
-		case nil:
-		case io.EOF:
-			return nil, nil
-		default:
+	if resp == nil || resp.StatusCode != 404 {
+		if err != nil {
 			return nil, err
 		}
-		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
-			return secret, nil
+		if resp == nil {
+			return nil, nil
 		}
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
+		return ParseSecret(resp.Body)
 	}
 
-	return ParseSecret(resp.Body)
+	// In the 404 case this may actually be a wrapped 404 error
+	secret, parseErr := ParseSecret(resp.Body)
+	switch parseErr {
+	case nil:
+	case io.EOF:
+		return nil, nil
+	default:
+		return nil, err
+	}
+	if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+		return secret, nil
+	}
+
+	// Otherwise this might be an old-style wrapping token so attempt the old
+	// method
+	if wrappingToken != "" {
+		origToken := c.c.Token()
+		defer c.c.SetToken(origToken)
+		c.c.SetToken(wrappingToken)
+	}
+
+	secret, err = c.Read(wrappedResponseLocation)
+	if err != nil {
+		return nil, errwrap.Wrapf(fmt.Sprintf("error reading %q: {{err}}", wrappedResponseLocation), err)
+	}
+	if secret == nil {
+		return nil, fmt.Errorf("no value found at %q", wrappedResponseLocation)
+	}
+	if secret.Data == nil {
+		return nil, fmt.Errorf("\"data\" not found in wrapping response")
+	}
+	if _, ok := secret.Data["response"]; !ok {
+		return nil, fmt.Errorf("\"response\" not found in wrapping response \"data\" map")
+	}
+
+	wrappedSecret := new(Secret)
+	buf := bytes.NewBufferString(secret.Data["response"].(string))
+	if err := jsonutil.DecodeJSONFromReader(buf, wrappedSecret); err != nil {
+		return nil, errwrap.Wrapf("error unmarshalling wrapped secret: {{err}}", err)
+	}
+
+	return wrappedSecret, nil
 }

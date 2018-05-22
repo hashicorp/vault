@@ -114,6 +114,13 @@ This endpoint enables a new secrets engine at the given path.
     encryption capability. This is currently only supported for `transit` and
     `pki` backends. This is only available in Vault Enterprise.
 
+- `options` `(map<string|string>: nil)` - Specifies mount type specific options
+  that are passed to the backend. 
+  
+    *Key/Value (KV)*  
+    - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
+      KV v2.
+
 - `plugin_name` `(string: "")` – Specifies the name of the plugin to
   use based from the name in the plugin catalog. Applies only to plugin
   backends.

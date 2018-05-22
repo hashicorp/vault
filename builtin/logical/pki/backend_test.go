@@ -2580,24 +2580,6 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = client.Logical().Write("root/roles/example", map[string]interface{}{
-		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
-		"allow_bare_domains": true,
-		"allow_subdomains":   true,
-		"max_ttl":            "2h",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = client.Logical().Write("int/roles/example", map[string]interface{}{
-		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
-		"allow_subdomains":   true,
-		"allow_bare_domains": true,
-		"max_ttl":            "2h",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// Direct issuing from root
 	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
@@ -2624,6 +2606,33 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 			} else {
 				argMap[currString] = arg
 			}
+		}
+		// We do this to ensure writing a key type of any is invalid when
+		// issuing and valid when signing
+		_, err = client.Logical().Write(path+"roles/example", map[string]interface{}{
+			"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
+			"allow_subdomains":   true,
+			"allow_bare_domains": true,
+			"max_ttl":            "2h",
+			"key_type":           "any",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = client.Logical().Write(path+"issue/example", argMap)
+		if err == nil {
+			t.Fatal("expected err from key_type any")
+		}
+		// Now put it back
+		_, err = client.Logical().Write(path+"roles/example", map[string]interface{}{
+			"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
+			"allow_subdomains":   true,
+			"allow_bare_domains": true,
+			"max_ttl":            "2h",
+			"key_type":           "rsa",
+		})
+		if err != nil {
+			t.Fatal(err)
 		}
 		_, err = client.Logical().Write(path+"issue/example", argMap)
 		switch {

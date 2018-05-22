@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -1004,7 +1005,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 	// If we are still restoring the expiration manager, we want to ensure the
 	// token is not expired
 	if ts.expiration == nil {
-		return nil, nil
+		return nil, errors.New("expiration manager is nil on tokenstore")
 	}
 	check, err := ts.expiration.RestoreSaltedTokenCheck(entry.Path, saltedID)
 	if err != nil {
@@ -1071,12 +1072,14 @@ func (ts *TokenStore) revokeOrphan(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	return ts.revokeSalted(ctx, saltedID)
+	return ts.revokeSalted(ctx, saltedID, false)
 }
 
-// revokeSalted is used to invalidate a given salted token,
-// any child tokens will be orphaned.
-func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret error) {
+// revokeSalted is used to invalidate a given salted token, any child tokens
+// will be orphaned unless otherwise specified. skipOrphan should be used
+// whenever we are revoking the entire tree starting from a particular parent
+// (e.g. revokeTreeSalted).
+func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string, skipOrphan bool) (ret error) {
 	// Check and set the token deletion state. We only proceed with the deletion
 	// if we don't have a pending deletion (empty), or if the deletion previously
 	// failed (state is false)
@@ -1169,37 +1172,45 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 		}
 	}
 
-	// Mark all children token as orphan by removing
-	// their parent index, and clear the parent entry.
-	//
-	// Marking the token as orphan is the correct behavior in here since
-	// revokeTreeSalted will ensure that they are deleted anyways if it's not an
-	// explicit call to orphan the child tokens (the delete occurs at the leaf
-	// node and uses parent prefix, not entry.Parent, to build the tree for
-	// traversal).
-	parentPath := parentPrefix + saltedID + "/"
-	children, err := ts.view.List(ctx, parentPath)
-	if err != nil {
-		return errwrap.Wrapf("failed to scan for children: {{err}}", err)
-	}
-	for _, child := range children {
-		entry, err := ts.lookupSalted(ctx, child, true)
+	if !skipOrphan {
+		// Mark all children token as orphan by removing
+		// their parent index, and clear the parent entry.
+		//
+		// Marking the token as orphan should be skipped if it's called by
+		// revokeTreeSalted to avoid unnecessary view.List operations. Since
+		// the deletion occurs in a DFS fashion we don't need to perform a delete
+		// on child prefixes as there will be none (as saltedID entry is a leaf node).
+		parentPath := parentPrefix + saltedID + "/"
+		children, err := ts.view.List(ctx, parentPath)
 		if err != nil {
-			return errwrap.Wrapf("failed to get child token: {{err}}", err)
+			return errwrap.Wrapf("failed to scan for children: {{err}}", err)
 		}
-		lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
-		lock.Lock()
+		for _, child := range children {
+			entry, err := ts.lookupSalted(ctx, child, true)
+			if err != nil {
+				return errwrap.Wrapf("failed to get child token: {{err}}", err)
+			}
+			lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
+			lock.Lock()
 
-		entry.Parent = ""
-		err = ts.store(ctx, entry)
-		if err != nil {
+			entry.Parent = ""
+			err = ts.store(ctx, entry)
+			if err != nil {
+				lock.Unlock()
+				return errwrap.Wrapf("failed to update child token: {{err}}", err)
+			}
 			lock.Unlock()
-			return errwrap.Wrapf("failed to update child token: {{err}}", err)
+
+			// Delete the the child storage entry after we update the token entry Since
+			// paths are not deeply nested (i.e. they are simply
+			// parenPrefix/<parentID>/<childID>), we can simply call view.Delete instead
+			// of logical.ClearView
+			index := parentPath + child
+			err = ts.view.Delete(ctx, index)
+			if err != nil {
+				return errwrap.Wrapf("failed to delete child entry: {{err}}", err)
+			}
 		}
-		lock.Unlock()
-	}
-	if err = logical.ClearView(ctx, ts.view.SubView(parentPath)); err != nil {
-		return errwrap.Wrapf("failed to delete entry: {{err}}", err)
 	}
 
 	return nil
@@ -1247,7 +1258,8 @@ func (ts *TokenStore) revokeTreeSalted(ctx context.Context, saltedID string) err
 			// take care of expiring them. If Vault is restarted, any revoked tokens
 			// would have been deleted, and any pending leases for deletion will be restored
 			// by the expiration manager.
-			if err := ts.revokeSalted(ctx, id); err != nil {
+			if err := ts.revokeSalted(ctx, id, true); err != nil {
+
 				return errwrap.Wrapf("failed to revoke entry: {{err}}", err)
 			}
 			// If the length of l is equal to 1, then the last token has been deleted
@@ -1643,8 +1655,11 @@ func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d 
 func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
 	// Read the parent policy
 	parent, err := ts.Lookup(ctx, req.ClientToken)
-	if err != nil || parent == nil {
-		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
+	if err != nil {
+		return nil, errwrap.Wrapf("parent token lookup failed: {{err}}", err)
+	}
+	if parent == nil {
+		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
 	}
 
 	// A token with a restricted number of uses cannot create a new token
@@ -2131,10 +2146,10 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 
 	parent, err := ts.Lookup(ctx, req.ClientToken)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("parent token lookup failed: %s", err.Error())), logical.ErrInvalidRequest
+		return nil, errwrap.Wrapf("parent token lookup failed: {{err}}", err)
 	}
 	if parent == nil {
-		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
 	}
 
 	// Check if the client token has sudo/root privileges for the requested path
@@ -2298,7 +2313,7 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 	// Lookup the token
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return nil, errwrap.Wrapf("error looking up token: {{err}}", err)
 	}
 
 	// Verify the token exists
