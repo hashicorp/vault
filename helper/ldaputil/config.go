@@ -283,7 +283,7 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"tls_min_version": c.TLSMinVersion,
 		"tls_max_version": c.TLSMaxVersion,
 	}
-	if c.CaseSensitiveNames != nil {
+	if *c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames
 	}
 	return m
