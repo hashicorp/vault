@@ -7,7 +7,7 @@ description: |-
 ---
 
 
-# Seal Wrap / FIPS 140-2 Compliance
+# Seal Wrap / FIPS 140-2
 
 ~> **Enterprise Only:** Vault's HSM auto-unseal and Seal Wrap features are a
 part of _Vault Enterprise_.
@@ -57,14 +57,14 @@ protected in a compliant fashion. This feature is called ***Seal Wrap***.
 
 ## Challenge
 
-Federal Information Processing Standard (FIPS) 140-2 is a U.S. Government
+The Federal Information Processing Standard (FIPS) 140-2 is a U.S. Government
 computer security standard used to accredit cryptography modules. If your
-product or service is not FIPS compliant, U.S. government cannot use your
-product.
+product or service does not follow FIPS' security requirements, it may 
+complicate your ability to operate with U.S. Government data. 
 
 Aside from doing business with U.S. government, your organization may care about
 FIPS which approves various cryptographic ciphers for hashing, signature, key
-exchange, and encryption for security.
+exchange, and encryption for security. 
 
 
 ## Solution
@@ -81,12 +81,12 @@ HSM encryption and decryption.
 
 #### Benefits of the Seal Wrap:
 
-- General compliance of FIPS 140-2 as [certified by Leidos](/docs/enterprise/sealwrap/index.html#fips-140-2-compliance)
+- Conformance with FIPS 140-2 directives on Key Storage and Key Transport as [certified by Leidos](/docs/enterprise/sealwrap/index.html#fips-140-2-compliance)
 - Supports FIPS level of security equal to HSM
   * For example, if you use Level 3 hardware encryption on an HSM, Vault will be
   using FIPS 140-2 Level 3 cryptography
 - Allows Vault to be deployed in high security [GRC](https://en.wikipedia.org/wiki/Governance,_risk_management,_and_compliance)
-environments (e.g. PCI-DSS, HIPAA)
+environments (e.g. PCI-DSS, HIPAA) where FIPS guidelines important for external audits
 - Pathway for Vault's use in managing  Department of Defense's (DOD) or North
 Atlantic Treaty Organization (NATO) military secrets
 
