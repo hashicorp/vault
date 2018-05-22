@@ -86,9 +86,9 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	ca, hasCa := conf["tls_ca_file"]
 	if (hasCert && hasKey) || hasCa {
 		tls := transport.TLSInfo{
-			CAFile:   ca,
-			CertFile: cert,
-			KeyFile:  key,
+			TrustedCAFile: ca,
+			CertFile:      cert,
+			KeyFile:       key,
 		}
 
 		tlscfg, err := tls.ClientConfig()
