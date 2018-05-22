@@ -11,6 +11,9 @@ FEATURES:
  * Cert auth CIDR restrictions: When using the `cert` auth method you can now
    limit authentication to specific CIDRs; these will also be encoded in
    resultant tokens to limit their use.
+ * Userpass auth CIDR restrictions: When using the `userpass` auth method you
+   can now limit authentication to specific CIDRs; these will also be encoded
+   in resultant tokens to limit their use.
 
 IMPROVEMENTS:
 
