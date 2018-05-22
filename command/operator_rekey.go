@@ -557,12 +557,12 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 	}
 
 	if mightContainUnsealKeys {
-		return c.printUnsealKeys(status.(*api.RekeyStatusResponse),
+		return c.printUnsealKeys(client, status.(*api.RekeyStatusResponse),
 			resp.(*api.RekeyUpdateResponse))
 	}
 
-	c.UI.Error(fmt.Sprintf("Should not be hitting this case"))
-	return 2
+	c.UI.Output("Rekey verification successful.")
+	return 0
 }
 
 // status is used just to fetch and dump the status.
@@ -678,6 +678,7 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 	case *api.RekeyVerificationStatusResponse:
 		status := in.(*api.RekeyVerificationStatusResponse)
 		out = append(out, fmt.Sprintf("Nonce | %s", status.Nonce))
+		out = append(out, fmt.Sprintf("Started | %t", status.Started))
 		out = append(out, fmt.Sprintf("New Shares | %d", status.N))
 		out = append(out, fmt.Sprintf("New Threshold | %d", status.T))
 		out = append(out, fmt.Sprintf("Verification Progress | %d/%d", status.Progress, status.T))
@@ -692,7 +693,7 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 	}
 }
 
-func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, resp *api.RekeyUpdateResponse) int {
+func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, status *api.RekeyStatusResponse, resp *api.RekeyUpdateResponse) int {
 	switch Format(c.UI) {
 	case "table":
 	default:
@@ -750,7 +751,7 @@ func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, 
 	default:
 		c.UI.Output("")
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
-			"Vault is storing a new key, split into %d key shares and a key threshold "+
+			"Vault has created a new key, split into %d key shares and a key threshold "+
 				"of %d. These will not be active until after verification is complete. "+
 				"Please securely distributed the key shares printed above. When Vault "+
 				"is re-sealed, restarted, or stopped, you must supply at least %d of "+
@@ -762,8 +763,13 @@ func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, 
 		c.UI.Warn(wrapAtLength(
 			"Again, these key shares are _not_ valid until verification is performed. " +
 				"Do not lose or discard your current key shares until after verification " +
-				"is complete or you will be unable to unseal Vault.",
+				"is complete or you will be unable to unseal Vault. The current " +
+				"verification status, including initial nonce, is shown below.",
 		))
+		c.UI.Output("")
+
+		c.flagVerify = true
+		return c.status(client)
 	}
 
 	return 0
