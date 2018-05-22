@@ -43,7 +43,8 @@ type RekeyResult struct {
 }
 
 type RekeyVerifyResult struct {
-	Nonce string
+	Complete bool
+	Nonce    string
 }
 
 // RekeyBackup stores the backup copy of PGP-encrypted keys
@@ -779,6 +780,10 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 	// Schedule the progress for forgetting and rotate the nonce if possible
 	defer func() {
 		config.VerificationProgress = nil
+		if ret != nil && ret.Complete {
+			return
+		}
+		// Not complete, so rotate nonce
 		nonce, err := uuid.GenerateUUID()
 		if err == nil {
 			config.VerificationNonce = nonce
@@ -819,7 +824,8 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 	}
 
 	res := &RekeyVerifyResult{
-		Nonce: config.VerificationNonce,
+		Nonce:    config.VerificationNonce,
+		Complete: true,
 	}
 
 	return res, nil
