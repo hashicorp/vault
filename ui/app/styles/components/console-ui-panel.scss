@@ -1,0 +1,54 @@
+.console-ui-panel {
+    background: hotpink;
+    color: white;
+    padding: 0 1em;
+    font-size: 16px;
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    min-height: 400px;
+    transform: translate3d(0, -400px, 0);
+    transition: transform .230s ease-in;
+    will-change: transform;
+  font-weight: 500;
+  overflow: auto;
+  padding-bottom: 20px;
+  pre {
+    background: none;
+    color: inherit;
+  }
+}
+.console-ui-input input {
+  caret-color: white;
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+  outline: none;
+  border: 0;
+  background: none;
+  display: inline-block;
+  width: calc(100% - 1.5rem);
+  padding: .5rem 0;
+}
+.console-ui-input::before {
+    content: '>';
+    font-size: 14px;
+    padding-right: .5rem;
+    display: inline-block;
+  }
+
+.panel-open .console-ui-panel {
+  transform: translate3d(0, 0, 0);
+}
+
+.panel-open {
+
+  z-index: 100;
+}
+
+header .navbar,
+header .navbar-sections {
+
+  z-index: 200;
+}
