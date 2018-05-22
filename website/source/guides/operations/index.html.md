@@ -36,13 +36,13 @@ is a Vault Enterprise feature.
 - **[Enterprise Only]** [Mount Filter](/guides/operations/mount-filter.html)
 guide demonstrates how to selectively filter out secret engines from being
 replicated across clusters. This feature can help organizations to comply with
-***General Data Protection Regulation (GDPR)***. 
+***General Data Protection Regulation (GDPR)***.
 
 - **[Enterprise Only]** [Vault Auto-unseal using AWS Key Management Service (KMS)](/guides/operations/autounseal-aws-kms.html) guide demonstrates an example of
 how to use Terraform to provision an instance that utilizes an encryption key
 from AWS Key Management Service (KMS).
 
-- **[Enterprise Only]** [Seal Wrap / FIPS 140-2 Compliance](/guides/operations/seal-wrap.html)
+- **[Enterprise Only]** [Seal Wrap / FIPS 140-2](/guides/operations/seal-wrap.html)
 guide demonstrates how Vault's seal wrap feature works to encrypt your secrets
 leveraging FIPS 140-2 certified HSM.
 

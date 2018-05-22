@@ -1,6 +1,6 @@
 ---
 layout: "guides"
-page_title: "Seal Wrap / FIPS 140-2 Compliance - Guides"
+page_title: "Seal Wrap / FIPS 140-2 - Guides"
 sidebar_current: "guides-operations-seal-wrap"
 description: |-
   In this guide,
@@ -59,12 +59,12 @@ protected in a compliant fashion. This feature is called ***Seal Wrap***.
 
 The Federal Information Processing Standard (FIPS) 140-2 is a U.S. Government
 computer security standard used to accredit cryptography modules. If your
-product or service does not follow FIPS' security requirements, it may 
-complicate your ability to operate with U.S. Government data. 
+product or service does not follow FIPS' security requirements, it may
+complicate your ability to operate with U.S. Government data.
 
 Aside from doing business with U.S. government, your organization may care about
 FIPS which approves various cryptographic ciphers for hashing, signature, key
-exchange, and encryption for security. 
+exchange, and encryption for security.
 
 
 ## Solution
