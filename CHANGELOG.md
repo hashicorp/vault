@@ -8,6 +8,8 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * Azure Key Vault Auto Unseal/Seal Wrap Support (Enterprise): Azure Key Vault
+   can now be used a support seal for Auto Unseal and Seal Wrapping.
  * Cert auth CIDR restrictions: When using the `cert` auth method you can now
    limit authentication to specific CIDRs; these will also be encoded in
    resultant tokens to limit their use.
@@ -25,7 +27,7 @@ IMPROVEMENTS:
    CKM_RSA_PKCS_OAEP mechanisms
  * core/pkcs11 (enterprise): HSM slots can now be selected by token label instead
    of just slot number
- * core/seal (enterprise): Lazily rewrap data when seal keys are rotated
+ * core/seal (enterprise): 
  * expiration: Allow revoke-prefix and revoke-force to work on single leases as
    well as prefixes [GH-4450]
 
