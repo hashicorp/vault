@@ -266,24 +266,27 @@ func (c *ConfigEntry) Map() map[string]interface{} {
 }
 
 func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
-	return map[string]interface{}{
-		"url":                  c.Url,
-		"userdn":               c.UserDN,
-		"groupdn":              c.GroupDN,
-		"groupfilter":          c.GroupFilter,
-		"groupattr":            c.GroupAttr,
-		"upndomain":            c.UPNDomain,
-		"userattr":             c.UserAttr,
-		"certificate":          c.Certificate,
-		"insecure_tls":         c.InsecureTLS,
-		"starttls":             c.StartTLS,
-		"binddn":               c.BindDN,
-		"deny_null_bind":       c.DenyNullBind,
-		"discoverdn":           c.DiscoverDN,
-		"tls_min_version":      c.TLSMinVersion,
-		"tls_max_version":      c.TLSMaxVersion,
-		"case_sensitive_names": *c.CaseSensitiveNames,
+	m := map[string]interface{}{
+		"url":             c.Url,
+		"userdn":          c.UserDN,
+		"groupdn":         c.GroupDN,
+		"groupfilter":     c.GroupFilter,
+		"groupattr":       c.GroupAttr,
+		"upndomain":       c.UPNDomain,
+		"userattr":        c.UserAttr,
+		"certificate":     c.Certificate,
+		"insecure_tls":    c.InsecureTLS,
+		"starttls":        c.StartTLS,
+		"binddn":          c.BindDN,
+		"deny_null_bind":  c.DenyNullBind,
+		"discoverdn":      c.DiscoverDN,
+		"tls_min_version": c.TLSMinVersion,
+		"tls_max_version": c.TLSMaxVersion,
 	}
+	if c.CaseSensitiveNames != nil {
+		m["case_sensitive_names"] = *c.CaseSensitiveNames
+	}
+	return m
 }
 
 func (c *ConfigEntry) Validate() error {
