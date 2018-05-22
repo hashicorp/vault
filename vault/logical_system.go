@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -3116,6 +3117,52 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	resp := &logical.Response{
 		Data: map[string]interface{}{},
 	}
+
+	// Most of the time we want to just send over the marshalled HTTP bytes.
+	// However there is a sad separate case: if the original response was using
+	// bare values we need to use those or else what comes back is garbled.
+	httpResp := &logical.HTTPResponse{}
+	err = jsonutil.DecodeJSON([]byte(response), httpResp)
+	if err != nil {
+		return nil, errwrap.Wrapf("error decoding wrapped response: {{err}}", err)
+	}
+	if httpResp.Data != nil &&
+		(httpResp.Data[logical.HTTPStatusCode] != nil ||
+			httpResp.Data[logical.HTTPRawBody] != nil ||
+			httpResp.Data[logical.HTTPContentType] != nil) {
+		if httpResp.Data[logical.HTTPStatusCode] != nil {
+			resp.Data[logical.HTTPStatusCode] = httpResp.Data[logical.HTTPStatusCode]
+		}
+		if httpResp.Data[logical.HTTPContentType] != nil {
+			resp.Data[logical.HTTPContentType] = httpResp.Data[logical.HTTPContentType]
+		}
+
+		rawBody := httpResp.Data[logical.HTTPRawBody]
+		if rawBody != nil {
+			// Decode here so that we can audit properly
+			switch rawBody.(type) {
+			case string:
+				// Best effort decoding; if this works, the original value was
+				// probably a []byte instead of a string, but was marshaled
+				// when the value was saved, so this restores it as it was
+				decBytes, err := base64.StdEncoding.DecodeString(rawBody.(string))
+				if err == nil {
+					// We end up with []byte, will not be HMAC'd
+					resp.Data[logical.HTTPRawBody] = decBytes
+				} else {
+					// We end up with string, will be HMAC'd
+					resp.Data[logical.HTTPRawBody] = rawBody
+				}
+			default:
+				b.Core.Logger().Error("unexpected type of raw body when decoding wrapped token", "type", fmt.Sprintf("%T", rawBody))
+			}
+
+			resp.Data[logical.HTTPRawBodyAlreadyJSONDecoded] = true
+		}
+
+		return resp, nil
+	}
+
 	if len(response) == 0 {
 		resp.Data[logical.HTTPStatusCode] = 204
 	} else {
@@ -3137,7 +3184,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, token string
 			return "", errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
 		}
 
-		defer b.Core.tokenStore.Revoke(ctx, token)
+		defer b.Core.tokenStore.revokeOrphan(ctx, token)
 	}
 
 	cubbyReq := &logical.Request{
@@ -3247,7 +3294,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		if err != nil {
 			return nil, errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
 		}
-		defer b.Core.tokenStore.Revoke(ctx, token)
+		defer b.Core.tokenStore.revokeOrphan(ctx, token)
 	}
 
 	// Fetch the original TTL

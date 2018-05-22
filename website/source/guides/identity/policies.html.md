@@ -164,7 +164,7 @@ This guide demonstrates basic policy authoring and management tasks.
 
 ### <a name="step1"></a>Step 1: Write ACL policies in HCL format
 
-Remember, an mpty policy grants **no permission** in the system. Therefore, ACL
+Remember, an empty policy grants **no permission** in the system. Therefore, ACL
 policies are defined for each path.
 
 ```shell

@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 
+	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/ryanuber/go-glob"
 )
 
@@ -77,6 +78,10 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		ttl = b.System().DefaultLeaseTTL()
 	}
 
+	if err := b.checkCIDR(matched.Entry, req); err != nil {
+		return nil, err
+	}
+
 	clientCerts := req.Connection.ConnState.PeerCertificates
 	if len(clientCerts) == 0 {
 		return logical.ErrorResponse("no client certificate found"), nil
@@ -96,6 +101,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			Metadata: map[string]string{
 				"cert_name":        matched.Entry.Name,
 				"common_name":      clientCerts[0].Subject.CommonName,
+				"serial_number":    clientCerts[0].SerialNumber.String(),
 				"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
 				"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
 			},
@@ -104,8 +110,9 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 				TTL:       ttl,
 			},
 			Alias: &logical.Alias{
-				Name: clientCerts[0].SerialNumber.String(),
+				Name: clientCerts[0].Subject.CommonName,
 			},
+			BoundCIDRs: matched.Entry.BoundCIDRs,
 		},
 	}
 
@@ -171,21 +178,20 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
+	if err := b.checkCIDR(cert, req); err != nil {
+		return nil, err
+	}
+
 	if !policyutil.EquivalentPolicies(cert.Policies, req.Auth.Policies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	// If a period is provided, set that as part of resp.Auth.Period and return a
-	// response immediately. Let expiration manager handle renewal from there on.
-	if cert.Period > time.Duration(0) {
-		resp := &logical.Response{
-			Auth: req.Auth,
-		}
-		resp.Auth.Period = cert.Period
-		return resp, nil
-	}
-
-	return framework.LeaseExtend(cert.TTL, cert.MaxTTL, b.System())(ctx, req, d)
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.TTL = cert.TTL
+	resp.Auth.MaxTTL = cert.MaxTTL
+	resp.Auth.Period = cert.Period
+	resp.Auth.BoundCIDRs = cert.BoundCIDRs
+	return resp, nil
 }
 
 func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d *framework.FieldData) (*ParsedCert, *logical.Response, error) {
@@ -473,6 +479,13 @@ func (b *backend) checkForValidChain(chains [][]*x509.Certificate) bool {
 		}
 	}
 	return false
+}
+
+func (b *backend) checkCIDR(cert *CertEntry, req *logical.Request) error {
+	if cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cert.BoundCIDRs) {
+		return nil
+	}
+	return logical.ErrPermissionDenied
 }
 
 // parsePEM parses a PEM encoded x509 certificate

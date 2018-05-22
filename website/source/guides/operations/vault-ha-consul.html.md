@@ -67,7 +67,7 @@ You perform the following:
 
 - [Step 1: Setup a Consul Server Cluster](#step1)
 - [Step 2: Start and Verify the Consul Cluster State](#step2)
-- [Step 3: Setup Console Client Agents on Vault Nodes](#step3)
+- [Step 3: Setup Consul Client Agents on Vault Nodes](#step3)
 - [Step 4: Configure the Vault Servers](#step4)
 - [Step 5: Start Vault and Verify the State](#step5)
 
@@ -282,21 +282,18 @@ The above output shows that **`consul_s3`** is the current cluster leader in
 this example.  Now, you are good to move on to the Vault server configuration.
 
 
-### <a name="step3"></a>Step 3: Setup Console Client Agents on Vault Nodes
+### <a name="step3"></a>Step 3: Setup Consul Client Agents on Vault Nodes
 
-The Vault server nodes require **both** the Consul and Vault binaries, and a
-Consul **client** agent and a Vault server itself need to be configured on each
-node.
+The Vault server nodes require **both** the Consul and Vault binaries on each node. Consul will be configured as a **client** agent and Vault will be configured as a server.
 
 ![Reference Architecture](/assets/images/vault-ha-consul-2.png)
 
 
 #### Consul Client Agent Configuration
 
-Since Consul is used to providing a highly available storage backend, you need to
+Since Consul is used to provide a highly available storage backend, you need to
 configure local Consul client agents on the Vault servers which will communicate
-to the Consul server cluster for registering health checks, service checks, and
-for leadership and also for cluster HA failover coordination.
+with the Consul server cluster for registering health checks, service discovery, and cluster HA failover coordination (cluster leadership).
 
 ~> Note that [it is not recommended to connect the Vault servers directly to the
 Consul servers](/docs/configuration/storage/consul.html#address).
@@ -461,14 +458,20 @@ by a label as well:
 - **`vault_s1: 10.1.42.201`**
 - **`vault_s2: 10.1.42.202`**
 
-This section presumes the vault binary is located at **`/usr/local/bin/vault`**.
+In our configuration file, we'll set up the following:
+
+- [**`tcp`**](/docs/configuration/listener/tcp.html) listener
+- [**`consul`**](/docs/configuration/storage/consul.html)  storage backend
+- [High Availability parameters](/docs/configuration/index.html#high-availability-parameters)
+
+This section assumes the Vault binary is located at **`/usr/local/bin/vault`**
 
 #### Vault Configuration
 
     listener "tcp" {
-      address = "0.0.0.0:8200"
-      cluster_address  = "$CLUSTER_ADDRESS"
-      tls_disable = "true"
+      address          = "0.0.0.0:8200"
+      cluster_address  = "0.0.0.0:8201"
+      tls_disable      = "true"
     }
 
     storage "consul" {
@@ -480,30 +483,26 @@ This section presumes the vault binary is located at **`/usr/local/bin/vault`**.
     cluster_addr = "$CLUSTER_ADDR"
 
 
-This configuration allows for listening on all interfaces (such that a vault
-command against the loopback address would succeed for example) but explicitly
-sets an intra-cluster communication address as [**`cluster_address`**](/docs/configuration/index.html#high-availability-parameters).
+We're setting the following parameters for our `tcp` listener:
+
+- `address` (string: "127.0.0.1:8200") – Specifies the address to bind to for listening.
+- `cluster_address` (string: "127.0.0.1:8201") – Specifies the address to bind to for cluster server-to-server requests. This defaults to one port higher than the value of address. This does not usually need to be set, but can be useful in case Vault servers are isolated from each other in such a way that they need to hop through a TCP load balancer or some other scheme in order to talk.
+
+This configuration allows for listening on all interfaces (such that a Vault
+command against the loopback address would succeed, for example). Specifical
+
+We're also explicitly setting Vault's [HA parameters](/docs/configuration/index.html#high-availability-parameters) (`api_addr` and `cluster_addr`). Often, it's not necessary to configure these two parameters when using Consul as Vault's storage backend, as Consul will attempt to automatically discover and advertise the address of the active Vault node. However, certain cluster configurations might require them to be explicitly set (accesing Vault through a load balancer, for example).
+
+For the sake of simplicity, we will assume that clients in our scenario connect directly to the Vault nodes (rather than through a load balancer). Review the [Client Redirection](/docs/concepts/ha.html#client-redirection) documentation for more information on client access patterns and their implications.
 
 Note that some values contain variable placeholders while the rest have
 reasonable defaults. You should replace the following values in your own Vault
 server configuration based on the example:
 
-- **$CLUSTER_ADDRESS**: this should be set to address that you prefer the Vault
-servers perform intra-server communications on; this needs to be routable
-between Vault servers and in our example will be `10.1.42.201:8200` and
-`10.1.42.202:8200` respectively.
+- **$API_ADDR**: Specifies the address (full URL) to advertise to other Vault servers in the cluster for client redirection. This can also be provided via the environment variable `VAULT_API_ADDR`. In general this should be set to a full URL that points to the value of the listener address. In our scenario, it will be `http://10.1.42.201:8200`
+and `http://10.1.42.202:8200` respectively.
 
-- **$API_ADDR**: this should be set to the address which client (API)
-requests are to be redirected to. There are two common scenarios: Vault servers
-accessed directly by clients, and Vault servers accessed via a load balancer.
-Since this example accesses the [Vault servers directly](/docs/concepts/ha.html#direct-access), the `api_addr` for each node
-should be that node's address. Therefore, it will be `https://10.1.42.201:8200`
-and `https://10.1.42.202:8200` respectively.
-
-- **$CLUSTER_ADDR**: Not to be confused with the **CLUSTER_ADDRESS** parameter,
-this parameter is specifically for HA request forwarding between Vault servers
-and needs to be a address routable between all Vault servers in a full URL
-format with port. In this case it will be `https://10.1.42.201:8201` and
+- **$CLUSTER_ADDR**: Specifies the address to advertise to other Vault servers in the cluster for request forwarding. This can also be provided via the environment variable `VAULT_CLUSTER_ADDR`. This is a full URL, like `api_addr`. In our scenario, it will be `https://10.1.42.201:8201` and
 `https://10.1.42.202:8201` respectively.
 
 > Note that the scheme here (https) is ignored; all cluster members will always
@@ -513,9 +512,9 @@ use TLS with a private key/certificate.
 #### `vault_s1.hcl` Example
 
     listener "tcp" {
-      address = "0.0.0.0:8200"
-      cluster_address  = "10.1.42.201:8200"
-      tls_disable = "true"
+      address          = "0.0.0.0:8200"
+      cluster_address  = "10.1.42.201:8201"
+      tls_disable      = "true"
     }
 
     storage "consul" {
@@ -523,16 +522,16 @@ use TLS with a private key/certificate.
       path    = "vault/"
     }
 
-    api_addr = "https://10.1.42.201:8200"
+    api_addr = "http://10.1.42.201:8200"
     cluster_addr = "https://10.1.42.201:8201"
 
 
 #### `vault_s2.hcl` Example
 
     listener "tcp" {
-      address = "0.0.0.0:8200"
-      cluster_address  = "10.1.42.202:8200"
-      tls_disable = "true"
+      address          = "0.0.0.0:8200"
+      cluster_address  = "10.1.42.202:8201"
+      tls_disable      = "true"
     }
 
     storage "consul" {
@@ -540,7 +539,7 @@ use TLS with a private key/certificate.
       path    = "vault/"
     }
 
-    api_addr = "https://10.1.42.202:8200"
+    api_addr = "http://10.1.42.202:8200"
     cluster_addr = "https://10.1.42.202:8201"
 
 

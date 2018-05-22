@@ -81,7 +81,7 @@ email addresses.`,
 sets the expiration date. If not specified
 the role default, backend default, or system
 default TTL is used, in that order. Cannot
-be later than the role max TTL.`,
+be larger than the role max TTL.`,
 	}
 
 	return fields

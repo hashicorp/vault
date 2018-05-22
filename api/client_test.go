@@ -196,6 +196,48 @@ func TestClientEnvSettings(t *testing.T) {
 	}
 }
 
+func TestParsingRateAndBurst(t *testing.T) {
+	var (
+		correctFormat                    = "400:400"
+		observedRate, observedBurst, err = parseRateLimit(correctFormat)
+		expectedRate, expectedBurst      = float64(400), 400
+	)
+	if err != nil {
+		t.Error(err)
+	}
+	if expectedRate != observedRate {
+		t.Errorf("Expected rate %v but found %v", expectedRate, observedRate)
+	}
+	if expectedBurst != observedBurst {
+		t.Errorf("Expected burst %v but found %v", expectedRate, observedRate)
+	}
+}
+
+func TestParsingRateOnly(t *testing.T) {
+	var (
+		correctFormat                    = "400"
+		observedRate, observedBurst, err = parseRateLimit(correctFormat)
+		expectedRate, expectedBurst      = float64(400), 400
+	)
+	if err != nil {
+		t.Error(err)
+	}
+	if expectedRate != observedRate {
+		t.Errorf("Expected rate %v but found %v", expectedRate, observedRate)
+	}
+	if expectedBurst != observedBurst {
+		t.Errorf("Expected burst %v but found %v", expectedRate, observedRate)
+	}
+}
+
+func TestParsingErrorCase(t *testing.T) {
+	var incorrectFormat = "foobar"
+	var _, _, err = parseRateLimit(incorrectFormat)
+	if err == nil {
+		t.Error("Expected error, found no error")
+	}
+}
+
 func TestClientTimeoutSetting(t *testing.T) {
 	oldClientTimeout := os.Getenv(EnvVaultClientTimeout)
 	os.Setenv(EnvVaultClientTimeout, "10")

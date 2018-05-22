@@ -91,9 +91,16 @@
     width: 100%;
     text-align: left;
 
+    .icon {
+      color: $menu-item-hover-background-color;
+    }
     &:hover {
       background-color: $menu-item-hover-background-color;
       color: $menu-item-hover-color;
+      .icon {
+        color: $menu-item-hover-color;
+      }
+
     }
 
     &.is-active {

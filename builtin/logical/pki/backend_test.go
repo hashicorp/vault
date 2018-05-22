@@ -1487,7 +1487,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 // Generates steps to test out various role permutations
 func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	roleVals := roleEntry{
-		MaxTTL:    "12h",
+		MaxTTL:    12 * time.Hour,
 		KeyType:   "rsa",
 		KeyBits:   2048,
 		RequireCN: true,
@@ -1866,7 +1866,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 			issueTestStep.ErrorOk = !allowed
 
-			validity, _ := time.ParseDuration(roleVals.MaxTTL)
+			validity := roleVals.MaxTTL
 
 			var testBitSize int
 
@@ -2088,16 +2088,16 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	{
 		roleTestStep.ErrorOk = true
 		roleVals.Lease = ""
-		roleVals.MaxTTL = ""
+		roleVals.MaxTTL = 0
 		addTests(nil)
 
 		roleVals.Lease = "12h"
-		roleVals.MaxTTL = "6h"
+		roleVals.MaxTTL = 6 * time.Hour
 		addTests(nil)
 
 		roleTestStep.ErrorOk = false
-		roleVals.TTL = ""
-		roleVals.MaxTTL = "12h"
+		roleVals.TTL = 0
+		roleVals.MaxTTL = 12 * time.Hour
 	}
 
 	// Listing test
@@ -2494,8 +2494,11 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp != nil {
-		t.Fatal("expected no ca info")
+	if resp == nil {
+		t.Fatal("expected a warning")
+	}
+	if resp.Data != nil || len(resp.Warnings) == 0 {
+		t.Fatalf("bad response: %#v", *resp)
 	}
 	resp, err = client.Logical().Read("pki/cert/ca_chain")
 	if err != nil {
@@ -2577,24 +2580,6 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = client.Logical().Write("root/roles/example", map[string]interface{}{
-		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
-		"allow_bare_domains": true,
-		"allow_subdomains":   true,
-		"max_ttl":            "2h",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = client.Logical().Write("int/roles/example", map[string]interface{}{
-		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
-		"allow_subdomains":   true,
-		"allow_bare_domains": true,
-		"max_ttl":            "2h",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// Direct issuing from root
 	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
@@ -2621,6 +2606,33 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 			} else {
 				argMap[currString] = arg
 			}
+		}
+		// We do this to ensure writing a key type of any is invalid when
+		// issuing and valid when signing
+		_, err = client.Logical().Write(path+"roles/example", map[string]interface{}{
+			"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
+			"allow_subdomains":   true,
+			"allow_bare_domains": true,
+			"max_ttl":            "2h",
+			"key_type":           "any",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = client.Logical().Write(path+"issue/example", argMap)
+		if err == nil {
+			t.Fatal("expected err from key_type any")
+		}
+		// Now put it back
+		_, err = client.Logical().Write(path+"roles/example", map[string]interface{}{
+			"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
+			"allow_subdomains":   true,
+			"allow_bare_domains": true,
+			"max_ttl":            "2h",
+			"key_type":           "rsa",
+		})
+		if err != nil {
+			t.Fatal(err)
 		}
 		_, err = client.Logical().Write(path+"issue/example", argMap)
 		switch {

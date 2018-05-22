@@ -742,6 +742,108 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	time.Sleep(300 * time.Millisecond)
+
+	noop.Lock()
+	defer noop.Unlock()
+
+	if len(noop.Requests) != 3 {
+		t.Fatalf("Bad: %v", noop.Requests)
+	}
+	for _, req := range noop.Requests {
+		if req.Operation != logical.RevokeOperation {
+			t.Fatalf("Bad: %v", req)
+		}
+	}
+
+	expect := []string{
+		"foo",
+		"sub/bar",
+		"zip",
+	}
+	sort.Strings(noop.Paths)
+	sort.Strings(expect)
+	if !reflect.DeepEqual(noop.Paths, expect) {
+		t.Fatalf("bad: %v", noop.Paths)
+	}
+}
+
+func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
+	exp := mockExpiration(t)
+	noop := &NoopBackend{}
+	// Request handle with a timeout context that simulates blocking lease revocation.
+	noop.RequestHandler = func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+		ctx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
+		defer cancel()
+
+		select {
+		case <-ctx.Done():
+			return noop.Response, nil
+		}
+	}
+
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	paths := []string{
+		"prod/aws/foo",
+		"prod/aws/sub/bar",
+		"prod/aws/zip",
+	}
+	for _, path := range paths {
+		req := &logical.Request{
+			Operation:   logical.ReadOperation,
+			Path:        path,
+			ClientToken: "foobarbaz",
+		}
+		resp := &logical.Response{
+			Secret: &logical.Secret{
+				LeaseOptions: logical.LeaseOptions{
+					TTL: 1 * time.Minute,
+				},
+			},
+			Data: map[string]interface{}{
+				"access_key": "xyz",
+				"secret_key": "abcd",
+			},
+		}
+		_, err := exp.Register(req, resp)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	// Should nuke all the keys
+	te := &TokenEntry{
+		ID: "foobarbaz",
+	}
+	if err := exp.RevokeByToken(te); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Lock and check that no requests has gone through yet
+	noop.Lock()
+	if len(noop.Requests) != 0 {
+		t.Fatalf("Bad: %v", noop.Requests)
+	}
+	noop.Unlock()
+
+	// Wait for a bit for timeouts to trigger and pending revocations to go
+	// through and then we relock
+	time.Sleep(300 * time.Millisecond)
+
+	noop.Lock()
+	defer noop.Unlock()
+
+	// Now make sure that all requests have gone through
 	if len(noop.Requests) != 3 {
 		t.Fatalf("Bad: %v", noop.Requests)
 	}
@@ -1239,6 +1341,8 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	time.Sleep(300 * time.Millisecond)
+
 	out, err := exp.tokenStore.Lookup(context.Background(), le.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1543,6 +1647,78 @@ func TestExpiration_RevokeForce(t *testing.T) {
 	resp, err = core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("got error: %s", err)
+	}
+}
+
+func TestExpiration_RevokeForceSingle(t *testing.T) {
+	core, _, _, root := TestCoreWithTokenStore(t)
+
+	core.logicalBackends["badrenew"] = badRenewFactory
+	me := &MountEntry{
+		Table:    mountTableType,
+		Path:     "badrenew/",
+		Type:     "badrenew",
+		Accessor: "badrenewaccessor",
+	}
+
+	err := core.mount(context.Background(), me)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "badrenew/creds",
+		ClientToken: root,
+	}
+
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("response was nil")
+	}
+	if resp.Secret == nil {
+		t.Fatalf("response secret was nil, response was %#v", *resp)
+	}
+	leaseID := resp.Secret.LeaseID
+
+	req.Operation = logical.UpdateOperation
+	req.Path = "sys/leases/lookup"
+	req.Data = map[string]interface{}{"lease_id": leaseID}
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("nil response")
+	}
+	if resp.Data["id"].(string) != leaseID {
+		t.Fatalf("expected id %q, got %q", leaseID, resp.Data["id"].(string))
+	}
+
+	req.Path = "sys/revoke-prefix/" + leaseID
+
+	resp, err = core.HandleRequest(req)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	req.Path = "sys/revoke-force/" + leaseID
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("got error: %s", err)
+	}
+
+	req.Path = "sys/leases/lookup"
+	req.Data = map[string]interface{}{"lease_id": leaseID}
+	resp, err = core.HandleRequest(req)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "invalid request") {
+		t.Fatalf("bad error: %v", err)
 	}
 }
 

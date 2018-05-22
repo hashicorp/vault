@@ -42,7 +42,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `credentials` `(string: <required>)`: The path to the credentials JSON file
   to use. May be also specified by the `GOOGLE_CREDENTIALS` or
   `GOOGLE_APPLICATION_CREDENTIALS` environment variable or set automatically if
-  running under Google App Engine, Google Compute Engine or Google Container
+  running under Google App Engine, Google Compute Engine or Google Kubernetes
   Engine.
 
 - `project` `(string: <required>)`: The GCP project ID to use. May also be

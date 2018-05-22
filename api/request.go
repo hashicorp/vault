@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	retryablehttp "github.com/hashicorp/go-retryablehttp"
 )
 
 // Request is a raw request configuration structure used to initiate
@@ -53,13 +56,44 @@ func (r *Request) ResetJSONBody() error {
 // ToHTTP turns this request into a valid *http.Request for use with the
 // net/http package.
 func (r *Request) ToHTTP() (*http.Request, error) {
+	req, err := r.toRetryableHTTP(true)
+	if err != nil {
+		return nil, err
+	}
+	return req.Request, nil
+}
+
+// legacy indicates whether we want to return a request derived from
+// http.NewRequest instead of retryablehttp.NewRequest, so that legacy clents
+// that might be using the public ToHTTP method still work
+func (r *Request) toRetryableHTTP(legacy bool) (*retryablehttp.Request, error) {
 	// Encode the query parameters
 	r.URL.RawQuery = r.Params.Encode()
 
-	// Create the HTTP request
-	req, err := http.NewRequest(r.Method, r.URL.RequestURI(), r.Body)
-	if err != nil {
-		return nil, err
+	// Create the HTTP request, defaulting to retryable
+	var req *retryablehttp.Request
+
+	if legacy {
+		regReq, err := http.NewRequest(r.Method, r.URL.RequestURI(), r.Body)
+		if err != nil {
+			return nil, err
+		}
+		req = &retryablehttp.Request{
+			Request: regReq,
+		}
+	} else {
+		var buf []byte
+		var err error
+		if r.Body != nil {
+			buf, err = ioutil.ReadAll(r.Body)
+			if err != nil {
+				return nil, err
+			}
+		}
+		req, err = retryablehttp.NewRequest(r.Method, r.URL.RequestURI(), bytes.NewReader(buf))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	req.URL.User = r.URL.User

@@ -151,12 +151,22 @@ identifier can later be used to revoke a DR secondary's access.
 - `ttl` `(string: "30m")` – Specifies the TTL for the secondary activation
   token.
 
+### Sample Payload
+
+```json
+{
+  "id": "us-east-1"
+}
+```
+
 ### Sample Request
 
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/sys/replication/dr/primary/secondary-token?id=us-east-1
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/primary/secondary-token
 ```
 
 ### Sample Response
@@ -295,7 +305,7 @@ result in data loss!
 
 ```json
 {
-  "key": "ijH8tphEHaBtgx+IvPfxDsSi2LV4j9k+Lad6eqT5cJw="
+  "dr_operation_token": "ijH8tphEHaBtgx+IvPfxDsSi2LV4j9k+Lad6eqT5cJw="
 }
 ```
 
@@ -390,7 +400,7 @@ $ curl \
 The `/sys/replication/dr/secondary/generate-operation-token` endpoint is used to create a new Disaster
 Recovery operation token for a DR secondary. These tokens are used to authorize
 certain DR Operation. They should be treated like traditional root tokens by
-being generated with needed and deleted soon after.
+being generated when needed and deleted soon after.
 
 ## Read Generation Progress
 

@@ -77,13 +77,17 @@ Sets a CA cert and associated parameters in a role name.
   as it is renewed it never expires unless `max_ttl` is also set, but the TTL
   set on the token at each renewal is fixed to the value specified here. If this
   value is modified, the token will pick up the new value at its next renewal.
+- `bound_cidrs` `(string: "", or list: [])` – If set, restricts usage of the
+  certificates to client IPs falling within the range of the specified
+  CIDR(s).
 
 ### Sample Payload
 
 ```json
 {
   "certificate": "-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----",
-  "display_name": "test"
+  "display_name": "test",
+  "bound_cidrs": ["127.0.0.1/32", "128.252.0.0/16"]
 }
 ```
 
