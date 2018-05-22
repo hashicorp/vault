@@ -106,8 +106,8 @@ The `config` endpoint configures the LDAP connection and binding parameters, as 
 
 ### Password parameters
 
-* `ttl` (string, optional) - The default password time-to-live in seconds. Once the ttl has passed, a password will be rotated the next time it's requested. Defaults to the number of seconds in 32 days.
-* `max_ttl` (string, optional) - The maximum password time-to-live in seconds. No role will be allowed to set a custom ttl greater than the `max_ttl`. Defaults to the number of seconds in 32 days.
+* `ttl` (string, optional) - The default password time-to-live in seconds. Once the ttl has passed, a password will be rotated the next time it's requested.
+* `max_ttl` (string, optional) - The maximum password time-to-live in seconds. No role will be allowed to set a custom ttl greater than the `max_ttl`.
 * `password_length` (string, optional) - The desired password length. Defaults to 64. Minimum is 14. Note: to meet complexity requirements, all passwords begin with "?@09AZ".
 
 ### Connection parameters
