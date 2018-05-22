@@ -3,11 +3,15 @@ import keys from 'vault/lib/keycodes';
 
 export default Ember.Component.extend({
   'data-test-component': 'console/command-input',
+  classNames: 'console-ui-input',
   onExecuteCommand() {},
   onValueUpdate() {},
   onShiftCommand() {},
   value: null,
 
+  didRender() {
+    this.element.scrollIntoView();
+  },
   actions: {
     handleKeyUp: function(event) {
       var keyCode = event.keyCode;

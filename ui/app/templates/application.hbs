@@ -9,6 +9,11 @@
         </div>
         <div class="navbar-end is-divider-list is-flex">
           <div class="navbar-item">
+            <button type="button" class="button has-color-white is-ghost" {{action 'toggleConsole'}}>
+              {{i-con glyph="wand" size=16}}
+            </button>
+          </div>
+          <div class="navbar-item">
             {{status-menu}}
           </div>
           <div class="navbar-item">
@@ -55,8 +60,8 @@
           </a>
         </li>
       </ul>
+      {{console/ui-panel}}
     </header>
-    {{console/ui-panel}}
   {{/if}}
   <div class="global-flash">
     {{#each flashMessages.queue as |flash|}}
