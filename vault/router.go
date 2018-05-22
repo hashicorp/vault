@@ -455,7 +455,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	clientToken := req.ClientToken
 	switch {
-	// Passthrough the client token for token store
+	// Passthrough the client token for token engine
 	case strings.HasPrefix(originalPath, "auth/token/"):
 	// Passthrough the client token for system engine
 	case strings.HasPrefix(originalPath, "sys/"):

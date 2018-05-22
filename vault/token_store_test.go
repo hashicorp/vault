@@ -36,6 +36,112 @@ type TokenEntryOld struct {
 	Period         time.Duration
 }
 
+func TestTokenStore_TokenEntryVersionCubbyholeDestroy(t *testing.T) {
+	core, ts, _, rootToken := TestCoreWithTokenStore(t)
+
+	var resp *logical.Response
+	var err error
+
+	// Root token will be having a token entry of version 2. Write some data in
+	// its cubbyhole.
+	resp, err = core.HandleRequest(&logical.Request{
+		ClientToken: rootToken,
+		Path:        "cubbyhole/foo",
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"bar": "baz",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+
+	// Fetch the prefix under which all the cubbyholes are stored
+	_, pathPrefix, _ := core.router.MatchingStoragePrefixByAPIPath("cubbyhole/")
+
+	// Ensure that there is one cubbyhole there for the root token
+	cubbyholes, err := core.barrier.List(context.Background(), pathPrefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cubbyholes) != 1 {
+		t.Fatalf("bad: number of cubbyholes; expected: 1 actual: %d", len(cubbyholes))
+	}
+
+	// Create a new token with its token entry version set to 0
+	tokenID := "oldtoken"
+	te := &TokenEntry{
+		ID:           tokenID,
+		Path:         "test",
+		Policies:     []string{"root"},
+		CreationTime: time.Now().Unix(),
+	}
+	err = ts.storeCommon(context.Background(), te, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write some data in the new token's cubbyhole
+	resp, err = core.HandleRequest(&logical.Request{
+		ClientToken: tokenID,
+		Path:        "cubbyhole/hello",
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"old": "world",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+
+	// Ensure that there are 2 cubbyholes now
+	cubbyholes, err = core.barrier.List(context.Background(), pathPrefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cubbyholes) != 2 {
+		t.Fatalf("bad: number of cubbyholes; expected: 2 actual: %d", len(cubbyholes))
+	}
+
+	// Revoke the token with token entry version 2 and check if the number of
+	// cubbyholes reduces by 1
+	resp, err = core.HandleRequest(&logical.Request{
+		ClientToken: rootToken,
+		Path:        "auth/token/revoke-self",
+		Operation:   logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+
+	cubbyholes, err = core.barrier.List(context.Background(), pathPrefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cubbyholes) != 1 {
+		t.Fatalf("bad: number of cubbyholes; expected: 1 actual: %d", len(cubbyholes))
+	}
+
+	// Revoke the token with token entry version 0 and check if the number of
+	// cubbyholes reduces by 1
+	resp, err = core.HandleRequest(&logical.Request{
+		ClientToken: rootToken,
+		Path:        "auth/token/revoke-self",
+		Operation:   logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+
+	cubbyholes, err = core.barrier.List(context.Background(), pathPrefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cubbyholes) != 0 {
+		t.Fatalf("bad: number of cubbyholes; expected: 0 actual: %d", len(cubbyholes))
+	}
+}
+
 func TestTokenStore_TokenEntryVersionUpgrade(t *testing.T) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 
