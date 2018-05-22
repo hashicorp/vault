@@ -471,6 +471,9 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 		stat := status.(*api.RekeyVerificationStatusResponse)
 		started = stat.Started
 		nonce = stat.Nonce
+	default:
+		c.UI.Error("Unknown status type")
+		return 1
 	}
 
 	// Verify a root token generation is in progress. If there is not one in
@@ -550,6 +553,9 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 		mightContainUnsealKeys = true
 	case *api.RekeyVerificationUpdateResponse:
 		complete = resp.(*api.RekeyVerificationUpdateResponse).Complete
+	default:
+		c.UI.Error("Unknown update response type")
+		return 1
 	}
 
 	if !complete {
@@ -682,6 +688,9 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 		out = append(out, fmt.Sprintf("New Shares | %d", status.N))
 		out = append(out, fmt.Sprintf("New Threshold | %d", status.T))
 		out = append(out, fmt.Sprintf("Verification Progress | %d/%d", status.Progress, status.T))
+	default:
+		c.UI.Error("Unknown status type")
+		return 1
 	}
 
 	switch Format(c.UI) {
