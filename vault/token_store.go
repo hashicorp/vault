@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -1056,7 +1057,7 @@ func (ts *TokenStore) lookupObfuscatedToken(ctx context.Context, obfuscatedID st
 	// If we are still restoring the expiration manager, we want to ensure the
 	// token is not expired
 	if ts.expiration == nil {
-		return nil, nil
+		return nil, errors.New("expiration manager is nil on tokenstore")
 	}
 	check, err := ts.expiration.RestoreObfuscatedTokenCheck(entry.Path, obfuscatedID)
 	if err != nil {
@@ -1147,10 +1148,14 @@ func (ts *TokenStore) revokeOrphan(ctx context.Context, tokenID string) error {
 		return nil
 	}
 
-	return ts.revokeObfuscatedToken(ctx, obfuscatedID, te)
+	return ts.revokeObfuscatedToken(ctx, obfuscatedID, false, te)
 }
 
-func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID string, entry *TokenEntry) (ret error) {
+// revokeObfuscatedToken is used to invalidate a given salted token, any child
+// tokens will be orphaned unless otherwise specified. skipOrphan should be
+// used whenever we are revoking the entire tree starting from a particular
+// parent (e.g. revokeTreeObfuscated).
+func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID string, skipOrphan bool, entry *TokenEntry) (ret error) {
 	// Check and set the token deletion state. We only proceed with the deletion
 	// if we don't have a pending deletion (empty), or if the deletion previously
 	// failed (state is false)
@@ -1266,64 +1271,66 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 		}
 	}
 
-	// Mark all child tokens as orphans by removing their parent index, and
-	// clear the parent entry.
-	//
-	// Marking the token as orphan is the correct behavior in here since
-	// revokeTreeSalted will ensure that they are deleted anyways if it's not
-	// an explicit call to orphan the child tokens (the delete occurs at the
-	// leaf node and uses parent prefix, not entry.Parent, to build the tree
-	// for traversal).
-	idHMAC, err := ts.hmac(ctx, entry.ID)
-	if err != nil {
-		return errwrap.Wrapf("failed to HMAC token ID: {{err}}", err)
-	}
-	idHMACParentPath := parentPrefix + idHMAC + "/"
-
-	allChildren := []string{}
-
-	children, err := ts.view.List(ctx, idHMACParentPath)
-	if err != nil {
-		return errwrap.Wrapf("failed to scan for children using HMAC token ID: {{err}}", err)
-	}
-
-	allChildren = append(allChildren, children...)
-
-	// This is only here for backwards compatibility
-	saltedID, err := ts.SaltID(ctx, entry.ID)
-	if err != nil {
-		return errwrap.Wrapf("failed to hash token ID: {{err}}", err)
-	}
-	saltedIDParentPath := parentPrefix + saltedID + "/"
-
-	children, err = ts.view.List(ctx, saltedIDParentPath)
-	if err != nil {
-		return errwrap.Wrapf("failed to scan for children: {{err}}", err)
-	}
-
-	allChildren = append(allChildren, children...)
-
-	for _, child := range allChildren {
-		entry, err := ts.lookupObfuscatedToken(ctx, child, true)
+	if !skipOrphan {
+		// Mark all child tokens as orphans by removing their parent index, and
+		// clear the parent entry.
+		//
+		// Marking the token as orphan is the correct behavior in here since
+		// revokeTreeSalted will ensure that they are deleted anyways if it's not
+		// an explicit call to orphan the child tokens (the delete occurs at the
+		// leaf node and uses parent prefix, not entry.Parent, to build the tree
+		// for traversal).
+		idHMAC, err := ts.hmac(ctx, entry.ID)
 		if err != nil {
-			return errwrap.Wrapf("failed to get child token: {{err}}", err)
+			return errwrap.Wrapf("failed to HMAC token ID: {{err}}", err)
 		}
-		lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
-		lock.Lock()
+		idHMACParentPath := parentPrefix + idHMAC + "/"
 
-		entry.Parent = ""
-		err = ts.store(ctx, entry)
+		allChildren := []string{}
+
+		children, err := ts.view.List(ctx, idHMACParentPath)
 		if err != nil {
+			return errwrap.Wrapf("failed to scan for children using HMAC token ID: {{err}}", err)
+		}
+
+		allChildren = append(allChildren, children...)
+
+		// This is only here for backwards compatibility
+		saltedID, err := ts.SaltID(ctx, entry.ID)
+		if err != nil {
+			return errwrap.Wrapf("failed to hash token ID: {{err}}", err)
+		}
+		saltedIDParentPath := parentPrefix + saltedID + "/"
+
+		children, err = ts.view.List(ctx, saltedIDParentPath)
+		if err != nil {
+			return errwrap.Wrapf("failed to scan for children: {{err}}", err)
+		}
+
+		allChildren = append(allChildren, children...)
+
+		for _, child := range allChildren {
+			entry, err := ts.lookupObfuscatedToken(ctx, child, true)
+			if err != nil {
+				return errwrap.Wrapf("failed to get child token: {{err}}", err)
+			}
+			lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
+			lock.Lock()
+
+			entry.Parent = ""
+			err = ts.store(ctx, entry)
+			if err != nil {
+				lock.Unlock()
+				return errwrap.Wrapf("failed to update child token: {{err}}", err)
+			}
 			lock.Unlock()
-			return errwrap.Wrapf("failed to update child token: {{err}}", err)
 		}
-		lock.Unlock()
-	}
-	if err = logical.ClearView(ctx, ts.view.SubView(idHMACParentPath)); err != nil {
-		return errwrap.Wrapf("failed to delete HMACed parent path: {{err}}", err)
-	}
-	if err = logical.ClearView(ctx, ts.view.SubView(saltedIDParentPath)); err != nil {
-		return errwrap.Wrapf("failed to delete hashed parent path: {{err}}", err)
+		if err = logical.ClearView(ctx, ts.view.SubView(idHMACParentPath)); err != nil {
+			return errwrap.Wrapf("failed to delete HMACed parent path: {{err}}", err)
+		}
+		if err = logical.ClearView(ctx, ts.view.SubView(saltedIDParentPath)); err != nil {
+			return errwrap.Wrapf("failed to delete hashed parent path: {{err}}", err)
+		}
 	}
 
 	return nil
@@ -1380,8 +1387,7 @@ func (ts *TokenStore) revokeTreeObfuscated(ctx context.Context, obfuscatedID str
 			// take care of expiring them. If Vault is restarted, any revoked tokens
 			// would have been deleted, and any pending leases for deletion will be restored
 			// by the expiration manager.
-
-			if err := ts.revokeObfuscatedToken(ctx, id, nil); err != nil {
+			if err := ts.revokeObfuscatedToken(ctx, id, true, nil); err != nil {
 				return errwrap.Wrapf("failed to revoke entry: {{err}}", err)
 			}
 			// If the length of l is equal to 1, then the last token has been deleted
@@ -1795,8 +1801,11 @@ func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d 
 func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
 	// Read the parent policy
 	parent, err := ts.Lookup(ctx, req.ClientToken)
-	if err != nil || parent == nil {
-		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
+	if err != nil {
+		return nil, errwrap.Wrapf("parent token lookup failed: {{err}}", err)
+	}
+	if parent == nil {
+		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
 	}
 
 	// A token with a restricted number of uses cannot create a new token
@@ -2283,10 +2292,10 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 
 	parent, err := ts.Lookup(ctx, req.ClientToken)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("parent token lookup failed: %s", err.Error())), logical.ErrInvalidRequest
+		return nil, errwrap.Wrapf("parent token lookup failed: {{err}}", err)
 	}
 	if parent == nil {
-		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
 	}
 
 	// Check if the client token has sudo/root privileges for the requested path
@@ -2445,7 +2454,7 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 	// Lookup the token
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return nil, errwrap.Wrapf("error looking up token: {{err}}", err)
 	}
 
 	// Verify the token exists

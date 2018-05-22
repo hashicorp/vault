@@ -496,7 +496,7 @@ Policies may be created (uploaded) via the CLI or via the API. To create a new
 policy in Vault:
 
 ```sh
-$ vault write sys/policy/my-policy policy=@my-policy.hcl
+$ vault policy write policy-name policy-file.hcl
 ```
 
 -> The `@` tells Vault to read from a file on disk. In the example above, Vault

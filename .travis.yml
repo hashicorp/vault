@@ -14,7 +14,7 @@ services:
   - docker
 
 go:
-  - "1.10.1"
+  - "1.10.2"
 
 matrix:
   allow_failures:

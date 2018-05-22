@@ -153,6 +153,7 @@ func validateKeyTypeLength(keyType string, keyBits int) *logical.Response {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"unsupported bit length for EC key: %d", keyBits))
 		}
+	case "any":
 	default:
 		return logical.ErrorResponse(fmt.Sprintf(
 			"unknown key type %s", keyType))
