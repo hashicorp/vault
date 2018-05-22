@@ -150,7 +150,7 @@ variable, which takes precedence.
 
 Currently there are several storage backends that support high availability
 mode, including Consul, ZooKeeper and etcd. These may change over time, and the
-[configuration page](/docs/configuration/index.html) should be referenced.
+[configuration page](https://www.vaultproject.io/docs/configuration/index.html) should be referenced.
 
 The Consul backend is the recommended HA backend, as it is used in production
 by HashiCorp and its customers with commercial support.
