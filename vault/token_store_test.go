@@ -125,7 +125,7 @@ func TestTokenStore_TokenEntryVersionCubbyholeDestroy(t *testing.T) {
 	// Revoke the token with token entry version 0 and check if the number of
 	// cubbyholes reduces by 1
 	resp, err = core.HandleRequest(&logical.Request{
-		ClientToken: rootToken,
+		ClientToken: tokenID,
 		Path:        "auth/token/revoke-self",
 		Operation:   logical.UpdateOperation,
 	})
