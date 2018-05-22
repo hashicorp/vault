@@ -216,6 +216,22 @@ Name to use as the SNI host when connecting via TLS.
 
 If provided, Vault output will not include ANSI color escape sequence characters.
 
+### `VAULT_RATE_LIMIT`
+
+This enviroment variable will limit the rate at which the `vault` command
+sends requests to Vault.
+
+This enviroment variable has the format `rate[:burst]` (where items in `[]` are
+optional). If not specified, the burst value defaults to rate. Both rate and 
+burst are specified in "operations per second". If the environment variable is
+not specified, then the rate and burst will be unlimited *i.e.* rate 
+limiting is off by default.
+
+*Note:* The rate is limited for each invocation of the `vault` CLI. Since
+each invocation of the `vault` CLI typically only makes a few requests,
+this enviroment variable is most useful when using the Go 
+[Vault client API](https://www.vaultproject.io/api/libraries.html#go).
+
 ### `VAULT_MFA`
 
 **ENTERPRISE ONLY**

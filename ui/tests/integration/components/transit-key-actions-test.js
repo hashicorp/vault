@@ -261,3 +261,27 @@ test('it can export a key: unwrapped, single version', function(assert) {
     'passes expected args to the adapter'
   );
 });
+
+test('it includes algorithm param for HMAC', function(assert) {
+  this.set('key', {
+    backend: 'transit',
+    id: 'akey',
+    supportedActions: ['hmac'],
+    validKeyVersions: [1],
+  });
+  this.render(hbs`{{transit-key-actions key=key}}`);
+  this.$('#algorithm').val('sha2-384').change();
+  this.$('button:submit').click();
+  assert.deepEqual(
+    this.get('storeService.callArgs'),
+    {
+      action: 'hmac',
+      backend: 'transit',
+      id: 'akey',
+      payload: {
+        algorithm: "sha2-384"
+      },
+    },
+    'passes expected args to the adapter'
+  );
+});

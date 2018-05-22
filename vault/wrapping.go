@@ -159,7 +159,7 @@ DONELISTHANDLING:
 		jwt := jws.NewJWT(claims, crypto.SigningMethodES512)
 		serWebToken, err := jwt.Serialize(c.wrappingJWTKey)
 		if err != nil {
-			c.tokenStore.Revoke(ctx, te.ID)
+			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to serialize JWT", "error", err)
 			return nil, ErrInternalError
 		}
@@ -200,7 +200,7 @@ DONELISTHANDLING:
 
 		marshaledResponse, err := json.Marshal(httpResponse)
 		if err != nil {
-			c.tokenStore.Revoke(ctx, te.ID)
+			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to marshal wrapped response", "error", err)
 			return nil, ErrInternalError
 		}
@@ -213,12 +213,12 @@ DONELISTHANDLING:
 	cubbyResp, err := c.router.Route(ctx, cubbyReq)
 	if err != nil {
 		// Revoke since it's not yet being tracked for expiration
-		c.tokenStore.Revoke(ctx, te.ID)
+		c.tokenStore.revokeOrphan(ctx, te.ID)
 		c.logger.Error("failed to store wrapped response information", "error", err)
 		return nil, ErrInternalError
 	}
 	if cubbyResp != nil && cubbyResp.IsError() {
-		c.tokenStore.Revoke(ctx, te.ID)
+		c.tokenStore.revokeOrphan(ctx, te.ID)
 		c.logger.Error("failed to store wrapped response information", "error", cubbyResp.Data["error"])
 		return cubbyResp, nil
 	}
@@ -239,12 +239,12 @@ DONELISTHANDLING:
 	cubbyResp, err = c.router.Route(ctx, cubbyReq)
 	if err != nil {
 		// Revoke since it's not yet being tracked for expiration
-		c.tokenStore.Revoke(ctx, te.ID)
+		c.tokenStore.revokeOrphan(ctx, te.ID)
 		c.logger.Error("failed to store wrapping information", "error", err)
 		return nil, ErrInternalError
 	}
 	if cubbyResp != nil && cubbyResp.IsError() {
-		c.tokenStore.Revoke(ctx, te.ID)
+		c.tokenStore.revokeOrphan(ctx, te.ID)
 		c.logger.Error("failed to store wrapping information", "error", cubbyResp.Data["error"])
 		return cubbyResp, nil
 	}
@@ -261,7 +261,7 @@ DONELISTHANDLING:
 	// Register the wrapped token with the expiration manager
 	if err := c.expiration.RegisterAuth(te.Path, wAuth); err != nil {
 		// Revoke since it's not yet being tracked for expiration
-		c.tokenStore.Revoke(ctx, te.ID)
+		c.tokenStore.revokeOrphan(ctx, te.ID)
 		c.logger.Error("failed to register cubbyhole wrapping token lease", "request_path", req.Path, "error", err)
 		return nil, ErrInternalError
 	}

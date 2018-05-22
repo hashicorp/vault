@@ -128,6 +128,11 @@ func Test(tt TestT, c TestCase) {
 		c.PreCheck()
 	}
 
+	// Defer on the teardown, regardless of pass/fail at this point
+	if c.Teardown != nil {
+		defer c.Teardown()
+	}
+
 	// Check that something is provided
 	if c.Backend == nil && c.Factory == nil {
 		tt.Fatal("Must provide either Backend or Factory")
@@ -333,11 +338,6 @@ func Test(tt TestT, c TestCase) {
 					"still exist. Please verify:\n\n%#v",
 				s))
 		}
-	}
-
-	// Cleanup
-	if c.Teardown != nil {
-		c.Teardown()
 	}
 }
 

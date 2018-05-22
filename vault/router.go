@@ -10,15 +10,8 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-radix"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
-)
-
-var (
-	whitelistedHeaders = []string{
-		consts.VaultKVCLIClientHeader,
-	}
 )
 
 // Router is used to do prefix based routing of a request to a logical backend
@@ -638,20 +631,6 @@ func pathsToRadix(paths []string) *radix.Tree {
 // origHeaders is done is a case-insensitive manner.
 func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHeaders []string) map[string][]string {
 	retHeaders := make(map[string][]string)
-
-	// Handle whitelisted values
-	for _, header := range whitelistedHeaders {
-		if val, ok := origHeaders[header]; ok {
-			retHeaders[header] = val
-		} else {
-			// Try to check if a lowercased version of the header exists in the
-			// originating request. The header key that gets used is the one from the
-			// whitelist.
-			if val, ok := origHeaders[strings.ToLower(header)]; ok {
-				retHeaders[header] = val
-			}
-		}
-	}
 
 	// Short-circuit if there's nothing to filter
 	if len(passthroughHeaders) == 0 {

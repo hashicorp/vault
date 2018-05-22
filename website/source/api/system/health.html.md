@@ -42,6 +42,9 @@ The default status codes are:
 - `standbycode` `(int: 429)` – Specifies the status code that should be returned
   for a standby node.
 
+- `drsecondarycode` `(int: 472)` – Specifies the status code that should be
+  returned for a DR secondary node.
+
 - `sealedcode` `(int: 503)` – Specifies the status code that should be returned
   for a sealed node.
 

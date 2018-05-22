@@ -6,8 +6,32 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/strutil"
 )
+
+// RemoteAddrIsOk checks if the given remote address is either:
+//   - OK because there's no CIDR whitelist
+//   - OK because it's in the CIDR whitelist
+func RemoteAddrIsOk(remoteAddr string, boundCIDRs []*sockaddr.SockAddrMarshaler) bool {
+	if len(boundCIDRs) == 0 {
+		// There's no CIDR whitelist.
+		return true
+	}
+	remoteSockAddr, err := sockaddr.NewSockAddr(remoteAddr)
+	if err != nil {
+		// Can't tell, err on the side of less access.
+		return false
+	}
+	for _, cidr := range boundCIDRs {
+		if cidr.Contains(remoteSockAddr) {
+			// Whitelisted.
+			return true
+		}
+	}
+	// Not whitelisted.
+	return false
+}
 
 // IPBelongsToCIDR checks if the given IP is encompassed by the given CIDR block
 func IPBelongsToCIDR(ipAddr string, cidr string) (bool, error) {

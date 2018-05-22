@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -51,19 +52,11 @@ const (
 	// rolesPrefix is the prefix used to store role information
 	rolesPrefix = "roles/"
 
-	// tokenRevocationDeferred indicates that the token should not be used
-	// again but is currently fulfilling its final use
-	tokenRevocationDeferred = -1
-
-	// tokenRevocationInProgress indicates that revocation of that token/its
-	// leases is ongoing
-	tokenRevocationInProgress = -2
-
-	// tokenRevocationFailed indicates that revocation failed; the entry is
-	// kept around so that when the tidy function is run it can be tried
-	// again (or when the revocation function is run again), but all other uses
-	// will report the token invalid
-	tokenRevocationFailed = -3
+	// tokenRevocationPending indicates that the token should not be used
+	// again. If this is encountered during an existing request flow, it means
+	// that the token is but is currently fulfilling its final use; after this
+	// request it will not be able to be looked up as being valid.
+	tokenRevocationPending = -1
 )
 
 var (
@@ -98,6 +91,12 @@ type TokenStore struct {
 
 	tokenLocks []*locksutil.LockEntry
 
+	// tokenPendingDeletion stores tokens that are being revoked. If the token is
+	// not in the map, it means that there's no deletion in progress. If the value
+	// is true it means deletion is in progress, and if false it means deletion
+	// failed. Revocation needs to handle these states accordingly.
+	tokensPendingDeletion *sync.Map
+
 	cubbyholeDestroyer func(context.Context, *TokenStore, string) error
 
 	logger log.Logger
@@ -122,6 +121,7 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 		cubbyholeDestroyer:          destroyCubbyhole,
 		logger:                      logger,
 		tokenLocks:                  locksutil.CreateLocks(),
+		tokensPendingDeletion:       &sync.Map{},
 		saltLock:                    sync.RWMutex{},
 		identityPoliciesDeriverFunc: c.fetchEntityAndDerivedPolicies,
 	}
@@ -916,12 +916,12 @@ func (ts *TokenStore) UseToken(ctx context.Context, te *TokenEntry) (*TokenEntry
 	// manager revoking children) attempting to acquire the same lock
 	// repeatedly.
 	if te.NumUses == 1 {
-		te.NumUses = -1
+		te.NumUses = tokenRevocationPending
 	} else {
-		te.NumUses -= 1
+		te.NumUses--
 	}
 
-	err = ts.storeCommon(ctx, te, false)
+	err = ts.store(ctx, te)
 	if err != nil {
 		return nil, err
 	}
@@ -1005,7 +1005,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 	// If we are still restoring the expiration manager, we want to ensure the
 	// token is not expired
 	if ts.expiration == nil {
-		return nil, nil
+		return nil, errors.New("expiration manager is nil on tokenstore")
 	}
 	check, err := ts.expiration.RestoreSaltedTokenCheck(entry.Path, saltedID)
 	if err != nil {
@@ -1052,7 +1052,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 
 	// If fields are getting upgraded, store the changes
 	if persistNeeded {
-		if err := ts.storeCommon(ctx, entry, false); err != nil {
+		if err := ts.store(ctx, entry); err != nil {
 			return nil, errwrap.Wrapf("failed to persist token upgrade: {{err}}", err)
 		}
 	}
@@ -1062,7 +1062,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 
 // Revoke is used to invalidate a given token, any child tokens
 // will be orphaned.
-func (ts *TokenStore) Revoke(ctx context.Context, id string) error {
+func (ts *TokenStore) revokeOrphan(ctx context.Context, id string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke"}, time.Now())
 	if id == "" {
 		return fmt.Errorf("cannot revoke blank token")
@@ -1072,15 +1072,26 @@ func (ts *TokenStore) Revoke(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	return ts.revokeSalted(ctx, saltedID)
+	return ts.revokeSalted(ctx, saltedID, false)
 }
 
-// revokeSalted is used to invalidate a given salted token,
-// any child tokens will be orphaned.
-func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret error) {
-	// Protect the entry lookup/writing with locks. The rub here is that we
-	// don't know the ID until we look it up once, so first we look it up, then
-	// do a locked lookup.
+// revokeSalted is used to invalidate a given salted token, any child tokens
+// will be orphaned unless otherwise specified. skipOrphan should be used
+// whenever we are revoking the entire tree starting from a particular parent
+// (e.g. revokeTreeSalted).
+func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string, skipOrphan bool) (ret error) {
+	// Check and set the token deletion state. We only proceed with the deletion
+	// if we don't have a pending deletion (empty), or if the deletion previously
+	// failed (state is false)
+	state, loaded := ts.tokensPendingDeletion.LoadOrStore(saltedID, true)
+
+	// If the entry was loaded and its state is true, we short-circuit
+	if loaded && state == true {
+		return nil
+	}
+
+	// The map check above should protect use from any concurrent revocations, so
+	// doing a bare lookup here should be fine.
 	entry, err := ts.lookupSalted(ctx, saltedID, true)
 	if err != nil {
 		return err
@@ -1089,61 +1100,36 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 		return nil
 	}
 
-	lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
-	lock.Lock()
-
-	// Lookup the token first
-	entry, err = ts.lookupSalted(ctx, saltedID, true)
-	if err != nil {
-		lock.Unlock()
-		return err
+	if entry.NumUses != tokenRevocationPending {
+		entry.NumUses = tokenRevocationPending
+		if err := ts.store(ctx, entry); err != nil {
+			// The only real reason for this is an underlying storage error
+			// which also means that nothing else in this func or expmgr will
+			// really work either. So we clear revocation state so the user can
+			// try again.
+			ts.logger.Error("failed to mark token as revoked")
+			ts.tokensPendingDeletion.Store(saltedID, false)
+			return err
+		}
 	}
 
-	if entry == nil {
-		lock.Unlock()
-		return nil
-	}
-
-	// On failure we write -3, so if we hit -2 here we're already running a
-	// revocation operation. This can happen due to e.g. recursion into this
-	// function via the expiration manager's RevokeByToken.
-	if entry.NumUses == tokenRevocationInProgress {
-		lock.Unlock()
-		return nil
-	}
-
-	// This acts as a WAL. lookupSalted will no longer return this entry,
-	// so the token cannot be used, but this way we can keep the entry
-	// around until after the rest of this function is attempted, and a
-	// tidy function can key off of this value to try again.
-	entry.NumUses = tokenRevocationInProgress
-	err = ts.storeCommon(ctx, entry, false)
-	lock.Unlock()
-	if err != nil {
-		return err
-	}
-
-	// If we are returning an error, mark the entry with -3 to indicate
-	// failed revocation. This way we don't try to clean up during active
-	// revocation (-2).
 	defer func() {
+		// If we succeeded in all other revocation operations after this defer and
+		// before we return, we can remove the token store entry
+		if ret == nil {
+			path := lookupPrefix + saltedID
+			if err := ts.view.Delete(ctx, path); err != nil {
+				ret = errwrap.Wrapf("failed to delete entry: {{err}}", err)
+			}
+		}
+
+		// Check on ret again and update the sync.Map accordingly
 		if ret != nil {
-			lock.Lock()
-			defer lock.Unlock()
-
-			// Lookup the token again to make sure something else didn't
-			// revoke in the interim
-			entry, err := ts.lookupSalted(ctx, saltedID, true)
-			if err != nil {
-				return
-			}
-
-			// If it exists just taint to -3 rather than trying to figure
-			// out what it means if it's already -3 after the -2 above
-			if entry != nil {
-				entry.NumUses = tokenRevocationFailed
-				ts.storeCommon(ctx, entry, false)
-			}
+			// If we failed on any of the calls within, we store the state as false
+			// so that the next call to revokeSalted will retry
+			ts.tokensPendingDeletion.Store(saltedID, false)
+		} else {
+			ts.tokensPendingDeletion.Delete(saltedID)
 		}
 	}()
 
@@ -1186,51 +1172,53 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 		}
 	}
 
-	// Mark all children token as orphan by removing
-	// their parent index, and clear the parent entry.
-	//
-	// Marking the token as orphan is the correct behavior in here since
-	// revokeTreeSalted will ensure that they are deleted anyways if it's not an
-	// explicit call to orphan the child tokens (the delete occurs at the leaf
-	// node and uses parent prefix, not entry.Parent, to build the tree for
-	// traversal).
-	parentPath := parentPrefix + saltedID + "/"
-	children, err := ts.view.List(ctx, parentPath)
-	if err != nil {
-		return errwrap.Wrapf("failed to scan for children: {{err}}", err)
-	}
-	for _, child := range children {
-		entry, err := ts.lookupSalted(ctx, child, true)
+	if !skipOrphan {
+		// Mark all children token as orphan by removing
+		// their parent index, and clear the parent entry.
+		//
+		// Marking the token as orphan should be skipped if it's called by
+		// revokeTreeSalted to avoid unnecessary view.List operations. Since
+		// the deletion occurs in a DFS fashion we don't need to perform a delete
+		// on child prefixes as there will be none (as saltedID entry is a leaf node).
+		parentPath := parentPrefix + saltedID + "/"
+		children, err := ts.view.List(ctx, parentPath)
 		if err != nil {
-			return errwrap.Wrapf("failed to get child token: {{err}}", err)
+			return errwrap.Wrapf("failed to scan for children: {{err}}", err)
 		}
-		lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
-		lock.Lock()
+		for _, child := range children {
+			entry, err := ts.lookupSalted(ctx, child, true)
+			if err != nil {
+				return errwrap.Wrapf("failed to get child token: {{err}}", err)
+			}
+			lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
+			lock.Lock()
 
-		entry.Parent = ""
-		err = ts.store(ctx, entry)
-		if err != nil {
+			entry.Parent = ""
+			err = ts.store(ctx, entry)
+			if err != nil {
+				lock.Unlock()
+				return errwrap.Wrapf("failed to update child token: {{err}}", err)
+			}
 			lock.Unlock()
-			return errwrap.Wrapf("failed to update child token: {{err}}", err)
-		}
-		lock.Unlock()
-	}
-	if err = logical.ClearView(ctx, ts.view.SubView(parentPath)); err != nil {
-		return errwrap.Wrapf("failed to delete entry: {{err}}", err)
-	}
 
-	// Now that the entry is not usable for any revocation tasks, nuke it
-	path := lookupPrefix + saltedID
-	if err = ts.view.Delete(ctx, path); err != nil {
-		return errwrap.Wrapf("failed to delete entry: {{err}}", err)
+			// Delete the the child storage entry after we update the token entry Since
+			// paths are not deeply nested (i.e. they are simply
+			// parenPrefix/<parentID>/<childID>), we can simply call view.Delete instead
+			// of logical.ClearView
+			index := parentPath + child
+			err = ts.view.Delete(ctx, index)
+			if err != nil {
+				return errwrap.Wrapf("failed to delete child entry: {{err}}", err)
+			}
+		}
 	}
 
 	return nil
 }
 
-// RevokeTree is used to invalidate a given token and all
+// revokeTree is used to invalidate a given token and all
 // child tokens.
-func (ts *TokenStore) RevokeTree(ctx context.Context, id string) error {
+func (ts *TokenStore) revokeTree(ctx context.Context, id string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke-tree"}, time.Now())
 	// Verify the token is not blank
 	if id == "" {
@@ -1265,7 +1253,13 @@ func (ts *TokenStore) revokeTreeSalted(ctx context.Context, saltedID string) err
 		// If the length of the children array is zero,
 		// then we are at a leaf node.
 		if len(children) == 0 {
-			if err := ts.revokeSalted(ctx, id); err != nil {
+			// Whenever revokeSalted is called, the token will be removed immediately and
+			// any underlying secrets will be handed off to the expiration manager which will
+			// take care of expiring them. If Vault is restarted, any revoked tokens
+			// would have been deleted, and any pending leases for deletion will be restored
+			// by the expiration manager.
+			if err := ts.revokeSalted(ctx, id, true); err != nil {
+
 				return errwrap.Wrapf("failed to revoke entry: {{err}}", err)
 			}
 			// If the length of l is equal to 1, then the last token has been deleted
@@ -1617,9 +1611,23 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 		return nil, err
 	}
 
-	// Revoke the token and its children
-	if err := ts.RevokeTree(ctx, aEntry.TokenID); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	te, err := ts.Lookup(ctx, aEntry.TokenID)
+	if err != nil {
+		return nil, err
+	}
+
+	if te == nil {
+		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
+	}
+
+	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(te)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ts.expiration.Revoke(leaseID)
+	if err != nil {
+		return nil, err
 	}
 
 	if urlaccessor {
@@ -1647,8 +1655,11 @@ func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d 
 func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
 	// Read the parent policy
 	parent, err := ts.Lookup(ctx, req.ClientToken)
-	if err != nil || parent == nil {
-		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
+	if err != nil {
+		return nil, errwrap.Wrapf("parent token lookup failed: {{err}}", err)
+	}
+	if parent == nil {
+		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
 	}
 
 	// A token with a restricted number of uses cannot create a new token
@@ -2054,10 +2065,25 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
 func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// Revoke the token and its children
-	if err := ts.RevokeTree(ctx, req.ClientToken); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	te, err := ts.Lookup(ctx, req.ClientToken)
+	if err != nil {
+		return nil, err
 	}
+
+	if te == nil {
+		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
+	}
+
+	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(te)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ts.expiration.Revoke(leaseID)
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -2075,9 +2101,23 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 		urltoken = true
 	}
 
-	// Revoke the token and its children
-	if err := ts.RevokeTree(ctx, id); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	te, err := ts.Lookup(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if te == nil {
+		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
+	}
+
+	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(te)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ts.expiration.Revoke(leaseID)
+	if err != nil {
+		return nil, err
 	}
 
 	if urltoken {
@@ -2106,10 +2146,10 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 
 	parent, err := ts.Lookup(ctx, req.ClientToken)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("parent token lookup failed: %s", err.Error())), logical.ErrInvalidRequest
+		return nil, errwrap.Wrapf("parent token lookup failed: {{err}}", err)
 	}
 	if parent == nil {
-		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
 	}
 
 	// Check if the client token has sudo/root privileges for the requested path
@@ -2121,7 +2161,7 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 	}
 
 	// Revoke and orphan
-	if err := ts.Revoke(ctx, id); err != nil {
+	if err := ts.revokeOrphan(ctx, id); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
@@ -2273,7 +2313,7 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 	// Lookup the token
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		return nil, errwrap.Wrapf("error looking up token: {{err}}", err)
 	}
 
 	// Verify the token exists

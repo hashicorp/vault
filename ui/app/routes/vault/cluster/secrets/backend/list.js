@@ -45,29 +45,29 @@ export default Ember.Route.extend({
   model(params) {
     const secret = params.secret ? params.secret : '';
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const backends = this.modelFor('vault.cluster.secrets').mapBy('id');
+    const backendModel = this.modelFor('vault.cluster.secrets.backend');
     return Ember.RSVP.hash({
       secret,
       secrets: this.store
-        .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
-          id: secret,
-          backend,
-          responsePath: 'data.keys',
-          page: params.page,
-          pageFilter: params.pageFilter,
-          size: 100,
-        })
-        .then(model => {
-          this.set('has404', false);
-          return model;
-        })
-        .catch(err => {
-          if (backends.includes(backend) && err.httpStatus === 404 && secret === '') {
-            return [];
-          } else {
-            throw err;
-          }
-        }),
+      .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
+        id: secret,
+        backend,
+        responsePath: 'data.keys',
+        page: params.page,
+        pageFilter: params.pageFilter,
+        size: 100,
+      })
+      .then(model => {
+        this.set('has404', false);
+        return model;
+      })
+      .catch(err => {
+        if (backendModel && err.httpStatus === 404 && secret === '') {
+          return [];
+        } else {
+          throw err;
+        }
+      })
     });
   },
 
@@ -138,11 +138,9 @@ export default Ember.Route.extend({
     error(error, transition) {
       const { secret } = this.paramsFor(this.routeName);
       const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-      const backends = this.modelFor('vault.cluster.secrets').mapBy('id');
 
       Ember.set(error, 'secret', secret);
       Ember.set(error, 'isRoot', true);
-      Ember.set(error, 'hasBackend', backends.includes(backend));
       Ember.set(error, 'backend', backend);
       const hasModel = this.controllerFor(this.routeName).get('hasModel');
       // only swallow the error if we have a previous model

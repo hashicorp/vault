@@ -22,7 +22,10 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -92,6 +95,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"wrapping/pubkey",
 				"replication/status",
 				"internal/ui/mounts",
+				"internal/ui/mounts/*",
 			},
 		},
 
@@ -1076,6 +1080,20 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
 			},
 			&framework.Path{
+				Pattern: "internal/ui/mounts/(?P<path>.+)",
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The path of the mount.",
+					},
+				},
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.pathInternalUIMountRead,
+				},
+				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
+			},
+			&framework.Path{
 				Pattern: "internal/ui/resultant-acl",
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: b.pathInternalUIResultantACL,
@@ -1520,6 +1538,41 @@ func (b *SystemBackend) handleRekeyDeleteRecovery(ctx context.Context, req *logi
 	return b.handleRekeyDelete(ctx, req, data, true)
 }
 
+func mountInfo(entry *MountEntry) map[string]interface{} {
+	info := map[string]interface{}{
+		"type":        entry.Type,
+		"description": entry.Description,
+		"accessor":    entry.Accessor,
+		"local":       entry.Local,
+		"seal_wrap":   entry.SealWrap,
+		"options":     entry.Options,
+	}
+	entryConfig := map[string]interface{}{
+		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+		"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+		"force_no_cache":    entry.Config.ForceNoCache,
+		"plugin_name":       entry.Config.PluginName,
+	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
+	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+		entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
+	}
+	// Even though empty value is valid for ListingVisibility, we can ignore
+	// this case during mount since there's nothing to unset/hide.
+	if len(entry.Config.ListingVisibility) > 0 {
+		entryConfig["listing_visibility"] = entry.Config.ListingVisibility
+	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
+		entryConfig["passthrough_request_headers"] = rawVal.([]string)
+	}
+
+	info["config"] = entryConfig
+
+	return info
+}
+
 // handleMountTable handles the "mounts" endpoint to provide the mount table
 func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.Core.mountsLock.RLock()
@@ -1531,36 +1584,7 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 
 	for _, entry := range b.Core.mounts.Entries {
 		// Populate mount info
-		info := map[string]interface{}{
-			"type":        entry.Type,
-			"description": entry.Description,
-			"accessor":    entry.Accessor,
-			"local":       entry.Local,
-			"seal_wrap":   entry.SealWrap,
-			"options":     entry.Options,
-		}
-		entryConfig := map[string]interface{}{
-			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-			"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-			"force_no_cache":    entry.Config.ForceNoCache,
-			"plugin_name":       entry.Config.PluginName,
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-			entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
-			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
-		}
-		// Even though empty value is valid for ListingVisibility, we can ignore
-		// this case during mount since there's nothing to unset/hide.
-		if len(entry.Config.ListingVisibility) > 0 {
-			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
-			entryConfig["passthrough_request_headers"] = rawVal.([]string)
-		}
-
-		info["config"] = entryConfig
+		info := mountInfo(entry)
 		resp.Data[entry.Path] = info
 	}
 
@@ -3093,6 +3117,52 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	resp := &logical.Response{
 		Data: map[string]interface{}{},
 	}
+
+	// Most of the time we want to just send over the marshalled HTTP bytes.
+	// However there is a sad separate case: if the original response was using
+	// bare values we need to use those or else what comes back is garbled.
+	httpResp := &logical.HTTPResponse{}
+	err = jsonutil.DecodeJSON([]byte(response), httpResp)
+	if err != nil {
+		return nil, errwrap.Wrapf("error decoding wrapped response: {{err}}", err)
+	}
+	if httpResp.Data != nil &&
+		(httpResp.Data[logical.HTTPStatusCode] != nil ||
+			httpResp.Data[logical.HTTPRawBody] != nil ||
+			httpResp.Data[logical.HTTPContentType] != nil) {
+		if httpResp.Data[logical.HTTPStatusCode] != nil {
+			resp.Data[logical.HTTPStatusCode] = httpResp.Data[logical.HTTPStatusCode]
+		}
+		if httpResp.Data[logical.HTTPContentType] != nil {
+			resp.Data[logical.HTTPContentType] = httpResp.Data[logical.HTTPContentType]
+		}
+
+		rawBody := httpResp.Data[logical.HTTPRawBody]
+		if rawBody != nil {
+			// Decode here so that we can audit properly
+			switch rawBody.(type) {
+			case string:
+				// Best effort decoding; if this works, the original value was
+				// probably a []byte instead of a string, but was marshaled
+				// when the value was saved, so this restores it as it was
+				decBytes, err := base64.StdEncoding.DecodeString(rawBody.(string))
+				if err == nil {
+					// We end up with []byte, will not be HMAC'd
+					resp.Data[logical.HTTPRawBody] = decBytes
+				} else {
+					// We end up with string, will be HMAC'd
+					resp.Data[logical.HTTPRawBody] = rawBody
+				}
+			default:
+				b.Core.Logger().Error("unexpected type of raw body when decoding wrapped token", "type", fmt.Sprintf("%T", rawBody))
+			}
+
+			resp.Data[logical.HTTPRawBodyAlreadyJSONDecoded] = true
+		}
+
+		return resp, nil
+	}
+
 	if len(response) == 0 {
 		resp.Data[logical.HTTPStatusCode] = 204
 	} else {
@@ -3114,7 +3184,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, token string
 			return "", errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
 		}
 
-		defer b.Core.tokenStore.Revoke(ctx, token)
+		defer b.Core.tokenStore.revokeOrphan(ctx, token)
 	}
 
 	cubbyReq := &logical.Request{
@@ -3224,7 +3294,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		if err != nil {
 			return nil, errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
 		}
-		defer b.Core.tokenStore.Revoke(ctx, token)
+		defer b.Core.tokenStore.revokeOrphan(ctx, token)
 	}
 
 	// Fetch the original TTL
@@ -3402,10 +3472,49 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
-func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.Core.mountsLock.RLock()
-	defer b.Core.mountsLock.RUnlock()
+func hasMountAccess(acl *ACL, path string) bool {
+	// If an ealier policy is giving us access to the mount path then we can do
+	// a fast return.
+	capabilities := acl.Capabilities(path)
+	if !strutil.StrListContains(capabilities, DenyCapability) {
+		return true
+	}
 
+	var aclCapabilitiesGiven bool
+	walkFn := func(s string, v interface{}) bool {
+		if v == nil {
+			return false
+		}
+
+		perms := v.(*ACLPermissions)
+
+		switch {
+		case perms.CapabilitiesBitmap&DenyCapabilityInt > 0:
+			return false
+
+		case perms.CapabilitiesBitmap&CreateCapabilityInt > 0,
+			perms.CapabilitiesBitmap&DeleteCapabilityInt > 0,
+			perms.CapabilitiesBitmap&ListCapabilityInt > 0,
+			perms.CapabilitiesBitmap&ReadCapabilityInt > 0,
+			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
+			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0:
+
+			aclCapabilitiesGiven = true
+			return true
+		}
+
+		return false
+	}
+
+	acl.exactRules.WalkPrefix(path, walkFn)
+	if !aclCapabilitiesGiven {
+		acl.globRules.WalkPrefix(path, walkFn)
+	}
+
+	return aclCapabilitiesGiven
+}
+
+func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{
 		Data: make(map[string]interface{}),
 	}
@@ -3415,24 +3524,103 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	resp.Data["secret"] = secretMounts
 	resp.Data["auth"] = authMounts
 
-	for _, entry := range b.Core.mounts.Entries {
-		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
-			info := map[string]interface{}{
-				"type":        entry.Type,
-				"description": entry.Description,
-			}
-			secretMounts[entry.Path] = info
+	var acl *ACL
+	var isAuthed bool
+	var err error
+	if req.ClientToken != "" {
+		isAuthed = true
+
+		var entity *identity.Entity
+		// Load the ACL policies so we can walk the prefix for this mount
+		acl, _, entity, err = b.Core.fetchACLTokenEntryAndEntity(req)
+		if err != nil {
+			return nil, err
 		}
+		if entity != nil && entity.Disabled {
+			return nil, logical.ErrPermissionDenied
+		}
+
 	}
 
-	for _, entry := range b.Core.auth.Entries {
-		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
-			info := map[string]interface{}{
-				"type":        entry.Type,
-				"description": entry.Description,
-			}
-			authMounts[entry.Path] = info
+	hasAccess := func(me *MountEntry) bool {
+		if me.Config.ListingVisibility == ListingVisibilityUnauth {
+			return true
 		}
+
+		if isAuthed {
+			return hasMountAccess(acl, me.Path)
+		}
+
+		return false
+	}
+
+	b.Core.mountsLock.RLock()
+	for _, entry := range b.Core.mounts.Entries {
+		if hasAccess(entry) {
+			if isAuthed {
+				// If this is an authed request return all the mount info
+				secretMounts[entry.Path] = mountInfo(entry)
+			} else {
+				secretMounts[entry.Path] = map[string]interface{}{
+					"type":        entry.Type,
+					"description": entry.Description,
+					"options":     entry.Options,
+				}
+			}
+		}
+	}
+	b.Core.mountsLock.RUnlock()
+
+	b.Core.authLock.RLock()
+	for _, entry := range b.Core.auth.Entries {
+		if hasAccess(entry) {
+			if isAuthed {
+				// If this is an authed request return all the mount info
+				authMounts[entry.Path] = mountInfo(entry)
+			} else {
+				authMounts[entry.Path] = map[string]interface{}{
+					"type":        entry.Type,
+					"description": entry.Description,
+					"options":     entry.Options,
+				}
+			}
+		}
+	}
+	b.Core.authLock.RUnlock()
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	path := d.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("path not set"), logical.ErrInvalidRequest
+	}
+	path = sanitizeMountPath(path)
+
+	me := b.Core.router.MatchingMountEntry(path)
+	if me == nil {
+		// Return a permission denied error here so this path cannot be used to
+		// brute force a list of mounts.
+		return nil, logical.ErrPermissionDenied
+	}
+
+	resp := &logical.Response{
+		Data: mountInfo(me),
+	}
+	resp.Data["path"] = me.Path
+
+	// Load the ACL policies so we can walk the prefix for this mount
+	acl, _, entity, err := b.Core.fetchACLTokenEntryAndEntity(req)
+	if err != nil {
+		return nil, err
+	}
+	if entity != nil && entity.Disabled {
+		return nil, logical.ErrPermissionDenied
+	}
+
+	if !hasMountAccess(acl, me.Path) {
+		return nil, logical.ErrPermissionDenied
 	}
 
 	return resp, nil

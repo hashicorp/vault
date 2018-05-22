@@ -94,6 +94,9 @@ enabled while creating or updating a role.
   but the TTL set on the token at each renewal is fixed to the value specified
   here. If this value is modified, the token will pick up the new value at its
   next renewal.
+- `enable_local_secret_ids` `(bool: false)` - If set, the secret IDs generated
+  using this role will be cluster local. This can only be set during role
+  creation and once set, it can't be reset later.
 
 ### Sample Payload
 
@@ -397,7 +400,7 @@ Reads out the properties of a SecretID.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --payload @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id/lookup
 ```
 
@@ -428,7 +431,7 @@ Destroy an AppRole secret ID.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --payload @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id/destroy
 ```
 
@@ -459,7 +462,7 @@ Reads out the properties of a SecretID.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --payload @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id-accessor/lookup
 ```
 
@@ -490,7 +493,7 @@ Destroy an AppRole secret ID by its accessor.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --payload @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id-accessor/destroy
 ```
 

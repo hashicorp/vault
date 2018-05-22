@@ -21,7 +21,8 @@ import (
 func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	var err error
 	if c.identityStore == nil {
-		return fmt.Errorf("identity store is not setup")
+		c.logger.Warn("identity store is not setup, skipping loading")
+		return nil
 	}
 
 	err = c.identityStore.loadEntities(ctx)

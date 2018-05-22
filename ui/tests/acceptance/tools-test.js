@@ -101,7 +101,7 @@ test('tools functionality', function(assert) {
   //random
   click('[data-test-tools-action-link="random"]');
   andThen(() => {
-    assert.equal(find('[data-test-tools-input="bytes"]').val(), 32, 'defaults to 32 bytes');
+    assert.dom('[data-test-tools-input="bytes"]').hasValue('32', 'defaults to 32 bytes');
   });
   click('[data-test-tools-submit]');
   andThen(() => {
@@ -117,8 +117,7 @@ test('tools functionality', function(assert) {
   click('[data-test-tools-b64-toggle="input"]');
   click('[data-test-tools-submit]');
   andThen(() => {
-    assert.equal(
-      find('[data-test-tools-input="sum"]').val(),
+    assert.dom('[data-test-tools-input="sum"]').hasValue(
       'LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=',
       'hashes the data, encodes input'
     );
@@ -128,8 +127,7 @@ test('tools functionality', function(assert) {
 
   click('[data-test-tools-submit]');
   andThen(() => {
-    assert.equal(
-      find('[data-test-tools-input="sum"]').val(),
+    assert.dom('[data-test-tools-input="sum"]').hasValue(
       'JmSi2Hhbgu2WYOrcOyTqqMdym7KT3sohCwAwaMonVrc=',
       'hashes the data, passes b64 input through'
     );
