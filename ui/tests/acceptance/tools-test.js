@@ -1,3 +1,4 @@
+import Pretender from 'pretender';
 import { test } from 'qunit';
 import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
 import { toolsActions } from 'vault/helpers/tools-actions';
@@ -131,5 +132,49 @@ test('tools functionality', function(assert) {
       'JmSi2Hhbgu2WYOrcOyTqqMdym7KT3sohCwAwaMonVrc=',
       'hashes the data, passes b64 input through'
     );
+  });
+});
+
+const AUTH_RESPONSE = {
+  "request_id": "39802bc4-235c-2f0b-87f3-ccf38503ac3e",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": null,
+  "wrap_info": null,
+  "warnings": null,
+  "auth": {
+    "client_token": "ecfc2758-588e-981d-50f4-a25883bbf03c",
+    "accessor": "6299780b-f2b2-1a3f-7b83-9d3d67629249",
+    "policies": [
+      "root"
+    ],
+    "metadata": null,
+    "lease_duration": 0,
+    "renewable": false,
+    "entity_id": ""
+  }
+};
+
+test('ensure unwrap with auth block works properly', function(assert) {
+     this.server = new Pretender(function() {
+      this.post('/v1/sys/wrapping/unwrap', response => {
+        return [response, { 'Content-Type': 'application/json' }, JSON.stringify(AUTH_RESPONSE)];
+      });
+    });
+  visit('/vault/tools');
+  //unwrap
+  click('[data-test-tools-action-link="unwrap"]');
+  andThen(() => {
+    fillIn('[data-test-tools-input="wrapping-token"]', 'sometoken');
+  });
+  click('[data-test-tools-submit]');
+  andThen(() => {
+    assert.deepEqual(
+      JSON.parse(find('.CodeMirror').get(0).CodeMirror.getValue()),
+      AUTH_RESPONSE.auth,
+      'unwrapped data equals input data'
+    );
+    this.server.shutdown();
   });
 });
