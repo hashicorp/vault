@@ -1286,14 +1286,15 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 		}
 		idHMACParentPath := parentPrefix + idHMAC + "/"
 
-		allChildren := []string{}
-
 		children, err := ts.view.List(ctx, idHMACParentPath)
 		if err != nil {
 			return errwrap.Wrapf("failed to scan for children using HMAC token ID: {{err}}", err)
 		}
 
-		allChildren = append(allChildren, children...)
+		allChildren := make(map[string]string)
+		for _, child := range children {
+			allChildren[idHMACParentPath] = child
+		}
 
 		// This is only here for backwards compatibility
 		saltedID, err := ts.SaltID(ctx, entry.ID)
@@ -1307,9 +1308,11 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 			return errwrap.Wrapf("failed to scan for children: {{err}}", err)
 		}
 
-		allChildren = append(allChildren, children...)
+		for _, child := range children {
+			allChildren[saltedIDParentPath] = child
+		}
 
-		for _, child := range allChildren {
+		for parentPath, child := range allChildren {
 			entry, err := ts.lookupObfuscatedToken(ctx, child, true)
 			if err != nil {
 				return errwrap.Wrapf("failed to get child token: {{err}}", err)
@@ -1324,12 +1327,16 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 				return errwrap.Wrapf("failed to update child token: {{err}}", err)
 			}
 			lock.Unlock()
-		}
-		if err = logical.ClearView(ctx, ts.view.SubView(idHMACParentPath)); err != nil {
-			return errwrap.Wrapf("failed to delete HMACed parent path: {{err}}", err)
-		}
-		if err = logical.ClearView(ctx, ts.view.SubView(saltedIDParentPath)); err != nil {
-			return errwrap.Wrapf("failed to delete hashed parent path: {{err}}", err)
+
+			// Delete the the child storage entry after we update the token
+			// entry. Since the paths are not deeply nested (i.e.
+			// parentPrefix/<parentID>/<childID>), we can simply call
+			// 'view.Delete' instead of 'logical.ClearView'
+			index := parentPath + child
+			err = ts.view.Delete(ctx, index)
+			if err != nil {
+				return errwrap.Wrapf("failed to delete child entry: {{err}}", err)
+			}
 		}
 	}
 
