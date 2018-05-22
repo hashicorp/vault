@@ -21,6 +21,25 @@ As long as access has been granted to the creds path via a method like
 Passwords are lazily rotated based on preset TTLs and can have a length configured to meet 
 your needs.
 
+## A Note on Lazy Rotation
+
+To drive home the point that passwords are rotated "lazily", consider this scenario:
+
+- A password is configured with a TTL of 1 hour.
+- All instances of a service using this password are off for 12 hours.
+- Then they wake up and again request the password.
+
+In this scenario, although the password TTL was set to 1 hour, the password wouldn't be rotated for 12 hours when it
+was next requested. "Lazy" rotation means passwords are rotated when all of the following conditions are true:
+
+- They are over their TTL
+- They are requested
+
+Therefore, the AD TTL can be considered a soft contract. It's fulfilled when the given password is next requested. 
+
+To ensure your passwords are rotated as expected, we'd recommend you configure services to request each password at least
+twice as often as its TTL.
+
 ## A Note on Escaping
 
 **It is up to the administrator** to provide properly escaped DNs. This
@@ -48,7 +67,7 @@ Most secrets engines must be configured in advance before they can perform their
 functions. These steps are usually completed by an operator or configuration
 management tool.
 
-0. Add the AD secrets plugin to your catalogue:
+1. Add the AD secrets plugin to your catalogue:
 
     ```text
     $ vault write sys/plugins/catalog/ad \
@@ -60,7 +79,7 @@ management tool.
     and refer to its readme. The sha_256 can also be obtained by running `$ sha256sum vault-plugin-secrets-active-directory`
     where "vault-plugin-secrets-active-directory" is the binary itself.
     
-1. Enable the Active Directory secrets engine:
+2. Enable the Active Directory secrets engine:
 
     ```text
     $ vault secrets enable -plugin-name='ad' plugin
@@ -70,7 +89,7 @@ management tool.
     By default, the secrets engine will mount at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-2. Configure the credentials that Vault uses to communicate with Active Directory 
+3. Configure the credentials that Vault uses to communicate with Active Directory 
 to generate passwords:
 
     ```text
@@ -88,7 +107,7 @@ to generate passwords:
     in a production environment. In production, we recommend `insecure_tls` is false (its default) and is used with a valid 
     `certificate`.
 
-3. Configure a role that maps a name in Vault to an account in Active Directory.
+4. Configure a role that maps a name in Vault to an account in Active Directory.
 When applications request passwords, password rotation settings will be managed by
 this role.
 
@@ -97,7 +116,7 @@ this role.
         service_account_name="my-application@example.com"
     ```
     
-4. Grant "my-application" access to its creds at `ad/creds/my-application` using an 
+5. Grant "my-application" access to its creds at `ad/creds/my-application` using an 
 auth method like [AppRole](https://www.vaultproject.io/api/auth/approle/index.html).
 
 ## Configuration
@@ -132,7 +151,8 @@ If an administrator at your company rotates a password that Vault is managing, t
 for that password, Vault won't know it. 
 
 To maintain that application's up-time, Vault will need to return to a state of knowing the password. Vault will generate 
-a new password, update it, and return it to the application(s) asking for it.
+a new password, update it, and return it to the application(s) asking for it. This all occurs automatically, without human
+intervention.
 
 Thus, we wouldn't recommend that administrators directly rotate the passwords for accounts that Vault is managing. This
 may lead to behavior the administrator wouldn't expect, like finding very quickly afterwards that their new password
@@ -147,7 +167,7 @@ Managed Service Accounts are a feature where, in some situations, Active Directo
 Vault can be used alongside Managed Service Accounts, but on separate accounts.
 
 If Vault were set up to rotate a Managed Service Account's password, there would effectively be _two_ entities rotating
-passwords for that account. This would create a strange situation where the password my be rotated by Active Directory,
+passwords for that account. This would create a strange situation where the password might be rotated by Active Directory,
 and then Vault would also be forced to rotate the password in order to know and return it again.
 
 We're not aware of any use case for this setup and would advise against it. Please use one _or_ the other as best fits
