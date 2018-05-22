@@ -5,6 +5,7 @@ export default Ember.Controller.extend({
   env: config.environment,
   auth: Ember.inject.service(),
   vaultVersion: Ember.inject.service('version'),
+  consoleOpen: false,
   activeCluster: Ember.computed('auth.activeCluster', function() {
     return this.store.peekRecord('cluster', this.get('auth.activeCluster'));
   }),
@@ -30,4 +31,9 @@ export default Ember.Controller.extend({
       }
     }
   ),
+  actions: {
+    toggleConsole() {
+      this.toggleProperty('consoleOpen');
+    }
+  }
 });
