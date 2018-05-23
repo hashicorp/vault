@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -1004,7 +1005,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 	// If we are still restoring the expiration manager, we want to ensure the
 	// token is not expired
 	if ts.expiration == nil {
-		return nil, nil
+		return nil, errors.New("expiration manager is nil on tokenstore")
 	}
 	check, err := ts.expiration.RestoreSaltedTokenCheck(entry.Path, saltedID)
 	if err != nil {
