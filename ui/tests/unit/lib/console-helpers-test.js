@@ -1,10 +1,7 @@
-import { moduleForComponent, test } from 'ember-qunit';
-import sinon from 'sinon';
+import { module, test } from 'qunit';
+import { parseCommand, extractDataAndFlags, logFromResponse, logFromError, logErrorFromInput } from 'vault/lib/console-helpers';
 
-moduleForComponent('console/ui-panel', 'Unit | Component | console/ui panel', {
-  unit: true,
-  needs: ['service:auth', 'service:console', 'service:flash-messages'],
-});
+module('lib/console-helpers', 'Unit | Lib | console helpers');
 
 const testCommands = [
   {
@@ -33,21 +30,19 @@ const testCommands = [
 
 testCommands.forEach(function(testCase) {
   test(`#parseCommand: ${testCase.name}`, function(assert) {
-    let panel = this.subject();
-    let result = panel.parseCommand(testCase.command);
+    let result = parseCommand(testCase.command);
     assert.deepEqual(result, testCase.expected);
   });
 });
 
 test('#parseCommand: invalid commands', function(assert) {
-  let panel = this.subject();
   let command = 'vault kv get foo';
-  let result = panel.parseCommand(command);
+  let result = parseCommand(command);
   assert.equal(result, false, 'parseCommand returns false by default');
 
   assert.throws(
     () => {
-      panel.parseCommand(command, true);
+      parseCommand(command, true);
     },
     /invalid command/,
     'throws on invalid command when `shouldThrow` is true'
@@ -101,8 +96,7 @@ const testExtractCases = [
 
 testExtractCases.forEach(function(testCase) {
   test(`#extractDataAndFlags: ${testCase.name}`, function(assert) {
-    let panel = this.subject();
-    let { data, flags } = panel.extractDataAndFlags(...testCase.input);
+    let { data, flags } = extractDataAndFlags(...testCase.input);
     assert.deepEqual(data, testCase.expected.data, 'has expected data');
     assert.deepEqual(flags, testCase.expected.flags, 'has expected flags');
   });
@@ -111,293 +105,254 @@ testExtractCases.forEach(function(testCase) {
 let testResponseCases = [
   {
     name: 'write response, no content',
-    args: [null, 'vault write', 'foo/bar', 'write', {}],
-    expectedCommand: 'vault write',
-    expectedLogArgs: [
+    args: [null, 'foo/bar', 'write', {}],
+    expectedData:
       {
         type: 'text',
         content: 'Success! Data written to: foo/bar',
       },
-    ],
   },
   {
     name: 'delete response, no content',
-    args: [null, 'vault delete', 'foo/bar', 'delete', {}],
-    expectedCommand: 'vault delete',
-    expectedLogArgs: [
+    args: [null, 'foo/bar', 'delete', {}],
+    expectedData:
       {
         type: 'text',
         content: 'Success! Data deleted (if it existed) at: foo/bar',
       },
-    ],
   },
   {
     name: 'write, with content',
-    args: [{ data: { one: 'two' } }, 'vault write', 'foo/bar', 'write', {}],
-    expectedCommand: 'vault write',
-    expectedLogArgs: [
+    args: [{ data: { one: 'two' } }, 'foo/bar', 'write', {}],
+    expectedData:
       {
         type: 'object',
         content: { one: 'two' },
       },
-    ],
   },
   {
     name: 'with wrap-ttl flag',
-    args: [{ wrap_info: { one: 'two' } }, 'vault read', 'foo/bar', 'read', { wrapTTL: '1h' }],
-    expectedCommand: 'vault read',
-    expectedLogArgs: [
+    args: [{ wrap_info: { one: 'two' } }, 'foo/bar', 'read', { wrapTTL: '1h' }],
+    expectedData:
       {
         type: 'object',
         content: { one: 'two' },
       },
-    ],
   },
   {
     name: 'with -format=json flag and wrap-ttl flag',
     args: [
       { foo: 'bar', wrap_info: { one: 'two' } },
-      'vault read',
       'foo/bar',
       'read',
       { format: 'json', wrapTTL: '1h' },
     ],
-    expectedCommand: 'vault read',
-    expectedLogArgs: [
+    expectedData:
       {
         type: 'json',
         content: { foo: 'bar', wrap_info: { one: 'two' } },
       },
-    ],
   },
   {
     name: 'with -format=json and -field flags',
     args: [
       { foo: 'bar', data: { one: 'two' } },
-      'vault read',
       'foo/bar',
       'read',
       { format: 'json', field: 'one' },
     ],
-    expectedCommand: 'vault read',
-    expectedLogArgs: [
+    expectedData:
       {
         type: 'json',
         content: 'two',
       },
-    ],
   },
   {
     name: 'with -format=json and -field, and -wrap-ttl flags',
     args: [
       { foo: 'bar', wrap_info: { one: 'two' } },
-      'vault read',
       'foo/bar',
       'read',
       { format: 'json', wrapTTL: '1h', field: 'one' },
     ],
-    expectedCommand: 'vault read',
-    expectedLogArgs: [
+    expectedData:
       {
         type: 'json',
         content: 'two',
       },
-    ],
   },
   {
     name: 'with string field flag and wrap-ttl flag',
     args: [
       { foo: 'bar', wrap_info: { one: 'two' } },
-      'vault read',
       'foo/bar',
       'read',
       { field: 'one', wrapTTL: '1h' },
     ],
-    expectedCommand: 'vault read',
-    expectedLogArgs: [
+    expectedData:
       {
         type: 'text',
         content: 'two',
       },
-    ],
   },
   {
     name: 'with object field flag and wrap-ttl flag',
     args: [
       { foo: 'bar', wrap_info: { one: { two: 'three' } } },
-      'vault read',
       'foo/bar',
       'read',
       { field: 'one', wrapTTL: '1h' },
     ],
-    expectedCommand: 'vault read',
-    expectedLogArgs: [
+    expectedData:
       {
         type: 'object',
         content: { two: 'three' },
       },
-    ],
   },
   {
     name: 'with response data and string field flag',
     args: [
       { foo: 'bar', data: { one: 'two' } },
-      'vault read',
       'foo/bar',
       'read',
       { field: 'one', wrapTTL: '1h' },
     ],
-    expectedCommand: 'vault read',
-    expectedLogArgs: [
+    expectedData:
       {
         type: 'text',
         content: 'two',
       },
-    ],
   },
   {
     name: 'with response data and object field flag ',
     args: [
       { foo: 'bar', data: { one: { two: 'three' } } },
-      'vault read',
       'foo/bar',
       'read',
       { field: 'one', wrapTTL: '1h' },
     ],
-    expectedCommand: 'vault read',
-    expectedLogArgs: [
+    expectedData:
       {
         type: 'object',
         content: { two: 'three' },
       },
-    ],
   },
   {
     name: 'response with data',
-    args: [{ foo: 'bar', data: { one: 'two' } }, 'vault read', 'foo/bar', 'read', {}],
-    expectedCommand: 'vault read',
-    expectedLogArgs: [
+    args: [{ foo: 'bar', data: { one: 'two' } }, 'foo/bar', 'read', {}],
+    expectedData:
       {
         type: 'object',
         content: { one: 'two' },
       },
-    ],
   },
   {
     name: 'with response data, field flag, and field missing',
-    args: [{ foo: 'bar', data: { one: 'two' } }, 'vault read', 'foo/bar', 'read', { field: 'foo' }],
-    expectedCommand: 'vault read',
-    expectedLogArgs: [
+    args: [{ foo: 'bar', data: { one: 'two' } }, 'foo/bar', 'read', { field: 'foo' }],
+    expectedData:
       {
         type: 'error',
         content: 'Field "foo" not present in secret',
       },
-    ],
   },
   {
     name: 'with response data and auth block',
     args: [
       { data: { one: 'two' }, auth: { three: 'four' } },
-      'vault write',
       'auth/token/create',
       'write',
       {},
     ],
-    expectedCommand: 'vault write',
-    expectedLogArgs: [
+    expectedData:
       {
         type: 'object',
         content: { three: 'four' },
       },
-    ],
   },
   {
     name: 'with -field and -format with an object field',
     args: [
       { data: { one: { three: 'two' } } },
-      'vault read',
       'sys/mounts',
       'read',
       { field: 'one', format: 'json' },
     ],
-    expectedCommand: 'vault read',
-    expectedLogArgs: [
+    expectedData:
       {
         type: 'json',
         content: { three: 'two' },
       },
-    ],
   },
   {
     name: 'with -field and -format with a string field',
-    args: [{ data: { one: 'two' } }, 'vault read', 'sys/mounts', 'read', { field: 'one', format: 'json' }],
-    expectedCommand: 'vault read',
-    expectedLogArgs: [
+    args: [{ data: { one: 'two' } }, 'sys/mounts', 'read', { field: 'one', format: 'json' }],
+    expectedData:
       {
         type: 'json',
         content: 'two',
       },
-    ],
   },
 ];
 
 testResponseCases.forEach(function(testCase) {
-  test(`#processResponse: ${testCase.name}`, function(assert) {
-    let panel = this.subject({
-      appendToLog: sinon.spy(),
-    });
-    panel.processResponse(...testCase.args);
-
-    let spy = panel.appendToLog;
-    let commandArgs = spy.getCall(spy.callCount - 2).args;
-    let appendArgs = spy.lastCall.args;
-    assert.deepEqual(
-      commandArgs[0],
-      { type: 'command', content: testCase.expectedCommand },
-      'appends command'
-    );
-    assert.deepEqual(appendArgs, testCase.expectedLogArgs, 'appends output');
+  test(`#logFromResponse: ${testCase.name}`, function(assert) {
+    let data = logFromResponse(...testCase.args);
+    assert.deepEqual(data, testCase.expectedData);
   });
 });
 
 let testErrorCases = [
   {
     name: 'AdapterError write',
-    args: ['command', 'write', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }],
+    args: [
+      { httpStatus: 404, path: 'v1/sys/foo', errors: [{}] },
+      'sys/foo',
+      'write',
+    ],
     expectedContent: 'Error writing to: sys/foo.\nURL: v1/sys/foo\nCode: 404',
   },
   {
     name: 'AdapterError read',
-    args: ['command', 'read', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }],
+    args: [
+      { httpStatus: 404, path: 'v1/sys/foo', errors: [{}] },
+      'sys/foo',
+      'read',
+    ],
     expectedContent: 'Error reading from: sys/foo.\nURL: v1/sys/foo\nCode: 404',
   },
   {
     name: 'AdapterError list',
-    args: ['command', 'list', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }],
+    args: [
+      { httpStatus: 404, path: 'v1/sys/foo', errors: [{}] },
+      'sys/foo',
+      'list',
+    ],
     expectedContent: 'Error listing: sys/foo.\nURL: v1/sys/foo\nCode: 404',
   },
   {
     name: 'AdapterError delete',
-    args: ['command', 'delete', 'sys/foo', { httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }],
+    args: [
+      { httpStatus: 404, path: 'v1/sys/foo', errors: [{}] },
+      'sys/foo',
+      'delete',
+    ],
     expectedContent: 'Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404',
   },
   {
     name: 'VaultError single error',
     args: [
-      'command',
-      'delete',
-      'sys/foo',
       { httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token'] },
+      'sys/foo',
+      'delete',
     ],
     expectedContent: 'Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404\nErrors:\n  no client token',
   },
   {
     name: 'VaultErrors multiple errors',
     args: [
-      'command',
-      'delete',
-      'sys/foo',
       { httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token', 'this is an error'] },
+      'sys/foo',
+      'delete',
     ],
     expectedContent:
       'Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404\nErrors:\n  no client token\n  this is an error',
@@ -405,18 +360,12 @@ let testErrorCases = [
 ];
 
 testErrorCases.forEach(function(testCase) {
-  test(`#handleServiceError: ${testCase.name}`, function(assert) {
-    let panel = this.subject({
-      appendToLog: sinon.spy(),
-    });
-    panel.handleServiceError(...testCase.args);
-
-    let spy = panel.appendToLog;
-    let appendArgs = spy.lastCall.args;
+  test(`#logFromError: ${testCase.name}`, function(assert) {
+    let data = logFromError(...testCase.args);
     assert.deepEqual(
-      appendArgs[0].content,
-      testCase.expectedContent,
-      'calls appendToLog with the expected error content'
+      data,
+      {type: 'error', content: testCase.expectedContent},
+      'returns the expected data'
     );
   });
 });
@@ -424,29 +373,30 @@ testErrorCases.forEach(function(testCase) {
 const testCommandCases = [
   {
     name: 'errors when command does not include a path',
-    command: `list`,
+    args: [
+    ],
     expectedContent: 'A path is required to make a request.',
   },
   {
     name: 'errors when write command does not include data and does not have force tag',
-    command: `write this/is/a/path`,
+    args:[
+      'foo/bar',
+      'write',
+      {},
+      []
+    ],
     expectedContent: 'Must supply data or use -force',
   },
 ];
 
 testCommandCases.forEach(function(testCase) {
-  test(`#executeCommand: ${testCase.name}`, function(assert) {
-    let panel = this.subject({
-      appendToLog: sinon.spy(),
-    });
-    panel.executeCommand(testCase.command);
+  test(`#logErrorFromInput: ${testCase.name}`, function(assert) {
+    let data = logErrorFromInput(...testCase.args);
 
-    let spy = panel.appendToLog;
-    let appendArgs = spy.lastCall.args;
     assert.deepEqual(
-      appendArgs[0].content,
-      testCase.expectedContent,
-      'calls appendToLog with the expected content'
+      data,
+      { type: 'error', content: testCase.expectedContent },
+      'returns the pcorrect data'
     );
   });
 });
