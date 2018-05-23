@@ -54,22 +54,20 @@ let testCases = [
     expected: 'vault.cluster.access.identity.aliases.show',
   },
 ];
-test('it computes cancelLink properly', function(assert) {
-  let component = this.subject();
-  let model;
-
-  testCases.forEach(testCase => {
-    model = Ember.Object.create({
-      identityType: testCase.identityType,
-      rollbackAttributes: sinon.spy(),
-    });
+testCases.forEach(function(testCase) {
+  let model = Ember.Object.create({
+    identityType: testCase.identityType,
+    rollbackAttributes: sinon.spy(),
+  });
+  test(`it computes cancelLink properly: ${testCase.identityType} ${testCase.mode}`, function(assert) {
+    let component = this.subject();
 
     component.set('mode', testCase.mode);
     component.set('model', model);
     assert.equal(
       component.get('cancelLink'),
       testCase.expected,
-      `${testCase.identityType} ${testCase.mode}: cancel link is correct`
+      'cancel link is correct'
     );
   });
 });

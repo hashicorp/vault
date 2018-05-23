@@ -74,6 +74,4 @@ export const testAliasDeleteFromForm = (name, itemType, assert) => {
     assert.equal(aliasIndexPage.items.filterBy('id', aliasID).length, 0, `${itemType}: the row does not show in the list`);
     aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted', `${itemType}: shows flash message`);
   });
-
-
 };
