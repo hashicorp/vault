@@ -102,13 +102,13 @@
         it without Vault.
     </p>
     <p>
-        <code>vault write secret/hello value=world</code>
+        <code>vault kv put secret/morning weather=sunny</code>
     </p>
     <p>
         Of course, you can then read this data too:
     </p>
     <p>
-        <code>vault read secret/hello</code>
+        <code>vault kv get secret/morning</code>
     </p>
 </script>
 

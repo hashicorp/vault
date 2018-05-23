@@ -20,8 +20,7 @@
   }
 }
 .popup-menu-trigger {
-  width: 3rem;
-  height: 2rem;
+  min-width: auto;
 }
 .popup-menu-trigger.is-active {
   &,
