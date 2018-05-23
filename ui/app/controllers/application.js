@@ -34,6 +34,6 @@ export default Ember.Controller.extend({
   actions: {
     toggleConsole() {
       this.toggleProperty('consoleOpen');
-    }
-  }
+    },
+  },
 });
