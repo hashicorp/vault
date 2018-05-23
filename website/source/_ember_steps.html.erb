@@ -94,32 +94,129 @@
 
 <script type="text/x-handlebars" data-template-name="list">
     <p>
-        Vault's Secrets engines are components which store, generate, or encrypt data.
-        List to see which secret engines have been enabled and ready to use.
+        Vault's Secrets engines are components which store, generate or encrypt data.
+        List which secret engines have been enabled and ready to use.
     </p>
     <p>
         <code>vault secrets list</code>
+    </p>
+    <p>
+        Key/Value Version 2 is enabled at "secret/" which retains a configurable number of versions.
     </p>
 </script>
 
 
 <script type="text/x-handlebars" data-template-name="secrets">
     <p>
-        Now that Vault has been set-up, we can start reading and writing secrets
-        with the default enabled secrets engine. Secrets written to Vault
-        are encrypted and then written to the backend storage.
-        The backend storage mechanism never sees the unencrypted
-        value and doesn't have the means necessary to decrypt
-        it without Vault.
+        Now we can start reading and writing secrets with the default enabled
+        secrets engine. Secrets written to Vault are encrypted and then written
+        to the backend storage. The backend storage mechanism never sees the
+        unencrypted value and doesn't have the means necessary to decrypt it
+        without Vault.
     </p>
     <p>
-        <code>vault kv put secret/hello value=world</code>
+        <code>vault kv put secret/apikey key="my-test-key"</code>
     </p>
     <p>
         Of course, you can then read this data too:
     </p>
     <p>
-        <code>vault kv get secret/hello</code>
+        <code>vault kv get secret/apikey</code>
+    </p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="update">
+    <p>
+        Let's update the secret by adding additional value.
+    </p>
+    <p>
+        <code>vault kv put secret/apikey key="my-test-key" owner="dev"</code>
+    </p>
+    <p>
+        This creates version 2 of the data at secret/apikey.
+        What happens if you modify the "owner" value without passing the "key"?
+    </p>
+    <p>
+        <code>vault kv put secret/apikey owner="ops"</code>
+    </p>
+    <p>
+        Run "vault kv get" to see what values are stored.
+    </p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="versions">
+    <p>
+        The following command retrieves the key metadata at secret/apikey:
+    </p>
+    <p>
+        <code>vault kv metadata get secret/apikey</code>
+    </p>
+    <p>
+        At this point, there are three versions of the data.
+        To retrieve the first version of the secret:
+    </p>
+    <p>
+        <code>vault kv get -version=1 secret/apikey</code>
+    </p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="delete">
+    <p>
+        You can delete specific version(s) of the secret:
+    </p>
+    <p>
+        <code>vault kv delete -versions=1 secret/apikey</code>
+    </p>
+    <p>
+        The metadata displays the deletion time of the Version 1 that you just deleted.
+    </p>
+    <p>
+        <code>vault kv metadata get secret/apikey</code>
+    </p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="recover">
+    <p>
+        When the data was deleted by accident, you can recover by running the following command:
+    </p>
+    <p>
+        <code>vault kv undelete -versions=1 secret/apikey</code>
+    </p>
+    <p>
+        You should be able to retrieve the Version 1 of the secret:
+    </p>
+    <p>
+        <code>vault kv get -version=1 secret/apikey</code>
+    </p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="destroy">
+    <p>
+        To permanently delete the secret version:
+    </p>
+    <p>
+        <code>vault kv destroy -versions=1 secret/apikey</code>
+    </p>
+    <p>
+        The following command deletes all versions and metadata at secret/apikey:
+    </p>
+    <p>
+        <code>vault kv metadata delete secret/apikey</code>
+    </p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="help">
+    <p>
+        At this point, secret/apikey no longer exists.  You can verify it by executing the following command:
+    </p>
+    <p>
+        <code>vault kv list secret/</code>
+    </p>
+    <p>
+        To learn more about the K/V command:
+    </p>
+    <p>
+        <code>vault kv -h/</code>
     </p>
 </script>
 
