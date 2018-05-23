@@ -69,7 +69,7 @@ var (
 func Handler(core *vault.Core) http.Handler {
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
-	mux.Handle("/v1/sys/apidocs/", http.StripPrefix("/v1/sys/apidocs/", http.FileServer(apidocAssetFS())))
+	mux.Handle("/v1/sys/apidocs/", handleSysApiDoc(core))
 	mux.Handle("/v1/sys/init", handleSysInit(core))
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))

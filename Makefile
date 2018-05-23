@@ -137,13 +137,13 @@ spellcheck:
 	@echo "==> Spell checking website..."
 	@misspell -error -source=text website/source
 
-apidoc:
-	@echo "--> Generating OpenAPI... "
-	@CGO_ENABLED=0 go run ./apidoc/main.go > apidoc.json
-	@go-bindata-assetfs -o bindata_apidoc_json.go -pkg http -prefix pkg -modtime 1480000000 apidoc.json
-	@gofmt -w bindata_apidoc_json.go
-	@sed -i -e 's/func assetFS/func apidocAssetFS/' bindata_apidoc_json.go
-	@mv bindata_apidoc_json.go http
+#apidoc:
+#	@echo "--> Generating OpenAPI... "
+#	@CGO_ENABLED=0 go run ./apidoc/main.go > apidoc.json
+#	@go-bindata-assetfs -o bindata_apidoc_json.go -pkg http -prefix pkg -modtime 1480000000 apidoc.json
+#	@gofmt -w bindata_apidoc_json.go
+#	@sed -i -e 's/func assetFS/func apidocAssetFS/' bindata_apidoc_json.go
+#	@mv bindata_apidoc_json.go http
 
 mysql-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin
