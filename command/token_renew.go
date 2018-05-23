@@ -99,9 +99,10 @@ func (c *TokenRenewCommand) Run(args []string) int {
 		token = strings.TrimSpace(args[0])
 	case 2:
 		// TODO: remove in 0.9.0 - backwards compat
-		c.UI.Warn("Specifying increment as a second argument is deprecated. " +
-			"Please use -increment instead.")
-
+		if Format(c.UI) == "table" {
+			c.UI.Warn("Specifying increment as a second argument is deprecated. " +
+				"Please use -increment instead.")
+		}
 		token = strings.TrimSpace(args[0])
 		parsed, err := time.ParseDuration(appendDurationSuffix(args[1]))
 		if err != nil {
