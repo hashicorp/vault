@@ -36,6 +36,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/helper/oas"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -695,6 +696,11 @@ func (n *rawHTTP) InvalidateKey(context.Context, string) {
 func (n *rawHTTP) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	// noop
 	return nil
+}
+
+func (n *rawHTTP) Describe() *oas.OASDoc {
+	d := oas.NewOASDoc()
+	return &d
 }
 
 func (n *rawHTTP) Type() logical.BackendType {

@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/helper/oas"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -272,6 +273,12 @@ func (b *Backend) Type() logical.BackendType {
 func (b *Backend) Route(path string) *Path {
 	result, _ := b.route(path)
 	return result
+}
+
+func (b *Backend) Describe() *oas.OASDoc {
+	doc := oas.NewOASDoc()
+	DocumentPaths(b, &doc)
+	return &doc
 }
 
 // Secret is used to look up the secret with the given type.

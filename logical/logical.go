@@ -4,6 +4,7 @@ import (
 	"context"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/oas"
 )
 
 // BackendType is the type of backend that is being implemented
@@ -41,6 +42,8 @@ type Backend interface {
 	// HandleRequest is used to handle a request and generate a response.
 	// The backends must check the operation type and handle appropriately.
 	HandleRequest(context.Context, *Request) (*Response, error)
+
+	Describe() *oas.OASDoc
 
 	// SpecialPaths is a list of paths that are special in some way.
 	// See PathType for the types of special paths. The key is the type
