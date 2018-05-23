@@ -1,5 +1,11 @@
 import { module, test } from 'qunit';
-import { parseCommand, extractDataAndFlags, logFromResponse, logFromError, logErrorFromInput } from 'vault/lib/console-helpers';
+import {
+  parseCommand,
+  extractDataAndFlags,
+  logFromResponse,
+  logFromError,
+  logErrorFromInput,
+} from 'vault/lib/console-helpers';
 
 module('lib/console-helpers', 'Unit | Lib | console helpers');
 
@@ -106,66 +112,50 @@ let testResponseCases = [
   {
     name: 'write response, no content',
     args: [null, 'foo/bar', 'write', {}],
-    expectedData:
-      {
-        type: 'text',
-        content: 'Success! Data written to: foo/bar',
-      },
+    expectedData: {
+      type: 'text',
+      content: 'Success! Data written to: foo/bar',
+    },
   },
   {
     name: 'delete response, no content',
     args: [null, 'foo/bar', 'delete', {}],
-    expectedData:
-      {
-        type: 'text',
-        content: 'Success! Data deleted (if it existed) at: foo/bar',
-      },
+    expectedData: {
+      type: 'text',
+      content: 'Success! Data deleted (if it existed) at: foo/bar',
+    },
   },
   {
     name: 'write, with content',
     args: [{ data: { one: 'two' } }, 'foo/bar', 'write', {}],
-    expectedData:
-      {
-        type: 'object',
-        content: { one: 'two' },
-      },
+    expectedData: {
+      type: 'object',
+      content: { one: 'two' },
+    },
   },
   {
     name: 'with wrap-ttl flag',
     args: [{ wrap_info: { one: 'two' } }, 'foo/bar', 'read', { wrapTTL: '1h' }],
-    expectedData:
-      {
-        type: 'object',
-        content: { one: 'two' },
-      },
+    expectedData: {
+      type: 'object',
+      content: { one: 'two' },
+    },
   },
   {
     name: 'with -format=json flag and wrap-ttl flag',
-    args: [
-      { foo: 'bar', wrap_info: { one: 'two' } },
-      'foo/bar',
-      'read',
-      { format: 'json', wrapTTL: '1h' },
-    ],
-    expectedData:
-      {
-        type: 'json',
-        content: { foo: 'bar', wrap_info: { one: 'two' } },
-      },
+    args: [{ foo: 'bar', wrap_info: { one: 'two' } }, 'foo/bar', 'read', { format: 'json', wrapTTL: '1h' }],
+    expectedData: {
+      type: 'json',
+      content: { foo: 'bar', wrap_info: { one: 'two' } },
+    },
   },
   {
     name: 'with -format=json and -field flags',
-    args: [
-      { foo: 'bar', data: { one: 'two' } },
-      'foo/bar',
-      'read',
-      { format: 'json', field: 'one' },
-    ],
-    expectedData:
-      {
-        type: 'json',
-        content: 'two',
-      },
+    args: [{ foo: 'bar', data: { one: 'two' } }, 'foo/bar', 'read', { format: 'json', field: 'one' }],
+    expectedData: {
+      type: 'json',
+      content: 'two',
+    },
   },
   {
     name: 'with -format=json and -field, and -wrap-ttl flags',
@@ -175,25 +165,18 @@ let testResponseCases = [
       'read',
       { format: 'json', wrapTTL: '1h', field: 'one' },
     ],
-    expectedData:
-      {
-        type: 'json',
-        content: 'two',
-      },
+    expectedData: {
+      type: 'json',
+      content: 'two',
+    },
   },
   {
     name: 'with string field flag and wrap-ttl flag',
-    args: [
-      { foo: 'bar', wrap_info: { one: 'two' } },
-      'foo/bar',
-      'read',
-      { field: 'one', wrapTTL: '1h' },
-    ],
-    expectedData:
-      {
-        type: 'text',
-        content: 'two',
-      },
+    args: [{ foo: 'bar', wrap_info: { one: 'two' } }, 'foo/bar', 'read', { field: 'one', wrapTTL: '1h' }],
+    expectedData: {
+      type: 'text',
+      content: 'two',
+    },
   },
   {
     name: 'with object field flag and wrap-ttl flag',
@@ -203,25 +186,18 @@ let testResponseCases = [
       'read',
       { field: 'one', wrapTTL: '1h' },
     ],
-    expectedData:
-      {
-        type: 'object',
-        content: { two: 'three' },
-      },
+    expectedData: {
+      type: 'object',
+      content: { two: 'three' },
+    },
   },
   {
     name: 'with response data and string field flag',
-    args: [
-      { foo: 'bar', data: { one: 'two' } },
-      'foo/bar',
-      'read',
-      { field: 'one', wrapTTL: '1h' },
-    ],
-    expectedData:
-      {
-        type: 'text',
-        content: 'two',
-      },
+    args: [{ foo: 'bar', data: { one: 'two' } }, 'foo/bar', 'read', { field: 'one', wrapTTL: '1h' }],
+    expectedData: {
+      type: 'text',
+      content: 'two',
+    },
   },
   {
     name: 'with response data and object field flag ',
@@ -231,66 +207,50 @@ let testResponseCases = [
       'read',
       { field: 'one', wrapTTL: '1h' },
     ],
-    expectedData:
-      {
-        type: 'object',
-        content: { two: 'three' },
-      },
+    expectedData: {
+      type: 'object',
+      content: { two: 'three' },
+    },
   },
   {
     name: 'response with data',
     args: [{ foo: 'bar', data: { one: 'two' } }, 'foo/bar', 'read', {}],
-    expectedData:
-      {
-        type: 'object',
-        content: { one: 'two' },
-      },
+    expectedData: {
+      type: 'object',
+      content: { one: 'two' },
+    },
   },
   {
     name: 'with response data, field flag, and field missing',
     args: [{ foo: 'bar', data: { one: 'two' } }, 'foo/bar', 'read', { field: 'foo' }],
-    expectedData:
-      {
-        type: 'error',
-        content: 'Field "foo" not present in secret',
-      },
+    expectedData: {
+      type: 'error',
+      content: 'Field "foo" not present in secret',
+    },
   },
   {
     name: 'with response data and auth block',
-    args: [
-      { data: { one: 'two' }, auth: { three: 'four' } },
-      'auth/token/create',
-      'write',
-      {},
-    ],
-    expectedData:
-      {
-        type: 'object',
-        content: { three: 'four' },
-      },
+    args: [{ data: { one: 'two' }, auth: { three: 'four' } }, 'auth/token/create', 'write', {}],
+    expectedData: {
+      type: 'object',
+      content: { three: 'four' },
+    },
   },
   {
     name: 'with -field and -format with an object field',
-    args: [
-      { data: { one: { three: 'two' } } },
-      'sys/mounts',
-      'read',
-      { field: 'one', format: 'json' },
-    ],
-    expectedData:
-      {
-        type: 'json',
-        content: { three: 'two' },
-      },
+    args: [{ data: { one: { three: 'two' } } }, 'sys/mounts', 'read', { field: 'one', format: 'json' }],
+    expectedData: {
+      type: 'json',
+      content: { three: 'two' },
+    },
   },
   {
     name: 'with -field and -format with a string field',
     args: [{ data: { one: 'two' } }, 'sys/mounts', 'read', { field: 'one', format: 'json' }],
-    expectedData:
-      {
-        type: 'json',
-        content: 'two',
-      },
+    expectedData: {
+      type: 'json',
+      content: 'two',
+    },
   },
 ];
 
@@ -304,47 +264,27 @@ testResponseCases.forEach(function(testCase) {
 let testErrorCases = [
   {
     name: 'AdapterError write',
-    args: [
-      { httpStatus: 404, path: 'v1/sys/foo', errors: [{}] },
-      'sys/foo',
-      'write',
-    ],
+    args: [{ httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }, 'sys/foo', 'write'],
     expectedContent: 'Error writing to: sys/foo.\nURL: v1/sys/foo\nCode: 404',
   },
   {
     name: 'AdapterError read',
-    args: [
-      { httpStatus: 404, path: 'v1/sys/foo', errors: [{}] },
-      'sys/foo',
-      'read',
-    ],
+    args: [{ httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }, 'sys/foo', 'read'],
     expectedContent: 'Error reading from: sys/foo.\nURL: v1/sys/foo\nCode: 404',
   },
   {
     name: 'AdapterError list',
-    args: [
-      { httpStatus: 404, path: 'v1/sys/foo', errors: [{}] },
-      'sys/foo',
-      'list',
-    ],
+    args: [{ httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }, 'sys/foo', 'list'],
     expectedContent: 'Error listing: sys/foo.\nURL: v1/sys/foo\nCode: 404',
   },
   {
     name: 'AdapterError delete',
-    args: [
-      { httpStatus: 404, path: 'v1/sys/foo', errors: [{}] },
-      'sys/foo',
-      'delete',
-    ],
+    args: [{ httpStatus: 404, path: 'v1/sys/foo', errors: [{}] }, 'sys/foo', 'delete'],
     expectedContent: 'Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404',
   },
   {
     name: 'VaultError single error',
-    args: [
-      { httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token'] },
-      'sys/foo',
-      'delete',
-    ],
+    args: [{ httpStatus: 404, path: 'v1/sys/foo', errors: ['no client token'] }, 'sys/foo', 'delete'],
     expectedContent: 'Error deleting at: sys/foo.\nURL: v1/sys/foo\nCode: 404\nErrors:\n  no client token',
   },
   {
@@ -362,29 +302,19 @@ let testErrorCases = [
 testErrorCases.forEach(function(testCase) {
   test(`#logFromError: ${testCase.name}`, function(assert) {
     let data = logFromError(...testCase.args);
-    assert.deepEqual(
-      data,
-      {type: 'error', content: testCase.expectedContent},
-      'returns the expected data'
-    );
+    assert.deepEqual(data, { type: 'error', content: testCase.expectedContent }, 'returns the expected data');
   });
 });
 
 const testCommandCases = [
   {
     name: 'errors when command does not include a path',
-    args: [
-    ],
+    args: [],
     expectedContent: 'A path is required to make a request.',
   },
   {
     name: 'errors when write command does not include data and does not have force tag',
-    args:[
-      'foo/bar',
-      'write',
-      {},
-      []
-    ],
+    args: ['foo/bar', 'write', {}, []],
     expectedContent: 'Must supply data or use -force',
   },
 ];
@@ -393,10 +323,6 @@ testCommandCases.forEach(function(testCase) {
   test(`#logErrorFromInput: ${testCase.name}`, function(assert) {
     let data = logErrorFromInput(...testCase.args);
 
-    assert.deepEqual(
-      data,
-      { type: 'error', content: testCase.expectedContent },
-      'returns the pcorrect data'
-    );
+    assert.deepEqual(data, { type: 'error', content: testCase.expectedContent }, 'returns the pcorrect data');
   });
 });

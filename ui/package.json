@@ -14,7 +14,7 @@
     "start2": "ember server --proxy=http://localhost:8202 --port=4202",
     "test": "node scripts/start-vault.js & ember test",
     "test-oss": "yarn run test -f='!enterprise'",
-    "fmt-js": "prettier-eslint --single-quote --no-use-tabs --trailing-comma es5 --print-width=110 --write {app,tests,config,lib,mirage}/**/*.js",
+    "fmt-js": "prettier-eslint --single-quote --no-use-tabs --trailing-comma es5 --print-width=110 --write '{app,tests,config,lib,mirage}/**/*.js'",
     "fmt-styles": "prettier --write app/styles/**/*.*",
     "fmt": "yarn run fmt-js && yarn run fmt-styles",
     "precommit": "lint-staged"

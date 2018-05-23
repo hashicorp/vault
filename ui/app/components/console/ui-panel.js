@@ -1,5 +1,12 @@
 import Ember from 'ember';
-import { parseCommand, shiftCommandIndex, extractDataAndFlags, logFromResponse, logFromError, logErrorFromInput } from 'vault/lib/console-helpers';
+import {
+  parseCommand,
+  shiftCommandIndex,
+  extractDataAndFlags,
+  logFromResponse,
+  logFromError,
+  logErrorFromInput,
+} from 'vault/lib/console-helpers';
 
 const { inject, computed } = Ember;
 
@@ -44,7 +51,7 @@ export default Ember.Component.extend({
     try {
       serviceArgs = parseCommand(command, shouldThrow);
     } catch (e) {
-      this.logAndOutput(command, {type: 'help'});
+      this.logAndOutput(command, { type: 'help' });
       return;
     }
     // we have a invalid command but don't want to throw
@@ -62,7 +69,9 @@ export default Ember.Component.extend({
     if (inputError) {
       this.logAndOutput(command, inputError);
     }
-    this.get('console')[method](path, data, flags.wrapTTL)
+    let serviceFn = this.get('console')[method];
+
+    serviceFn(path, data, flags.wrapTTL)
       .then(resp => {
         this.logAndOutput(command, logFromResponse(resp, path, method, flags));
       })
@@ -72,7 +81,11 @@ export default Ember.Component.extend({
   },
 
   shiftCommandIndex(keyCode) {
-    let [index, newInputValue] = shiftCommandIndex(keyCode, this.get('commandHistory'), this.get('commandIndex'));
+    let [index, newInputValue] = shiftCommandIndex(
+      keyCode,
+      this.get('commandHistory'),
+      this.get('commandIndex')
+    );
     this.set('commandIndex', index);
     this.set('inputValue', newInputValue);
   },
