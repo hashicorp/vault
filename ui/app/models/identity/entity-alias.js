@@ -1,7 +1,8 @@
 import IdentityModel from './_base';
 import DS from 'ember-data';
 import Ember from 'ember';
-import { queryRecord } from 'ember-computed-query';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import identityCapabilities from 'vault/macros/identity-capabilities';
 const { attr, belongsTo } = DS;
 const { computed } = Ember;
 
@@ -33,18 +34,7 @@ export default IdentityModel.extend({
   }),
   mergedFromCanonicalIds: attr(),
 
-  updatePath: queryRecord(
-    'capabilities',
-    context => {
-      const { identityType, id } = context.getProperties('identityType', 'id');
-      //identity/entity-alias/id/efb8b562-77fd-335f-a754-740373a778e6
-      return {
-        id: `identity/${identityType}/id/${id}`,
-      };
-    },
-    'id',
-    'identityType'
-  ),
+  updatePath: identityCapabilities(),
   canDelete: computed.alias('updatePath.canDelete'),
   canEdit: computed.alias('updatePath.canUpdate'),
 });
