@@ -69,9 +69,10 @@ export default Ember.Component.extend({
     if (inputError) {
       this.logAndOutput(command, inputError);
     }
-    let serviceFn = this.get('console')[method];
+    let service = this.get('console');
+    let serviceFn = service[method];
 
-    serviceFn(path, data, flags.wrapTTL)
+    serviceFn.call(service, path, data, flags.wrapTTL)
       .then(resp => {
         this.logAndOutput(command, logFromResponse(resp, path, method, flags));
       })
