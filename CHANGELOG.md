@@ -44,6 +44,7 @@ BUG FIXES:
    parameters were used [GH-4582]
  * secret/gcp: Make `bound_region` able to use short names
  * secret/kv: Fix response wrapping for KV v2 [GH-4511]
+ * secret/kv: Fix address flag not being honored correctly [GH-4617]
  * secret/pki: Fix `key_type` not being allowed to be set to `any` [GH-4595]
  * secret/pki: Fix path length parameter being ignored when using
    `use_csr_values` and signing an intermediate CA cert [GH-4459]
