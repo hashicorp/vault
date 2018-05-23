@@ -68,6 +68,7 @@ Router.map(function() {
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function() {
           this.route('index', { path: '/' });
+          this.route('configuration');
           // because globs / params can't be empty,
           // we have to special-case ids of '' with thier own routes
           this.route('list-root', { path: '/list/' });

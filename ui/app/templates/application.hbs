@@ -40,7 +40,7 @@
           {{/if}}
         </li>
         <li class="{{if (is-active-route (array 'vault.cluster.policies' 'vault.cluster.policy')) 'is-active'}}">
-          <a href="{{href-to "vault.cluster.policies" activeClusterName current-when='vault.cluster.policies vault.cluster.policy'}}">
+          <a href="{{href-to "vault.cluster.policies" "acl" current-when='vault.cluster.policies vault.cluster.policy'}}">
             Policies
           </a>
         </li>
