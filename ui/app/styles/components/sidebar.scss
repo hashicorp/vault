@@ -72,13 +72,7 @@
       transition: 250ms border-width;
 
       &.is-active {
-        color: $blue;
-        background-color: $dark-white;
         border-right: 4px solid $blue;
-      }
-
-      &:hover {
-        background-color: $dark-white;
       }
     }
   }

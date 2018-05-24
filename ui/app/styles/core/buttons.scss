@@ -1,8 +1,8 @@
 $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
 
 .button {
-  box-shadow: $button-box-shadow-standard;
   border: 1px solid $grey-light;
+  box-shadow: $box-shadow-low;
   color: $grey-dark;
   display: inline-block;
   font-size: $size-small;
@@ -57,13 +57,14 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
       &.is-hovered {
         background-color: darken($color, 5%);
         border-color: darken($color, 5%);
+        box-shadow: $box-shadow-middle;
       }
 
       &:active,
       &.is-active {
         background-color: darken($color, 10%);
         border-color: darken($color, 10%);
-        box-shadow: none;
+        box-shadow: $box-shadow-middle;
       }
 
       &:focus,
