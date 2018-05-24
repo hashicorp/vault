@@ -269,21 +269,27 @@ func (c *OperatorRekeyCommand) Run(args []string) int {
 	// Deprecations
 	// TODO: remove in 0.9.0
 	if c.flagDelete {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! The -delete flag is deprecated. Please use -backup-delete " +
-				"instead. This flag will be removed in Vault 0.11 (or later)."))
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! The -delete flag is deprecated. Please use -backup-delete " +
+					"instead. This flag will be removed in Vault 0.11 (or later)."))
+		}
 		c.flagBackupDelete = true
 	}
 	if c.flagRetrieve {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! The -retrieve flag is deprecated. Please use -backup-retrieve " +
-				"instead. This flag will be removed in Vault 0.11 (or later)."))
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! The -retrieve flag is deprecated. Please use -backup-retrieve " +
+					"instead. This flag will be removed in Vault 0.11 (or later)."))
+		}
 		c.flagBackupRetrieve = true
 	}
 	if c.flagRecoveryKey {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! The -recovery-key flag is deprecated. Please use -target=recovery " +
-				"instead. This flag will be removed in Vault 0.11 (or later)."))
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! The -recovery-key flag is deprecated. Please use -target=recovery " +
+					"instead. This flag will be removed in Vault 0.11 (or later)."))
+		}
 		c.flagTarget = "recovery"
 	}
 
@@ -344,25 +350,29 @@ func (c *OperatorRekeyCommand) init(client *api.Client) int {
 
 	// Print warnings about recovery, etc.
 	if len(c.flagPGPKeys) == 0 {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! If you lose the keys after they are returned, there is no " +
-				"recovery. Consider canceling this operation and re-initializing " +
-				"with the -pgp-keys flag to protect the returned unseal keys along " +
-				"with -backup to allow recovery of the encrypted keys in case of " +
-				"emergency. You can delete the stored keys later using the -delete " +
-				"flag."))
-		c.UI.Output("")
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! If you lose the keys after they are returned, there is no " +
+					"recovery. Consider canceling this operation and re-initializing " +
+					"with the -pgp-keys flag to protect the returned unseal keys along " +
+					"with -backup to allow recovery of the encrypted keys in case of " +
+					"emergency. You can delete the stored keys later using the -delete " +
+					"flag."))
+			c.UI.Output("")
+		}
 	}
 	if len(c.flagPGPKeys) > 0 && !c.flagBackup {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! You are using PGP keys for encrypted the resulting unseal " +
-				"keys, but you did not enable the option to backup the keys to " +
-				"Vault's core. If you lose the encrypted keys after they are " +
-				"returned, you will not be able to recover them. Consider canceling " +
-				"this operation and re-running with -backup to allow recovery of the " +
-				"encrypted unseal keys in case of emergency. You can delete the " +
-				"stored keys later using the -delete flag."))
-		c.UI.Output("")
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! You are using PGP keys for encrypted the resulting unseal " +
+					"keys, but you did not enable the option to backup the keys to " +
+					"Vault's core. If you lose the encrypted keys after they are " +
+					"returned, you will not be able to recover them. Consider canceling " +
+					"this operation and re-running with -backup to allow recovery of the " +
+					"encrypted unseal keys in case of emergency. You can delete the " +
+					"stored keys later using the -delete flag."))
+			c.UI.Output("")
+		}
 	}
 
 	// Provide the current status

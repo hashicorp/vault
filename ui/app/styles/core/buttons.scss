@@ -133,6 +133,17 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     }
   }
 
+  &.is-orange {
+    background-color: $orange;
+    border-color: $orange;
+    color: $white;
+
+    &:hover,
+    &.is-hovered {
+      background-color: darken($orange, 5%);
+      border-color: darken($orange, 5%);
+    }
+  }
   &.is-compact {
     height: 2rem;
     padding: $size-11 $size-8;
@@ -146,7 +157,6 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     }
   }
 
-  &.is-more-icon,
   &.tool-tip-trigger {
     color: $black;
     min-width: auto;

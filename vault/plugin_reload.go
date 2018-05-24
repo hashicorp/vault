@@ -81,6 +81,7 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	// We don't want to reload the singleton mounts. They often have specific
 	// inmemory elements and we don't want to touch them here.
 	if strutil.StrListContains(singletonMounts, entry.Type) {
+		c.logger.Debug("Skipping reload of singleton mount", "type", entry.Type)
 		return nil
 	}
 
