@@ -173,10 +173,6 @@ updated attributes.
 - `name` `(string: <required>)` – Specifies the name of an existing role against
   which to create this Nomad tokens. This is part of the request URL.
 
-- `lease` `(string: "")` – Specifies the lease for this role. This is provided
-  as a string duration with a time suffix like `"30s"` or `"1h"` or as total 
-  seconds. If not provided, the default Vault lease is used.
-
 - `policies` `(string: "")` – Comma separated list of Nomad policies the token is going to be created against. These need to be created beforehand in Nomad.
 
 - `global` `(bool: "false")` – Specifies if the token should be global, as defined in the [Nomad Documentation](https://www.nomadproject.io/guides/acl.html#acl-tokens).

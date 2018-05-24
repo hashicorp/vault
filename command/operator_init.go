@@ -244,14 +244,18 @@ func (c *OperatorInitCommand) Run(args []string) int {
 	// Deprecations
 	// TODO: remove in 0.9.0
 	if c.flagAuto {
-		c.UI.Warn(wrapAtLength("WARNING! -auto is deprecated. Please use " +
-			"-consul-auto instead. This will be removed in Vault 0.11 " +
-			"(or later)."))
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength("WARNING! -auto is deprecated. Please use " +
+				"-consul-auto instead. This will be removed in Vault 0.11 " +
+				"(or later)."))
+		}
 		c.flagConsulAuto = true
 	}
 	if c.flagCheck {
-		c.UI.Warn(wrapAtLength("WARNING! -check is deprecated. Please use " +
-			"-status instead. This will be removed in Vault 0.11 (or later)."))
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength("WARNING! -check is deprecated. Please use " +
+				"-status instead. This will be removed in Vault 0.11 (or later)."))
+		}
 		c.flagStatus = true
 	}
 

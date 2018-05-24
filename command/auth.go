@@ -66,10 +66,12 @@ func (c *AuthCommand) Run(args []string) int {
 	for _, arg := range args {
 		switch {
 		case strings.HasPrefix(arg, "-methods"):
-			c.UI.Warn(wrapAtLength(
-				"WARNING! The -methods flag is deprecated. Please use "+
-					"\"vault auth list\" instead. This flag will be removed in "+
-					"Vault 0.11 (or later).") + "\n")
+			if Format(c.UI) == "table" {
+				c.UI.Warn(wrapAtLength(
+					"WARNING! The -methods flag is deprecated. Please use "+
+						"\"vault auth list\" instead. This flag will be removed in "+
+						"Vault 0.11 (or later).") + "\n")
+			}
 			return (&AuthListCommand{
 				BaseCommand: &BaseCommand{
 					UI:     c.UI,
@@ -77,10 +79,12 @@ func (c *AuthCommand) Run(args []string) int {
 				},
 			}).Run(nil)
 		case strings.HasPrefix(arg, "-method-help"):
-			c.UI.Warn(wrapAtLength(
-				"WARNING! The -method-help flag is deprecated. Please use "+
-					"\"vault auth help\" instead. This flag will be removed in "+
-					"Vault 0.11 (or later).") + "\n")
+			if Format(c.UI) == "table" {
+				c.UI.Warn(wrapAtLength(
+					"WARNING! The -method-help flag is deprecated. Please use "+
+						"\"vault auth help\" instead. This flag will be removed in "+
+						"Vault 0.11 (or later).") + "\n")
+			}
 			// Parse the args to pull out the method, suppressing any errors because
 			// there could be other flags that we don't care about.
 			f := flag.NewFlagSet("", flag.ContinueOnError)
@@ -101,11 +105,13 @@ func (c *AuthCommand) Run(args []string) int {
 
 	// If we got this far, we have an arg or a series of args that should be
 	// passed directly to the new "vault login" command.
-	c.UI.Warn(wrapAtLength(
-		"WARNING! The \"vault auth ARG\" command is deprecated and is now a "+
-			"subcommand for interacting with auth methods. To authenticate "+
-			"locally to Vault, use \"vault login\" instead. This backwards "+
-			"compatibility will be removed in Vault 0.11 (or later).") + "\n")
+	if Format(c.UI) == "table" {
+		c.UI.Warn(wrapAtLength(
+			"WARNING! The \"vault auth ARG\" command is deprecated and is now a "+
+				"subcommand for interacting with auth methods. To authenticate "+
+				"locally to Vault, use \"vault login\" instead. This backwards "+
+				"compatibility will be removed in Vault 0.11 (or later).") + "\n")
+	}
 	return (&LoginCommand{
 		BaseCommand: &BaseCommand{
 			UI:          c.UI,

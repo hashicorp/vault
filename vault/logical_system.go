@@ -3600,11 +3600,13 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	}
 	path = sanitizeMountPath(path)
 
+	errResp := logical.ErrorResponse(fmt.Sprintf("Preflight capability check returned 403, please ensure client's policies grant access to path \"%s\"", path))
+
 	me := b.Core.router.MatchingMountEntry(path)
 	if me == nil {
 		// Return a permission denied error here so this path cannot be used to
 		// brute force a list of mounts.
-		return nil, logical.ErrPermissionDenied
+		return errResp, logical.ErrPermissionDenied
 	}
 
 	resp := &logical.Response{
@@ -3618,11 +3620,11 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return nil, err
 	}
 	if entity != nil && entity.Disabled {
-		return nil, logical.ErrPermissionDenied
+		return errResp, logical.ErrPermissionDenied
 	}
 
 	if !hasMountAccess(acl, me.Path) {
-		return nil, logical.ErrPermissionDenied
+		return errResp, logical.ErrPermissionDenied
 	}
 
 	return resp, nil
