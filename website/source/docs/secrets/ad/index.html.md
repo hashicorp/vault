@@ -66,30 +66,18 @@ Directory](http://social.technet.microsoft.com/wiki/contents/articles/5312.activ
 Most secrets engines must be configured in advance before they can perform their
 functions. These steps are usually completed by an operator or configuration
 management tool.
-
-1. Add the AD secrets plugin to your catalogue:
-
-    ```text
-    $ vault write sys/plugins/catalog/ad \
-        sha_256=7967092173cd96565870b8494f9e64dc29cf0f191e33a2f89b53674907c4ef20 \
-        command="vault-plugin-secrets-active-directory"
-    ```
-
-    To obtain the binary and current sha_256, visit [the plugin's Github repo](https://github.com/hashicorp/vault-plugin-secrets-active-directory)
-    and refer to its readme. The sha_256 can also be obtained by running `$ sha256sum vault-plugin-secrets-active-directory`
-    where "vault-plugin-secrets-active-directory" is the binary itself.
     
-2. Enable the Active Directory secrets engine:
+1. Enable the Active Directory secrets engine:
 
     ```text
-    $ vault secrets enable -plugin-name='ad' plugin
+    $ vault secrets enable ad
     Success! Enabled the ad secrets engine at: ad/
     ```
 
     By default, the secrets engine will mount at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-3. Configure the credentials that Vault uses to communicate with Active Directory 
+2. Configure the credentials that Vault uses to communicate with Active Directory 
 to generate passwords:
 
     ```text
@@ -107,7 +95,7 @@ to generate passwords:
     in a production environment. In production, we recommend `insecure_tls` is false (its default) and is used with a valid 
     `certificate`.
 
-4. Configure a role that maps a name in Vault to an account in Active Directory.
+3. Configure a role that maps a name in Vault to an account in Active Directory.
 When applications request passwords, password rotation settings will be managed by
 this role.
 
@@ -116,7 +104,7 @@ this role.
         service_account_name="my-application@example.com"
     ```
     
-5. Grant "my-application" access to its creds at `ad/creds/my-application` using an 
+4. Grant "my-application" access to its creds at `ad/creds/my-application` using an 
 auth method like [AppRole](https://www.vaultproject.io/api/auth/approle/index.html).
 
 ## Configuration
