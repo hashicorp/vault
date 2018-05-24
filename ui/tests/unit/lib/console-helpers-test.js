@@ -113,7 +113,7 @@ let testResponseCases = [
     name: 'write response, no content',
     args: [null, 'foo/bar', 'write', {}],
     expectedData: {
-      type: 'text',
+      type: 'success',
       content: 'Success! Data written to: foo/bar',
     },
   },
@@ -121,7 +121,7 @@ let testResponseCases = [
     name: 'delete response, no content',
     args: [null, 'foo/bar', 'delete', {}],
     expectedData: {
-      type: 'text',
+      type: 'success',
       content: 'Success! Data deleted (if it existed) at: foo/bar',
     },
   },
