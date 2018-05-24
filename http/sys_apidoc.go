@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/oas"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 
 	credAzure "github.com/hashicorp/vault-plugin-auth-azure/plugin"
@@ -41,6 +42,12 @@ import (
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 )
+
+var conf = &logical.BackendConfig{
+	Logger:      log.NewNullLogger(),
+	System:      logical.StaticSystemView{},
+	StorageView: &logical.InmemStorage{},
+}
 
 var (
 	backends = map[string]logical.Factory{
@@ -77,9 +84,17 @@ var (
 		"totp":       totp.Factory,
 		"transit":    transit.Factory,
 
-		// sys
+		// system
 		"sys": func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 			return vault.NewSystemBackend(&vault.Core{}, nil).Backend, nil
+		},
+		"cubbyhole": vault.CubbyholeBackendFactory,
+		"token": func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+			return newTokenStore().Backend, nil
+		},
+		"identity": func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+			i, _ := vault.NewIdentityStore(ctx, &vault.Core{}, conf, log.NewNullLogger())
+			return i.Backend, nil
 		},
 	}
 )
@@ -120,11 +135,6 @@ func genAllDocs() map[string]*oas.OASDoc {
 }
 
 func genDoc(mount string) *oas.OASDoc {
-	conf := &logical.BackendConfig{
-		Logger: log.NewNullLogger(),
-		System: logical.StaticSystemView{},
-	}
-
 	f, ok := backends[mount]
 	if !ok {
 		return nil
@@ -136,4 +146,32 @@ func genDoc(mount string) *oas.OASDoc {
 	}
 
 	return b.Describe()
+}
+
+func newTokenStore() *vault.TokenStore {
+	logger := log.NewNullLogger()
+	physicalBackend, _ := inmem.NewInmem(nil, logger)
+
+	core, _ := vault.NewCore(
+		&vault.CoreConfig{
+			Physical:     physicalBackend,
+			DisableMlock: true,
+			Logger:       logger,
+		},
+	)
+
+	barrierConfig := &vault.SealConfig{
+		SecretShares:    1,
+		SecretThreshold: 1,
+	}
+
+	result, _ := core.Initialize(context.Background(), &vault.InitParams{
+		BarrierConfig:  barrierConfig,
+		RecoveryConfig: barrierConfig,
+	})
+
+	core.Unseal(result.SecretShares[0])
+	ts, _ := vault.NewTokenStore(context.Background(), logger, core, conf)
+
+	return ts
 }

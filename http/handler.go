@@ -69,7 +69,6 @@ var (
 func Handler(core *vault.Core) http.Handler {
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
-	mux.Handle("/v1/sys/apidocs/", handleSysApiDoc(core))
 	mux.Handle("/v1/sys/init", handleSysInit(core))
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
@@ -89,6 +88,7 @@ func Handler(core *vault.Core) http.Handler {
 	for _, path := range injectDataIntoTopRoutes {
 		mux.Handle(path, handleRequestForwarding(core, handleLogical(core, true, nil)))
 	}
+	mux.Handle("/v1/sys/internal/apidoc/", handleSysApiDoc(core))
 	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 	if core.UIEnabled() == true {
