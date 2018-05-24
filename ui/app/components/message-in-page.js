@@ -6,6 +6,8 @@ const { computed } = Ember;
 export default Ember.Component.extend({
   type: null,
 
+  yieldWithoutColumn: false,
+
   classNameBindings: ['containerClass'],
 
   containerClass: computed('type', function() {

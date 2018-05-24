@@ -159,5 +159,9 @@ export default Ember.Route.extend({
       }
       return true;
     },
+    reload() {
+      this.refresh();
+      this.store.clearAllDatasets();
+    }
   },
 });
