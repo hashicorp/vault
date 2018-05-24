@@ -87,3 +87,7 @@ ui/vault-ui-integration-server.pid
 # for building static assets
 node_modules
 package-lock.json
+
+# FoundationDB
+vendor/fdb-go-install.sh
+vendor/foundation
