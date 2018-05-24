@@ -1296,20 +1296,22 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 			allChildren[idHMACParentPath] = child
 		}
 
-		// This is only here for backwards compatibility
-		saltedID, err := ts.SaltID(ctx, entry.ID)
-		if err != nil {
-			return errwrap.Wrapf("failed to hash token ID: {{err}}", err)
-		}
-		saltedIDParentPath := parentPrefix + saltedID + "/"
+		if entry.Version < 2 {
+			// This is only here for backwards compatibility
+			saltedID, err := ts.SaltID(ctx, entry.ID)
+			if err != nil {
+				return errwrap.Wrapf("failed to hash token ID: {{err}}", err)
+			}
+			saltedIDParentPath := parentPrefix + saltedID + "/"
 
-		children, err = ts.view.List(ctx, saltedIDParentPath)
-		if err != nil {
-			return errwrap.Wrapf("failed to scan for children: {{err}}", err)
-		}
+			children, err = ts.view.List(ctx, saltedIDParentPath)
+			if err != nil {
+				return errwrap.Wrapf("failed to scan for children: {{err}}", err)
+			}
 
-		for _, child := range children {
-			allChildren[saltedIDParentPath] = child
+			for _, child := range children {
+				allChildren[saltedIDParentPath] = child
+			}
 		}
 
 		for parentPath, child := range allChildren {
