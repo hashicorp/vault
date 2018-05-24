@@ -20,8 +20,7 @@
   }
 }
 .popup-menu-trigger {
-  width: 3rem;
-  height: 2rem;
+  min-width: auto;
 }
 .popup-menu-trigger.is-active {
   &,
@@ -50,6 +49,7 @@
     height: auto;
     width: 100%;
     text-align: left;
+    text-decoration: none;
 
     &:hover {
       background-color: $menu-item-hover-background-color;

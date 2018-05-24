@@ -71,10 +71,11 @@ export default Ember.Component.extend(DEFAULTS, {
 
   handleSuccess(resp, action) {
     let props = {};
-    if (resp && resp.data && action === 'unwrap') {
-      props = Ember.assign({}, props, { unwrap_data: resp.data });
+    let secret = (resp && resp.data) || resp.auth;
+    if (secret && action === 'unwrap') {
+      props = Ember.assign({}, props, { unwrap_data: secret });
     }
-    props = Ember.assign({}, props, resp.data);
+    props = Ember.assign({}, props, secret);
 
     if (resp && resp.wrap_info) {
       const keyName = action === 'rewrap' ? 'rewrap_token' : 'token';

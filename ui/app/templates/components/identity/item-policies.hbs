@@ -1,4 +1,4 @@
-{{#each model.policies as |item|}}
+{{#each model.policies as |policyName|}}
   {{#linked-block
     "vault.cluster.policy.show"
     "acl"
@@ -7,12 +7,15 @@
   }}
     <div class="columns is-mobile">
       <div class="column is-10">
-        <a href={{href-to "vault.cluster.policy.show" "acl" item}}
-          class="has-text-black has-text-weight-semibold"
-          ><span class="is-underline">{{item}}</span>
+        <a href={{href-to "vault.cluster.policy.show" "acl" policyName}}
+          class="is-block has-text-black has-text-weight-semibold"
+          ><span class="is-underline">{{policyName}}</span>
         </a>
       </div>
       <div class="column has-text-right">
+        {{#if model.canEdit}}
+          {{identity/popup-policy params=(array model policyName)}}
+        {{/if}}
       </div>
     </div>
   {{/linked-block}}

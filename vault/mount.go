@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -977,6 +978,9 @@ func (c *Core) defaultMountTable() *MountTable {
 		Options: map[string]string{
 			"version": "1",
 		},
+	}
+	if os.Getenv("VAULT_INTERACTIVE_DEMO_SERVER") != "" {
+		kvMount.Options["version"] = "2"
 	}
 	table.Entries = append(table.Entries, kvMount)
 	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
