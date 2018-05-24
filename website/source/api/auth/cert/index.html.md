@@ -34,6 +34,11 @@ Sets a CA cert and associated parameters in a role name.
   (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
   a comma-separated list of patterns. Authentication requires at least one Name
   matching at least one pattern. If not set, defaults to allowing all names.
+- `allowed_uris` `(string: "")` - Constrain the Alternative Names in
+  the client certificate with a [globbed pattern]
+  (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
+  a comma-separated list of URI patterns. Authentication requires at least one URI
+  matching at least one pattern. If not set, defaults to allowing all URIs.
 - `required_extensions` `(string: "" or array:[])` - Require specific Custom
    Extension OIDs to exist and match the pattern. Value is a comma separated
    string or array of `oid:value`. Expects the extension value to be some type
