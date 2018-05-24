@@ -1,7 +1,6 @@
 import Ember from 'ember';
 import {
   parseCommand,
-  shiftCommandIndex,
   extractDataAndFlags,
   logFromResponse,
   logFromError,
@@ -16,37 +15,24 @@ export default Ember.Component.extend({
   isFullscreen: false,
   console: inject.service(),
   inputValue: null,
-  commandHistory: computed('log.[]', function() {
-    return this.get('log').filterBy('type', 'command');
-  }),
-  log: computed(function() {
-    return [];
-  }),
-  commandIndex: null,
-
-  clearLog() {
-    let history = this.get('commandHistory').slice();
-    history.setEach('hidden', true);
-    let log = this.get('log');
-    log.clear();
-    log.addObjects(history);
-  },
+  log: computed.alias('console.log'),
 
   logAndOutput(command, logContent) {
-    let log = this.get('log');
     this.set('inputValue', '');
-    log.pushObject({ type: 'command', content: command });
-    this.set('commandIndex', null);
-    if (logContent) {
-      log.pushObject(logContent);
-    }
+    this.get('console').logAndOutput(command, logContent);
   },
 
   executeCommand(command, shouldThrow = false) {
+    let service = this.get('console');
     let serviceArgs;
+    if (command === 'clearall') {
+      this.logAndOutput(command);
+      service.clearLog(true);
+      return;
+    }
     if (command === 'clear') {
       this.logAndOutput(command);
-      this.clearLog();
+      service.clearLog();
       return;
     }
     if (command === 'fullscreen') {
@@ -75,10 +61,9 @@ export default Ember.Component.extend({
     let inputError = logErrorFromInput(path, method, flags, dataArray);
     if (inputError) {
       this.logAndOutput(command, inputError);
+      return;
     }
-    let service = this.get('console');
     let serviceFn = service[method];
-
     serviceFn.call(service, path, data, flags.wrapTTL)
       .then(resp => {
         this.logAndOutput(command, logFromResponse(resp, path, method, flags));
@@ -89,13 +74,9 @@ export default Ember.Component.extend({
   },
 
   shiftCommandIndex(keyCode) {
-    let [index, newInputValue] = shiftCommandIndex(
-      keyCode,
-      this.get('commandHistory'),
-      this.get('commandIndex')
-    );
-    this.set('commandIndex', index);
-    this.set('inputValue', newInputValue);
+    this.get('console').shiftCommandIndex(keyCode, (val) => {
+      this.set('inputValue', val);
+    });
   },
 
   actions: {

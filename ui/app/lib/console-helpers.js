@@ -127,6 +127,7 @@ export function logFromError(error, vaultPath, method) {
 export function shiftCommandIndex(keyCode, history, index) {
   let newInputValue;
   let commandHistoryLength = history.length;
+  if (!commandHistoryLength) { return []; }
 
   if (keyCode === keys.UP) {
     index -= 1;

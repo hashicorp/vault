@@ -1,8 +1,11 @@
 // Low level service that allows users to input paths to make requests to vault
 // this service provides the UI synecdote to the cli commands read, write, delete, and list
 import Ember from 'ember';
+import {
+  shiftCommandIndex,
+} from 'vault/lib/console-helpers';
 
-const { Service, getOwner } = Ember;
+const { Service, getOwner, computed } = Ember;
 
 export function sanitizePath(path) {
   //remove whitespace + remove trailing and leading slashes
@@ -20,8 +23,50 @@ const VERBS = {
 };
 
 export default Service.extend({
+
   adapter() {
     return getOwner(this).lookup('adapter:console');
+  },
+  commandHistory: computed('log.[]', function() {
+    return this.get('log').filterBy('type', 'command');
+  }),
+  log: computed(function() {
+    return [];
+  }),
+  commandIndex: null,
+
+  shiftCommandIndex(keyCode, setCommandFn = ()=>{}) {
+    let [newIndex, newCommand] = shiftCommandIndex(
+      keyCode,
+      this.get('commandHistory'),
+      this.get('commandIndex')
+    );
+    if (newIndex && newCommand) {
+      this.set('commandIndex', newIndex);
+      setCommandFn(newCommand);
+    }
+  },
+
+  clearLog(clearAll=false) {
+    let log = this.get('log');
+    let history;
+    if (!clearAll) {
+      history = this.get('commandHistory').slice();
+      history.setEach('hidden', true);
+    }
+    log.clear();
+    if (history) {
+      log.addObjects(history);
+    }
+  },
+
+  logAndOutput(command, logContent) {
+    let log = this.get('log');
+    log.pushObject({ type: 'command', content: command });
+    this.set('commandIndex', null);
+    if (logContent) {
+      log.pushObject(logContent);
+    }
   },
 
   ajax(operation, path, options = {}) {

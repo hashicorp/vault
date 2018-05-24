@@ -23,7 +23,7 @@
   transition: justify-content $speed ease-in;
 
 
-  pre {
+  pre, p {
     background: none;
     color: inherit;
     font-size: $body-size;
