@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault-plugin-secrets-active-directory/plugin/client"
-	"github.com/hashicorp/vault-plugin-secrets-active-directory/plugin/util"
+	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/client"
+	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
 	"github.com/hashicorp/vault/helper/ldaputil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -67,4 +67,14 @@ type secretsClient interface {
 	UpdatePassword(conf *ldaputil.ConfigEntry, serviceAccountName string, newPassword string) error
 }
 
-const backendHelp = ``
+const backendHelp = `
+The Active Directory (AD) secrets engine rotates AD passwords dynamically,
+and is designed for a high-load environment where many instances may be accessing
+a shared password simultaneously. With a simple set up and a simple creds API,
+it doesn't require instances to be manually registered in advance to gain access. 
+As long as access has been granted to the creds path via a method like 
+AppRole, they're available.
+
+Passwords are lazily rotated based on preset TTLs and can have a length configured to meet 
+your needs.
+`

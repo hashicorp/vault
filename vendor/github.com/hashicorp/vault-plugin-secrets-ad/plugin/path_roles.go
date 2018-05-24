@@ -234,9 +234,21 @@ func getValidatedTTL(passwordConf *passwordConf, fieldData *framework.FieldData)
 }
 
 const (
-	roleHelpSynopsis    = ``
-	roleHelpDescription = ``
+	roleHelpSynopsis = `
+Manage roles to build links between Vault and Active Directory service accounts.
+`
+	roleHelpDescription = `
+This endpoint allows you to read, write, and delete individual roles that are used for enabling password rotation.
 
-	pathListRolesHelpSyn  = ``
-	pathListRolesHelpDesc = ``
+Deleting a role will not disable its current password. It will delete the role's associated creds in Vault.
+`
+
+	pathListRolesHelpSyn = `
+List the name of each role currently stored.
+`
+	pathListRolesHelpDesc = `
+To learn which service accounts are being managed by Vault, list the role names using
+this endpoint. Then read any individual role by name to learn more, like the name of
+the service account it's associated with.
+`
 )

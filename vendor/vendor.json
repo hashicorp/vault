@@ -1321,22 +1321,22 @@
 			"revisionTime": "2018-04-03T19:54:48Z"
 		},
 		{
-			"checksumSHA1": "QKY9Bd0DBOsrGgCHCWhYFpPzLUA=",
-			"path": "github.com/hashicorp/vault-plugin-secrets-active-directory/plugin",
-			"revision": "a25615b49f81f9d87ec6ccb274850d85c9685147",
-			"revisionTime": "2018-05-24T16:56:26Z"
+			"checksumSHA1": "B8KN0npDVBBnSDoL8htTSBpFgZ0=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin",
+			"revision": "321ea9aa40719a982e9ad39fecd911a212d0d7c0",
+			"revisionTime": "2018-05-24T23:02:05Z"
 		},
 		{
-			"checksumSHA1": "HNU2Z+mj65WtUvI8fkQjzsHU54U=",
-			"path": "github.com/hashicorp/vault-plugin-secrets-active-directory/plugin/client",
-			"revision": "a25615b49f81f9d87ec6ccb274850d85c9685147",
-			"revisionTime": "2018-05-24T16:56:26Z"
+			"checksumSHA1": "qHGmA9y3hKMBSLRWLifD37EaHP4=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/client",
+			"revision": "321ea9aa40719a982e9ad39fecd911a212d0d7c0",
+			"revisionTime": "2018-05-24T23:02:05Z"
 		},
 		{
-			"checksumSHA1": "YTVlaUpS9XtYmY2T6ScC9ky54Is=",
-			"path": "github.com/hashicorp/vault-plugin-secrets-active-directory/plugin/util",
-			"revision": "a25615b49f81f9d87ec6ccb274850d85c9685147",
-			"revisionTime": "2018-05-24T16:56:26Z"
+			"checksumSHA1": "/wFdQSWF1zexkefiI7j+LrREMHk=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/util",
+			"revision": "321ea9aa40719a982e9ad39fecd911a212d0d7c0",
+			"revisionTime": "2018-05-24T23:02:05Z"
 		},
 		{
 			"checksumSHA1": "0BXf2h4FJSUTdVK3m75a1KXnYVA=",
@@ -2039,48 +2039,6 @@
 			"path": "golang.org/x/sys/windows",
 			"revision": "37707fdb30a5b38865cfb95e5aab41707daec7fd",
 			"revisionTime": "2018-02-02T13:35:31Z"
-		},
-		{
-			"checksumSHA1": "Mr4ur60bgQJnQFfJY0dGtwWwMPE=",
-			"origin": "github.com/hashicorp/vault-plugin-secrets-active-directory/vendor/golang.org/x/text/encoding",
-			"path": "golang.org/x/text/encoding",
-			"revision": "a25615b49f81f9d87ec6ccb274850d85c9685147",
-			"revisionTime": "2018-05-24T16:56:26Z"
-		},
-		{
-			"checksumSHA1": "zeHyHebIZl1tGuwGllIhjfci+wI=",
-			"origin": "github.com/hashicorp/vault-plugin-secrets-active-directory/vendor/golang.org/x/text/encoding/internal",
-			"path": "golang.org/x/text/encoding/internal",
-			"revision": "a25615b49f81f9d87ec6ccb274850d85c9685147",
-			"revisionTime": "2018-05-24T16:56:26Z"
-		},
-		{
-			"checksumSHA1": "7kYqxy64WhMjFIFZgN7tJ3lbKxM=",
-			"origin": "github.com/hashicorp/vault-plugin-secrets-active-directory/vendor/golang.org/x/text/encoding/internal/identifier",
-			"path": "golang.org/x/text/encoding/internal/identifier",
-			"revision": "a25615b49f81f9d87ec6ccb274850d85c9685147",
-			"revisionTime": "2018-05-24T16:56:26Z"
-		},
-		{
-			"checksumSHA1": "G9LfJI9gySazd+MyyC6QbTHx4to=",
-			"origin": "github.com/hashicorp/vault-plugin-secrets-active-directory/vendor/golang.org/x/text/encoding/unicode",
-			"path": "golang.org/x/text/encoding/unicode",
-			"revision": "a25615b49f81f9d87ec6ccb274850d85c9685147",
-			"revisionTime": "2018-05-24T16:56:26Z"
-		},
-		{
-			"checksumSHA1": "Qk7dljcrEK1BJkAEZguxAbG9dSo=",
-			"origin": "github.com/hashicorp/vault-plugin-secrets-active-directory/vendor/golang.org/x/text/internal/utf8internal",
-			"path": "golang.org/x/text/internal/utf8internal",
-			"revision": "a25615b49f81f9d87ec6ccb274850d85c9685147",
-			"revisionTime": "2018-05-24T16:56:26Z"
-		},
-		{
-			"checksumSHA1": "IV4MN7KGBSocu/5NR3le3sxup4Y=",
-			"origin": "github.com/hashicorp/vault-plugin-secrets-active-directory/vendor/golang.org/x/text/runes",
-			"path": "golang.org/x/text/runes",
-			"revision": "a25615b49f81f9d87ec6ccb274850d85c9685147",
-			"revisionTime": "2018-05-24T16:56:26Z"
 		},
 		{
 			"checksumSHA1": "CbpjEkkOeh0fdM/V8xKDdI0AA88=",

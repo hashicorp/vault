@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hashicorp/vault-plugin-secrets-active-directory/plugin/util"
+	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
 	"github.com/hashicorp/vault/helper/ldaputil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -164,6 +164,38 @@ func (b *backend) configDeleteOperation(ctx context.Context, req *logical.Reques
 }
 
 const (
-	configHelpSynopsis    = ``
-	configHelpDescription = ``
+	configHelpSynopsis = `
+Configure the AD server to connect to, along with password options.
+`
+	configHelpDescription = `
+This endpoint allows you to configure the AD server to connect to and its
+configuration options. When you add, update, or delete a config, it takes
+immediate effect on all subsequent actions. It does not apply itself to roles
+or creds added in the past.
+
+The AD URL can use either the "ldap://" or "ldaps://" schema. In the former
+case, an unencrypted connection will be made with a default port of 389, unless
+the "starttls" parameter is set to true, in which case TLS will be used. In the
+latter case, a SSL connection will be established with a default port of 636.
+
+## A NOTE ON ESCAPING
+
+It is up to the administrator to provide properly escaped DNs. This includes
+the user DN, bind DN for search, and so on.
+
+The only DN escaping performed by this backend is on usernames given at login
+time when they are inserted into the final bind DN, and uses escaping rules
+defined in RFC 4514.
+
+Additionally, Active Directory has escaping rules that differ slightly from the
+RFC; in particular it requires escaping of '#' regardless of position in the DN
+(the RFC only requires it to be escaped when it is the first character), and
+'=', which the RFC indicates can be escaped with a backslash, but does not
+contain in its set of required escapes. If you are using Active Directory and
+these appear in your usernames, please ensure that they are escaped, in
+addition to being properly escaped in your configured DNs.
+
+For reference, see https://www.ietf.org/rfc/rfc4514.txt and
+http://social.technet.microsoft.com/wiki/contents/articles/5312.active-directory-characters-to-escape.aspx
+`
 )

@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	ad "github.com/hashicorp/vault-plugin-secrets-active-directory/plugin"
+	ad "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
 	gcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
