@@ -48,19 +48,8 @@ valid AD credentials with proper permissions.
 | Method   | Path                   | Produces               |
 | :------- | :--------------------- | :--------------------- |
 | `POST`   | `/ad/config`           | `204 (empty body)`     |
-| `GET`    | `/ad/config`           | `200 (see body below)` |
+| `GET`    | `/ad/config`           | `200 application/json` |
 | `DELETE` | `/ad/config`           | `204 (empty body)`     |
-
-### Sample Payload
-
-```json
-{
-  "binddn": "domain-admin",
-  "bindpass": "pa$$w0rd",
-  "url": "ldap://127.0.0.11",
-  "userdn": "dc=example,dc=com"
-}
-```
 
 ### Sample Post Request
 
@@ -71,21 +60,34 @@ $ curl \
     --data @payload.json \
     http://127.0.0.1:8200/v1/ad/config
 ```
-### Sample Get Response
+
+### Sample Post Payload
 
 ```json
 {
   "binddn": "domain-admin",
-  "url": "ldaps://example.com",
-  "certificate": "-----BEGIN CERTIFICATE-----....",
-  "userdn": "dc=example,dc=com",
+  "bindpass": "pa$$w0rd",
+  "url": "ldap://127.0.0.11",
+  "userdn": "dc=example,dc=com"
+}
+```
+
+### Sample Get Response Data
+
+```json
+{
+  "binddn": "domain-admin",
+  "certificate": "",
   "insecure_tls": false,
-  "start_tls": true,
-  "tls_min_version": "tls12",
-  "tls_max_version": "tls12",
-  "ttl": 2764800,
+  "length": 64,
   "max_ttl": 2764800,
-  "password_length": 64
+  "starttls": false,
+  "tls_max_version": "tls12",
+  "tls_min_version": "tls12",
+  "ttl": 2764800,
+  "upndomain": "",
+  "url": "ldap://127.0.0.11",
+  "userdn": "dc=example,dc=com"
 }
 
 ```
@@ -103,19 +105,10 @@ When adding a role, Vault verifies its associated service account exists.
 
 | Method   | Path                   | Produces               |
 | :------- | :--------------------- | :--------------------- |
-| `GET`    | `/ad/roles`            | `204 (see body below)` |
+| `GET`    | `/ad/roles`            | `200 application/json` |
 | `POST`   | `/ad/roles/:role_name` | `204 (empty body)`     |
-| `GET`    | `/ad/roles/:role_name` | `200 (see body below)` |
+| `GET`    | `/ad/roles/:role_name` | `200 application/json` |
 | `DELETE` | `/ad/roles/:role_name` | `204 (empty body)`     |
-
-### Sample Payload
-
-```json
-{
-  "service_account_name": "my-application@example.com",
-  "ttl": 100
-}
-```
 
 ### Sample Post Request
 
@@ -127,25 +120,33 @@ $ curl \
     http://127.0.0.1:8200/v1/ad/roles/my-application
 ```
 
-### Sample Get Response
+### Sample Post Payload
 
 ```json
 {
-    "service_account_name": "my-application@example.com",
-    "last_vault_rotation": "2018-03-29T14:33:24Z07:00",
-    "password_last_set": "2018-03-30T14:33:24Z07:00",
-    "ttl": 100
+  "service_account_name": "my-application@example.com",
+  "ttl": 100
 }
 ```
 
-### Sample List Response
+### Sample Get Role Response
 
-Performing a `GET` on the `/ad/roles` endpoint will list the names of all the roles Vault contains.
+```json
+{
+  "last_vault_rotation": "2018-05-24T17:14:38.677370855Z",
+  "password_last_set": "2018-05-24T17:14:38.6038495Z",
+  "service_account_name": "my-application@example.com",
+  "ttl": 100
+}
+```
+
+### Sample List Roles Response
+
+Performing a `LIST` on the `/ad/roles` endpoint will list the names of all the roles Vault contains.
 
 ```json
 [
-  "my-application",
-  "another-application"
+  "my-application"
 ]
 ```
 
@@ -167,8 +168,8 @@ $ curl \
 
 ```json
 {
-    "username": "my-application",
-    "current_password": "?@09AZ2wR37xJf",
-    "last_password": "?@09AZ7WEu9fu8"
+  "current_password": "?@09AZnh4Q5N4O5zdLk/4F8aIMgsnpDM6tSQEZCge3Mz1wXcZEgZhOa6OR748F96",
+  "last_password": "?@09AZSen9TzUwK7ZhafS7B0GuWGraQjfWEna5SwnmF/tVaKFqjXhhGV/Z0v/pBJ",
+  "username": "my-application"
 }
 ```
