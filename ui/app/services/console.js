@@ -23,6 +23,7 @@ const VERBS = {
 };
 
 export default Service.extend({
+  isOpen: false,
 
   adapter() {
     return getOwner(this).lookup('adapter:console');
@@ -41,7 +42,7 @@ export default Service.extend({
       this.get('commandHistory'),
       this.get('commandIndex')
     );
-    if (newIndex && newCommand) {
+    if (newCommand && newIndex !== undefined) {
       this.set('commandIndex', newIndex);
       setCommandFn(newCommand);
     }
