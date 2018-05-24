@@ -5,9 +5,11 @@ export default Ember.Component.extend({
   'data-test-component': 'console/command-input',
   classNames: 'console-ui-input',
   onExecuteCommand() {},
+  onFullscreen() {},
   onValueUpdate() {},
   onShiftCommand() {},
   value: null,
+  isFullscreen: null,
 
   didRender() {
     this.element.scrollIntoView();
@@ -27,9 +29,8 @@ export default Ember.Component.extend({
           this.get('onValueUpdate')(event.target.value);
       }
     },
+    fullscreen() {
+      this.get('onFullscreen')();
+    }
   },
 });
-
-// up cycles through history
-// down clears if there is no more history or cycles down through history
-//

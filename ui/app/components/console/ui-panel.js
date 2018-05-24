@@ -11,7 +11,9 @@ import {
 const { inject, computed } = Ember;
 
 export default Ember.Component.extend({
-  classNames: 'console-ui-panel',
+  classNames: 'console-ui-panel-scoller',
+  classNameBindings: ['isFullscreen:fullscreen'],
+  isFullscreen: false,
   console: inject.service(),
   inputValue: null,
   commandHistory: computed('log.[]', function() {
@@ -45,6 +47,11 @@ export default Ember.Component.extend({
     if (command === 'clear') {
       this.logAndOutput(command);
       this.clearLog();
+      return;
+    }
+    if (command === 'fullscreen') {
+      this.toggleProperty('isFullscreen');
+      this.logAndOutput(command);
       return;
     }
     // parse to verify it's valid
@@ -94,6 +101,9 @@ export default Ember.Component.extend({
   actions: {
     setValue(val) {
       this.set('inputValue', val);
+    },
+    toggleFullscreen(val) {
+      this.toggleProperty('isFullscreen');
     },
     executeCommand(val) {
       this.executeCommand(val, true);
