@@ -10,6 +10,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	colorable "github.com/mattn/go-colorable"
 	"github.com/mitchellh/cli"
@@ -22,8 +23,7 @@ type VaultUI struct {
 
 // setupEnv parses args and may replace them and sets some env vars to known
 // values based on format options
-func setupEnv(args []string) []string {
-	var format string
+func setupEnv(args []string) (retArgs []string, format string) {
 	var nextArgFormat bool
 
 	for _, arg := range args {
@@ -65,10 +65,8 @@ func setupEnv(args []string) []string {
 	if format == "" {
 		format = "table"
 	}
-	// Put back into the env for later
-	os.Setenv(EnvVaultFormat, format)
 
-	return args
+	return args, format
 }
 
 type RunOptions struct {
@@ -76,6 +74,7 @@ type RunOptions struct {
 	Stdout      io.Writer
 	Stderr      io.Writer
 	Address     string
+	Client      *api.Client
 }
 
 func Run(args []string) int {
@@ -89,7 +88,8 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		runOpts = &RunOptions{}
 	}
 
-	args = setupEnv(args)
+	var format string
+	args, format = setupEnv(args)
 
 	// Don't use color if disabled
 	useColor := true
@@ -103,8 +103,6 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 	if runOpts.Stderr == nil {
 		runOpts.Stderr = os.Stderr
 	}
-
-	format := format()
 
 	// Only use colored UI if stdout is a tty, and not disabled
 	if useColor && format == "table" {

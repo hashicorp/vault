@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bytes"
 	"os"
 	"strings"
 	"testing"
@@ -91,13 +92,13 @@ func Test_Format_Parsing(t *testing.T) {
 	}{
 		{
 			"format",
-			[]string{"-format", "json"},
+			[]string{"token", "renew", "-format", "json"},
 			"{",
 			0,
 		},
 		{
 			"format_bad",
-			[]string{"-format", "nope-not-real"},
+			[]string{"token", "renew", "-format", "nope-not-real"},
 			"Invalid output format",
 			1,
 		},
@@ -110,21 +111,24 @@ func Test_Format_Parsing(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
+			stdout := bytes.NewBuffer(nil)
+			stderr := bytes.NewBuffer(nil)
+			runOpts := &RunOptions{
+				Stdout: stdout,
+				Stderr: stderr,
+				Client: client,
+			}
+
 			// Login with the token so we can renew-self.
 			token, _ := testTokenAndAccessor(t, client)
 			client.SetToken(token)
 
-			ui, cmd := testTokenRenewCommand(t)
-			cmd.client = client
-
-			tc.args = setupEnv(tc.args)
-
-			code := cmd.Run(tc.args)
+			code := RunCustom(tc.args, runOpts)
 			if code != tc.code {
 				t.Errorf("expected %d to be %d", code, tc.code)
 			}
 
-			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+			combined := stdout.String() + stderr.String()
 			if !strings.Contains(combined, tc.out) {
 				t.Errorf("expected %q to contain %q", combined, tc.out)
 			}

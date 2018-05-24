@@ -217,9 +217,11 @@ func (c *OperatorGenerateRootCommand) Run(args []string) int {
 	// TODO: remove in 0.9.0
 	switch {
 	case c.flagGenOTP:
-		c.UI.Warn(wrapAtLength(
-			"The -gen-otp flag is deprecated. Please use the -generate-otp flag " +
-				"instead."))
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! The -gen-otp flag is deprecated. Please use the -generate-otp flag " +
+					"instead."))
+		}
 		c.flagGenerateOTP = c.flagGenOTP
 	}
 
