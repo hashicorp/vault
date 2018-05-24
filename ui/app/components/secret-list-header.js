@@ -9,6 +9,4 @@ export default Ember.Component.extend({
   baseKey: null,
   backendCrumb: null,
   model: null,
-
-
 });

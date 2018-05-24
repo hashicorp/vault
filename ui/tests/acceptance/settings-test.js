@@ -46,10 +46,6 @@ test('settings', function(assert) {
   });
 
   andThen(() => {
-    assert.ok(
-      currentURL(),
-      '/vault/secrets/${path}/configuration',
-      'navigates to the config page'
-    );
+    assert.ok(currentURL(), '/vault/secrets/${path}/configuration', 'navigates to the config page');
   });
 });
