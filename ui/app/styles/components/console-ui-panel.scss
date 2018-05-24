@@ -7,8 +7,8 @@
   position: absolute;
   right: 0;
   transform: translate3d(0, -400px, 0);
-  transition: transform $speed ease-in;
-  will-change: transform;
+  transition: min-height $speed ease-out, transform $speed ease-in;
+  will-change: transform, min-height;
   z-index: 199;
 }
 .console-ui-panel {
@@ -20,6 +20,8 @@
   color: white;
   font-size: $body-size;
   font-weight: $font-weight-semibold;
+  transition: justify-content $speed ease-in;
+
 
   pre {
     background: none;
@@ -120,9 +122,6 @@
   top: 0;
   min-height: 100%;
   z-index: 300;
-  .console-ui-panel {
-    display: block;
-  }
 }
 
 header .navbar,
