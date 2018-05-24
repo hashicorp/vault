@@ -52,6 +52,11 @@ BUG FIXES:
    [GH-4570]
  * ui: Fix HMAC algorithm in transit [GH-4604]
  * ui: Fix unwrap of auth responses via the UI's unwrap tool [GH-4611]
+ * replication: Fix error while running plugins on a newly created replication
+   secondary
+ * replication: Fix issue with token store lookups after a secondary's mount table
+   is invalidated.
+ * replication: Improve startup time when a large merkle index is in use.
 
 ## 0.10.1/0.9.7 (April 25th, 2018)
 
