@@ -1,19 +1,25 @@
-.console-ui-panel {
-  background: linear-gradient(to right, #191A1C, #1B212D);
-  color: white;
-  font-size: $body-size;
-  font-weight: $font-weight-semibold;
+.console-ui-scroller {
   height: 0;
   left: 0;
   min-height: 400px;
   overflow: auto;
-  padding: $size-8 $size-8 $size-4;
   position: absolute;
   right: 0;
   transform: translate3d(0, -400px, 0);
   transition: transform $speed ease-in;
   will-change: transform;
   z-index: 199;
+}
+.console-ui-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: $size-8 $size-8 $size-4;
+  min-height: 100%;
+  background: linear-gradient(to right, #191A1C, #1B212D);
+  color: white;
+  font-size: $body-size;
+  font-weight: $font-weight-semibold;
 
   pre {
     background: none;
@@ -49,6 +55,7 @@
 .console-ui-input {
   align-items: center;
   display: flex;
+
 
   input {
     background-color: rgba($black, 0.5);
@@ -104,7 +111,7 @@
 }
 
 .panel-open {
-  .console-ui-panel {
+  .console-ui-scroller  {
     transform: translate3d(0, 0, 0);
   }
 }
