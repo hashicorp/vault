@@ -3598,7 +3598,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	}
 	path = sanitizeMountPath(path)
 
-	errResp := logical.ErrorResponse(fmt.Sprintf("Preflight request returned 403, please ensure policy grants access to path \"%s\"", path))
+	errResp := logical.ErrorResponse(fmt.Sprintf("Preflight capability check returned 403, please ensure client's policies grant access to path \"%s\"", path))
 
 	me := b.Core.router.MatchingMountEntry(path)
 	if me == nil {
