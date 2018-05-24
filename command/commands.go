@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	ad "github.com/hashicorp/vault-plugin-secrets-active-directory/plugin"
 	gcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
@@ -110,6 +111,7 @@ var (
 	}
 
 	logicalBackends = map[string]logical.Factory{
+		"ad":         ad.Factory,
 		"aws":        aws.Factory,
 		"cassandra":  cassandra.Factory,
 		"consul":     consul.Factory,
