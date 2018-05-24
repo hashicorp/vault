@@ -61,7 +61,7 @@
                   <li class="action">
                     {{#confirm-action
                       confirmButtonClasses="button is-primary"
-                      buttonClasses="link"
+                      buttonClasses="link is-destroy"
                       onConfirmAction=(perform disableMethod method)
                       confirmMessage=(concat "Are you sure you want to disable auth via " method.id "?")
                       showConfirm=(get this (concat "shouldDelete-" method.id))
