@@ -101,17 +101,21 @@ const testEncryption = (assert, keyName) => {
         );
       },
       assertBeforeDecrypt: key => {
-        assert.dom('[data-test-transit-input="context"]').hasValue(
-          'nqR8LiVgNh/lwO2rArJJE9F9DMhh0lKo4JX9DAAkCDw=',
-          `${key}: the ui shows the base64-encoded context`
-        );
+        assert
+          .dom('[data-test-transit-input="context"]')
+          .hasValue(
+            'nqR8LiVgNh/lwO2rArJJE9F9DMhh0lKo4JX9DAAkCDw=',
+            `${key}: the ui shows the base64-encoded context`
+          );
       },
 
       assertAfterDecrypt: key => {
-        assert.dom('[data-test-transit-input="plaintext"]').hasValue(
-          'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
-          `${key}: the ui shows the base64-encoded plaintext`
-        );
+        assert
+          .dom('[data-test-transit-input="plaintext"]')
+          .hasValue(
+            'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
+            `${key}: the ui shows the base64-encoded plaintext`
+          );
       },
     },
     // raw bytes for plaintext, string for context
@@ -128,13 +132,17 @@ const testEncryption = (assert, keyName) => {
         );
       },
       assertBeforeDecrypt: key => {
-        assert.dom('[data-test-transit-input="context"]').hasValue(encodeString('context'), `${key}: the ui shows the input context`);
+        assert
+          .dom('[data-test-transit-input="context"]')
+          .hasValue(encodeString('context'), `${key}: the ui shows the input context`);
       },
       assertAfterDecrypt: key => {
-        assert.dom('[data-test-transit-input="plaintext"]').hasValue(
-          'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
-          `${key}: the ui shows the base64-encoded plaintext`
-        );
+        assert
+          .dom('[data-test-transit-input="plaintext"]')
+          .hasValue(
+            'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
+            `${key}: the ui shows the base64-encoded plaintext`
+          );
       },
     },
     // base64 input
@@ -151,10 +159,14 @@ const testEncryption = (assert, keyName) => {
         );
       },
       assertBeforeDecrypt: key => {
-        assert.dom('[data-test-transit-input="context"]').hasValue(encodeString('context'), `${key}: the ui shows the input context`);
+        assert
+          .dom('[data-test-transit-input="context"]')
+          .hasValue(encodeString('context'), `${key}: the ui shows the input context`);
       },
       assertAfterDecrypt: key => {
-        assert.dom('[data-test-transit-input="plaintext"]').hasValue('This is the secret', `${key}: the ui decodes plaintext`);
+        assert
+          .dom('[data-test-transit-input="plaintext"]')
+          .hasValue('This is the secret', `${key}: the ui decodes plaintext`);
       },
     },
 
@@ -173,11 +185,15 @@ const testEncryption = (assert, keyName) => {
         );
       },
       assertBeforeDecrypt: key => {
-        assert.dom('[data-test-transit-input="context"]').hasValue(encodeString('secret 2'), `${key}: the ui shows the encoded context`);
+        assert
+          .dom('[data-test-transit-input="context"]')
+          .hasValue(encodeString('secret 2'), `${key}: the ui shows the encoded context`);
       },
       assertAfterDecrypt: key => {
         assert.ok(findWithAssert('[data-test-transit-input="plaintext"]'), `${key}: plaintext box shows`);
-        assert.dom('[data-test-transit-input="plaintext"]').hasValue('There are many secrets 🤐', `${key}: the ui decodes plaintext`);
+        assert
+          .dom('[data-test-transit-input="plaintext"]')
+          .hasValue('There are many secrets 🤐', `${key}: the ui decodes plaintext`);
       },
     },
   ];
@@ -229,12 +245,16 @@ test('transit backend', function(assert) {
     if (index === 0) {
       click('[data-test-transit-link="versions"]');
       andThen(() => {
-        assert.dom('[data-test-transit-key-version-row]').exists({ count: 1 }, `${key.name}: only one key version`);
+        assert
+          .dom('[data-test-transit-key-version-row]')
+          .exists({ count: 1 }, `${key.name}: only one key version`);
       });
       click('[data-test-transit-key-rotate] button');
       click('[data-test-confirm-button]');
       andThen(() => {
-        assert.dom('[data-test-transit-key-version-row]').exists({ count: 2 }, `${key.name}: two key versions after rotate`);
+        assert
+          .dom('[data-test-transit-key-version-row]')
+          .exists({ count: 2 }, `${key.name}: two key versions after rotate`);
       });
     }
     click('[data-test-transit-key-actions-link]');
@@ -256,7 +276,9 @@ test('transit backend', function(assert) {
           `${key.name}: exportable key has a link to export action`
         );
       } else {
-        assert.dom('[data-test-transit-action-link="export"]').doesNotExist(`${key.name}: non-exportable key does not link to export action`);
+        assert
+          .dom('[data-test-transit-action-link="export"]')
+          .doesNotExist(`${key.name}: non-exportable key does not link to export action`);
       }
       if (key.convergent && key.supportsEncryption) {
         testEncryption(assert, key.name);

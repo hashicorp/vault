@@ -134,10 +134,16 @@ export default DS.Store.extend({
     this.peekAll(modelName).forEach(record => {
       record.unloadRecord();
     });
-    return new Ember.RSVP.Promise((resolve) => {
+    return new Ember.RSVP.Promise(resolve => {
       Ember.run.schedule('destroy', () => {
         this.push(
-          this.serializerFor(modelName).normalizeResponse(this, this.modelFor(modelName), response, null, 'query')
+          this.serializerFor(modelName).normalizeResponse(
+            this,
+            this.modelFor(modelName),
+            response,
+            null,
+            'query'
+          )
         );
         let model = this.peekAll(modelName).toArray();
         model.set('meta', response.meta);

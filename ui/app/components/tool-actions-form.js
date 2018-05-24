@@ -71,7 +71,7 @@ export default Ember.Component.extend(DEFAULTS, {
 
   handleSuccess(resp, action) {
     let props = {};
-    let secret = resp && resp.data || resp.auth;
+    let secret = (resp && resp.data) || resp.auth;
     if (secret && action === 'unwrap') {
       props = Ember.assign({}, props, { unwrap_data: secret });
     }

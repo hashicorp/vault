@@ -1,7 +1,6 @@
 import IdentityModel from './_base';
 import DS from 'ember-data';
 import Ember from 'ember';
-import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import identityCapabilities from 'vault/macros/identity-capabilities';
 const { attr, belongsTo } = DS;
 const { computed } = Ember;

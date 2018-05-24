@@ -143,7 +143,9 @@ test('ssh backend', function(assert) {
     click(`[data-test-confirm-button]`);
 
     andThen(() => {
-      assert.dom(`[data-test-secret-link="${role.name}"]`).doesNotExist(`${role.type}: role is no longer in the list`);
+      assert
+        .dom(`[data-test-secret-link="${role.name}"]`)
+        .doesNotExist(`${role.type}: role is no longer in the list`);
     });
   });
 });
