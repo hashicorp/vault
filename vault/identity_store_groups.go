@@ -331,15 +331,28 @@ func (i *IdentityStore) pathGroupIDList() framework.OperationFunc {
 		}
 
 		var groupIDs []string
+		groupInfo := map[string]interface{}{}
 		for {
 			raw := iter.Next()
 			if raw == nil {
 				break
 			}
-			groupIDs = append(groupIDs, raw.(*identity.Group).ID)
+			group := raw.(*identity.Group)
+			groupIDs = append(groupIDs, group.ID)
+			groupInfoEntry := map[string]interface{}{
+				"name": group.Name,
+			}
+			if group.Alias != nil {
+				groupInfoEntry["alias"] = map[string]interface{}{
+					"id":             group.Alias.ID,
+					"name":           group.Alias.Name,
+					"mount_accessor": group.Alias.MountAccessor,
+				}
+			}
+			groupInfo[group.ID] = groupInfoEntry
 		}
 
-		return logical.ListResponse(groupIDs), nil
+		return logical.ListResponseWithInfo(groupIDs, groupInfo), nil
 	}
 }
 

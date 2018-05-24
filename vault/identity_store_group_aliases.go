@@ -210,8 +210,9 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(req *logical.Request, d *fr
 	}
 
 	group.Alias.Name = groupAliasName
-	group.Alias.MountType = mountValidationResp.MountType
 	group.Alias.MountAccessor = mountValidationResp.MountAccessor
+	// Explicitly correct for previous versions that persisted this
+	group.Alias.MountType = ""
 
 	err = i.sanitizeAndUpsertGroup(group, nil)
 	if err != nil {
@@ -267,15 +268,23 @@ func (i *IdentityStore) pathGroupAliasIDList() framework.OperationFunc {
 		}
 
 		var groupAliasIDs []string
+		aliasInfo := map[string]interface{}{}
 		for {
 			raw := iter.Next()
 			if raw == nil {
 				break
 			}
-			groupAliasIDs = append(groupAliasIDs, raw.(*identity.Alias).ID)
+			alias := raw.(*identity.Alias)
+			groupAliasIDs = append(groupAliasIDs, alias.ID)
+			aliasInfoEntry := map[string]interface{}{
+				"name":           alias.Name,
+				"canonical_id":   alias.CanonicalID,
+				"mount_accessor": alias.MountAccessor,
+			}
+			aliasInfo[alias.ID] = aliasInfoEntry
 		}
 
-		return logical.ListResponse(groupAliasIDs), nil
+		return logical.ListResponseWithInfo(groupAliasIDs, aliasInfo), nil
 	}
 }
 

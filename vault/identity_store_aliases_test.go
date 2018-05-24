@@ -42,13 +42,16 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	testAliasCanonicalID := resp.Data["canonical_id"].(string)
+	testAliasAliasID := resp.Data["id"].(string)
 
 	aliasData["name"] = "entityalias"
-	aliasData["entity_id"] = entityID
+	aliasData["canonical_id"] = entityID
 	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	entityAliasAliasID := resp.Data["id"].(string)
 
 	listReq := &logical.Request{
 		Operation: logical.ListOperation,
@@ -62,6 +65,81 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 	keys := resp.Data["keys"].([]string)
 	if len(keys) != 2 {
 		t.Fatalf("bad: length of alias IDs listed; expected: 2, actual: %d", len(keys))
+	}
+
+	// Do some due diligence on the key info
+	aliasInfoRaw, ok := resp.Data["key_info"]
+	if !ok {
+		t.Fatal("expected key_info map in response")
+	}
+	aliasInfo := aliasInfoRaw.(map[string]interface{})
+	for _, key := range keys {
+		infoRaw, ok := aliasInfo[key]
+		if !ok {
+			t.Fatal("expected key info")
+		}
+		info := infoRaw.(map[string]interface{})
+		currName := "entityalias"
+		if info["canonical_id"].(string) == testAliasCanonicalID {
+			currName = "testaliasname"
+		}
+		t.Logf("alias info: %#v", info)
+		switch {
+		case info["name"].(string) != currName:
+			t.Fatalf("bad name: %v", info["name"].(string))
+		case info["mount_accessor"].(string) != githubAccessor:
+			t.Fatalf("bad mount_path: %v", info["mount_accessor"].(string))
+		}
+	}
+
+	// Now do the same with entity info
+	listReq = &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "entity/id",
+	}
+	resp, err = is.HandleRequest(context.Background(), listReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	keys = resp.Data["keys"].([]string)
+	if len(keys) != 2 {
+		t.Fatalf("bad: length of entity IDs listed; expected: 2, actual: %d", len(keys))
+	}
+
+	entityInfoRaw, ok := resp.Data["key_info"]
+	if !ok {
+		t.Fatal("expected key_info map in response")
+	}
+
+	// This is basically verifying that the entity has the alias in key_info
+	// that we expect to be tied to it, plus tests a value further down in it
+	// for fun
+	entityInfo := entityInfoRaw.(map[string]interface{})
+	for _, key := range keys {
+		infoRaw, ok := entityInfo[key]
+		if !ok {
+			t.Fatal("expected key info")
+		}
+		info := infoRaw.(map[string]interface{})
+		t.Logf("entity info: %#v", info)
+		currAliasID := entityAliasAliasID
+		if key == testAliasCanonicalID {
+			currAliasID = testAliasAliasID
+		}
+		currAliases := info["aliases"].(map[string]interface{})
+		if len(currAliases) != 1 {
+			t.Fatal("bad aliases length")
+		}
+		for k, v := range currAliases {
+			curr := v.(map[string]interface{})
+			switch {
+			case k != currAliasID:
+				t.Fatalf("bad alias id: %v", k)
+			case curr["mount_accessor"].(string) != githubAccessor:
+				t.Fatalf("bad mount accessor: %v", k)
+			}
+		}
 	}
 }
 

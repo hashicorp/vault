@@ -8,6 +8,121 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestIdentityStore_ListGroupAlias(t *testing.T) {
+	var err error
+	var resp *logical.Response
+
+	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(t)
+
+	groupReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "group",
+		Data: map[string]interface{}{
+			"type": "external",
+		},
+	}
+	resp, err = is.HandleRequest(context.Background(), groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("expected a non-nil response")
+	}
+	groupID := resp.Data["id"].(string)
+
+	// Create an alias
+	aliasData := map[string]interface{}{
+		"name":           "groupalias",
+		"mount_accessor": githubAccessor,
+		"canonical_id":   groupID,
+	}
+	aliasReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "group-alias",
+		Data:      aliasData,
+	}
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	aliasID := resp.Data["id"].(string)
+
+	listReq := &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "group-alias/id",
+	}
+	resp, err = is.HandleRequest(context.Background(), listReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	keys := resp.Data["keys"].([]string)
+	if len(keys) != 1 {
+		t.Fatalf("bad: length of alias IDs listed; expected: 1, actual: %d", len(keys))
+	}
+
+	// Do some due diligence on the key info
+	aliasInfoRaw, ok := resp.Data["key_info"]
+	if !ok {
+		t.Fatal("expected key_info map in response")
+	}
+	aliasInfo := aliasInfoRaw.(map[string]interface{})
+	for _, key := range keys {
+		infoRaw, ok := aliasInfo[key]
+		if !ok {
+			t.Fatal("expected key info")
+		}
+		info := infoRaw.(map[string]interface{})
+		t.Logf("alias info: %#v", info)
+		switch {
+		case info["name"].(string) != "groupalias":
+			t.Fatalf("bad name: %v", info["name"].(string))
+		case info["mount_accessor"].(string) != githubAccessor:
+			t.Fatalf("bad mount_accessor: %v", info["mount_accessor"].(string))
+		}
+	}
+
+	// Now do the same with entity info
+	listReq = &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "group/id",
+	}
+	resp, err = is.HandleRequest(context.Background(), listReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	keys = resp.Data["keys"].([]string)
+	if len(keys) != 1 {
+		t.Fatalf("bad: length of entity IDs listed; expected: 1, actual: %d", len(keys))
+	}
+
+	groupInfoRaw, ok := resp.Data["key_info"]
+	if !ok {
+		t.Fatal("expected key_info map in response")
+	}
+
+	// This is basically verifying that the group has the alias in key_info
+	// that we expect to be tied to it, plus tests a value further down in it
+	// for fun
+	groupInfo := groupInfoRaw.(map[string]interface{})
+	for _, key := range keys {
+		infoRaw, ok := groupInfo[key]
+		if !ok {
+			t.Fatal("expected key info")
+		}
+		info := infoRaw.(map[string]interface{})
+		t.Logf("group info: %#v", info)
+		alias := info["alias"].(map[string]interface{})
+		switch {
+		case alias["id"].(string) != aliasID:
+			t.Fatalf("bad alias id: %v", alias["id"])
+		case alias["mount_accessor"].(string) != githubAccessor:
+			t.Fatalf("bad mount accessor: %v", alias["mount_accessor"])
+		}
+	}
+}
+
 func TestIdentityStore_GroupAliasDeletionOnGroupDeletion(t *testing.T) {
 	var resp *logical.Response
 	var err error
