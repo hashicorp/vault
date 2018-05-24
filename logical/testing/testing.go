@@ -39,6 +39,10 @@ type TestCase struct {
 	// backend requires more construction
 	Factory logical.Factory
 
+	// Setup will be called after Vault is initialized and the test backend
+	// is mounted, immediately before the execution of the testcase Steps.
+	Setup TestSetupFunc
+
 	// Steps are the set of operations that are run for this test case.
 	Steps []TestStep
 
@@ -93,6 +97,9 @@ type TestCheckFunc func(*logical.Response) error
 // PreFlightFunc is used to modify request parameters directly before execution
 // in each TestStep.
 type PreFlightFunc func(*logical.Request) error
+
+// TestSetupFunc is the callback used for setup in a TestCase.
+type TestSetupFunc func(client *api.Client)
 
 // TestTeardownFunc is the callback used for Teardown in TestCase.
 type TestTeardownFunc func() error
@@ -210,6 +217,11 @@ func Test(tt TestT, c TestCase) {
 	if err := client.Sys().Mount(prefix, mountInfo); err != nil {
 		tt.Fatal("error mounting backend: ", err)
 		return
+	}
+
+	// Perform any custom setup.
+	if c.Setup != nil {
+		c.Setup(client)
 	}
 
 	// Make requests
