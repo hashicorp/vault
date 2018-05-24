@@ -75,7 +75,6 @@ func Format(ui cli.Ui) string {
 		return ui.(*VaultUI).format
 	}
 
-	panic("")
 	format := os.Getenv(EnvVaultFormat)
 	if format == "" {
 		format = "table"
