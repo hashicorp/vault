@@ -16,6 +16,10 @@ FEATURES:
  * Userpass auth CIDR restrictions: When using the `userpass` auth method you
    can now limit authentication to specific CIDRs; these will also be encoded
    in resultant tokens to limit their use.
+ * Vault Browser CLI: The UI now supports usage of read/write/list/delete
+   commands in a CLI that can be accessed from the nav bar. Complex inputs such
+   as JSON files are not currently supported. This surfaces features otherwise
+   unsupported in Vault's UI.
 
 IMPROVEMENTS:
 

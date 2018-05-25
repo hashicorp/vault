@@ -15,7 +15,7 @@
   z-index: 1;
 
   .notification {
-    box-shadow: 0 0 25px rgba($black, 0.2);
+    box-shadow: $box-shadow-high;
     margin: 20px;
     @include until($desktop) {
       margin: 1rem 0;

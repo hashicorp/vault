@@ -26,13 +26,11 @@
           {{i-con glyph="folder" size=14 class="has-text-grey-light"}} <span data-test-path data-test-id={{method.id}}>{{method.path}}</span>
           <br />
           <span class="tag">
-            <code>
-              {{#if (eq method.type 'plugin')}}
-                {{method.type}}: {{method.config.plugin_name}}
-              {{else}}
-                {{method.type}}
-              {{/if}}
-            </code>
+            {{#if (eq method.type 'plugin')}}
+              {{method.type}}: {{method.config.plugin_name}}
+            {{else}}
+              {{method.type}}
+            {{/if}}
           </span>
           <code class="has-text-grey is-size-8">
             {{method.accessor}}
@@ -61,7 +59,7 @@
                   <li class="action">
                     {{#confirm-action
                       confirmButtonClasses="button is-primary"
-                      buttonClasses="link"
+                      buttonClasses="link is-destroy"
                       onConfirmAction=(perform disableMethod method)
                       confirmMessage=(concat "Are you sure you want to disable auth via " method.id "?")
                       showConfirm=(get this (concat "shouldDelete-" method.id))
