@@ -210,8 +210,9 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(req *logical.Request, d *fr
 	}
 
 	group.Alias.Name = groupAliasName
-	group.Alias.MountType = mountValidationResp.MountType
 	group.Alias.MountAccessor = mountValidationResp.MountAccessor
+	// Explicitly correct for previous versions that persisted this
+	group.Alias.MountType = ""
 
 	err = i.sanitizeAndUpsertGroup(group, nil)
 	if err != nil {
@@ -267,15 +268,46 @@ func (i *IdentityStore) pathGroupAliasIDList() framework.OperationFunc {
 		}
 
 		var groupAliasIDs []string
+		aliasInfo := map[string]interface{}{}
+
+		type mountInfo struct {
+			MountType string
+			MountPath string
+		}
+		mountAccessorMap := map[string]mountInfo{}
+
 		for {
 			raw := iter.Next()
 			if raw == nil {
 				break
 			}
-			groupAliasIDs = append(groupAliasIDs, raw.(*identity.Alias).ID)
+			alias := raw.(*identity.Alias)
+			groupAliasIDs = append(groupAliasIDs, alias.ID)
+			entry := map[string]interface{}{
+				"name":           alias.Name,
+				"canonical_id":   alias.CanonicalID,
+				"mount_accessor": alias.MountAccessor,
+			}
+
+			mi, ok := mountAccessorMap[alias.MountAccessor]
+			if ok {
+				entry["mount_type"] = mi.MountType
+				entry["mount_path"] = mi.MountPath
+			} else {
+				mi = mountInfo{}
+				if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
+					mi.MountType = mountValidationResp.MountType
+					mi.MountPath = mountValidationResp.MountPath
+					entry["mount_type"] = mi.MountType
+					entry["mount_path"] = mi.MountPath
+				}
+				mountAccessorMap[alias.MountAccessor] = mi
+			}
+
+			aliasInfo[alias.ID] = entry
 		}
 
-		return logical.ListResponse(groupAliasIDs), nil
+		return logical.ListResponseWithInfo(groupAliasIDs, aliasInfo), nil
 	}
 }
 

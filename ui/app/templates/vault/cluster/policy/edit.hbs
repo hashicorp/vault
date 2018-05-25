@@ -92,7 +92,7 @@
       </div>
       {{#if (and (not-eq model.id "default") capabilities.canDelete)}}
         {{#confirm-action
-          buttonClasses="button is-link is-outlined is-inverted"
+          buttonClasses="button is-ghost"
           onConfirmAction=(action "deletePolicy" model)
           confirmMessage=(concat "Are you sure you want to delete " model.id "?")
           data-test-policy-delete=true

@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "DB Root Credential Rotation - Guides"
-sidebar_current: "guides-secret-db-root-rotation"
+sidebar_current: "guides-secret-mgmt-db-root-rotation"
 description: |-
   Vault enables the combined database secret engines to automate the rotation of
   root credentials.

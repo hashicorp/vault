@@ -1,21 +1,56 @@
 {{#if model.hasMembers}}
   {{#each model.memberGroupIds as |gid|}}
-    <a href={{href-to "vault.cluster.access.identity.show" "groups" gid "details" }}
-      class="box is-sideless is-marginless"
-      >{{i-con
-        glyph='folder'
-        size=14
-        class="has-text-grey-light"
-        }}{{gid}}</a>
+
+  {{#linked-block
+    "vault.cluster.access.identity.show"
+    "groups"
+    gid
+    details
+    class="box is-sideless is-marginless"
+  }}
+    <div class="columns is-mobile">
+      <div class="column is-10">
+        <a href={{href-to "vault.cluster.access.identity.show" "groups" gid "details" }}
+          class="is-block has-text-black has-text-weight-semibold"
+          >{{i-con
+            glyph='folder'
+            size=14
+            class="has-text-grey-light"
+            }}{{gid}}</a>
+      </div>
+      <div class="column has-text-right">
+        {{#if model.canEdit}}
+          {{identity/popup-members params=(array model "memberGroupIds" gid)}}
+        {{/if}}
+      </div>
+    </div>
+    {{/linked-block}}
   {{/each}}
   {{#each model.memberEntityIds as |gid|}}
-    <a href={{href-to "vault.cluster.access.identity.show" "entities" gid "details" }}
+    {{#linked-block
+      "vault.cluster.access.identity.show"
+      "groups"
+      gid
+      details
       class="box is-sideless is-marginless"
-      >{{i-con
-        glyph='role'
-        size=14
-        class="has-text-grey-light"
-        }}{{gid}}</a>
+    }}
+      <div class="columns">
+        <div class="column is-10">
+          <a href={{href-to "vault.cluster.access.identity.show" "entities" gid "details" }}
+            class="is-block has-text-black has-text-weight-semibold"
+            >{{i-con
+              glyph='role'
+              size=14
+              class="has-text-grey-light"
+              }}{{gid}}</a>
+        </div>
+        <div class="column has-text-right">
+          {{#if model.canEdit}}
+            {{identity/popup-members params=(array model "memberEntityIds" gid)}}
+          {{/if}}
+        </div>
+      </div>
+    {{/linked-block}}
   {{/each}}
 {{else}}
   <div class="box is-bottomless has-background-white-bis">

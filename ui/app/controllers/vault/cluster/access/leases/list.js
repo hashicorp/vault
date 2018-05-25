@@ -1,9 +1,11 @@
 import Ember from 'ember';
 import utils from 'vault/lib/key-utils';
 
-export default Ember.Controller.extend({
-  flashMessages: Ember.inject.service(),
-  clusterController: Ember.inject.controller('vault.cluster'),
+const { inject, computed, Controller } = Ember;
+export default Controller.extend({
+  flashMessages: inject.service(),
+  store: inject.service(),
+  clusterController: inject.controller('vault.cluster'),
   queryParams: {
     page: 'page',
     pageFilter: 'pageFilter',
@@ -13,7 +15,7 @@ export default Ember.Controller.extend({
   pageFilter: null,
   filter: null,
 
-  backendCrumb: Ember.computed(function() {
+  backendCrumb: computed(function() {
     return {
       label: 'leases',
       text: 'leases',
@@ -24,13 +26,13 @@ export default Ember.Controller.extend({
 
   isLoading: false,
 
-  filterMatchesKey: Ember.computed('filter', 'model', 'model.[]', function() {
+  filterMatchesKey: computed('filter', 'model', 'model.[]', function() {
     var filter = this.get('filter');
     var content = this.get('model');
     return !!(content.length && content.findBy('id', filter));
   }),
 
-  firstPartialMatch: Ember.computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
+  firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
     var filter = this.get('filter');
     var content = this.get('model');
     var filterMatchesKey = this.get('filterMatchesKey');
@@ -42,7 +44,7 @@ export default Ember.Controller.extend({
         });
   }),
 
-  filterIsFolder: Ember.computed('filter', function() {
+  filterIsFolder: computed('filter', function() {
     return !!utils.keyIsFolder(this.get('filter'));
   }),
 
@@ -56,7 +58,7 @@ export default Ember.Controller.extend({
     },
 
     revokePrefix(prefix, isForce) {
-      const adapter = this.model.store.adapterFor('lease');
+      const adapter = this.get('store').adapterFor('lease');
       const method = isForce ? 'forceRevokePrefix' : 'revokePrefix';
       const fn = adapter[method];
       fn

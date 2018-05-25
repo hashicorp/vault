@@ -8,21 +8,27 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * Azure Key Vault Auto Unseal/Seal Wrap Support (Enterprise): Azure Key Vault
+   can now be used a support seal for Auto Unseal and Seal Wrapping.
  * Cert auth CIDR restrictions: When using the `cert` auth method you can now
    limit authentication to specific CIDRs; these will also be encoded in
    resultant tokens to limit their use.
+ * Userpass auth CIDR restrictions: When using the `userpass` auth method you
+   can now limit authentication to specific CIDRs; these will also be encoded
+   in resultant tokens to limit their use.
 
 IMPROVEMENTS:
 
  * api: Close renewer's doneCh when the renewer is stopped, so that programs
    expecting a final value through doneCh behave correctly [GH-4472]
+ * auth/cert: Break out `allowed_names` into component parts and add
+   `allowed_uri_sans` [GH-4231]
  * cli: `vault login` now supports a `-no-print` flag to suppress printing
    token information but still allow storing into the token helper [GH-4454]
- * core/pkcs11 (enterprise): Add support for CKM_AES_CBS_PAD, CKM_RSA_PKCS, and 
+ * core/pkcs11 (enterprise): Add support for CKM_AES_CBC_PAD, CKM_RSA_PKCS, and 
    CKM_RSA_PKCS_OAEP mechanisms
  * core/pkcs11 (enterprise): HSM slots can now be selected by token label instead
    of just slot number
- * core/seal (enterprise): Lazily rewrap data when seal keys are rotated
  * expiration: Allow revoke-prefix and revoke-force to work on single leases as
    well as prefixes [GH-4450]
 
@@ -39,12 +45,19 @@ BUG FIXES:
    parameters were used [GH-4582]
  * secret/gcp: Make `bound_region` able to use short names
  * secret/kv: Fix response wrapping for KV v2 [GH-4511]
+ * secret/kv: Fix address flag not being honored correctly [GH-4617]
  * secret/pki: Fix `key_type` not being allowed to be set to `any` [GH-4595]
  * secret/pki: Fix path length parameter being ignored when using
    `use_csr_values` and signing an intermediate CA cert [GH-4459]
  * storage/dynamodb: Fix listing when one child is left within a nested path
    [GH-4570]
  * ui: Fix HMAC algorithm in transit [GH-4604]
+ * ui: Fix unwrap of auth responses via the UI's unwrap tool [GH-4611]
+ * replication: Fix error while running plugins on a newly created replication
+   secondary
+ * replication: Fix issue with token store lookups after a secondary's mount table
+   is invalidated.
+ * replication: Improve startup time when a large merkle index is in use.
 
 ## 0.10.1/0.9.7 (April 25th, 2018)
 
