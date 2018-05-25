@@ -600,7 +600,12 @@ type TokenEntry struct {
 	// The set of CIDRs that this token can be used with
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
 
+	// Version of this token entry. Version '0' uses SHA1 for path obfuscation,
+	// whereas the version 2 uses SHA2-256 HMAC.
 	Version int `json:"version" mapstructure:"version" structs:"version" sentinel:""`
+
+	// ParentVersion is the token entry version of the parent token
+	ParentVersion int `json:"parent_version" mapstructure:"parent_version" structs:"parent_version" sentinel:""`
 }
 
 func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {
@@ -874,7 +879,7 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *TokenEntry, writeS
 
 			var obfuscatedParentID string
 			switch {
-			case entry.Version < 2:
+			case parent.Version < 2:
 				obfuscatedParentID, err = ts.SaltID(ctx, entry.Parent)
 			default:
 				obfuscatedParentID, err = ts.hmac(ctx, entry.Parent)
@@ -1229,7 +1234,7 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 	if entry.Parent != "" {
 		var parentIndex string
 		switch {
-		case entry.Version < 2:
+		case entry.ParentVersion < 2:
 			// This is only here for backwards compatibility
 			parentSaltedID, err := ts.SaltID(ctx, entry.Parent)
 			if err != nil {
@@ -1347,31 +1352,42 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 
 // revokeTree is used to invalidate a given token and all
 // child tokens.
-func (ts *TokenStore) revokeTree(ctx context.Context, id string) error {
+func (ts *TokenStore) revokeTree(ctx context.Context, tokenID string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke-tree"}, time.Now())
 	// Verify the token is not blank
-	if id == "" {
+	if tokenID == "" {
 		return fmt.Errorf("cannot tree-revoke blank token")
 	}
 
-	idHMAC, err := ts.hmac(ctx, id)
+	idHMAC, err := ts.hmac(ctx, tokenID)
+	if err != nil {
+		return err
+	}
+	obfuscatedID := idHMAC
+
+	te, err := ts.lookupObfuscatedToken(ctx, idHMAC, true)
 	if err != nil {
 		return err
 	}
 
-	// Nuke the entire tree recursively
-	err = ts.revokeTreeObfuscated(ctx, idHMAC)
+	if te == nil {
+		// This is only here for backwards compatibility
+		saltedID, err := ts.SaltID(ctx, tokenID)
+		if err != nil {
+			return err
+		}
+		obfuscatedID = saltedID
+		te, err = ts.lookupObfuscatedToken(ctx, saltedID, true)
+	}
 	if err != nil {
 		return err
 	}
 
-	// This is only here for backwards compatibility
-	saltedID, err := ts.SaltID(ctx, id)
-	if err != nil {
-		return err
+	if te == nil {
+		return nil
 	}
 
-	return ts.revokeTreeObfuscated(ctx, saltedID)
+	return ts.revokeTreeObfuscated(ctx, obfuscatedID)
 }
 
 // revokeTreeSalted is used to invalidate a given token and all child tokens
@@ -1855,7 +1871,8 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	// Setup the token entry
 	te := TokenEntry{
-		Parent: req.ClientToken,
+		Parent:        req.ClientToken,
+		ParentVersion: parent.Version,
 
 		// The mount point is always the same since we have only one token
 		// store; using req.MountPoint causes trouble in tests since they don't

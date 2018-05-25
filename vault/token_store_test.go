@@ -249,26 +249,12 @@ func TestTokenStore_TokenEntryVersionUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// One hashed, one HMACed parent index
-	if len(parentIndexes) != 2 {
-		t.Fatalf("length of parent indexes; expected: 2, actual: %d", len(parentIndexes))
+	// There should still be one hashed parent index
+	if len(parentIndexes) != 1 {
+		t.Fatalf("length of parent indexes; expected: 1, actual: %d", len(parentIndexes))
 	}
 
-	// Ensure that there are parent indexes for new children
-	parentIDHMAC, err := ts.hmac(context.Background(), parentID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	hmacParentIndexes, err := ts.view.List(context.Background(), parentPrefix+parentIDHMAC+"/")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(hmacParentIndexes) != 10 {
-		t.Fatalf("bad: number of HMAC parent indexes; expected: 10, actual: %d", len(hmacParentIndexes))
-	}
-
-	// Ensure that there are parent indexes for old children
+	// Ensure that there are parent indexes for all 20 children
 	parentIDHash, err := ts.SaltID(context.Background(), parentID)
 	if err != nil {
 		t.Fatal(err)
@@ -278,8 +264,8 @@ func TestTokenStore_TokenEntryVersionUpgrade(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(hashedParentIndexes) != 10 {
-		t.Fatalf("bad: number of hashed parent indexes; expected: 10, actual: %d", len(hashedParentIndexes))
+	if len(hashedParentIndexes) != 20 {
+		t.Fatalf("bad: number of hashed parent indexes; expected: 20, actual: %d", len(hashedParentIndexes))
 	}
 
 	// Revoke all the children and check if parent indexes are removed or not
@@ -302,14 +288,6 @@ func TestTokenStore_TokenEntryVersionUpgrade(t *testing.T) {
 	}
 	if len(hashedParentIndexes) != 0 {
 		t.Fatalf("bad: number of hashed parent indexes; expected: 0, actual: %d", len(hashedParentIndexes))
-	}
-
-	hmacParentIndexes, err = ts.view.List(context.Background(), parentPrefix+parentIDHMAC+"/")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(hmacParentIndexes) != 0 {
-		t.Fatalf("bad: number of HMAC parent indexes; expected: 0, actual: %d", len(hmacParentIndexes))
 	}
 
 	// All the child tokens should now have been gone
@@ -367,14 +345,6 @@ func TestTokenStore_TokenEntryVersionUpgrade(t *testing.T) {
 	}
 	if len(hashedParentIndexes) != 0 {
 		t.Fatalf("bad: number of hashed parent indexes; expected: 0, actual: %d", len(hashedParentIndexes))
-	}
-
-	hmacParentIndexes, err = ts.view.List(context.Background(), parentPrefix+parentIDHMAC+"/")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(hmacParentIndexes) != 0 {
-		t.Fatalf("bad: number of HMAC parent indexes; expected: 0, actual: %d", len(hmacParentIndexes))
 	}
 }
 
@@ -1224,12 +1194,12 @@ func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *TokenEntr
 	for current < depth {
 		next := make([]*TokenEntry, 0, 2*len(frontier))
 		for _, node := range frontier {
-			left := &TokenEntry{Parent: node.ID}
+			left := &TokenEntry{Parent: node.ID, ParentVersion: node.Version}
 			if err := ts.create(context.Background(), left); err != nil {
 				t.Fatalf("err: %v", err)
 			}
 
-			right := &TokenEntry{Parent: node.ID}
+			right := &TokenEntry{Parent: node.ID, ParentVersion: node.Version}
 			if err := ts.create(context.Background(), right); err != nil {
 				t.Fatalf("err: %v", err)
 			}
@@ -1253,17 +1223,17 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	ent2 := &TokenEntry{Parent: ent1.ID}
+	ent2 := &TokenEntry{Parent: ent1.ID, ParentVersion: ent1.Version}
 	if err := ts.create(context.Background(), ent2); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	ent3 := &TokenEntry{Parent: ent2.ID}
+	ent3 := &TokenEntry{Parent: ent2.ID, ParentVersion: ent2.Version}
 	if err := ts.create(context.Background(), ent3); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	ent4 := &TokenEntry{Parent: ent2.ID}
+	ent4 := &TokenEntry{Parent: ent2.ID, ParentVersion: ent2.Version}
 	if err := ts.create(context.Background(), ent4); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1329,14 +1299,15 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 	}
 
 	expected := &TokenEntry{
-		ID:          resp.Auth.ClientToken,
-		Accessor:    resp.Auth.Accessor,
-		Parent:      root,
-		Policies:    []string{"root"},
-		Path:        "auth/token/create",
-		DisplayName: "token-foo-bar-baz",
-		TTL:         0,
-		Version:     2,
+		ID:            resp.Auth.ClientToken,
+		Accessor:      resp.Auth.Accessor,
+		Parent:        root,
+		Policies:      []string{"root"},
+		Path:          "auth/token/create",
+		DisplayName:   "token-foo-bar-baz",
+		TTL:           0,
+		Version:       2,
+		ParentVersion: 2,
 	}
 	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if err != nil {
@@ -1361,15 +1332,16 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 	}
 
 	expected := &TokenEntry{
-		ID:          resp.Auth.ClientToken,
-		Accessor:    resp.Auth.Accessor,
-		Parent:      root,
-		Policies:    []string{"root"},
-		Path:        "auth/token/create",
-		DisplayName: "token",
-		NumUses:     1,
-		TTL:         0,
-		Version:     2,
+		ID:            resp.Auth.ClientToken,
+		Accessor:      resp.Auth.Accessor,
+		Parent:        root,
+		Policies:      []string{"root"},
+		Path:          "auth/token/create",
+		DisplayName:   "token",
+		NumUses:       1,
+		TTL:           0,
+		Version:       2,
+		ParentVersion: 2,
 	}
 	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if err != nil {
@@ -1426,14 +1398,15 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 	}
 
 	expected := &TokenEntry{
-		ID:          resp.Auth.ClientToken,
-		Accessor:    resp.Auth.Accessor,
-		Parent:      root,
-		Policies:    []string{"root"},
-		Path:        "auth/token/create",
-		DisplayName: "token",
-		TTL:         0,
-		Version:     2,
+		ID:            resp.Auth.ClientToken,
+		Accessor:      resp.Auth.Accessor,
+		Parent:        root,
+		Policies:      []string{"root"},
+		Path:          "auth/token/create",
+		DisplayName:   "token",
+		TTL:           0,
+		Version:       2,
+		ParentVersion: 2,
 	}
 	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if err != nil {
