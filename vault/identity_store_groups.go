@@ -332,6 +332,13 @@ func (i *IdentityStore) pathGroupIDList() framework.OperationFunc {
 
 		var groupIDs []string
 		groupInfo := map[string]interface{}{}
+
+		type mountInfo struct {
+			MountType string
+			MountPath string
+		}
+		mountAccessorMap := map[string]mountInfo{}
+
 		for {
 			raw := iter.Next()
 			if raw == nil {
@@ -343,11 +350,28 @@ func (i *IdentityStore) pathGroupIDList() framework.OperationFunc {
 				"name": group.Name,
 			}
 			if group.Alias != nil {
-				groupInfoEntry["alias"] = map[string]interface{}{
+				entry := map[string]interface{}{
 					"id":             group.Alias.ID,
 					"name":           group.Alias.Name,
 					"mount_accessor": group.Alias.MountAccessor,
 				}
+
+				mi, ok := mountAccessorMap[group.Alias.MountAccessor]
+				if ok {
+					entry["mount_type"] = mi.MountType
+					entry["mount_path"] = mi.MountPath
+				} else {
+					mi = mountInfo{}
+					if mountValidationResp := i.core.router.validateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
+						mi.MountType = mountValidationResp.MountType
+						mi.MountPath = mountValidationResp.MountPath
+						entry["mount_type"] = mi.MountType
+						entry["mount_path"] = mi.MountPath
+					}
+					mountAccessorMap[group.Alias.MountAccessor] = mi
+				}
+
+				groupInfoEntry["alias"] = entry
 			}
 			groupInfo[group.ID] = groupInfoEntry
 		}

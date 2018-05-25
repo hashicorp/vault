@@ -527,6 +527,13 @@ func (i *IdentityStore) pathEntityIDList() framework.OperationFunc {
 
 		var entityIDs []string
 		entityInfo := map[string]interface{}{}
+
+		type mountInfo struct {
+			MountType string
+			MountPath string
+		}
+		mountAccessorMap := map[string]mountInfo{}
+
 		for {
 			raw := iter.Next()
 			if raw == nil {
@@ -538,14 +545,32 @@ func (i *IdentityStore) pathEntityIDList() framework.OperationFunc {
 				"name": entity.Name,
 			}
 			if len(entity.Aliases) > 0 {
-				aliasMap := make(map[string]interface{}, len(entity.Aliases))
+				aliasList := make([]interface{}, 0, len(entity.Aliases))
 				for _, alias := range entity.Aliases {
-					aliasMap[alias.ID] = map[string]interface{}{
+					entry := map[string]interface{}{
+						"id":             alias.ID,
 						"name":           alias.Name,
 						"mount_accessor": alias.MountAccessor,
 					}
+
+					mi, ok := mountAccessorMap[alias.MountAccessor]
+					if ok {
+						entry["mount_type"] = mi.MountType
+						entry["mount_path"] = mi.MountPath
+					} else {
+						mi = mountInfo{}
+						if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
+							mi.MountType = mountValidationResp.MountType
+							mi.MountPath = mountValidationResp.MountPath
+							entry["mount_type"] = mi.MountType
+							entry["mount_path"] = mi.MountPath
+						}
+						mountAccessorMap[alias.MountAccessor] = mi
+					}
+
+					aliasList = append(aliasList, entry)
 				}
-				entityInfoEntry["aliases"] = aliasMap
+				entityInfoEntry["aliases"] = aliasList
 			}
 			entityInfo[entity.ID] = entityInfoEntry
 		}

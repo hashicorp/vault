@@ -269,6 +269,13 @@ func (i *IdentityStore) pathGroupAliasIDList() framework.OperationFunc {
 
 		var groupAliasIDs []string
 		aliasInfo := map[string]interface{}{}
+
+		type mountInfo struct {
+			MountType string
+			MountPath string
+		}
+		mountAccessorMap := map[string]mountInfo{}
+
 		for {
 			raw := iter.Next()
 			if raw == nil {
@@ -276,12 +283,28 @@ func (i *IdentityStore) pathGroupAliasIDList() framework.OperationFunc {
 			}
 			alias := raw.(*identity.Alias)
 			groupAliasIDs = append(groupAliasIDs, alias.ID)
-			aliasInfoEntry := map[string]interface{}{
+			entry := map[string]interface{}{
 				"name":           alias.Name,
 				"canonical_id":   alias.CanonicalID,
 				"mount_accessor": alias.MountAccessor,
 			}
-			aliasInfo[alias.ID] = aliasInfoEntry
+
+			mi, ok := mountAccessorMap[alias.MountAccessor]
+			if ok {
+				entry["mount_type"] = mi.MountType
+				entry["mount_path"] = mi.MountPath
+			} else {
+				mi = mountInfo{}
+				if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
+					mi.MountType = mountValidationResp.MountType
+					mi.MountPath = mountValidationResp.MountPath
+					entry["mount_type"] = mi.MountType
+					entry["mount_path"] = mi.MountPath
+				}
+				mountAccessorMap[alias.MountAccessor] = mi
+			}
+
+			aliasInfo[alias.ID] = entry
 		}
 
 		return logical.ListResponseWithInfo(groupAliasIDs, aliasInfo), nil
