@@ -55,7 +55,8 @@
   }
 
   .menu-label {
-    color: $grey-light;
+    color: $grey;
+    font-weight: $font-weight-semibold;
     font-size: $size-small;
     line-height: 1;
     margin-bottom: $size-8;

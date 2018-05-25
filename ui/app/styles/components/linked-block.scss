@@ -1,6 +1,8 @@
 .linked-block {
   cursor: pointer;
   transition: box-shadow $speed;
+  will-change: box-shadow;
+
   &:hover,
   &:focus,
   &:active {
