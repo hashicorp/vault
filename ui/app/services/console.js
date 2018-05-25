@@ -36,13 +36,13 @@ export default Service.extend({
   }),
   commandIndex: null,
 
-  shiftCommandIndex(keyCode, setCommandFn = ()=>{}) {
+  shiftCommandIndex(keyCode, setCommandFn = () => {}) {
     let [newIndex, newCommand] = shiftCommandIndex(
       keyCode,
       this.get('commandHistory'),
       this.get('commandIndex')
     );
-    if (newCommand && newIndex !== undefined) {
+    if (newCommand !== undefined && newIndex !== undefined) {
       this.set('commandIndex', newIndex);
       setCommandFn(newCommand);
     }

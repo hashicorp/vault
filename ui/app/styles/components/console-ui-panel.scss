@@ -1,4 +1,4 @@
-.console-ui-panel-scoller {
+.console-ui-panel-scroller {
   background: linear-gradient(to right, #191A1C, #1B212D);
   height: 0;
   left: 0;
@@ -114,10 +114,10 @@
   }
 }
 
-.panel-open .console-ui-panel-scoller  {
+.panel-open .console-ui-panel-scroller  {
   transform: translate3d(0, 0, 0);
 }
-.panel-open .console-ui-panel-scoller.fullscreen  {
+.panel-open .console-ui-panel-scroller.fullscreen  {
   bottom: 0;
   top: 0;
   min-height: 100%;

@@ -1,6 +1,5 @@
 import Ember from 'ember';
 import columnify from 'columnify';
-import { capitalize } from 'vault/helpers/capitalize';
 const { computed } = Ember;
 
 export function stringifyObjectValues(data) {
@@ -22,7 +21,7 @@ export default Ember.Component.extend({
     return columnify(data, {
       preserveNewLines: true,
       headingTransform: function(heading) {
-        return capitalize([heading]);
+        return Ember.String.capitalize(heading);
       },
     });
   }),

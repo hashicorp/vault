@@ -5,12 +5,13 @@ import {
   logFromResponse,
   logFromError,
   logErrorFromInput,
+  executeUICommand,
 } from 'vault/lib/console-helpers';
 
 const { inject, computed } = Ember;
 
 export default Ember.Component.extend({
-  classNames: 'console-ui-panel-scoller',
+  classNames: 'console-ui-panel-scroller',
   classNameBindings: ['isFullscreen:fullscreen'],
   isFullscreen: false,
   console: inject.service(),
@@ -25,21 +26,11 @@ export default Ember.Component.extend({
   executeCommand(command, shouldThrow = false) {
     let service = this.get('console');
     let serviceArgs;
-    if (command === 'clearall') {
-      this.logAndOutput(command);
-      service.clearLog(true);
+    
+    if(executeUICommand(command, (args) => this.logAndOutput(args), (args) => service.clearLog(args), () => this.toggleProperty('isFullscreen'))){
       return;
     }
-    if (command === 'clear') {
-      this.logAndOutput(command);
-      service.clearLog();
-      return;
-    }
-    if (command === 'fullscreen') {
-      this.toggleProperty('isFullscreen');
-      this.logAndOutput(command);
-      return;
-    }
+
     // parse to verify it's valid
     try {
       serviceArgs = parseCommand(command, shouldThrow);

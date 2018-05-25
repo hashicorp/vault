@@ -2,6 +2,7 @@ import keys from 'vault/lib/keycodes';
 import argTokenizer from 'yargs-parser-tokenizer';
 
 const supportedCommands = ['read', 'write', 'list', 'delete'];
+const uiCommands = ['clearall', 'clear', 'fullscreen'];
 
 export function extractDataAndFlags(data, flags) {
   return data.concat(flags).reduce((accumulator, val) => {
@@ -26,6 +27,26 @@ export function extractDataAndFlags(data, flags) {
 
     return accumulator;
   }, { data: {}, flags: {} });
+}
+
+export function executeUICommand(command, logAndOutput, clearLog, toggleFullscreen){
+  const isUICommand = uiCommands.includes(command);
+  if(isUICommand){
+    logAndOutput(command);
+  }
+  switch(command){
+    case 'clearall':
+      clearLog(true);
+      break;
+    case 'clear':
+      clearLog();
+      break;
+    case 'fullscreen':
+      toggleFullscreen();
+      break;
+  }
+
+  return isUICommand;
 }
 
 export function parseCommand(command, shouldThrow) {
@@ -127,6 +148,7 @@ export function logFromError(error, vaultPath, method) {
 export function shiftCommandIndex(keyCode, history, index) {
   let newInputValue;
   let commandHistoryLength = history.length;
+
   if (!commandHistoryLength) { return []; }
 
   if (keyCode === keys.UP) {
