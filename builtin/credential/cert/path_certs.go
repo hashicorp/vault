@@ -187,9 +187,9 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 			"period":               cert.Period / time.Second,
 			"allowed_names":        cert.AllowedNames,
 			"allowed_common_names": cert.AllowedCommonNames,
-			"allowed_dns_sans":     cert.AllowedDNSSans,
-			"allowed_email_sans":   cert.AllowedEmailSans,
-			"allowed_uri_sans":     cert.AllowedURISans,
+			"allowed_dns_sans":     cert.AllowedDNSSANs,
+			"allowed_email_sans":   cert.AllowedEmailSANs,
+			"allowed_uri_sans":     cert.AllowedURISANs,
 			"required_extensions":  cert.RequiredExtensions,
 		},
 	}, nil
@@ -202,9 +202,9 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	policies := policyutil.ParsePolicies(d.Get("policies"))
 	allowedNames := d.Get("allowed_names").([]string)
 	allowedCommonNames := d.Get("allowed_common_names").([]string)
-	allowedDNSSans := d.Get("allowed_dns_sans").([]string)
-	allowedEmailSans := d.Get("allowed_email_sans").([]string)
-	allowedURISans := d.Get("allowed_uri_sans").([]string)
+	allowedDNSSANs := d.Get("allowed_dns_sans").([]string)
+	allowedEmailSANs := d.Get("allowed_email_sans").([]string)
+	allowedURISANs := d.Get("allowed_uri_sans").([]string)
 	requiredExtensions := d.Get("required_extensions").([]string)
 
 	var resp logical.Response
@@ -284,9 +284,9 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 		Policies:           policies,
 		AllowedNames:       allowedNames,
 		AllowedCommonNames: allowedCommonNames,
-		AllowedDNSSans:     allowedDNSSans,
-		AllowedEmailSans:   allowedEmailSans,
-		AllowedURISans:     allowedURISans,
+		AllowedDNSSANs:     allowedDNSSANs,
+		AllowedEmailSANs:   allowedEmailSANs,
+		AllowedURISANs:     allowedURISANs,
 		RequiredExtensions: requiredExtensions,
 		TTL:                ttl,
 		MaxTTL:             maxTTL,
@@ -320,9 +320,9 @@ type CertEntry struct {
 	Period             time.Duration
 	AllowedNames       []string
 	AllowedCommonNames []string
-	AllowedDNSSans     []string
-	AllowedEmailSans   []string
-	AllowedURISans     []string
+	AllowedDNSSANs     []string
+	AllowedEmailSANs   []string
+	AllowedURISANs     []string
 	RequiredExtensions []string
 	BoundCIDRs         []*sockaddr.SockAddrMarshaler
 }

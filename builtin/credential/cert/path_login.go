@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -256,9 +255,9 @@ func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain 
 	return !b.checkForChainInCRLs(trustedChain) &&
 		b.matchesNames(clientCert, config) &&
 		b.matchesCommonName(clientCert, config) &&
-		b.matchesDNSSans(clientCert, config) &&
-		b.matchesEmailSans(clientCert, config) &&
-		b.matchesURISans(clientCert, config) &&
+		b.matchesDNSSANs(clientCert, config) &&
+		b.matchesEmailSANs(clientCert, config) &&
+		b.matchesURISANs(clientCert, config) &&
 		b.matchesCertificateExtensions(clientCert, config)
 }
 
@@ -308,15 +307,15 @@ func (b *backend) matchesCommonName(clientCert *x509.Certificate, config *Parsed
 	return false
 }
 
-// matchesDNSSans verifies that the certificate matches at least one configured
+// matchesDNSSANs verifies that the certificate matches at least one configured
 // allowed dns entry in the subject alternate name extension
-func (b *backend) matchesDNSSans(clientCert *x509.Certificate, config *ParsedCert) bool {
+func (b *backend) matchesDNSSANs(clientCert *x509.Certificate, config *ParsedCert) bool {
 	// Default behavior (no names) is to allow all names
-	if len(config.Entry.AllowedDNSSans) == 0 {
+	if len(config.Entry.AllowedDNSSANs) == 0 {
 		return true
 	}
 	// At least one pattern must match at least one name if any patterns are specified
-	for _, allowedDNS := range config.Entry.AllowedDNSSans {
+	for _, allowedDNS := range config.Entry.AllowedDNSSANs {
 		for _, name := range clientCert.DNSNames {
 			if glob.Glob(allowedDNS, name) {
 				return true
@@ -327,15 +326,15 @@ func (b *backend) matchesDNSSans(clientCert *x509.Certificate, config *ParsedCer
 	return false
 }
 
-// matchesEmailSans verifies that the certificate matches at least one configured
+// matchesEmailSANs verifies that the certificate matches at least one configured
 // allowed email in the subject alternate name extension
-func (b *backend) matchesEmailSans(clientCert *x509.Certificate, config *ParsedCert) bool {
+func (b *backend) matchesEmailSANs(clientCert *x509.Certificate, config *ParsedCert) bool {
 	// Default behavior (no names) is to allow all names
-	if len(config.Entry.AllowedEmailSans) == 0 {
+	if len(config.Entry.AllowedEmailSANs) == 0 {
 		return true
 	}
 	// At least one pattern must match at least one name if any patterns are specified
-	for _, allowedEmail := range config.Entry.AllowedEmailSans {
+	for _, allowedEmail := range config.Entry.AllowedEmailSANs {
 		for _, email := range clientCert.EmailAddresses {
 			if glob.Glob(allowedEmail, email) {
 				return true
@@ -346,15 +345,15 @@ func (b *backend) matchesEmailSans(clientCert *x509.Certificate, config *ParsedC
 	return false
 }
 
-// matchesURISans verifies that the certificate matches at least one configured
+// matchesURISANs verifies that the certificate matches at least one configured
 // allowed uri in the subject alternate name extension
-func (b *backend) matchesURISans(clientCert *x509.Certificate, config *ParsedCert) bool {
+func (b *backend) matchesURISANs(clientCert *x509.Certificate, config *ParsedCert) bool {
 	// Default behavior (no names) is to allow all names
-	if len(config.Entry.AllowedURISans) == 0 {
+	if len(config.Entry.AllowedURISANs) == 0 {
 		return true
 	}
 	// At least one pattern must match at least one name if any patterns are specified
-	for _, allowedURI := range config.Entry.AllowedURISans {
+	for _, allowedURI := range config.Entry.AllowedURISANs {
 		for _, name := range clientCert.URIs {
 			if glob.Glob(allowedURI, name.String()) {
 				return true
