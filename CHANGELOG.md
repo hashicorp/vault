@@ -25,7 +25,7 @@ IMPROVEMENTS:
    `allowed_uri_sans` [GH-4231]
  * cli: `vault login` now supports a `-no-print` flag to suppress printing
    token information but still allow storing into the token helper [GH-4454]
- * core/pkcs11 (enterprise): Add support for CKM_AES_CBS_PAD, CKM_RSA_PKCS, and 
+ * core/pkcs11 (enterprise): Add support for CKM_AES_CBC_PAD, CKM_RSA_PKCS, and 
    CKM_RSA_PKCS_OAEP mechanisms
  * core/pkcs11 (enterprise): HSM slots can now be selected by token label instead
    of just slot number
