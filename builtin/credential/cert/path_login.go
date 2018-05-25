@@ -103,6 +103,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 				Renewable: true,
 				TTL:       matched.Entry.TTL,
 				MaxTTL:    matched.Entry.MaxTTL,
+				Period:    matched.Entry.Period,
 			},
 			Alias: &logical.Alias{
 				Name: clientCerts[0].Subject.CommonName,
@@ -253,6 +254,10 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
 	return !b.checkForChainInCRLs(trustedChain) &&
 		b.matchesNames(clientCert, config) &&
+		b.matchesCommonName(clientCert, config) &&
+		b.matchesDNSSANs(clientCert, config) &&
+		b.matchesEmailSANs(clientCert, config) &&
+		b.matchesURISANs(clientCert, config) &&
 		b.matchesCertificateExtensions(clientCert, config)
 }
 
@@ -280,7 +285,82 @@ func (b *backend) matchesNames(clientCert *x509.Certificate, config *ParsedCert)
 				return true
 			}
 		}
+
 	}
+	return false
+}
+
+// matchesCommonName verifies that the certificate matches at least one configured
+// allowed common name
+func (b *backend) matchesCommonName(clientCert *x509.Certificate, config *ParsedCert) bool {
+	// Default behavior (no names) is to allow all names
+	if len(config.Entry.AllowedCommonNames) == 0 {
+		return true
+	}
+	// At least one pattern must match at least one name if any patterns are specified
+	for _, allowedCommonName := range config.Entry.AllowedCommonNames {
+		if glob.Glob(allowedCommonName, clientCert.Subject.CommonName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// matchesDNSSANs verifies that the certificate matches at least one configured
+// allowed dns entry in the subject alternate name extension
+func (b *backend) matchesDNSSANs(clientCert *x509.Certificate, config *ParsedCert) bool {
+	// Default behavior (no names) is to allow all names
+	if len(config.Entry.AllowedDNSSANs) == 0 {
+		return true
+	}
+	// At least one pattern must match at least one name if any patterns are specified
+	for _, allowedDNS := range config.Entry.AllowedDNSSANs {
+		for _, name := range clientCert.DNSNames {
+			if glob.Glob(allowedDNS, name) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// matchesEmailSANs verifies that the certificate matches at least one configured
+// allowed email in the subject alternate name extension
+func (b *backend) matchesEmailSANs(clientCert *x509.Certificate, config *ParsedCert) bool {
+	// Default behavior (no names) is to allow all names
+	if len(config.Entry.AllowedEmailSANs) == 0 {
+		return true
+	}
+	// At least one pattern must match at least one name if any patterns are specified
+	for _, allowedEmail := range config.Entry.AllowedEmailSANs {
+		for _, email := range clientCert.EmailAddresses {
+			if glob.Glob(allowedEmail, email) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// matchesURISANs verifies that the certificate matches at least one configured
+// allowed uri in the subject alternate name extension
+func (b *backend) matchesURISANs(clientCert *x509.Certificate, config *ParsedCert) bool {
+	// Default behavior (no names) is to allow all names
+	if len(config.Entry.AllowedURISANs) == 0 {
+		return true
+	}
+	// At least one pattern must match at least one name if any patterns are specified
+	for _, allowedURI := range config.Entry.AllowedURISANs {
+		for _, name := range clientCert.URIs {
+			if glob.Glob(allowedURI, name.String()) {
+				return true
+			}
+		}
+	}
+
 	return false
 }
 
