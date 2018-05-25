@@ -1321,6 +1321,24 @@
 			"revisionTime": "2018-04-03T19:54:48Z"
 		},
 		{
+			"checksumSHA1": "B8KN0npDVBBnSDoL8htTSBpFgZ0=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin",
+			"revision": "321ea9aa40719a982e9ad39fecd911a212d0d7c0",
+			"revisionTime": "2018-05-24T23:02:05Z"
+		},
+		{
+			"checksumSHA1": "qHGmA9y3hKMBSLRWLifD37EaHP4=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/client",
+			"revision": "321ea9aa40719a982e9ad39fecd911a212d0d7c0",
+			"revisionTime": "2018-05-24T23:02:05Z"
+		},
+		{
+			"checksumSHA1": "/wFdQSWF1zexkefiI7j+LrREMHk=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/util",
+			"revision": "321ea9aa40719a982e9ad39fecd911a212d0d7c0",
+			"revisionTime": "2018-05-24T23:02:05Z"
+		},
+		{
 			"checksumSHA1": "0BXf2h4FJSUTdVK3m75a1KXnYVA=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin",
 			"revision": "18d7e59878f9f9c264d52b4b894e4f445ce8cbcc",
