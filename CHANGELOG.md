@@ -21,13 +21,14 @@ IMPROVEMENTS:
 
  * api: Close renewer's doneCh when the renewer is stopped, so that programs
    expecting a final value through doneCh behave correctly [GH-4472]
+ * auth/cert: Break out `allowed_names` into component parts and add
+   `allowed_uri_sans` [GH-4231]
  * cli: `vault login` now supports a `-no-print` flag to suppress printing
    token information but still allow storing into the token helper [GH-4454]
- * core/pkcs11 (enterprise): Add support for CKM_AES_CBS_PAD, CKM_RSA_PKCS, and 
+ * core/pkcs11 (enterprise): Add support for CKM_AES_CBC_PAD, CKM_RSA_PKCS, and 
    CKM_RSA_PKCS_OAEP mechanisms
  * core/pkcs11 (enterprise): HSM slots can now be selected by token label instead
    of just slot number
- * core/seal (enterprise): 
  * expiration: Allow revoke-prefix and revoke-force to work on single leases as
    well as prefixes [GH-4450]
 
@@ -52,6 +53,11 @@ BUG FIXES:
    [GH-4570]
  * ui: Fix HMAC algorithm in transit [GH-4604]
  * ui: Fix unwrap of auth responses via the UI's unwrap tool [GH-4611]
+ * replication: Fix error while running plugins on a newly created replication
+   secondary
+ * replication: Fix issue with token store lookups after a secondary's mount table
+   is invalidated.
+ * replication: Improve startup time when a large merkle index is in use.
 
 ## 0.10.1/0.9.7 (April 25th, 2018)
 

@@ -29,16 +29,38 @@ Sets a CA cert and associated parameters in a role name.
 
 - `name` `(string: <required>)` - The name of the certificate role.
 - `certificate` `(string: <required>)` - The PEM-format CA certificate.
-- `allowed_names` `(string: "")` - Constrain the Common and Alternative Names in
-  the client certificate with a [globbed pattern]
+- `allowed_names` `(string: "")` - DEPRECATED: Please use the individual
+  `allowed_X_sans` parameters instead. Constrain the Common and Alternative
+  Names in the client certificate with a [globbed pattern]
   (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
   a comma-separated list of patterns. Authentication requires at least one Name
   matching at least one pattern. If not set, defaults to allowing all names.
-- `required_extensions` `(string: "" or array:[])` - Require specific Custom
-   Extension OIDs to exist and match the pattern. Value is a comma separated
-   string or array of `oid:value`. Expects the extension value to be some type
-   of ASN1 encoded string. All conditions _must_ be met. Supports globbing on
-   `value`.
+- `allowed_common_names` `(string: "" or array: [])` - Constrain the Common
+  Names in the client certificate with a [globbed pattern]
+  (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
+  a comma-separated list of patterns. Authentication requires at least one Name
+  matching at least one pattern. If not set, defaults to allowing all names.
+- `allowed_dns_sans` `(string: "" or array: [])` - Constrain the Alternative
+  Names in the client certificate with a [globbed pattern]
+  (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
+  a comma-separated list of patterns. Authentication requires at least one DNS
+  matching at least one pattern. If not set, defaults to allowing all dns.
+- `allowed_email_sans` `(string: "" or array: [])` - Constrain the Alternative
+  Names in the client certificate with a [globbed pattern]
+  (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
+  a comma-separated list of patterns. Authentication requires at least one
+  Email matching at least one pattern. If not set, defaults to allowing all
+  emails.
+- `allowed_uri_sans` `(string: "" or array: [])` - Constrain the Alternative
+  Names in the client certificate with a [globbed pattern]
+  (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
+  a comma-separated list of URI patterns. Authentication requires at least one
+  URI matching at least one pattern. If not set, defaults to allowing all URIs.
+- `required_extensions` `(string: "" or array: [])` - Require specific Custom
+  Extension OIDs to exist and match the pattern. Value is a comma separated
+  string or array of `oid:value`. Expects the extension value to be some type
+  of ASN1 encoded string. All conditions _must_ be met. Supports globbing on
+  `value`.
 - `policies` `(string: "")` - A comma-separated list of policies to set on
   tokens issued when authenticating against this CA certificate.
 - `display_name` `(string: "")` - The `display_name` to set on tokens issued
