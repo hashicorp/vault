@@ -124,7 +124,9 @@
 }
 
 .panel-open {
-  transition: transform $speed ease-in;
+  .navbar, .navbar-sections{
+    transition: transform $speed ease-in;
+  }
 }
 
 .panel-open.panel-fullscreen {
@@ -133,7 +135,12 @@
   }
 }
 
+header {
+  background: linear-gradient(to right, #191A1C, #1B212D);
+}
+
 header .navbar,
 header .navbar-sections {
   z-index: 200;
+  transform: translate3d(0, 0, 0);
 }
