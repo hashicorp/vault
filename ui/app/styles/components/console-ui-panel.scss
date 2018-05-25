@@ -117,8 +117,10 @@
 }
 
 .panel-open .console-ui-panel-scroller  {
+  box-shadow: $box-shadow-highest;
   transform: translate3d(0, 0, 0);
 }
+
 .panel-open .console-ui-panel-scroller.fullscreen  {
   bottom: 0;
   top: 0;
