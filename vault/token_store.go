@@ -1285,41 +1285,13 @@ func (ts *TokenStore) revokeObfuscatedToken(ctx context.Context, obfuscatedID st
 		// an explicit call to orphan the child tokens (the delete occurs at the
 		// leaf node and uses parent prefix, not entry.Parent, to build the tree
 		// for traversal).
-		idHMAC, err := ts.hmac(ctx, entry.ID)
-		if err != nil {
-			return errwrap.Wrapf("failed to HMAC token ID: {{err}}", err)
-		}
-		idHMACParentPath := parentPrefix + idHMAC + "/"
-
-		children, err := ts.view.List(ctx, idHMACParentPath)
+		parentPath := parentPrefix + obfuscatedID + "/"
+		children, err := ts.view.List(ctx, parentPath)
 		if err != nil {
 			return errwrap.Wrapf("failed to scan for children using HMAC token ID: {{err}}", err)
 		}
 
-		allChildren := make(map[string]string)
 		for _, child := range children {
-			allChildren[idHMACParentPath] = child
-		}
-
-		if entry.Version < 2 {
-			// This is only here for backwards compatibility
-			saltedID, err := ts.SaltID(ctx, entry.ID)
-			if err != nil {
-				return errwrap.Wrapf("failed to hash token ID: {{err}}", err)
-			}
-			saltedIDParentPath := parentPrefix + saltedID + "/"
-
-			children, err = ts.view.List(ctx, saltedIDParentPath)
-			if err != nil {
-				return errwrap.Wrapf("failed to scan for children: {{err}}", err)
-			}
-
-			for _, child := range children {
-				allChildren[saltedIDParentPath] = child
-			}
-		}
-
-		for parentPath, child := range allChildren {
 			entry, err := ts.lookupObfuscatedToken(ctx, child, true)
 			if err != nil {
 				return errwrap.Wrapf("failed to get child token: {{err}}", err)
