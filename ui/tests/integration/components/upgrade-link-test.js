@@ -20,7 +20,7 @@ test('it renders with overlay', function(assert) {
     'contains overlay content'
   );
   assert.equal(
-    this.$('#modal-wormhole a[href^="http://hashicorp.com/products/vault/trial?source=vaultui"]').length,
+    this.$('#modal-wormhole a[href^="https://hashicorp.com/products/vault/trial?source=vaultui"]').length,
     1,
     'contains info link'
   );
