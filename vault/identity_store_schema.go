@@ -54,13 +54,6 @@ func aliasesTableSchema() *memdb.TableSchema {
 					Field: "CanonicalID",
 				},
 			},
-			"mount_type": &memdb.IndexSchema{
-				Name:   "mount_type",
-				Unique: false,
-				Indexer: &memdb.StringFieldIndex{
-					Field: "MountType",
-				},
-			},
 			"factors": &memdb.IndexSchema{
 				Name:   "factors",
 				Unique: true,
@@ -203,13 +196,6 @@ func groupAliasesTableSchema() *memdb.TableSchema {
 				Unique: false,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "CanonicalID",
-				},
-			},
-			"mount_type": &memdb.IndexSchema{
-				Name:   "mount_type",
-				Unique: false,
-				Indexer: &memdb.StringFieldIndex{
-					Field: "MountType",
 				},
 			},
 			"factors": &memdb.IndexSchema{
