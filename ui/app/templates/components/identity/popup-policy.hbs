@@ -15,7 +15,7 @@
         {{#confirm-action
           confirmButtonClasses="button is-primary"
           confirmButtonText="Remove"
-          buttonClasses="link"
+          buttonClasses="link is-destroy"
           onConfirmAction=(action "performTransaction" model policyName)
           confirmMessage=(concat "Are you sure you want to remove " policyName "?")
           showConfirm=(get this (concat "shouldDelete-" policyName))
