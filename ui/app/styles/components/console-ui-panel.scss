@@ -11,13 +11,14 @@
   will-change: transform, min-height;
   z-index: 199;
 }
+
 .console-ui-panel {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   padding: $size-8 $size-8 $size-4;
   min-height: 100%;
-  color: white;
+  color: $white;
   font-size: $body-size;
   font-weight: $font-weight-semibold;
   transition: justify-content $speed ease-in;
@@ -92,6 +93,7 @@
     right: 0;
     top: 0;
     transition: opacity $speed;
+    will-change: opacity;
   }
 
   &:hover {
@@ -131,11 +133,11 @@
 
 .panel-open.panel-fullscreen {
   .navbar, .navbar-sections{
-    transform: translate3d(0, -200px, 0);
+    transform: translate3d(0, -100px, 0);
   }
 }
 
-header {
+.page-container > header {
   background: linear-gradient(to right, #191A1C, #1B212D);
 }
 
@@ -143,4 +145,5 @@ header .navbar,
 header .navbar-sections {
   z-index: 200;
   transform: translate3d(0, 0, 0);
+  will-change: transform;
 }
