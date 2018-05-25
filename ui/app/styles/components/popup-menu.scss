@@ -11,7 +11,7 @@
   }
 
   &.is-wide > .box {
-    width: 200px;
+    width: 300px;
   }
 
   .confirm-action span .button {
@@ -21,20 +21,22 @@
   }
 
   .menu {
+    padding: $size-11 0;
+
     button.link,
     a {
-      color: $menu-item-color;
-      font-size: $size-7;
-      font-weight: $font-weight-semibold;
-      display: block;
-      padding: $size-9 $size-6;
+      background: transparent;
       box-shadow: none;
       border: none;
-      background: transparent;
+      color: $menu-item-color;
+      display: block;
       height: auto;
-      width: 100%;
+      font-size: $size-7;
+      font-weight: $font-weight-semibold;
+      padding: $size-9 $size-8;
       text-align: left;
       text-decoration: none;
+      width: 100%;
 
       &:hover {
         background-color: $menu-item-hover-background-color;
@@ -58,23 +60,57 @@
   }
 
   .menu-label {
-    background: $grey-lighter;
+    color: $grey-dark;
     font-size: $size-8;
+    font-weight: $font-weight-semibold;
     letter-spacing: 0;
     margin: 0;
-    padding: $size-10 calc(#{$size-6} + .1rem);
+    padding: $size-10 $size-8 $size-11;
     text-transform: none;
   }
 
-  .menu-list {
-    margin: 0.1rem;
+  .menu-content {
+    padding: $size-10 $size-8;
+  }
+
+  hr {
+    background-color: $grey-light;
+    margin: $size-11 0;
   }
 }
 
 .popup-menu-trigger {
-  min-width: auto;
+  height: 2rem;
+  min-width: 0;
+  padding: 0 $size-10;
 }
 
-.ember-basic-dropdown-content--left.popup-menu {
-  margin: 0px 0 0 -8px;
+.status-menu-content {
+  margin-top: 8px;
+}
+
+.ember-basic-dropdown-content {
+  &--left.popup-menu {
+    margin: 0px 0 0 -8px;
+  }
+
+  &--below {
+    &.ember-basic-dropdown--transitioning-in {
+      animation: drop-fade-above .15s;
+    }
+
+    &.ember-basic-dropdown--transitioning-out {
+      animation: drop-fade-above .15s reverse;
+    }
+  }
+
+  &--above {
+    &.ember-basic-dropdown--transitioning-in {
+      animation: drop-fade-below .15s;
+    }
+
+    &.ember-basic-dropdown--transitioning-out {
+      animation: drop-fade-below .15s reverse;
+    }
+  }
 }
