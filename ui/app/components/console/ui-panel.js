@@ -71,9 +71,6 @@ export default Ember.Component.extend({
   },
 
   actions: {
-    setValue(val) {
-      this.set('inputValue', val);
-    },
     toggleFullscreen() {
       this.toggleProperty('isFullscreen');
     },

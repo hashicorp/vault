@@ -8,7 +8,7 @@
   {{console/command-input
     isFullscreen=isFullscreen
     value=inputValue
-    onValueUpdate=(action 'setValue')
+    onValueUpdate=(action (mut inputValue))
     onFullscreen=(action 'toggleFullscreen')
     onExecuteCommand=(action 'executeCommand')
     onShiftCommand=(action 'shiftCommandIndex')

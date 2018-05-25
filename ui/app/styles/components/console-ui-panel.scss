@@ -4,7 +4,7 @@
   left: 0;
   min-height: 400px;
   overflow: auto;
-  position: absolute;
+  position: fixed;
   right: 0;
   transform: translate3d(0, -400px, 0);
   transition: min-height $speed ease-out, transform $speed ease-in;
@@ -64,8 +64,8 @@
   input {
     background-color: rgba($black, 0.5);
     border: 0;
-    caret-color: white;
-    color: white;
+    caret-color: $white;
+    color: $white;
     flex: 1;
     font-family: $family-monospace;
     font-size: $body-size;
@@ -121,7 +121,16 @@
   bottom: 0;
   top: 0;
   min-height: 100%;
-  z-index: 300;
+}
+
+.panel-open {
+  transition: transform $speed ease-in;
+}
+
+.panel-open.panel-fullscreen {
+  .navbar, .navbar-sections{
+    transform: translate3d(0, -200px, 0);
+  }
 }
 
 header .navbar,

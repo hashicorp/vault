@@ -15,8 +15,8 @@ export default Ember.Component.extend({
     this.element.scrollIntoView();
   },
   actions: {
-    handleKeyUp: function(event) {
-      var keyCode = event.keyCode;
+    handleKeyUp(event) {
+      const keyCode = event.keyCode;
       switch (keyCode) {
         case keys.ENTER:
           this.get('onExecuteCommand')(event.target.value);

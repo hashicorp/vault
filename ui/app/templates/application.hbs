@@ -1,6 +1,6 @@
 <div class="page-container">
   {{#if showNav}}
-  <header data-test-header-with-nav class="{{if consoleOpen 'panel-open'}}">
+  <header data-test-header-with-nav class="{{if consoleOpen 'panel-open'}} {{if consoleFullscreen ' panel-fullscreen'}}">
       <nav class="navbar has-dark-grey-gradient is-grouped-split">
         <div class="navbar-brand">
           {{#home-link class="navbar-item has-text-white has-current-color-fill"}}
@@ -66,7 +66,7 @@
           </a>
         </li>
       </ul>
-      {{console/ui-panel}}
+      {{console/ui-panel isFullscreen=consoleFullscreen}}
     </header>
   {{/if}}
   <div class="global-flash">
