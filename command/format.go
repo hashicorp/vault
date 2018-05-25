@@ -69,20 +69,18 @@ var Formatters = map[string]Formatter{
 	"yml":   YamlFormatter{},
 }
 
-func format() string {
-	format := os.Getenv(EnvVaultFormat)
-	if format == "" {
-		format = "table"
-	}
-	return format
-}
-
 func Format(ui cli.Ui) string {
 	switch ui.(type) {
 	case *VaultUI:
 		return ui.(*VaultUI).format
 	}
-	return format()
+
+	format := os.Getenv(EnvVaultFormat)
+	if format == "" {
+		format = "table"
+	}
+
+	return format
 }
 
 // An output formatter for json output of an object

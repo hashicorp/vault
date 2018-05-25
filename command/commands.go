@@ -216,6 +216,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 			UI:          ui,
 			tokenHelper: runOpts.TokenHelper,
 			flagAddress: runOpts.Address,
+			client:      runOpts.Client,
 		}
 	}
 
