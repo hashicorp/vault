@@ -2,13 +2,14 @@
   background: linear-gradient(to right, #191A1C, #1B212D);
   height: 0;
   left: 0;
-  min-height: 400px;
   overflow: auto;
-  position: fixed;
+  position: absolute;
+  min-height: 0;
   right: 0;
   transform: translate3d(0, -400px, 0);
   transition: min-height $speed ease-out, transform $speed ease-in;
   will-change: transform, min-height;
+  -webkit-overflow-scrolling: touch;
   z-index: 199;
 }
 
@@ -69,7 +70,7 @@
     color: $white;
     flex: 1;
     font-family: $family-monospace;
-    font-size: $body-size;
+    font-size: 16px;
     font-weight: $font-weight-bold;
     margin-left: -$size-10;
     outline: none;
@@ -119,11 +120,13 @@
 .panel-open .console-ui-panel-scroller  {
   box-shadow: $box-shadow-highest;
   transform: translate3d(0, 0, 0);
+  min-height: 400px;
 }
 
 .panel-open .console-ui-panel-scroller.fullscreen  {
   bottom: 0;
   top: 0;
+  position: fixed;
   min-height: 100%;
 }
 
@@ -146,7 +149,6 @@
 header .navbar,
 header .navbar-sections {
   z-index: 200;
-  position: relative;
   transform: translate3d(0, 0, 0);
   will-change: transform;
 }
