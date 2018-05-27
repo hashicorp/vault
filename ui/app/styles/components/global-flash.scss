@@ -1,14 +1,7 @@
 .global-flash {
   position: fixed;
-  @include until($desktop) {
-    position: -webkit-sticky;
-    position: sticky;
-    top: 0;
-    bottom: auto;
-    margin: 0 auto;
-    width: 95%;
-  }
-  width: 450px;
+  max-width: 450px;
+  width: 95%;
   bottom: 0;
   left: 0;
   margin: 10px;
