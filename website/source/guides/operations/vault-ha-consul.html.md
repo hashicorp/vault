@@ -566,7 +566,7 @@ instance. Here is an example `systemd` unit file:
 
     [Service]
     User=vault
-    Group=vault_
+    Group=vault
     PIDFile=/var/run/vault/vault.pid
     ExecStart=/usr/local/bin/vault server -config=/etc/vault/vault_server.hcl -log-level=debug
     ExecReload=/bin/kill -HUP $MAINPID
