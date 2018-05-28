@@ -92,14 +92,14 @@ func (c *Core) RekeyThreshold(ctx context.Context, recovery bool) (int, logical.
 }
 
 // RekeyProgress is used to return the rekey progress (num shares).
-func (c *Core) RekeyProgress(recovery, verification bool) (int, logical.HTTPCodedError) {
+func (c *Core) RekeyProgress(recovery, verification bool) (bool, int, logical.HTTPCodedError) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return 0, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
+		return false, 0, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
-		return 0, logical.CodedError(http.StatusBadRequest, consts.ErrStandby.Error())
+		return false, 0, logical.CodedError(http.StatusBadRequest, consts.ErrStandby.Error())
 	}
 
 	c.rekeyLock.RLock()
@@ -112,10 +112,14 @@ func (c *Core) RekeyProgress(recovery, verification bool) (int, logical.HTTPCode
 		conf = c.barrierRekeyConfig
 	}
 
-	if verification {
-		return len(conf.VerificationProgress), nil
+	if conf == nil {
+		return false, 0, logical.CodedError(http.StatusBadRequest, "rekey operation not in progress")
 	}
-	return len(conf.RekeyProgress), nil
+
+	if verification {
+		return len(conf.VerificationKey) > 0, len(conf.VerificationProgress), nil
+	}
+	return true, len(conf.RekeyProgress), nil
 }
 
 // RekeyConfig is used to read the rekey configuration
@@ -755,6 +759,10 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 		return nil, logical.CodedError(http.StatusBadRequest, "no rekey in progress")
 	}
 
+	if len(c.barrierRekeyConfig.VerificationKey) == 0 {
+		return nil, logical.CodedError(http.StatusBadRequest, "no rekey verification in progress")
+	}
+
 	if nonce != config.VerificationNonce {
 		return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("incorrect nonce supplied; nonce for this verify operation is %q", config.VerificationNonce))
 	}
@@ -854,7 +862,7 @@ func (c *Core) RekeyCancel(recovery bool) logical.HTTPCodedError {
 	return nil
 }
 
-// RekeyVerifyCancel is used to start the verification process over
+// RekeyVerifyRestart is used to start the verification process over
 func (c *Core) RekeyVerifyRestart(recovery bool) logical.HTTPCodedError {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()

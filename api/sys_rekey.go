@@ -296,6 +296,7 @@ type RekeyRetrieveResponse struct {
 
 type RekeyVerificationStatusResponse struct {
 	Nonce    string `json:"nonce"`
+	Started  bool   `json:"started"`
 	T        int    `json:"t"`
 	N        int    `json:"n"`
 	Progress int    `json:"progress"`

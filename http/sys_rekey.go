@@ -72,7 +72,7 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 	}
 	if rekeyConf != nil {
 		// Get the progress
-		progress, err := core.RekeyProgress(recovery, false)
+		started, progress, err := core.RekeyProgress(recovery, false)
 		if err != nil {
 			respondError(w, err.Code(), err)
 			return
@@ -85,7 +85,7 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 		}
 
 		status.Nonce = rekeyConf.Nonce
-		status.Started = true
+		status.Started = started
 		status.T = rekeyConf.SecretThreshold
 		status.N = rekeyConf.SecretShares
 		status.Progress = progress
@@ -290,7 +290,7 @@ func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery boo
 	}
 
 	// Get the progress
-	progress, err := core.RekeyProgress(recovery, true)
+	started, progress, err := core.RekeyProgress(recovery, true)
 	if err != nil {
 		respondError(w, err.Code(), err)
 		return
@@ -298,6 +298,7 @@ func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery boo
 
 	// Format the status
 	status := &RekeyVerificationStatusResponse{
+		Started:  started,
 		Nonce:    rekeyConf.VerificationNonce,
 		T:        rekeyConf.SecretThreshold,
 		N:        rekeyConf.SecretShares,
@@ -410,6 +411,7 @@ type RekeyVerificationUpdateRequest struct {
 
 type RekeyVerificationStatusResponse struct {
 	Nonce    string `json:"nonce"`
+	Started  bool   `json:"started"`
 	T        int    `json:"t"`
 	N        int    `json:"n"`
 	Progress int    `json:"progress"`
