@@ -671,8 +671,9 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// Client API for Database service
-
+// DatabaseClient is the client API for Database service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type DatabaseClient interface {
 	Type(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TypeResponse, error)
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
@@ -694,7 +695,7 @@ func NewDatabaseClient(cc *grpc.ClientConn) DatabaseClient {
 
 func (c *databaseClient) Type(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TypeResponse, error) {
 	out := new(TypeResponse)
-	err := grpc.Invoke(ctx, "/dbplugin.Database/Type", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/dbplugin.Database/Type", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -703,7 +704,7 @@ func (c *databaseClient) Type(ctx context.Context, in *Empty, opts ...grpc.CallO
 
 func (c *databaseClient) CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error) {
 	out := new(CreateUserResponse)
-	err := grpc.Invoke(ctx, "/dbplugin.Database/CreateUser", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/dbplugin.Database/CreateUser", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -712,7 +713,7 @@ func (c *databaseClient) CreateUser(ctx context.Context, in *CreateUserRequest, 
 
 func (c *databaseClient) RenewUser(ctx context.Context, in *RenewUserRequest, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
-	err := grpc.Invoke(ctx, "/dbplugin.Database/RenewUser", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/dbplugin.Database/RenewUser", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -721,7 +722,7 @@ func (c *databaseClient) RenewUser(ctx context.Context, in *RenewUserRequest, op
 
 func (c *databaseClient) RevokeUser(ctx context.Context, in *RevokeUserRequest, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
-	err := grpc.Invoke(ctx, "/dbplugin.Database/RevokeUser", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/dbplugin.Database/RevokeUser", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -730,7 +731,7 @@ func (c *databaseClient) RevokeUser(ctx context.Context, in *RevokeUserRequest, 
 
 func (c *databaseClient) RotateRootCredentials(ctx context.Context, in *RotateRootCredentialsRequest, opts ...grpc.CallOption) (*RotateRootCredentialsResponse, error) {
 	out := new(RotateRootCredentialsResponse)
-	err := grpc.Invoke(ctx, "/dbplugin.Database/RotateRootCredentials", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/dbplugin.Database/RotateRootCredentials", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -739,7 +740,7 @@ func (c *databaseClient) RotateRootCredentials(ctx context.Context, in *RotateRo
 
 func (c *databaseClient) Init(ctx context.Context, in *InitRequest, opts ...grpc.CallOption) (*InitResponse, error) {
 	out := new(InitResponse)
-	err := grpc.Invoke(ctx, "/dbplugin.Database/Init", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/dbplugin.Database/Init", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -748,7 +749,7 @@ func (c *databaseClient) Init(ctx context.Context, in *InitRequest, opts ...grpc
 
 func (c *databaseClient) Close(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
-	err := grpc.Invoke(ctx, "/dbplugin.Database/Close", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/dbplugin.Database/Close", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -758,15 +759,14 @@ func (c *databaseClient) Close(ctx context.Context, in *Empty, opts ...grpc.Call
 // Deprecated: Do not use.
 func (c *databaseClient) Initialize(ctx context.Context, in *InitializeRequest, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
-	err := grpc.Invoke(ctx, "/dbplugin.Database/Initialize", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/dbplugin.Database/Initialize", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// Server API for Database service
-
+// DatabaseServer is the server API for Database service.
 type DatabaseServer interface {
 	Type(context.Context, *Empty) (*TypeResponse, error)
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
