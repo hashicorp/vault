@@ -1321,6 +1321,12 @@
 			"revisionTime": "2018-04-03T19:54:48Z"
 		},
 		{
+			"checksumSHA1": "9XyQmuPPBiP/DqKrv93/J0qlums=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-ad",
+			"revision": "18300aa1c7e4c3433afe92c74b53278f617d19bf",
+			"revisionTime": "2018-05-29T21:38:19Z"
+		},
+		{
 			"checksumSHA1": "B8KN0npDVBBnSDoL8htTSBpFgZ0=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin",
 			"revision": "321ea9aa40719a982e9ad39fecd911a212d0d7c0",
