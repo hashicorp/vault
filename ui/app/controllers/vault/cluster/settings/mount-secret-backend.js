@@ -7,22 +7,23 @@ const { computed } = Ember;
 
 export default Ember.Controller.extend({
   mountTypes: [
+    { label: 'Active Directory', value: 'ad' },
     { label: 'AWS', value: 'aws' },
-    { label: 'Cassandra', value: 'cassandra', deprecated: true },
     { label: 'Consul', value: 'consul' },
     { label: 'Databases', value: 'database' },
     { label: 'Google Cloud', value: 'gcp' },
     { label: 'KV', value: 'kv' },
-    { label: 'MongoDB', value: 'mongodb', deprecated: true },
-    { label: 'MSSQL', value: 'mssql', deprecated: true },
-    { label: 'MySQL', value: 'mysql', deprecated: true },
     { label: 'Nomad', value: 'nomad' },
     { label: 'PKI', value: 'pki' },
-    { label: 'PostgreSQL', value: 'postgresql', deprecated: true },
     { label: 'RabbitMQ', value: 'rabbitmq' },
     { label: 'SSH', value: 'ssh' },
     { label: 'Transit', value: 'transit' },
     { label: 'TOTP', value: 'totp' },
+    { label: 'Cassandra', value: 'cassandra', deprecated: true },
+    { label: 'MongoDB', value: 'mongodb', deprecated: true },
+    { label: 'MSSQL', value: 'mssql', deprecated: true },
+    { label: 'MySQL', value: 'mysql', deprecated: true },
+    { label: 'PostgreSQL', value: 'postgresql', deprecated: true },
   ],
 
   selectedType: null,
@@ -30,7 +31,6 @@ export default Ember.Controller.extend({
   description: null,
   default_lease_ttl: null,
   max_lease_ttl: null,
-  force_no_cache: null,
   showConfig: false,
   local: false,
   sealWrap: false,
@@ -50,7 +50,6 @@ export default Ember.Controller.extend({
       description: null,
       default_lease_ttl: null,
       max_lease_ttl: null,
-      force_no_cache: null,
       local: false,
       showConfig: false,
       sealWrap: false,
@@ -82,7 +81,6 @@ export default Ember.Controller.extend({
         selectedType: type,
         description,
         default_lease_ttl,
-        force_no_cache,
         local,
         max_lease_ttl,
         sealWrap,
@@ -92,7 +90,6 @@ export default Ember.Controller.extend({
         'selectedType',
         'description',
         'default_lease_ttl',
-        'force_no_cache',
         'local',
         'max_lease_ttl',
         'sealWrap',
@@ -112,9 +109,8 @@ export default Ember.Controller.extend({
 
       if (this.get('showConfig')) {
         attrs.config = {
-          default_lease_ttl,
-          max_lease_ttl,
-          force_no_cache,
+          defaultLeaseTtl: default_lease_ttl,
+          maxLeaseTtl: max_lease_ttl,
         };
       }
 

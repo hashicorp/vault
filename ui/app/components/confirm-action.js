@@ -16,6 +16,7 @@ export default Ember.Component.extend({
         class={{buttonClasses}}
         type="button"
         disabled={{disabled}}
+        data-test-confirm-action-trigger=true
         {{action 'toggleConfirm'}}
       >
         {{yield}}

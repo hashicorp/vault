@@ -32,7 +32,7 @@ export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
   model(params) {
     const id = this.getClusterId(params);
 
-      return this.get('store').findRecord('cluster', id);
+    return this.get('store').findRecord('cluster', id);
   },
 
   stopPoll: Ember.on('deactivate', function() {

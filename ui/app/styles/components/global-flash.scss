@@ -1,21 +1,14 @@
 .global-flash {
   position: fixed;
-  @include until($desktop) {
-    position: -webkit-sticky;
-    position: sticky;
-    top: 0;
-    bottom: auto;
-    margin: 0 auto;
-    width: 95%;
-  }
-  width: 450px;
+  max-width: 450px;
+  width: 95%;
   bottom: 0;
   left: 0;
   margin: 10px;
   z-index: 1;
 
   .notification {
-    box-shadow: 0 0 25px rgba($black, 0.2);
+    box-shadow: $box-shadow-high;
     margin: 20px;
     @include until($desktop) {
       margin: 1rem 0;

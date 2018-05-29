@@ -55,7 +55,8 @@
   }
 
   .menu-label {
-    color: $grey-light;
+    color: $grey;
+    font-weight: $font-weight-semibold;
     font-size: $size-small;
     line-height: 1;
     margin-bottom: $size-8;
@@ -72,13 +73,7 @@
       transition: 250ms border-width;
 
       &.is-active {
-        color: $blue;
-        background-color: $dark-white;
         border-right: 4px solid $blue;
-      }
-
-      &:hover {
-        background-color: $dark-white;
       }
     }
   }

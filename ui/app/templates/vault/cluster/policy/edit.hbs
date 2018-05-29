@@ -10,10 +10,8 @@
       <h1 class="title is-3">
         {{model.id}}
         {{#if model.enforcementLevel}}
-          <span class="tag is-medium is-inverted is-outlined" aria-label="Enforcement level: {{model.enforcementLevel}}">
-            <code>
-              {{model.enforcementLevel}}
-            </code>
+          <span class="tag is-medium" aria-label="Enforcement level: {{model.enforcementLevel}}">
+            {{model.enforcementLevel}}
           </span>
         {{/if}}
       </h1>
@@ -92,7 +90,7 @@
       </div>
       {{#if (and (not-eq model.id "default") capabilities.canDelete)}}
         {{#confirm-action
-          buttonClasses="button is-link is-outlined is-inverted"
+          buttonClasses="button is-ghost"
           onConfirmAction=(action "deletePolicy" model)
           confirmMessage=(concat "Are you sure you want to delete " model.id "?")
           data-test-policy-delete=true

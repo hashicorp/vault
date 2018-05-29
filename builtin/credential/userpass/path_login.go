@@ -3,9 +3,11 @@ package userpass
 import (
 	"context"
 	"crypto/subtle"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -69,6 +71,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		return logical.ErrorResponse("invalid username or password"), nil
 	}
 
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.BoundCIDRs) {
+		return logical.ErrorResponse("login request originated from invalid CIDR"), nil
+	}
+
 	// Check for a password match. Check for a hash collision for Vault 0.2+,
 	// but handle the older legacy passwords with a constant time comparison.
 	passwordBytes := []byte(password)
@@ -97,6 +104,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 			Alias: &logical.Alias{
 				Name: username,
 			},
+			BoundCIDRs: user.BoundCIDRs,
 		},
 	}, nil
 }
@@ -116,9 +124,15 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.BoundCIDRs) {
+		return nil, errors.New("renewal request originated from invalid CIDR")
+	}
+
 	resp := &logical.Response{Auth: req.Auth}
 	resp.Auth.TTL = user.TTL
 	resp.Auth.MaxTTL = user.MaxTTL
+	resp.Auth.BoundCIDRs = user.BoundCIDRs
 	return resp, nil
 }
 

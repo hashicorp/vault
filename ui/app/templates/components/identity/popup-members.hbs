@@ -1,0 +1,21 @@
+{{#popup-menu name="member-edit-menu"}}
+  <nav class="menu">
+    <ul class="menu-list">
+      <li class="action">
+        {{#confirm-action
+          confirmButtonClasses="button is-primary"
+          confirmButtonText="Remove"
+          buttonClasses="link is-destroy"
+          onConfirmAction=(action "performTransaction" model groupArray memberId)
+          confirmMessage=(concat "Are you sure you want to remove " memberId "?")
+          showConfirm=(get this (concat "shouldDelete-" memberId))
+          class=(if (get this (concat "shouldDelete-" memberId)) "message is-block is-warning is-outline")
+          containerClasses="message-body is-block"
+          messageClasses="is-block"
+        }}
+          Remove
+        {{/confirm-action}}
+      </li>
+    </ul>
+  </nav>
+{{/popup-menu}}

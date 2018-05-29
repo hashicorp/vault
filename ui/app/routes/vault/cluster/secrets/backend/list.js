@@ -49,25 +49,25 @@ export default Ember.Route.extend({
     return Ember.RSVP.hash({
       secret,
       secrets: this.store
-      .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
-        id: secret,
-        backend,
-        responsePath: 'data.keys',
-        page: params.page,
-        pageFilter: params.pageFilter,
-        size: 100,
-      })
-      .then(model => {
-        this.set('has404', false);
-        return model;
-      })
-      .catch(err => {
-        if (backendModel && err.httpStatus === 404 && secret === '') {
-          return [];
-        } else {
-          throw err;
-        }
-      })
+        .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
+          id: secret,
+          backend,
+          responsePath: 'data.keys',
+          page: params.page,
+          pageFilter: params.pageFilter,
+          size: 100,
+        })
+        .then(model => {
+          this.set('has404', false);
+          return model;
+        })
+        .catch(err => {
+          if (backendModel && err.httpStatus === 404 && secret === '') {
+            return [];
+          } else {
+            throw err;
+          }
+        }),
     });
   },
 
@@ -158,6 +158,10 @@ export default Ember.Route.extend({
         this.store.clearAllDatasets();
       }
       return true;
+    },
+    reload() {
+      this.refresh();
+      this.store.clearAllDatasets();
     },
   },
 });

@@ -14,7 +14,7 @@
 }
 
 @include keyframes(drop-fade-below) {
-  0%   {
+  0% {
     opacity: 0;
     transform: translateY(-1rem);
   }
@@ -25,7 +25,7 @@
 }
 
 @include keyframes(drop-fade-above) {
-  0%   {
+  0% {
     opacity: 0;
     transform: translateY(1rem);
   }

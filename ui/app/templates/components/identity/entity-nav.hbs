@@ -7,12 +7,12 @@
     </div>
     <div class="level-right">
       {{#if (eq identityType "entity")}}
-        <a href="{{href-to 'vault.cluster.access.identity.merge'}}" class="button has-icon-right is-ghost is-compact" data-test-entity-merge-link=true>
+        <a href="{{href-to 'vault.cluster.access.identity.merge' (pluralize identityType)}}" class="button has-icon-right is-ghost is-compact" data-test-entity-merge-link=true>
           Merge {{pluralize identityType}}
           {{i-con glyph="chevron-right" size=11}}
         </a>
       {{/if}}
-      <a href="{{href-to 'vault.cluster.access.identity.create'}}" class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true>
+      <a href="{{href-to 'vault.cluster.access.identity.create' (pluralize identityType)}}" class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true>
         Create {{identityType}}
         {{i-con glyph="chevron-right" size=11}}
       </a>

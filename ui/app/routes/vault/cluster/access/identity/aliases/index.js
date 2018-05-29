@@ -27,10 +27,14 @@ export default Ember.Route.extend(ListRoute, {
   actions: {
     willTransition(transition) {
       window.scrollTo(0, 0);
-      if (transition.targetName !== this.routeName) {
+      if (!transition || transition.targetName !== this.routeName) {
         this.store.clearAllDatasets();
       }
       return true;
+    },
+    reload() {
+      this.store.clearAllDatasets();
+      this.refresh();
     },
   },
 });

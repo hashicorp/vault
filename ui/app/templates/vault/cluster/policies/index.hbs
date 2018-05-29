@@ -5,10 +5,8 @@
         <h1 class="title is-3">
           {{uppercase policyType}} Policies
           {{#unless (eq policyType "acl")}}
-            <span class="tag is-inverted is-outlined" aria-label="Enforcement level: {{model.enforcementLevel}}">
-              <code>
-               Sentinel
-              </code>
+            <span class="tag" aria-label="Enforcement level: {{model.enforcementLevel}}">
+              Sentinel
             </span>
           {{/unless}}
         </h1>
@@ -120,7 +118,7 @@
                         <li class="action">
                           {{#confirm-action
                             confirmButtonClasses="button is-primary"
-                            buttonClasses="link"
+                            buttonClasses="link is-destroy"
                             onConfirmAction=(action "deletePolicy" item)
                             confirmMessage=(concat "Are you sure you want to delete " item.id "?")
                             showConfirm=(get this (concat "shouldDelete-" item.id))

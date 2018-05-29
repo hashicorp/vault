@@ -42,10 +42,8 @@ key-value store.
 
 ```json
 {
-  "data": {
-	  "max_versions": 5,
-	  "cas_required": false
-	}
+  "max_versions": 5,
+  "cas_required": false
 }
 ```
 
@@ -410,10 +408,8 @@ have an ACL policy granting the `update` capability.
 
 ```json
 {
-  "data": {
-	  "max_versions": 5,
-	  "cas_required": false
-	}
+  "max_versions": 5,
+  "cas_required": false	
 }
 ```
 
