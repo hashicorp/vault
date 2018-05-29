@@ -92,7 +92,7 @@ bootstrap:
 	done
 
 update-plugins:
-	grep vault-plugin- vendor/vendor.json | cut -d '"' -f 4 | xargs govendor fetch
+	grep vault-plugin-secrets-ad vendor/vendor.json | cut -d '"' -f 4 | xargs govendor fetch
 
 static-assets:
 	@echo "--> Generating static assets"
