@@ -158,7 +158,7 @@ func (b *backend) generateAndReturnCreds(ctx context.Context, storage logical.St
 		return nil, errors.New("the config is currently unset")
 	}
 
-	newPassword, err := util.GeneratePassword(engineConf.PasswordConf.Length)
+	newPassword, err := util.GeneratePassword(engineConf.PasswordConf.Formatter, engineConf.PasswordConf.Length)
 	if err != nil {
 		return nil, err
 	}
