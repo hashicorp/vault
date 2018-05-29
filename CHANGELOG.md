@@ -64,6 +64,7 @@ BUG FIXES:
  * ui: Fix unwrap of auth responses via the UI's unwrap tool [GH-4611]
  * ui (enterprise): Fix parsing of version string that blocked some users from seeing
    enterprise-specific pages in the UI [GH-4547]
+ * ui: Fix incorrect capabilities path check when viewing policies [GH-4566]
  * replication: Fix error while running plugins on a newly created replication
    secondary
  * replication: Fix issue with token store lookups after a secondary's mount table
