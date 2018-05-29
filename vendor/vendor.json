@@ -1303,10 +1303,10 @@
 			"revisionTime": "2018-04-03T19:19:30Z"
 		},
 		{
-			"checksumSHA1": "klHF0u2D5rTw60ZcNufHHtO8nSk=",
+			"checksumSHA1": "CidzvD2Z5a68j+AfUatPOUlHZT4=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "c1f38c311636440ff37e1f655f9722d3d9c1c0cc",
-			"revisionTime": "2018-04-08T01:06:05Z"
+			"revision": "c6d50df183e9848729b204364e1436e85bf7fb26",
+			"revisionTime": "2018-05-29T23:55:28Z"
 		},
 		{
 			"checksumSHA1": "ffJQvzbQvmCG/PdaElGSfGnDgNM=",
