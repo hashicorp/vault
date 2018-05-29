@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/NYTimes/gziphandler"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
@@ -94,7 +95,7 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 	if core.UIEnabled() == true {
 		if uiBuiltIn {
-			mux.Handle("/ui/", http.StripPrefix("/ui/", handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
+			mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
 		} else {
 			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 		}
