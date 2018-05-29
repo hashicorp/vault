@@ -8,18 +8,23 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
- * Azure Key Vault Auto Unseal/Seal Wrap Support (Enterprise): Azure Key Vault
-   can now be used a support seal for Auto Unseal and Seal Wrapping.
+ * Rekey Verification: Rekey operations can now require verification. This
+   turns on a two-phase process where the existing key shares authorize
+   generating a new master key, and a threshold of the new, returned key shares
+   must be provided to verify that they have been successfully received in
+   order for the actual master key to be rotated.
  * Cert auth CIDR restrictions: When using the `cert` auth method you can now
    limit authentication to specific CIDRs; these will also be encoded in
    resultant tokens to limit their use.
  * Userpass auth CIDR restrictions: When using the `userpass` auth method you
    can now limit authentication to specific CIDRs; these will also be encoded
    in resultant tokens to limit their use.
- * Vault Browser CLI: The UI now supports usage of read/write/list/delete
+ * Vault UI Browser CLI: The UI now supports usage of read/write/list/delete
    commands in a CLI that can be accessed from the nav bar. Complex inputs such
    as JSON files are not currently supported. This surfaces features otherwise
    unsupported in Vault's UI.
+ * Azure Key Vault Auto Unseal/Seal Wrap Support (Enterprise): Azure Key Vault
+   can now be used a support seal for Auto Unseal and Seal Wrapping.
 
 IMPROVEMENTS:
 
