@@ -35,6 +35,9 @@ IMPROVEMENTS:
    of just slot number
  * expiration: Allow revoke-prefix and revoke-force to work on single leases as
    well as prefixes [GH-4450]
+ * identity: Return parent group info when reading a group [GH-4648]
+ * identity: Provide more contextual key information when listing entities,
+   groups, and aliases
  * ui: wrapping lookup now distplays the path [GH-4644]
  * ui: Identity interface now has more inline actions to make editing and adding
    aliases to an entity or group easier [GH-4502]
