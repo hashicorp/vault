@@ -41,12 +41,8 @@ func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, masterKeys [][]byte,
 	}
 
 	// Should be no progress
-	num, err := c.RekeyProgress(recovery)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if num != 0 {
-		t.Fatalf("bad: %d", num)
+	if _, _, err := c.RekeyProgress(recovery, false); err == nil {
+		t.Fatal("expected error from RekeyProgress")
 	}
 
 	// Should be no config
@@ -186,12 +182,8 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 	}
 
 	// Should be no progress
-	num, hErr := c.RekeyProgress(recovery)
-	if hErr != nil {
-		t.Fatalf("err: %v", hErr)
-	}
-	if num != 0 {
-		t.Fatalf("rekey progress error: %d", num)
+	if _, _, err := c.RekeyProgress(recovery, false); err == nil {
+		t.Fatal("expected error from RekeyProgress")
 	}
 
 	// Should be no config
@@ -275,12 +267,14 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		}
 
 		// Should be progress
-		num, err := c.RekeyProgress(recovery)
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		if (i == 2 && num != 0) || (i != 2 && num != i+1) {
-			t.Fatalf("bad: %d", num)
+		if i < 2 {
+			_, num, err := c.RekeyProgress(recovery, false)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if num != i+1 {
+				t.Fatalf("bad: %d", num)
+			}
 		}
 	}
 	if result == nil || len(result.SecretShares) != 1 {
