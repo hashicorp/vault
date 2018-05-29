@@ -690,6 +690,9 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 			out = append(out, fmt.Sprintf("New Shares | %d", status.N))
 			out = append(out, fmt.Sprintf("New Threshold | %d", status.T))
 			out = append(out, fmt.Sprintf("Verification Required | %t", status.VerificationRequired))
+			if status.VerificationNonce != "" {
+				out = append(out, fmt.Sprintf("Verification Nonce | %s", status.VerificationNonce))
+			}
 		}
 		if len(status.PGPFingerprints) > 0 {
 			out = append(out, fmt.Sprintf("PGP Fingerprints | %s", status.PGPFingerprints))
@@ -697,10 +700,10 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 		}
 	case *api.RekeyVerificationStatusResponse:
 		status := in.(*api.RekeyVerificationStatusResponse)
-		out = append(out, fmt.Sprintf("Nonce | %s", status.Nonce))
 		out = append(out, fmt.Sprintf("Started | %t", status.Started))
 		out = append(out, fmt.Sprintf("New Shares | %d", status.N))
 		out = append(out, fmt.Sprintf("New Threshold | %d", status.T))
+		out = append(out, fmt.Sprintf("Verification Nonce | %s", status.Nonce))
 		out = append(out, fmt.Sprintf("Verification Progress | %d/%d", status.Progress, status.T))
 	default:
 		c.UI.Error("Unknown status type")
