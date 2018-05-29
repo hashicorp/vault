@@ -24,7 +24,12 @@ The `config` endpoint configures the LDAP connection and binding parameters, as 
 
 * `ttl` (string, optional) - The default password time-to-live in seconds. Once the ttl has passed, a password will be rotated the next time it's requested.
 * `max_ttl` (string, optional) - The maximum password time-to-live in seconds. No role will be allowed to set a custom ttl greater than the `max_ttl`.
-* `password_length` (string, optional) - The desired password length. Defaults to 64. Minimum is 14. Note: to meet complexity requirements, all passwords begin with "?@09AZ".
+* `length` (string, optional) - The desired password length. Defaults to 64. Minimum is 14.
+* `formatter` (string, optional) - Text into which the base64 password should be inserted, formatted like so: `mycustom{{PASSWORD}}`.
+
+To meet Microsoft's password complexity requirements, all passwords begin with "?@09AZ" unless a `formatter` is provided. 
+The `formatter` is for organizations with different, custom password requirements. It allows an organization to supply
+text that fulfills those requirements. `{{PASSWORD}}` must appear exactly once and can be anywhere in the text.
 
 ### Connection parameters
 
