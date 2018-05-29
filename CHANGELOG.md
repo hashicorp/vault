@@ -35,6 +35,9 @@ IMPROVEMENTS:
    of just slot number
  * expiration: Allow revoke-prefix and revoke-force to work on single leases as
    well as prefixes [GH-4450]
+ * identity: Return parent group info when reading a group [GH-4648]
+ * identity: Provide more contextual key information when listing entities,
+   groups, and aliases
  * ui: wrapping lookup now distplays the path [GH-4644]
  * ui: Identity interface now has more inline actions to make editing and adding
    aliases to an entity or group easier [GH-4502]
@@ -64,6 +67,7 @@ BUG FIXES:
  * ui: Fix unwrap of auth responses via the UI's unwrap tool [GH-4611]
  * ui (enterprise): Fix parsing of version string that blocked some users from seeing
    enterprise-specific pages in the UI [GH-4547]
+ * ui: Fix incorrect capabilities path check when viewing policies [GH-4566]
  * replication: Fix error while running plugins on a newly created replication
    secondary
  * replication: Fix issue with token store lookups after a secondary's mount table

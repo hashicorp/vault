@@ -278,6 +278,7 @@ func (i *IdentityStore) handleGroupReadCommon(group *identity.Group) (*logical.R
 	respData["name"] = group.Name
 	respData["policies"] = group.Policies
 	respData["member_entity_ids"] = group.MemberEntityIDs
+	respData["parent_group_ids"] = group.ParentGroupIDs
 	respData["metadata"] = group.Metadata
 	respData["creation_time"] = ptypes.TimestampString(group.CreationTime)
 	respData["last_update_time"] = ptypes.TimestampString(group.LastUpdateTime)
@@ -347,7 +348,9 @@ func (i *IdentityStore) pathGroupIDList() framework.OperationFunc {
 			group := raw.(*identity.Group)
 			groupIDs = append(groupIDs, group.ID)
 			groupInfoEntry := map[string]interface{}{
-				"name": group.Name,
+				"name":                group.Name,
+				"num_member_entities": len(group.MemberEntityIDs),
+				"num_parent_groups":   len(group.ParentGroupIDs),
 			}
 			if group.Alias != nil {
 				entry := map[string]interface{}{
