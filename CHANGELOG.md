@@ -35,6 +35,9 @@ IMPROVEMENTS:
    of just slot number
  * expiration: Allow revoke-prefix and revoke-force to work on single leases as
    well as prefixes [GH-4450]
+ * ui: wrapping lookup now distplays the path [GH-4644]
+ * ui: Identity interface now has more inline actions to make editing and adding
+   aliases to an entity or group easier [GH-4502]
 
 BUG FIXES:
 
@@ -59,6 +62,8 @@ BUG FIXES:
    [GH-4570]
  * ui: Fix HMAC algorithm in transit [GH-4604]
  * ui: Fix unwrap of auth responses via the UI's unwrap tool [GH-4611]
+ * ui (enterprise): Fix parsing of version string that blocked some users from seeing
+   enterprise-specific pages in the UI [GH-4547]
  * replication: Fix error while running plugins on a newly created replication
    secondary
  * replication: Fix issue with token store lookups after a secondary's mount table
