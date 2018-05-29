@@ -6,6 +6,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/logical"
 )
@@ -290,6 +291,7 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 			"testkey1": "testvalue1",
 			"testkey2": "testvalue2",
 		},
+		"parent_group_ids": []string(nil),
 	}
 	expectedData["id"] = resp.Data["id"]
 	expectedData["type"] = resp.Data["type"]
@@ -301,8 +303,8 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	expectedData["alias"] = resp.Data["alias"]
 
-	if !reflect.DeepEqual(expectedData, resp.Data) {
-		t.Fatalf("bad: group data;\nexpected: %#v\n actual: %#v\n", expectedData, resp.Data)
+	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Update the policies and metadata in the group
@@ -410,6 +412,7 @@ func TestIdentityStore_GroupsCRUD_ByID(t *testing.T) {
 			"testkey1": "testvalue1",
 			"testkey2": "testvalue2",
 		},
+		"parent_group_ids": []string(nil),
 	}
 	expectedData["id"] = resp.Data["id"]
 	expectedData["type"] = resp.Data["type"]
@@ -421,8 +424,8 @@ func TestIdentityStore_GroupsCRUD_ByID(t *testing.T) {
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	expectedData["alias"] = resp.Data["alias"]
 
-	if !reflect.DeepEqual(expectedData, resp.Data) {
-		t.Fatalf("bad: group data;\nexpected: %#v\n actual: %#v\n", expectedData, resp.Data)
+	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Update the policies and metadata in the group
