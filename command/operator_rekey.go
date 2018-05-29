@@ -577,7 +577,7 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 			resp.(*api.RekeyUpdateResponse))
 	}
 
-	c.UI.Output("Rekey verification successful.")
+	c.UI.Output(wrapAtLength("Rekey verification successful. The rekey operation is complete and the new keys are now active."))
 	return 0
 }
 
