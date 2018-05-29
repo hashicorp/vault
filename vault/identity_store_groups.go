@@ -347,7 +347,9 @@ func (i *IdentityStore) pathGroupIDList() framework.OperationFunc {
 			group := raw.(*identity.Group)
 			groupIDs = append(groupIDs, group.ID)
 			groupInfoEntry := map[string]interface{}{
-				"name": group.Name,
+				"name":                group.Name,
+				"num_member_entities": len(group.MemberEntityIDs),
+				"num_parent_groups":   len(group.ParentGroupIDs),
 			}
 			if group.Alias != nil {
 				entry := map[string]interface{}{
