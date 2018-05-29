@@ -655,7 +655,7 @@ func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, 
 
 	c.UI.Output("")
 	c.UI.Output(wrapAtLength(fmt.Sprintf(
-		"Vault rekeyed with %d key shares an a key threshold of %d. Please "+
+		"Vault rekeyed with %d key shares and a key threshold of %d. Please "+
 			"securely distributed the key shares printed above. When the Vault is "+
 			"re-sealed, restarted, or stopped, you must supply at least %d of "+
 			"these keys to unseal it before it can start servicing requests.",
