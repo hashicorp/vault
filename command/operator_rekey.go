@@ -682,7 +682,11 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 		out = append(out, fmt.Sprintf("Nonce | %s", status.Nonce))
 		out = append(out, fmt.Sprintf("Started | %t", status.Started))
 		if status.Started {
-			out = append(out, fmt.Sprintf("Rekey Progress | %d/%d", status.Progress, status.Required))
+			if status.Progress == status.Required {
+				out = append(out, fmt.Sprintf("Rekey Progress | %d/%d (verification in progress)", status.Progress, status.Required))
+			} else {
+				out = append(out, fmt.Sprintf("Rekey Progress | %d/%d", status.Progress, status.Required))
+			}
 			out = append(out, fmt.Sprintf("New Shares | %d", status.N))
 			out = append(out, fmt.Sprintf("New Threshold | %d", status.T))
 			out = append(out, fmt.Sprintf("Verification Required | %t", status.VerificationRequired))

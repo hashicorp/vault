@@ -162,6 +162,13 @@ func (c *Core) RekeyInit(config *SealConfig, recovery bool) logical.HTTPCodedErr
 
 // BarrierRekeyInit is used to initialize the rekey settings for the barrier key
 func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
+	if c.seal.StoredKeysSupported() {
+		c.logger.Warn("stored keys supported, forcing rekey shares/threshold to 1")
+		config.SecretShares = 1
+		config.SecretThreshold = 1
+		config.StoredShares = 1
+	}
+
 	if config.StoredShares > 0 {
 		if !c.seal.StoredKeysSupported() {
 			return logical.CodedError(http.StatusBadRequest, "storing keys not supported by barrier seal")
@@ -357,13 +364,6 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		return nil, nil
 	}
 
-	// Schedule the rekey progress for forgetting
-	defer func() {
-		if c.barrierRekeyConfig != nil {
-			c.barrierRekeyConfig.RekeyProgress = nil
-		}
-	}()
-
 	// Recover the master key or recovery key
 	var recoveredKey []byte
 	if existingConfig.SecretThreshold == 1 {
@@ -521,6 +521,8 @@ func (c *Core) performBarrierRekey(ctx context.Context, newMasterKey []byte) log
 		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to save keyring canary: {{err}}", err).Error())
 	}
 
+	c.barrierRekeyConfig.RekeyProgress = nil
+
 	return nil
 }
 
@@ -589,13 +591,6 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 		}
 		return nil, nil
 	}
-
-	// Schedule the rekey progress for forgetting
-	defer func() {
-		if c.recoveryRekeyConfig != nil {
-			c.recoveryRekeyConfig.RekeyProgress = nil
-		}
-	}()
 
 	// Recover the master key
 	var recoveryKey []byte
@@ -726,6 +721,8 @@ func (c *Core) performRecoveryRekey(ctx context.Context, newMasterKey []byte) lo
 		return logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to save keyring canary: {{err}}", err).Error())
 	}
 
+	c.recoveryRekeyConfig.RekeyProgress = nil
+
 	return nil
 }
 
@@ -763,7 +760,7 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 		return nil, logical.CodedError(http.StatusBadRequest, "no rekey in progress")
 	}
 
-	if len(c.barrierRekeyConfig.VerificationKey) == 0 {
+	if len(config.VerificationKey) == 0 {
 		return nil, logical.CodedError(http.StatusBadRequest, "no rekey verification in progress")
 	}
 

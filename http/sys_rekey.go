@@ -117,20 +117,6 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 		return
 	}
 
-	// If the seal supports stored keys, and we are rekeying the barrier key,
-	// force the shares to 1
-	if !recovery && core.SealAccess().StoredKeysSupported() {
-		req.SecretShares = 1
-		req.SecretThreshold = 1
-		req.StoredShares = 1
-		core.Logger().Warn("rekey: stored keys supported, forcing shares/threshold to 1")
-	} else {
-		if req.StoredShares != 0 {
-			respondError(w, http.StatusBadRequest, fmt.Errorf("stored keys are not supported by the current seal type"))
-			return
-		}
-	}
-
 	if len(req.PGPKeys) > 0 && len(req.PGPKeys) != req.SecretShares {
 		respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys for rekey"))
 		return
