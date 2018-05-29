@@ -33,6 +33,11 @@ IMPROVEMENTS:
    CKM_RSA_PKCS_OAEP mechanisms
  * core/pkcs11 (enterprise): HSM slots can now be selected by token label instead
    of just slot number
+ * core/token: Optimize token revocation by removing unnecessary list call
+   against the storage backend when calling revoke-orphan on tokens [GH-4465]
+ * core/token: Refactor token revocation logic to not block on the call when
+   underlying leases are pending revocation by moving the expiration logic to
+   the expiration manager [GH-4512]
  * expiration: Allow revoke-prefix and revoke-force to work on single leases as
    well as prefixes [GH-4450]
  * identity: Return parent group info when reading a group [GH-4648]
