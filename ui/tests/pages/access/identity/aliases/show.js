@@ -7,5 +7,5 @@ export default create({
   flashMessage,
   nameContains: contains('[data-test-alias-name]'),
   rows: collection('[data-test-component="info-table-row"]', infoTableRow),
-  edit: clickable('[data-test-alias-edit-link]')
+  edit: clickable('[data-test-alias-edit-link]'),
 });

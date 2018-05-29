@@ -31,6 +31,6 @@ export default Ember.Component.extend({
     },
     fullscreen() {
       this.get('onFullscreen')();
-    }
+    },
   },
 });

@@ -60,7 +60,7 @@ export default Ember.Component.extend({
       return;
     }
     this.get('flashMessages').success(message);
-    yield this.get('onSave')({saveType: 'save', model});
+    yield this.get('onSave')({ saveType: 'save', model });
   }).drop(),
 
   willDestroy() {
@@ -74,12 +74,10 @@ export default Ember.Component.extend({
     deleteItem(model) {
       let message = this.getMessage(model, true);
       let flash = this.get('flashMessages');
-      model
-        .destroyRecord()
-        .then(() => {
-          flash.success(message);
-          return this.get('onSave')({saveType: 'delete', model});
-        });
+      model.destroyRecord().then(() => {
+        flash.success(message);
+        return this.get('onSave')({ saveType: 'delete', model });
+      });
     },
   },
 });

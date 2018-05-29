@@ -162,6 +162,6 @@ export default Ember.Route.extend({
     reload() {
       this.refresh();
       this.store.clearAllDatasets();
-    }
+    },
   },
 });

@@ -7,10 +7,10 @@ export default Ember.Component.extend({
   isActive: false,
   tagName: 'span',
   trackingSource: computed('pageName', function() {
-    let trackingSource = "vaultui";
+    let trackingSource = 'vaultui';
     let pageName = this.get('pageName');
     if (pageName) {
-      trackingSource = trackingSource + "_" + encodeURIComponent(pageName);
+      trackingSource = trackingSource + '_' + encodeURIComponent(pageName);
     }
     return trackingSource;
   }),

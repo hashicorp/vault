@@ -59,14 +59,10 @@ test('tools functionality', function(assert) {
   });
   click('[data-test-tools-submit]');
   andThen(() => {
-    assert.ok(
-      find('[data-test-tools="token-lookup-row"]:eq(0)').text().match(/Creation time/i),
-      'show creation time row'
-    );
-    assert.ok(
-      find('[data-test-tools="token-lookup-row"]:eq(1)').text().match(/Creation ttl/i),
-      'show creation ttl row'
-    );
+    let rows = document.querySelectorAll('[data-test-tools="token-lookup-row"]');
+    assert.dom(rows[0]).hasText(/Creation path/, 'show creation path row');
+    assert.dom(rows[1]).hasText(/Creation time/, 'show creation time row');
+    assert.dom(rows[2]).hasText(/Creation TTL/, 'show creation ttl row');
   });
 
   //rewrap

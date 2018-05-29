@@ -64,10 +64,6 @@ testCases.forEach(function(testCase) {
 
     component.set('mode', testCase.mode);
     component.set('model', model);
-    assert.equal(
-      component.get('cancelLink'),
-      testCase.expected,
-      'cancel link is correct'
-    );
+    assert.equal(component.get('cancelLink'), testCase.expected, 'cancel link is correct');
   });
 });
