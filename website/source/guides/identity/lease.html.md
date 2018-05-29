@@ -255,8 +255,8 @@ the value using `-ttl` parameter.
 $ vault token create -ttl=30s
 Key            	Value
 ---            	-----
-token          	7544266f-3ec9-81a6--data504-e258b89de862
-token_accessor 	59aae2f1-2e97-6ebb-f925-8a97cf5a9942
+token          	3b2b1285-844b-4b40-6afa-623f39c1b738
+token_accessor 	2b2b5b83-7f22-fecd-03f0-4e25bf64da11
 token_duration 	30s
 token_renewable	true
 token_policies 	[admin]
@@ -303,6 +303,12 @@ If you want to renew and extend the token's TTL, pass the desired extension:
 $ vault token renew <TOKEN> <EXTENSION>
 ```
 
+Or with revamped cli:
+
+```shell
+$ vault token renew -increment=<EXTENSION> <TOKEN>
+```
+
 The extension value can be an integer number of seconds (e.g. 3600) or a string
 duration (e.g. "1h").
 
@@ -343,7 +349,7 @@ $ curl --header "X-Vault-Token: f7d88963-1aba-64d7-11a0-9282ae7681d0" \
 {
   ...
  "data": {
-   "accessor": "a54fea3f-6c09--data288-ede5-53288569f988",
+   "accessor": "c0a40d94-b814-e46f-7e56-ee18fccdf1b6",
    "creation_time": 1515702669,
    "creation_ttl": 30,
     ...
@@ -400,7 +406,7 @@ $ vault token create -policy=default -use-limit=2
 Key            	Value
 ---            	-----
 token          	bd39178e-176e-cc91-3930-94f7b0194de5
-token_accessor 	a230f5ab-b59f--datab0b-855d-36ea4319b58e
+token_accessor 	a230f5ab-b59f-db0b-855d-36ea4319b58e
 token_duration 	768h0m0s
 token_renewable	true
 token_policies 	[default]
@@ -415,7 +421,7 @@ $ VAULT_TOKEN=bd39178e-176e-cc91-3930-94f7b0194de5 vault token lookup
 
 Key             	Value
 ---             	-----
-accessor        	a230f5ab-b59f--datab0b-855d-36ea4319b58e
+accessor        	a230f5ab-b59f-db0b-855d-36ea4319b58e
 creation_time   	1515710251
 creation_ttl    	2764800
 display_name    	token
@@ -562,7 +568,7 @@ $ vault token create -role=zabbix
 Key            	Value
 ---            	-----
 token          	de91ebba-20ad-18ba-fa43-08e1932de301
-token_accessor 	1f8abad0-c1db-9399-15ee--datad4b6230386c
+token_accessor 	1f8abad0-c1db-9399-15ee-dd4b6230386c
 token_duration 	24h0m0s
 token_renewable	true
 token_policies 	[default]
@@ -709,8 +715,10 @@ $ vault lease revoke -prefix database/creds
 
 # Revoke all tokens
 $ vault lease revoke -prefix auth/token/create
-```
 
+# Revoke all tokens by accessor
+$ vault token revoke -accessor 2b2b5b83-7f22-fecd-03f0-4e25bf64da11
+```
 
 #### API call using cURL
 
@@ -732,6 +740,12 @@ $ curl --header "X-Vault-Token:..." --request POST \
 # Revoke all tokens
 $ curl --header "X-Vault-Token:..." --request POST \
        http://127.0.0.1:8200/v1/sys/leases/revoke-prefix/auth/token/create
+
+# Revoke all tokens by accessor
+$ curl \
+    --header "X-Vault-Token: ..." --request POST \
+    --data '{ "accessor": "2b2b5b83-7f22-fecd-03f0-4e25bf64da11" }' \
+    http://127.0.0.1:8200/v1/auth/token/revoke-accessor
 ```
 
 
