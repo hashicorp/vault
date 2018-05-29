@@ -26,8 +26,15 @@ export default Ember.Component.extend({
   executeCommand(command, shouldThrow = false) {
     let service = this.get('console');
     let serviceArgs;
-    
-    if(executeUICommand(command, (args) => this.logAndOutput(args), (args) => service.clearLog(args), () => this.toggleProperty('isFullscreen'))){
+
+    if (
+      executeUICommand(
+        command,
+        args => this.logAndOutput(args),
+        args => service.clearLog(args),
+        () => this.toggleProperty('isFullscreen')
+      )
+    ) {
       return;
     }
 
@@ -55,7 +62,8 @@ export default Ember.Component.extend({
       return;
     }
     let serviceFn = service[method];
-    serviceFn.call(service, path, data, flags.wrapTTL)
+    serviceFn
+      .call(service, path, data, flags.wrapTTL)
       .then(resp => {
         this.logAndOutput(command, logFromResponse(resp, path, method, flags));
       })
@@ -65,7 +73,7 @@ export default Ember.Component.extend({
   },
 
   shiftCommandIndex(keyCode) {
-    this.get('console').shiftCommandIndex(keyCode, (val) => {
+    this.get('console').shiftCommandIndex(keyCode, val => {
       this.set('inputValue', val);
     });
   },

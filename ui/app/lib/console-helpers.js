@@ -29,12 +29,12 @@ export function extractDataAndFlags(data, flags) {
   }, { data: {}, flags: {} });
 }
 
-export function executeUICommand(command, logAndOutput, clearLog, toggleFullscreen){
+export function executeUICommand(command, logAndOutput, clearLog, toggleFullscreen) {
   const isUICommand = uiCommands.includes(command);
-  if(isUICommand){
+  if (isUICommand) {
     logAndOutput(command);
   }
-  switch(command){
+  switch (command) {
     case 'clearall':
       clearLog(true);
       break;
@@ -149,7 +149,9 @@ export function shiftCommandIndex(keyCode, history, index) {
   let newInputValue;
   let commandHistoryLength = history.length;
 
-  if (!commandHistoryLength) { return []; }
+  if (!commandHistoryLength) {
+    return [];
+  }
 
   if (keyCode === keys.UP) {
     index -= 1;

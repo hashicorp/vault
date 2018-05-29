@@ -9,8 +9,9 @@ export default Ember.Component.extend({
     enable(model) {
       model.set('disabled', false);
 
-      model.save().
-        then(() => {
+      model
+        .save()
+        .then(() => {
           this.get('flashMessages').success(`Successfully enabled entity: ${model.id}`);
         })
         .catch(e => {
@@ -18,6 +19,6 @@ export default Ember.Component.extend({
             `There was a problem enabling the entity: ${model.id} - ${e.error.join(' ') || e.message}`
           );
         });
-    }
-  }
+    },
+  },
 });

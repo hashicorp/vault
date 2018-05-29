@@ -35,5 +35,4 @@ export default IdentityModel.extend({
   updatePath: identityCapabilities(),
   canDelete: computed.alias('updatePath.canDelete'),
   canEdit: computed.alias('updatePath.canUpdate'),
-
 });

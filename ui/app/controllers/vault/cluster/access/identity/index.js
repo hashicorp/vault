@@ -29,8 +29,9 @@ export default Ember.Controller.extend(ListController, {
       let id = model.id;
       model.toggleProperty('disabled');
 
-      model.save().
-        then(() => {
+      model
+        .save()
+        .then(() => {
           this.get('flashMessages').success(`Successfully ${action[0]} ${type}: ${id}`);
         })
         .catch(e => {

@@ -29,4 +29,3 @@ test('it can be deleted from the edit form', function(assert) {
   let name = `entity-${Date.now()}`;
   testDeleteFromForm(name, 'entities', assert);
 });
-

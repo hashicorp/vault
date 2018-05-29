@@ -27,21 +27,31 @@ export const testAliasCRUD = (name, itemType, assert) => {
       'navigates to the correct route'
     );
     assert.ok(
-      aliasShowPage.flashMessage.latestMessage.startsWith('Successfully saved', `${itemType}: shows a flash message`)
+      aliasShowPage.flashMessage.latestMessage.startsWith(
+        'Successfully saved',
+        `${itemType}: shows a flash message`
+      )
     );
     assert.ok(aliasShowPage.nameContains(name), `${itemType}: renders the name on the show page`);
   });
 
   aliasIndexPage.visit({ item_type: itemType });
   andThen(() => {
-    assert.equal(aliasIndexPage.items.filterBy('id', aliasID).length, 1, `${itemType}: lists the entity in the entity list`);
+    assert.equal(
+      aliasIndexPage.items.filterBy('id', aliasID).length,
+      1,
+      `${itemType}: lists the entity in the entity list`
+    );
     aliasIndexPage.items.filterBy('id', aliasID)[0].menu();
   });
   aliasIndexPage.delete().confirmDelete();
 
   andThen(() => {
     assert.equal(aliasIndexPage.items.filterBy('id', aliasID).length, 0, `${itemType}: the row is deleted`);
-    aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted', `${itemType}: shows flash message`);
+    aliasIndexPage.flashMessage.latestMessage.startsWith(
+      'Successfully deleted',
+      `${itemType}: shows flash message`
+    );
   });
 };
 
@@ -66,12 +76,27 @@ export const testAliasDeleteFromForm = (name, itemType, assert) => {
   aliasShowPage.edit();
 
   andThen(() => {
-    assert.equal(currentRouteName(), 'vault.cluster.access.identity.aliases.edit', `${itemType}: navigates to edit on create`);
+    assert.equal(
+      currentRouteName(),
+      'vault.cluster.access.identity.aliases.edit',
+      `${itemType}: navigates to edit on create`
+    );
   });
   page.editForm.delete().confirmDelete();
   andThen(() => {
-    assert.equal(currentRouteName(), 'vault.cluster.access.identity.aliases.index', `${itemType}: navigates to list page on delete`);
-    assert.equal(aliasIndexPage.items.filterBy('id', aliasID).length, 0, `${itemType}: the row does not show in the list`);
-    aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted', `${itemType}: shows flash message`);
+    assert.equal(
+      currentRouteName(),
+      'vault.cluster.access.identity.aliases.index',
+      `${itemType}: navigates to list page on delete`
+    );
+    assert.equal(
+      aliasIndexPage.items.filterBy('id', aliasID).length,
+      0,
+      `${itemType}: the row does not show in the list`
+    );
+    aliasIndexPage.flashMessage.latestMessage.startsWith(
+      'Successfully deleted',
+      `${itemType}: shows flash message`
+    );
   });
 };

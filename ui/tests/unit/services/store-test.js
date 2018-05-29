@@ -129,14 +129,16 @@ test('store.fetchPage', function(assert) {
   );
 
   Ember.run(() => {
-    store.fetchPage('transit-key', {
-      size: pageSize,
-      page: 3,
-      responsePath: 'data.keys',
-    }).then(r => {
-      result = r;
-      done()
-    });
+    store
+      .fetchPage('transit-key', {
+        size: pageSize,
+        page: 3,
+        responsePath: 'data.keys',
+      })
+      .then(r => {
+        result = r;
+        done();
+      });
   });
 
   const pageThreeEnd = 3 * pageSize;
@@ -148,15 +150,16 @@ test('store.fetchPage', function(assert) {
   );
 
   Ember.run(() => {
-    store.fetchPage('transit-key', {
-      size: pageSize,
-      page: 99,
-      responsePath: 'data.keys',
-    }).then(r => {
-
-      result = r;
-      done();
-    });
+    store
+      .fetchPage('transit-key', {
+        size: pageSize,
+        page: 99,
+        responsePath: 'data.keys',
+      })
+      .then(r => {
+        result = r;
+        done();
+      });
   });
 
   assert.deepEqual(
@@ -166,14 +169,16 @@ test('store.fetchPage', function(assert) {
   );
 
   Ember.run(() => {
-    store.fetchPage('transit-key', {
-      size: pageSize,
-      page: 0,
-      responsePath: 'data.keys',
-    }).then(r => {
-      result = r;
-      done();
-    });
+    store
+      .fetchPage('transit-key', {
+        size: pageSize,
+        page: 0,
+        responsePath: 'data.keys',
+      })
+      .then(r => {
+        result = r;
+        done();
+      });
   });
   assert.deepEqual(
     result.mapBy('id'),
