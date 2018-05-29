@@ -275,6 +275,7 @@ type RekeyStatusResponse struct {
 	PGPFingerprints      []string `json:"pgp_fingerprints"`
 	Backup               bool     `json:"backup"`
 	VerificationRequired bool     `json:"verification_required"`
+	VerificationNonce    string   `json:"verification_nonce"`
 }
 
 type RekeyUpdateResponse struct {

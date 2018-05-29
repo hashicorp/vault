@@ -91,6 +91,7 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 		status.N = rekeyConf.SecretShares
 		status.Progress = progress
 		status.VerificationRequired = rekeyConf.VerificationRequired
+		status.VerificationNonce = rekeyConf.VerificationNonce
 		if rekeyConf.PGPKeys != nil && len(rekeyConf.PGPKeys) != 0 {
 			pgpFingerprints, err := pgpkeys.GetFingerprints(rekeyConf.PGPKeys, nil)
 			if err != nil {
@@ -372,6 +373,7 @@ type RekeyStatusResponse struct {
 	PGPFingerprints      []string `json:"pgp_fingerprints"`
 	Backup               bool     `json:"backup"`
 	VerificationRequired bool     `json:"verification_required"`
+	VerificationNonce    string   `json:"verification_nonce"`
 }
 
 type RekeyUpdateRequest struct {
