@@ -154,6 +154,10 @@ func (c *Core) RekeyConfig(recovery bool) (*SealConfig, logical.HTTPCodedError) 
 // RekeyInit will either initialize the rekey of barrier or recovery key.
 // recovery determines whether this is a rekey on the barrier or recovery key.
 func (c *Core) RekeyInit(config *SealConfig, recovery bool) logical.HTTPCodedError {
+	if config.SecretThreshold > config.SecretShares {
+		return logical.CodedError(http.StatusBadRequest, "provided threshold greater than the total shares")
+	}
+
 	if recovery {
 		return c.RecoveryRekeyInit(config)
 	}
