@@ -359,7 +359,9 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 
 	// Schedule the rekey progress for forgetting
 	defer func() {
-		c.barrierRekeyConfig.RekeyProgress = nil
+		if c.barrierRekeyConfig != nil {
+			c.barrierRekeyConfig.RekeyProgress = nil
+		}
 	}()
 
 	// Recover the master key or recovery key
@@ -590,7 +592,9 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 
 	// Schedule the rekey progress for forgetting
 	defer func() {
-		c.recoveryRekeyConfig.RekeyProgress = nil
+		if c.recoveryRekeyConfig != nil {
+			c.recoveryRekeyConfig.RekeyProgress = nil
+		}
 	}()
 
 	// Recover the master key

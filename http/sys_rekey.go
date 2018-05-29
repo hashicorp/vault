@@ -64,21 +64,22 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 		return
 	}
 
+	sealThreshold, err := core.RekeyThreshold(ctx, recovery)
+	if err != nil {
+		respondError(w, err.Code(), err)
+		return
+	}
+
 	// Format the status
 	status := &RekeyStatusResponse{
-		Started: false,
-		T:       0,
-		N:       0,
+		Started:  false,
+		T:        0,
+		N:        0,
+		Required: sealThreshold,
 	}
 	if rekeyConf != nil {
 		// Get the progress
 		started, progress, err := core.RekeyProgress(recovery, false)
-		if err != nil {
-			respondError(w, err.Code(), err)
-			return
-		}
-
-		sealThreshold, err := core.RekeyThreshold(ctx, recovery)
 		if err != nil {
 			respondError(w, err.Code(), err)
 			return
@@ -89,7 +90,6 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 		status.T = rekeyConf.SecretThreshold
 		status.N = rekeyConf.SecretShares
 		status.Progress = progress
-		status.Required = sealThreshold
 		status.VerificationRequired = rekeyConf.VerificationRequired
 		if rekeyConf.PGPKeys != nil && len(rekeyConf.PGPKeys) != 0 {
 			pgpFingerprints, err := pgpkeys.GetFingerprints(rekeyConf.PGPKeys, nil)
