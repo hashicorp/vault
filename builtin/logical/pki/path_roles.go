@@ -73,6 +73,12 @@ This is a separate option as in some cases this can
 be considered a security threat.`,
 			},
 
+			"allow_token_displayname": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `If set, clients can request certificates for
+a CN matching the display name of the requesting token.`,
+			},
+
 			"allow_subdomains": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates for
@@ -437,6 +443,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		AllowLocalhost:                data.Get("allow_localhost").(bool),
 		AllowedDomains:                data.Get("allowed_domains").([]string),
 		AllowBareDomains:              data.Get("allow_bare_domains").(bool),
+		AllowTokenDisplayName:         data.Get("allow_token_displayname").(bool),
 		AllowSubdomains:               data.Get("allow_subdomains").(bool),
 		AllowGlobDomains:              data.Get("allow_glob_domains").(bool),
 		AllowAnyName:                  data.Get("allow_any_name").(bool),
