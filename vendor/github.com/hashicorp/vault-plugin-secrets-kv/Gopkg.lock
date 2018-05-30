@@ -19,12 +19,6 @@
   revision = "1fca145dffbcaa8fe914309b1ec0cfc67500fe61"
 
 [[projects]]
-  name = "github.com/fatih/structs"
-  packages = ["."]
-  revision = "a720dfa8df582c51dee1b36feabb906bde1588bd"
-  version = "v1.0"
-
-[[projects]]
   branch = "master"
   name = "github.com/golang/protobuf"
   packages = [
@@ -34,13 +28,13 @@
     "ptypes/duration",
     "ptypes/timestamp"
   ]
-  revision = "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175"
+  revision = "3a3da3a4e26776cc22a79ef46d5d58477532dede"
 
 [[projects]]
   branch = "master"
   name = "github.com/golang/snappy"
   packages = ["."]
-  revision = "553a641470496b2327abcac10b36396bd98e45c9"
+  revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
   branch = "master"
@@ -58,7 +52,13 @@
   branch = "master"
   name = "github.com/hashicorp/go-hclog"
   packages = ["."]
-  revision = "5bcb0f17e36442247290887cc914a6e507afa5c4"
+  revision = "69ff559dc25f3b435631604f573a5fa1efdb6433"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-immutable-radix"
+  packages = ["."]
+  revision = "7f3cd4390caab3250a57f30efdb2a65dd7649ecf"
 
 [[projects]]
   branch = "master"
@@ -70,13 +70,25 @@
   branch = "master"
   name = "github.com/hashicorp/go-plugin"
   packages = ["."]
-  revision = "8068b0bdcfb702b4ab69d0e42c6023b4996c3026"
+  revision = "e8d22c780116115ae5624720c9af0c97afe4f551"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-retryablehttp"
+  packages = ["."]
+  revision = "763e4b5d05f5534071213c67c335aad6b0d318a7"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/go-rootcerts"
   packages = ["."]
   revision = "6bb64b370b90e7ef1fa532be9e591a81c3493e00"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-sockaddr"
+  packages = ["."]
+  revision = "6d291a969b86c4b633730bfc6b8b9d64c3aafed9"
 
 [[projects]]
   branch = "master"
@@ -88,7 +100,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-version"
   packages = ["."]
-  revision = "4fe82ae3040f80a03d04d2cccb5606a626b8e1ee"
+  revision = "23480c0665776210b5fbbac6eaaee40e3e6a96b7"
 
 [[projects]]
   branch = "master"
@@ -113,7 +125,7 @@
     "json/scanner",
     "json/token"
   ]
-  revision = "f40e974e75af4e271d97ce0fc917af5898ae7bda"
+  revision = "ef8a98b0bbce4a65b5aa4c368430a80ddc533168"
 
 [[projects]]
   branch = "master"
@@ -131,6 +143,7 @@
     "helper/logging",
     "helper/mlock",
     "helper/parseutil",
+    "helper/pathmanager",
     "helper/pluginutil",
     "helper/salt",
     "helper/strutil",
@@ -143,7 +156,7 @@
     "physical/inmem",
     "version"
   ]
-  revision = "205c40489422f350b58e3d57b242fe8e6e36134a"
+  revision = "924e55a07d7aa9fe5e3af6bc55bd0ad10d7f20e4"
 
 [[projects]]
   branch = "master"
@@ -155,7 +168,7 @@
   branch = "master"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
-  revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
+  revision = "3864e76763d94a6df2f9960b16a20a33da9f9a66"
 
 [[projects]]
   branch = "master"
@@ -167,7 +180,7 @@
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
+  revision = "bb74f1db0675b241733089d5a1faa5dd8b0ef57b"
 
 [[projects]]
   name = "github.com/oklog/run"
@@ -183,12 +196,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/sethgrid/pester"
-  packages = ["."]
-  revision = "ed9870dad3170c0b25ab9b11830cc57c3a7798fb"
-
-[[projects]]
-  branch = "master"
   name = "golang.org/x/crypto"
   packages = [
     "chacha20poly1305",
@@ -198,27 +205,30 @@
     "internal/chacha20",
     "poly1305"
   ]
-  revision = "80db560fac1fb3e6ac81dbc7f8ae4c061f5257bd"
+  revision = "ab813273cd59e1333f7ae7bff5d027d4aadf528c"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
     "context",
+    "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
     "internal/timeseries",
-    "lex/httplex",
     "trace"
   ]
-  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
+  revision = "89e543239a64caf31d3a6865872ea120b41446df"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
-  revision = "c488ab1dd8481ef762f96a79a9577c27825be697"
+  packages = [
+    "cpu",
+    "unix"
+  ]
+  revision = "c11f84a56e43e20a78cee75a7c034031ecf57d1f"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -243,9 +253,15 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/time"
+  packages = ["rate"]
+  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
+
+[[projects]]
+  branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "f8c8703595236ae70fdf8789ecb656ea0bcdcf46"
+  revision = "694d95ba50e67b2e363f3483057db5d4910c18f9"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -254,6 +270,7 @@
     "balancer",
     "balancer/base",
     "balancer/roundrobin",
+    "channelz",
     "codes",
     "connectivity",
     "credentials",
@@ -276,12 +293,12 @@
     "tap",
     "transport"
   ]
-  revision = "8e4536a86ab602859c20df5ebfd0bd4228d08655"
-  version = "v1.10.0"
+  revision = "41344da2231b913fa3d983840a57a6b1b7b631a1"
+  version = "v1.12.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b931a497c04b2b7fccc2f3962172d83debc80221239075635e829449f433fdd0"
+  inputs-digest = "90b9fd05b2dbe168441e3bb1be83fb26d891c31b3080ba50ca407be5b30bf6a9"
   solver-name = "gps-cdcl"
   solver-version = 1
