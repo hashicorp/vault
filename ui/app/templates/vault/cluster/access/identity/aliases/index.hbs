@@ -21,7 +21,14 @@
               glyph="role"
               size=14
               class="has-text-grey-light"
-            }}<span class="has-text-weight-semibold">{{item.id}}</span></a>
+            }}<span class="has-text-weight-semibold">{{item.name}}</span></a>
+          <div class="has-text-grey">
+            {{item.id}}
+          </div>
+          <span class="tag"> {{item.mountType}} </span> 
+          <span class="has-text-grey is-size-8">
+            {{item.mountAccessor}}
+          </span>
         </div>
         <div class="column has-text-right">
           {{identity/popup-alias params=(array item) onSuccess=(action "onDelete")}}
