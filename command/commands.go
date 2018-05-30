@@ -201,6 +201,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"aws":      &credAws.CLIHandler{},
 		"centrify": &credCentrify.CLIHandler{},
 		"cert":     &credCert.CLIHandler{},
+		"gcp":      &credGcp.CLIHandler{},
 		"github":   &credGitHub.CLIHandler{},
 		"ldap":     &credLdap.CLIHandler{},
 		"okta":     &credOkta.CLIHandler{},

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hashicorp/vault-plugin-auth-gcp/plugin/util"
+	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -100,15 +100,15 @@ iam AUTH:
 
 // gcpConfig contains all config required for the GCP backend.
 type gcpConfig struct {
-	Credentials         *util.GcpCredentials `json:"credentials" structs:"credentials" mapstructure:"credentials"`
-	GoogleCertsEndpoint string               `json:"google_certs_endpoint" structs:"google_certs_endpoint" mapstructure:"google_certs_endpoint"`
+	Credentials         *gcputil.GcpCredentials `json:"credentials" structs:"credentials" mapstructure:"credentials"`
+	GoogleCertsEndpoint string                  `json:"google_certs_endpoint" structs:"google_certs_endpoint" mapstructure:"google_certs_endpoint"`
 }
 
 // Update sets gcpConfig values parsed from the FieldData.
 func (config *gcpConfig) Update(data *framework.FieldData) error {
 	credentialsJson := data.Get("credentials").(string)
 	if credentialsJson != "" {
-		creds, err := util.Credentials(credentialsJson)
+		creds, err := gcputil.Credentials(credentialsJson)
 		if err != nil {
 			return fmt.Errorf("error reading google credentials from given JSON: %v", err)
 		}
