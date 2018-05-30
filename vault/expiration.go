@@ -460,7 +460,7 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 		m.logger.Debug("persisting expiration manager metadata", "sha1_hashed_leases_cleared", expMetadata.SHA1HashedLeasesCleared)
 
 		// Encode and persist the metadata entry
-		metadataEntry, err := logical.StorageEntryJSON("metadata", expMetadata)
+		metadataEntry, err := logical.StorageEntryJSON(metadataPath, expMetadata)
 		if err != nil {
 			return err
 		}

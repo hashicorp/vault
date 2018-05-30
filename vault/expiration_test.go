@@ -71,6 +71,17 @@ func TestExpiration_Metadata(t *testing.T) {
 		exp.updatePending(le, le.Secret.LeaseTotal())
 	}
 
+	// Override the metadata entry to test the upgrade
+	expMetadata := &ExpirationMetadata{}
+	metadataEntry, err := logical.StorageEntryJSON("metadata", expMetadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.view.Put(context.Background(), metadataEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	err = core.Seal(root)
 	if err != nil {
 		t.Fatal(err)
@@ -94,8 +105,8 @@ func TestExpiration_Metadata(t *testing.T) {
 		t.Fatalf("expected metadata entry to be present")
 	}
 
-	expMetadata := ExpirationMetadata{}
-	err = entry.DecodeJSON(&expMetadata)
+	expMetadata = &ExpirationMetadata{}
+	err = entry.DecodeJSON(expMetadata)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,8 +155,8 @@ func TestExpiration_Metadata(t *testing.T) {
 		t.Fatalf("expected metadata entry to be present")
 	}
 
-	expMetadata = ExpirationMetadata{}
-	err = entry.DecodeJSON(&expMetadata)
+	expMetadata = &ExpirationMetadata{}
+	err = entry.DecodeJSON(expMetadata)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,8 +205,8 @@ func TestExpiration_Metadata(t *testing.T) {
 		t.Fatalf("expected metadata entry to be present")
 	}
 
-	expMetadata = ExpirationMetadata{}
-	err = entry.DecodeJSON(&expMetadata)
+	expMetadata = &ExpirationMetadata{}
+	err = entry.DecodeJSON(expMetadata)
 	if err != nil {
 		t.Fatal(err)
 	}
