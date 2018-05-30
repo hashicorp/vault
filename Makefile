@@ -31,10 +31,10 @@ dev-ui: prep
 dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
-testtravis: BUILD_TAGS="travis ${BUILD_TAGS}"
+testtravis: BUILD_TAGS=travis
 testtravis: test
 
-testracetravis: BUILD_TAGS="travis ${BUILD_TAGS}"
+testracetravis: BUILD_TAGS=travis
 testracetravis: testrace
 
 # test runs the unit tests and vets the code
