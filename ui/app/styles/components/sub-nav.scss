@@ -14,13 +14,17 @@
         border-color: $blue;
         color: $blue;
       }
+      &:first-child a {
+        margin-left: $size-5;
+      }
     }
 
     a {
       color: $grey-dark;
       font-weight: $font-weight-semibold;
       text-decoration: none;
-      padding: $size-6 $size-8 $size-8;
+      padding: $size-6 0;
+      margin: 0 $size-4;
       border-bottom: 2px solid transparent;
       transition: border-color $speed;
 

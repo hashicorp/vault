@@ -3,12 +3,9 @@ import showPage from 'vault/tests/pages/access/identity/show';
 import indexPage from 'vault/tests/pages/access/identity/index';
 
 export const testCRUD = (name, itemType, assert) => {
-  let id;
   page.visit({ item_type: itemType });
   page.editForm.name(name).submit();
   andThen(() => {
-    let idRow = showPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
-    id = idRow.rowValue;
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.identity.show',
@@ -26,16 +23,16 @@ export const testCRUD = (name, itemType, assert) => {
   indexPage.visit({ item_type: itemType });
   andThen(() => {
     assert.equal(
-      indexPage.items.filterBy('id', id).length,
+      indexPage.items.filterBy('name', name).length,
       1,
       `${itemType}: lists the entity in the entity list`
     );
-    indexPage.items.filterBy('id', id)[0].menu();
+    indexPage.items.filterBy('name', name)[0].menu();
   });
   indexPage.delete().confirmDelete();
 
   andThen(() => {
-    assert.equal(indexPage.items.filterBy('id', id).length, 0, `${itemType}: the row is deleted`);
+    assert.equal(indexPage.items.filterBy('name', name).length, 0, `${itemType}: the row is deleted`);
     indexPage.flashMessage.latestMessage.startsWith(
       'Successfully deleted',
       `${itemType}: shows flash message`
@@ -44,12 +41,8 @@ export const testCRUD = (name, itemType, assert) => {
 };
 
 export const testDeleteFromForm = (name, itemType, assert) => {
-  let id;
   page.visit({ item_type: itemType });
   page.editForm.name(name).submit();
-  andThen(() => {
-    id = showPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0].rowValue;
-  });
   showPage.edit();
   andThen(() => {
     assert.equal(
@@ -66,7 +59,7 @@ export const testDeleteFromForm = (name, itemType, assert) => {
       `${itemType}: navigates to list page on delete`
     );
     assert.equal(
-      indexPage.items.filterBy('id', id).length,
+      indexPage.items.filterBy('name', name).length,
       0,
       `${itemType}: the row does not show in the list`
     );
