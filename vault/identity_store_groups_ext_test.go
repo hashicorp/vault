@@ -8,8 +8,143 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 
+	"github.com/hashicorp/vault/builtin/credential/github"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 )
+
+func TestIdentityStore_ListGroupAlias(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"github": github.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().EnableAuthWithOptions("github", &api.EnableAuthOptions{
+		Type: "github",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mounts, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var githubAccessor string
+	for k, v := range mounts {
+		t.Logf("key: %v\nmount: %#v", k, *v)
+		if k == "github/" {
+			githubAccessor = v.Accessor
+			break
+		}
+	}
+	if githubAccessor == "" {
+		t.Fatal("did not find github accessor")
+	}
+
+	resp, err := client.Logical().Write("identity/group", map[string]interface{}{
+		"type": "external",
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	groupID := resp.Data["id"].(string)
+
+	resp, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
+		"name":           "groupalias",
+		"mount_accessor": githubAccessor,
+		"canonical_id":   groupID,
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	aliasID := resp.Data["id"].(string)
+
+	resp, err = client.Logical().List("identity/group-alias/id")
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	keys := resp.Data["keys"].([]interface{})
+	if len(keys) != 1 {
+		t.Fatalf("bad: length of alias IDs listed; expected: 1, actual: %d", len(keys))
+	}
+
+	// Do some due diligence on the key info
+	aliasInfoRaw, ok := resp.Data["key_info"]
+	if !ok {
+		t.Fatal("expected key_info map in response")
+	}
+	aliasInfo := aliasInfoRaw.(map[string]interface{})
+	if len(aliasInfo) != 1 {
+		t.Fatalf("bad: length of alias ID key info; expected: 1, actual: %d", len(aliasInfo))
+	}
+
+	infoRaw, ok := aliasInfo[aliasID]
+	if !ok {
+		t.Fatal("expected to find alias ID in key info map")
+	}
+	info := infoRaw.(map[string]interface{})
+	t.Logf("alias info: %#v", info)
+	switch {
+	case info["name"].(string) != "groupalias":
+		t.Fatalf("bad name: %v", info["name"].(string))
+	case info["mount_accessor"].(string) != githubAccessor:
+		t.Fatalf("bad mount_accessor: %v", info["mount_accessor"].(string))
+	}
+
+	// Now do the same with group info
+	resp, err = client.Logical().List("identity/group/id")
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	keys = resp.Data["keys"].([]interface{})
+	if len(keys) != 1 {
+		t.Fatalf("bad: length of group IDs listed; expected: 1, actual: %d", len(keys))
+	}
+
+	groupInfoRaw, ok := resp.Data["key_info"]
+	if !ok {
+		t.Fatal("expected key_info map in response")
+	}
+
+	// This is basically verifying that the group has the alias in key_info
+	// that we expect to be tied to it, plus tests a value further down in it
+	// for fun
+	groupInfo := groupInfoRaw.(map[string]interface{})
+	if len(groupInfo) != 1 {
+		t.Fatalf("bad: length of group ID key info; expected: 1, actual: %d", len(groupInfo))
+	}
+
+	infoRaw, ok = groupInfo[groupID]
+	if !ok {
+		t.Fatal("expected key info")
+	}
+	info = infoRaw.(map[string]interface{})
+	t.Logf("group info: %#v", info)
+	alias := info["alias"].(map[string]interface{})
+	switch {
+	case alias["id"].(string) != aliasID:
+		t.Fatalf("bad alias id: %v", alias["id"])
+	case alias["mount_accessor"].(string) != githubAccessor:
+		t.Fatalf("bad mount accessor: %v", alias["mount_accessor"])
+	case alias["mount_path"].(string) != "auth/github/":
+		t.Fatalf("bad mount path: %v", alias["mount_path"])
+	case alias["mount_type"].(string) != "github":
+		t.Fatalf("bad mount type: %v", alias["mount_type"])
+	}
+}
 
 // Testing the fix for GH-4351
 func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {

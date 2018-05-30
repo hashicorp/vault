@@ -30,7 +30,7 @@ test('it sets the ttl corrects when mounting', function(assert) {
     .maxTTLUnit('h')
     .submit();
 
-  configPage.visit({backend: path});
+  configPage.visit({ backend: path });
   andThen(() => {
     assert.equal(configPage.defaultTTL, defaultTTLSeconds, 'shows the proper TTL');
     assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');

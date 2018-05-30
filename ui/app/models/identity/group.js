@@ -26,6 +26,12 @@ export default IdentityModel.extend({
   lastUpdateTime: attr('string', {
     readOnly: true,
   }),
+  numMemberEntities: attr('number', {
+    readOnly: true
+  }),
+  numParentGroups: attr('number', {
+    readOnly: true
+  }),
   metadata: attr('object', {
     editType: 'kv',
   }),
@@ -34,6 +40,10 @@ export default IdentityModel.extend({
   }),
   memberGroupIds: attr({
     label: 'Member Group IDs',
+    editType: 'stringArray',
+  }),
+  parentGroupIds: attr({
+    label: 'Parent Group IDs',
     editType: 'stringArray',
   }),
   memberEntityIds: attr({

@@ -16,11 +16,11 @@ test('it renders with overlay', function(assert) {
   assert.equal(this.$('.upgrade-link-container button').text().trim(), 'upgrade', 'renders link content');
   assert.equal(
     this.$('#modal-wormhole .upgrade-overlay-title').text().trim(),
-    'Vault Enterprise',
+    'Try Vault Enterprise Free for 30 Days',
     'contains overlay content'
   );
   assert.equal(
-    this.$('#modal-wormhole a[href^="https://www.hashicorp.com/go/vault-enterprise"]').length,
+    this.$('#modal-wormhole a[href^="https://hashicorp.com/products/vault/trial?source=vaultui"]').length,
     1,
     'contains info link'
   );

@@ -5,7 +5,7 @@
         Performance Replication is a feature of Vault Enterprise Premium.
       </p>
       <p class="has-text-centered">
-        {{#upgrade-link linkClass="button is-ghost has-icon-right"}}
+        {{#upgrade-link linkClass="button is-ghost has-icon-right" pageName="Performance Replication"}}
           Learn more
           {{i-con glyph="chevron-right"}}
         {{/upgrade-link}}
@@ -18,13 +18,13 @@
         {{capitalize modeForUrl}}
       </span>
       {{#if secondaryId}}
-        <span class="tag is-light">
+        <span class="tag">
           <code>
             {{secondaryId}}
           </code>
         </span>
       {{/if}}
-      <span class="tag is-light">
+      <span class="tag">
         <code>
           {{clusterIdDisplay}}
         </code>

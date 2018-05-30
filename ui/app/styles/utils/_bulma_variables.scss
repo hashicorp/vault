@@ -37,7 +37,9 @@ $border: $grey-light;
 $hr-margin: 1rem 0;
 
 //typography
-$family-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+$family-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+  "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+  sans-serif;
 $family-primary: $family-sans;
 $body-size: 14px;
 $size-3: (24/14) + 0rem;
@@ -46,6 +48,7 @@ $size-8: (12/14) + 0rem;
 $size-9: 0.75rem;
 $size-10: 0.5rem;
 $size-11: 0.25rem;
+$console-spacing: 1.5rem;
 $size-small: $size-8;
 $font-weight-normal: 400;
 $font-weight-semibold: 600;
@@ -61,6 +64,10 @@ $radius: 2px;
 //box
 $box-radius: 0;
 $box-shadow: 0 0 0 1px rgba($black, 0.1);
+$box-shadow-low: 0 5px 1px -2px rgba($black, 0.12), 0 3px 2px -1px rgba($black, 0);
+$box-shadow-middle: 0 8px 4px -4px rgba($black, 0.10), 0 6px 8px -2px rgba($black, 0.05);
+$box-shadow-high: 0 12px 5px -7px rgba($black, 0.08), 0 11px 10px -3px rgba($black, 0.10);
+$box-shadow-highest: 0 16px 6px -10px rgba($black, 0.06), 0 16px 16px -4px rgba($black, 0.20);
 
 $link: $blue;
 $text: $black;
@@ -77,6 +84,12 @@ $menu-item-hover-color: $white;
 $progress-bar-background-color: lighten($grey-light, 15%);
 
 $base-border: 1px solid $grey-light;
+
+//menu
+$menu-item-hover-color: $text;
+$menu-item-hover-background-color: $grey-lighter;
+$menu-item-active-color: $link;
+$menu-item-active-background-color: transparent;
 
 // animations
 $speed: 150ms;

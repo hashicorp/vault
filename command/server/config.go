@@ -56,12 +56,14 @@ type Config struct {
 	ClusterAddr          string      `hcl:"cluster_addr"`
 	DisableClustering    bool        `hcl:"-"`
 	DisableClusteringRaw interface{} `hcl:"disable_clustering"`
+
+	DisableSealWrap    bool        `hcl:"-"`
+	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
 func DevConfig(ha, transactional bool) *Config {
 	ret := &Config{
-		DisableCache:      false,
 		DisableMlock:      true,
 		EnableRawEndpoint: true,
 
@@ -314,6 +316,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PidFile = c2.PidFile
 	}
 
+	result.DisableSealWrap = c.DisableSealWrap
+	if c2.DisableSealWrap {
+		result.DisableSealWrap = c2.DisableSealWrap
+	}
+
 	return result
 }
 
@@ -395,6 +402,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
+	if result.DisableSealWrapRaw != nil {
+		if result.DisableSealWrap, err = parseutil.ParseBool(result.DisableSealWrapRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
@@ -423,6 +436,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"api_addr",
 		"cluster_addr",
 		"disable_clustering",
+		"disable_sealwrap",
 	}
 	if err := checkHCLKeys(list, valid); err != nil {
 		return nil, err
@@ -711,14 +725,20 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 		valid = []string{
 			"lib",
 			"slot",
+			"token_label",
 			"pin",
 			"mechanism",
 			"hmac_mechanism",
 			"key_label",
+			"default_key_label",
 			"hmac_key_label",
+			"hmac_default_key_label",
 			"generate_key",
 			"regenerate_key",
 			"max_parallel",
+			"disable_auto_reinit_on_error",
+			"rsa_encrypt_local",
+			"rsa_oaep_hash",
 		}
 	case "awskms":
 		valid = []string{
@@ -727,6 +747,23 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 			"secret_key",
 			"kms_key_id",
 			"max_parallel",
+		}
+	case "gcpckms":
+		valid = []string{
+			"credentials",
+			"project",
+			"region",
+			"key_ring",
+			"crypto_key",
+		}
+	case "azurekeyvault":
+		valid = []string{
+			"tenant_id",
+			"client_id",
+			"client_secret",
+			"environment",
+			"vault_name",
+			"key_name",
 		}
 	default:
 		return fmt.Errorf("invalid seal type %q", key)

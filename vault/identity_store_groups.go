@@ -278,6 +278,7 @@ func (i *IdentityStore) handleGroupReadCommon(group *identity.Group) (*logical.R
 	respData["name"] = group.Name
 	respData["policies"] = group.Policies
 	respData["member_entity_ids"] = group.MemberEntityIDs
+	respData["parent_group_ids"] = group.ParentGroupIDs
 	respData["metadata"] = group.Metadata
 	respData["creation_time"] = ptypes.TimestampString(group.CreationTime)
 	respData["last_update_time"] = ptypes.TimestampString(group.LastUpdateTime)
@@ -331,15 +332,54 @@ func (i *IdentityStore) pathGroupIDList() framework.OperationFunc {
 		}
 
 		var groupIDs []string
+		groupInfo := map[string]interface{}{}
+
+		type mountInfo struct {
+			MountType string
+			MountPath string
+		}
+		mountAccessorMap := map[string]mountInfo{}
+
 		for {
 			raw := iter.Next()
 			if raw == nil {
 				break
 			}
-			groupIDs = append(groupIDs, raw.(*identity.Group).ID)
+			group := raw.(*identity.Group)
+			groupIDs = append(groupIDs, group.ID)
+			groupInfoEntry := map[string]interface{}{
+				"name":                group.Name,
+				"num_member_entities": len(group.MemberEntityIDs),
+				"num_parent_groups":   len(group.ParentGroupIDs),
+			}
+			if group.Alias != nil {
+				entry := map[string]interface{}{
+					"id":             group.Alias.ID,
+					"name":           group.Alias.Name,
+					"mount_accessor": group.Alias.MountAccessor,
+				}
+
+				mi, ok := mountAccessorMap[group.Alias.MountAccessor]
+				if ok {
+					entry["mount_type"] = mi.MountType
+					entry["mount_path"] = mi.MountPath
+				} else {
+					mi = mountInfo{}
+					if mountValidationResp := i.core.router.validateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
+						mi.MountType = mountValidationResp.MountType
+						mi.MountPath = mountValidationResp.MountPath
+						entry["mount_type"] = mi.MountType
+						entry["mount_path"] = mi.MountPath
+					}
+					mountAccessorMap[group.Alias.MountAccessor] = mi
+				}
+
+				groupInfoEntry["alias"] = entry
+			}
+			groupInfo[group.ID] = groupInfoEntry
 		}
 
-		return logical.ListResponse(groupIDs), nil
+		return logical.ListResponseWithInfo(groupIDs, groupInfo), nil
 	}
 }
 

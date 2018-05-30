@@ -277,6 +277,10 @@ func (u *marshalInfo) marshal(b []byte, ptr pointer, deterministic bool) ([]byte
 			if err == errRepeatedHasNil {
 				err = errors.New("proto: repeated field " + f.name + " has nil element")
 			}
+			if err == errInvalidUTF8 {
+				fullName := revProtoTypes[reflect.PtrTo(u.typ)] + "." + f.name
+				err = fmt.Errorf("proto: string field %q contains invalid UTF-8", fullName)
+			}
 			return b, err
 		}
 	}

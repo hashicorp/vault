@@ -12,6 +12,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -724,21 +725,28 @@ func GenerateRandBytes(length int) ([]byte, error) {
 
 func TestWaitActive(t testing.T, core *Core) {
 	t.Helper()
+	if err := TestWaitActiveWithError(core); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWaitActiveWithError(core *Core) error {
 	start := time.Now()
 	var standby bool
 	var err error
 	for time.Now().Sub(start) < time.Second {
 		standby, err = core.Standby()
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			return err
 		}
 		if !standby {
 			break
 		}
 	}
 	if standby {
-		t.Fatalf("should not be in standby mode")
+		return errors.New("should not be in standby mode")
 	}
+	return nil
 }
 
 type TestCluster struct {
@@ -769,31 +777,39 @@ func (c *TestCluster) Start() {
 
 // UnsealCores uses the cluster barrier keys to unseal the test cluster cores
 func (c *TestCluster) UnsealCores(t testing.T) {
+	if err := c.UnsealCoresWithError(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (c *TestCluster) UnsealCoresWithError() error {
 	numCores := len(c.Cores)
 
 	// Unseal first core
 	for _, key := range c.BarrierKeys {
 		if _, err := c.Cores[0].Unseal(TestKeyCopy(key)); err != nil {
-			t.Fatalf("unseal err: %s", err)
+			return fmt.Errorf("unseal err: %s", err)
 		}
 	}
 
 	// Verify unsealed
 	sealed, err := c.Cores[0].Sealed()
 	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
+		return fmt.Errorf("err checking seal status: %s", err)
 	}
 	if sealed {
-		t.Fatal("should not be sealed")
+		return fmt.Errorf("should not be sealed")
 	}
 
-	TestWaitActive(t, c.Cores[0].Core)
+	if err := TestWaitActiveWithError(c.Cores[0].Core); err != nil {
+		return err
+	}
 
 	// Unseal other cores
 	for i := 1; i < numCores; i++ {
 		for _, key := range c.BarrierKeys {
 			if _, err := c.Cores[i].Core.Unseal(TestKeyCopy(key)); err != nil {
-				t.Fatalf("unseal err: %s", err)
+				return fmt.Errorf("unseal err: %s", err)
 			}
 		}
 	}
@@ -806,12 +822,14 @@ func (c *TestCluster) UnsealCores(t testing.T) {
 	for i := 1; i < numCores; i++ {
 		isLeader, _, _, err := c.Cores[i].Leader()
 		if err != nil {
-			t.Fatal(err)
+			return err
 		}
 		if isLeader {
-			t.Fatalf("core[%d] should not be leader", i)
+			return fmt.Errorf("core[%d] should not be leader", i)
 		}
 	}
+
+	return nil
 }
 
 func (c *TestCluster) EnsureCoresSealed(t testing.T) {

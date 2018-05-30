@@ -459,14 +459,18 @@ func (i *IdentityStore) handleEntityReadCommon(entity *identity.Entity) (*logica
 		aliasMap := map[string]interface{}{}
 		aliasMap["id"] = alias.ID
 		aliasMap["canonical_id"] = alias.CanonicalID
-		aliasMap["mount_type"] = alias.MountType
 		aliasMap["mount_accessor"] = alias.MountAccessor
-		aliasMap["mount_path"] = alias.MountPath
 		aliasMap["metadata"] = alias.Metadata
 		aliasMap["name"] = alias.Name
 		aliasMap["merged_from_canonical_ids"] = alias.MergedFromCanonicalIDs
 		aliasMap["creation_time"] = ptypes.TimestampString(alias.CreationTime)
 		aliasMap["last_update_time"] = ptypes.TimestampString(alias.LastUpdateTime)
+
+		if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
+			aliasMap["mount_type"] = mountValidationResp.MountType
+			aliasMap["mount_path"] = mountValidationResp.MountPath
+		}
+
 		aliasesToReturn[aliasIdx] = aliasMap
 	}
 
@@ -522,15 +526,56 @@ func (i *IdentityStore) pathEntityIDList() framework.OperationFunc {
 		}
 
 		var entityIDs []string
+		entityInfo := map[string]interface{}{}
+
+		type mountInfo struct {
+			MountType string
+			MountPath string
+		}
+		mountAccessorMap := map[string]mountInfo{}
+
 		for {
 			raw := iter.Next()
 			if raw == nil {
 				break
 			}
-			entityIDs = append(entityIDs, raw.(*identity.Entity).ID)
+			entity := raw.(*identity.Entity)
+			entityIDs = append(entityIDs, entity.ID)
+			entityInfoEntry := map[string]interface{}{
+				"name": entity.Name,
+			}
+			if len(entity.Aliases) > 0 {
+				aliasList := make([]interface{}, 0, len(entity.Aliases))
+				for _, alias := range entity.Aliases {
+					entry := map[string]interface{}{
+						"id":             alias.ID,
+						"name":           alias.Name,
+						"mount_accessor": alias.MountAccessor,
+					}
+
+					mi, ok := mountAccessorMap[alias.MountAccessor]
+					if ok {
+						entry["mount_type"] = mi.MountType
+						entry["mount_path"] = mi.MountPath
+					} else {
+						mi = mountInfo{}
+						if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
+							mi.MountType = mountValidationResp.MountType
+							mi.MountPath = mountValidationResp.MountPath
+							entry["mount_type"] = mi.MountType
+							entry["mount_path"] = mi.MountPath
+						}
+						mountAccessorMap[alias.MountAccessor] = mi
+					}
+
+					aliasList = append(aliasList, entry)
+				}
+				entityInfoEntry["aliases"] = aliasList
+			}
+			entityInfo[entity.ID] = entityInfoEntry
 		}
 
-		return logical.ListResponse(entityIDs), nil
+		return logical.ListResponseWithInfo(entityIDs, entityInfo), nil
 	}
 }
 

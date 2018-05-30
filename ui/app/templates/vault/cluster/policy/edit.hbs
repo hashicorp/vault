@@ -10,10 +10,8 @@
       <h1 class="title is-3">
         {{model.id}}
         {{#if model.enforcementLevel}}
-          <span class="tag is-medium is-inverted is-outlined" aria-label="Enforcement level: {{model.enforcementLevel}}">
-            <code>
-              {{model.enforcementLevel}}
-            </code>
+          <span class="tag is-medium" aria-label="Enforcement level: {{model.enforcementLevel}}">
+            {{model.enforcementLevel}}
           </span>
         {{/if}}
       </h1>

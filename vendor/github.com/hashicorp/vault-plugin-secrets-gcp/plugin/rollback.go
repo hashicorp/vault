@@ -166,7 +166,7 @@ func (b *backend) serviceAccountPolicyRollback(ctx context.Context, req *logical
 		}
 	}
 
-	r, err := b.enabledIamResources.Resource(entry.Resource)
+	r, err := b.iamResources.Parse(entry.Resource)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func (b *backend) deleteTokenGenKey(ctx context.Context, iamAdmin *iam.Service, 
 
 func (b *backend) removeBindings(ctx context.Context, iamHandle *iamutil.IamHandle, email string, bindings ResourceBindings) (allErr *multierror.Error) {
 	for resName, roles := range bindings {
-		resource, err := b.enabledIamResources.Resource(resName)
+		resource, err := b.iamResources.Parse(resName)
 		if err != nil {
 			allErr = multierror.Append(allErr, errwrap.Wrapf(fmt.Sprintf("unable to delete role binding for resource '%s': {{err}}", resName), err))
 			continue

@@ -106,8 +106,9 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   specified by the `VAULT_HSM_MECHANISM` environment variable.  
   Currently supported mechanisms (in order of precedence):
 
+    - `0x1085` `CKM_AES_CBC_PAD` (HMAC mechanism required)
     - `0x1082` `CKM_AES_CBC` (HMAC mechanism required)
-    - `0x1087` `CKM_AES_GCM` **_BETA_**
+    - `0x1087` `CKM_AES_GCM`
     - `0x0009` `CKM_RSA_PKCS_OAEP`
     - `0x0001` `CKM_RSA_PKCS`
 

@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	ad "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
 	gcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
@@ -110,6 +111,7 @@ var (
 	}
 
 	logicalBackends = map[string]logical.Factory{
+		"ad":         ad.Factory,
 		"aws":        aws.Factory,
 		"cassandra":  cassandra.Factory,
 		"consul":     consul.Factory,
@@ -199,6 +201,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"aws":      &credAws.CLIHandler{},
 		"centrify": &credCentrify.CLIHandler{},
 		"cert":     &credCert.CLIHandler{},
+		"gcp":      &credGcp.CLIHandler{},
 		"github":   &credGitHub.CLIHandler{},
 		"ldap":     &credLdap.CLIHandler{},
 		"okta":     &credOkta.CLIHandler{},

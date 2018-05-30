@@ -2375,8 +2375,9 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// Client API for Backend service
-
+// BackendClient is the client API for Backend service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type BackendClient interface {
 	// HandleRequest is used to handle a request and generate a response.
 	// The plugins must check the operation type and handle appropriately.
@@ -2422,7 +2423,7 @@ func NewBackendClient(cc *grpc.ClientConn) BackendClient {
 
 func (c *backendClient) HandleRequest(ctx context.Context, in *HandleRequestArgs, opts ...grpc.CallOption) (*HandleRequestReply, error) {
 	out := new(HandleRequestReply)
-	err := grpc.Invoke(ctx, "/pb.Backend/HandleRequest", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Backend/HandleRequest", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2431,7 +2432,7 @@ func (c *backendClient) HandleRequest(ctx context.Context, in *HandleRequestArgs
 
 func (c *backendClient) SpecialPaths(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SpecialPathsReply, error) {
 	out := new(SpecialPathsReply)
-	err := grpc.Invoke(ctx, "/pb.Backend/SpecialPaths", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Backend/SpecialPaths", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2440,7 +2441,7 @@ func (c *backendClient) SpecialPaths(ctx context.Context, in *Empty, opts ...grp
 
 func (c *backendClient) HandleExistenceCheck(ctx context.Context, in *HandleExistenceCheckArgs, opts ...grpc.CallOption) (*HandleExistenceCheckReply, error) {
 	out := new(HandleExistenceCheckReply)
-	err := grpc.Invoke(ctx, "/pb.Backend/HandleExistenceCheck", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Backend/HandleExistenceCheck", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2449,7 +2450,7 @@ func (c *backendClient) HandleExistenceCheck(ctx context.Context, in *HandleExis
 
 func (c *backendClient) Cleanup(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
-	err := grpc.Invoke(ctx, "/pb.Backend/Cleanup", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Backend/Cleanup", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2458,7 +2459,7 @@ func (c *backendClient) Cleanup(ctx context.Context, in *Empty, opts ...grpc.Cal
 
 func (c *backendClient) InvalidateKey(ctx context.Context, in *InvalidateKeyArgs, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
-	err := grpc.Invoke(ctx, "/pb.Backend/InvalidateKey", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Backend/InvalidateKey", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2467,7 +2468,7 @@ func (c *backendClient) InvalidateKey(ctx context.Context, in *InvalidateKeyArgs
 
 func (c *backendClient) Setup(ctx context.Context, in *SetupArgs, opts ...grpc.CallOption) (*SetupReply, error) {
 	out := new(SetupReply)
-	err := grpc.Invoke(ctx, "/pb.Backend/Setup", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Backend/Setup", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2476,15 +2477,14 @@ func (c *backendClient) Setup(ctx context.Context, in *SetupArgs, opts ...grpc.C
 
 func (c *backendClient) Type(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TypeReply, error) {
 	out := new(TypeReply)
-	err := grpc.Invoke(ctx, "/pb.Backend/Type", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Backend/Type", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// Server API for Backend service
-
+// BackendServer is the server API for Backend service.
 type BackendServer interface {
 	// HandleRequest is used to handle a request and generate a response.
 	// The plugins must check the operation type and handle appropriately.
@@ -2687,8 +2687,9 @@ var _Backend_serviceDesc = grpc.ServiceDesc{
 	Metadata: "logical/plugin/pb/backend.proto",
 }
 
-// Client API for Storage service
-
+// StorageClient is the client API for Storage service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type StorageClient interface {
 	List(ctx context.Context, in *StorageListArgs, opts ...grpc.CallOption) (*StorageListReply, error)
 	Get(ctx context.Context, in *StorageGetArgs, opts ...grpc.CallOption) (*StorageGetReply, error)
@@ -2706,7 +2707,7 @@ func NewStorageClient(cc *grpc.ClientConn) StorageClient {
 
 func (c *storageClient) List(ctx context.Context, in *StorageListArgs, opts ...grpc.CallOption) (*StorageListReply, error) {
 	out := new(StorageListReply)
-	err := grpc.Invoke(ctx, "/pb.Storage/List", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Storage/List", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2715,7 +2716,7 @@ func (c *storageClient) List(ctx context.Context, in *StorageListArgs, opts ...g
 
 func (c *storageClient) Get(ctx context.Context, in *StorageGetArgs, opts ...grpc.CallOption) (*StorageGetReply, error) {
 	out := new(StorageGetReply)
-	err := grpc.Invoke(ctx, "/pb.Storage/Get", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Storage/Get", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2724,7 +2725,7 @@ func (c *storageClient) Get(ctx context.Context, in *StorageGetArgs, opts ...grp
 
 func (c *storageClient) Put(ctx context.Context, in *StoragePutArgs, opts ...grpc.CallOption) (*StoragePutReply, error) {
 	out := new(StoragePutReply)
-	err := grpc.Invoke(ctx, "/pb.Storage/Put", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Storage/Put", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2733,15 +2734,14 @@ func (c *storageClient) Put(ctx context.Context, in *StoragePutArgs, opts ...grp
 
 func (c *storageClient) Delete(ctx context.Context, in *StorageDeleteArgs, opts ...grpc.CallOption) (*StorageDeleteReply, error) {
 	out := new(StorageDeleteReply)
-	err := grpc.Invoke(ctx, "/pb.Storage/Delete", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.Storage/Delete", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// Server API for Storage service
-
+// StorageServer is the server API for Storage service.
 type StorageServer interface {
 	List(context.Context, *StorageListArgs) (*StorageListReply, error)
 	Get(context.Context, *StorageGetArgs) (*StorageGetReply, error)
@@ -2850,8 +2850,9 @@ var _Storage_serviceDesc = grpc.ServiceDesc{
 	Metadata: "logical/plugin/pb/backend.proto",
 }
 
-// Client API for SystemView service
-
+// SystemViewClient is the client API for SystemView service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type SystemViewClient interface {
 	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
 	DefaultLeaseTTL(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TTLReply, error)
@@ -2897,7 +2898,7 @@ func NewSystemViewClient(cc *grpc.ClientConn) SystemViewClient {
 
 func (c *systemViewClient) DefaultLeaseTTL(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TTLReply, error) {
 	out := new(TTLReply)
-	err := grpc.Invoke(ctx, "/pb.SystemView/DefaultLeaseTTL", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.SystemView/DefaultLeaseTTL", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2906,7 +2907,7 @@ func (c *systemViewClient) DefaultLeaseTTL(ctx context.Context, in *Empty, opts 
 
 func (c *systemViewClient) MaxLeaseTTL(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TTLReply, error) {
 	out := new(TTLReply)
-	err := grpc.Invoke(ctx, "/pb.SystemView/MaxLeaseTTL", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.SystemView/MaxLeaseTTL", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2915,7 +2916,7 @@ func (c *systemViewClient) MaxLeaseTTL(ctx context.Context, in *Empty, opts ...g
 
 func (c *systemViewClient) SudoPrivilege(ctx context.Context, in *SudoPrivilegeArgs, opts ...grpc.CallOption) (*SudoPrivilegeReply, error) {
 	out := new(SudoPrivilegeReply)
-	err := grpc.Invoke(ctx, "/pb.SystemView/SudoPrivilege", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.SystemView/SudoPrivilege", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2924,7 +2925,7 @@ func (c *systemViewClient) SudoPrivilege(ctx context.Context, in *SudoPrivilegeA
 
 func (c *systemViewClient) Tainted(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TaintedReply, error) {
 	out := new(TaintedReply)
-	err := grpc.Invoke(ctx, "/pb.SystemView/Tainted", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.SystemView/Tainted", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2933,7 +2934,7 @@ func (c *systemViewClient) Tainted(ctx context.Context, in *Empty, opts ...grpc.
 
 func (c *systemViewClient) CachingDisabled(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*CachingDisabledReply, error) {
 	out := new(CachingDisabledReply)
-	err := grpc.Invoke(ctx, "/pb.SystemView/CachingDisabled", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.SystemView/CachingDisabled", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2942,7 +2943,7 @@ func (c *systemViewClient) CachingDisabled(ctx context.Context, in *Empty, opts 
 
 func (c *systemViewClient) ReplicationState(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ReplicationStateReply, error) {
 	out := new(ReplicationStateReply)
-	err := grpc.Invoke(ctx, "/pb.SystemView/ReplicationState", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.SystemView/ReplicationState", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2951,7 +2952,7 @@ func (c *systemViewClient) ReplicationState(ctx context.Context, in *Empty, opts
 
 func (c *systemViewClient) ResponseWrapData(ctx context.Context, in *ResponseWrapDataArgs, opts ...grpc.CallOption) (*ResponseWrapDataReply, error) {
 	out := new(ResponseWrapDataReply)
-	err := grpc.Invoke(ctx, "/pb.SystemView/ResponseWrapData", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.SystemView/ResponseWrapData", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2960,7 +2961,7 @@ func (c *systemViewClient) ResponseWrapData(ctx context.Context, in *ResponseWra
 
 func (c *systemViewClient) MlockEnabled(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*MlockEnabledReply, error) {
 	out := new(MlockEnabledReply)
-	err := grpc.Invoke(ctx, "/pb.SystemView/MlockEnabled", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.SystemView/MlockEnabled", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2969,15 +2970,14 @@ func (c *systemViewClient) MlockEnabled(ctx context.Context, in *Empty, opts ...
 
 func (c *systemViewClient) LocalMount(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*LocalMountReply, error) {
 	out := new(LocalMountReply)
-	err := grpc.Invoke(ctx, "/pb.SystemView/LocalMount", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/pb.SystemView/LocalMount", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// Server API for SystemView service
-
+// SystemViewServer is the server API for SystemView service.
 type SystemViewServer interface {
 	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
 	DefaultLeaseTTL(context.Context, *Empty) (*TTLReply, error)

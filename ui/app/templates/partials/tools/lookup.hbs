@@ -10,6 +10,7 @@
 
 {{#if (or creation_time creation_ttl)}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{info-table-row label="Creation path" value=creation_path data-test-tools="token-lookup-row"}}
     {{info-table-row label="Creation time" value=creation_time data-test-tools="token-lookup-row"}}
     {{info-table-row label="Creation TTL" value=creation_ttl data-test-tools="token-lookup-row"}}
     {{#if expirationDate}}

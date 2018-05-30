@@ -2092,7 +2092,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 	if rawVal, ok := data.GetOk("listing_visibility"); ok {
 		lvString := rawVal.(string)
-		listingVisibility := ListingVisiblityType(lvString)
+		listingVisibility := ListingVisibilityType(lvString)
 
 		if err := checkListingVisibility(listingVisibility); err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", listingVisibility)), nil
@@ -3769,7 +3769,7 @@ func sanitizeMountPath(path string) string {
 	return path
 }
 
-func checkListingVisibility(visibility ListingVisiblityType) error {
+func checkListingVisibility(visibility ListingVisibilityType) error {
 	switch visibility {
 	case ListingVisibilityHidden:
 	case ListingVisibilityUnauth:
@@ -4366,7 +4366,7 @@ This path responds to the following HTTP methods.
 		"This function can be used to generate high-entropy random bytes.",
 	},
 	"listing_visibility": {
-		"Determines the visibility of the mount in the UI-specific listing endpoint.",
+		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and ''.",
 		"",
 	},
 	"passthrough_request_headers": {

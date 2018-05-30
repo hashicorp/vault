@@ -39,8 +39,8 @@ branches:
 
 env:
   - TEST_COMMAND='make dev test-ember'
-  - TEST_COMMAND='travis_wait 75 make test'
-  - TEST_COMMAND='travis_wait 75 make testrace'
+  - TEST_COMMAND='travis_wait 75 make testtravis'
+  - TEST_COMMAND='travis_wait 75 make testracetravis'
 
 
 script:

@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"google.golang.org/api/iam/v1"
+	"regexp"
 )
 
 const (
@@ -162,7 +163,7 @@ func (b *backend) saveRoleSetWithNewAccount(ctx context.Context, s logical.Stora
 		binds = newBinds
 		rs.Bindings = newBinds
 	}
-	walIds, err := rs.updateIamPolicies(ctx, s, b.enabledIamResources, iamHandle, binds)
+	walIds, err := rs.updateIamPolicies(ctx, s, b.iamResources, iamHandle, binds)
 	if err != nil {
 		tryDeleteWALs(ctx, s, oldWals...)
 		return nil, err
@@ -358,7 +359,7 @@ func (rs *RoleSet) newKeyForTokenGen(ctx context.Context, s logical.Storage, iam
 	return walId, nil
 }
 
-func (rs *RoleSet) updateIamPolicies(ctx context.Context, s logical.Storage, enabledIamResources iamutil.EnabledResources, iamHandle *iamutil.IamHandle, rb ResourceBindings) ([]string, error) {
+func (rs *RoleSet) updateIamPolicies(ctx context.Context, s logical.Storage, enabledIamResources iamutil.IamResourceParser, iamHandle *iamutil.IamHandle, rb ResourceBindings) ([]string, error) {
 	wals := make([]string, 0, len(rb))
 	for rName, roles := range rb {
 		walId, err := framework.PutWAL(ctx, s, walTypeIamPolicy, &walIamPolicy{
@@ -374,7 +375,7 @@ func (rs *RoleSet) updateIamPolicies(ctx context.Context, s logical.Storage, ena
 			return wals, err
 		}
 
-		resource, err := enabledIamResources.Resource(rName)
+		resource, err := enabledIamResources.Parse(rName)
 		if err != nil {
 			return wals, err
 		}
@@ -401,9 +402,12 @@ func (rs *RoleSet) updateIamPolicies(ctx context.Context, s logical.Storage, ena
 }
 
 func roleSetServiceAccountName(rsName string) (name string) {
+	// Sanitize role name
+	reg := regexp.MustCompile("[^a-zA-Z0-9-]+")
+	rsName = reg.ReplaceAllString(rsName, "-")
+
 	intSuffix := fmt.Sprintf("%d", time.Now().Unix())
 	fullName := fmt.Sprintf("vault%s-%s", rsName, intSuffix)
-
 	name = fullName
 	if len(fullName) > serviceAccountMaxLen {
 		toTrunc := len(fullName) - serviceAccountMaxLen

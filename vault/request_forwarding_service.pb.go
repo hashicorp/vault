@@ -149,8 +149,9 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// Client API for RequestForwarding service
-
+// RequestForwardingClient is the client API for RequestForwarding service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type RequestForwardingClient interface {
 	ForwardRequest(ctx context.Context, in *forwarding.Request, opts ...grpc.CallOption) (*forwarding.Response, error)
 	Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoReply, error)
@@ -166,7 +167,7 @@ func NewRequestForwardingClient(cc *grpc.ClientConn) RequestForwardingClient {
 
 func (c *requestForwardingClient) ForwardRequest(ctx context.Context, in *forwarding.Request, opts ...grpc.CallOption) (*forwarding.Response, error) {
 	out := new(forwarding.Response)
-	err := grpc.Invoke(ctx, "/vault.RequestForwarding/ForwardRequest", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/vault.RequestForwarding/ForwardRequest", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -175,15 +176,14 @@ func (c *requestForwardingClient) ForwardRequest(ctx context.Context, in *forwar
 
 func (c *requestForwardingClient) Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoReply, error) {
 	out := new(EchoReply)
-	err := grpc.Invoke(ctx, "/vault.RequestForwarding/Echo", in, out, c.cc, opts...)
+	err := c.cc.Invoke(ctx, "/vault.RequestForwarding/Echo", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// Server API for RequestForwarding service
-
+// RequestForwardingServer is the server API for RequestForwarding service.
 type RequestForwardingServer interface {
 	ForwardRequest(context.Context, *forwarding.Request) (*forwarding.Response, error)
 	Echo(context.Context, *EchoRequest) (*EchoReply, error)

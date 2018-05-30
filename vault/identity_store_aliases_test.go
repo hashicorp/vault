@@ -9,62 +9,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestIdentityStore_ListAlias(t *testing.T) {
-	var err error
-	var resp *logical.Response
-
-	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(t)
-
-	entityReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "entity",
-	}
-	resp, err = is.HandleRequest(context.Background(), entityReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-	if resp == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityID := resp.Data["id"].(string)
-
-	// Create an alias
-	aliasData := map[string]interface{}{
-		"name":           "testaliasname",
-		"mount_accessor": githubAccessor,
-	}
-	aliasReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "entity-alias",
-		Data:      aliasData,
-	}
-	resp, err = is.HandleRequest(context.Background(), aliasReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	aliasData["name"] = "entityalias"
-	aliasData["entity_id"] = entityID
-	resp, err = is.HandleRequest(context.Background(), aliasReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	listReq := &logical.Request{
-		Operation: logical.ListOperation,
-		Path:      "entity-alias/id",
-	}
-	resp, err = is.HandleRequest(context.Background(), listReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	keys := resp.Data["keys"].([]string)
-	if len(keys) != 2 {
-		t.Fatalf("bad: length of alias IDs listed; expected: 2, actual: %d", len(keys))
-	}
-}
-
 // This test is required because MemDB does not take care of ensuring
 // uniqueness of indexes that are marked unique.
 func TestIdentityStore_AliasSameAliasNames(t *testing.T) {

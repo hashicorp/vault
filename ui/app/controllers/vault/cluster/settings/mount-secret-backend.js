@@ -7,22 +7,23 @@ const { computed } = Ember;
 
 export default Ember.Controller.extend({
   mountTypes: [
+    { label: 'Active Directory', value: 'ad' },
     { label: 'AWS', value: 'aws' },
-    { label: 'Cassandra', value: 'cassandra', deprecated: true },
     { label: 'Consul', value: 'consul' },
     { label: 'Databases', value: 'database' },
     { label: 'Google Cloud', value: 'gcp' },
     { label: 'KV', value: 'kv' },
-    { label: 'MongoDB', value: 'mongodb', deprecated: true },
-    { label: 'MSSQL', value: 'mssql', deprecated: true },
-    { label: 'MySQL', value: 'mysql', deprecated: true },
     { label: 'Nomad', value: 'nomad' },
     { label: 'PKI', value: 'pki' },
-    { label: 'PostgreSQL', value: 'postgresql', deprecated: true },
     { label: 'RabbitMQ', value: 'rabbitmq' },
     { label: 'SSH', value: 'ssh' },
     { label: 'Transit', value: 'transit' },
     { label: 'TOTP', value: 'totp' },
+    { label: 'Cassandra', value: 'cassandra', deprecated: true },
+    { label: 'MongoDB', value: 'mongodb', deprecated: true },
+    { label: 'MSSQL', value: 'mssql', deprecated: true },
+    { label: 'MySQL', value: 'mysql', deprecated: true },
+    { label: 'PostgreSQL', value: 'postgresql', deprecated: true },
   ],
 
   selectedType: null,

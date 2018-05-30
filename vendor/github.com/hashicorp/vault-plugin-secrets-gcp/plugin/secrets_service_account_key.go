@@ -170,6 +170,9 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 	if err != nil {
 		return nil, errwrap.Wrapf("could not read backend config: {{err}}", err)
 	}
+	if cfg == nil {
+		cfg = &config{}
+	}
 
 	iamC, err := newIamAdmin(ctx, s)
 	if err != nil {

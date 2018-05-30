@@ -12,7 +12,6 @@ EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox \
 	github.com/kardianos/govendor \
 	github.com/client9/misspell/cmd/misspell
-BUILD_TAGS?=vault
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
 GO_VERSION_MIN=1.10
@@ -31,6 +30,12 @@ dev-ui: prep
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS) ui' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+
+testtravis: BUILD_TAGS=travis
+testtravis: test
+
+testracetravis: BUILD_TAGS=travis
+testracetravis: testrace
 
 # test runs the unit tests and vets the code
 test: prep
@@ -91,6 +96,8 @@ bootstrap:
 		go get -u $$tool; \
 	done
 
+# Note: if you have plugins in GOPATH you can update all of them via something like:
+# for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
 update-plugins:
 	grep vault-plugin- vendor/vendor.json | cut -d '"' -f 4 | xargs govendor fetch
 
