@@ -50,7 +50,20 @@ const (
 
 	//maxLeaseThreshold is the maximum lease count before generating log warning
 	maxLeaseThreshold = 256000
+
+	// metadata is the path at which operational metadata for the expiration
+	// manager is persisted
+	metadataPath = "metadata"
 )
+
+// ExpirationMetadata holds operational information for the expiration
+// manager
+type ExpirationMetadata struct {
+	// SHA1HashedLeasesCleared indicates whether or not all the active leases
+	// are of version 2 (uses SHA2-256 HMAC and not SHA1 hash for obfuscation
+	// of lease IDs and indexes).
+	SHA1HashedLeasesCleared bool `json:"sha1_hashed_leases_cleared"`
+}
 
 // ExpirationManager is used by the Core to manage leases. Secrets
 // can provide a lease, meaning that they can be renewed or revoked.
@@ -58,6 +71,7 @@ const (
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
 	router     *Router
+	view       *BarrierView
 	idView     *BarrierView
 	tokenView  *BarrierView
 	tokenStore *TokenStore
@@ -80,6 +94,14 @@ type ExpirationManager struct {
 	leaseCheckCounter uint32
 
 	logLeaseExpirations bool
+
+	// SHA1HashedLeasesPresent tracks the presence of active leases that use
+	// SHA1 hash for the obfuscation of lease ID or lease's secondary index
+	SHA1HashedLeasesPresent int32
+
+	// SHA1HashedLeasesCleared is set when there are no active leases that use
+	// SHA1 hash for the obfuscation of lease ID or lease's secondary index
+	SHA1HashedLeasesCleared bool
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -87,6 +109,7 @@ type ExpirationManager struct {
 func NewExpirationManager(c *Core, view *BarrierView, logger log.Logger) *ExpirationManager {
 	exp := &ExpirationManager{
 		router:     c.router,
+		view:       view,
 		idView:     view.SubView(leaseViewPrefix),
 		tokenView:  view.SubView(tokenViewPrefix),
 		tokenStore: c.tokenStore,
@@ -116,7 +139,7 @@ func NewExpirationManager(c *Core, view *BarrierView, logger log.Logger) *Expira
 
 // setupExpiration is invoked after we've loaded the mount table to
 // initialize the expiration manager
-func (c *Core) setupExpiration() error {
+func (c *Core) setupExpiration(ctx context.Context) error {
 	c.metricsMutex.Lock()
 	defer c.metricsMutex.Unlock()
 	// Create a sub-view
@@ -124,6 +147,21 @@ func (c *Core) setupExpiration() error {
 
 	// Create the manager
 	mgr := NewExpirationManager(c, view, c.logger.ResetNamed("expiration"))
+
+	// Read the metadata for the expiration manager
+	entry, err := view.Get(ctx, metadataPath)
+	if err != nil {
+		return errwrap.Wrapf("failed to read expiration metadata: {{err}}", err)
+	}
+	if entry != nil {
+		var expMetadata ExpirationMetadata
+		err = entry.DecodeJSON(&expMetadata)
+		if err != nil {
+			return errwrap.Wrapf("failed to decode expiration metadata: {{err}}", err)
+		}
+		mgr.SHA1HashedLeasesCleared = expMetadata.SHA1HashedLeasesCleared
+	}
+
 	c.expiration = mgr
 
 	// Link the token store to this
@@ -407,6 +445,29 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	m.restoreModeLock.Unlock()
 
 	m.logger.Info("lease restore complete")
+
+	// At this time all the leases are loaded. The restoration of leases would
+	// have also computed if were any leases that had either its ID or
+	// secondary index obfuscated using SHA1 hash instead of SHA2-256 HMAC.
+	// Persist the result of that computation across reboots.
+	expMetadata := &ExpirationMetadata{}
+
+	if atomic.LoadInt32(&m.SHA1HashedLeasesPresent) == 0 {
+		expMetadata.SHA1HashedLeasesCleared = true
+	}
+
+	m.logger.Debug("persisting expiration manager metadata", "sha1_hashed_leases_cleared", expMetadata.SHA1HashedLeasesCleared)
+
+	// Encode and persist the metadata entry
+	metadataEntry, err := logical.StorageEntryJSON("metadata", expMetadata)
+	if err != nil {
+		return err
+	}
+	err = m.view.Put(m.quitContext, metadataEntry)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -906,6 +967,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		Secret:      resp.Secret,
 		IssueTime:   time.Now(),
 		ExpireTime:  resp.Secret.ExpirationTime(),
+		Version:     2,
 	}
 
 	// Encode the entry
@@ -952,6 +1014,7 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 		Path:        source,
 		IssueTime:   time.Now(),
 		ExpireTime:  auth.ExpirationTime(),
+		Version:     2,
 	}
 
 	// Encode the entry
@@ -1187,6 +1250,10 @@ func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreMode bool, 
 			}
 		}
 
+		if le.Version < 2 {
+			atomic.CompareAndSwapInt32(&m.SHA1HashedLeasesPresent, 0, 1)
+		}
+
 		// Update the cache of restored leases, either synchronously or through
 		// the lazy loaded restore process
 		m.restoreLoaded.Store(le.LeaseID, struct{}{})
@@ -1406,6 +1473,12 @@ func (m *ExpirationManager) lookupLeasesByToken(tokenID string) ([]string, error
 
 	leaseIDs = append(leaseIDs, ids...)
 
+	// Avoid putting SHA1 hash of the tokenID on the wire when there are no
+	// active leases that use SHA1 hash anymore
+	if m.SHA1HashedLeasesCleared {
+		return leaseIDs, nil
+	}
+
 	// This is only here for backwards compatibility
 	saltedID, err := m.tokenStore.SaltID(m.quitContext, tokenID)
 	if err != nil {
@@ -1470,6 +1543,7 @@ type leaseEntry struct {
 	IssueTime       time.Time              `json:"issue_time"`
 	ExpireTime      time.Time              `json:"expire_time"`
 	LastRenewalTime time.Time              `json:"last_renewal_time"`
+	Version         int                    `json:"version"`
 }
 
 // encode is used to JSON encode the lease entry

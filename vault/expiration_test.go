@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -32,6 +33,175 @@ func mockExpiration(t testing.TB) *ExpirationManager {
 func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
 	c, ts, _, _ := TestCoreWithBackendTokenStore(t, backend)
 	return c, ts.expiration
+}
+
+func TestExpiration_Metadata(t *testing.T) {
+	core, ts, keys, root := TestCoreWithTokenStore(t)
+	exp := ts.expiration
+
+	var err error
+
+	for i := 0; i < 10; i++ {
+		// Version is not set to 2 in the lease
+		le := &leaseEntry{
+			LeaseID: "test/foo" + strconv.Itoa(i),
+			Path:    "test/foo",
+			Data: map[string]interface{}{
+				"testing": true,
+			},
+			Secret: &logical.Secret{
+				LeaseOptions: logical.LeaseOptions{
+					TTL: time.Minute,
+				},
+			},
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now().Add(60 * time.Second),
+		}
+
+		err = exp.persistEntry(le)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = exp.createIndexByToken(le.ClientToken, le.LeaseID)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		exp.updatePending(le, le.Secret.LeaseTotal())
+	}
+
+	err = core.Seal(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Wait for restoration to complete
+	time.Sleep(2 * time.Second)
+
+	// Metadata should indicate that there were no leases using SHA1 hash
+	entry, err := exp.view.Get(context.Background(), metadataPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry == nil {
+		t.Fatalf("expected metadata entry to be present")
+	}
+
+	expMetadata := ExpirationMetadata{}
+	err = entry.DecodeJSON(&expMetadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if expMetadata.SHA1HashedLeasesCleared {
+		t.Fatalf("expected metadata to indicate that SHA1 hashes are present")
+	}
+
+	for i := 0; i < 10; i++ {
+		if i%2 == 0 {
+			continue
+		}
+		le, err := exp.loadEntry("test/foo" + strconv.Itoa(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Update version in lease entry and persist
+		le.Version = 2
+		err = exp.persistEntry(le)
+		if err != nil {
+			t.Fatal(err)
+		}
+		exp.updatePending(le, le.Secret.LeaseTotal())
+	}
+
+	err = core.Seal(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Wait for restoration to complete
+	time.Sleep(2 * time.Second)
+
+	// Metadata should indicate that there are no SHA1 hash using leases
+	entry, err = exp.view.Get(context.Background(), metadataPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry == nil {
+		t.Fatalf("expected metadata entry to be present")
+	}
+
+	expMetadata = ExpirationMetadata{}
+	err = entry.DecodeJSON(&expMetadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if expMetadata.SHA1HashedLeasesCleared {
+		t.Fatalf("expected metadata to indicate that SHA1 hashes are present")
+	}
+
+	for i := 0; i < 10; i++ {
+		if i%2 == 1 {
+			continue
+		}
+		le, err := exp.loadEntry("test/foo" + strconv.Itoa(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Update version in lease entry and persist
+		le.Version = 2
+		err = exp.persistEntry(le)
+		if err != nil {
+			t.Fatal(err)
+		}
+		exp.updatePending(le, le.Secret.LeaseTotal())
+	}
+
+	err = core.Seal(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Wait for restoration to complete
+	time.Sleep(2 * time.Second)
+
+	// Metadata should indicate that there are no SHA1 hash using leases
+	entry, err = exp.view.Get(context.Background(), metadataPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry == nil {
+		t.Fatalf("expected metadata entry to be present")
+	}
+
+	expMetadata = ExpirationMetadata{}
+	err = entry.DecodeJSON(&expMetadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !expMetadata.SHA1HashedLeasesCleared {
+		t.Fatalf("expected metadata to indicate that SHA1 hashes are cleared")
+	}
 }
 
 func TestExpiration_Tidy(t *testing.T) {

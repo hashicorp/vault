@@ -1719,7 +1719,7 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.startRollback(); err != nil {
 		return err
 	}
-	if err := c.setupExpiration(); err != nil {
+	if err := c.setupExpiration(c.activeContext); err != nil {
 		return err
 	}
 	if err := c.loadAudits(c.activeContext); err != nil {

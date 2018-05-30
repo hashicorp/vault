@@ -1024,15 +1024,16 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expect := &TokenEntry{
-		ID:           clientToken,
-		Accessor:     te.Accessor,
-		Parent:       root,
-		Policies:     []string{"default", "foo"},
-		Path:         "auth/token/create",
-		DisplayName:  "token",
-		CreationTime: te.CreationTime,
-		TTL:          time.Hour * 24 * 32,
-		Version:      2,
+		ID:            clientToken,
+		Accessor:      te.Accessor,
+		Parent:        root,
+		Policies:      []string{"default", "foo"},
+		Path:          "auth/token/create",
+		DisplayName:   "token",
+		CreationTime:  te.CreationTime,
+		TTL:           time.Hour * 24 * 32,
+		Version:       2,
+		ParentVersion: 2,
 	}
 	if !reflect.DeepEqual(te, expect) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)
@@ -1070,15 +1071,16 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expect := &TokenEntry{
-		ID:           clientToken,
-		Accessor:     te.Accessor,
-		Parent:       root,
-		Policies:     []string{"foo"},
-		Path:         "auth/token/create",
-		DisplayName:  "token",
-		CreationTime: te.CreationTime,
-		TTL:          time.Hour * 24 * 32,
-		Version:      2,
+		ID:            clientToken,
+		Accessor:      te.Accessor,
+		Parent:        root,
+		Policies:      []string{"foo"},
+		Path:          "auth/token/create",
+		DisplayName:   "token",
+		CreationTime:  te.CreationTime,
+		TTL:           time.Hour * 24 * 32,
+		Version:       2,
+		ParentVersion: 2,
 	}
 	if !reflect.DeepEqual(te, expect) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)
