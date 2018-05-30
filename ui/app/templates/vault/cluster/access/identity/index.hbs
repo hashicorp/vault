@@ -27,11 +27,8 @@
           </div>
         </div>
         <div class="column is-3 is-hidden-mobile">
-          {{#if (eq item.identityType "entity")}}
-            {{#if item.aliases.length}}
-              {{pluralize item.aliases.length "alias"}}
-            {{/if}}
-          {{else}}
+          {{#if item.aliases.length}}
+            {{pluralize item.aliases.length "alias"}}
           {{/if}}
         </div>
         <div class="column has-text-right">
