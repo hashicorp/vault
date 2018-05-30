@@ -9,7 +9,7 @@
       data-test-identity-row=true
       }}
       <div class="columns is-mobile">
-        <div class="column is-10">
+        <div class="column is-7-tablet is-10-mobile">
           <a href={{href-to
             "vault.cluster.access.identity.show"
             item.id
@@ -21,7 +21,18 @@
               glyph="role"
               size=14
               class="has-text-grey-light"
-            }}<span class="has-text-weight-semibold">{{item.id}}</span></a>
+            }}<span class="has-text-weight-semibold">{{item.name}}</span></a>
+          <div class="has-text-grey is-size-8">
+            {{item.id}}
+          </div>
+        </div>
+        <div class="column is-3 is-hidden-mobile">
+          {{#if (eq item.identityType "entity")}}
+            {{#if item.aliases.length}}
+              {{pluralize item.aliases.length "alias"}}
+            {{/if}}
+          {{else}}
+          {{/if}}
         </div>
         <div class="column has-text-right">
           {{#popup-menu name="identity-item" onOpen=(action "reloadRecord" item)}}

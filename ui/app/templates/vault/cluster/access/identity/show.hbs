@@ -35,7 +35,7 @@
       {{#each (tabs-for-identity-show model.identityType model.type) as |tab|}}
         {{#link-to "vault.cluster.access.identity.show" model.id tab tagName="li"}}
           <a href={{href-to "vault.cluster.access.identity.show" (pluralize model.identityType) model.id tab }}>
-            {{capitalize tab}}
+            {{capitalize (humanize tab)}}
           </a>
         {{/link-to}}
       {{/each}}
