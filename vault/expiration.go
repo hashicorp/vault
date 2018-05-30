@@ -97,7 +97,7 @@ type ExpirationManager struct {
 
 	// SHA1HashedLeasesPresent tracks the presence of active leases that use
 	// SHA1 hash for the obfuscation of lease ID or lease's secondary index
-	SHA1HashedLeasesPresent int32
+	SHA1HashedLeasesPresent uint32
 
 	// SHA1HashedLeasesCleared is set when there are no active leases that use
 	// SHA1 hash for the obfuscation of lease ID or lease's secondary index
@@ -446,26 +446,28 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 
 	m.logger.Info("lease restore complete")
 
-	// At this time all the leases are loaded. The restoration of leases would
-	// have also computed if were any leases that had either its ID or
-	// secondary index obfuscated using SHA1 hash instead of SHA2-256 HMAC.
-	// Persist the result of that computation across reboots.
-	expMetadata := &ExpirationMetadata{}
+	if !m.SHA1HashedLeasesCleared {
+		// At this time all the leases are loaded. The restoration of leases would
+		// have also computed if were any leases that had either its ID or
+		// secondary index obfuscated using SHA1 hash instead of SHA2-256 HMAC.
+		// Persist the result of that computation across reboots.
+		expMetadata := &ExpirationMetadata{}
 
-	if atomic.LoadInt32(&m.SHA1HashedLeasesPresent) == 0 {
-		expMetadata.SHA1HashedLeasesCleared = true
-	}
+		if atomic.LoadUint32(&m.SHA1HashedLeasesPresent) == 0 {
+			expMetadata.SHA1HashedLeasesCleared = true
+		}
 
-	m.logger.Debug("persisting expiration manager metadata", "sha1_hashed_leases_cleared", expMetadata.SHA1HashedLeasesCleared)
+		m.logger.Debug("persisting expiration manager metadata", "sha1_hashed_leases_cleared", expMetadata.SHA1HashedLeasesCleared)
 
-	// Encode and persist the metadata entry
-	metadataEntry, err := logical.StorageEntryJSON("metadata", expMetadata)
-	if err != nil {
-		return err
-	}
-	err = m.view.Put(m.quitContext, metadataEntry)
-	if err != nil {
-		return err
+		// Encode and persist the metadata entry
+		metadataEntry, err := logical.StorageEntryJSON("metadata", expMetadata)
+		if err != nil {
+			return err
+		}
+		err = m.view.Put(m.quitContext, metadataEntry)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -1251,7 +1253,7 @@ func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreMode bool, 
 		}
 
 		if le.Version < 2 {
-			atomic.CompareAndSwapInt32(&m.SHA1HashedLeasesPresent, 0, 1)
+			atomic.StoreUint32(&m.SHA1HashedLeasesPresent, 1)
 		}
 
 		// Update the cache of restored leases, either synchronously or through
