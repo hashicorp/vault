@@ -935,15 +935,22 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
-	time.Sleep(1000 * time.Millisecond)
-
 	lookup := []string{ent1.ID, ent2.ID, ent3.ID, ent4.ID}
+	var out *TokenEntry
 	for _, id := range lookup {
-		out, err := ts.Lookup(context.Background(), id)
-		if err != nil {
-			t.Fatalf("err: %v", err)
+		var found bool
+		for i := 0; i < 10; i++ {
+			out, err = ts.Lookup(context.Background(), id)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if out == nil {
+				found = true
+				break
+			}
+			time.Sleep(1000 * time.Millisecond)
 		}
-		if out != nil {
+		if !found {
 			t.Fatalf("bad: %#v", out)
 		}
 	}
