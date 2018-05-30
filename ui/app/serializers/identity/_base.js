@@ -1,4 +1,5 @@
 import ApplicationSerializer from '../application';
+import Ember from 'ember';
 
 export default ApplicationSerializer.extend({
   normalizeItems(payload) {

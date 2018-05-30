@@ -38,11 +38,11 @@ export const testAliasCRUD = (name, itemType, assert) => {
   aliasIndexPage.visit({ item_type: itemType });
   andThen(() => {
     assert.equal(
-      aliasIndexPage.items.filterBy('id', aliasID).length,
+      aliasIndexPage.items.filterBy('name', name).length,
       1,
       `${itemType}: lists the entity in the entity list`
     );
-    aliasIndexPage.items.filterBy('id', aliasID)[0].menu();
+    aliasIndexPage.items.filterBy('name', name)[0].menu();
   });
   aliasIndexPage.delete().confirmDelete();
 
