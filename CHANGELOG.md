@@ -51,6 +51,8 @@ IMPROVEMENTS:
  * ui: wrapping lookup now distplays the path [GH-4644]
  * ui: Identity interface now has more inline actions to make editing and adding
    aliases to an entity or group easier [GH-4502]
+ * ui: Identity interface now lists groups by name [GH-4655]
+ * ui: Permission denied errors still render the sidebar in the Access section [GH-4658]
 
 BUG FIXES:
 
