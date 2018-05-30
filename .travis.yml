@@ -38,9 +38,9 @@ branches:
     - travis-testing
 
 env:
-  - TEST_COMMAND='BUILD_TAGS="vault travis" make dev test-ember'
-  - TEST_COMMAND='travis_wait 75 BUILD_TAGS="vault travis" make test'
-  - TEST_COMMAND='travis_wait 75 BUILD_TAGS="vault travis" make testrace'
+  - TEST_COMMAND='make dev test-ember'
+  - TEST_COMMAND='travis_wait 75 make testtravis'
+  - TEST_COMMAND='travis_wait 75 make testracetravis'
 
 
 script:

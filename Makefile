@@ -12,7 +12,6 @@ EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox \
 	github.com/kardianos/govendor \
 	github.com/client9/misspell/cmd/misspell
-BUILD_TAGS?=vault
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
 GO_VERSION_MIN=1.10
@@ -31,6 +30,12 @@ dev-ui: prep
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS) ui' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+
+testtravis: BUILD_TAGS="travis ${BUILD_TAGS}"
+testtravis: test
+
+testracetravis: BUILD_TAGS="travis ${BUILD_TAGS}"
+testracetravis: testrace
 
 # test runs the unit tests and vets the code
 test: prep
