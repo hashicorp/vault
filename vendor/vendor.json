@@ -1293,20 +1293,20 @@
 		{
 			"checksumSHA1": "NCsUBSk7mleZOEz5iDQIXTvxroI=",
 			"path": "github.com/hashicorp/vault-plugin-auth-azure/plugin",
-			"revision": "ef1aebd830562fe9a1c629102fcb156a536e8a0a",
-			"revisionTime": "2018-04-09T18:16:42Z"
+			"revision": "4a00ec473112ccb88b2df03c56ebd0074313db3d",
+			"revisionTime": "2018-05-30T01:05:16Z"
 		},
 		{
-			"checksumSHA1": "z3uh8zJmu5wVa22xfPcTt5JDBJg=",
+			"checksumSHA1": "wlqe/d6fgGPTrcHPKNvnrQgPt7s=",
 			"path": "github.com/hashicorp/vault-plugin-auth-centrify",
-			"revision": "3bf2341fe15ee93c6b42c600c51eadde9a707941",
-			"revisionTime": "2018-04-03T19:19:30Z"
+			"revision": "686a6c7493c36866316f4f3a9f39972d5fbb8d09",
+			"revisionTime": "2018-05-30T01:09:28Z"
 		},
 		{
 			"checksumSHA1": "CidzvD2Z5a68j+AfUatPOUlHZT4=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "c6d50df183e9848729b204364e1436e85bf7fb26",
-			"revisionTime": "2018-05-29T23:55:28Z"
+			"revision": "ba6bf5cfd920487f8bd5ebcc8c9428a78f98b47c",
+			"revisionTime": "2018-05-30T01:10:45Z"
 		},
 		{
 			"checksumSHA1": "ffJQvzbQvmCG/PdaElGSfGnDgNM=",
@@ -1315,46 +1315,46 @@
 			"revisionTime": "2018-04-08T01:06:05Z"
 		},
 		{
-			"checksumSHA1": "I3b7HgnguhModU0rkNBp3PjzpZ8=",
+			"checksumSHA1": "peG2kzr0s+m66hK2qcVdlLbksuc=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "d3c2f16719dedd34911cd626a98bd5879e1caaff",
-			"revisionTime": "2018-04-03T19:54:48Z"
+			"revision": "364dc7a8b257893415293583db4512fc8d44c284",
+			"revisionTime": "2018-05-30T01:11:52Z"
 		},
 		{
 			"checksumSHA1": "vCJEdTDszlvEQUqrT/RC7Q31J3g=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin",
-			"revision": "18300aa1c7e4c3433afe92c74b53278f617d19bf",
-			"revisionTime": "2018-05-29T21:38:19Z"
+			"revision": "db025fb5e7a61e8dd984f59f2a445506d987b183",
+			"revisionTime": "2018-05-30T01:15:41Z"
 		},
 		{
 			"checksumSHA1": "qHGmA9y3hKMBSLRWLifD37EaHP4=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/client",
-			"revision": "18300aa1c7e4c3433afe92c74b53278f617d19bf",
-			"revisionTime": "2018-05-29T21:38:19Z"
+			"revision": "db025fb5e7a61e8dd984f59f2a445506d987b183",
+			"revisionTime": "2018-05-30T01:15:41Z"
 		},
 		{
 			"checksumSHA1": "f5N0jlhC8c2vq0zez81fezfas/o=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/util",
-			"revision": "18300aa1c7e4c3433afe92c74b53278f617d19bf",
-			"revisionTime": "2018-05-29T21:38:19Z"
+			"revision": "db025fb5e7a61e8dd984f59f2a445506d987b183",
+			"revisionTime": "2018-05-30T01:15:41Z"
 		},
 		{
-			"checksumSHA1": "0BXf2h4FJSUTdVK3m75a1KXnYVA=",
+			"checksumSHA1": "X9XW3xqAeOQqDdeJKzeqOYHn4Wo=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin",
-			"revision": "18d7e59878f9f9c264d52b4b894e4f445ce8cbcc",
-			"revisionTime": "2018-04-23T14:10:30Z"
+			"revision": "5edda7daf40133a7ae2fb142ef0af5ba0e2dbfce",
+			"revisionTime": "2018-05-30T01:13:41Z"
 		},
 		{
-			"checksumSHA1": "1xWWeopXV4tbHTrVM1eFuH8TCuo=",
+			"checksumSHA1": "Dmpy+AguiGWfVg43Me5HB3+eDsk=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil",
-			"revision": "18d7e59878f9f9c264d52b4b894e4f445ce8cbcc",
-			"revisionTime": "2018-04-23T14:10:30Z"
+			"revision": "5edda7daf40133a7ae2fb142ef0af5ba0e2dbfce",
+			"revisionTime": "2018-05-30T01:13:41Z"
 		},
 		{
 			"checksumSHA1": "81kYL49zTBoj1NYczxB2Xbr2d6Y=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util",
-			"revision": "18d7e59878f9f9c264d52b4b894e4f445ce8cbcc",
-			"revisionTime": "2018-04-23T14:10:30Z"
+			"revision": "5edda7daf40133a7ae2fb142ef0af5ba0e2dbfce",
+			"revisionTime": "2018-05-30T01:13:41Z"
 		},
 		{
 			"checksumSHA1": "mawUYCTqiIcegkYTCG9fZChK4kQ=",
