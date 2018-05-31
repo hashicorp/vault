@@ -5,9 +5,82 @@ import (
 	"testing"
 	"time"
 
+	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/logical"
 )
+
+func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
+	// Enable GitHub auth and initialize
+	is, ghAccessor, core := testIdentityStoreWithGithubAuth(t)
+	alias := &logical.Alias{
+		MountType:     "github",
+		MountAccessor: ghAccessor,
+		Name:          "githubuser",
+	}
+
+	// Create an entity with GitHub alias
+	entity, err := is.CreateOrFetchEntity(alias)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entity == nil {
+		t.Fatalf("expected a non-nil entity")
+	}
+
+	// Create a token with the above created entity set on it
+	ent := &TokenEntry{
+		ID:           "testtokenid",
+		Path:         "test",
+		Policies:     []string{"root"},
+		CreationTime: time.Now().Unix(),
+		EntityID:     entity.ID,
+	}
+	if err := core.tokenStore.create(context.Background(), ent); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Set a request handler to the noop backend which responds with the entity
+	// ID received in the request object
+	requestHandler := func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"entity_id": req.EntityID,
+			},
+		}, nil
+	}
+
+	noop := &NoopBackend{
+		RequestHandler: requestHandler,
+	}
+
+	// Mount the noop backend
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = core.router.Mount(noop, "test/backend/", &MountEntry{Path: "test/backend/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make the request with the above created token
+	resp, err := core.HandleRequest(&logical.Request{
+		ClientToken: "testtokenid",
+		Operation:   logical.ReadOperation,
+		Path:        "test/backend/foo",
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\n err: %v", resp, err)
+	}
+
+	// Expected entity ID to be in the response
+	if resp.Data["entity_id"] != entity.ID {
+		t.Fatalf("expected entity ID to be passed through to the backend")
+	}
+}
 
 func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 	is, ghAccessor, _ := testIdentityStoreWithGithubAuth(t)
