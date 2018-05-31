@@ -98,7 +98,8 @@
     "prettier-eslint-cli": "^4.2.1",
     "qunit-dom": "^0.6.2",
     "sass-svg-uri": "^1.0.0",
-    "string.prototype.startswith": "mathiasbynens/String.prototype.startsWith",
+    "string.prototype.endswith": "^0.2.0",
+    "string.prototype.startswith": "^0.2.0",
     "text-encoder-lite": "1.0.0",
     "yargs-parser": "^10.0.0"
   },

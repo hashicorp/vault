@@ -7946,9 +7946,13 @@ string-width@^2.0.0, string-width@^2.1.0:
     is-fullwidth-code-point "^2.0.0"
     strip-ansi "^4.0.0"
 
-string.prototype.startswith@mathiasbynens/String.prototype.startsWith:
+string.prototype.endswith@^0.2.0:
   version "0.2.0"
-  resolved "https://codeload.github.com/mathiasbynens/String.prototype.startsWith/tar.gz/bb6f34bb8577ac95b6aef79a13a84297d6fae5a6"
+  resolved "https://registry.yarnpkg.com/string.prototype.endswith/-/string.prototype.endswith-0.2.0.tgz#a19c20dee51a98777e9a47e10f09be393b9bba75"
+
+string.prototype.startswith@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/string.prototype.startswith/-/string.prototype.startswith-0.2.0.tgz#da68982e353a4e9ac4a43b450a2045d1c445ae7b"
 
 string_decoder@0.10, string_decoder@~0.10.x:
   version "0.10.31"
