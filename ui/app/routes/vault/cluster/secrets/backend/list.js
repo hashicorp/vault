@@ -19,11 +19,15 @@ export default Ember.Route.extend({
   templateName: 'vault/cluster/secrets/backend/list',
 
   beforeModel() {
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const backendModel = this.store.peekRecord('secret-engine', backend);
-    const type = backendModel && backendModel.get('type');
+    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+      let { secret } = this.paramsFor(this.routeName);
+    let backendModel = this.store.peekRecord('secret-engine', backend);
+    let type = backendModel && backendModel.get('type');
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.transitionTo('vault.cluster.secrets');
+    }
+    if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
+      return this.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
   },
 
