@@ -22,8 +22,14 @@ type Request struct {
 	MFAHeaderVals []string
 	WrapTTL       string
 	Obj           interface{}
-	Body          io.Reader
-	BodySize      int64
+
+	// When possible, use BodyBytes as it is more efficient due to how the
+	// retry logic works
+	BodyBytes []byte
+
+	// Fallback
+	Body     io.Reader
+	BodySize int64
 
 	// Whether to request overriding soft-mandatory Sentinel policies (RGPs and
 	// EGPs). If set, the override flag will take effect for all policies
@@ -33,67 +39,75 @@ type Request struct {
 
 // SetJSONBody is used to set a request body that is a JSON-encoded value.
 func (r *Request) SetJSONBody(val interface{}) error {
-	buf := bytes.NewBuffer(nil)
-	enc := json.NewEncoder(buf)
-	if err := enc.Encode(val); err != nil {
+	buf, err := json.Marshal(val)
+	if err != nil {
 		return err
 	}
 
 	r.Obj = val
-	r.Body = buf
-	r.BodySize = int64(buf.Len())
+	r.BodyBytes = buf
 	return nil
 }
 
 // ResetJSONBody is used to reset the body for a redirect
 func (r *Request) ResetJSONBody() error {
-	if r.Body == nil {
+	if r.BodyBytes == nil {
 		return nil
 	}
 	return r.SetJSONBody(r.Obj)
 }
 
-// ToHTTP turns this request into a valid *http.Request for use with the
-// net/http package.
+// DEPRECATED: ToHTTP turns this request into a valid *http.Request for use
+// with the net/http package.
 func (r *Request) ToHTTP() (*http.Request, error) {
-	req, err := r.toRetryableHTTP(true)
+	req, err := r.toRetryableHTTP()
 	if err != nil {
 		return nil, err
 	}
+
+	switch {
+	case r.BodyBytes == nil && r.Body == nil:
+		// No body
+
+	case r.BodyBytes != nil:
+		req.Request.Body = ioutil.NopCloser(bytes.NewReader(r.BodyBytes))
+
+	default:
+		if c, ok := r.Body.(io.ReadCloser); ok {
+			req.Request.Body = c
+		} else {
+			req.Request.Body = ioutil.NopCloser(r.Body)
+		}
+	}
+
 	return req.Request, nil
 }
 
-// legacy indicates whether we want to return a request derived from
-// http.NewRequest instead of retryablehttp.NewRequest, so that legacy clents
-// that might be using the public ToHTTP method still work
-func (r *Request) toRetryableHTTP(legacy bool) (*retryablehttp.Request, error) {
+func (r *Request) toRetryableHTTP() (*retryablehttp.Request, error) {
 	// Encode the query parameters
 	r.URL.RawQuery = r.Params.Encode()
 
 	// Create the HTTP request, defaulting to retryable
 	var req *retryablehttp.Request
 
-	if legacy {
-		regReq, err := http.NewRequest(r.Method, r.URL.RequestURI(), r.Body)
-		if err != nil {
-			return nil, err
-		}
-		req = &retryablehttp.Request{
-			Request: regReq,
-		}
-	} else {
-		var buf []byte
-		var err error
-		if r.Body != nil {
-			buf, err = ioutil.ReadAll(r.Body)
-			if err != nil {
-				return nil, err
-			}
-		}
-		req, err = retryablehttp.NewRequest(r.Method, r.URL.RequestURI(), bytes.NewReader(buf))
-		if err != nil {
-			return nil, err
-		}
+	var err error
+	var body interface{}
+
+	switch {
+	case r.BodyBytes == nil && r.Body == nil:
+		// No body
+
+	case r.BodyBytes != nil:
+		// Use bytes, it's more efficient
+		body = r.BodyBytes
+
+	default:
+		body = r.Body
+	}
+
+	req, err = retryablehttp.NewRequest(r.Method, r.URL.RequestURI(), body)
+	if err != nil {
+		return nil, err
 	}
 
 	req.URL.User = r.URL.User
