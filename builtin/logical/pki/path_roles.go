@@ -502,6 +502,15 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		return errResp, nil
 	}
 
+	if len(entry.ExtKeyUsageOIDs) > 0 {
+		for _, oidstr := range entry.ExtKeyUsageOIDs {
+			_, err := stringToOid(oidstr)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for an extended key usage", oidstr)), nil
+			}
+		}
+	}
+
 	if len(entry.PolicyIdentifiers) > 0 {
 		for _, oidstr := range entry.PolicyIdentifiers {
 			_, err := stringToOid(oidstr)
