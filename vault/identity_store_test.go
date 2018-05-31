@@ -30,14 +30,11 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 
 	// Create a token with the above created entity set on it
 	ent := &TokenEntry{
-		ID:             "testtokenid",
-		DisplayName:    "test-display-name",
-		Path:           "test",
-		Policies:       []string{"root"},
-		CreationTime:   time.Now().Unix(),
-		ExplicitMaxTTL: 100,
-		NumUses:        10,
-		EntityID:       entity.ID,
+		ID:           "testtokenid",
+		Path:         "test",
+		Policies:     []string{"root"},
+		CreationTime: time.Now().Unix(),
+		EntityID:     entity.ID,
 	}
 	if err := core.tokenStore.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %s", err)
