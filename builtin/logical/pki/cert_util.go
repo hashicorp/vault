@@ -1268,6 +1268,8 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 
 	addKeyUsages(data, certTemplate)
 
+  addExtKeyUsageOids(data, certTemplate)
+
 	var certBytes []byte
 
 	certTemplate.IssuingCertificateURL = data.params.URLs.IssuingCertificates
