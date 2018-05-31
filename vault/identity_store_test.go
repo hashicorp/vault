@@ -45,7 +45,7 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 	requestHandler := func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"entity_id": req.EntityID,
+				"entity_id": req.Entity.ID,
 			},
 		}, nil
 	}
