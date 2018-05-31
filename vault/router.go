@@ -437,15 +437,6 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	originalEntityID := req.EntityID
 
-	// Allow EntityID to passthrough to the system backend. This is required to
-	// allow clients to generate MFA credentials in respective entity objects
-	// in identity store via the system backend.
-	switch {
-	case strings.HasPrefix(originalPath, "sys/"):
-	default:
-		req.EntityID = ""
-	}
-
 	// Hash the request token unless the request is being routed to the token
 	// or system backend.
 	clientToken := req.ClientToken
