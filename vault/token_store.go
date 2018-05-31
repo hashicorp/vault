@@ -75,6 +75,32 @@ var (
 	}
 )
 
+// LookupToken returns the properties of the token from the token store. This
+// is particularly useful to fetch the accessor of the client token and get it
+// populated in the logical request along with the client token. The accessor
+// of the client token can get audit logged.
+func (c *Core) LookupToken(token string) (*TokenEntry, error) {
+	if token == "" {
+		return nil, fmt.Errorf("missing client token")
+	}
+
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return nil, consts.ErrSealed
+	}
+	if c.standby {
+		return nil, consts.ErrStandby
+	}
+
+	// Many tests don't have a token store running
+	if c.tokenStore == nil {
+		return nil, nil
+	}
+
+	return c.tokenStore.Lookup(c.activeContext, token)
+}
+
 // TokenStore is used to manage client tokens. Tokens are used for
 // clients to authenticate, and each token is mapped to an applicable
 // set of policy which is used for authorization.
