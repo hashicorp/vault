@@ -14,3 +14,10 @@ type Alias struct {
 	// Name is the identifier of this identity in its authentication source
 	Name string `json:"name" structs:"name" mapstructure:"name"`
 }
+
+// Entity represents a logical entity object that gets passed through to
+// backends
+type Entity struct {
+	// ID is the identifier of the entity
+	ID string `json:"id"`
+}

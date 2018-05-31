@@ -128,9 +128,9 @@ type Request struct {
 	// token supplied
 	ClientTokenRemainingUses int `json:"client_token_remaining_uses" structs:"client_token_remaining_uses" mapstructure:"client_token_remaining_uses"`
 
-	// EntityID is the identity of the caller extracted out of the token used
-	// to make this request
-	EntityID string `json:"entity_id" structs:"entity_id" mapstructure:"entity_id" sentinel:""`
+	// Entity is the identity of the caller extracted out of the token used to
+	// make this request
+	Entity *Entity `json:"entity" structs:"entity" mapstructure:"entity" sentinel:""`
 
 	// PolicyOverride indicates that the requestor wishes to override
 	// soft-mandatory Sentinel policies

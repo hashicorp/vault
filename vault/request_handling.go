@@ -221,8 +221,12 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
-		// Store the entity ID in the request object
-		req.EntityID = te.EntityID
+
+		if te.EntityID != "" {
+			req.Entity = &logical.Entity{
+				ID: te.EntityID,
+			}
+		}
 	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not

@@ -435,7 +435,13 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	// Attach the storage view for the request
 	req.Storage = re.storageView
 
-	originalEntityID := req.EntityID
+	originalEntity := req.Entity
+
+	if req.Entity != nil {
+		req.Entity = &logical.Entity{
+			ID: req.Entity.ID,
+		}
+	}
 
 	// Hash the request token unless the request is being routed to the token
 	// or system backend.
@@ -505,7 +511,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		// returned by the authentication backends
 		req.MountAccessor = re.mountEntry.Accessor
 
-		req.EntityID = originalEntityID
+		req.Entity = originalEntity
 	}()
 
 	// Invoke the backend
