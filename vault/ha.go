@@ -237,9 +237,8 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	return retErr
 }
 
-// runStandby is a long running routine that is used when an HA backend
-// is enabled. It waits until we are leader and switches this Vault to
-// active.
+// runStandby is a long running process that manages a number of the HA
+// subsystems.
 func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
@@ -301,7 +300,7 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 	g.Run()
 }
 
-// runStandby is a long running routine that is used when an HA backend
+// waitForLeadership is a long running routine that is used when an HA backend
 // is enabled. It waits until we are leader and switches this Vault to
 // active.
 func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{}) {
