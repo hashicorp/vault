@@ -8,13 +8,14 @@ import {
   executeUICommand,
 } from 'vault/lib/console-helpers';
 
-const { inject, computed } = Ember;
+const { inject, computed, getOwner } = Ember;
 
 export default Ember.Component.extend({
   classNames: 'console-ui-panel-scroller',
   classNameBindings: ['isFullscreen:fullscreen'],
   isFullscreen: false,
   console: inject.service(),
+  router: inject.service(),
   inputValue: null,
   log: computed.alias('console.log'),
 
@@ -32,7 +33,8 @@ export default Ember.Component.extend({
         command,
         args => this.logAndOutput(args),
         args => service.clearLog(args),
-        () => this.toggleProperty('isFullscreen')
+        () => this.toggleProperty('isFullscreen'),
+        () => this.refreshRoute()
       )
     ) {
       return;
@@ -70,6 +72,12 @@ export default Ember.Component.extend({
       .catch(error => {
         this.logAndOutput(command, logFromError(error, path, method));
       });
+  },
+
+  refreshRoute() {
+    let owner = getOwner(this);
+    let routeName = this.get('router.currentRouteName');
+    owner.lookup(`route:${routeName}`).refresh();
   },
 
   shiftCommandIndex(keyCode) {
