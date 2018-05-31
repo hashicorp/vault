@@ -273,6 +273,11 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 
 func handleUI(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+
+		// The fileserver handler strips trailing slashes and does a redirect.
+		// We don't want the redirect to happen so we preemptively trim the slash
+		// here.
+		req.URL.Path = strings.TrimSuffix(req.URL.Path, "/")
 		h.ServeHTTP(w, req)
 		return
 	})
