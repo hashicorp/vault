@@ -151,3 +151,18 @@ header .navbar-sections {
   transform: translate3d(0, 0, 0);
   will-change: transform;
 }
+
+.console-spinner.control {
+  height: 21px;
+  width: 21px;
+  transform: scale(.75);
+  transform-origin: center;
+  &:after {
+    height: auto;
+    width: auto;
+    right: .25rem;
+    left: .25rem;
+    top: .25rem;
+    bottom: .25rem;
+  }
+}
