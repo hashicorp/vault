@@ -138,7 +138,7 @@ func (c *SSHCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "user-known-hosts-file",
 		Target:     &c.flagUserKnownHostsFile,
-		Default:    "~/.ssh/known_hosts",
+		Default:    "",
 		EnvVar:     "VAULT_SSH_USER_KNOWN_HOSTS_FILE",
 		Completion: complete.PredictFiles("*"),
 		Usage: "Value to use for the SSH configuration option " +
@@ -451,10 +451,21 @@ func (c *SSHCommand) handleTypeCA(username, hostname, ip string, sshArgs []strin
 	args := append([]string{
 		"-i", c.flagPrivateKeyPath,
 		"-i", signedPublicKeyPath,
-		"-o UserKnownHostsFile=" + userKnownHostsFile,
 		"-o StrictHostKeyChecking=" + strictHostKeyChecking,
-		username + "@" + hostname,
-	}, sshArgs...)
+	})
+
+	if userKnownHostsFile != "" {
+		args = append(args,
+			"-o UserKnownHostsFile="+userKnownHostsFile,
+		)
+	}
+
+	args = append(args,
+		username+"@"+hostname,
+	)
+
+	// Add extra user defined ssh arguments
+	args = append(args, sshArgs...)
 
 	cmd := exec.Command("ssh", args...)
 	cmd.Stdin = os.Stdin
@@ -503,35 +514,46 @@ func (c *SSHCommand) handleTypeOTP(username, hostname string, ip string, sshArgs
 	// it is then, use it to automate typing in OTP to the prompt. Unfortunately,
 	// it was not possible to automate it without a third-party application, with
 	// only the Go libraries. Feel free to try and remove this dependency.
+	args := make([]string, 0)
+	env := os.Environ()
+	sshCmd := "ssh"
+
 	sshpassPath, err := exec.LookPath("sshpass")
 	if err != nil {
+		// No sshpass available so using normal ssh client
 		c.UI.Warn(wrapAtLength(
 			"Vault could not locate \"sshpass\". The OTP code for the session is " +
 				"displayed below. Enter this code in the SSH password prompt. If you " +
 				"install sshpass, Vault can automatically perform this step for you."))
 		c.UI.Output("OTP for the session is: " + cred.Key)
-
-		args := append([]string{
-			"-o UserKnownHostsFile=" + c.flagUserKnownHostsFile,
-			"-o StrictHostKeyChecking=" + c.flagStrictHostKeyChecking,
-			"-p", cred.Port,
-			username + "@" + hostname,
-		}, sshArgs...)
-		cmd = exec.Command("ssh", args...)
 	} else {
-		args := append([]string{
+		// sshpass is available so lets use it instead
+		sshCmd = sshpassPath
+		args = append(args,
 			"-e", // Read password for SSHPASS environment variable
 			"ssh",
-			"-o UserKnownHostsFile=" + c.flagUserKnownHostsFile,
-			"-o StrictHostKeyChecking=" + c.flagStrictHostKeyChecking,
-			"-p", cred.Port,
-			username + "@" + hostname,
-		}, sshArgs...)
-		cmd = exec.Command(sshpassPath, args...)
-		env := os.Environ()
+		)
 		env = append(env, fmt.Sprintf("SSHPASS=%s", string(cred.Key)))
-		cmd.Env = env
 	}
+
+	// Only harcode the knownhostsfile path if it has been set
+	if c.flagUserKnownHostsFile != "" {
+		args = append(args,
+			"-o UserKnownHostsFile="+c.flagUserKnownHostsFile,
+		)
+	}
+
+	args = append(args,
+		"-o StrictHostKeyChecking="+c.flagStrictHostKeyChecking,
+		"-p", cred.Port,
+		username+"@"+hostname,
+	)
+
+	// Add the rest of the ssh args appended by the user
+	args = append(args, sshArgs...)
+
+	cmd = exec.Command(sshCmd, args...)
+	cmd.Env = env
 
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
