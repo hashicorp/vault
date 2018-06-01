@@ -157,7 +157,7 @@ header .navbar-sections {
   width: 21px;
   transform: scale(.75);
   transform-origin: center;
-  &:after {
+  &::after {
     height: auto;
     width: auto;
     right: .25rem;
