@@ -6,7 +6,7 @@ type Entity struct {
 	// ID is the unique identifier for the entity
 	ID string `json:"id"`
 
-	// Name is a human-friendly unique identifier for the entity.
+	// Name is a human-friendly unique identifier for the entity
 	Name string `json:"name"`
 
 	// Aliases contains the unique identifiers assigned by the

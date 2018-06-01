@@ -153,8 +153,7 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 	if d.core.identityStore == nil {
 		return nil, fmt.Errorf("system view identity store is nil")
 	}
-	// Get a clone of the current entity id in the store. Taking a clone so any values
-	// can be passed as is to the caller
+	// Get a clone of the current entity id in the store
 	entity, err := d.core.identityStore.MemDBEntityByID(entityID, false)
 	if err != nil {
 		return nil, err
