@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/cidrutil"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -229,6 +230,10 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 			return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the role: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
 		}
 	}
+	boundCIDRs, err := parseutil.ParseAddrs(role.BoundCIDRList)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
 
 	// Always include the role name, for later filtering
 	metadata["role_name"] = roleName
@@ -249,6 +254,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		Alias: &logical.Alias{
 			Name: role.RoleID,
 		},
+		BoundCIDRs: boundCIDRs,
 	}
 
 	return &logical.Response{
@@ -276,10 +282,16 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 		return nil, fmt.Errorf("role %q does not exist during renewal", roleName)
 	}
 
+	boundCIDRs, err := parseutil.ParseAddrs(role.BoundCIDRList)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	resp := &logical.Response{Auth: req.Auth}
 	resp.Auth.TTL = role.TokenTTL
 	resp.Auth.MaxTTL = role.TokenMaxTTL
 	resp.Auth.Period = role.Period
+	resp.Auth.BoundCIDRs = boundCIDRs
 	return resp, nil
 }
 
