@@ -78,6 +78,8 @@ BUG FIXES:
  * secret/pki: Fix `key_type` not being allowed to be set to `any` [GH-4595]
  * secret/pki: Fix path length parameter being ignored when using
    `use_csr_values` and signing an intermediate CA cert [GH-4459]
+ * secret/ssh: Only append UserKnownHostsFile to args when configured with a
+   value [GH-4674]
  * storage/dynamodb: Fix listing when one child is left within a nested path
    [GH-4570]
  * ui: Fix HMAC algorithm in transit [GH-4604]
