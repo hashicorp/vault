@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import { task } from 'ember-concurrency';
 import {
   parseCommand,
   extractDataAndFlags,
@@ -34,11 +35,11 @@ export default Ember.Component.extend({
   },
 
   logAndOutput(command, logContent) {
-    this.set('inputValue', '');
     this.get('console').logAndOutput(command, logContent);
   },
 
   executeCommand(command, shouldThrow = false) {
+    this.set('inputValue', '');
     let service = this.get('console');
     let serviceArgs;
 
@@ -78,21 +79,28 @@ export default Ember.Component.extend({
       return;
     }
     let serviceFn = service[method];
-    serviceFn
-      .call(service, path, data, flags.wrapTTL)
-      .then(resp => {
-        this.logAndOutput(command, logFromResponse(resp, path, method, flags));
-      })
-      .catch(error => {
-        this.logAndOutput(command, logFromError(error, path, method));
-      });
+    this.get('runner').perform(
+      () => service[method].call(service, path, data, flags.wrapTTL),
+      resp => this.logAndOutput(command, logFromResponse(resp, path, method, flags)),
+      error => this.logAndOutput(command, logFromError(error, path, method))
+    );
   },
 
   refreshRoute() {
     let owner = getOwner(this);
     let routeName = this.get('router.currentRouteName');
-    owner.lookup(`route:${routeName}`).refresh();
+    let route = owner.lookup(`route:${routeName}`);
+
+    this.get('runner').perform(
+      () => route.refresh(),
+      () => this.logAndOutput(null, {type: 'success', content: 'The current screen has been refreshed!'}),
+      () => this.logAndOutput(null, {type: 'error', content: 'The was a problem refreshing the current screen.'}),
+    );
   },
+
+  runner: task(function*(fn, success, err) {
+    yield fn().then(success, err);
+  }),
 
   shiftCommandIndex(keyCode) {
     this.get('console').shiftCommandIndex(keyCode, val => {
