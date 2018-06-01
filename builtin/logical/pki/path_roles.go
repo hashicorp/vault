@@ -109,6 +109,13 @@ CN and SANs. Defaults to true.`,
 Any valid IP is accepted.`,
 			},
 
+			"allow_uri_sans": &framework.FieldSchema{
+				Type:    framework.TypeBool,
+				Default: true,
+				Description: `If set, URI Subject Alternative Names are allowed.
+Any valid URI is accepted.`,
+			},
+
 			"allowed_other_sans": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed other names to put in SANs. These values support globbing.`,
@@ -452,6 +459,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		AllowAnyName:                  data.Get("allow_any_name").(bool),
 		EnforceHostnames:              data.Get("enforce_hostnames").(bool),
 		AllowIPSANs:                   data.Get("allow_ip_sans").(bool),
+		AllowURISANs:                  data.Get("allow_uri_sans").(bool),
 		ServerFlag:                    data.Get("server_flag").(bool),
 		ClientFlag:                    data.Get("client_flag").(bool),
 		CodeSigningFlag:               data.Get("code_signing_flag").(bool),
@@ -584,6 +592,7 @@ type roleEntry struct {
 	AllowAnyName                  bool          `json:"allow_any_name" mapstructure:"allow_any_name"`
 	EnforceHostnames              bool          `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
 	AllowIPSANs                   bool          `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
+	AllowURISANs                  bool          `json:"allow_uri_sans" mapstructure:"allow_uri_sans"`
 	ServerFlag                    bool          `json:"server_flag" mapstructure:"server_flag"`
 	ClientFlag                    bool          `json:"client_flag" mapstructure:"client_flag"`
 	CodeSigningFlag               bool          `json:"code_signing_flag" mapstructure:"code_signing_flag"`
@@ -630,6 +639,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"allow_any_name":                     r.AllowAnyName,
 		"enforce_hostnames":                  r.EnforceHostnames,
 		"allow_ip_sans":                      r.AllowIPSANs,
+		"allow_uri_sans":                     r.AllowURISANs,
 		"server_flag":                        r.ServerFlag,
 		"client_flag":                        r.ClientFlag,
 		"code_signing_flag":                  r.CodeSigningFlag,
