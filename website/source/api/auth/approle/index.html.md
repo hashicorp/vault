@@ -71,7 +71,7 @@ enabled while creating or updating a role.
   logging in using this AppRole.
 - `bound_cidr_list` `(array: [])` - Comma-separated string or list of CIDR
   blocks; if set, specifies blocks of IP addresses which can perform the login
-  operation.
+  operation or use the returned token.
 - `policies` `(array: [])` - Comma-separated list of policies set on tokens
   issued via this AppRole.
 - `secret_id_num_uses` `(integer: 0)` - Number of times any particular SecretID
