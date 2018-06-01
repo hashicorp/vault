@@ -9,7 +9,7 @@ import {
   executeUICommand,
 } from 'vault/lib/console-helpers';
 
-const { inject, computed, getOwner } = Ember;
+const { inject, computed, getOwner, run } = Ember;
 
 export default Ember.Component.extend({
   classNames: 'console-ui-panel-scroller',
@@ -36,6 +36,7 @@ export default Ember.Component.extend({
 
   logAndOutput(command, logContent) {
     this.get('console').logAndOutput(command, logContent);
+    run.next(()=> this.scrollToBottom());
   },
 
   executeCommand(command, shouldThrow = false) {
