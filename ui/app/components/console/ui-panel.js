@@ -30,7 +30,7 @@ export default Ember.Component.extend({
   didRender() {
     if (this.get('valChanged')) {
       // make sure we're scrolled to the bottom;
-     this.scrollToBottom();
+      this.scrollToBottom();
     }
   },
 
@@ -78,7 +78,6 @@ export default Ember.Component.extend({
       this.logAndOutput(command, inputError);
       return;
     }
-    let serviceFn = service[method];
     this.get('runner').perform(
       () => service[method].call(service, path, data, flags.wrapTTL),
       resp => this.logAndOutput(command, logFromResponse(resp, path, method, flags)),
@@ -93,8 +92,12 @@ export default Ember.Component.extend({
 
     this.get('runner').perform(
       () => route.refresh(),
-      () => this.logAndOutput(null, {type: 'success', content: 'The current screen has been refreshed!'}),
-      () => this.logAndOutput(null, {type: 'error', content: 'The was a problem refreshing the current screen.'}),
+      () => this.logAndOutput(null, { type: 'success', content: 'The current screen has been refreshed!' }),
+      () =>
+        this.logAndOutput(null, {
+          type: 'error',
+          content: 'The was a problem refreshing the current screen.',
+        })
     );
   },
 
