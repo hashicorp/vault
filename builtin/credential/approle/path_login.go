@@ -282,16 +282,10 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 		return nil, fmt.Errorf("role %q does not exist during renewal", roleName)
 	}
 
-	boundCIDRs, err := parseutil.ParseAddrs(role.BoundCIDRList)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
 	resp := &logical.Response{Auth: req.Auth}
 	resp.Auth.TTL = role.TokenTTL
 	resp.Auth.MaxTTL = role.TokenMaxTTL
 	resp.Auth.Period = role.Period
-	resp.Auth.BoundCIDRs = boundCIDRs
 	return resp, nil
 }
 
