@@ -145,3 +145,34 @@ func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string) (*plug
 func (d dynamicSystemView) MlockEnabled() bool {
 	return d.core.enableMlock
 }
+
+func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) {
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.identityStore == nil {
+		return nil, fmt.Errorf("system view identity store is nil")
+	}
+	// Get a clone of the current entity id in the store. Taking a clone so any values
+	// can be passed as is to the caller
+	entity, err := d.core.identityStore.MemDBEntityByID(entityID, false)
+	if err != nil {
+		return nil, err
+	}
+
+	aliases := make([]*logical.Alias, len(entity.Aliases))
+	for i, alias := range entity.Aliases {
+		aliases[i] = &logical.Alias{
+			MountType:     alias.MountType,
+			MountAccessor: alias.MountAccessor,
+			Name:          alias.Name,
+		}
+	}
+
+	// Only returning a subset of the data
+	return &logical.Entity{
+		ID:      entity.ID,
+		Name:    entity.Name,
+		Aliases: aliases,
+	}, nil
+}

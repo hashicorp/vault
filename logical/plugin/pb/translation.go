@@ -464,6 +464,40 @@ func LogicalResponseToProtoResponse(r *logical.Response) (*Response, error) {
 	}, nil
 }
 
+func LogicalEntityToProtoEntity(e *logical.Entity) *Entity {
+	if e == nil {
+		return nil
+	}
+
+	aliases := make([]*Alias, len(e.Aliases))
+	for i, alias := range e.Aliases {
+		aliases[i] = LogicalAliasToProtoAlias(alias)
+	}
+
+	return &Entity{
+		ID:      e.ID,
+		Name:    e.Name,
+		Aliases: aliases,
+	}
+}
+
+func ProtoEntityToLogicalEntity(e *Entity) *logical.Entity {
+	if e == nil {
+		return nil
+	}
+
+	aliases := make([]*logical.Alias, len(e.Aliases))
+	for i, alias := range e.Aliases {
+		aliases[i] = ProtoAliasToLogicalAlias(alias)
+	}
+
+	return &logical.Entity{
+		ID:      e.ID,
+		Name:    e.Name,
+		Aliases: aliases,
+	}
+}
+
 func LogicalAliasToProtoAlias(a *logical.Alias) *Alias {
 	if a == nil {
 		return nil

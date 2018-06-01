@@ -132,6 +132,17 @@ message Request {
 	Connection connection = 20;
 }
 
+message Entity {
+	// ID is the unique identifier for the entity
+	string id = 1;
+
+	// Name is the human-friendly unique identifier for the entity
+	string name = 2;
+
+	// Aliases contains thhe alias mappings for the given entity
+	repeated Alias aliases = 3;
+}
+
 message Alias {
 	// MountType is the backend mount's type to which this identity belongs
 	string mount_type = 1;
@@ -498,6 +509,15 @@ message LocalMountReply {
 	bool local = 1;
 }
 
+message EntityInfoArgs {
+	string entity_id = 1;
+}
+
+message EntityInfoReply {
+	Entity entity = 1;
+	string err = 2;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -541,6 +561,9 @@ service SystemView {
 	// LocalMount, when run from a system view attached to a request, indicates
 	// whether the request is affecting a local mount or not
 	rpc LocalMount(Empty) returns (LocalMountReply);
+
+	// EntityInfo returns the basic entity information for the given entity id
+	rpc EntityInfo(EntityInfoArgs) returns (EntityInfoReply);
 }
 
 message Connection {
