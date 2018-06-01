@@ -20,26 +20,18 @@ export default Ember.Component.extend({
   inputValue: null,
   log: computed.alias('console.log'),
 
-  didReceiveAttrs() {
-    let val = this.get('inputValue');
-    let oldVal = this.get('oldInputValue');
-    this.set('valChanged', val !== oldVal);
-    this.set('oldInputValue', val);
-  },
-
   didRender() {
-    if (this.get('valChanged')) {
-      // make sure we're scrolled to the bottom;
-      this.scrollToBottom();
-    }
+    this.scrollToBottom();
   },
 
   logAndOutput(command, logContent) {
     this.get('console').logAndOutput(command, logContent);
-    run.next(()=> this.scrollToBottom());
+    run.schedule('afterRender', () => this.scrollToBottom());
   },
 
-  executeCommand(command, shouldThrow = false) {
+  isRunning: computed.or('executeCommand.isRunning', 'refreshRoute.isRunning'),
+
+  executeCommand: task(function*(command, shouldThrow = false) {
     this.set('inputValue', '');
     let service = this.get('console');
     let serviceArgs;
@@ -50,7 +42,7 @@ export default Ember.Component.extend({
         args => this.logAndOutput(args),
         args => service.clearLog(args),
         () => this.toggleProperty('isFullscreen'),
-        () => this.refreshRoute()
+        () => this.get('refreshRoute').perform()
       )
     ) {
       return;
@@ -79,31 +71,25 @@ export default Ember.Component.extend({
       this.logAndOutput(command, inputError);
       return;
     }
-    this.get('runner').perform(
-      () => service[method].call(service, path, data, flags.wrapTTL),
-      resp => this.logAndOutput(command, logFromResponse(resp, path, method, flags)),
-      error => this.logAndOutput(command, logFromError(error, path, method))
-    );
-  },
+    try {
+      let resp = yield service[method].call(service, path, data, flags.wrapTTL);
+      this.logAndOutput(command, logFromResponse(resp, path, method, flags));
+    } catch(error) {
+      this.logAndOutput(command, logFromError(error, path, method));
+    }
+  }),
 
-  refreshRoute() {
+  refreshRoute:task(function*() {
     let owner = getOwner(this);
     let routeName = this.get('router.currentRouteName');
     let route = owner.lookup(`route:${routeName}`);
 
-    this.get('runner').perform(
-      () => route.refresh(),
-      () => this.logAndOutput(null, { type: 'success', content: 'The current screen has been refreshed!' }),
-      () =>
-        this.logAndOutput(null, {
-          type: 'error',
-          content: 'The was a problem refreshing the current screen.',
-        })
-    );
-  },
-
-  runner: task(function*(fn, success, err) {
-    yield fn().then(success, err);
+    try {
+      yield route.refresh();
+      this.logAndOutput(null, { type: 'success', content: 'The current screen has been refreshed!' });
+    } catch (error) {
+      this.logAndOutput(null, { type: 'error', content: 'The was a problem refreshing the current screen.' });
+    }
   }),
 
   shiftCommandIndex(keyCode) {
@@ -121,7 +107,7 @@ export default Ember.Component.extend({
       this.toggleProperty('isFullscreen');
     },
     executeCommand(val) {
-      this.executeCommand(val, true);
+      this.get('executeCommand').perform(val, true);
     },
     shiftCommandIndex(direction) {
       this.shiftCommandIndex(direction);
