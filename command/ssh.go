@@ -331,7 +331,7 @@ func (c *SSHCommand) Run(args []string) int {
 	case ssh.KeyTypeCA:
 		return c.handleTypeCA(username, hostname, ip, sshArgs)
 	case ssh.KeyTypeOTP:
-		return c.handleTypeOTP(username, ip, sshArgs)
+		return c.handleTypeOTP(username, hostname, ip, sshArgs)
 	case ssh.KeyTypeDynamic:
 		return c.handleTypeDynamic(username, ip, sshArgs)
 	default:
@@ -482,7 +482,7 @@ func (c *SSHCommand) handleTypeCA(username, hostname, ip string, sshArgs []strin
 }
 
 // handleTypeOTP is used to handle SSH logins using the "otp" key type.
-func (c *SSHCommand) handleTypeOTP(username, ip string, sshArgs []string) int {
+func (c *SSHCommand) handleTypeOTP(username, hostname string, ip string, sshArgs []string) int {
 	secret, cred, err := c.generateCredential(username, ip)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("failed to generate credential: %s", err))
@@ -515,7 +515,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip string, sshArgs []string) int {
 			"-o UserKnownHostsFile=" + c.flagUserKnownHostsFile,
 			"-o StrictHostKeyChecking=" + c.flagStrictHostKeyChecking,
 			"-p", cred.Port,
-			username + "@" + ip,
+			username + "@" + hostname,
 		}, sshArgs...)
 		cmd = exec.Command("ssh", args...)
 	} else {
@@ -525,7 +525,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip string, sshArgs []string) int {
 			"-o UserKnownHostsFile=" + c.flagUserKnownHostsFile,
 			"-o StrictHostKeyChecking=" + c.flagStrictHostKeyChecking,
 			"-p", cred.Port,
-			username + "@" + ip,
+			username + "@" + hostname,
 		}, sshArgs...)
 		cmd = exec.Command(sshpassPath, args...)
 		env := os.Environ()
