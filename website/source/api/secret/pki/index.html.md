@@ -435,6 +435,9 @@ can be set in a CSR are supported.
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list.
 
+- `uri_sans` `(string: "")` – Specifies the requested URI Subject Alternative
+  Names, in a comma-delimited list.
+
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
   must match values specified on the role in `allowed_other_sans` (globbing
   allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
@@ -588,6 +591,9 @@ need to request a new certificate.**
 - `ip_sans` `(string: "")` – Specifies requested IP Subject Alternative Names,
   in a comma-delimited list. Only valid if the role allows IP SANs (which is the
   default).
+
+- `uri_sans` `(string: "")` – Specifies the requested URI Subject Alternative
+  Names, in a comma-delimited list.
 
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
   must match values specified on the role in `allowed_other_sans` (globbing
@@ -762,6 +768,10 @@ request is denied.
   Alternative Names. No authorization checking is performed except to verify
   that the given values are valid IP addresses.
 
+- `allow_uri_sans` `(bool: true)` - Specifies if clients can request URI Subject
+  Alternative Names. No authorization checking is performed except to verify
+  that the given values are valid URIs.
+
 - `allowed_other_sans` `(string: "")` – Defines allowed custom OID/UTF8-string
   SANs. This field supports globbing. The format is the same as OpenSSL:
   `<oid>;<type>:<value>` where the only current valid type is `UTF8`. This can
@@ -908,6 +918,7 @@ $ curl \
   "data": {
     "allow_any_name": false,
     "allow_ip_sans": true,
+    "allow_uri_sans": true,
     "allow_localhost": true,
     "allow_subdomains": false,
     "allowed_domains": ["example.com", "foobar.com"],
@@ -1012,6 +1023,9 @@ existing cert/key with new values.
   they will be parsed into their respective fields.
 
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
+  Names, in a comma-delimited list.
+
+- `uri_sans` `(string: "")` – Specifies the requested URI Subject Alternative
   Names, in a comma-delimited list.
 
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
@@ -1164,6 +1178,9 @@ verbatim.
   they will be parsed into their respective fields.
 
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
+  Names, in a comma-delimited list.
+
+- `uri_sans` `(string: "")` – Specifies the requested URI Subject Alternative
   Names, in a comma-delimited list.
 
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
@@ -1363,6 +1380,10 @@ root CA need be in a client's trust store.
 
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list. Only valid if the role allows IP SANs (which
+  is the default).
+
+- `uri_sans` `(string: "")` – Specifies the requested URI Subject Alternative
+  Names, in a comma-delimited list. Only valid if the role allows URI SANs (which
   is the default).
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live. Cannot be greater
