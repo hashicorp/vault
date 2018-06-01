@@ -39,6 +39,12 @@ pkcs8 instead. Defaults to "der".`,
 comma-delimited list`,
 	}
 
+	fields["uri_sans"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested URI SANs, if any, in a
+comma-delimited list`,
+	}
+
 	fields["other_sans"] = &framework.FieldSchema{
 		Type: framework.TypeCommaStringSlice,
 		Description: `Requested other SANs, in an array with the format
