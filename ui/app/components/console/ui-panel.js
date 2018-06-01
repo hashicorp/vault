@@ -21,6 +21,7 @@ export default Ember.Component.extend({
   log: computed.alias('console.log'),
 
   didRender() {
+    this._super(...arguments);
     this.scrollToBottom();
   },
 
