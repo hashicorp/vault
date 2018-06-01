@@ -19,6 +19,20 @@ export default Ember.Component.extend({
   inputValue: null,
   log: computed.alias('console.log'),
 
+  didReceiveAttrs() {
+    let val = this.get('inputValue');
+    let oldVal = this.get('oldInputValue');
+    this.set('valChanged', val !== oldVal);
+    this.set('oldInputValue', val);
+  },
+
+  didRender() {
+    if (this.get('valChanged')) {
+      // make sure we're scrolled to the bottom;
+     this.scrollToBottom();
+    }
+  },
+
   logAndOutput(command, logContent) {
     this.set('inputValue', '');
     this.get('console').logAndOutput(command, logContent);
@@ -84,6 +98,10 @@ export default Ember.Component.extend({
     this.get('console').shiftCommandIndex(keyCode, val => {
       this.set('inputValue', val);
     });
+  },
+
+  scrollToBottom() {
+    this.element.scrollTop = this.element.scrollHeight;
   },
 
   actions: {
