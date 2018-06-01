@@ -168,7 +168,6 @@ this value to an empty list.`,
 
 			"ext_key_usage_oids": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Default:     []string{},
 				Description: `A comma-separated string or list of extended key usage oids.`,
 			},
 
