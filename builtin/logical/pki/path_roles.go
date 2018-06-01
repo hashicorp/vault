@@ -166,6 +166,11 @@ To remove all key usages from being set, set
 this value to an empty list.`,
 			},
 
+			"ext_key_usage_oids": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: `A comma-separated string or list of extended key usage oids.`,
+			},
+
 			"use_csr_common_name": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
@@ -451,6 +456,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
 		KeyUsage:                      data.Get("key_usage").([]string),
+		ExtKeyUsageOIDs:               data.Get("ext_key_usage_oids").([]string),
 		OU:                            data.Get("ou").([]string),
 		Organization:                  data.Get("organization").([]string),
 		Country:                       data.Get("country").([]string),
@@ -493,6 +499,15 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 
 	if errResp := validateKeyTypeLength(entry.KeyType, entry.KeyBits); errResp != nil {
 		return errResp, nil
+	}
+
+	if len(entry.ExtKeyUsageOIDs) > 0 {
+		for _, oidstr := range entry.ExtKeyUsageOIDs {
+			_, err := stringToOid(oidstr)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for an extended key usage", oidstr)), nil
+			}
+		}
 	}
 
 	if len(entry.PolicyIdentifiers) > 0 {
@@ -588,6 +603,7 @@ type roleEntry struct {
 	RequireCN                     bool          `json:"require_cn" mapstructure:"require_cn"`
 	AllowedOtherSANs              []string      `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
 	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
+	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
 
 	// Used internally for signing intermediates
@@ -616,6 +632,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"key_type":                           r.KeyType,
 		"key_bits":                           r.KeyBits,
 		"key_usage":                          r.KeyUsage,
+		"ext_key_usage_oids":                 r.ExtKeyUsageOIDs,
 		"ou":                                 r.OU,
 		"organization":                       r.Organization,
 		"country":                            r.Country,
