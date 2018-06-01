@@ -92,6 +92,7 @@ BUG FIXES:
  * replication: Fix issue with token store lookups after a secondary's mount table
    is invalidated.
  * replication: Improve startup time when a large merkle index is in use.
+ * replication: Fix panic when storage becomes unreachable during unseal.
 
 ## 0.10.1/0.9.7 (April 25th, 2018)
 
