@@ -9,7 +9,7 @@
         </div>
         <div class="navbar-end is-divider-list is-flex">
           <div class="navbar-item">
-            <button type="button" class="button is-transparent" {{action 'toggleConsole'}}>
+            <button type="button" class="button is-transparent" {{action 'toggleConsole'}} data-test-console-toggle>
               {{#if consoleOpen}}
                 {{i-con glyph="console-active" size=24}}
                 {{i-con glyph="chevron-up" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}

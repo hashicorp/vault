@@ -7,6 +7,7 @@
   {{console/output-log log=log}}
   {{console/command-input
     isFullscreen=isFullscreen
+    isRunning=isRunning
     value=inputValue
     onValueUpdate=(action (mut inputValue))
     onFullscreen=(action 'toggleFullscreen')
