@@ -62,6 +62,7 @@ type creationParameters struct {
 	NotAfter                      time.Time
 	KeyUsage                      x509.KeyUsage
 	ExtKeyUsage                   certExtKeyUsage
+	ExtKeyUsageOIDs               []string
 	PolicyIdentifiers             []string
 	BasicConstraintsValidForNonCA bool
 
@@ -918,6 +919,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		NotAfter:                      notAfter,
 		KeyUsage:                      x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
 		ExtKeyUsage:                   extUsage,
+		ExtKeyUsageOIDs:               data.role.ExtKeyUsageOIDs,
 		PolicyIdentifiers:             data.role.PolicyIdentifiers,
 		BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
 	}
@@ -989,6 +991,16 @@ func addPolicyIdentifiers(data *dataBundle, certTemplate *x509.Certificate) {
 	}
 }
 
+// addExtKeyUsageOids adds custom extended key usage OIDs to certificate
+func addExtKeyUsageOids(data *dataBundle, certTemplate *x509.Certificate) {
+	for _, oidstr := range data.params.ExtKeyUsageOIDs {
+		oid, err := stringToOid(oidstr)
+		if err == nil {
+			certTemplate.UnknownExtKeyUsage = append(certTemplate.UnknownExtKeyUsage, oid)
+		}
+	}
+}
+
 // Performs the heavy lifting of creating a certificate. Returns
 // a fully-filled-in ParsedCertBundle.
 func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
@@ -1044,6 +1056,8 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	addPolicyIdentifiers(data, certTemplate)
 
 	addKeyUsages(data, certTemplate)
+
+	addExtKeyUsageOids(data, certTemplate)
 
 	certTemplate.IssuingCertificateURL = data.params.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = data.params.URLs.CRLDistributionPoints
@@ -1253,6 +1267,8 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	addPolicyIdentifiers(data, certTemplate)
 
 	addKeyUsages(data, certTemplate)
+
+	addExtKeyUsageOids(data, certTemplate)
 
 	var certBytes []byte
 

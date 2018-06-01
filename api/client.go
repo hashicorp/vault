@@ -635,7 +635,7 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 
 	redirectCount := 0
 START:
-	req, err := r.toRetryableHTTP(false)
+	req, err := r.toRetryableHTTP()
 	if err != nil {
 		return nil, err
 	}

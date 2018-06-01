@@ -55,6 +55,10 @@ export default DS.Model.extend({
     defaultValue: 'DigitalSignature,KeyAgreement,KeyEncipherment',
     editType: 'stringArray',
   }),
+  extKeyUsageOids: attr({
+    label: 'Custom extended key usage OIDs',
+    editType: 'stringArray',
+  }),
   requireCn: attr('boolean', {
     label: 'Require common name',
     defaultValue: true,
@@ -223,7 +227,7 @@ export default DS.Model.extend({
           'allowedDomains',
         ],
       },
-      { 'Extended Key Usage': ['serverFlag', 'clientFlag', 'codeSigningFlag', 'emailProtectionFlag'] },
+      { 'Extended Key Usage': ['serverFlag', 'clientFlag', 'codeSigningFlag', 'emailProtectionFlag', 'extKeyUsageOids'] },
       {
         Advanced: ['generateLease', 'noStore', 'basicConstraintsValidForNonCA', 'policyIdentifiers'],
       },
