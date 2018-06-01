@@ -2551,7 +2551,6 @@ func (b *SystemBackend) handlePoliciesList(policyType PolicyType) framework.Oper
 			policies = append(policies, "root")
 			resp := logical.ListResponse(policies)
 
-			fmt.Println(req.Path)
 			// If the request is from sys/policy/ we handle backwards compatibility
 			if strings.HasPrefix(req.Path, "policy") {
 				resp.Data["policies"] = resp.Data["keys"]
