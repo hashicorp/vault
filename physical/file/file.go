@@ -163,6 +163,18 @@ func (b *FileBackend) GetInternal(ctx context.Context, k string) (*physical.Entr
 	path, key := b.expandPath(k)
 	path = filepath.Join(path, key)
 
+	// If we stat it and it exists but is size zero, it may be left from some
+	// previous FS error like out-of-space. No Vault entry will ever be zero
+	// length, so simply remove it and return nil.
+	fi, err := os.Stat(path)
+	if err == nil {
+		if fi.Size() == 0 {
+			// Best effort, ignore errors
+			os.Remove(path)
+			return nil, nil
+		}
+	}
+
 	f, err := os.Open(path)
 	if f != nil {
 		defer f.Close()
