@@ -226,7 +226,7 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 		headers[k] = &Header{Header: v}
 	}
 
-	return &Request{
+	request := &Request{
 		ID:                       r.ID,
 		ReplicationCluster:       r.ReplicationCluster,
 		Operation:                string(r.Operation),
@@ -244,10 +244,17 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 		WrapInfo:                 LogicalRequestWrapInfoToProtoRequestWrapInfo(r.WrapInfo),
 		ClientTokenRemainingUses: int64(r.ClientTokenRemainingUses),
 		Connection:               LogicalConnectionToProtoConnection(r.Connection),
-		EntityID:                 r.EntityID,
 		PolicyOverride:           r.PolicyOverride,
 		Unauthenticated:          r.Unauthenticated,
-	}, nil
+	}
+
+	if r.Entity != nil {
+		request.Entity = &Entity{
+			ID: r.Entity.ID,
+		}
+	}
+
+	return request, nil
 }
 
 func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
@@ -279,7 +286,7 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		}
 	}
 
-	return &logical.Request{
+	request := &logical.Request{
 		ID:                       r.ID,
 		ReplicationCluster:       r.ReplicationCluster,
 		Operation:                logical.Operation(r.Operation),
@@ -297,10 +304,17 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		WrapInfo:                 ProtoRequestWrapInfoToLogicalRequestWrapInfo(r.WrapInfo),
 		ClientTokenRemainingUses: int(r.ClientTokenRemainingUses),
 		Connection:               ProtoConnectionToLogicalConnection(r.Connection),
-		EntityID:                 r.EntityID,
 		PolicyOverride:           r.PolicyOverride,
 		Unauthenticated:          r.Unauthenticated,
-	}, nil
+	}
+
+	if r.Entity != nil {
+		request.Entity = &logical.Entity{
+			ID: request.Entity.ID,
+		}
+	}
+
+	return request, nil
 }
 
 func LogicalConnectionToProtoConnection(c *logical.Connection) *Connection {

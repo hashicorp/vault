@@ -115,7 +115,7 @@ message Request {
 
 	// EntityID is the identity of the caller extracted out of the token used
 	// to make this request
-	string entity_id = 17;
+	string entity_id = 17 [deprecated = true];
 
 	// PolicyOverride indicates that the requestor wishes to override
 	// soft-mandatory Sentinel policies
@@ -130,6 +130,10 @@ message Request {
 	// inspect the connection information and potentially use it for
 	// authentication/protection.
 	Connection connection = 20;
+
+	// Entity is the identity of the caller extracted out of the token used to
+	// make this request
+	Entity entity = 21;
 }
 
 message Alias {
@@ -142,6 +146,11 @@ message Alias {
 
 	// Name is the identifier of this identity in its authentication source
 	string name = 3;
+}
+
+message Entity {
+	// ID is the identifier of the entity
+	string id = 1;
 }
 
 message Auth {
