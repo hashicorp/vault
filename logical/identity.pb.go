@@ -20,11 +20,11 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Entity struct {
 	// ID is the unique identifier for the entity
-	ID string `sentinel:"" protobuf:"bytes,1,opt,name=ID" json:"ID,omitempty"`
+	ID string `protobuf:"bytes,1,opt,name=ID" json:"ID,omitempty"`
 	// Name is the human-friendly unique identifier for the entity
-	Name string `sentinel:"" protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
+	Name string `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
 	// Aliases contains thhe alias mappings for the given entity
-	Aliases              []*Alias `sentinel:"" protobuf:"bytes,3,rep,name=aliases" json:"aliases,omitempty"`
+	Aliases              []*Alias `protobuf:"bytes,3,rep,name=aliases" json:"aliases,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -77,12 +77,12 @@ func (m *Entity) GetAliases() []*Alias {
 
 type Alias struct {
 	// MountType is the backend mount's type to which this identity belongs
-	MountType string `sentinel:"" protobuf:"bytes,1,opt,name=mount_type,json=mountType" json:"mount_type,omitempty"`
+	MountType string `protobuf:"bytes,1,opt,name=mount_type,json=mountType" json:"mount_type,omitempty"`
 	// MountAccessor is the identifier of the mount entry to which this
 	// identity belongs
-	MountAccessor string `sentinel:"" protobuf:"bytes,2,opt,name=mount_accessor,json=mountAccessor" json:"mount_accessor,omitempty"`
+	MountAccessor string `protobuf:"bytes,2,opt,name=mount_accessor,json=mountAccessor" json:"mount_accessor,omitempty"`
 	// Name is the identifier of this identity in its authentication source
-	Name                 string   `sentinel:"" protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
+	Name                 string   `protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
