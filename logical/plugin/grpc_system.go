@@ -143,7 +143,7 @@ func (s *gRPCSystemViewClient) EntityInfo(entityID string) (*logical.Entity, err
 		return nil, errors.New(reply.Err)
 	}
 
-	return pb.ProtoEntityToLogicalEntity(reply.Entity), nil
+	return reply.Entity, nil
 }
 
 type gRPCSystemViewServer struct {
@@ -239,6 +239,6 @@ func (s *gRPCSystemViewServer) EntityInfo(ctx context.Context, args *pb.EntityIn
 		}, nil
 	}
 	return &pb.EntityInfoReply{
-		Entity: pb.LogicalEntityToProtoEntity(entity),
+		Entity: entity,
 	}, nil
 }
