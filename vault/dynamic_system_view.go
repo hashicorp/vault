@@ -147,12 +147,17 @@ func (d dynamicSystemView) MlockEnabled() bool {
 }
 
 func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) {
+	if entityID == "" {
+		return nil, nil
+	}
+
 	if d.core == nil {
 		return nil, fmt.Errorf("system view core is nil")
 	}
 	if d.core.identityStore == nil {
 		return nil, fmt.Errorf("system view identity store is nil")
 	}
+
 	// Get a clone of the current entity id in the store
 	entity, err := d.core.identityStore.MemDBEntityByID(entityID, false)
 	if err != nil {
