@@ -385,7 +385,6 @@ func (i *MySQLHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 }
 
 func (i *MySQLHALock) attemptLock(lockpath string, didLock chan struct{}, failLock chan error, releaseCh chan bool) {
-	// Wait to acquire the lock in ZK
 	lock := NewMySQLLock(i.in, i.logger, lockpath)
 
 	err := lock.Lock()
@@ -408,14 +407,12 @@ func (i *MySQLHALock) attemptLock(lockpath string, didLock chan struct{}, failLo
 
 func (i *MySQLHALock) monitorLock(leaderCh chan struct{}) {
 	for {
-		// monitor this lock to make sure we still hold the lock
-		// we have to poll since I know no way to have mysql push to us a notification
-		// when a lock is lost. However the only way to lose this lock is if someone is
+		// The only way to lose this lock is if someone is
 		// logging into the DB and altering system tables or you lose a connection in
 		// which case you will lose the lock anyway.
 		err := i.hasLock(i.key)
 		if err != nil {
-			// Somehow we lost the lock.... this should absolutely never happen
+			// Somehow we lost the lock.... this should never happen
 			// unless someone is messing around in the DB doing malicious things.
 			i.logger.Info("mysql: distributed lock released")
 			close(leaderCh)
@@ -450,14 +447,14 @@ func (i *MySQLHALock) hasLock(key string) error {
 		return err
 	}
 
-	// Check the row to see if we actually were given the lock or not.
-	// Zero means someone else already has the lock where one is returned
-	// if we hold the lock.
 	defer lockRows.Close()
 	lockRows.Next()
 	var locknum int
 	lockRows.Scan(&locknum)
 
+	// IS_USED_LOCK will return the ID of the connection that created the lock.
+	// it will return NULL otherwise which converts to a zero above when scanning
+	// it into locknum.
 	if locknum == 0 {
 		return ErrLockHeld
 	}
@@ -494,18 +491,9 @@ var (
 
 // NewMySQLLock helper function
 func NewMySQLLock(in *MySQLBackend, l log.Logger, key string) *MySQLLock {
-	// Create a new connection to the database since we can only have one connection open
-	// to reliably check and release locks. If we have multiple threads open we have a very
-	// high chance that the query trying to release the lock will be from a different thread than
-	// the one that created it causing it to fail and put us in a deadlock. We make a copy of the
-	// config even though it's never referenced changing the config in the lock function seems like
-	// it would just cause bugs later on.
-	tmpConf := make(map[string]string)
-	for k, v := range in.conf {
-		tmpConf[k] = v
-	}
-
-	conn, _ := NewMySQLClient(tmpConf, in.logger)
+	// Create a new MySQL connection so we can close this and have no effect on
+	// the rest of the MySQL backend and any cleanup that might need to be done.
+	conn, _ := NewMySQLClient(in.conf, in.logger)
 	return &MySQLLock{
 		in:     conn,
 		logger: l,
@@ -521,14 +509,12 @@ func (i *MySQLLock) Lock() error {
 		return err
 	}
 
-	// Check the row to see if we actually were given the lock or not.
-	// Zero means someone else already has the lock where one is returned
-	// if we hold the lock.
 	defer rows.Close()
 	rows.Next()
 	var num int
 	rows.Scan(&num)
 
+	// 1 is returned from GET_LOCK if it was able to get the lock
 	if num != 1 {
 		return ErrLockHeld
 	}
@@ -536,7 +522,12 @@ func (i *MySQLLock) Lock() error {
 	return nil
 }
 
-// Unlock will try to relase the lock that we currently think we are holding.
+// Unlock just closes the connection. This is because closing the MySQL connection
+// is a 100% reliable way to close the lock. If you just release the lock you must
+// do it from the same mysql connection_id that you originally created it from. This
+// is a huge hastle and I actually couldn't find a clean way to do this although one
+// likely does exist. Closing the connection however ensures we don't ever get into a
+// state where we try to release the lock and it hangs it is also much less code.
 func (i *MySQLLock) Unlock() error {
 	err := i.in.Close()
 
