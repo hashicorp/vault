@@ -41,11 +41,105 @@ type MySQLBackend struct {
 	statements map[string]*sql.Stmt
 	logger     log.Logger
 	permitPool *physical.PermitPool
+	conf       map[string]string
 }
 
 // NewMySQLBackend constructs a MySQL backend using the given API client and
 // server address and credential for accessing mysql database.
 func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
+	var err error
+	db, err := NewMySQLClient(conf, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	database, ok := conf["database"]
+	if !ok {
+		database = "vault"
+	}
+	table, ok := conf["table"]
+	if !ok {
+		table = "vault"
+	}
+	dbTable := database + "." + table
+
+	maxParStr, ok := conf["max_parallel"]
+	var maxParInt int
+	if ok {
+		maxParInt, err = strconv.Atoi(maxParStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+		}
+		if logger.IsDebug() {
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
+		}
+	} else {
+		maxParInt = physical.DefaultParallelOperations
+	}
+
+	// Check schema exists
+	var schemaExist bool
+	schemaRows, err := db.Query("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?", database)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to check mysql schema exist: {{err}}", err)
+	}
+	defer schemaRows.Close()
+	schemaExist = schemaRows.Next()
+
+	// Check table exists
+	var tableExist bool
+	tableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", table, database)
+
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to check mysql table exist: {{err}}", err)
+	}
+	defer tableRows.Close()
+	tableExist = tableRows.Next()
+
+	// Create the required database if it doesn't exists.
+	if !schemaExist {
+		if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS " + database); err != nil {
+			return nil, errwrap.Wrapf("failed to create mysql database: {{err}}", err)
+		}
+	}
+
+	// Create the required table if it doesn't exists.
+	if !tableExist {
+		create_query := "CREATE TABLE IF NOT EXISTS " + dbTable +
+			" (vault_key varbinary(512), vault_value mediumblob, PRIMARY KEY (vault_key))"
+		if _, err := db.Exec(create_query); err != nil {
+			return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
+		}
+	}
+
+	// Setup the backend.
+	m := &MySQLBackend{
+		dbTable:    dbTable,
+		client:     db,
+		statements: make(map[string]*sql.Stmt),
+		logger:     logger,
+		permitPool: physical.NewPermitPool(maxParInt),
+		conf:       conf,
+	}
+
+	// Prepare all the statements required
+	statements := map[string]string{
+		"put": "INSERT INTO " + dbTable +
+			" VALUES( ?, ? ) ON DUPLICATE KEY UPDATE vault_value=VALUES(vault_value)",
+		"get":    "SELECT vault_value FROM " + dbTable + " WHERE vault_key = ?",
+		"delete": "DELETE FROM " + dbTable + " WHERE vault_key = ?",
+		"list":   "SELECT vault_key FROM " + dbTable + " WHERE vault_key LIKE ?",
+	}
+	for name, query := range statements {
+		if err := m.prepare(name, query); err != nil {
+			return nil, err
+		}
+	}
+
+	return m, nil
+}
+
+func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) {
 	var err error
 
 	// Get the MySQL credentials to perform read/write operations.
@@ -63,17 +157,6 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if !ok {
 		address = "127.0.0.1:3306"
 	}
-
-	// Get the MySQL database and table details.
-	database, ok := conf["database"]
-	if !ok {
-		database = "vault"
-	}
-	table, ok := conf["table"]
-	if !ok {
-		table = "vault"
-	}
-	dbTable := database + "." + table
 
 	maxIdleConnStr, ok := conf["max_idle_connections"]
 	var maxIdleConnInt int
@@ -136,65 +219,8 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if maxConnLifeInt != 0 {
 		db.SetConnMaxLifetime(time.Duration(maxConnLifeInt) * time.Second)
 	}
-	// Check schema exists
-	var schemaExist bool
-	schemaRows, err := db.Query("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?", database)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to check mysql schema exist: {{err}}", err)
-	}
-	defer schemaRows.Close()
-	schemaExist = schemaRows.Next()
 
-	// Check table exists
-	var tableExist bool
-	tableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", table, database)
-
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to check mysql table exist: {{err}}", err)
-	}
-	defer tableRows.Close()
-	tableExist = tableRows.Next()
-
-	// Create the required database if it doesn't exists.
-	if !schemaExist {
-		if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS " + database); err != nil {
-			return nil, errwrap.Wrapf("failed to create mysql database: {{err}}", err)
-		}
-	}
-
-	// Create the required table if it doesn't exists.
-	if !tableExist {
-		create_query := "CREATE TABLE IF NOT EXISTS " + dbTable +
-			" (vault_key varbinary(512), vault_value mediumblob, PRIMARY KEY (vault_key))"
-		if _, err := db.Exec(create_query); err != nil {
-			return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
-		}
-	}
-
-	// Setup the backend.
-	m := &MySQLBackend{
-		dbTable:    dbTable,
-		client:     db,
-		statements: make(map[string]*sql.Stmt),
-		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
-	}
-
-	// Prepare all the statements required
-	statements := map[string]string{
-		"put": "INSERT INTO " + dbTable +
-			" VALUES( ?, ? ) ON DUPLICATE KEY UPDATE vault_value=VALUES(vault_value)",
-		"get":    "SELECT vault_value FROM " + dbTable + " WHERE vault_key = ?",
-		"delete": "DELETE FROM " + dbTable + " WHERE vault_key = ?",
-		"list":   "SELECT vault_key FROM " + dbTable + " WHERE vault_key LIKE ?",
-	}
-	for name, query := range statements {
-		if err := m.prepare(name, query); err != nil {
-			return nil, err
-		}
-	}
-
-	return m, nil
+	return db, err
 }
 
 // prepare is a helper to prepare a query for future execution
@@ -361,6 +387,7 @@ func (i *MySQLHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 func (i *MySQLHALock) attemptLock(lockpath string, didLock chan struct{}, failLock chan error, releaseCh chan bool) {
 	// Wait to acquire the lock in ZK
 	lock := NewMySQLLock(i.in, i.logger, lockpath)
+
 	err := lock.Lock()
 	if err != nil {
 		failLock <- err
@@ -392,13 +419,14 @@ func (i *MySQLHALock) monitorLock(leaderCh chan struct{}) {
 			// unless someone is messing around in the DB doing malicious things.
 			i.logger.Info("mysql: distributed lock released")
 			close(leaderCh)
+			return
 		}
 
 		time.Sleep(5 * time.Second)
 	}
 }
 
-func (i *MySQLHALock) unlockInternal() error {
+func (i *MySQLHALock) Unlock() error {
 	i.localLock.Lock()
 	defer i.localLock.Unlock()
 	if !i.held {
@@ -415,13 +443,7 @@ func (i *MySQLHALock) unlockInternal() error {
 	return err
 }
 
-func (i *MySQLHALock) Unlock() error {
-	err := i.unlockInternal()
-	return err
-}
-
-// hasLock will check if a lock is held and if you are the current owner of it.
-// If both conditions are not met an error is returned.
+// hasLock will check if a lock is held this is done by trying to get the lock.
 func (i *MySQLHALock) hasLock(key string) error {
 	lockRows, err := i.in.client.Query("SELECT IS_USED_LOCK(?)", key)
 	if err != nil {
@@ -436,7 +458,7 @@ func (i *MySQLHALock) hasLock(key string) error {
 	var locknum int
 	lockRows.Scan(&locknum)
 
-	if locknum <= 0 {
+	if locknum == 0 {
 		return ErrLockHeld
 	}
 
@@ -457,7 +479,7 @@ func (i *MySQLHALock) Value() (bool, string, error) {
 // locks using the built in GET_LOCK function. Note that these
 // locks are released when you lose connection to the server.
 type MySQLLock struct {
-	in     *MySQLBackend
+	in     *sql.DB
 	logger log.Logger
 	key    string
 }
@@ -472,8 +494,20 @@ var (
 
 // NewMySQLLock helper function
 func NewMySQLLock(in *MySQLBackend, l log.Logger, key string) *MySQLLock {
+	// Create a new connection to the database since we can only have one connection open
+	// to reliably check and release locks. If we have multiple threads open we have a very
+	// high chance that the query trying to release the lock will be from a different thread than
+	// the one that created it causing it to fail and put us in a deadlock. We make a copy of the
+	// config even though it's never referenced changing the config in the lock function seems like
+	// it would just cause bugs later on.
+	tmpConf := make(map[string]string)
+	for k, v := range in.conf {
+		tmpConf[k] = v
+	}
+
+	conn, _ := NewMySQLClient(tmpConf, in.logger)
 	return &MySQLLock{
-		in:     in,
+		in:     conn,
 		logger: l,
 		key:    key,
 	}
@@ -482,7 +516,7 @@ func NewMySQLLock(in *MySQLBackend, l log.Logger, key string) *MySQLLock {
 // Lock will try to get a lock for an indefinite amount of time
 // based on the given key that has been requested.
 func (i *MySQLLock) Lock() error {
-	rows, err := i.in.client.Query("SELECT GET_LOCK(?, -1)", i.key)
+	rows, err := i.in.Query("SELECT GET_LOCK(?, -1)", i.key)
 	if err != nil {
 		return err
 	}
@@ -504,20 +538,9 @@ func (i *MySQLLock) Lock() error {
 
 // Unlock will try to relase the lock that we currently think we are holding.
 func (i *MySQLLock) Unlock() error {
-	rows, err := i.in.client.Query("SELECT RELEASE_LOCK(?)", i.key)
+	err := i.in.Close()
+
 	if err != nil {
-		return err
-	}
-
-	// Check the row to see if we actually were able to release the lock.
-	// Zero means someone else already has the lock where one is returned
-	// if we were able to release the lock.
-	defer rows.Close()
-	rows.Next()
-	var num int
-	rows.Scan(&num)
-
-	if num != 1 {
 		return ErrUnlockFailed
 	}
 
