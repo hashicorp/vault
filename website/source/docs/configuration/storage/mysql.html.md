@@ -12,8 +12,7 @@ description: |-
 The MySQL storage backend is used to persist Vault's data in a [MySQL][mysql]
 server or cluster.
 
-- **No High Availability** – the MySQL storage backend does not support high
-  availability.
+- **High Availability** – the MySQL storage backend supports high availability.
 
 - **Community Supported** – the MySQL storage backend is supported by the
   community. While it has undergone review by HashiCorp employees, they may not

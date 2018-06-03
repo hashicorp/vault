@@ -299,7 +299,7 @@ func (m *MySQLBackend) List(ctx context.Context, prefix string) ([]string, error
 func (m *MySQLBackend) LockWith(key, value string) (physical.Lock, error) {
 	l := &MySQLHALock{
 		in:     m,
-		key:    key, //+ ":" + value,
+		key:    key,
 		logger: m.logger,
 	}
 	return l, nil
