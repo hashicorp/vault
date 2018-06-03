@@ -13,9 +13,9 @@ FEATURES:
    generating a new master key, and a threshold of the new, returned key shares
    must be provided to verify that they have been successfully received in
    order for the actual master key to be rotated.
- * Cert auth CIDR restrictions: When using the `cert` auth method you can now
-   limit authentication to specific CIDRs; these will also be encoded in
-   resultant tokens to limit their use.
+ * CIDR restrictions for `cert`, `userpass`, and `kubernetes` auth methods:
+   You can now limit authentication to specific CIDRs; these will also be
+   encoded in resultant tokens to limit their use.
  * Userpass auth CIDR restrictions: When using the `userpass` auth method you
    can now limit authentication to specific CIDRs; these will also be encoded
    in resultant tokens to limit their use.
