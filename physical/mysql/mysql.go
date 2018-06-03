@@ -5,12 +5,14 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
@@ -24,6 +26,8 @@ import (
 
 // Verify MySQLBackend satisfies the correct interfaces
 var _ physical.Backend = (*MySQLBackend)(nil)
+var _ physical.HABackend = (*MySQLBackend)(nil)
+var _ physical.Lock = (*MySQLHALock)(nil)
 
 // Unreserved tls key
 // Reserved values are "true", "false", "skip-verify"
@@ -217,7 +221,7 @@ func (m *MySQLBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	return nil
 }
 
-// Get is used to fetch and entry.
+// Get is used to fetch an entry.
 func (m *MySQLBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"mysql", "get"}, time.Now())
 
@@ -289,6 +293,260 @@ func (m *MySQLBackend) List(ctx context.Context, prefix string) ([]string, error
 
 	sort.Strings(keys)
 	return keys, nil
+}
+
+// LockWith is used for mutual exclusion based on the given key.
+func (m *MySQLBackend) LockWith(key, value string) (physical.Lock, error) {
+	l := &MySQLHALock{
+		in:     m,
+		key:    key, //+ ":" + value,
+		logger: m.logger,
+	}
+	return l, nil
+}
+
+// HAEnabled ...
+func (m *MySQLBackend) HAEnabled() bool {
+	return true
+}
+
+// MySQLHALock is a MySQL Lock implementation for the HABackend
+type MySQLHALock struct {
+	in     *MySQLBackend
+	key    string
+	logger log.Logger
+
+	held      bool
+	localLock sync.Mutex
+	leaderCh  chan struct{}
+	stopCh    <-chan struct{}
+	lock      *MySQLLock
+}
+
+func (i *MySQLHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
+	i.localLock.Lock()
+	defer i.localLock.Unlock()
+	if i.held {
+		return nil, fmt.Errorf("lock already held")
+	}
+
+	// Attempt an async acquisition
+	didLock := make(chan struct{})
+	failLock := make(chan error, 1)
+	releaseCh := make(chan bool, 1)
+	lockpath := i.key
+	go i.attemptLock(lockpath, didLock, failLock, releaseCh)
+
+	// Wait for lock acquisition, failure, or shutdown
+	select {
+	case <-didLock:
+		releaseCh <- false
+	case err := <-failLock:
+		return nil, err
+	case <-stopCh:
+		releaseCh <- true
+		return nil, nil
+	}
+
+	// Create the leader channel
+	i.held = true
+	i.leaderCh = make(chan struct{})
+
+	go i.monitorLock(i.leaderCh)
+
+	i.stopCh = stopCh
+
+	return i.leaderCh, nil
+}
+
+func (i *MySQLHALock) attemptLock(lockpath string, didLock chan struct{}, failLock chan error, releaseCh chan bool) {
+	// Wait to acquire the lock in ZK
+	lock := NewMySQLLock(i.in, i.logger, lockpath)
+	err := lock.Lock()
+	if err != nil {
+		failLock <- err
+		return
+	}
+	// Set node value
+	i.lock = lock
+
+	// Signal that lock is held
+	close(didLock)
+
+	// Handle an early abort
+	release := <-releaseCh
+	if release {
+		lock.Unlock()
+	}
+}
+
+func (i *MySQLHALock) monitorLock(leaderCh chan struct{}) {
+	for {
+		// monitor this lock to make sure we still hold the lock
+		// we have to poll since I know no way to have mysql push to us a notification
+		// when a lock is lost. However the only way to lose this lock is if someone is
+		// logging into the DB and altering system tables or you lose a connection in
+		// which case you will lose the lock anyway.
+		err := i.lock.HasLock()
+		if err != nil {
+			// Somehow we lost the lock.... this should absolutely never happen
+			// unless someone is messing around in the DB doing malicious things.
+			i.logger.Info("mysql: distributed lock released")
+			close(leaderCh)
+		}
+
+		time.Sleep(5 * time.Second)
+	}
+}
+
+func (i *MySQLHALock) unlockInternal() error {
+	i.localLock.Lock()
+	defer i.localLock.Unlock()
+	if !i.held {
+		return nil
+	}
+
+	err := i.lock.Unlock()
+
+	if err == nil {
+		i.held = false
+		return nil
+	}
+
+	return err
+}
+
+func (i *MySQLHALock) Unlock() error {
+	var err error
+
+	i.unlockInternal()
+
+	return err
+}
+
+func (i *MySQLHALock) hasLockOnKey() error {
+	lockRows, err := i.in.client.Query("SELECT IS_USED_LOCK(?)", i.key)
+	if err != nil {
+		return err
+	}
+
+	// Check the row to see if we actually were given the lock or not.
+	// Zero means someone else already has the lock where one is returned
+	// if we hold the lock.
+	defer lockRows.Close()
+	lockRows.Next()
+	var locknum int
+	lockRows.Scan(&locknum)
+
+	if locknum <= 0 {
+		return ErrLockHeld
+	}
+
+	return nil
+}
+
+func (i *MySQLHALock) Value() (bool, string, error) {
+	lockpath := i.key
+	err := i.hasLockOnKey()
+	if err != nil {
+		return false, lockpath, err
+	}
+
+	return true, lockpath, err
+}
+
+// MySQLLock provides an easy way to grab and release mysql
+// locks using the built in GET_LOCK function. Note that these
+// locks are released when you lose connection to the server.
+type MySQLLock struct {
+	in     *MySQLBackend
+	logger log.Logger
+	key    string
+}
+
+// Errors specific to trying to grab a lock in MySQL
+var (
+	// ErrLockHeld is returned when another vault instance already has a lock held for the given key.
+	ErrLockHeld = errors.New("mysql: lock already held")
+	// ErrUnlockFailed
+	ErrUnlockFailed = errors.New("mysql: unable to release lock, already released or not held by this session")
+)
+
+// NewMySQLLock helper function
+func NewMySQLLock(in *MySQLBackend, l log.Logger, key string) *MySQLLock {
+	return &MySQLLock{
+		in:     in,
+		logger: l,
+		key:    key,
+	}
+}
+
+// HasLock will check if a lock is held and if you are the current owner of it.
+// If both conditions are not met an error is returned.
+func (i *MySQLLock) HasLock() error {
+	lockRows, err := i.in.client.Query("SELECT IS_USED_LOCK(?)", i.key)
+	if err != nil {
+		return err
+	}
+
+	// Check the row to see if we actually were given the lock or not.
+	// Zero means someone else already has the lock where one is returned
+	// if we hold the lock.
+	defer lockRows.Close()
+	lockRows.Next()
+	var locknum int
+	lockRows.Scan(&locknum)
+
+	if locknum <= 0 {
+		return ErrLockHeld
+	}
+
+	return nil
+}
+
+// Lock will try to get a lock for an indefinite amount of time
+// based on the given key that has been requested.
+func (i *MySQLLock) Lock() error {
+	rows, err := i.in.client.Query("SELECT GET_LOCK(?, -1)", i.key)
+	if err != nil {
+		return err
+	}
+
+	// Check the row to see if we actually were given the lock or not.
+	// Zero means someone else already has the lock where one is returned
+	// if we hold the lock.
+	defer rows.Close()
+	rows.Next()
+	var num int
+	rows.Scan(&num)
+
+	if num != 1 {
+		return ErrLockHeld
+	}
+
+	return nil
+}
+
+// Unlock will try to relase the lock that we currently think we are holding.
+func (i *MySQLLock) Unlock() error {
+	rows, err := i.in.client.Query("SELECT RELEASE_LOCK(?, -1)", i.key)
+	if err != nil {
+		return err
+	}
+
+	// Check the row to see if we actually were able to release the lock.
+	// Zero means someone else already has the lock where one is returned
+	// if we were able to release the lock.
+	defer rows.Close()
+	rows.Next()
+	var num int
+	rows.Scan(&num)
+
+	if num != 1 {
+		return ErrUnlockFailed
+	}
+
+	return nil
 }
 
 // Establish a TLS connection with a given CA certificate
