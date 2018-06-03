@@ -158,13 +158,18 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 	if err != nil {
 		return nil, err
 	}
+	if entity == nil {
+		return nil, nil
+	}
 
 	aliases := make([]*logical.Alias, len(entity.Aliases))
 	for i, alias := range entity.Aliases {
 		aliases[i] = &logical.Alias{
-			MountType:     alias.MountType,
 			MountAccessor: alias.MountAccessor,
 			Name:          alias.Name,
+		}
+		if mount := d.core.router.validateMountByAccessor(alias.MountAccessor); mount != nil {
+			aliases[i].MountType = mount.MountType
 		}
 	}
 
