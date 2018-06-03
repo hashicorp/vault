@@ -42,6 +42,8 @@ module.exports = function(defaults) {
     },
     'ember-app-shell': {
       visitPath: '/ui/app-shell',
+      root: config.rootURL,
+      skipCritical: true
     }
   });
 

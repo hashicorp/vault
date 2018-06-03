@@ -46,7 +46,7 @@
     "cool-checkboxes-for-bulma.io": "^1.1.0",
     "ember-ajax": "^3.0.0",
     "ember-api-actions": "^0.1.8",
-    "ember-app-shell": "^0.5.4",
+    "ember-app-shell": "meirish/ember-app-shell#puppeteer",
     "ember-basic-dropdown": "^0.33.5",
     "ember-basic-dropdown-hover": "^0.2.0",
     "ember-cli": "~2.16.0",
