@@ -305,7 +305,6 @@ func (m *MySQLBackend) LockWith(key, value string) (physical.Lock, error) {
 	return l, nil
 }
 
-// HAEnabled ...
 func (m *MySQLBackend) HAEnabled() bool {
 	return true
 }
@@ -387,7 +386,7 @@ func (i *MySQLHALock) monitorLock(leaderCh chan struct{}) {
 		// when a lock is lost. However the only way to lose this lock is if someone is
 		// logging into the DB and altering system tables or you lose a connection in
 		// which case you will lose the lock anyway.
-		err := i.lock.HasLock()
+		err := i.hasLock(i.key)
 		if err != nil {
 			// Somehow we lost the lock.... this should absolutely never happen
 			// unless someone is messing around in the DB doing malicious things.
@@ -424,8 +423,10 @@ func (i *MySQLHALock) Unlock() error {
 	return err
 }
 
-func (i *MySQLHALock) hasLockOnKey() error {
-	lockRows, err := i.in.client.Query("SELECT IS_USED_LOCK(?)", i.key)
+// hasLock will check if a lock is held and if you are the current owner of it.
+// If both conditions are not met an error is returned.
+func (i *MySQLHALock) hasLock(key string) error {
+	lockRows, err := i.in.client.Query("SELECT IS_USED_LOCK(?)", key)
 	if err != nil {
 		return err
 	}
@@ -447,7 +448,7 @@ func (i *MySQLHALock) hasLockOnKey() error {
 
 func (i *MySQLHALock) Value() (bool, string, error) {
 	lockpath := i.key
-	err := i.hasLockOnKey()
+	err := i.hasLock(lockpath)
 	if err != nil {
 		return false, lockpath, err
 	}
@@ -479,29 +480,6 @@ func NewMySQLLock(in *MySQLBackend, l log.Logger, key string) *MySQLLock {
 		logger: l,
 		key:    key,
 	}
-}
-
-// HasLock will check if a lock is held and if you are the current owner of it.
-// If both conditions are not met an error is returned.
-func (i *MySQLLock) HasLock() error {
-	lockRows, err := i.in.client.Query("SELECT IS_USED_LOCK(?)", i.key)
-	if err != nil {
-		return err
-	}
-
-	// Check the row to see if we actually were given the lock or not.
-	// Zero means someone else already has the lock where one is returned
-	// if we hold the lock.
-	defer lockRows.Close()
-	lockRows.Next()
-	var locknum int
-	lockRows.Scan(&locknum)
-
-	if locknum <= 0 {
-		return ErrLockHeld
-	}
-
-	return nil
 }
 
 // Lock will try to get a lock for an indefinite amount of time
