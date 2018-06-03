@@ -416,10 +416,7 @@ func (i *MySQLHALock) unlockInternal() error {
 }
 
 func (i *MySQLHALock) Unlock() error {
-	var err error
-
-	i.unlockInternal()
-
+	err := i.unlockInternal()
 	return err
 }
 
