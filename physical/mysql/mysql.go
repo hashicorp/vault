@@ -507,7 +507,7 @@ func (i *MySQLLock) Lock() error {
 
 // Unlock will try to relase the lock that we currently think we are holding.
 func (i *MySQLLock) Unlock() error {
-	rows, err := i.in.client.Query("SELECT RELEASE_LOCK(?, -1)", i.key)
+	rows, err := i.in.client.Query("SELECT RELEASE_LOCK(?)", i.key)
 	if err != nil {
 		return err
 	}
