@@ -610,16 +610,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			return nil, auth, retErr
 		}
 
-		// Register with the expiration manager. We use the token's actual path
-		// here because roles allow suffixes.
-		te, err := c.tokenStore.Lookup(ctx, resp.Auth.ClientToken)
-		if err != nil {
-			c.logger.Error("failed to look up token", "error", err)
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, auth, retErr
-		}
-
-		if err := c.expiration.RegisterAuth(te.Path, resp.Auth); err != nil {
+		if err := c.expiration.RegisterAuth(resp.Auth.CreationPath, resp.Auth); err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)

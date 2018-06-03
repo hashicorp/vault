@@ -624,9 +624,8 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error 
 				return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q: {{err}}", prefix), err)
 			}
 			return nil
-		} else {
-			prefix = prefix + "/"
 		}
+		prefix = prefix + "/"
 	}
 
 	// Accumulate existing leases
@@ -717,45 +716,6 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 
 	// Return the response
 	return resp, nil
-}
-
-// RestoreSaltedTokenCheck verifies that the token is not expired while running
-// in restore mode.  If we are not in restore mode, the lease has already been
-// restored or the lease still has time left, it returns true.
-func (m *ExpirationManager) RestoreSaltedTokenCheck(source string, saltedID string) (bool, error) {
-	defer metrics.MeasureSince([]string{"expire", "restore-token-check"}, time.Now())
-
-	// Return immediately if we are not in restore mode, expiration manager is
-	// already loaded
-	if !m.inRestoreMode() {
-		return true, nil
-	}
-
-	m.restoreModeLock.RLock()
-	defer m.restoreModeLock.RUnlock()
-
-	// Check again after we obtain the lock
-	if !m.inRestoreMode() {
-		return true, nil
-	}
-
-	leaseID := path.Join(source, saltedID)
-
-	m.lockLease(leaseID)
-	defer m.unlockLease(leaseID)
-
-	le, err := m.loadEntryInternal(leaseID, true, true)
-	if err != nil {
-		return false, err
-	}
-	if le != nil && !le.ExpireTime.IsZero() {
-		expires := le.ExpireTime.Sub(time.Now())
-		if expires <= 0 {
-			return false, nil
-		}
-	}
-
-	return true, nil
 }
 
 // RenewToken is used to renew a token which does not need to
@@ -947,6 +907,7 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 
 	// Setup revocation timer
 	m.updatePending(&le, auth.LeaseTotal())
+
 	return nil
 }
 

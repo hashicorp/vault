@@ -1,5 +1,18 @@
 ## 0.10.2 (Unreleased)
 
+SECURITY:
+
+ * The Vault team identified a race condition that could occur if a token's
+   lease expired while Vault was not running. In this case, when Vault came
+   back online, sometimes it would properly revoke the lease but other times it
+   would not, leading to a Vault token that no longer had an expiration and had
+   essentially unlimited lifetime. This race was per-token, not all-or-nothing
+   for all tokens that may have expired during Vault's downtime. We have fixed
+   the behavior and put extra checks in place to help prevent any similar
+   future issues. In addition, the logic we have put in place ensures that such
+   lease-less tokens can no longer be used (unless they are root tokens that
+   never had an expiration to begin with).
+
 DEPRECATIONS/CHANGES:
 
  * PKI duration return types: The PKI backend now returns durations (e.g. when
