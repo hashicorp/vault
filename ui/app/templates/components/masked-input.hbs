@@ -1,0 +1,4 @@
+<div class={{if shouldObscure "masked"}} data-test-masked-input>
+	{{textarea value=value focus-in=(action "setFocus" true) focus-out=(action "setFocus" false) key-down=(action onKeyDown) change=(action onChange) data-test-textarea="true"}}
+	<button {{action "toggleMask"}} data-test-button>Toggle mask</button>
+</div>

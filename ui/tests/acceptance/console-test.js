@@ -8,7 +8,7 @@ moduleForAcceptance('Acceptance | console', {
   },
 });
 
-test("refresh reloads the current route's data", function(assert) {
+test('refresh reloads the current route\'s data', function(assert) {
   let numEngines;
   enginesPage.visit();
   andThen(() => {
