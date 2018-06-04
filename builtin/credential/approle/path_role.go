@@ -1373,7 +1373,10 @@ func (b *backend) pathRoleBoundCIDRListUpdate(ctx context.Context, req *logical.
 	} else if cidrListRaw, ok := data.GetOk("bound_cidr_list"); ok {
 		role.SecretIDBoundCIDRs = cidrListRaw.([]string)
 	}
-	role.TokenBoundCIDRs = data.Get("token_bound_cidrs").([]string)
+
+	if cidrListRaw, ok := data.GetOk("token_bound_cidrs"); ok {
+		role.TokenBoundCIDRs = cidrListRaw.([]string)
+	}
 
 	if len(role.SecretIDBoundCIDRs)+len(role.TokenBoundCIDRs) == 0 {
 		return logical.ErrorResponse("missing secret_id_bound_cidrs and token_bound_cidrs"), nil
