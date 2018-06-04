@@ -891,6 +891,10 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		}
 	}
 
+	if boundCIDRListRaw, ok := data.GetOk("token_bound_cidrs"); ok {
+		role.TokenBoundCIDRs = boundCIDRListRaw.([]string)
+	}
+
 	if len(role.TokenBoundCIDRs) != 0 {
 		valid, err := cidrutil.ValidateCIDRListSlice(role.TokenBoundCIDRs)
 		if err != nil {
