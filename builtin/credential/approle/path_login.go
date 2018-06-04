@@ -230,12 +230,6 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 				return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the role: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
 			}
 		}
-		if len(role.TokenBoundCIDRs) != 0 {
-			belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, role.TokenBoundCIDRs)
-			if err != nil || !belongs {
-				return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the role: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
-			}
-		}
 	}
 
 	// Parse the CIDRs we should be binding the token to.

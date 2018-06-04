@@ -785,7 +785,7 @@ func (b *backend) roleEntry(ctx context.Context, s logical.Storage, roleName str
 
 	if len(role.BoundCIDRList) != 0 {
 		role.SecretIDBoundCIDRs = role.BoundCIDRList
-		role.BoundCIDRList = []string{}
+		role.BoundCIDRList = nil
 		needsUpgrade = true
 	}
 
@@ -1368,38 +1368,17 @@ func (b *backend) pathRoleBoundCIDRListUpdate(ctx context.Context, req *logical.
 		return nil, nil
 	}
 
-	if cidrListRaw, ok := data.GetOk("secret_id_bound_cidrs"); ok {
-		role.SecretIDBoundCIDRs = cidrListRaw.([]string)
-	} else if cidrListRaw, ok := data.GetOk("bound_cidr_list"); ok {
-		role.SecretIDBoundCIDRs = cidrListRaw.([]string)
+	role.BoundCIDRList = data.Get("bound_cidr_list").([]string)
+	if len(role.BoundCIDRList) == 0 {
+		return logical.ErrorResponse("missing bound_cidr_list"), nil
 	}
 
-	if cidrListRaw, ok := data.GetOk("token_bound_cidrs"); ok {
-		role.TokenBoundCIDRs = cidrListRaw.([]string)
+	valid, err := cidrutil.ValidateCIDRListSlice(role.BoundCIDRList)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
 	}
-
-	if len(role.SecretIDBoundCIDRs)+len(role.TokenBoundCIDRs) == 0 {
-		return logical.ErrorResponse("missing secret_id_bound_cidrs and token_bound_cidrs"), nil
-	}
-
-	if len(role.SecretIDBoundCIDRs) > 0 {
-		valid, err := cidrutil.ValidateCIDRListSlice(role.SecretIDBoundCIDRs)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
-		}
-		if !valid {
-			return logical.ErrorResponse("failed to validate CIDR blocks"), nil
-		}
-	}
-
-	if len(role.TokenBoundCIDRs) > 0 {
-		valid, err := cidrutil.ValidateCIDRListSlice(role.TokenBoundCIDRs)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
-		}
-		if !valid {
-			return logical.ErrorResponse("failed to validate CIDR blocks"), nil
-		}
+	if !valid {
+		return logical.ErrorResponse("failed to validate CIDR blocks"), nil
 	}
 
 	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
