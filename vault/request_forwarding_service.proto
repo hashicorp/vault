@@ -1,6 +1,8 @@
 syntax = "proto3";
 
-import "github.com/hashicorp/vault/helper/forwarding/types.proto";
+option go_package = "github.com/hashicorp/vault/vault";
+
+import "helper/forwarding/types.proto";
 
 package vault;
 
