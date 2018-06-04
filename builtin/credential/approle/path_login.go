@@ -220,15 +220,13 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		metadata = entry.Metadata
 	}
 
-	if len(role.SecretIDBoundCIDRs)+len(role.TokenBoundCIDRs) != 0 {
+	if len(role.SecretIDBoundCIDRs) != 0 {
 		if req.Connection == nil || req.Connection.RemoteAddr == "" {
 			return nil, fmt.Errorf("failed to get connection information")
 		}
-		if len(role.SecretIDBoundCIDRs) != 0 {
-			belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, role.SecretIDBoundCIDRs)
-			if err != nil || !belongs {
-				return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the role: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
-			}
+		belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, role.SecretIDBoundCIDRs)
+		if err != nil || !belongs {
+			return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the role: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
 		}
 	}
 
