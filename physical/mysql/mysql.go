@@ -112,6 +112,32 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
+	locktable, ok := conf["lock_table"]
+	if !ok {
+		locktable = "vault_lock"
+	}
+
+	dbLockTable := database + "." + locktable
+
+	// Check table exists
+	var lockTableExist bool
+	lockTableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", locktable, database)
+
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to check mysql table exist: {{err}}", err)
+	}
+	defer lockTableRows.Close()
+	lockTableExist = lockTableRows.Next()
+
+	// Create the required table if it doesn't exists.
+	if !lockTableExist {
+		create_query := "CREATE TABLE IF NOT EXISTS " + dbLockTable +
+			" (node_job varchar(512), current_leader varchar(512), PRIMARY KEY (node_job))"
+		if _, err := db.Exec(create_query); err != nil {
+			return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
+		}
+	}
+
 	// Setup the backend.
 	m := &MySQLBackend{
 		dbTable:    dbTable,
@@ -126,9 +152,10 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	statements := map[string]string{
 		"put": "INSERT INTO " + dbTable +
 			" VALUES( ?, ? ) ON DUPLICATE KEY UPDATE vault_value=VALUES(vault_value)",
-		"get":    "SELECT vault_value FROM " + dbTable + " WHERE vault_key = ?",
-		"delete": "DELETE FROM " + dbTable + " WHERE vault_key = ?",
-		"list":   "SELECT vault_key FROM " + dbTable + " WHERE vault_key LIKE ?",
+		"get":      "SELECT vault_value FROM " + dbTable + " WHERE vault_key = ?",
+		"delete":   "DELETE FROM " + dbTable + " WHERE vault_key = ?",
+		"list":     "SELECT vault_key FROM " + dbTable + " WHERE vault_key LIKE ?",
+		"get_lock": "SELECT current_leader FROM " + dbLockTable + " WHERE node_job = ?",
 	}
 	for name, query := range statements {
 		if err := m.prepare(name, query); err != nil {
@@ -326,6 +353,7 @@ func (m *MySQLBackend) LockWith(key, value string) (physical.Lock, error) {
 	l := &MySQLHALock{
 		in:     m,
 		key:    key,
+		value:  value,
 		logger: m.logger,
 	}
 	return l, nil
@@ -339,6 +367,7 @@ func (m *MySQLBackend) HAEnabled() bool {
 type MySQLHALock struct {
 	in     *MySQLBackend
 	key    string
+	value  string
 	logger log.Logger
 
 	held      bool
@@ -359,8 +388,7 @@ func (i *MySQLHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	didLock := make(chan struct{})
 	failLock := make(chan error, 1)
 	releaseCh := make(chan bool, 1)
-	lockpath := i.key
-	go i.attemptLock(lockpath, didLock, failLock, releaseCh)
+	go i.attemptLock(i.key, i.value, didLock, failLock, releaseCh)
 
 	// Wait for lock acquisition, failure, or shutdown
 	select {
@@ -384,10 +412,13 @@ func (i *MySQLHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	return i.leaderCh, nil
 }
 
-func (i *MySQLHALock) attemptLock(lockpath string, didLock chan struct{}, failLock chan error, releaseCh chan bool) {
-	lock := NewMySQLLock(i.in, i.logger, lockpath)
+func (i *MySQLHALock) attemptLock(key, value string, didLock chan struct{}, failLock chan error, releaseCh chan bool) {
+	lock, err := NewMySQLLock(i.in, i.logger, key, value)
+	if err != nil {
+		failLock <- err
+	}
 
-	err := lock.Lock()
+	err = lock.Lock()
 	if err != nil {
 		failLock <- err
 		return
@@ -455,6 +486,7 @@ func (i *MySQLHALock) hasLock(key string) error {
 	// IS_USED_LOCK will return the ID of the connection that created the lock.
 	// it will return NULL otherwise which converts to a zero above when scanning
 	// it into locknum.
+	fmt.Println(locknum)
 	if locknum == 0 {
 		return ErrLockHeld
 	}
@@ -462,23 +494,41 @@ func (i *MySQLHALock) hasLock(key string) error {
 	return nil
 }
 
-func (i *MySQLHALock) Value() (bool, string, error) {
-	lockpath := i.key
-	err := i.hasLock(lockpath)
-	if err != nil {
-		return false, lockpath, err
+func (i *MySQLHALock) GetLeader() (string, error) {
+	defer metrics.MeasureSince([]string{"mysql", "lock_get"}, time.Now())
+
+	var result string
+	err := i.in.statements["get_lock"].QueryRow("leader").Scan(&result)
+	if err == sql.ErrNoRows {
+		return "", err
 	}
 
-	return true, lockpath, err
+	return result, nil
+}
+
+func (i *MySQLHALock) Value() (bool, string, error) {
+	leaderkey, err := i.GetLeader()
+	if err != nil {
+		return false, "", err
+	}
+
+	err = i.hasLock(i.key)
+	if err != nil {
+		return false, leaderkey, err
+	}
+
+	return true, leaderkey, err
 }
 
 // MySQLLock provides an easy way to grab and release mysql
 // locks using the built in GET_LOCK function. Note that these
 // locks are released when you lose connection to the server.
 type MySQLLock struct {
-	in     *sql.DB
-	logger log.Logger
-	key    string
+	in         *sql.DB
+	logger     log.Logger
+	statements map[string]*sql.Stmt
+	key        string
+	value      string
 }
 
 // Errors specific to trying to grab a lock in MySQL
@@ -487,18 +537,85 @@ var (
 	ErrLockHeld = errors.New("mysql: lock already held")
 	// ErrUnlockFailed
 	ErrUnlockFailed = errors.New("mysql: unable to release lock, already released or not held by this session")
+	// You were unable to update that you are the new leader in the DB
+	ErrClaimFailed = errors.New("mysql: unable to update DB with new leader infromation")
+	// We were not able to remove outself as the active leader. This is more a warning as it will be fixed as soon
+	// as the new leader has come online.
+	ErrClearLeaderFailed = errors.New("mysql: unable to clear outselves as the current leader")
 )
 
 // NewMySQLLock helper function
-func NewMySQLLock(in *MySQLBackend, l log.Logger, key string) *MySQLLock {
+func NewMySQLLock(in *MySQLBackend, l log.Logger, key, value string) (*MySQLLock, error) {
 	// Create a new MySQL connection so we can close this and have no effect on
 	// the rest of the MySQL backend and any cleanup that might need to be done.
 	conn, _ := NewMySQLClient(in.conf, in.logger)
-	return &MySQLLock{
-		in:     conn,
-		logger: l,
-		key:    key,
+
+	table, ok := in.conf["lock_table"]
+	if !ok {
+		table = "vault_lock"
 	}
+
+	database, ok := in.conf["database"]
+	if !ok {
+		database = "vault"
+	}
+
+	dbTable := database + "." + table
+
+	m := &MySQLLock{
+		in:         conn,
+		logger:     l,
+		statements: make(map[string]*sql.Stmt),
+		key:        key,
+		value:      value,
+	}
+
+	statements := map[string]string{
+		"put": "INSERT INTO " + dbTable +
+			" VALUES( ?, ? ) ON DUPLICATE KEY UPDATE current_leader=VALUES(current_leader)",
+	}
+
+	for name, query := range statements {
+		if err := m.prepare(name, query); err != nil {
+			return nil, err
+		}
+	}
+
+	return m, nil
+}
+
+// prepare is a helper to prepare a query for future execution
+func (m *MySQLLock) prepare(name, query string) error {
+	stmt, err := m.in.Prepare(query)
+	if err != nil {
+		return errwrap.Wrapf(fmt.Sprintf("failed to prepare %q: {{err}}", name), err)
+	}
+	m.statements[name] = stmt
+	return nil
+}
+
+// update the current cluster leader in the DB. This is used so
+// we can tell the servers in standby who the active leader is.
+func (i *MySQLLock) becomeLeader() error {
+	defer metrics.MeasureSince([]string{"mysql", "lock_put"}, time.Now())
+
+	_, err := i.statements["put"].Exec("leader", i.value)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// clear the leader for cases when we are stepping down. This will greatly reduce the chance
+// of a standby node redirecting to a broken leader.
+func (i *MySQLLock) clearLeader() error {
+	defer metrics.MeasureSince([]string{"mysql", "lock_put"}, time.Now())
+
+	_, err := i.statements["put"].Exec("leader", "")
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Lock will try to get a lock for an indefinite amount of time
@@ -519,6 +636,11 @@ func (i *MySQLLock) Lock() error {
 		return ErrLockHeld
 	}
 
+	err = i.becomeLeader()
+	if err != nil {
+		return ErrLockHeld
+	}
+
 	return nil
 }
 
@@ -533,6 +655,11 @@ func (i *MySQLLock) Unlock() error {
 
 	if err != nil {
 		return ErrUnlockFailed
+	}
+
+	err = i.clearLeader()
+	if err != nil {
+		return ErrClearLeaderFailed
 	}
 
 	return nil
