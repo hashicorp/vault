@@ -243,10 +243,10 @@ func TestApprole_UpgradeBoundCIDRList(t *testing.T) {
 	}
 
 	expected := []string{"127.0.0.1/18", "192.178.1.2/24"}
-	actual := resp.Data["bound_cidr_list"].([]string)
+	actual := resp.Data["secret_id_bound_cidrs"].([]string)
 
 	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("bad: bound_cidr_list; expected: %#v\nactual: %#v\n", expected, actual)
+		t.Fatalf("bad: secret_id_bound_cidrs; expected: %#v\nactual: %#v\n", expected, actual)
 	}
 
 	// Modify the storage entry of the role to hold the old style string typed bound_cidr_list
@@ -1122,13 +1122,13 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	b, storage := createBackendWithStorage(t)
 
 	roleData := map[string]interface{}{
-		"policies":           "p,q,r,s",
-		"secret_id_num_uses": 10,
-		"secret_id_ttl":      300,
-		"token_ttl":          400,
-		"token_max_ttl":      500,
-		"token_num_uses":     600,
-		"bound_cidr_list":    "127.0.0.1/32,127.0.0.1/16",
+		"policies":              "p,q,r,s",
+		"secret_id_num_uses":    10,
+		"secret_id_ttl":         300,
+		"token_ttl":             400,
+		"token_max_ttl":         500,
+		"token_num_uses":        600,
+		"secret_id_bound_cidrs": "127.0.0.1/32,127.0.0.1/16",
 	}
 	roleReq := &logical.Request{
 		Operation: logical.CreateOperation,
@@ -1149,14 +1149,14 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"bind_secret_id":     true,
-		"policies":           []string{"p", "q", "r", "s"},
-		"secret_id_num_uses": 10,
-		"secret_id_ttl":      300,
-		"token_ttl":          400,
-		"token_max_ttl":      500,
-		"token_num_uses":     600,
-		"bound_cidr_list":    []string{"127.0.0.1/32", "127.0.0.1/16"},
+		"bind_secret_id":        true,
+		"policies":              []string{"p", "q", "r", "s"},
+		"secret_id_num_uses":    10,
+		"secret_id_ttl":         300,
+		"token_ttl":             400,
+		"token_max_ttl":         500,
+		"token_num_uses":        600,
+		"secret_id_bound_cidrs": []string{"127.0.0.1/32", "127.0.0.1/16"},
 	}
 
 	var expectedStruct roleStorageEntry
