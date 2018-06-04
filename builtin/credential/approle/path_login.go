@@ -130,7 +130,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 
 			// Ensure that the CIDRs on the secret ID are still a subset of that of
 			// role's
-			err = verifyCIDRRoleSecretIDSubset(entry.CIDRList, role)
+			err = verifyCIDRRoleSecretIDSubset(entry.CIDRList, role.SecretIDBoundCIDRs)
 			if err != nil {
 				return nil, err
 			}
@@ -198,7 +198,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 
 			// Ensure that the CIDRs on the secret ID are still a subset of that of
 			// role's
-			err = verifyCIDRRoleSecretIDSubset(entry.CIDRList, role)
+			err = verifyCIDRRoleSecretIDSubset(entry.CIDRList, role.SecretIDBoundCIDRs)
 			if err != nil {
 				return nil, err
 			}

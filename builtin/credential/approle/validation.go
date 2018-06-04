@@ -68,25 +68,18 @@ type secretIDAccessorStorageEntry struct {
 
 // verifyCIDRRoleSecretIDSubset checks if the CIDR blocks set on the secret ID
 // are a subset of CIDR blocks set on the role
-func verifyCIDRRoleSecretIDSubset(secretIDCIDRs []string, role *roleStorageEntry) error {
-	if len(secretIDCIDRs) == 0 {
-		return nil
+func verifyCIDRRoleSecretIDSubset(secretIDCIDRs []string, roleBoundCIDRList []string) error {
+	if len(secretIDCIDRs) != 0 {
+		// If there are no CIDR blocks on the role, then the subset
+		// requirement would be satisfied
+		if len(roleBoundCIDRList) != 0 {
+			subset, err := cidrutil.SubsetBlocks(roleBoundCIDRList, secretIDCIDRs)
+			if !subset || err != nil {
+				return errwrap.Wrapf(fmt.Sprintf("failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: {{err}}", roleBoundCIDRList, secretIDCIDRs), err)
+			}
+		}
 	}
 
-	// If there are no CIDR blocks on the role, then the subset
-	// requirement would be satisfied
-	if len(role.SecretIDBoundCIDRs) != 0 {
-		subset, err := cidrutil.SubsetBlocks(role.SecretIDBoundCIDRs, secretIDCIDRs)
-		if !subset || err != nil {
-			return errwrap.Wrapf(fmt.Sprintf("failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: {{err}}", role.SecretIDBoundCIDRs, secretIDCIDRs), err)
-		}
-	}
-	if len(role.TokenBoundCIDRs) != 0 {
-		subset, err := cidrutil.SubsetBlocks(role.TokenBoundCIDRs, secretIDCIDRs)
-		if !subset || err != nil {
-			return errwrap.Wrapf(fmt.Sprintf("failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: {{err}}", role.TokenBoundCIDRs, secretIDCIDRs), err)
-		}
-	}
 	return nil
 }
 

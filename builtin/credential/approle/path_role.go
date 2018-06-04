@@ -997,7 +997,10 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	}
 
 	respData := map[string]interface{}{
-		"bind_secret_id":        role.BindSecretID,
+		"bind_secret_id": role.BindSecretID,
+		// TODO - remove this deprecated field in future versions,
+		// and its associated warning below.
+		"bound_cidr_list":       role.SecretIDBoundCIDRs,
 		"secret_id_bound_cidrs": role.SecretIDBoundCIDRs,
 		"token_bound_cidrs":     role.TokenBoundCIDRs,
 		"period":                role.Period / time.Second,
@@ -1021,6 +1024,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	if err := validateRoleConstraints(role); err != nil {
 		resp.AddWarning("Role does not have any constraints set on it. Updates to this role will require a constraint to be set")
 	}
+	resp.AddWarning(`The "bound_cidr_list" parameter is deprecated and will be removed. Please use "secret_id_bound_cidrs" instead.`)
 
 	// For sanity, verify that the index still exists. If the index is missing,
 	// add one and return a warning so it can be reported.
@@ -1413,12 +1417,17 @@ func (b *backend) pathRoleBoundCIDRListRead(ctx context.Context, req *logical.Re
 	} else if role == nil {
 		return nil, nil
 	} else {
-		return &logical.Response{
+		resp := &logical.Response{
 			Data: map[string]interface{}{
+				// TODO - remove this deprecated field in future versions,
+				// and its associated warning below.
+				"bound_cidr_list":       role.SecretIDBoundCIDRs,
 				"secret_id_bound_cidrs": role.SecretIDBoundCIDRs,
 				"token_bound_cidrs":     role.TokenBoundCIDRs,
 			},
-		}, nil
+		}
+		resp.AddWarning(`The "bound_cidr_list" parameter is deprecated and will be removed. Please use "secret_id_bound_cidrs" instead.`)
+		return resp, nil
 	}
 }
 
@@ -2171,7 +2180,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 	}
 
 	// Ensure that the CIDRs on the secret ID are a subset of that of role's
-	if err := verifyCIDRRoleSecretIDSubset(secretIDCIDRs, role); err != nil {
+	if err := verifyCIDRRoleSecretIDSubset(secretIDCIDRs, role.SecretIDBoundCIDRs); err != nil {
 		return nil, err
 	}
 

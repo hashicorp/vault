@@ -519,7 +519,7 @@ func TestAppRole_RoleReadSetIndex(t *testing.T) {
 	}
 
 	// Check if the warning is being returned
-	if !strings.Contains(resp.Warnings[0], "Role identifier was missing an index back to role name.") {
+	if !strings.Contains(resp.Warnings[1], "Role identifier was missing an index back to role name.") {
 		t.Fatalf("bad: expected a warning in the response")
 	}
 
@@ -1157,6 +1157,7 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 		"token_max_ttl":         500,
 		"token_num_uses":        600,
 		"secret_id_bound_cidrs": []string{"127.0.0.1/32", "127.0.0.1/16"},
+		"bound_cidr_list":       []string{"127.0.0.1/32", "127.0.0.1/16"}, // returned for backwards compatibility
 		"token_bound_cidrs":     []string{},
 	}
 
@@ -1634,6 +1635,7 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 		"token_num_uses":        600,
 		"token_bound_cidrs":     []string{"127.0.0.1/32", "127.0.0.1/16"},
 		"secret_id_bound_cidrs": []string{},
+		"bound_cidr_list":       []string{}, // provided for backwards compatibility
 	}
 
 	var expectedStruct roleStorageEntry
