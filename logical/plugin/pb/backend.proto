@@ -1,6 +1,8 @@
 syntax = "proto3";
 package pb;
 
+option go_package = "github.com/hashicorp/vault/logical/plugin/pb";
+
 import "google/protobuf/timestamp.proto";
 import "logical/identity.proto";
 
