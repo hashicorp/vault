@@ -145,3 +145,46 @@ func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string) (*plug
 func (d dynamicSystemView) MlockEnabled() bool {
 	return d.core.enableMlock
 }
+
+func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) {
+	// Requests from token created from the token backend will not have entity information.
+	// Return missing entity instead of error when requesting from MemDB.
+	if entityID == "" {
+		return nil, nil
+	}
+
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.identityStore == nil {
+		return nil, fmt.Errorf("system view identity store is nil")
+	}
+
+	// Retrieve the entity from MemDB
+	entity, err := d.core.identityStore.MemDBEntityByID(entityID, false)
+	if err != nil {
+		return nil, err
+	}
+	if entity == nil {
+		return nil, nil
+	}
+
+	aliases := make([]*logical.Alias, len(entity.Aliases))
+	for i, alias := range entity.Aliases {
+		aliases[i] = &logical.Alias{
+			MountAccessor: alias.MountAccessor,
+			Name:          alias.Name,
+		}
+		// MountType is not stored with the entity and must be looked up
+		if mount := d.core.router.validateMountByAccessor(alias.MountAccessor); mount != nil {
+			aliases[i].MountType = mount.MountType
+		}
+	}
+
+	// Only returning a subset of the data
+	return &logical.Entity{
+		ID:      entity.ID,
+		Name:    entity.Name,
+		Aliases: aliases,
+	}, nil
+}

@@ -127,6 +127,7 @@ proto:
 	protoc -I helper/forwarding -I vault -I ../../.. vault/*.proto --go_out=plugins=grpc:vault
 	protoc -I helper/storagepacker helper/storagepacker/types.proto --go_out=plugins=grpc:helper/storagepacker
 	protoc -I helper/forwarding -I vault -I ../../.. helper/forwarding/types.proto --go_out=plugins=grpc:helper/forwarding
+	protoc logical/*.proto --go_out=plugins=grpc:$(GOPATH)/src
 	protoc -I physical physical/types.proto --go_out=plugins=grpc:physical
 	protoc -I helper/identity -I ../../.. helper/identity/types.proto --go_out=plugins=grpc:helper/identity
 	protoc  builtin/logical/database/dbplugin/*.proto --go_out=plugins=grpc:.

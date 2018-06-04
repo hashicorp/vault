@@ -174,3 +174,28 @@ func TestSystem_mlockEnabled(t *testing.T) {
 		t.Fatalf("expected: %v, got: %v", expected, actual)
 	}
 }
+
+func TestSystem_entityInfo(t *testing.T) {
+	client, server := plugin.TestRPCConn(t)
+	defer client.Close()
+
+	sys := logical.TestSystemView()
+	sys.EntityVal = &logical.Entity{
+		ID:   "test",
+		Name: "name",
+	}
+
+	server.RegisterName("Plugin", &SystemViewServer{
+		impl: sys,
+	})
+
+	testSystemView := &SystemViewClient{client: client}
+
+	actual, err := testSystemView.EntityInfo("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(sys.EntityVal, actual) {
+		t.Fatalf("expected: %v, got: %v", sys.EntityVal, actual)
+	}
+}
