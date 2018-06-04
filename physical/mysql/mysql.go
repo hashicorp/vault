@@ -651,15 +651,14 @@ func (i *MySQLLock) Lock() error {
 // likely does exist. Closing the connection however ensures we don't ever get into a
 // state where we try to release the lock and it hangs it is also much less code.
 func (i *MySQLLock) Unlock() error {
-	err := i.in.Close()
-
-	if err != nil {
-		return ErrUnlockFailed
-	}
-
-	err = i.clearLeader()
+	err := i.clearLeader()
 	if err != nil {
 		return ErrClearLeaderFailed
+	}
+
+	err = i.in.Close()
+	if err != nil {
+		return ErrUnlockFailed
 	}
 
 	return nil
