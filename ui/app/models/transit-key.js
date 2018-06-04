@@ -1,6 +1,7 @@
 import Ember from 'ember';
 import DS from 'ember-data';
 import clamp from 'vault/utils/clamp';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { queryRecord } from 'ember-computed-query';
 
 const { attr } = DS;
@@ -120,20 +121,6 @@ export default DS.Model.extend({
     readOnly: true,
   }),
 
-  rotatePath: queryRecord(
-    'capabilities',
-    context => {
-      const { backend, id } = context.getProperties('backend', 'id');
-      if (!backend && id) {
-        return;
-      }
-      return {
-        id: `${backend}/keys/${id}/rotate`,
-      };
-    },
-    'id',
-    'backend'
-  ),
-
+  rotatePath: lazyCapabilities(apiPath`${'backend'}/keys/${'id'}/rotate`, 'backend', 'id'),
   canRotate: computed.alias('rotatePath.canUpdate'),
 });

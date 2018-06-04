@@ -1,6 +1,6 @@
 import Ember from 'ember';
 import DS from 'ember-data';
-import { queryRecord } from 'ember-computed-query';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const { attr } = DS;
 const { computed, get } = Ember;
@@ -104,58 +104,18 @@ export default DS.Model.extend({
     label: 'Mark Basic Constraints valid when issuing non-CA certificates.',
   }),
 
-  updatePath: queryRecord(
-    'capabilities',
-    context => {
-      const { backend, id } = context.getProperties('backend', 'id');
-      return {
-        id: `${backend}/roles/${id}`,
-      };
-    },
-    'id',
-    'backend'
-  ),
+  updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),
   canDelete: computed.alias('updatePath.canDelete'),
   canEdit: computed.alias('updatePath.canUpdate'),
   canRead: computed.alias('updatePath.canRead'),
 
-  generatePath: queryRecord(
-    'capabilities',
-    context => {
-      const { backend, id } = context.getProperties('backend', 'id');
-      return {
-        id: `${backend}/issue/${id}`,
-      };
-    },
-    'id',
-    'backend'
-  ),
+  generatePath: lazyCapabilities(apiPath`${'backend'}/issue/${'id'}`, 'backend', 'id'),
   canGenerate: computed.alias('generatePath.canUpdate'),
 
-  signPath: queryRecord(
-    'capabilities',
-    context => {
-      const { backend, id } = context.getProperties('backend', 'id');
-      return {
-        id: `${backend}/sign/${id}`,
-      };
-    },
-    'id',
-    'backend'
-  ),
+  signPath: lazyCapabilities(apiPath`${'backend'}/sign/${'id'}`, 'backend', 'id'),
   canSign: computed.alias('signPath.canUpdate'),
 
-  signVerbatimPath: queryRecord(
-    'capabilities',
-    context => {
-      const { backend, id } = context.getProperties('backend', 'id');
-      return {
-        id: `${backend}/sign-verbatim/${id}`,
-      };
-    },
-    'id',
-    'backend'
-  ),
+  signVerbatimPath: lazyCapabilities(apiPath`${'backend'}/sign-verbatim/${'id'}`, 'backend', 'id'),
   canSignVerbatim: computed.alias('signVerbatimPath.canUpdate'),
 
   /*

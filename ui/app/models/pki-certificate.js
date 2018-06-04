@@ -1,6 +1,6 @@
 import Ember from 'ember';
 import DS from 'ember-data';
-import { queryRecord } from 'ember-computed-query';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const { computed, get } = Ember;
 const { attr } = DS;
@@ -145,15 +145,6 @@ export default DS.Model.extend({
     }
   ),
 
-  revokePath: queryRecord(
-    'capabilities',
-    context => {
-      const { backend } = context.getProperties('backend');
-      return {
-        id: `${backend}/revoke`,
-      };
-    },
-    'backend'
-  ),
+  revokePath: lazyCapabilities(apiPath`${'backend'}/revoke`, 'backend'),
   canRevoke: computed.alias('revokePath.canUpdate'),
 });
