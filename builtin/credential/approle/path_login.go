@@ -130,7 +130,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 
 			// Ensure that the CIDRs on the secret ID are still a subset of that of
 			// role's
-			err = verifyCIDRRoleSecretIDSubset(entry.CIDRList, role.SecretIDBoundCIDRs)
+			err = verifyCIDRRoleSecretIDSubset(entry.CIDRList, role)
 			if err != nil {
 				return nil, err
 			}
@@ -198,7 +198,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 
 			// Ensure that the CIDRs on the secret ID are still a subset of that of
 			// role's
-			err = verifyCIDRRoleSecretIDSubset(entry.CIDRList, role.SecretIDBoundCIDRs)
+			err = verifyCIDRRoleSecretIDSubset(entry.CIDRList, role)
 			if err != nil {
 				return nil, err
 			}
@@ -220,17 +220,26 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		metadata = entry.Metadata
 	}
 
-	if len(role.SecretIDBoundCIDRs) != 0 {
+	if len(role.SecretIDBoundCIDRs)+len(role.TokenBoundCIDRs) != 0 {
 		if req.Connection == nil || req.Connection.RemoteAddr == "" {
 			return nil, fmt.Errorf("failed to get connection information")
 		}
-
-		belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, role.SecretIDBoundCIDRs)
-		if err != nil || !belongs {
-			return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the role: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
+		if len(role.SecretIDBoundCIDRs) != 0 {
+			belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, role.SecretIDBoundCIDRs)
+			if err != nil || !belongs {
+				return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the role: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
+			}
+		}
+		if len(role.TokenBoundCIDRs) != 0 {
+			belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, role.TokenBoundCIDRs)
+			if err != nil || !belongs {
+				return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the role: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
+			}
 		}
 	}
-	boundCIDRs, err := parseutil.ParseAddrs(role.SecretIDBoundCIDRs)
+
+	// Parse the CIDRs we should be binding the token to.
+	tokenBoundCIDRs, err := parseutil.ParseAddrs(role.TokenBoundCIDRs)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -254,7 +263,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		Alias: &logical.Alias{
 			Name: role.RoleID,
 		},
-		BoundCIDRs: boundCIDRs,
+		BoundCIDRs: tokenBoundCIDRs,
 	}
 
 	return &logical.Response{

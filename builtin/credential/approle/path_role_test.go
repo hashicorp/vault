@@ -1157,6 +1157,7 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 		"token_max_ttl":         500,
 		"token_num_uses":        600,
 		"secret_id_bound_cidrs": []string{"127.0.0.1/32", "127.0.0.1/16"},
+		"token_bound_cidrs":     []string{},
 	}
 
 	var expectedStruct roleStorageEntry
