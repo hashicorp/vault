@@ -1327,22 +1327,22 @@
 			"revisionTime": "2018-05-30T01:11:52Z"
 		},
 		{
-			"checksumSHA1": "vCJEdTDszlvEQUqrT/RC7Q31J3g=",
+			"checksumSHA1": "TXlbc4EPXue+Jz/HXl3NU5kEoUs=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin",
-			"revision": "db025fb5e7a61e8dd984f59f2a445506d987b183",
-			"revisionTime": "2018-05-30T01:15:41Z"
+			"revision": "955ac20048397e0ec7c707704fb28cd7fc5cb3da",
+			"revisionTime": "2018-06-04T18:23:35Z"
 		},
 		{
-			"checksumSHA1": "qHGmA9y3hKMBSLRWLifD37EaHP4=",
+			"checksumSHA1": "w0TXZUy4HvuTrCxm32cVzkF3sEg=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/client",
-			"revision": "db025fb5e7a61e8dd984f59f2a445506d987b183",
-			"revisionTime": "2018-05-30T01:15:41Z"
+			"revision": "955ac20048397e0ec7c707704fb28cd7fc5cb3da",
+			"revisionTime": "2018-06-04T18:23:35Z"
 		},
 		{
 			"checksumSHA1": "f5N0jlhC8c2vq0zez81fezfas/o=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/util",
-			"revision": "db025fb5e7a61e8dd984f59f2a445506d987b183",
-			"revisionTime": "2018-05-30T01:15:41Z"
+			"revision": "955ac20048397e0ec7c707704fb28cd7fc5cb3da",
+			"revisionTime": "2018-06-04T18:23:35Z"
 		},
 		{
 			"checksumSHA1": "X9XW3xqAeOQqDdeJKzeqOYHn4Wo=",
