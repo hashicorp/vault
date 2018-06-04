@@ -2,7 +2,6 @@ import Ember from 'ember';
 import DS from 'ember-data';
 import clamp from 'vault/utils/clamp';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { queryRecord } from 'ember-computed-query';
 
 const { attr } = DS;
 const { computed, get, set } = Ember;

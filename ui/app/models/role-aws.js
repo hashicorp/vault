@@ -1,9 +1,10 @@
 import Ember from 'ember';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
-const { computed, get } = Ember;
+const { computed } = Ember;
 
 const CREATE_FIELDS = ['name', 'policy', 'arn'];
 export default DS.Model.extend({
@@ -24,18 +25,7 @@ export default DS.Model.extend({
   }),
   attrs: computed(function() {
     let keys = CREATE_FIELDS.slice(0);
-    get(this.constructor, 'attributes').forEach((meta, name) => {
-      const index = keys.indexOf(name);
-      if (index === -1) {
-        return;
-      }
-      keys.replace(index, 1, {
-        type: meta.type,
-        name,
-        options: meta.options,
-      });
-    });
-    return keys;
+    return expandAttributeMeta(this, keys);
   }),
 
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),

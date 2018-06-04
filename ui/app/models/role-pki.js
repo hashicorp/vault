@@ -1,9 +1,10 @@
 import Ember from 'ember';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
-const { computed, get } = Ember;
+const { computed } = Ember;
 
 export default DS.Model.extend({
   backend: attr('string', {
@@ -118,43 +119,6 @@ export default DS.Model.extend({
   signVerbatimPath: lazyCapabilities(apiPath`${'backend'}/sign-verbatim/${'id'}`, 'backend', 'id'),
   canSignVerbatim: computed.alias('signVerbatimPath.canUpdate'),
 
-  /*
-   * this hydrates the map in `fieldGroups` so that it contains
-   * the actual field information, not just the name of the field
-   */
-  fieldsToAttrs(fieldGroups) {
-    const attrMap = get(this.constructor, 'attributes');
-    return fieldGroups.map(group => {
-      const groupKey = Object.keys(group)[0];
-      const groupMembers = group[groupKey];
-      const fields = groupMembers.map(field => {
-        var meta = attrMap.get(field);
-        return {
-          type: meta.type,
-          name: meta.name,
-          options: meta.options,
-        };
-      });
-      return { [groupKey]: fields };
-    });
-  },
-
-  /*
-   * returns an array of objects that list attributes so that the form can be programmatically generated
-   * the attributes are pulled from the model's attribute hash
-   *
-   * The keys will be used to label each section of the form.
-   * the 'default' key contains fields that are outside of any grouping
-   *
-   * returns an array of objects:
-   *
-   * [
-   *   {'default': [ { type: 'string', name: 'keyType', options: { label: 'Key Type'}}]},
-   *   {'Options': [{ type: 'boolean', name: 'allowAnyName', options: {}}]}
-   * ]
-   *
-   *
-   */
   fieldGroups: computed(function() {
     const groups = [
       { default: ['name', 'keyType'] },
@@ -187,12 +151,20 @@ export default DS.Model.extend({
           'allowedDomains',
         ],
       },
-      { 'Extended Key Usage': ['serverFlag', 'clientFlag', 'codeSigningFlag', 'emailProtectionFlag', 'extKeyUsageOids'] },
+      {
+        'Extended Key Usage': [
+          'serverFlag',
+          'clientFlag',
+          'codeSigningFlag',
+          'emailProtectionFlag',
+          'extKeyUsageOids',
+        ],
+      },
       {
         Advanced: ['generateLease', 'noStore', 'basicConstraintsValidForNonCA', 'policyIdentifiers'],
       },
     ];
 
-    return this.fieldsToAttrs(Ember.copy(groups, true));
+    return fieldToAttrs(this, groups);
   }),
 });
