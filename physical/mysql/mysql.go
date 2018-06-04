@@ -486,7 +486,6 @@ func (i *MySQLHALock) hasLock(key string) error {
 	// IS_USED_LOCK will return the ID of the connection that created the lock.
 	// it will return NULL otherwise which converts to a zero above when scanning
 	// it into locknum.
-	fmt.Println(locknum)
 	if locknum == 0 {
 		return ErrLockHeld
 	}
