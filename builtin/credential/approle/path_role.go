@@ -60,7 +60,7 @@ type roleStorageEntry struct {
 	// A constraint, if set, specifies the CIDR blocks from which logins should be allowed
 	SecretIDBoundCIDRs []string `json:"secret_id_bound_cidrs" structs:"bound_cidr_list" mapstructure:"bound_cidr_list"`
 
-	// A constraint, if set, specifies the CIDR blocks from which logins and token use should be allowed
+	// A constraint, if set, specifies the CIDR blocks from which token use should be allowed
 	TokenBoundCIDRs []string `json:"token_bound_cidrs" structs:"token_bound_cidrs" mapstructure:"token_bound_cidrs"`
 
 	// Period, if set, indicates that the token generated using this role
@@ -141,7 +141,7 @@ IP addresses which can perform the login operation.`,
 				"token_bound_cidrs": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can perform the login operation or use the returned token.`,
+IP addresses which can use the returned token.`,
 				},
 				"policies": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
@@ -256,7 +256,7 @@ IP addresses which can perform the login operation.`,
 				"token_bound_cidrs": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can perform the login operation or use the returned token.`,
+IP addresses which can use the returned token.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
