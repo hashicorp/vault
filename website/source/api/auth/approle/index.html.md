@@ -69,9 +69,17 @@ enabled while creating or updating a role.
 - `role_name` `(string: <required>)` - Name of the AppRole.
 - `bind_secret_id` `(bool: true)` - Require `secret_id` to be presented when
   logging in using this AppRole.
-- `bound_cidr_list` `(array: [])` - Comma-separated string or list of CIDR
+- `bound_cidr_list` `(array: [])` - Deprecated: Comma-separated string or list of CIDR
   blocks; if set, specifies blocks of IP addresses which can perform the login
-  operation or use the returned token.
+  operation.
+- `secret_id_bound_cidrs` `(array: [])` - Comma-separated string or list of CIDR
+  blocks; if set, specifies blocks of IP addresses which can perform the login
+  operation.
+- `token_bound_cidrs` `(array: [])` - Comma-separated string or list of CIDR
+  blocks; if set, specifies blocks of IP addresses which can perform the login
+  operation or use the returned token. This has all the features of a `secret_id_bound_cidrs`,
+  with the added effect of restricting use of the returned auth tokens. Intended to be mutually
+  exclusive with `secret_id_bound_cidrs`.
 - `policies` `(array: [])` - Comma-separated list of policies set on tokens
   issued via this AppRole.
 - `secret_id_num_uses` `(integer: 0)` - Number of times any particular SecretID

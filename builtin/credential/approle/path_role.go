@@ -141,7 +141,7 @@ IP addresses which can perform the login operation.`,
 				"token_bound_cidrs": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can perform the login operation.`,
+IP addresses which can perform the login operation or use the returned token.`,
 				},
 				"policies": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
@@ -256,7 +256,7 @@ IP addresses which can perform the login operation.`,
 				"token_bound_cidrs": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can perform the login operation.`,
+IP addresses which can perform the login operation or use the returned token.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -464,7 +464,7 @@ the role.`,
 				"token_bound_cidrs": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can perform the login operation.`,
+IP addresses which can perform the login operation or use the returned token.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -581,7 +581,7 @@ the role.`,
 				},
 				"token_bound_cidrs": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
-					Description: `Comma separated string or list of CIDR blocks enforcing secret IDs to be used from
+					Description: `Comma separated string or list of CIDR blocks enforcing secret IDs and their associated tokens to be used from
 specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
 list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
 the role.`,
@@ -1369,7 +1369,6 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 	return nil, nil
 }
 
-// TODO need to make sure this path takes token bound cidrs
 func (b *backend) pathRoleBoundCIDRListUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
