@@ -44,6 +44,7 @@
     "columnify": "^1.5.4",
     "cool-checkboxes-for-bulma.io": "^1.1.0",
     "ember-ajax": "^3.0.0",
+    "ember-angle-bracket-invocation-polyfill": "^1.0.2",
     "ember-api-actions": "^0.1.8",
     "ember-basic-dropdown": "^0.33.5",
     "ember-basic-dropdown-hover": "^0.2.0",
