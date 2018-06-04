@@ -75,6 +75,13 @@ is enabled for the role, this may contain
 email addresses.`,
 	}
 
+	fields["serial_number"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested serial number, if any. If you want
+more than one, specify alternative names in
+the alt_names map using OID 2.5.4.5.`,
+	}
+
 	fields["ttl"] = &framework.FieldSchema{
 		Type: framework.TypeDurationSecond,
 		Description: `The requested Time To Live for the certificate;
