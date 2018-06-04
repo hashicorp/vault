@@ -446,25 +446,12 @@ be renewed. Defaults to 0, in which case the value will fall back to the system/
 					Description: `Metadata to be tied to the SecretID. This should be a JSON
 formatted string containing the metadata in key value pairs.`,
 				},
-				// Deprecated
 				"cidr_list": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Deprecated: Comma separated string or list of CIDR blocks enforcing secret IDs to be used from
-specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
-list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
-the role.`,
-				},
-				"secret_id_bound_cidrs": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks enforcing secret IDs to be used from
 specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
 list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
 the role.`,
-				},
-				"token_bound_cidrs": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can perform the login operation or use the returned token.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -564,24 +551,9 @@ IP addresses which can perform the login operation or use the returned token.`,
 					Description: `Metadata to be tied to the SecretID. This should be a JSON
 formatted string containing metadata in key value pairs.`,
 				},
-				// Deprecated
 				"cidr_list": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
-					Description: `Deprecated: Comma separated string or list of CIDR blocks enforcing secret IDs to be used from
-specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
-list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
-the role.`,
-				},
-				"secret_id_bound_cidrs": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks enforcing secret IDs to be used from
-specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
-list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
-the role.`,
-				},
-				"token_bound_cidrs": &framework.FieldSchema{
-					Type: framework.TypeCommaStringSlice,
-					Description: `Comma separated string or list of CIDR blocks enforcing secret IDs and their associated tokens to be used from
 specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
 list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
 the role.`,
@@ -2181,27 +2153,11 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("bind_secret_id is not set on the role"), nil
 	}
 
-	var secretIDCIDRs []string
-	if rawBoundCIDRs, ok := data.GetOk("secret_id_bound_cidrs"); ok {
-		secretIDCIDRs = rawBoundCIDRs.([]string)
-	} else if rawBoundCIDRs, ok := data.GetOk("cidr_list"); ok {
-		secretIDCIDRs = rawBoundCIDRs.([]string)
-	}
+	secretIDCIDRs := data.Get("cidr_list").([]string)
 
 	// Validate the list of CIDR blocks
 	if len(secretIDCIDRs) != 0 {
 		valid, err := cidrutil.ValidateCIDRListSlice(secretIDCIDRs)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
-		}
-		if !valid {
-			return logical.ErrorResponse("failed to validate CIDR blocks"), nil
-		}
-	}
-
-	role.TokenBoundCIDRs = data.Get("token_bound_cidrs").([]string)
-	if len(role.TokenBoundCIDRs) != 0 {
-		valid, err := cidrutil.ValidateCIDRListSlice(role.TokenBoundCIDRs)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
 		}
