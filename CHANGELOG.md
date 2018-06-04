@@ -49,10 +49,12 @@ IMPROVEMENTS:
  * identity: Provide more contextual key information when listing entities,
    groups, and aliases
  * identity: Passthrough EntityID to backends [GH-4663]
- * identity: Adds ability to request entity information through system view [GH_4681]
+ * identity: Adds ability to request entity information through system view
+   [GH_4681]
  * secret/pki: Add custom extended key usages [GH-4667]
  * secret/ssh: Use hostname instead of IP in OTP mode, similar to CA mode
    [GH-4673]
+ * storage/file: Attempt in some error conditions to do more cleanup [GH-4684]
  * ui: wrapping lookup now distplays the path [GH-4644]
  * ui: Identity interface now has more inline actions to make editing and adding
    aliases to an entity or group easier [GH-4502]
