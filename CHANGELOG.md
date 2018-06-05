@@ -87,6 +87,7 @@ BUG FIXES:
    value [GH-4674]
  * storage/dynamodb: Fix listing when one child is left within a nested path
    [GH-4570]
+ * storage/gcs: Fix swallowing an error on connection close [GH-4691]
  * ui: Fix HMAC algorithm in transit [GH-4604]
  * ui: Fix unwrap of auth responses via the UI's unwrap tool [GH-4611]
  * ui (enterprise): Fix parsing of version string that blocked some users from seeing
