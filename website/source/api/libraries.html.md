@@ -141,6 +141,12 @@ Install-Module Zyborg.Vault
 $ pip install hvac
 ```
 
+* [Async-HVAC](https://github.com/Aloomaio/async-hvac)
+
+```shell
+$ pip install async-hvac
+```
+
 ### Rust
 
 * [HashicorpVault](https://crates.io/crates/hashicorp_vault)
