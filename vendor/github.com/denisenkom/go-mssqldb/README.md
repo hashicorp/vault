@@ -1,8 +1,15 @@
 # A pure Go MSSQL driver for Go's database/sql package
 
-## Install
+[![GoDoc](https://godoc.org/github.com/denisenkom/go-mssqldb?status.svg)](http://godoc.org/github.com/denisenkom/go-mssqldb)
+[![Build status](https://ci.appveyor.com/api/projects/status/jrln8cs62wj9i0a2?svg=true)](https://ci.appveyor.com/project/denisenkom/go-mssqldb)
+[![codecov](https://codecov.io/gh/denisenkom/go-mssqldb/branch/master/graph/badge.svg)](https://codecov.io/gh/denisenkom/go-mssqldb)
 
-    go get github.com/denisenkom/go-mssqldb
+## Install
+### Requirements
+
+* Go 1.7 or above
+
+`go get github.com/denisenkom/go-mssqldb`
 
 ## Connection Parameters and DSN
 

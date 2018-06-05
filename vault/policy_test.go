@@ -85,10 +85,14 @@ path "test/types" {
 		"bool" = [false]
 	}
 }
+path "test/req" {
+	capabilities = ["create", "sudo"]
+	required_parameters = ["foo"]
+}
 `)
 
 func TestPolicy_Parse(t *testing.T) {
-	p, err := Parse(rawPolicy)
+	p, err := ParseACLPolicy(rawPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -97,17 +101,17 @@ func TestPolicy_Parse(t *testing.T) {
 		t.Fatalf("bad name: %q", p.Name)
 	}
 
-	expect := []*PathCapabilities{
-		&PathCapabilities{
+	expect := []*PathRules{
+		&PathRules{
 			Prefix: "",
 			Policy: "deny",
 			Capabilities: []string{
 				"deny",
 			},
-			Permissions: &Permissions{CapabilitiesBitmap: DenyCapabilityInt},
+			Permissions: &ACLPermissions{CapabilitiesBitmap: DenyCapabilityInt},
 			Glob:        true,
 		},
-		&PathCapabilities{
+		&PathRules{
 			Prefix: "stage/",
 			Policy: "sudo",
 			Capabilities: []string{
@@ -118,22 +122,22 @@ func TestPolicy_Parse(t *testing.T) {
 				"list",
 				"sudo",
 			},
-			Permissions: &Permissions{
+			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | ReadCapabilityInt | UpdateCapabilityInt | DeleteCapabilityInt | ListCapabilityInt | SudoCapabilityInt),
 			},
 			Glob: true,
 		},
-		&PathCapabilities{
+		&PathRules{
 			Prefix: "prod/version",
 			Policy: "read",
 			Capabilities: []string{
 				"read",
 				"list",
 			},
-			Permissions: &Permissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)},
+			Permissions: &ACLPermissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)},
 			Glob:        false,
 		},
-		&PathCapabilities{
+		&PathRules{
 			Prefix: "foo/bar",
 			Policy: "read",
 			Capabilities: []string{
@@ -142,14 +146,14 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			MinWrappingTTLHCL: 300,
 			MaxWrappingTTLHCL: "1h",
-			Permissions: &Permissions{
+			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt),
 				MinWrappingTTL:     300 * time.Second,
 				MaxWrappingTTL:     3600 * time.Second,
 			},
 			Glob: false,
 		},
-		&PathCapabilities{
+		&PathRules{
 			Prefix: "foo/bar",
 			Policy: "",
 			Capabilities: []string{
@@ -158,14 +162,14 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			MinWrappingTTLHCL: "300s",
 			MaxWrappingTTLHCL: 3600,
-			Permissions: &Permissions{
+			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				MinWrappingTTL:     300 * time.Second,
 				MaxWrappingTTL:     3600 * time.Second,
 			},
 			Glob: false,
 		},
-		&PathCapabilities{
+		&PathRules{
 			Prefix: "foo/bar",
 			Policy: "",
 			Capabilities: []string{
@@ -173,13 +177,13 @@ func TestPolicy_Parse(t *testing.T) {
 				"sudo",
 			},
 			AllowedParametersHCL: map[string][]interface{}{"zip": {}, "zap": {}},
-			Permissions: &Permissions{
+			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				AllowedParameters:  map[string][]interface{}{"zip": {}, "zap": {}},
 			},
 			Glob: false,
 		},
-		&PathCapabilities{
+		&PathRules{
 			Prefix: "baz/bar",
 			Policy: "",
 			Capabilities: []string{
@@ -187,13 +191,13 @@ func TestPolicy_Parse(t *testing.T) {
 				"sudo",
 			},
 			DeniedParametersHCL: map[string][]interface{}{"zip": []interface{}{}, "zap": []interface{}{}},
-			Permissions: &Permissions{
+			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				DeniedParameters:   map[string][]interface{}{"zip": []interface{}{}, "zap": []interface{}{}},
 			},
 			Glob: false,
 		},
-		&PathCapabilities{
+		&PathRules{
 			Prefix: "biz/bar",
 			Policy: "",
 			Capabilities: []string{
@@ -202,14 +206,14 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			AllowedParametersHCL: map[string][]interface{}{"zim": {}, "zam": {}},
 			DeniedParametersHCL:  map[string][]interface{}{"zip": {}, "zap": {}},
-			Permissions: &Permissions{
+			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				AllowedParameters:  map[string][]interface{}{"zim": {}, "zam": {}},
 				DeniedParameters:   map[string][]interface{}{"zip": {}, "zap": {}},
 			},
 			Glob: false,
 		},
-		&PathCapabilities{
+		&PathRules{
 			Prefix: "test/types",
 			Policy: "",
 			Capabilities: []string{
@@ -218,10 +222,24 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			AllowedParametersHCL: map[string][]interface{}{"map": []interface{}{map[string]interface{}{"good": "one"}}, "int": []interface{}{1, 2}},
 			DeniedParametersHCL:  map[string][]interface{}{"string": []interface{}{"test"}, "bool": []interface{}{false}},
-			Permissions: &Permissions{
+			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				AllowedParameters:  map[string][]interface{}{"map": []interface{}{map[string]interface{}{"good": "one"}}, "int": []interface{}{1, 2}},
 				DeniedParameters:   map[string][]interface{}{"string": []interface{}{"test"}, "bool": []interface{}{false}},
+			},
+			Glob: false,
+		},
+		&PathRules{
+			Prefix: "test/req",
+			Policy: "",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			RequiredParametersHCL: []string{"foo"},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+				RequiredParameters: []string{"foo"},
 			},
 			Glob: false,
 		},
@@ -232,7 +250,7 @@ func TestPolicy_Parse(t *testing.T) {
 }
 
 func TestPolicy_ParseBadRoot(t *testing.T) {
-	_, err := Parse(strings.TrimSpace(`
+	_, err := ParseACLPolicy(strings.TrimSpace(`
 name = "test"
 bad  = "foo"
 nope = "yes"
@@ -241,17 +259,17 @@ nope = "yes"
 		t.Fatalf("expected error")
 	}
 
-	if !strings.Contains(err.Error(), "invalid key 'bad' on line 2") {
+	if !strings.Contains(err.Error(), `invalid key "bad" on line 2`) {
 		t.Errorf("bad error: %q", err)
 	}
 
-	if !strings.Contains(err.Error(), "invalid key 'nope' on line 3") {
+	if !strings.Contains(err.Error(), `invalid key "nope" on line 3`) {
 		t.Errorf("bad error: %q", err)
 	}
 }
 
 func TestPolicy_ParseBadPath(t *testing.T) {
-	_, err := Parse(strings.TrimSpace(`
+	_, err := ParseACLPolicy(strings.TrimSpace(`
 path "/" {
 	capabilities = ["read"]
 	capabilites  = ["read"]
@@ -261,13 +279,13 @@ path "/" {
 		t.Fatalf("expected error")
 	}
 
-	if !strings.Contains(err.Error(), "invalid key 'capabilites' on line 3") {
+	if !strings.Contains(err.Error(), `invalid key "capabilites" on line 3`) {
 		t.Errorf("bad error: %s", err)
 	}
 }
 
 func TestPolicy_ParseBadPolicy(t *testing.T) {
-	_, err := Parse(strings.TrimSpace(`
+	_, err := ParseACLPolicy(strings.TrimSpace(`
 path "/" {
 	policy = "banana"
 }
@@ -276,13 +294,13 @@ path "/" {
 		t.Fatalf("expected error")
 	}
 
-	if !strings.Contains(err.Error(), `path "/": invalid policy 'banana'`) {
+	if !strings.Contains(err.Error(), `path "/": invalid policy "banana"`) {
 		t.Errorf("bad error: %s", err)
 	}
 }
 
 func TestPolicy_ParseBadWrapping(t *testing.T) {
-	_, err := Parse(strings.TrimSpace(`
+	_, err := ParseACLPolicy(strings.TrimSpace(`
 path "/" {
 	policy = "read"
 	min_wrapping_ttl = 400
@@ -299,7 +317,7 @@ path "/" {
 }
 
 func TestPolicy_ParseBadCapabilities(t *testing.T) {
-	_, err := Parse(strings.TrimSpace(`
+	_, err := ParseACLPolicy(strings.TrimSpace(`
 path "/" {
 	capabilities = ["read", "banana"]
 }
@@ -308,7 +326,7 @@ path "/" {
 		t.Fatalf("expected error")
 	}
 
-	if !strings.Contains(err.Error(), `path "/": invalid capability 'banana'`) {
+	if !strings.Contains(err.Error(), `path "/": invalid capability "banana"`) {
 		t.Errorf("bad error: %s", err)
 	}
 }

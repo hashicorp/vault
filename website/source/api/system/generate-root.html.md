@@ -24,7 +24,7 @@ attempt.
 
 ```
 $ curl \
-    https://vault.rocks/v1/sys/generate-root/attempt
+    http://127.0.0.1:8200/v1/sys/generate-root/attempt
 ```
 
 ### Sample Response
@@ -35,7 +35,7 @@ $ curl \
   "nonce": "2dbd10f1-8528-6246-09e7-82b25b8aba63",
   "progress": 1,
   "required": 3,
-  "encoded_root_token": "",
+  "encoded_token": "",
   "pgp_fingerprint": "",
   "complete": false
 }
@@ -81,8 +81,8 @@ generation attempt can take place at a time. One (and only one) of `otp` or
 ```
 $ curl \
     --request PUT \
-    --data payload.json \
-    https://vault.rocks/v1/sys/generate-root/attempt    
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/generate-root/attempt    
 ```
 
 ### Sample Response
@@ -93,7 +93,7 @@ $ curl \
   "nonce": "2dbd10f1-8528-6246-09e7-82b25b8aba63",
   "progress": 1,
   "required": 3,
-  "encoded_root_token": "",
+  "encoded_token": "",
   "pgp_fingerprint": "816938b8a29146fbe245dd29e7cbaf8e011db793",
   "complete": false
 }
@@ -113,7 +113,7 @@ progress made. This must be called to change the OTP or PGP key being used.
 ```
 $ curl \
     --request DELETE \
-    https://vault.rocks/v1/sys/generate-root/attempt
+    http://127.0.0.1:8200/v1/sys/generate-root/attempt
 ```
 
 ## Provide Key Share to Generate Root
@@ -139,7 +139,7 @@ nonce must be provided with each call.
 ```json
 {
   "key": "acbd1234",
-  "nonce": "ad235",
+  "nonce": "ad235"
 }
 ```
 
@@ -148,8 +148,8 @@ nonce must be provided with each call.
 ```
 $ curl \
     --request PUT \
-    --data payload.json \
-    https://vault.rocks/v1/sys/generate-root/update
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/generate-root/update
 ```
 
 ### Sample Response
@@ -165,6 +165,6 @@ status, and the encoded root token, if the attempt is complete.
   "required": 3,
   "pgp_fingerprint": "",
   "complete": true,
-  "encoded_root_token": "FPzkNBvwNDeFh4SmGA8c+w=="
+  "encoded_token": "FPzkNBvwNDeFh4SmGA8c+w=="
 }
 ```

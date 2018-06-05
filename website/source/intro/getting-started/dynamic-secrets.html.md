@@ -1,6 +1,6 @@
 ---
 layout: "intro"
-page_title: "Dynamic Secrets"
+page_title: "Dynamic Secrets - Getting Started"
 sidebar_current: "gettingstarted-dynamicsecrets"
 description: |-
   On this page we introduce dynamic secrets by showing you how to create AWS access keys with Vault.
@@ -8,85 +8,71 @@ description: |-
 
 # Dynamic Secrets
 
-Now that we've written basic secrets to Vault and we have an understanding
-of the mount system, we're going to move on to the next core feature of
-Vault: _dynamic secrets_.
+Now that you've experimented with the `kv` secrets engine, it is time to explore
+another feature of Vault: _dynamic secrets_.
 
-Dynamic secrets are secrets that are generated when they're accessed,
-and aren't statically written like we did in
-[Your First Secret](/intro/getting-started/first-secret.html).
-On this page, we'll use the built-in AWS secret backend to dynamically
-generate AWS access keys.
-
-The power of dynamic secrets is that they simply don't exist before
-they're read, so there is no risk of someone stealing them or another
-client using the same secrets. And because Vault has built-in revocation
-mechanisms (covered later), the dynamic secret can be revoked right after
-use, minimizing the amount of time the secret existed.
+Unlike the `kv` secrets where you had to put data into the store yourself,
+dynamic secrets are generated when they are accessed. Dynamic secrets do not
+exist until they are read, so there is no risk of someone stealing them or
+another client using the same secrets. Because Vault has built-in revocation
+mechanisms, dynamic secrets can be revoked immediately after use, minimizing the
+amount of time the secret existed.
 
 -> **Note:** Before starting this page, please register for an
 [AWS account](https://aws.amazon.com). We won't be using any features that
-cost money, so you shouldn't be charged for anything. However, we're not
+cost money, so you shouldn't be charged for anything. However, we are not
 responsible for any charges you may incur.
 
-## Mounting the AWS Backend
+## Enable the AWS Secrets Engine
 
-Let's generate our first dynamic secret. We'll use the AWS backend to
-dynamically generate an AWS access key pair. First, mount the AWS backend:
+Unlike the `kv` secrets engine which is enabled by default, the AWS secrets
+engine must be enabled before use. This step is usually done via configuration
+management.
 
+```text
+$ vault secrets enable -path=aws aws
+Success! Enabled the aws secrets engine at: aws/
 ```
-$ vault mount aws
-Successfully mounted 'aws' at 'aws'!
-```
 
-The AWS backend is now mounted at `aws/`. As we covered in a previous
-section: different secret backends allow for different behavior, and in this
-case the AWS backend is a dynamic backend for generating AWS access credentials.
+The AWS secrets engine is now enabled at `aws/`. As we covered in the previous
+sections, different secrets engines allow for different behavior. In this case,
+the AWS secrets engine generates dynamic, on-demand AWS access credentials.
 
-## Configuring the AWS Backend
+## Configuring the AWS Secrets Engine
 
-With the AWS backend mounted, the first step is to configure it with
-the AWS credentials that will be used to create the other credentials.
-For now, use the root keys for your AWS account.
+After enabling the AWS secrets engine, you must configure it to authenticate and
+communicate with AWS. This requires privileged account credentials. If you are
+unfamiliar with AWS, use your root account keys.
 
-To configure the backend, we use `vault write` to a special path
-`aws/config/root`:
+~> Do not use your root account keys in production. This is a getting started
+guide and is not "best practices" for production installations.
 
-```
+```text
 $ vault write aws/config/root \
     access_key=AKIAI4SGLQPBX6CSENIQ \
     secret_key=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
 Success! Data written to: aws/config/root
 ```
 
-Remember that secret backends can behave anyway they want when
-reading/writing a path, so this path stores this configuration for
-later. Notice you can't read it back:
-
-```
-$ vault read aws/config/root
-Error reading aws/config/root: Error making API request.
-
-URL: GET http://127.0.0.1:8200/v1/aws/config/root
-Code: 405. Errors:
-
-* unsupported operation
-```
-
-To help keep the credentials secure, the AWS backend doesn't let you
-read them back even if you're using a root credential.
+These credentials are now stored in this AWS secrets engine. The engine will use
+these credentials when communicating with AWS in future requests.
 
 ## Creating a Role
 
-The next step is to configure the AWS backend with an IAM policy.
-IAM is the system AWS uses for creating new credentials with limited
-API permissions.
+The next step is to configure a "role". A "role" in Vault is a human-friendly
+identifier to an action. Think of it like a symlink.
 
-The AWS backend requires an IAM policy to associate created credentials
-with. For this example, we'll write just one policy, but you can associate
-many policies with the backend. Save a file named `policy.json` with the following contents:
+Vault knows how to create an IAM user via the AWS API, but it does not know what
+permissions, groups, and policies you want to attach to that user. This is where
+roles come in - roles map your configuration options to those API calls.
 
-```javascript
+For example, here is an IAM policy that enables all actions on EC2. When Vault
+generates an access key, it will automatically attach this policy. The generated
+access key will have full access to EC2 (as dictated by this policy), but not
+IAM or other AWS services. If you are not familiar with AWS' IAM policies, that
+is okay - just use this one for now.
+
+```json
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -104,73 +90,92 @@ many policies with the backend. Save a file named `policy.json` with the followi
 }
 ```
 
-This is a basic IAM policy that lets the user perform any action within
-Amazon EC2. With the policy saved, write it to Vault and create a new role:
+As mentioned above, we need to map this policy document to a named role. To do
+that, write to `aws/roles/:name`:
 
-```
-$ vault write aws/roles/deploy policy=@policy.json
-Success! Data written to: aws/roles/deploy
+```text
+$ vault write aws/roles/my-role policy=-<<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Stmt1426528957000",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:*"
+      ],
+      "Resource": [
+        "*"
+      ]
+    }
+  ]
+}
+EOF
+Success! Data written to: aws/roles/my-role
 ```
 
-Again, we're using a special path here `aws/roles/<NAME>` to write
-an IAM policy to Vault. We also used the special syntax `@filename` with
-`vault write` to write the contents of a file.
+Again, we're using a special path here `aws/roles/:name` to write an IAM policy
+to Vault. We just told Vault:
+
+> When I ask for a credential for "my-role", create it and attach the IAM policy `{ "Version": "2012..." }`.
 
 ## Generating the Secret
 
-Now that we've configured the AWS backend and created a role, we can now
-request an access key pair for that role. To do so, just read the
-special path `aws/creds/<NAME>` where `NAME` is the role name:
+Now that the AWS secrets engine is enabled and configured with a role, we can
+ask Vault to generate an access key pair for that role by reading from
+`aws/creds/:name` where `:name` corresponds to the name of an existing role:
 
+```text
+$ vault read aws/creds/my-role
+Key                Value
+---                -----
+lease_id           aws/creds/my-role/0bce0782-32aa-25ec-f61d-c026ff22106e
+lease_duration     768h
+lease_renewable    true
+access_key         AKIAJELUDIANQGRXCTZQ
+secret_key         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
+security_token     <nil>
 ```
-$ vault read aws/creds/deploy
-Key             Value
----             -----
-lease_id        aws/creds/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5
-lease_duration  768h0m0s
-lease_renewable true
-access_key      AKIAJFN42DVCQWDHQYHQ
-secret_key      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
-security_token  <nil>
-```
 
-Success! The access and secret key can now be used to perform any EC2
-operations within AWS. You can verify they work, if you want. Also notice
-that these keys are new, they're not the keys you entered earlier.
+Success! The access and secret key can now be used to perform any EC2 operations
+within AWS. Notice that these keys are new, they are not the keys you entered
+earlier. If you were to run the command a second time, you would get a new
+access key pair. Each time you read from `aws/creds/:name`, Vault will connect
+to AWS and generate a new IAM user and key pair.
 
-The `lease_id` above is a special ID used for Vault for renewal,
-revocation, etc. Copy and save your Lease ID now.
+Take careful note of the `lease_id` field in the output. This value is used for
+renewal, revocation, and inspection. Copy this `lease_id` to your clipboard.
+Note that the `lease_id` is the **full path**, not just the UUID at the end.
 
 ## Revoking the Secret
 
-Let's complete the loop and revoke this secret now, purging it from
-existence. Once the secret is revoked, the access keys will no longer
-work.
+Vault will automatically revoke this credential after 768 hours (see
+`lease_duration` in the output), but perhaps we want to revoke it early. Once
+the secret is revoked, the access keys are no longer valid.
 
-To revoke the secret, use `vault revoke` with the lease ID that was
-outputted from `vault read` when you ran it:
+To revoke the secret, use `vault revoke` with the lease ID that was outputted
+from `vault read` when you ran it:
 
+```text
+$ vault lease revoke aws/creds/my-role/0bce0782-32aa-25ec-f61d-c026ff22106
+Success! Revoked lease: aws/creds/my-role/0bce0782-32aa-25ec-f61d-c026ff22106e
 ```
-$ vault revoke aws/creds/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5
-Success! Revoked the secret with ID 'aws/creds/deploy/0d042c53-aa8a-7ce7-9dfd-310351c465e5', if it existed.
-```
 
-Done! If you look at your AWS account, you'll notice that no IAM users
-exist. If you try to use the access keys that were generated, you'll
-find that they no longer work.
+Done! If you login to your AWS account, you will see that no IAM users exist. If
+you try to use the access keys that were generated, you will find that they no
+longer work.
 
-With such easy dynamic creation and revocation, you can hopefully begin
-to see how easy it is to work with dynamic secrets and ensure they only
-exist for the duration that they're needed.
+With such easy dynamic creation and revocation, you can hopefully begin to see
+how easy it is to work with dynamic secrets and ensure they only exist for the
+duration that they are needed.
 
 ## Next
 
-On this page we experienced our first dynamic secret, and we also saw
-the revocation system in action. Dynamic secrets are incredibly powerful.
-As time goes on, we expect that more systems will support some sort of
-API to create access credentials, and Vault will be ready to get the
-most value out of this practice.
+On this page we experienced our first dynamic secret, and we also saw the
+revocation system in action. Dynamic secrets are incredibly powerful. As time
+goes on, we expect that more systems will support some sort of API to create
+access credentials, and Vault will be ready to get the most value out of this
+practice.
 
-Before going further, we're going to take a quick detour to learn
-about the
+Before going further, we're going to take a quick detour to learn about the
 [built-in help system](/intro/getting-started/help.html).

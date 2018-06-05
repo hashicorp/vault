@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -36,7 +37,7 @@ func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (c
 	cid, connErr := dockertest.ConnectToMongoDB(60, 500*time.Millisecond, func(connURI string) bool {
 		connURI = "mongodb://" + connURI
 		// This will cause a validation to run
-		resp, err := b.HandleRequest(&logical.Request{
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Storage:   s,
 			Operation: logical.UpdateOperation,
 			Path:      "config/connection",
@@ -75,7 +76,7 @@ func TestBackend_config_connection(t *testing.T) {
 	var err error
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,26 +92,22 @@ func TestBackend_config_connection(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      configData,
 	}
-	resp, err = b.HandleRequest(configReq)
+	resp, err = b.HandleRequest(context.Background(), configReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
 	configReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(configReq)
+	resp, err = b.HandleRequest(context.Background(), configReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
-
-	if resp.Data["uri"] != configData["uri"] {
-		t.Fatalf("bad: %#v", resp)
 	}
 }
 
 func TestBackend_basic(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +133,7 @@ func TestBackend_basic(t *testing.T) {
 func TestBackend_roleCrud(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +161,7 @@ func TestBackend_roleCrud(t *testing.T) {
 func TestBackend_leaseWriteRead(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +203,7 @@ func testAccStepConfig(d map[string]interface{}, expectError bool) logicaltest.T
 					return err
 				}
 				if len(e.Error) == 0 {
-					return fmt.Errorf("expected error, but write succeeded.")
+					return fmt.Errorf("expected error, but write succeeded")
 				}
 				return nil
 			} else if resp != nil && resp.IsError() {

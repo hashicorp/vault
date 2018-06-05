@@ -19,8 +19,8 @@ The DynamoDB storage backend is used to persist Vault's data in
 
 - **Community Supported** – the DynamoDB storage backend is supported by the
   community. While it has undergone review by HashiCorp employees, they may not
-  be as knowledgeable about the technology. If you encounter problems with them,
-  you may be referred to the original author.
+  be as knowledgeable about the technology. If you encounter problems with this
+  storage backend, you could be referred to the original author for support.
 
 ```hcl
 storage "dynamodb" {
@@ -39,9 +39,9 @@ see the [official AWS DynamoDB documentation][dynamodb-rw-capacity].
   endpoint. This can also be provided via the environment variable
   `AWS_DYNAMODB_ENDPOINT`.
 
-- `ha_enabled` `(bool: false)` – Specifies whether this backend should be used
-  to run Vault in high availability mode. This can also be provided via the
-  environment variable `DYNAMODB_HA_ENABLED`.
+- `ha_enabled` `(string: "false")` – Specifies whether this backend should be used
+  to run Vault in high availability mode. Valid values are "true" or "false". This
+  can also be provided via the environment variable `DYNAMODB_HA_ENABLED`.
 
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests.
@@ -77,23 +77,6 @@ cause Vault to attempt to retrieve credentials from the AWS metadata service.
 - `session_token` `(string: "")` – Specifies the AWS session token. This can
   also be provided via the environment variable `AWS_SESSION_TOKEN`.
 
-This backend also supports the following high availability parameters. These are
-discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
-
-- `cluster_addr` `(string: "")` – Specifies the address to advertise to other
-  Vault servers in the cluster for request forwarding. This can also be provided
-  via the environment variable `VAULT_CLUSTER_ADDR`. This is a full URL, like
-  `redirect_addr`, but Vault will ignore the scheme (all cluster members always
-  use TLS with a private key/certificate).
-
-- `disable_clustering` `(bool: false)` – Specifies whether clustering features
-  such as request forwarding are enabled. Setting this to true on one Vault node
-  will disable these features _only when that node is the active node_.
-
-- `redirect_addr` `(string: <required>)` – Specifies the address (full URL) to
-  advertise to other Vault servers in the cluster for client redirection. This
-  can also be provided via the environment variable `VAULT_REDIRECT_ADDR`.
-
 ## `dynamodb` Examples
 
 ### Custom Table and Read-Write Capacity
@@ -114,9 +97,11 @@ storage "dynamodb" {
 This example show enabling high availability for the DynamoDB storage backend.
 
 ```hcl
+api_addr = "https://vault-leader.my-company.internal"
+
 storage "dynamodb" {
   ha_enabled    = "true"
-  redirect_addr = "vault-leader.my-company.internal"
+  ...
 }
 ```
 

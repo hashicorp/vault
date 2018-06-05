@@ -15,12 +15,12 @@
 package concurrency
 
 import (
+	"context"
 	"fmt"
 
 	v3 "github.com/coreos/etcd/clientv3"
 	pb "github.com/coreos/etcd/etcdserver/etcdserverpb"
-	"github.com/coreos/etcd/mvcc/mvccpb"
-	"golang.org/x/net/context"
+	"github.com/coreos/etcd/internal/mvcc/mvccpb"
 )
 
 func waitDelete(ctx context.Context, client *v3.Client, key string, rev int64) error {

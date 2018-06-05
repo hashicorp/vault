@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -11,14 +12,24 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	b := Backend()
+	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func Backend() *framework.Backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
+
+		PathsSpecial: &logical.Paths{
+			SealWrapStorage: []string{
+				"config/connection",
+			},
+		},
 
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
@@ -34,7 +45,8 @@ func Backend() *framework.Backend {
 
 		Clean: b.ResetSession,
 
-		Invalidate: b.invalidate,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeLogical,
 	}
 
 	return b.Backend
@@ -48,7 +60,7 @@ type backend struct {
 }
 
 // Session returns the database connection.
-func (b *backend) Session(s logical.Storage) (*mgo.Session, error) {
+func (b *backend) Session(ctx context.Context, s logical.Storage) (*mgo.Session, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -59,7 +71,7 @@ func (b *backend) Session(s logical.Storage) (*mgo.Session, error) {
 		b.session.Close()
 	}
 
-	connConfigJSON, err := s.Get("config/connection")
+	connConfigJSON, err := s.Get(ctx, "config/connection")
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +100,7 @@ func (b *backend) Session(s logical.Storage) (*mgo.Session, error) {
 }
 
 // ResetSession forces creation of a new connection next time Session() is called.
-func (b *backend) ResetSession() {
+func (b *backend) ResetSession(_ context.Context) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -99,16 +111,16 @@ func (b *backend) ResetSession() {
 	b.session = nil
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(ctx context.Context, key string) {
 	switch key {
 	case "config/connection":
-		b.ResetSession()
+		b.ResetSession(ctx)
 	}
 }
 
 // LeaseConfig returns the lease configuration
-func (b *backend) LeaseConfig(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get("config/lease")
+func (b *backend) LeaseConfig(ctx context.Context, s logical.Storage) (*configLease, error) {
+	entry, err := s.Get(ctx, "config/lease")
 	if err != nil {
 		return nil, err
 	}

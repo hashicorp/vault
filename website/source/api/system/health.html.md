@@ -25,6 +25,7 @@ The default status codes are:
 
 - `200` if initialized, unsealed, and active
 - `429` if unsealed and standby
+- `472` if data recovery mode replication secondary and active
 - `501` if not initialized
 - `503` if sealed
 
@@ -41,6 +42,9 @@ The default status codes are:
 - `standbycode` `(int: 429)` – Specifies the status code that should be returned
   for a standby node.
 
+- `drsecondarycode` `(int: 472)` – Specifies the status code that should be
+  returned for a DR secondary node.
+
 - `sealedcode` `(int: 503)` – Specifies the status code that should be returned
   for a sealed node.
 
@@ -51,21 +55,28 @@ The default status codes are:
 
 ```
 $ curl \
-    https://vault.rocks/v1/sys/health
+    http://127.0.0.1:8200/v1/sys/health
 ```
 
 ### Sample Response
 
 This response is only returned for a `GET` request.
 
+Note: `replication_perf_mode` and `replication_dr_mode` reflect the state of
+the active node in the cluster; if you are querying it for a standby that has
+just come up, it can take a small time for the active node to inform the
+standby of its status.
+
 ```json
 {
-  "cluster_id": "c9abceea-4f46-4dab-a688-5ce55f89e228",
-  "cluster_name": "vault-cluster-5515c810",
-  "version": "0.6.2",
-  "server_time_utc": 1469555798,
-  "standby": false,
+  "initialized": true,
   "sealed": false,
-  "initialized": true
+  "standby": false,
+  "replication_perf_mode": "disabled",
+  "replication_dr_mode": "disabled",
+  "server_time_utc": 1516639589,
+  "version": "0.9.1",
+  "cluster_name": "vault-cluster-3bd69ca2",
+  "cluster_id": "00af5aa8-c87d-b5fc-e82e-97cd8dfaf731"
 }
 ```

@@ -60,7 +60,7 @@ This example shows a default configuration for Swift.
 
 ```hcl
 storage "swift" {
-  auth_url  = "https://os.initernal/v1/auth"
+  auth_url  = "https://os.internal/v1/auth"
   container = "container-239"
 
   username  = "user1234"

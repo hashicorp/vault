@@ -8,12 +8,13 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/vault"
 )
 
 // Test to check if the API errors out when wrong number of PGP keys are
 // supplied for rekey
-func TestSysRekeyInit_pgpKeysEntriesForRekey(t *testing.T) {
+func TestSysRekey_Init_pgpKeysEntriesForRekey(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
@@ -27,7 +28,7 @@ func TestSysRekeyInit_pgpKeysEntriesForRekey(t *testing.T) {
 	testResponseStatus(t, resp, 400)
 }
 
-func TestSysRekeyInit_Status(t *testing.T) {
+func TestSysRekey_Init_Status(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
@@ -40,14 +41,15 @@ func TestSysRekeyInit_Status(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"started":          false,
-		"t":                json.Number("0"),
-		"n":                json.Number("0"),
-		"progress":         json.Number("0"),
-		"required":         json.Number("3"),
-		"pgp_fingerprints": interface{}(nil),
-		"backup":           false,
-		"nonce":            "",
+		"started":               false,
+		"t":                     json.Number("0"),
+		"n":                     json.Number("0"),
+		"progress":              json.Number("0"),
+		"required":              json.Number("3"),
+		"pgp_fingerprints":      interface{}(nil),
+		"backup":                false,
+		"nonce":                 "",
+		"verification_required": false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -56,12 +58,13 @@ func TestSysRekeyInit_Status(t *testing.T) {
 	}
 }
 
-func TestSysRekeyInit_Setup(t *testing.T) {
+func TestSysRekey_Init_Setup(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
+	// Start rekey
 	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
 		"secret_shares":    5,
 		"secret_threshold": 3,
@@ -70,13 +73,14 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"started":          true,
-		"t":                json.Number("3"),
-		"n":                json.Number("5"),
-		"progress":         json.Number("0"),
-		"required":         json.Number("3"),
-		"pgp_fingerprints": interface{}(nil),
-		"backup":           false,
+		"started":               true,
+		"t":                     json.Number("3"),
+		"n":                     json.Number("5"),
+		"progress":              json.Number("0"),
+		"required":              json.Number("3"),
+		"pgp_fingerprints":      interface{}(nil),
+		"backup":                false,
+		"verification_required": false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -88,17 +92,19 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
 
+	// Get rekey status
 	resp = testHttpGet(t, token, addr+"/v1/sys/rekey/init")
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"started":          true,
-		"t":                json.Number("3"),
-		"n":                json.Number("5"),
-		"progress":         json.Number("0"),
-		"required":         json.Number("3"),
-		"pgp_fingerprints": interface{}(nil),
-		"backup":           false,
+		"started":               true,
+		"t":                     json.Number("3"),
+		"n":                     json.Number("5"),
+		"progress":              json.Number("0"),
+		"required":              json.Number("3"),
+		"pgp_fingerprints":      interface{}(nil),
+		"backup":                false,
+		"verification_required": false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -114,7 +120,7 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 	}
 }
 
-func TestSysRekeyInit_Cancel(t *testing.T) {
+func TestSysRekey_Init_Cancel(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
@@ -136,14 +142,15 @@ func TestSysRekeyInit_Cancel(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"started":          false,
-		"t":                json.Number("0"),
-		"n":                json.Number("0"),
-		"progress":         json.Number("0"),
-		"required":         json.Number("3"),
-		"pgp_fingerprints": interface{}(nil),
-		"backup":           false,
-		"nonce":            "",
+		"started":               false,
+		"t":                     json.Number("0"),
+		"n":                     json.Number("0"),
+		"progress":              json.Number("0"),
+		"required":              json.Number("3"),
+		"pgp_fingerprints":      interface{}(nil),
+		"backup":                false,
+		"nonce":                 "",
+		"verification_required": false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -189,14 +196,15 @@ func TestSysRekey_Update(t *testing.T) {
 
 		actual = map[string]interface{}{}
 		expected = map[string]interface{}{
-			"started":          true,
-			"nonce":            rekeyStatus["nonce"].(string),
-			"backup":           false,
-			"pgp_fingerprints": interface{}(nil),
-			"required":         json.Number("3"),
-			"t":                json.Number("3"),
-			"n":                json.Number("5"),
-			"progress":         json.Number(fmt.Sprintf("%d", i+1)),
+			"started":               true,
+			"nonce":                 rekeyStatus["nonce"].(string),
+			"backup":                false,
+			"pgp_fingerprints":      interface{}(nil),
+			"required":              json.Number("3"),
+			"t":                     json.Number("3"),
+			"n":                     json.Number("5"),
+			"progress":              json.Number(fmt.Sprintf("%d", i+1)),
+			"verification_required": false,
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
@@ -216,8 +224,8 @@ func TestSysRekey_Update(t *testing.T) {
 			t.Fatalf("expected a nonce, i is %d, actual is %#v", i, actual)
 		}
 
-		if !reflect.DeepEqual(actual, expected) {
-			t.Fatalf("\nexpected: \n%#v\nactual: \n%#v", expected, actual)
+		if diff := deep.Equal(actual, expected); diff != nil {
+			t.Fatal(diff)
 		}
 	}
 

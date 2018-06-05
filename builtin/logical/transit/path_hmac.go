@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -45,6 +46,13 @@ Defaults to "sha2-256".`,
 				Type:        framework.TypeString,
 				Description: `Algorithm to use (POST URL parameter)`,
 			},
+
+			"key_version": &framework.FieldSchema{
+				Type: framework.TypeInt,
+				Description: `The version of the key to use for generating the HMAC.
+Must be 0 (for latest) or a value greater than or equal
+to the min_encryption_version configured on the key.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -56,9 +64,9 @@ Defaults to "sha2-256".`,
 	}
 }
 
-func (b *backend) pathHMACWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+	ver := d.Get("key_version").(int)
 	inputB64 := d.Get("input").(string)
 	algorithm := d.Get("urlalgorithm").(string)
 	if algorithm == "" {
@@ -71,7 +79,7 @@ func (b *backend) pathHMACWrite(
 	}
 
 	// Get the policy
-	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -79,10 +87,21 @@ func (b *backend) pathHMACWrite(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
-	key, err := p.HMACKey(p.LatestVersion)
+	switch {
+	case ver == 0:
+		// Allowed, will use latest; set explicitly here to ensure the string
+		// is generated properly
+		ver = p.LatestVersion
+	case ver == p.LatestVersion:
+		// Allowed
+	case p.MinEncryptionVersion > 0 && ver < p.MinEncryptionVersion:
+		return logical.ErrorResponse("cannot generate HMAC: version is too old (disallowed by policy)"), logical.ErrInvalidRequest
+	}
+
+	key, err := p.HMACKey(ver)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
@@ -107,7 +126,7 @@ func (b *backend) pathHMACWrite(
 	retBytes := hf.Sum(nil)
 
 	retStr := base64.StdEncoding.EncodeToString(retBytes)
-	retStr = fmt.Sprintf("vault:v%s:%s", strconv.Itoa(p.LatestVersion), retStr)
+	retStr = fmt.Sprintf("vault:v%s:%s", strconv.Itoa(ver), retStr)
 
 	// Generate the response
 	resp := &logical.Response{
@@ -118,9 +137,7 @@ func (b *backend) pathHMACWrite(
 	return resp, nil
 }
 
-func (b *backend) pathHMACVerify(
-	req *logical.Request, d *framework.FieldData, verificationHMAC string) (*logical.Response, error) {
-
+func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *framework.FieldData, verificationHMAC string) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	inputB64 := d.Get("input").(string)
 	algorithm := d.Get("urlalgorithm").(string)
@@ -154,7 +171,7 @@ func (b *backend) pathHMACVerify(
 	}
 
 	// Get the policy
-	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -162,7 +179,7 @@ func (b *backend) pathHMACVerify(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
 	if ver > p.LatestVersion {

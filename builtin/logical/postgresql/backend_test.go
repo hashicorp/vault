@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -39,7 +40,7 @@ func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (c
 
 	cid, connErr := dockertest.ConnectToPostgreSQL(60, 500*time.Millisecond, func(connURL string) bool {
 		// This will cause a validation to run
-		resp, err := b.HandleRequest(&logical.Request{
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Storage:   s,
 			Operation: logical.UpdateOperation,
 			Path:      "config/connection",
@@ -78,14 +79,13 @@ func TestBackend_config_connection(t *testing.T) {
 	var err error
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	configData := map[string]interface{}{
 		"connection_url":       "sample_connection_url",
-		"value":                "",
 		"max_open_connections": 9,
 		"max_idle_connections": 7,
 		"verify_connection":    false,
@@ -97,18 +97,19 @@ func TestBackend_config_connection(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      configData,
 	}
-	resp, err = b.HandleRequest(configReq)
+	resp, err = b.HandleRequest(context.Background(), configReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
 	configReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(configReq)
+	resp, err = b.HandleRequest(context.Background(), configReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
 	delete(configData, "verify_connection")
+	delete(configData, "connection_url")
 	if !reflect.DeepEqual(configData, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v\n", configData, resp.Data)
 	}
@@ -117,7 +118,7 @@ func TestBackend_config_connection(t *testing.T) {
 func TestBackend_basic(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +144,7 @@ func TestBackend_basic(t *testing.T) {
 func TestBackend_roleCrud(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +172,7 @@ func TestBackend_roleCrud(t *testing.T) {
 func TestBackend_BlockStatements(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +204,7 @@ func TestBackend_BlockStatements(t *testing.T) {
 func TestBackend_roleReadOnly(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +237,7 @@ func TestBackend_roleReadOnly(t *testing.T) {
 func TestBackend_roleReadOnly_revocationSQL(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -284,7 +285,7 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 					return err
 				}
 				if len(e.Error) == 0 {
-					return fmt.Errorf("expected error, but write succeeded.")
+					return fmt.Errorf("expected error, but write succeeded")
 				}
 				return nil
 			} else if resp != nil && resp.IsError() {
@@ -379,7 +380,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 				t.Fatalf("did not get expected number of rows, got %d", userRows)
 			}
 
-			resp, err = b.HandleRequest(&logical.Request{
+			resp, err = b.HandleRequest(context.Background(), &logical.Request{
 				Operation: logical.RevokeOperation,
 				Storage:   s,
 				Secret: &logical.Secret{
@@ -395,7 +396,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			}
 			if resp != nil {
 				if resp.IsError() {
-					return fmt.Errorf("Error on resp: %#v", *resp)
+					return fmt.Errorf("error on resp: %#v", *resp)
 				}
 			}
 
@@ -441,7 +442,7 @@ func testAccStepCreateTable(t *testing.T, b logical.Backend, s logical.Storage, 
 				t.Fatal(err)
 			}
 
-			resp, err = b.HandleRequest(&logical.Request{
+			resp, err = b.HandleRequest(context.Background(), &logical.Request{
 				Operation: logical.RevokeOperation,
 				Storage:   s,
 				Secret: &logical.Secret{
@@ -456,7 +457,7 @@ func testAccStepCreateTable(t *testing.T, b logical.Backend, s logical.Storage, 
 			}
 			if resp != nil {
 				if resp.IsError() {
-					return fmt.Errorf("Error on resp: %#v", *resp)
+					return fmt.Errorf("error on resp: %#v", *resp)
 				}
 			}
 
@@ -496,7 +497,7 @@ func testAccStepDropTable(t *testing.T, b logical.Backend, s logical.Storage, na
 				t.Fatal(err)
 			}
 
-			resp, err = b.HandleRequest(&logical.Request{
+			resp, err = b.HandleRequest(context.Background(), &logical.Request{
 				Operation: logical.RevokeOperation,
 				Storage:   s,
 				Secret: &logical.Secret{
@@ -511,7 +512,7 @@ func testAccStepDropTable(t *testing.T, b logical.Backend, s logical.Storage, na
 			}
 			if resp != nil {
 				if resp.IsError() {
-					return fmt.Errorf("Error on resp: %#v", *resp)
+					return fmt.Errorf("error on resp: %#v", *resp)
 				}
 			}
 

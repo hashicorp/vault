@@ -2,22 +2,26 @@ package vault
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
+	"github.com/hashicorp/vault/physical/inmem"
 )
 
 var (
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 )
 
 // mockBarrier returns a physical backend, security barrier, and master key
 func mockBarrier(t testing.TB) (physical.Backend, SecurityBarrier, []byte) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -25,14 +29,16 @@ func mockBarrier(t testing.TB) (physical.Backend, SecurityBarrier, []byte) {
 
 	// Initialize and unseal
 	key, _ := b.GenerateKey()
-	b.Initialize(key)
-	b.Unseal(key)
+	b.Initialize(context.Background(), key)
+	b.Unseal(context.Background(), key)
 	return inm, b, key
 }
 
 func TestAESGCMBarrier_Basic(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -41,8 +47,10 @@ func TestAESGCMBarrier_Basic(t *testing.T) {
 }
 
 func TestAESGCMBarrier_Rotate(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -51,8 +59,10 @@ func TestAESGCMBarrier_Rotate(t *testing.T) {
 }
 
 func TestAESGCMBarrier_Upgrade(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b1, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -65,8 +75,10 @@ func TestAESGCMBarrier_Upgrade(t *testing.T) {
 }
 
 func TestAESGCMBarrier_Upgrade_Rekey(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b1, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -79,8 +91,10 @@ func TestAESGCMBarrier_Upgrade_Rekey(t *testing.T) {
 }
 
 func TestAESGCMBarrier_Rekey(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -91,8 +105,10 @@ func TestAESGCMBarrier_Rekey(t *testing.T) {
 // Test an upgrade from the old (0.1) barrier/init to the new
 // core/keyring style
 func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -116,7 +132,7 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 		Key:   barrierInitPath,
 		Value: value,
 	}
-	inm.Put(pe)
+	inm.Put(context.Background(), pe)
 
 	// Create a fake key
 	gcm, _ = b.aeadFromKey(encrypt)
@@ -124,10 +140,10 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 		Key:   "test/foo",
 		Value: b.encrypt("test/foo", initialKeyTerm, gcm, []byte("test")),
 	}
-	inm.Put(pe)
+	inm.Put(context.Background(), pe)
 
 	// Should still be initialized
-	isInit, err := b.Initialized()
+	isInit, err := b.Initialized(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -136,13 +152,13 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 	}
 
 	// Unseal should work and migrate online
-	err = b.Unseal(master)
+	err = b.Unseal(context.Background(), master)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Check for migraiton
-	out, err := inm.Get(barrierInitPath)
+	// Check for migration
+	out, err := inm.Get(context.Background(), barrierInitPath)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -151,7 +167,7 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 	}
 
 	// Should have keyring
-	out, err = inm.Get(keyringPath)
+	out, err = inm.Get(context.Background(), keyringPath)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -160,7 +176,7 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 	}
 
 	// Attempt to read encrypted key
-	entry, err := b.Get("test/foo")
+	entry, err := b.Get(context.Background(), "test/foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -171,8 +187,10 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 
 // Verify data sent through is encrypted
 func TestAESGCMBarrier_Confidential(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -180,18 +198,18 @@ func TestAESGCMBarrier_Confidential(t *testing.T) {
 
 	// Initialize and unseal
 	key, _ := b.GenerateKey()
-	b.Initialize(key)
-	b.Unseal(key)
+	b.Initialize(context.Background(), key)
+	b.Unseal(context.Background(), key)
 
 	// Put a logical entry
 	entry := &Entry{Key: "test", Value: []byte("test")}
-	err = b.Put(entry)
+	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Check the physcial entry
-	pe, err := inm.Get("test")
+	// Check the physical entry
+	pe, err := inm.Get(context.Background(), "test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -209,8 +227,10 @@ func TestAESGCMBarrier_Confidential(t *testing.T) {
 
 // Verify data sent through cannot be tampered with
 func TestAESGCMBarrier_Integrity(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -218,26 +238,26 @@ func TestAESGCMBarrier_Integrity(t *testing.T) {
 
 	// Initialize and unseal
 	key, _ := b.GenerateKey()
-	b.Initialize(key)
-	b.Unseal(key)
+	b.Initialize(context.Background(), key)
+	b.Unseal(context.Background(), key)
 
 	// Put a logical entry
 	entry := &Entry{Key: "test", Value: []byte("test")}
-	err = b.Put(entry)
+	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Change a byte in the underlying physical entry
-	pe, _ := inm.Get("test")
+	pe, _ := inm.Get(context.Background(), "test")
 	pe.Value[15]++
-	err = inm.Put(pe)
+	err = inm.Put(context.Background(), pe)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Read from the barrier
-	_, err = b.Get("test")
+	_, err = b.Get(context.Background(), "test")
 	if err == nil {
 		t.Fatalf("should fail!")
 	}
@@ -245,8 +265,10 @@ func TestAESGCMBarrier_Integrity(t *testing.T) {
 
 // Verify data sent through cannot be moved
 func TestAESGCMBarrier_MoveIntegrityV1(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -255,37 +277,42 @@ func TestAESGCMBarrier_MoveIntegrityV1(t *testing.T) {
 
 	// Initialize and unseal
 	key, _ := b.GenerateKey()
-	err = b.Initialize(key)
+	err = b.Initialize(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = b.Unseal(key)
+	err = b.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Put a logical entry
 	entry := &Entry{Key: "test", Value: []byte("test")}
-	err = b.Put(entry)
+	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Change the location of the underlying physical entry
-	pe, _ := inm.Get("test")
+	pe, _ := inm.Get(context.Background(), "test")
 	pe.Key = "moved"
-	err = inm.Put(pe)
+	err = inm.Put(context.Background(), pe)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 
 	// Read from the barrier
-	_, err = b.Get("moved")
+	_, err = b.Get(context.Background(), "moved")
 	if err != nil {
 		t.Fatalf("should succeed with version 1!")
 	}
 }
 
 func TestAESGCMBarrier_MoveIntegrityV2(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -294,37 +321,42 @@ func TestAESGCMBarrier_MoveIntegrityV2(t *testing.T) {
 
 	// Initialize and unseal
 	key, _ := b.GenerateKey()
-	err = b.Initialize(key)
+	err = b.Initialize(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = b.Unseal(key)
+	err = b.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Put a logical entry
 	entry := &Entry{Key: "test", Value: []byte("test")}
-	err = b.Put(entry)
+	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Change the location of the underlying physical entry
-	pe, _ := inm.Get("test")
+	pe, _ := inm.Get(context.Background(), "test")
 	pe.Key = "moved"
-	err = inm.Put(pe)
+	err = inm.Put(context.Background(), pe)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 
 	// Read from the barrier
-	_, err = b.Get("moved")
+	_, err = b.Get(context.Background(), "moved")
 	if err == nil {
 		t.Fatalf("should fail with version 2!")
 	}
 }
 
 func TestAESGCMBarrier_UpgradeV1toV2(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -333,18 +365,18 @@ func TestAESGCMBarrier_UpgradeV1toV2(t *testing.T) {
 
 	// Initialize and unseal
 	key, _ := b.GenerateKey()
-	err = b.Initialize(key)
+	err = b.Initialize(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = b.Unseal(key)
+	err = b.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Put a logical entry
 	entry := &Entry{Key: "test", Value: []byte("test")}
-	err = b.Put(entry)
+	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -363,29 +395,31 @@ func TestAESGCMBarrier_UpgradeV1toV2(t *testing.T) {
 	b.currentAESGCMVersionByte = AESGCMVersion2
 
 	// Unseal
-	err = b.Unseal(key)
+	err = b.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Check successful decryption
-	_, err = b.Get("test")
+	_, err = b.Get(context.Background(), "test")
 	if err != nil {
 		t.Fatalf("Upgrade unsuccessful")
 	}
 }
 
 func TestEncrypt_Unique(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	key, _ := b.GenerateKey()
-	b.Initialize(key)
-	b.Unseal(key)
+	b.Initialize(context.Background(), key)
+	b.Unseal(context.Background(), key)
 
 	if b.keyring == nil {
 		t.Fatalf("barrier is sealed")
@@ -404,8 +438,10 @@ func TestEncrypt_Unique(t *testing.T) {
 }
 
 func TestInitialize_KeyLength(t *testing.T) {
-
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -415,19 +451,19 @@ func TestInitialize_KeyLength(t *testing.T) {
 	middle := []byte("ThisIsASecretKeyAndMore")
 	short := []byte("Key")
 
-	err = b.Initialize(long)
+	err = b.Initialize(context.Background(), long)
 
 	if err == nil {
 		t.Fatalf("key length protection failed")
 	}
 
-	err = b.Initialize(middle)
+	err = b.Initialize(context.Background(), middle)
 
 	if err == nil {
 		t.Fatalf("key length protection failed")
 	}
 
-	err = b.Initialize(short)
+	err = b.Initialize(context.Background(), short)
 
 	if err == nil {
 		t.Fatalf("key length protection failed")
@@ -435,7 +471,13 @@ func TestInitialize_KeyLength(t *testing.T) {
 }
 
 func TestEncrypt_BarrierEncryptor(t *testing.T) {
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	b, err := NewAESGCMBarrier(inm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -443,15 +485,15 @@ func TestEncrypt_BarrierEncryptor(t *testing.T) {
 
 	// Initialize and unseal
 	key, _ := b.GenerateKey()
-	b.Initialize(key)
-	b.Unseal(key)
+	b.Initialize(context.Background(), key)
+	b.Unseal(context.Background(), key)
 
-	cipher, err := b.Encrypt("foo", []byte("quick brown fox"))
+	cipher, err := b.Encrypt(context.Background(), "foo", []byte("quick brown fox"))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	plain, err := b.Decrypt("foo", cipher)
+	plain, err := b.Decrypt(context.Background(), "foo", cipher)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

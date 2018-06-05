@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"os"
@@ -8,14 +9,14 @@ import (
 	"sort"
 	"testing"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -82,7 +83,7 @@ type TestStep struct {
 	// RemoteAddr, if set, will set the remote addr on the request.
 	RemoteAddr string
 
-	// ConnState, if set, will set the tls conneciton state
+	// ConnState, if set, will set the tls connection state
 	ConnState *tls.ConnectionState
 }
 
@@ -127,6 +128,11 @@ func Test(tt TestT, c TestCase) {
 		c.PreCheck()
 	}
 
+	// Defer on the teardown, regardless of pass/fail at this point
+	if c.Teardown != nil {
+		defer c.Teardown()
+	}
+
 	// Check that something is provided
 	if c.Backend == nil && c.Factory == nil {
 		tt.Fatal("Must provide either Backend or Factory")
@@ -134,16 +140,22 @@ func Test(tt TestT, c TestCase) {
 	}
 
 	// Create an in-memory Vault core
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
+
+	phys, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		tt.Fatal(err)
+		return
+	}
 
 	core, err := vault.NewCore(&vault.CoreConfig{
-		Physical: physical.NewInmem(logger),
+		Physical: phys,
 		LogicalBackends: map[string]logical.Factory{
-			"test": func(conf *logical.BackendConfig) (logical.Backend, error) {
+			"test": func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 				if c.Backend != nil {
 					return c.Backend, nil
 				}
-				return c.Factory(conf)
+				return c.Factory(ctx, conf)
 			},
 		},
 		DisableMlock: true,
@@ -154,7 +166,7 @@ func Test(tt TestT, c TestCase) {
 	}
 
 	// Initialize the core
-	init, err := core.Initialize(&vault.InitParams{
+	init, err := core.Initialize(context.Background(), &vault.InitParams{
 		BarrierConfig: &vault.SealConfig{
 			SecretShares:    1,
 			SecretThreshold: 1,
@@ -203,8 +215,8 @@ func Test(tt TestT, c TestCase) {
 	// Make requests
 	var revoke []*logical.Request
 	for i, s := range c.Steps {
-		if log.IsWarn() {
-			log.Warn("Executing test step", "step_number", i+1)
+		if logger.IsWarn() {
+			logger.Warn("Executing test step", "step_number", i+1)
 		}
 
 		// Create the request
@@ -264,7 +276,7 @@ func Test(tt TestT, c TestCase) {
 		// If the error is a 'logical.ErrorResponse' and if error was not expected,
 		// set the error so that this can be caught below.
 		if resp.IsError() && !s.ErrorOk {
-			err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
+			err = fmt.Errorf("erroneous response:\n\n%#v", resp)
 		}
 
 		// Either the 'err' was nil or if an error was expected, it was set to nil.
@@ -287,13 +299,13 @@ func Test(tt TestT, c TestCase) {
 	// Revoke any secrets we might have.
 	var failedRevokes []*logical.Secret
 	for _, req := range revoke {
-		if log.IsWarn() {
-			log.Warn("Revoking secret", "secret", fmt.Sprintf("%#v", req))
+		if logger.IsWarn() {
+			logger.Warn("Revoking secret", "secret", fmt.Sprintf("%#v", req))
 		}
 		req.ClientToken = client.Token()
 		resp, err := core.HandleRequest(req)
 		if err == nil && resp.IsError() {
-			err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
+			err = fmt.Errorf("erroneous response:\n\n%#v", resp)
 		}
 		if err != nil {
 			failedRevokes = append(failedRevokes, req.Secret)
@@ -304,13 +316,13 @@ func Test(tt TestT, c TestCase) {
 	// Perform any rollbacks. This should no-op if there aren't any.
 	// We set the "immediate" flag here that any backend can pick up on
 	// to do all rollbacks immediately even if the WAL entries are new.
-	log.Warn("Requesting RollbackOperation")
+	logger.Warn("Requesting RollbackOperation")
 	req := logical.RollbackRequest(prefix + "/")
 	req.Data["immediate"] = true
 	req.ClientToken = client.Token()
 	resp, err := core.HandleRequest(req)
 	if err == nil && resp.IsError() {
-		err = fmt.Errorf("Erroneous response:\n\n%#v", resp)
+		err = fmt.Errorf("erroneous response:\n\n%#v", resp)
 	}
 	if err != nil {
 		if !errwrap.Contains(err, logical.ErrUnsupportedOperation.Error()) {
@@ -326,11 +338,6 @@ func Test(tt TestT, c TestCase) {
 					"still exist. Please verify:\n\n%#v",
 				s))
 		}
-	}
-
-	// Cleanup
-	if c.Teardown != nil {
-		c.Teardown()
 	}
 }
 

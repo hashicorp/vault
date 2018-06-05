@@ -45,7 +45,7 @@ storage "etcd" {
   version is 3.1+ and there has been no data written using the v2 API, the
   auto-detected default is v3.
 
-- `ha_enabled` `(bool: false)` – Specifies if high availability should be
+- `ha_enabled` `(string: "false")` – Specifies if high availability should be
   enabled. This can also be provided via the environment variable
   `ETCD_HA_ENABLED`.
 
@@ -73,23 +73,6 @@ storage "etcd" {
 
 - `tls_key_file` `(string: "")` – Specifies the path to the private key for Etcd
   communication.
-
-This backend also supports the following high availability parameters. These are
-discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
-
-- `cluster_addr` `(string: "")` – Specifies the address to advertise to other
-  Vault servers in the cluster for request forwarding. This can also be provided
-  via the environment variable `VAULT_CLUSTER_ADDR`. This is a full URL, like
-  `redirect_addr`, but Vault will ignore the scheme (all cluster members always
-  use TLS with a private key/certificate).
-
-- `disable_clustering` `(bool: false)` – Specifies whether clustering features
-  such as request forwarding are enabled. Setting this to true on one Vault node
-  will disable these features _only when that node is the active node_.
-
-- `redirect_addr` `(string: <required>)` – Specifies the address (full URL) to
-  advertise to other Vault servers in the cluster for client redirection. This
-  can also be provided via the environment variable `VAULT_REDIRECT_ADDR`.
 
 ## `etcd` Examples
 
@@ -131,9 +114,11 @@ storage "etcd" {
 This example show enabling high availability for the Etcd storage backend.
 
 ```hcl
+api_addr = "https://vault-leader.my-company.internal"
+
 storage "etcd" {
-  ha_enabled    = true
-  redirect_addr = "vault-leader.my-company.internal"
+  ha_enabled    = "true"
+  ...
 }
 ```
 

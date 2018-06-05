@@ -2,19 +2,20 @@ package vault
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
+	"github.com/hashicorp/vault/physical/inmem"
 )
 
 var (
@@ -24,12 +25,12 @@ var (
 func TestClusterFetching(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
-	err := c.setupCluster()
+	err := c.setupCluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cluster, err := c.Cluster()
+	cluster, err := c.Cluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,13 +41,21 @@ func TestClusterFetching(t *testing.T) {
 }
 
 func TestClusterHAFetching(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 
 	redirect := "http://127.0.0.1:8200"
 
+	inm, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inmha, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
 	c, err := NewCore(&CoreConfig{
-		Physical:     physical.NewInmemHA(logger),
-		HAPhysical:   physical.NewInmemHA(logger),
+		Physical:     inm,
+		HAPhysical:   inmha.(physical.HABackend),
 		RedirectAddr: redirect,
 		DisableMlock: true,
 	})
@@ -72,7 +81,7 @@ func TestClusterHAFetching(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, c)
 
-	cluster, err := c.Cluster()
+	cluster, err := c.Cluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,12 +95,12 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Make this nicer for tests
 	manualStepDownSleepPeriod = 5 * time.Second
 
-	cores := TestCluster(t, []http.Handler{nil, nil, nil}, nil, false)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
-
-	root := cores[0].Root
+	cluster := NewTestCluster(t, nil, &TestClusterOptions{
+		KeepStandbysSealed: true,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	cores := cluster.Cores
 
 	// Wait for core to become active
 	TestWaitActive(t, cores[0].Core)
@@ -99,7 +108,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Use this to have a valid config after sealing since ClusterTLSConfig returns nil
 	var lastTLSConfig *tls.Config
 	checkListenersFunc := func(expectFail bool) {
-		tlsConfig, err := cores[0].ClusterTLSConfig()
+		tlsConfig, err := cores[0].ClusterTLSConfig(context.Background(), nil)
 		if err != nil {
 			if err.Error() != consts.ErrSealed.Error() {
 				t.Fatal(err)
@@ -116,16 +125,16 @@ func TestCluster_ListenForRequests(t *testing.T) {
 				t.Fatalf("%s not a TCP port", tcpAddr.String())
 			}
 
-			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+10), tlsConfig)
+			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+105), tlsConfig)
 			if err != nil {
 				if expectFail {
-					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+10)
+					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+105)
 					continue
 				}
 				t.Fatalf("error: %v\nlisteners are\n%#v\n%#v\n", err, cores[0].Listeners[0], cores[0].Listeners[1])
 			}
 			if expectFail {
-				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+10)
+				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+105)
 			}
 			err = conn.Handshake()
 			if err != nil {
@@ -138,7 +147,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			case connState.NegotiatedProtocol != "h2" || !connState.NegotiatedProtocolIsMutual:
 				t.Fatal("bad protocol negotiation")
 			}
-			t.Logf("testing %s:%d successful", tcpAddr.IP.String(), tcpAddr.Port+10)
+			t.Logf("testing %s:%d successful", tcpAddr.IP.String(), tcpAddr.Port+105)
 		}
 	}
 
@@ -148,7 +157,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	err := cores[0].StepDown(&logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/step-down",
-		ClientToken: root,
+		ClientToken: cluster.RootToken,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -163,7 +172,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	time.Sleep(manualStepDownSleepPeriod)
 	checkListenersFunc(false)
 
-	err = cores[0].Seal(root)
+	err = cores[0].Seal(cluster.RootToken)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,51 +185,39 @@ func TestCluster_ForwardRequests(t *testing.T) {
 	// Make this nicer for tests
 	manualStepDownSleepPeriod = 5 * time.Second
 
-	testCluster_ForwardRequestsCommon(t, false)
-	testCluster_ForwardRequestsCommon(t, true)
-	os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "")
+	testCluster_ForwardRequestsCommon(t)
 }
 
-func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
-	if rpc {
-		os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "1")
-	} else {
-		os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "")
-	}
-
-	handler1 := http.NewServeMux()
-	handler1.HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
+func testCluster_ForwardRequestsCommon(t *testing.T) {
+	cluster := NewTestCluster(t, nil, nil)
+	cores := cluster.Cores
+	cores[0].Handler.(*http.ServeMux).HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(201)
 		w.Write([]byte("core1"))
 	})
-	handler2 := http.NewServeMux()
-	handler2.HandleFunc("/core2", func(w http.ResponseWriter, req *http.Request) {
+	cores[1].Handler.(*http.ServeMux).HandleFunc("/core2", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(202)
 		w.Write([]byte("core2"))
 	})
-	handler3 := http.NewServeMux()
-	handler3.HandleFunc("/core3", func(w http.ResponseWriter, req *http.Request) {
+	cores[2].Handler.(*http.ServeMux).HandleFunc("/core3", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(203)
 		w.Write([]byte("core3"))
 	})
+	cluster.Start()
+	defer cluster.Cleanup()
 
-	cores := TestCluster(t, []http.Handler{handler1, handler2, handler3}, nil, true)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
-
-	root := cores[0].Root
+	root := cluster.RootToken
 
 	// Wait for core to become active
 	TestWaitActive(t, cores[0].Core)
 
 	// Test forwarding a request. Since we're going directly from core to core
 	// with no fallback we know that if it worked, request handling is working
-	testCluster_ForwardRequests(t, cores[1], "core1")
-	testCluster_ForwardRequests(t, cores[2], "core1")
+	testCluster_ForwardRequests(t, cores[1], root, "core1")
+	testCluster_ForwardRequests(t, cores[2], root, "core1")
 
 	//
 	// Now we do a bunch of round-robining. The point is to make sure that as
@@ -245,8 +242,8 @@ func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
 	})
 	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[1].Core)
-	testCluster_ForwardRequests(t, cores[0], "core2")
-	testCluster_ForwardRequests(t, cores[2], "core2")
+	testCluster_ForwardRequests(t, cores[0], root, "core2")
+	testCluster_ForwardRequests(t, cores[2], root, "core2")
 
 	// Ensure active core is cores[2] and test
 	err = cores[1].StepDown(&logical.Request{
@@ -265,8 +262,8 @@ func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
 	})
 	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[2].Core)
-	testCluster_ForwardRequests(t, cores[0], "core3")
-	testCluster_ForwardRequests(t, cores[1], "core3")
+	testCluster_ForwardRequests(t, cores[0], root, "core3")
+	testCluster_ForwardRequests(t, cores[1], root, "core3")
 
 	// Ensure active core is cores[0] and test
 	err = cores[2].StepDown(&logical.Request{
@@ -285,8 +282,8 @@ func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
 	})
 	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[0].Core)
-	testCluster_ForwardRequests(t, cores[1], "core1")
-	testCluster_ForwardRequests(t, cores[2], "core1")
+	testCluster_ForwardRequests(t, cores[1], root, "core1")
+	testCluster_ForwardRequests(t, cores[2], root, "core1")
 
 	// Ensure active core is cores[1] and test
 	err = cores[0].StepDown(&logical.Request{
@@ -305,8 +302,8 @@ func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
 	})
 	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[1].Core)
-	testCluster_ForwardRequests(t, cores[0], "core2")
-	testCluster_ForwardRequests(t, cores[2], "core2")
+	testCluster_ForwardRequests(t, cores[0], root, "core2")
+	testCluster_ForwardRequests(t, cores[2], root, "core2")
 
 	// Ensure active core is cores[2] and test
 	err = cores[1].StepDown(&logical.Request{
@@ -325,11 +322,11 @@ func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
 	})
 	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[2].Core)
-	testCluster_ForwardRequests(t, cores[0], "core3")
-	testCluster_ForwardRequests(t, cores[1], "core3")
+	testCluster_ForwardRequests(t, cores[0], root, "core3")
+	testCluster_ForwardRequests(t, cores[1], root, "core3")
 }
 
-func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, remoteCoreID string) {
+func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, remoteCoreID string) {
 	standby, err := c.Standby()
 	if err != nil {
 		t.Fatal(err)
@@ -339,7 +336,7 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, remoteCoreID 
 	}
 
 	// We need to call Leader as that refreshes the connection info
-	isLeader, _, err := c.Leader()
+	isLeader, _, _, err := c.Leader()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,7 +349,7 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, remoteCoreID 
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Add("X-Vault-Token", c.Root)
+	req.Header.Add("X-Vault-Token", rootToken)
 
 	statusCode, header, respBytes, err := c.ForwardRequest(req)
 	if err != nil {
@@ -384,5 +381,39 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, remoteCoreID 
 		if statusCode != 203 {
 			t.Fatal("bad response")
 		}
+	}
+}
+
+func TestCluster_CustomCipherSuites(t *testing.T) {
+	cluster := NewTestCluster(t, &CoreConfig{
+		ClusterCipherSuites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+	}, nil)
+	cluster.Start()
+	defer cluster.Cleanup()
+	core := cluster.Cores[0]
+
+	// Wait for core to become active
+	TestWaitActive(t, core.Core)
+
+	tlsConf, err := core.Core.ClusterTLSConfig(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", core.Listeners[0].Address.IP.String(), core.Listeners[0].Address.Port+105), tlsConf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	err = conn.Handshake()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if conn.ConnectionState().CipherSuite != tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 {
+		var availCiphers string
+		for _, cipher := range core.clusterCipherSuites {
+			availCiphers += fmt.Sprintf("%x ", cipher)
+		}
+		t.Fatalf("got bad negotiated cipher %x, core-set suites are %s", conn.ConnectionState().CipherSuite, availCiphers)
 	}
 }

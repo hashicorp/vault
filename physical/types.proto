@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/physical";
+
+package physical;
+
+message SealWrapEntry {
+    bytes ciphertext = 1;
+
+    bytes iv  = 2;
+
+    bytes hmac = 3;
+
+    bool wrapped = 4;
+}

@@ -1,0 +1,78 @@
+.list-pagination {
+  @extend .has-slim-padding;
+  position: relative;
+  top: 1px;
+  background-color: $grey-lighter;
+  margin-bottom: $size-4;
+
+  a {
+    text-decoration: none;
+    height: 1.5rem;
+    min-width: 1.5rem;
+    border: none;
+  }
+  a.pagination-link {
+    width: 3ch;
+  }
+  a:not(.is-current):hover {
+    text-decoration: underline;
+    color: $blue;
+  }
+  a.is-current {
+    background-color: $grey;
+  }
+  .pagination {
+    justify-content: center;
+  }
+  .pagination-list {
+    flex-grow: 0;
+  }
+  .pagination-ellipsis {
+    margin: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+.list-pagination .pagination-previous,
+.list-pagination .pagination-next {
+  @extend .button;
+  @extend .is-primary;
+  @extend .is-outlined;
+  @extend .is-compact;
+  background: $white;
+  max-width: 8rem;
+
+  @include until($tablet) {
+    max-width: 2rem;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .pagination-next-label,
+  .pagination-previous-label {
+    @include until($tablet) {
+      display: none;
+    }
+  }
+
+  .icon {
+    height: 1em;
+    width: 1em;
+    vertical-align: middle;
+
+    &:last-child:not(:first-child),
+    &:first-child:not(:last-child) {
+      margin: -0.1em 0 0;
+    }
+  }
+
+  .button .icon {
+    margin: 0;
+  }
+}
+
+.list-pagination .pagination-next {
+  @include until($tablet) {
+    order: 3;
+  }
+}

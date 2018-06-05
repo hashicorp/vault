@@ -36,6 +36,21 @@ type Signer interface {
 	PublicKeyAlgo() PublicKeyAlgorithm
 }
 
+// RevocationKey represents designated revoker packet. See RFC 4880
+// section 5.2.3.15 for details.
+type RevocationKey struct {
+	Class         byte
+	PublicKeyAlgo PublicKeyAlgorithm
+	Fingerprint   []byte
+}
+
+// KeyFlagBits holds boolean whether any usage flags were provided in
+// the signature and BitField with KeyFlag* flags.
+type KeyFlagBits struct {
+	Valid    bool
+	BitField byte
+}
+
 // Signature represents a signature. See RFC 4880, section 5.2.
 type Signature struct {
 	SigType    SignatureType
@@ -96,6 +111,11 @@ type Signature struct {
 	// when appearing in WoT-style cross signatures. But it should prevent a signature
 	// from being applied to a primary or subkey.
 	StubbedOutCriticalError error
+
+	// DesignaterRevoker will be present if this signature certifies a
+	// designated revoking key id (3rd party key that can sign
+	// revocation for this key).
+	DesignatedRevoker *RevocationKey
 
 	outSubpackets []outputSubpacket
 }
@@ -224,6 +244,7 @@ const (
 	regularExpressionSubpacket   signatureSubpacketType = 6
 	keyExpirationSubpacket       signatureSubpacketType = 9
 	prefSymmetricAlgosSubpacket  signatureSubpacketType = 11
+	revocationKey                signatureSubpacketType = 12
 	issuerSubpacket              signatureSubpacketType = 16
 	prefHashAlgosSubpacket       signatureSubpacketType = 21
 	prefCompressionSubpacket     signatureSubpacketType = 22
@@ -363,18 +384,20 @@ func parseSignatureSubpacket(sig *Signature, subpacket []byte, isHashed bool) (r
 			err = errors.StructuralError("empty key flags subpacket")
 			return
 		}
-		sig.FlagsValid = true
-		if subpacket[0]&KeyFlagCertify != 0 {
-			sig.FlagCertify = true
-		}
-		if subpacket[0]&KeyFlagSign != 0 {
-			sig.FlagSign = true
-		}
-		if subpacket[0]&KeyFlagEncryptCommunications != 0 {
-			sig.FlagEncryptCommunications = true
-		}
-		if subpacket[0]&KeyFlagEncryptStorage != 0 {
-			sig.FlagEncryptStorage = true
+		if subpacket[0] != 0 {
+			sig.FlagsValid = true
+			if subpacket[0]&KeyFlagCertify != 0 {
+				sig.FlagCertify = true
+			}
+			if subpacket[0]&KeyFlagSign != 0 {
+				sig.FlagSign = true
+			}
+			if subpacket[0]&KeyFlagEncryptCommunications != 0 {
+				sig.FlagEncryptCommunications = true
+			}
+			if subpacket[0]&KeyFlagEncryptStorage != 0 {
+				sig.FlagEncryptStorage = true
+			}
 		}
 	case reasonForRevocationSubpacket:
 		// Reason For Revocation, section 5.2.3.23
@@ -426,6 +449,18 @@ func parseSignatureSubpacket(sig *Signature, subpacket []byte, isHashed bool) (r
 		// The first byte is how many bytes the fingerprint is, but we'll just
 		// read until the end of the subpacket, so we'll ignore it.
 		sig.IssuerFingerprint = append([]byte{}, subpacket[1:]...)
+	case revocationKey:
+		// Authorizes the specified key to issue revocation signatures
+		// for a key.
+
+		// TODO: Class octet must have bit 0x80 set. If the bit 0x40
+		// is set, then this means that the revocation information is
+		// sensitive.
+		sig.DesignatedRevoker = &RevocationKey{
+			Class:         subpacket[0],
+			PublicKeyAlgo: PublicKeyAlgorithm(subpacket[1]),
+			Fingerprint:   append([]byte{}, subpacket[2:]...),
+		}
 	default:
 		if isCritical {
 			err = errors.UnsupportedError("unknown critical signature subpacket type " + strconv.Itoa(int(packetType)))
@@ -772,20 +807,7 @@ func (sig *Signature) buildSubpackets() (subpackets []outputSubpacket) {
 	// Key flags may only appear in self-signatures or certification signatures.
 
 	if sig.FlagsValid {
-		var flags byte
-		if sig.FlagCertify {
-			flags |= KeyFlagCertify
-		}
-		if sig.FlagSign {
-			flags |= KeyFlagSign
-		}
-		if sig.FlagEncryptCommunications {
-			flags |= KeyFlagEncryptCommunications
-		}
-		if sig.FlagEncryptStorage {
-			flags |= KeyFlagEncryptStorage
-		}
-		subpackets = append(subpackets, outputSubpacket{true, keyFlagsSubpacket, false, []byte{flags}})
+		subpackets = append(subpackets, outputSubpacket{true, keyFlagsSubpacket, false, []byte{sig.GetKeyFlags().BitField}})
 	}
 
 	// The following subpackets may only appear in self-signatures
@@ -813,4 +835,48 @@ func (sig *Signature) buildSubpackets() (subpackets []outputSubpacket) {
 	}
 
 	return
+}
+
+func (sig *Signature) GetKeyFlags() (ret KeyFlagBits) {
+	if !sig.FlagsValid {
+		return ret
+	}
+
+	ret.Valid = true
+	if sig.FlagCertify {
+		ret.BitField |= KeyFlagCertify
+	}
+	if sig.FlagSign {
+		ret.BitField |= KeyFlagSign
+	}
+	if sig.FlagEncryptCommunications {
+		ret.BitField |= KeyFlagEncryptCommunications
+	}
+	if sig.FlagEncryptStorage {
+		ret.BitField |= KeyFlagEncryptStorage
+	}
+	return ret
+}
+
+func (f *KeyFlagBits) HasFlagCertify() bool {
+	return f.BitField&KeyFlagCertify != 0
+}
+
+func (f *KeyFlagBits) HasFlagSign() bool {
+	return f.BitField&KeyFlagSign != 0
+}
+
+func (f *KeyFlagBits) HasFlagEncryptCommunications() bool {
+	return f.BitField&KeyFlagEncryptCommunications != 0
+}
+
+func (f *KeyFlagBits) HasFlagEncryptStorage() bool {
+	return f.BitField&KeyFlagEncryptStorage != 0
+}
+
+func (f *KeyFlagBits) Merge(other KeyFlagBits) {
+	if other.Valid {
+		f.Valid = true
+		f.BitField |= other.BitField
+	}
 }

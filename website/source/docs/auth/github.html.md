@@ -1,52 +1,60 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: GitHub"
+page_title: "GitHub - Auth Methods"
 sidebar_current: "docs-auth-github"
 description: |-
-  The GitHub auth backend allows authentication with Vault using GitHub.
+  The GitHub auth method allows authentication with Vault using GitHub.
 ---
 
-# Auth Backend: GitHub
+# GitHub Auth Method
 
-Name: `github`
-
-The GitHub auth backend can be used to authenticate with Vault using a GitHub
+The `github` auth method can be used to authenticate with Vault using a GitHub
 personal access token. This method of authentication is most useful for humans:
 operators or developers using Vault directly via the CLI.
 
+~> **IMPORTANT NOTE:** Vault does not support an OAuth workflow to generate
+GitHub tokens, so does not act as a GitHub application. As a result, this method
+uses personal access tokens. An important consequence is that any valid GitHub
+access token with the `read:org` scope can be used for authentication. If such a
+token is stolen from a third party service, and the attacker is able to make
+network calls to Vault, they will be able to log in as the user that generated
+the access token. When using this method it is a good idea to ensure that access
+to Vault is restricted at a network level rather than public. If these risks are
+unacceptable to you, you should use a different method.
+
 ## Authentication
 
-#### Via the CLI
+### Via the CLI
 
+The default path is `/github`. If this auth method was enabled at a different
+path, specify `-path=/my-path` in the CLI.
+
+```text
+$ vault login -method=github token="MY_TOKEN"
 ```
-$ vault auth -method=github token=<api token>
-...
-```
 
-#### Via the API
+### Via the API
 
-The endpoint for the GitHub login is `auth/github/login`. 
-
-The `github` mountpoint value in the url is the default mountpoint value.
-If you have mounted the `github` backend with a different mountpoint, use that value.
-
-The `token` should be sent in the POST body encoded as JSON.
+The default endpoint is `auth/github/login`. If this auth method was enabled
+at a different path, use that value instead of `github`.
 
 ```shell
-$ curl $VAULT_ADDR/v1/auth/github/login \
-    -d '{ "token": "your_github_personal_access_token" }'
+$ curl \
+    --request POST \
+    --data '{"token": "MY_TOKEN"}' \
+    http://127.0.0.1:8200/v1/auth/github/login
 ```
 
-The response will be in JSON. For example:
+The response will contain a token at `auth.client_token`:
 
-```javascript
+```json
 {
   "auth": {
     "renewable": true,
     "lease_duration": 2764800,
     "metadata": {
-      "username": "vishalnayak",
-      "org": "hashicorp"
+      "username": "my-user",
+      "org": "my-org"
     },
     "policies": [
       "default",
@@ -54,97 +62,56 @@ The response will be in JSON. For example:
     ],
     "accessor": "f93c4b2d-18b6-2b50-7a32-0fecf88237b8",
     "client_token": "1977fceb-3bfa-6c71-4d1f-b64af98ac018"
-  },
-  "warnings": null,
-  "wrap_info": null,
-  "data": null,
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": "",
-  "request_id": "3c346f3b-e089-39ab-a953-a349f2284e3c"
+  }
 }
 ```
 
 ## Configuration
 
-First, you must enable the GitHub auth backend:
+Auth methods must be configured in advance before users or machines can
+authenticate. These steps are usually completed by an operator or configuration
+management tool.
 
-```
-$ vault auth-enable github
-Successfully enabled 'github' at 'github'!
-```
+1. Enable the GitHub auth method:
 
-Now when you run `vault auth -methods`, the GitHub backend is available:
+    ```text
+    $ vault auth enable github
+    ```
 
-```
-Path       Type      Description
-github/    github
-token/     token     token based credentials
-```
+1. Use the `/config` endpoint to configure Vault to talk to GitHub.
 
-Prior to using the GitHub auth backend, it must be configured. To
-configure it, use the `/config` endpoint with the following arguments:
+    ```text
+    $ vault write auth/github/config organization=hashicorp
+    ```
 
-  * `organization` (string, required) - The organization name a user must
-     be a part of to authenticate.
-  * `base_url` (string, optional) - For GitHub Enterprise or other API-compatible
-     servers, the base URL to access the server.
-  * `max_ttl` (string, optional) - Maximum duration after which authentication will be expired.
-     This must be a string in a format parsable by Go's [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration)
-  * `ttl` (string, optional) - Duration after which authentication will be expired.
-     This must be a string in a format parsable by Go's [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration)
+    For the complete list of configuration options, please see the API
+    documentation.
 
-###Generate a GitHub Personal Access Token
-Access your Personal Access Tokens in GitHub at [https://github.com/settings/tokens](https://github.com/settings/tokens).
-Generate a new Token that has the scope `read:org`. Save the generated token. This is what you will provide to vault.
+1. Map the users/teams of that GitHub organization to policies in Vault. Team
+   names must be "slugified":
 
-For example:
+    ```text
+    $ vault write auth/github/map/teams/dev value=dev-policy
+    ```
 
-```
-$ vault write auth/github/config organization=hashicorp
-Success! Data written to: auth/github/config
-```
+    In this example, when members of the team "dev" in the organization
+    "hashicorp" authenticate to Vault using a GitHub personal access token, they
+    will be given a token with the "dev-policy" policy attached.
 
-After configuring that, you must map the teams of that organization to
-policies within Vault. Use the `map/teams/<team>` endpoints to do that.
-Team names must be slugified, so if your team name is: `Some Amazing Team`, 
-you will need to include it as: `some-amazing-team`. 
-Example:
+    ---
 
-```
-$ vault write auth/github/map/teams/dev value=dev-policy
-Success! Data written to: auth/github/map/teams/dev
-```
+    You can also create mappings for a specific user `map/users/<user>`
+    endpoint:
 
-The above would make anyone in the `dev` team receive tokens with the policy
-`dev-policy`.
+    ```text
+    $ vault write auth/github/map/users/sethvargo value=sethvargo-policy
+    ```
 
-You can then auth with a user that is a member of the `dev` team using a
-Personal Access Token with the `read:org` scope.
+    In this example, a user with the GitHub username `sethvargo` will be
+    assigned the `sethvargo-policy` policy **in addition to** any team policies.
 
-You can also create mappings for specific users in a similar fashion with the 
-`map/users/<user>` endpoint.
-Example:
+## API
 
-```
-$ vault write auth/github/map/users/user1 value=user1-policy
-Success! Data written to: auth/github/map/teams/user1
-```
-
-Now a user with GitHub username `user1` will be assigned the `user1-policy` on authentication, 
-in addition to any team policies.
-
-GitHub token can also be supplied from the env variable `VAULT_AUTH_GITHUB_TOKEN`.
-
-```
-$ vault auth -method=github token=000000905b381e723b3d6a7d52f148a5d43c4b45
-Successfully authenticated! You are now logged in.
-The token below is already saved in the session. You do not
-need to "vault auth" again with the token.
-token: 0d9ab511-bc25-4fb6-a58b-94ce12b8da9c
-token_duration: 2764800
-token_policies: [default dev-policy]
-```
-
-Clients can use this token to perform an allowed set of operations on all the
-paths contained by the policy set.
+The GitHub auth method has a full HTTP API. Please see the
+[GitHub Auth API](/api/auth/github/index.html) for more
+details.

@@ -1,0 +1,53 @@
+<div class="level-left is-flex-1">
+  <div>
+    {{#if (and (eq mode 'performance') (not version.hasPerfReplication))}}
+      <p>
+        Performance Replication is a feature of Vault Enterprise Premium.
+      </p>
+      <p class="has-text-centered">
+        {{#upgrade-link linkClass="button is-ghost has-icon-right" pageName="Performance Replication"}}
+          Learn more
+          {{i-con glyph="chevron-right"}}
+        {{/upgrade-link}}
+      </p>
+    {{else if replicationEnabled}}
+      <h5 class="title is-7 is-uppercase is-marginless">
+        Enabled
+      </h5>
+      <span class="has-text-grey">
+        {{capitalize modeForUrl}}
+      </span>
+      {{#if secondaryId}}
+        <span class="tag">
+          <code>
+            {{secondaryId}}
+          </code>
+        </span>
+      {{/if}}
+      <span class="tag">
+        <code>
+          {{clusterIdDisplay}}
+        </code>
+      </span>
+    {{else}}
+      <p class="help has-text-grey-dark">
+        {{#if (eq mode 'dr')}}
+          DR is designed to protect against catastrophic failure of entire clusters. Secondaries do not forward service requests (until they are elected and become a new primary).
+        {{else}}
+          Performance replication scales workloads horizontally across clusters to make requests faster. Local secondaries handle read requests but forward writes to the primary to be handled.
+        {{/if}}
+      </p>
+    {{/if}}
+  </div>
+</div>
+<div class="level-right">
+  {{#if replicationDisabled}}
+    <a href="{{href-to 'vault.cluster.replication.mode.index' cluster.name mode}}" class="button is-primary">
+      Enable
+    </a>
+  {{else if (eq mode 'dr')}}
+    {{cluster.drReplicationStateDisplay}}
+  {{else if (eq mode 'performance')}}
+    {{cluster.perfReplicationStateDisplay}}
+  {{/if}}
+</div>

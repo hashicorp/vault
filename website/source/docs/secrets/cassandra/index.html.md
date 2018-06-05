@@ -1,16 +1,19 @@
 ---
 layout: "docs"
-page_title: "Cassandra Secret Backend"
+page_title: "Cassandra - Secrets Engines"
 sidebar_current: "docs-secrets-cassandra"
 description: |-
-  The Cassandra secret backend for Vault generates database credentials to access Cassandra.
+  The Cassandra secrets engine for Vault generates database credentials to access Cassandra.
 ---
 
-# Cassandra Secret Backend
+# Cassandra Secrets Engine
 
-Name: `cassandra`
+~> **Deprecation Note:** This secrets engine is deprecated in favor of the
+combined databases secrets engine added in v0.7.1. See the documentation for
+the new implementation of this secrets engine at
+[Cassandra database plugin](/docs/secrets/databases/cassandra.html).
 
-The Cassandra secret backend for Vault generates database credentials
+The Cassandra secrets engine for Vault generates database credentials
 dynamically based on configured roles. This means that services that need
 to access a database no longer need to hardcode credentials: they can request
 them from Vault, and use Vault's leasing mechanism to more easily roll keys.
@@ -20,17 +23,17 @@ the database with unique credentials, it makes auditing much easier when
 questionable data access is discovered: you can track it down to the specific
 instance of a service based on the Cassandra username.
 
-This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault path-help` after mounting the backend.
+This page will show a quick start for this secrets engine. For detailed documentation
+on every path, use `vault path-help` after mounting the secrets engine.
 
 ## Quick Start
 
-The first step to using the Cassandra backend is to mount it.
-Unlike the `generic` backend, the `cassandra` backend is not mounted by default.
+The first step to using the Cassandra secrets engine is to mount it. Unlike the
+`kv` secrets engine, the `cassandra` secrets engine is not mounted by default.
 
 ```text
-$ vault mount cassandra
-Successfully mounted 'cassandra' at 'cassandra'!
+$ vault secrets enable cassandra
+Success! Enabled the cassandra secrets engine at: cassandra/
 ```
 
 Next, Vault must be configured to connect to Cassandra. This is done by
@@ -71,12 +74,13 @@ Vault is now configured to create and manage credentials for Cassandra!
 
 ```text
 $ vault read cassandra/creds/readonly
-Key           	Value
-lease_id       	cassandra/creds/test/7a23e890-3a26-531d-529b-92d18d1fa63f
-lease_duration 	3600
-lease_renewable	true
-password       	dfa80eea-ccbe-b228-ebf7-e2f62b245e71
-username       	vault-root-1434647667-9313
+Key                Value
+---                -----
+lease_id           cassandra/creds/test/7a23e890-3a26-531d-529b-92d18d1fa63f
+lease_duration     3600
+lease_renewable    true
+password           dfa80eea-ccbe-b228-ebf7-e2f62b245e71
+username           vault-root-1434647667-9313
 ```
 
 By reading from the `creds/readonly` path, Vault has generated a new
@@ -84,7 +88,7 @@ set of credentials using the `readonly` role configuration. Here we
 see the dynamically generated username and password, along with a one
 hour lease.
 
-Using ACLs, it is possible to restrict using the `cassandra` backend such
+Using ACLs, it is possible to restrict using the `cassandra` secrets engine such
 that trusted operators can manage the role definitions, and both
 users and applications are restricted in the credentials they are
 allowed to read.
@@ -94,6 +98,6 @@ subpath for interactive help output.
 
 ## API
 
-The Cassandra secret backend has a full HTTP API. Please see the
-[Cassandra secret backend API](/api/secret/cassandra/index.html) for more
+The Cassandra secrets engine has a full HTTP API. Please see the
+[Cassandra secrets engine API](/api/secret/cassandra/index.html) for more
 details.

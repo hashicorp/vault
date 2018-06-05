@@ -66,8 +66,8 @@ func WithWaiterRequestOptions(opts ...Option) WaiterOption {
 	}
 }
 
-// A Waiter provides the functionality to performing blocking call which will
-// wait for an resource state to be satisfied a service.
+// A Waiter provides the functionality to perform a blocking call which will
+// wait for a resource state to be satisfied by a service.
 //
 // This type should not be used directly. The API operations provided in the
 // service packages prefixed with "WaitUntil" should be used instead.
@@ -79,8 +79,9 @@ type Waiter struct {
 	MaxAttempts int
 	Delay       WaiterDelay
 
-	RequestOptions []Option
-	NewRequest     func([]Option) (*Request, error)
+	RequestOptions   []Option
+	NewRequest       func([]Option) (*Request, error)
+	SleepWithContext func(aws.Context, time.Duration) error
 }
 
 // ApplyOptions updates the waiter with the list of waiter options provided.
@@ -195,8 +196,15 @@ func (w Waiter) WaitWithContext(ctx aws.Context) error {
 		if sleepFn := req.Config.SleepDelay; sleepFn != nil {
 			// Support SleepDelay for backwards compatibility and testing
 			sleepFn(delay)
-		} else if err := aws.SleepWithContext(ctx, delay); err != nil {
-			return awserr.New(CanceledErrorCode, "waiter context canceled", err)
+		} else {
+			sleepCtxFn := w.SleepWithContext
+			if sleepCtxFn == nil {
+				sleepCtxFn = aws.SleepWithContext
+			}
+
+			if err := sleepCtxFn(ctx, delay); err != nil {
+				return awserr.New(CanceledErrorCode, "waiter context canceled", err)
+			}
 		}
 	}
 

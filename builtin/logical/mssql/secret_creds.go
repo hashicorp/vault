@@ -1,9 +1,12 @@
 package mssql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -30,10 +33,9 @@ func secretCreds(b *backend) *framework.Secret {
 	}
 }
 
-func (b *backend) secretCredsRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the lease information
-	leaseConfig, err := b.LeaseConfig(req.Storage)
+	leaseConfig, err := b.LeaseConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -41,12 +43,13 @@ func (b *backend) secretCredsRenew(
 		leaseConfig = &configLease{}
 	}
 
-	f := framework.LeaseExtend(leaseConfig.TTL, leaseConfig.TTLMax, b.System())
-	return f(req, d)
+	resp := &logical.Response{Secret: req.Secret}
+	resp.Secret.TTL = leaseConfig.TTL
+	resp.Secret.MaxTTL = leaseConfig.TTLMax
+	return resp, nil
 }
 
-func (b *backend) secretCredsRevoke(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
@@ -55,7 +58,7 @@ func (b *backend) secretCredsRevoke(
 	username, ok := usernameRaw.(string)
 
 	// Get our connection
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -128,24 +131,19 @@ func (b *backend) secretCredsRevoke(
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revokeStmts {
-		stmt, err := db.Prepare(query)
-		if err != nil {
+
+		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 			continue
-		}
-		defer stmt.Close()
-		_, err = stmt.Exec()
-		if err != nil {
-			lastStmtError = err
 		}
 	}
 
 	// can't drop if not all database users are dropped
 	if rows.Err() != nil {
-		return nil, fmt.Errorf("cound not generate sql statements for all rows: %s", rows.Err())
+		return nil, errwrap.Wrapf("could not generate sql statements for all rows: {{err}}", rows.Err())
 	}
 	if lastStmtError != nil {
-		return nil, fmt.Errorf("could not perform all sql statements: %s", lastStmtError)
+		return nil, errwrap.Wrapf("could not perform all sql statements: {{err}}", lastStmtError)
 	}
 
 	// Drop this login

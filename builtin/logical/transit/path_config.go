@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -19,12 +20,31 @@ func (b *backend) pathConfig() *framework.Path {
 			"min_decryption_version": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `If set, the minimum version of the key allowed
-to be decrypted.`,
+to be decrypted. For signing keys, the minimum
+version allowed to be used for verification.`,
+			},
+
+			"min_encryption_version": &framework.FieldSchema{
+				Type: framework.TypeInt,
+				Description: `If set, the minimum version of the key allowed
+to be used for encryption; or for signing keys,
+to be used for signing. If set to zero, only
+the latest version of the key is allowed.`,
 			},
 
 			"deletion_allowed": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: "Whether to allow deletion of the key",
+			},
+
+			"exportable": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: `Enables export of the key. Once set, this cannot be disabled.`,
+			},
+
+			"allow_plaintext_backup": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: `Enables taking a backup of the named key in plaintext format. Once set, this cannot be disabled.`,
 			},
 		},
 
@@ -37,12 +57,11 @@ to be decrypted.`,
 	}
 }
 
-func (b *backend) pathConfigWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	// Check if the policy already exists before we lock everything
-	p, lock, err := b.lm.GetPolicyExclusive(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyExclusive(ctx, req.Storage, name)
 	if lock != nil {
 		defer lock.Unlock()
 	}
@@ -72,8 +91,7 @@ func (b *backend) pathConfigWrite(
 			resp.AddWarning("since Vault 0.3, transit key numbering starts at 1; forcing minimum to 1")
 		}
 
-		if minDecryptionVersion > 0 &&
-			minDecryptionVersion != p.MinDecryptionVersion {
+		if minDecryptionVersion != p.MinDecryptionVersion {
 			if minDecryptionVersion > p.LatestVersion {
 				return logical.ErrorResponse(
 					fmt.Sprintf("cannot set min decryption version of %d, latest key version is %d", minDecryptionVersion, p.LatestVersion)), nil
@@ -81,6 +99,32 @@ func (b *backend) pathConfigWrite(
 			p.MinDecryptionVersion = minDecryptionVersion
 			persistNeeded = true
 		}
+	}
+
+	minEncryptionVersionRaw, ok := d.GetOk("min_encryption_version")
+	if ok {
+		minEncryptionVersion := minEncryptionVersionRaw.(int)
+
+		if minEncryptionVersion < 0 {
+			return logical.ErrorResponse("min encryption version cannot be negative"), nil
+		}
+
+		if minEncryptionVersion != p.MinEncryptionVersion {
+			if minEncryptionVersion > p.LatestVersion {
+				return logical.ErrorResponse(
+					fmt.Sprintf("cannot set min encryption version of %d, latest key version is %d", minEncryptionVersion, p.LatestVersion)), nil
+			}
+			p.MinEncryptionVersion = minEncryptionVersion
+			persistNeeded = true
+		}
+	}
+
+	// Check here to get the final picture after the logic on each
+	// individually. MinDecryptionVersion will always be 1 or above.
+	if p.MinEncryptionVersion > 0 &&
+		p.MinEncryptionVersion < p.MinDecryptionVersion {
+		return logical.ErrorResponse(
+			fmt.Sprintf("cannot set min encryption/decryption values; min encryption version of %d must be greater than or equal to min decryption version of %d", p.MinEncryptionVersion, p.MinDecryptionVersion)), nil
 	}
 
 	allowDeletionInt, ok := d.GetOk("deletion_allowed")
@@ -100,15 +144,35 @@ func (b *backend) pathConfigWrite(
 		persistNeeded = true
 	}
 
+	exportableRaw, ok := d.GetOk("exportable")
+	if ok {
+		exportable := exportableRaw.(bool)
+		// Don't unset the already set value
+		if exportable && !p.Exportable {
+			p.Exportable = exportable
+			persistNeeded = true
+		}
+	}
+
+	allowPlaintextBackupRaw, ok := d.GetOk("allow_plaintext_backup")
+	if ok {
+		allowPlaintextBackup := allowPlaintextBackupRaw.(bool)
+		// Don't unset the already set value
+		if allowPlaintextBackup && !p.AllowPlaintextBackup {
+			p.AllowPlaintextBackup = allowPlaintextBackup
+			persistNeeded = true
+		}
+	}
+
 	if !persistNeeded {
 		return nil, nil
 	}
 
-	if len(resp.Warnings()) == 0 {
-		return nil, p.Persist(req.Storage)
+	if len(resp.Warnings) == 0 {
+		return nil, p.Persist(ctx, req.Storage)
 	}
 
-	return resp, p.Persist(req.Storage)
+	return resp, p.Persist(ctx, req.Storage)
 }
 
 const pathConfigHelpSyn = `Configure a named encryption key`
@@ -116,5 +180,5 @@ const pathConfigHelpSyn = `Configure a named encryption key`
 const pathConfigHelpDesc = `
 This path is used to configure the named key. Currently, this
 supports adjusting the minimum version of the key allowed to
-be used for decryption via the min_decryption_version paramter.
+be used for decryption via the min_decryption_version parameter.
 `

@@ -1,6 +1,6 @@
 ---
 layout: "intro"
-page_title: "Starting the Server"
+page_title: "Starting the Server - Getting Started"
 sidebar_current: "gettingstarted-devserver"
 description: |-
   After installing Vault, the next step is to start the server.
@@ -10,72 +10,66 @@ description: |-
 
 With Vault installed, the next step is to start a Vault server.
 
-Vault operates as a client/server application. The Vault server is the
-only piece of the Vault architecture that interacts with the data
-storage and backends. All operations done via the Vault CLI interact
-with the server over a TLS connection.
+Vault operates as a client/server application. The Vault server is the only
+piece of the Vault architecture that interacts with the data storage and
+backends. All operations done via the Vault CLI interact with the server over a
+TLS connection.
 
-In this page, we'll start and interact with the Vault server to understand
-how the server is started.
+In this page, we'll start and interact with the Vault server to understand how
+the server is started.
 
 ## Starting the Dev Server
 
-First, we're going to start a Vault _dev server_. The dev server
-is a built-in, pre-configured server that is not very
-secure but useful for playing with Vault locally. Later in this guide
-we'll configure and start a real server.
+First, we're going to start a Vault _dev server_. The dev server is a built-in,
+pre-configured server that is not very secure but useful for playing with Vault
+locally. Later in this guide we'll configure and start a real server.
 
 To start the Vault dev server, run:
 
-```
+```text
 $ vault server -dev
-WARNING: Dev mode is enabled!
-
-In this mode, Vault is completely in-memory and unsealed.
-Vault is configured to only have a single unseal key. The root
-token has already been authenticated with the CLI, so you can
-immediately begin using the Vault CLI.
-
-The only step you need to take is to set the following
-environment variable since Vault will be talking without TLS:
-
-    export VAULT_ADDR='http://127.0.0.1:8200'
-
-The unseal key and root token are reproduced below in case you
-want to seal/unseal the Vault or play with authentication.
-
-Unseal Key: 2252546b1a8551e8411502501719c4b3
-Root Token: 79bd8011-af5a-f147-557e-c58be4fedf6c
-
 ==> Vault server configuration:
 
-         Log Level: info
-           Backend: inmem
-        Listener 1: tcp (addr: "127.0.0.1:8200", tls: "disabled")
+                     Cgo: disabled
+         Cluster Address: https://127.0.0.1:8201
+              Listener 1: tcp (addr: "127.0.0.1:8200", cluster address: "127.0.0.1:8201", tls: "disabled")
+               Log Level: info
+                   Mlock: supported: false, enabled: false
+        Redirect Address: http://127.0.0.1:8200
+                 Storage: inmem
+                 Version: Vault v1.2.3
+             Version Sha: ...
 
-...
+WARNING! dev mode is enabled! In this mode, Vault runs entirely in-memory
+and starts unsealed with a single unseal key. The root token is already
+authenticated to the CLI, so you can immediately begin using Vault.
+
+You may need to set the following environment variable:
+
+    $ export VAULT_ADDR='http://127.0.0.1:8200'
+
+The unseal key and initial root token are displayed below in case you want to
+seal/unseal the Vault or re-authenticate.
+
+Unseal Key: 1aKM7rNnyW+7Jx1XDAXFswgkRVe+78JB28k/bel90jY=
+Root Token: root
+
+Development mode should NOT be used in production installations!
+
+==> Vault server started! Log data will stream in below:
+
+# ...
 ```
 
 You should see output similar to that above. Vault does not fork, so it will
-continue to run in the foreground; to connect to it with later commands, open
-another shell.
+continue to run in the foreground. Open another shell or terminal tab to run the
+remaining commands.
 
-As you can see, when you start a dev server, Vault warns you loudly. The dev
-server stores all its data in-memory (but still encrypted), listens on
+The dev server stores all its data in-memory (but still encrypted), listens on
 `localhost` without TLS, and automatically unseals and shows you the unseal key
-and root access key.  We'll go over what all this means shortly.
+and root access key. **Do not run a dev server in production!**
 
-The important thing about the dev server is that it is meant for
-development only.
-
--> **Note:** Do not run the dev server in production.
-
-Even if the dev server was run in production, it wouldn't be very useful
-since it stores data in-memory and every restart would clear all your
-secrets.
-
-With the dev server running, do the following three things before anything
-else:
+With the dev server running, do the following three things before anything else:
 
   1. Launch a new terminal session.
 
@@ -96,20 +90,22 @@ command from above properly.
 
 If it ran successfully, the output should look like the below:
 
-```
+```text
 $ vault status
-Sealed: false
-Key Shares: 1
-Key Threshold: 1
-Unseal Progress: 0
-
-High-Availability Enabled: false
+Key             Value
+---             -----
+Sealed          false
+Total Shares    1
+Version         (version unknown)
+Cluster Name    vault-cluster-81109a1a
+Cluster ID      f6e0aa8a-700e-38b8-5dc5-4265c880b2a1
+HA Enabled      false
 ```
 
-If the output looks different, especially if the numbers are different
-or the Vault is sealed, then restart the dev server and try again. The
-only reason these would ever be different is if you're running a dev
-server from going through this guide previously.
+If the output looks different, especially if the numbers are different or the
+Vault is sealed, then restart the dev server and try again. The only reason
+these would ever be different is if you're running a dev server from going
+through this guide previously.
 
 We'll cover what this output means later in the guide.
 

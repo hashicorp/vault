@@ -1,4 +1,5 @@
 // +build !race
+// The server tests have a go-metrics/exp manager race condition :(.
 
 package command
 
@@ -7,69 +8,112 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
+	"net"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/meta"
+	"github.com/hashicorp/vault/physical"
 	"github.com/mitchellh/cli"
+
+	physConsul "github.com/hashicorp/vault/physical/consul"
+	physFile "github.com/hashicorp/vault/physical/file"
 )
 
-var (
-	basehcl = `
-disable_mlock = true
+func testRandomPort(tb testing.TB) int {
+	tb.Helper()
 
-listener "tcp" {
-  address = "127.0.0.1:8200"
-  tls_disable = "true"
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+	if err != nil {
+		tb.Fatal(err)
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	defer l.Close()
+
+	return l.Addr().(*net.TCPAddr).Port
 }
-`
 
-	consulhcl = `
+func testBaseHCL(tb testing.TB) string {
+	tb.Helper()
+
+	return strings.TrimSpace(fmt.Sprintf(`
+		disable_mlock = true
+		listener "tcp" {
+		  address     = "127.0.0.1:%d"
+		  tls_disable = "true"
+		}
+	`, testRandomPort(tb)))
+}
+
+const (
+	consulHCL = `
 backend "consul" {
-    prefix = "foo/"
-    advertise_addr = "http://127.0.0.1:8200"
-    disable_registration = "true"
+  prefix               = "foo/"
+  advertise_addr       = "http://127.0.0.1:8200"
+  disable_registration = "true"
 }
 `
-	haconsulhcl = `
+	haConsulHCL = `
 ha_backend "consul" {
-    prefix = "bar/"
-    redirect_addr = "http://127.0.0.1:8200"
-    disable_registration = "true"
+  prefix               = "bar/"
+  redirect_addr        = "http://127.0.0.1:8200"
+  disable_registration = "true"
 }
 `
 
-	badhaconsulhcl = `
+	badHAConsulHCL = `
 ha_backend "file" {
-    path = "/dev/null"
+  path = "/dev/null"
 }
 `
 
-	reloadhcl = `
+	reloadHCL = `
 backend "file" {
-    path = "/dev/null"
+  path = "/dev/null"
 }
-
 disable_mlock = true
-
 listener "tcp" {
-    address = "127.0.0.1:8203"
-    tls_cert_file = "TMPDIR/reload_FILE.pem"
-    tls_key_file = "TMPDIR/reload_FILE.key"
+  address       = "127.0.0.1:8203"
+  tls_cert_file = "TMPDIR/reload_cert.pem"
+  tls_key_file  = "TMPDIR/reload_key.pem"
 }
 `
 )
 
-// The following tests have a go-metrics/exp manager race condition
+func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
+	tb.Helper()
+
+	ui := cli.NewMockUi()
+	return ui, &ServerCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+		ShutdownCh: MakeShutdownCh(),
+		SighupCh:   MakeSighupCh(),
+		PhysicalBackends: map[string]physical.Factory{
+			"file":   physFile.NewFileBackend,
+			"consul": physConsul.NewConsulBackend,
+		},
+
+		// These prevent us from random sleep guessing...
+		startedCh:  make(chan struct{}, 5),
+		reloadedCh: make(chan struct{}, 5),
+	}
+}
+
 func TestServer_ReloadListener(t *testing.T) {
+	t.Parallel()
+
 	wd, _ := os.Getwd()
 	wd += "/server/test-fixtures/reload/"
 
-	td, err := ioutil.TempDir("", fmt.Sprintf("vault-test-%d", rand.New(rand.NewSource(time.Now().Unix())).Int63))
+	td, err := ioutil.TempDir("", "vault-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,15 +123,11 @@ func TestServer_ReloadListener(t *testing.T) {
 
 	// Setup initial certs
 	inBytes, _ := ioutil.ReadFile(wd + "reload_foo.pem")
-	ioutil.WriteFile(td+"/reload_foo.pem", inBytes, 0777)
+	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0777)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_foo.key")
-	ioutil.WriteFile(td+"/reload_foo.key", inBytes, 0777)
-	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.pem")
-	ioutil.WriteFile(td+"/reload_bar.pem", inBytes, 0777)
-	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.key")
-	ioutil.WriteFile(td+"/reload_bar.key", inBytes, 0777)
+	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0777)
 
-	relhcl := strings.Replace(strings.Replace(reloadhcl, "TMPDIR", td, -1), "FILE", "foo", -1)
+	relhcl := strings.Replace(reloadHCL, "TMPDIR", td, -1)
 	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0777)
 
 	inBytes, _ = ioutil.ReadFile(wd + "reload_ca.pem")
@@ -97,14 +137,8 @@ func TestServer_ReloadListener(t *testing.T) {
 		t.Fatal("not ok when appending CA cert")
 	}
 
-	ui := new(cli.MockUi)
-	c := &ServerCommand{
-		Meta: meta.Meta{
-			Ui: ui,
-		},
-		ShutdownCh: MakeShutdownCh(),
-		SighupCh:   MakeSighupCh(),
-	}
+	ui, cmd := testServerCommand(t)
+	_ = ui
 
 	finished := false
 	finishedMutex := sync.Mutex{}
@@ -112,22 +146,15 @@ func TestServer_ReloadListener(t *testing.T) {
 	wg.Add(1)
 	args := []string{"-config", td + "/reload.hcl"}
 	go func() {
-		if code := c.Run(args); code != 0 {
-			t.Error("got a non-zero exit status")
+		if code := cmd.Run(args); code != 0 {
+			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+			t.Errorf("got a non-zero exit status: %s", output)
 		}
 		finishedMutex.Lock()
 		finished = true
 		finishedMutex.Unlock()
 		wg.Done()
 	}()
-
-	checkFinished := func() {
-		finishedMutex.Lock()
-		if finished {
-			t.Fatalf(fmt.Sprintf("finished early; relhcl was\n%s\nstdout was\n%s\nstderr was\n%s\n", relhcl, ui.OutputWriter.String(), ui.ErrorWriter.String()))
-		}
-		finishedMutex.Unlock()
-	}
 
 	testCertificateName := func(cn string) error {
 		conn, err := tls.Dial("tcp", "127.0.0.1:8203", &tls.Config{
@@ -147,27 +174,95 @@ func TestServer_ReloadListener(t *testing.T) {
 		return nil
 	}
 
-	checkFinished()
-	time.Sleep(5 * time.Second)
-	checkFinished()
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout")
+	}
 
 	if err := testCertificateName("foo.example.com"); err != nil {
 		t.Fatalf("certificate name didn't check out: %s", err)
 	}
 
-	relhcl = strings.Replace(strings.Replace(reloadhcl, "TMPDIR", td, -1), "FILE", "bar", -1)
+	relhcl = strings.Replace(reloadHCL, "TMPDIR", td, -1)
+	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.pem")
+	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0777)
+	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.key")
+	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0777)
 	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0777)
 
-	c.SighupCh <- struct{}{}
-	checkFinished()
-	time.Sleep(2 * time.Second)
-	checkFinished()
+	cmd.SighupCh <- struct{}{}
+	select {
+	case <-cmd.reloadedCh:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout")
+	}
 
 	if err := testCertificateName("bar.example.com"); err != nil {
 		t.Fatalf("certificate name didn't check out: %s", err)
 	}
 
-	c.ShutdownCh <- struct{}{}
+	cmd.ShutdownCh <- struct{}{}
 
 	wg.Wait()
+}
+
+func TestServer(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		contents string
+		exp      string
+		code     int
+	}{
+		{
+			"common_ha",
+			testBaseHCL(t) + consulHCL,
+			"(HA available)",
+			0,
+		},
+		{
+			"separate_ha",
+			testBaseHCL(t) + consulHCL + haConsulHCL,
+			"HA Storage:",
+			0,
+		},
+		{
+			"bad_separate_ha",
+			testBaseHCL(t) + consulHCL + badHAConsulHCL,
+			"Specified HA storage does not support HA",
+			1,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ui, cmd := testServerCommand(t)
+			f, err := ioutil.TempFile("", "")
+			if err != nil {
+				t.Fatalf("error creating temp dir: %v", err)
+			}
+			f.WriteString(tc.contents)
+			f.Close()
+			defer os.Remove(f.Name())
+
+			code := cmd.Run([]string{
+				"-config", f.Name(),
+				"-test-verify-only",
+			})
+			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+			if code != tc.code {
+				t.Errorf("expected %d to be %d: %s", code, tc.code, output)
+			}
+
+			if !strings.Contains(output, tc.exp) {
+				t.Fatalf("expected %q to contain %q", output, tc.exp)
+			}
+		})
+	}
 }

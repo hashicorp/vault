@@ -1,10 +1,12 @@
 package vault
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/shamir"
 )
@@ -26,20 +28,20 @@ type InitResult struct {
 }
 
 // Initialized checks if the Vault is already initialized
-func (c *Core) Initialized() (bool, error) {
+func (c *Core) Initialized(ctx context.Context) (bool, error) {
 	// Check the barrier first
-	init, err := c.barrier.Initialized()
+	init, err := c.barrier.Initialized(ctx)
 	if err != nil {
-		c.logger.Error("core: barrier init check failed", "error", err)
+		c.logger.Error("barrier init check failed", "error", err)
 		return false, err
 	}
 	if !init {
-		c.logger.Info("core: security barrier not initialized")
+		c.logger.Info("security barrier not initialized")
 		return false, nil
 	}
 
 	// Verify the seal configuration
-	sealConf, err := c.seal.BarrierConfig()
+	sealConf, err := c.seal.BarrierConfig(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -54,7 +56,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 	// Generate a master key
 	masterKey, err := c.barrier.GenerateKey()
 	if err != nil {
-		return nil, nil, fmt.Errorf("key generation failed: %v", err)
+		return nil, nil, errwrap.Wrapf("key generation failed: {{err}}", err)
 	}
 
 	// Return the master key if only a single key part is used
@@ -65,7 +67,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 		// Split the master key using the Shamir algorithm
 		shares, err := shamir.Split(masterKey, sc.SecretShares, sc.SecretThreshold)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to generate barrier shares: %v", err)
+			return nil, nil, errwrap.Wrapf("failed to generate barrier shares: {{err}}", err)
 		}
 		unsealKeys = shares
 	}
@@ -88,7 +90,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 
 // Initialize is used to initialize the Vault with the given
 // configurations.
-func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
+func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitResult, error) {
 	barrierConfig := initParams.BarrierConfig
 	recoveryConfig := initParams.RecoveryConfig
 
@@ -103,15 +105,15 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 
 		// Check if the seal configuration is valid
 		if err := recoveryConfig.Validate(); err != nil {
-			c.logger.Error("core: invalid recovery configuration", "error", err)
-			return nil, fmt.Errorf("invalid recovery configuration: %v", err)
+			c.logger.Error("invalid recovery configuration", "error", err)
+			return nil, errwrap.Wrapf("invalid recovery configuration: {{err}}", err)
 		}
 	}
 
 	// Check if the seal configuration is valid
 	if err := barrierConfig.Validate(); err != nil {
-		c.logger.Error("core: invalid seal configuration", "error", err)
-		return nil, fmt.Errorf("invalid seal configuration: %v", err)
+		c.logger.Error("invalid seal configuration", "error", err)
+		return nil, errwrap.Wrapf("invalid seal configuration: {{err}}", err)
 	}
 
 	// Avoid an initialization race
@@ -119,7 +121,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	defer c.stateLock.Unlock()
 
 	// Check if we are initialized
-	init, err := c.Initialized()
+	init, err := c.Initialized(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -127,31 +129,31 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		return nil, ErrAlreadyInit
 	}
 
-	err = c.seal.Init()
+	err = c.seal.Init(ctx)
 	if err != nil {
-		c.logger.Error("core: failed to initialize seal", "error", err)
-		return nil, fmt.Errorf("error initializing seal: %v", err)
+		c.logger.Error("failed to initialize seal", "error", err)
+		return nil, errwrap.Wrapf("error initializing seal: {{err}}", err)
 	}
 
 	barrierKey, barrierUnsealKeys, err := c.generateShares(barrierConfig)
 	if err != nil {
-		c.logger.Error("core: error generating shares", "error", err)
+		c.logger.Error("error generating shares", "error", err)
 		return nil, err
 	}
 
 	// Initialize the barrier
-	if err := c.barrier.Initialize(barrierKey); err != nil {
-		c.logger.Error("core: failed to initialize barrier", "error", err)
-		return nil, fmt.Errorf("failed to initialize barrier: %v", err)
+	if err := c.barrier.Initialize(ctx, barrierKey); err != nil {
+		c.logger.Error("failed to initialize barrier", "error", err)
+		return nil, errwrap.Wrapf("failed to initialize barrier: {{err}}", err)
 	}
 	if c.logger.IsInfo() {
-		c.logger.Info("core: security barrier initialized", "shares", barrierConfig.SecretShares, "threshold", barrierConfig.SecretThreshold)
+		c.logger.Info("security barrier initialized", "shares", barrierConfig.SecretShares, "threshold", barrierConfig.SecretThreshold)
 	}
 
 	// Unseal the barrier
-	if err := c.barrier.Unseal(barrierKey); err != nil {
-		c.logger.Error("core: failed to unseal barrier", "error", err)
-		return nil, fmt.Errorf("failed to unseal barrier: %v", err)
+	if err := c.barrier.Unseal(ctx, barrierKey); err != nil {
+		c.logger.Error("failed to unseal barrier", "error", err)
+		return nil, errwrap.Wrapf("failed to unseal barrier: {{err}}", err)
 	}
 
 	// Ensure the barrier is re-sealed
@@ -160,14 +162,14 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		// happens before sealing. preSeal also stops, so we just make the
 		// stopping safe against multiple calls.
 		if err := c.barrier.Seal(); err != nil {
-			c.logger.Error("core: failed to seal barrier", "error", err)
+			c.logger.Error("failed to seal barrier", "error", err)
 		}
 	}()
 
-	err = c.seal.SetBarrierConfig(barrierConfig)
+	err = c.seal.SetBarrierConfig(ctx, barrierConfig)
 	if err != nil {
-		c.logger.Error("core: failed to save barrier configuration", "error", err)
-		return nil, fmt.Errorf("barrier configuration saving failed: %v", err)
+		c.logger.Error("failed to save barrier configuration", "error", err)
+		return nil, errwrap.Wrapf("barrier configuration saving failed: {{err}}", err)
 	}
 
 	// If we are storing shares, pop them out of the returned results and push
@@ -178,9 +180,9 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 			keysToStore = append(keysToStore, barrierUnsealKeys[0])
 			barrierUnsealKeys = barrierUnsealKeys[1:]
 		}
-		if err := c.seal.SetStoredKeys(keysToStore); err != nil {
-			c.logger.Error("core: failed to store keys", "error", err)
-			return nil, fmt.Errorf("failed to store keys: %v", err)
+		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
+			c.logger.Error("failed to store keys", "error", err)
+			return nil, errwrap.Wrapf("failed to store keys: {{err}}", err)
 		}
 	}
 
@@ -189,12 +191,12 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Perform initial setup
-	if err := c.setupCluster(); err != nil {
-		c.logger.Error("core: cluster setup failed during init", "error", err)
+	if err := c.setupCluster(ctx); err != nil {
+		c.logger.Error("cluster setup failed during init", "error", err)
 		return nil, err
 	}
 	if err := c.postUnseal(); err != nil {
-		c.logger.Error("core: post-unseal setup failed during init", "error", err)
+		c.logger.Error("post-unseal setup failed during init", "error", err)
 		return nil, err
 	}
 
@@ -202,20 +204,20 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	// disabled. When using recovery keys they are stored in the barrier, so
 	// this must happen post-unseal.
 	if c.seal.RecoveryKeySupported() {
-		err = c.seal.SetRecoveryConfig(recoveryConfig)
+		err = c.seal.SetRecoveryConfig(ctx, recoveryConfig)
 		if err != nil {
-			c.logger.Error("core: failed to save recovery configuration", "error", err)
-			return nil, fmt.Errorf("recovery configuration saving failed: %v", err)
+			c.logger.Error("failed to save recovery configuration", "error", err)
+			return nil, errwrap.Wrapf("recovery configuration saving failed: {{err}}", err)
 		}
 
 		if recoveryConfig.SecretShares > 0 {
 			recoveryKey, recoveryUnsealKeys, err := c.generateShares(recoveryConfig)
 			if err != nil {
-				c.logger.Error("core: failed to generate recovery shares", "error", err)
+				c.logger.Error("failed to generate recovery shares", "error", err)
 				return nil, err
 			}
 
-			err = c.seal.SetRecoveryKey(recoveryKey)
+			err = c.seal.SetRecoveryKey(ctx, recoveryKey)
 			if err != nil {
 				return nil, err
 			}
@@ -225,18 +227,18 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Generate a new root token
-	rootToken, err := c.tokenStore.rootToken()
+	rootToken, err := c.tokenStore.rootToken(ctx)
 	if err != nil {
-		c.logger.Error("core: root token generation failed", "error", err)
+		c.logger.Error("root token generation failed", "error", err)
 		return nil, err
 	}
 	results.RootToken = rootToken.ID
-	c.logger.Info("core: root token generated")
+	c.logger.Info("root token generated")
 
 	if initParams.RootTokenPGPKey != "" {
 		_, encryptedVals, err := pgpkeys.EncryptShares([][]byte{[]byte(results.RootToken)}, []string{initParams.RootTokenPGPKey})
 		if err != nil {
-			c.logger.Error("core: root token encryption failed", "error", err)
+			c.logger.Error("root token encryption failed", "error", err)
 			return nil, err
 		}
 		results.RootToken = base64.StdEncoding.EncodeToString(encryptedVals[0])
@@ -244,43 +246,44 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 
 	// Prepare to re-seal
 	if err := c.preSeal(); err != nil {
-		c.logger.Error("core: pre-seal teardown failed", "error", err)
+		c.logger.Error("pre-seal teardown failed", "error", err)
 		return nil, err
 	}
 
 	return results, nil
 }
 
-func (c *Core) UnsealWithStoredKeys() error {
+// UnsealWithStoredKeys performs auto-unseal using stored keys.
+func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	if !c.seal.StoredKeysSupported() {
 		return nil
 	}
 
 	sealed, err := c.Sealed()
 	if err != nil {
-		c.logger.Error("core: error checking sealed status in auto-unseal", "error", err)
-		return fmt.Errorf("error checking sealed status in auto-unseal: %s", err)
+		c.logger.Error("error checking sealed status in auto-unseal", "error", err)
+		return errwrap.Wrapf("error checking sealed status in auto-unseal: {{err}}", err)
 	}
 	if !sealed {
 		return nil
 	}
 
-	c.logger.Info("core: stored unseal keys supported, attempting fetch")
-	keys, err := c.seal.GetStoredKeys()
+	c.logger.Info("stored unseal keys supported, attempting fetch")
+	keys, err := c.seal.GetStoredKeys(ctx)
 	if err != nil {
-		c.logger.Error("core: fetching stored unseal keys failed", "error", err)
-		return &NonFatalError{Err: fmt.Errorf("fetching stored unseal keys failed: %v", err)}
+		c.logger.Error("fetching stored unseal keys failed", "error", err)
+		return &NonFatalError{Err: errwrap.Wrapf("fetching stored unseal keys failed: {{err}}", err)}
 	}
 	if len(keys) == 0 {
-		c.logger.Warn("core: stored unseal key(s) supported but none found")
+		c.logger.Warn("stored unseal key(s) supported but none found")
 	} else {
 		unsealed := false
 		keysUsed := 0
 		for _, key := range keys {
 			unsealed, err = c.Unseal(key)
 			if err != nil {
-				c.logger.Error("core: unseal with stored unseal key failed", "error", err)
-				return &NonFatalError{Err: fmt.Errorf("unseal with stored key failed: %v", err)}
+				c.logger.Error("unseal with stored unseal key failed", "error", err)
+				return &NonFatalError{Err: errwrap.Wrapf("unseal with stored key failed: {{err}}", err)}
 			}
 			keysUsed += 1
 			if unsealed {
@@ -289,11 +292,11 @@ func (c *Core) UnsealWithStoredKeys() error {
 		}
 		if !unsealed {
 			if c.logger.IsWarn() {
-				c.logger.Warn("core: stored unseal key(s) used but Vault not unsealed yet", "stored_keys_used", keysUsed)
+				c.logger.Warn("stored unseal key(s) used but Vault not unsealed yet", "stored_keys_used", keysUsed)
 			}
 		} else {
 			if c.logger.IsInfo() {
-				c.logger.Info("core: successfully unsealed with stored key(s)", "stored_keys_used", keysUsed)
+				c.logger.Info("successfully unsealed with stored key(s)", "stored_keys_used", keysUsed)
 			}
 		}
 	}

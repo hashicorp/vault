@@ -1,0 +1,11 @@
+.column .menu-list a {
+  border-radius: 0;
+  border-right: 0 solid transparent;
+  font-weight: $font-weight-semibold;
+
+  &:hover,
+  &.is-active {
+    color: $menu-item-active-color;
+    background-color: $menu-item-active-background-color;
+  }
+}

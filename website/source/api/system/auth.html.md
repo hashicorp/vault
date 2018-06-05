@@ -3,18 +3,18 @@ layout: "api"
 page_title: "/sys/auth - HTTP API"
 sidebar_current: "docs-http-system-auth"
 description: |-
-  The `/sys/auth` endpoint is used to manage auth backends in Vault.
+  The `/sys/auth` endpoint is used to manage auth methods in Vault.
 ---
 
 # `/sys/auth`
 
 The `/sys/auth` endpoint is used to list, create, update, and delete auth
-backends. Auth backends convert user or machine-supplied information into a
+methods. Auth methods convert user or machine-supplied information into a
 token which can be used for all future requests.
 
-## List Auth Backends
+## List Auth Methods
 
-This endpoint lists all enabled auth backends.
+This endpoint lists all enabled auth methods.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -25,7 +25,7 @@ This endpoint lists all enabled auth backends.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/auth
+    http://127.0.0.1:8200/v1/sys/auth
 ```
 
 ### Sample Response
@@ -47,13 +47,13 @@ $ curl \
 }
 ```
 
-## Mount Auth Backend
+## Enable Auth Method
 
-This endpoint enables a new auth backend. After mounting, the auth backend can
+This endpoint enables a new auth method. After enabling, the auth method can
 be accessed and configured via the auth path specified as part of the URL. This
 auth path will be nested under the `auth` prefix.
 
-For example, mounting the "foo" auth backend will make it accessible at
+For example, enable the "foo" auth method will make it accessible at
 `/auth/foo`.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
@@ -65,21 +65,51 @@ For example, mounting the "foo" auth backend will make it accessible at
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path in which to mount the auth
-  backend. This is part of the request URL.
+- `path` `(string: <required>)` – Specifies the path in which to enable the auth
+  method. This is part of the request URL.
 
 - `description` `(string: "")` – Specifies a human-friendly description of the
-  auth backend.
+  auth method.
 
 - `type` `(string: <required>)` – Specifies the name of the authentication
-  backend type, such as "github" or "token".
+  method type, such as "github" or "token".
 
-Additionally, the following options are allowed in Vault open-source, but 
+- `config` `(map<string|string>: nil)` – Specifies configuration options for
+  this auth method. These are the possible values:
+
+  - `default_lease_ttl` `(string: "")` - The default lease duration, specified
+     as a string duration like "5s" or "30m".
+
+  - `max_lease_ttl` `(string: "")` - The maximum lease duration, specified as a
+     string duration like "5s" or "30m".
+
+  - `plugin_name` `(string: "")` - The name of the plugin in the plugin catalog
+     to use.
+
+  - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
+     that will not be HMAC'd by audit devices in the request data object.
+
+  - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
+     that will not be HMAC'd by audit devices in the response data object.
+
+  - `listing_visibility` `(string: "")` - Speficies whether to show this mount
+     in the UI-specific listing endpoint.
+
+  - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
+     to whitelist and pass from the request to the backend.
+
+    The plugin_name can be provided in the config map or as a top-level option,
+    with the former taking precedence.
+
+- `plugin_name` `(string: "")` – Specifies the name of the auth plugin to
+  use based from the name in the plugin catalog. Applies only to plugin
+  methods.
+
+Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
-- `local` `(bool: false)` – Specifies if the auth backend is a local mount  
-  only. Local mounts are not replicated nor (if a secondary) removed by
-  replication.
+- `local` `(bool: false)` – Specifies if the auth method is a local only. Local
+  auth methods are not replicated nor (if a secondary) removed by replication.
 
 ### Sample Payload
 
@@ -97,12 +127,12 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/auth/my-auth
+    http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
-## Unmount Auth Backend
+## Disable Auth Method
 
-This endpoint un-mounts the auth backend at the given auth path.
+This endpoint disables the auth method at the given auth path.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
@@ -113,7 +143,7 @@ This endpoint un-mounts the auth backend at the given auth path.
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path to unmount. This is part of
+- `path` `(string: <required>)` – Specifies the path to disable. This is part of
   the request URL.
 
 ### Sample Request
@@ -122,10 +152,10 @@ This endpoint un-mounts the auth backend at the given auth path.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/auth/my-auth
+    http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
-## Read Auth Backend Tuning
+## Read Auth Method Tuning
 
 This endpoint reads the given auth path's configuration. _This endpoint requires
 `sudo` capability on the final path, but the same functionality can be achieved
@@ -147,7 +177,7 @@ without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/auth/my-auth/tune
+    http://127.0.0.1:8200/v1/sys/auth/my-auth/tune
 ```
 
 ### Sample Response
@@ -159,7 +189,7 @@ $ curl \
 }
 ```
 
-## Tune Auth Backend
+## Tune Auth Method
 
 Tune configuration parameters for a given auth path. _This endpoint
 requires `sudo` capability on the final path, but the same functionality
@@ -180,6 +210,23 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 - `max_lease_ttl` `(int: 0)` – Specifies the maximum time-to-live. If set on a
   specific auth path, this overrides the global default.
 
+- `description` `(string: "")` – Specifies the description of the mount. This
+  overrides the current stored value, if any.
+
+- `audit_non_hmac_request_keys` `(array: [])` - Specifies the comma-separated
+  list of keys that will not be HMAC'd by audit devices in the request data
+  object.
+
+- `audit_non_hmac_response_keys` `(array: [])` - Specifies the comma-separated
+  list of keys that will not be HMAC'd by audit devices in the response data
+  object.
+
+- `listing_visibility` `(string: "")` - Speficies whether to show this mount
+    in the UI-specific listing endpoint. Valid values are `"unauth"` or `""`.
+
+- `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
+    to whitelist and pass from the request to the backend.
+
 ### Sample Payload
 
 ```json
@@ -196,5 +243,5 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/auth/my-auth/tune
+    http://127.0.0.1:8200/v1/sys/auth/my-auth/tune
 ```

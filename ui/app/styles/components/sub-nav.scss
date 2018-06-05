@@ -1,0 +1,41 @@
+.sub-nav {
+  &.tabs {
+    box-shadow: inset 0 -1px 0 $grey-light;
+
+    ul {
+      border-color: transparent;
+    }
+
+    li {
+      &:focus {
+        box-shadow: none;
+      }
+      &.is-active a {
+        border-color: $blue;
+        color: $blue;
+      }
+      &:first-child a {
+        margin-left: $size-5;
+      }
+    }
+
+    a {
+      color: $grey-dark;
+      font-weight: $font-weight-semibold;
+      text-decoration: none;
+      padding: $size-6 0;
+      margin: 0 $size-4;
+      border-bottom: 2px solid transparent;
+      transition: border-color $speed;
+
+      &:hover,
+      &:active {
+        border-color: $grey-light;
+      }
+    }
+
+    .ember-basic-dropdown-trigger {
+      outline: none;
+    }
+  }
+}

@@ -17,10 +17,10 @@ import (
 )
 
 const (
-	DEFAULT_HIST_SIZE = uint16(100)
+	defaultHistSize = uint16(100)
 )
 
-var power_of_ten = [...]float64{
+var powerOfTen = [...]float64{
 	1, 10, 100, 1000, 10000, 100000, 1e+06, 1e+07, 1e+08, 1e+09, 1e+10,
 	1e+11, 1e+12, 1e+13, 1e+14, 1e+15, 1e+16, 1e+17, 1e+18, 1e+19, 1e+20,
 	1e+21, 1e+22, 1e+23, 1e+24, 1e+25, 1e+26, 1e+27, 1e+28, 1e+29, 1e+30,
@@ -51,36 +51,39 @@ var power_of_ten = [...]float64{
 }
 
 // A Bracket is a part of a cumulative distribution.
-type Bin struct {
+type bin struct {
+	count uint64
 	val   int8
 	exp   int8
-	count uint64
 }
 
-func NewBinRaw(val int8, exp int8, count uint64) *Bin {
-	return &Bin{
+func newBinRaw(val int8, exp int8, count uint64) *bin {
+	return &bin{
+		count: count,
 		val:   val,
 		exp:   exp,
-		count: count,
 	}
 }
-func NewBin() *Bin {
-	return NewBinRaw(0, 0, 0)
+
+func newBin() *bin {
+	return newBinRaw(0, 0, 0)
 }
-func NewBinFromFloat64(d float64) *Bin {
-	hb := NewBinRaw(0, 0, 0)
-	hb.SetFromFloat64(d)
+
+func newBinFromFloat64(d float64) *bin {
+	hb := newBinRaw(0, 0, 0)
+	hb.setFromFloat64(d)
 	return hb
 }
 
-type FastL2 struct {
+type fastL2 struct {
 	l1, l2 int
 }
 
-func (hb *Bin) fastl2() FastL2 {
-	return FastL2{l1: int(uint8(hb.exp)), l2: int(uint8(hb.val))}
+func (hb *bin) newFastL2() fastL2 {
+	return fastL2{l1: int(uint8(hb.exp)), l2: int(uint8(hb.val))}
 }
-func (hb *Bin) SetFromFloat64(d float64) *Bin {
+
+func (hb *bin) setFromFloat64(d float64) *bin {
 	hb.val = -1
 	if math.IsInf(d, 0) || math.IsNaN(d) {
 		return hb
@@ -103,7 +106,7 @@ func (hb *Bin) SetFromFloat64(d float64) *Bin {
 		}
 		return hb
 	}
-	d = d / hb.PowerOfTen()
+	d = d / hb.powerOfTen()
 	d = d * 10
 	hb.val = int8(sign * int(math.Floor(d+1e-13)))
 	if hb.val == 100 || hb.val == -100 {
@@ -126,86 +129,96 @@ func (hb *Bin) SetFromFloat64(d float64) *Bin {
 	}
 	return hb
 }
-func (hb *Bin) PowerOfTen() float64 {
+
+func (hb *bin) powerOfTen() float64 {
 	idx := int(uint8(hb.exp))
-	return power_of_ten[idx]
+	return powerOfTen[idx]
 }
 
-func (hb *Bin) IsNaN() bool {
-	if hb.val > 99 || hb.val < -99 {
+func (hb *bin) isNaN() bool {
+	// aval := abs(hb.val)
+	aval := hb.val
+	if aval < 0 {
+		aval = -aval
+	}
+	if 99 < aval { // in [100... ]: nan
 		return true
+	}
+	if 9 < aval { // in [10 - 99]: valid range
+		return false
+	}
+	if 0 < aval { // in [1  - 9 ]: nan
+		return true
+	}
+	if 0 == aval { // in [0]      : zero bucket
+		return false
 	}
 	return false
 }
-func (hb *Bin) Val() int8 {
-	return hb.val
-}
-func (hb *Bin) Exp() int8 {
-	return hb.exp
-}
-func (hb *Bin) Count() uint64 {
-	return hb.count
-}
-func (hb *Bin) Value() float64 {
-	if hb.IsNaN() {
+
+func (hb *bin) value() float64 {
+	if hb.isNaN() {
 		return math.NaN()
 	}
 	if hb.val < 10 && hb.val > -10 {
 		return 0.0
 	}
-	return (float64(hb.val) / 10.0) * hb.PowerOfTen()
+	return (float64(hb.val) / 10.0) * hb.powerOfTen()
 }
-func (hb *Bin) BinWidth() float64 {
-	if hb.IsNaN() {
+
+func (hb *bin) binWidth() float64 {
+	if hb.isNaN() {
 		return math.NaN()
 	}
 	if hb.val < 10 && hb.val > -10 {
 		return 0.0
 	}
-	return hb.PowerOfTen() / 10.0
+	return hb.powerOfTen() / 10.0
 }
-func (hb *Bin) Midpoint() float64 {
-	if hb.IsNaN() {
+
+func (hb *bin) midpoint() float64 {
+	if hb.isNaN() {
 		return math.NaN()
 	}
-	out := hb.Value()
+	out := hb.value()
 	if out == 0 {
 		return 0
 	}
-	interval := hb.BinWidth()
+	interval := hb.binWidth()
 	if out < 0 {
 		interval = interval * -1
 	}
 	return out + interval/2.0
 }
-func (hb *Bin) Left() float64 {
-	if hb.IsNaN() {
+
+func (hb *bin) left() float64 {
+	if hb.isNaN() {
 		return math.NaN()
 	}
-	out := hb.Value()
+	out := hb.value()
 	if out >= 0 {
 		return out
 	}
-	return out - hb.BinWidth()
+	return out - hb.binWidth()
 }
 
-func (h1 *Bin) Compare(h2 *Bin) int {
+func (h1 *bin) compare(h2 *bin) int {
 	var v1, v2 int
 
-	//     slide exp positive,
-	//                         shift by size of val
-	//                              multiple by (val != 0)
-	//       then add or subtract val accordingly
+	// 1) slide exp positive
+	// 2) shift by size of val multiple by (val != 0)
+	// 3) then add or subtract val accordingly
 
 	if h1.val >= 0 {
-		v1 = ((int(h1.exp)+256)<<8)*int(((h1.val|(^h1.val+1))>>8)&1) + int(h1.val)
+		v1 = ((int(h1.exp)+256)<<8)*int(((int(h1.val)|(^int(h1.val)+1))>>8)&1) + int(h1.val)
 	} else {
-		v1 = ((int(h1.exp)+256)<<8)*int(((h1.val|(^h1.val+1))>>8)&1) - int(h1.val)
+		v1 = ((int(h1.exp)+256)<<8)*int(((int(h1.val)|(^int(h1.val)+1))>>8)&1) - int(h1.val)
 	}
+
 	if h2.val >= 0 {
-		v2 = ((int(h2.exp)+256)<<8)*int(((h2.val|(^h2.val+1))>>8)&1) + int(h2.val)
+		v2 = ((int(h2.exp)+256)<<8)*int(((int(h2.val)|(^int(h2.val)+1))>>8)&1) + int(h2.val)
 	} else {
-		v2 = ((int(h2.exp)+256)<<8)*int(((h2.val|(^h2.val+1))>>8)&1) - int(h2.val)
+		v2 = ((int(h2.exp)+256)<<8)*int(((int(h2.val)|(^int(h2.val)+1))>>8)&1) - int(h2.val)
 	}
 
 	// return the difference
@@ -215,22 +228,22 @@ func (h1 *Bin) Compare(h2 *Bin) int {
 // This histogram structure tracks values are two decimal digits of precision
 // with a bounded error that remains bounded upon composition
 type Histogram struct {
-	bvs    []Bin
+	bvs    []bin
 	used   uint16
 	allocd uint16
 
 	lookup [256][]uint16
 
-	mutex    sync.Mutex
+	mutex    sync.RWMutex
 	useLocks bool
 }
 
 // New returns a new Histogram
 func New() *Histogram {
 	return &Histogram{
-		allocd:   DEFAULT_HIST_SIZE,
+		allocd:   defaultHistSize,
 		used:     0,
-		bvs:      make([]Bin, DEFAULT_HIST_SIZE),
+		bvs:      make([]bin, defaultHistSize),
 		useLocks: true,
 	}
 }
@@ -238,9 +251,9 @@ func New() *Histogram {
 // New returns a Histogram without locking
 func NewNoLocks() *Histogram {
 	return &Histogram{
-		allocd:   DEFAULT_HIST_SIZE,
+		allocd:   defaultHistSize,
 		used:     0,
-		bvs:      make([]Bin, DEFAULT_HIST_SIZE),
+		bvs:      make([]bin, defaultHistSize),
 		useLocks: false,
 	}
 }
@@ -257,7 +270,7 @@ func NewFromStrings(strs []string, locks bool) (*Histogram, error) {
 }
 
 // NewFromBins returns a Histogram created from a bins struct slice
-func newFromBins(bins []Bin, locks bool) *Histogram {
+func newFromBins(bins []bin, locks bool) *Histogram {
 	return &Histogram{
 		allocd:   uint16(len(bins) + 10), // pad it with 10
 		used:     uint16(len(bins)),
@@ -336,11 +349,11 @@ func (h *Histogram) RecordCorrectedValue(v, expectedInterval int64) error {
 }
 
 // find where a new bin should go
-func (h *Histogram) InternalFind(hb *Bin) (bool, uint16) {
+func (h *Histogram) internalFind(hb *bin) (bool, uint16) {
 	if h.used == 0 {
 		return false, 0
 	}
-	f2 := hb.fastl2()
+	f2 := hb.newFastL2()
 	if h.lookup[f2.l1] != nil {
 		if idx := h.lookup[f2.l1][f2.l2]; idx != 0 {
 			return true, idx - 1
@@ -352,7 +365,7 @@ func (h *Histogram) InternalFind(hb *Bin) (bool, uint16) {
 	r := int(h.used - 1)
 	for l < r {
 		check := (r + l) / 2
-		rv = h.bvs[check].Compare(hb)
+		rv = h.bvs[check].compare(hb)
 		if rv == 0 {
 			l = check
 			r = check
@@ -363,7 +376,7 @@ func (h *Histogram) InternalFind(hb *Bin) (bool, uint16) {
 		}
 	}
 	if rv != 0 {
-		rv = h.bvs[l].Compare(hb)
+		rv = h.bvs[l].compare(hb)
 	}
 	idx = uint16(l)
 	if rv == 0 {
@@ -376,22 +389,22 @@ func (h *Histogram) InternalFind(hb *Bin) (bool, uint16) {
 	return false, idx
 }
 
-func (h *Histogram) InsertBin(hb *Bin, count int64) uint64 {
+func (h *Histogram) insertBin(hb *bin, count int64) uint64 {
 	if h.useLocks {
 		h.mutex.Lock()
 		defer h.mutex.Unlock()
 	}
-	found, idx := h.InternalFind(hb)
+	found, idx := h.internalFind(hb)
 	if !found {
 		if h.used == h.allocd {
-			new_bvs := make([]Bin, h.allocd+DEFAULT_HIST_SIZE)
+			new_bvs := make([]bin, h.allocd+defaultHistSize)
 			if idx > 0 {
 				copy(new_bvs[0:], h.bvs[0:idx])
 			}
 			if idx < h.used {
 				copy(new_bvs[idx+1:], h.bvs[idx:])
 			}
-			h.allocd = h.allocd + DEFAULT_HIST_SIZE
+			h.allocd = h.allocd + defaultHistSize
 			h.bvs = new_bvs
 		} else {
 			copy(h.bvs[idx+1:], h.bvs[idx:h.used])
@@ -401,7 +414,7 @@ func (h *Histogram) InsertBin(hb *Bin, count int64) uint64 {
 		h.bvs[idx].count = uint64(count)
 		h.used++
 		for i := idx; i < h.used; i++ {
-			f2 := h.bvs[i].fastl2()
+			f2 := h.bvs[i].newFastL2()
 			if h.lookup[f2.l1] == nil {
 				h.lookup[f2.l1] = make([]uint16, 256)
 			}
@@ -450,30 +463,30 @@ func (h *Histogram) RecordIntScales(val, scale int, n int64) error {
 		scale = 0
 	}
 	val *= sign
-	hb := Bin{val: int8(val), exp: int8(scale), count: 0}
-	h.InsertBin(&hb, n)
+	hb := bin{val: int8(val), exp: int8(scale), count: 0}
+	h.insertBin(&hb, n)
 	return nil
 }
 
 // RecordValues records n occurrences of the given value, returning an error if
 // the value is out of range.
 func (h *Histogram) RecordValues(v float64, n int64) error {
-	var hb Bin
-	hb.SetFromFloat64(v)
-	h.InsertBin(&hb, n)
+	var hb bin
+	hb.setFromFloat64(v)
+	h.insertBin(&hb, n)
 	return nil
 }
 
 // Approximate mean
 func (h *Histogram) ApproxMean() float64 {
 	if h.useLocks {
-		h.mutex.Lock()
-		defer h.mutex.Unlock()
+		h.mutex.RLock()
+		defer h.mutex.RUnlock()
 	}
 	divisor := 0.0
 	sum := 0.0
 	for i := uint16(0); i < h.used; i++ {
-		midpoint := h.bvs[i].Midpoint()
+		midpoint := h.bvs[i].midpoint()
 		cardinality := float64(h.bvs[i].count)
 		divisor += cardinality
 		sum += midpoint * cardinality
@@ -487,12 +500,12 @@ func (h *Histogram) ApproxMean() float64 {
 // Approximate sum
 func (h *Histogram) ApproxSum() float64 {
 	if h.useLocks {
-		h.mutex.Lock()
-		defer h.mutex.Unlock()
+		h.mutex.RLock()
+		defer h.mutex.RUnlock()
 	}
 	sum := 0.0
 	for i := uint16(0); i < h.used; i++ {
-		midpoint := h.bvs[i].Midpoint()
+		midpoint := h.bvs[i].midpoint()
 		cardinality := float64(h.bvs[i].count)
 		sum += midpoint * cardinality
 	}
@@ -501,8 +514,8 @@ func (h *Histogram) ApproxSum() float64 {
 
 func (h *Histogram) ApproxQuantile(q_in []float64) ([]float64, error) {
 	if h.useLocks {
-		h.mutex.Lock()
-		defer h.mutex.Unlock()
+		h.mutex.RLock()
+		defer h.mutex.RUnlock()
 	}
 	q_out := make([]float64, len(q_in))
 	i_q, i_b := 0, uint16(0)
@@ -518,7 +531,7 @@ func (h *Histogram) ApproxQuantile(q_in []float64) ([]float64, error) {
 	}
 	// Add up the bins
 	for i_b = 0; i_b < h.used; i_b++ {
-		if !h.bvs[i_b].IsNaN() {
+		if !h.bvs[i_b].isNaN() {
 			total_cnt += float64(h.bvs[i_b].count)
 		}
 	}
@@ -534,11 +547,11 @@ func (h *Histogram) ApproxQuantile(q_in []float64) ([]float64, error) {
 	}
 
 	for i_b = 0; i_b < h.used; i_b++ {
-		if h.bvs[i_b].IsNaN() {
+		if h.bvs[i_b].isNaN() {
 			continue
 		}
-		bin_width = h.bvs[i_b].BinWidth()
-		bin_left = h.bvs[i_b].Left()
+		bin_width = h.bvs[i_b].binWidth()
+		bin_left = h.bvs[i_b].left()
 		lower_cnt = upper_cnt
 		upper_cnt = lower_cnt + float64(h.bvs[i_b].count)
 		break
@@ -546,8 +559,8 @@ func (h *Histogram) ApproxQuantile(q_in []float64) ([]float64, error) {
 	for i_q = 0; i_q < len(q_in); i_q++ {
 		for i_b < (h.used-1) && upper_cnt < q_out[i_q] {
 			i_b++
-			bin_width = h.bvs[i_b].BinWidth()
-			bin_left = h.bvs[i_b].Left()
+			bin_width = h.bvs[i_b].binWidth()
+			bin_left = h.bvs[i_b].left()
 			lower_cnt = upper_cnt
 			upper_cnt = lower_cnt + float64(h.bvs[i_b].count)
 		}
@@ -569,8 +582,8 @@ func (h *Histogram) ApproxQuantile(q_in []float64) ([]float64, error) {
 // ValueAtQuantile returns the recorded value at the given quantile (0..1).
 func (h *Histogram) ValueAtQuantile(q float64) float64 {
 	if h.useLocks {
-		h.mutex.Lock()
-		defer h.mutex.Unlock()
+		h.mutex.RLock()
+		defer h.mutex.RUnlock()
 	}
 	q_in := make([]float64, 1)
 	q_in[0] = q
@@ -591,12 +604,12 @@ func (h *Histogram) SignificantFigures() int64 {
 // Equals returns true if the two Histograms are equivalent, false if not.
 func (h *Histogram) Equals(other *Histogram) bool {
 	if h.useLocks {
-		h.mutex.Lock()
-		defer h.mutex.Unlock()
+		h.mutex.RLock()
+		defer h.mutex.RUnlock()
 	}
 	if other.useLocks {
-		other.mutex.Lock()
-		defer other.mutex.Unlock()
+		other.mutex.RLock()
+		defer other.mutex.RUnlock()
 	}
 	switch {
 	case
@@ -604,7 +617,7 @@ func (h *Histogram) Equals(other *Histogram) bool {
 		return false
 	default:
 		for i := uint16(0); i < h.used; i++ {
-			if h.bvs[i].Compare(&other.bvs[i]) != 0 {
+			if h.bvs[i].compare(&other.bvs[i]) != 0 {
 				return false
 			}
 			if h.bvs[i].count != other.bvs[i].count {
@@ -625,8 +638,8 @@ func (h *Histogram) CopyAndReset() *Histogram {
 		used:   h.used,
 		bvs:    h.bvs,
 	}
-	h.allocd = DEFAULT_HIST_SIZE
-	h.bvs = make([]Bin, DEFAULT_HIST_SIZE)
+	h.allocd = defaultHistSize
+	h.bvs = make([]bin, defaultHistSize)
 	h.used = 0
 	for i := 0; i < 256; i++ {
 		if h.lookup[i] != nil {
@@ -646,7 +659,7 @@ func (h *Histogram) DecStrings() []string {
 	for i, bin := range h.bvs[0:h.used] {
 		var buffer bytes.Buffer
 		buffer.WriteString("H[")
-		buffer.WriteString(fmt.Sprintf("%3.1e", bin.Value()))
+		buffer.WriteString(fmt.Sprintf("%3.1e", bin.value()))
 		buffer.WriteString("]=")
 		buffer.WriteString(fmt.Sprintf("%v", bin.count))
 		out[i] = buffer.String()
@@ -655,9 +668,9 @@ func (h *Histogram) DecStrings() []string {
 }
 
 // takes the output of DecStrings and deserializes it into a Bin struct slice
-func stringsToBin(strs []string) ([]Bin, error) {
+func stringsToBin(strs []string) ([]bin, error) {
 
-	bins := make([]Bin, len(strs))
+	bins := make([]bin, len(strs))
 	for i, str := range strs {
 
 		// H[0.0e+00]=1
@@ -682,7 +695,7 @@ func stringsToBin(strs []string) ([]Bin, error) {
 		if err != nil {
 			return nil, err
 		}
-		bins[i] = *NewBinRaw(int8(valInt*10), int8(expInt), uint64(countInt))
+		bins[i] = *newBinRaw(int8(valInt*10), int8(expInt), uint64(countInt))
 	}
 
 	return bins, nil

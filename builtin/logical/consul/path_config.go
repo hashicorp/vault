@@ -1,8 +1,10 @@
 package consul
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -39,28 +41,25 @@ func pathConfigAccess() *framework.Path {
 	}
 }
 
-func readConfigAccess(storage logical.Storage) (*accessConfig, error, error) {
-	entry, err := storage.Get("config/access")
+func readConfigAccess(ctx context.Context, storage logical.Storage) (*accessConfig, error, error) {
+	entry, err := storage.Get(ctx, "config/access")
 	if err != nil {
 		return nil, nil, err
 	}
 	if entry == nil {
-		return nil, fmt.Errorf(
-				"Access credentials for the backend itself haven't been configured. Please configure them at the '/config/access' endpoint"),
-			nil
+		return nil, fmt.Errorf("access credentials for the backend itself haven't been configured; please configure them at the '/config/access' endpoint"), nil
 	}
 
 	conf := &accessConfig{}
 	if err := entry.DecodeJSON(conf); err != nil {
-		return nil, nil, fmt.Errorf("error reading consul access configuration: %s", err)
+		return nil, nil, errwrap.Wrapf("error reading consul access configuration: {{err}}", err)
 	}
 
 	return conf, nil, nil
 }
 
-func pathConfigAccessRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	conf, userErr, intErr := readConfigAccess(req.Storage)
+func pathConfigAccessRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	conf, userErr, intErr := readConfigAccess(ctx, req.Storage)
 	if intErr != nil {
 		return nil, intErr
 	}
@@ -79,8 +78,7 @@ func pathConfigAccessRead(
 	}, nil
 }
 
-func pathConfigAccessWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func pathConfigAccessWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("config/access", accessConfig{
 		Address: data.Get("address").(string),
 		Scheme:  data.Get("scheme").(string),
@@ -90,7 +88,7 @@ func pathConfigAccessWrite(
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

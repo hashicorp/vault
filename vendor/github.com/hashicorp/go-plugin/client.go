@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"bufio"
+	"context"
 	"crypto/subtle"
 	"crypto/tls"
 	"errors"
@@ -9,7 +10,6 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -20,6 +20,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
+
+	hclog "github.com/hashicorp/go-hclog"
 )
 
 // If this is 1, then we've called CleanupClients. This can be used
@@ -74,7 +76,10 @@ type Client struct {
 	l           sync.Mutex
 	address     net.Addr
 	process     *os.Process
-	client      *RPCClient
+	client      ClientProtocol
+	protocol    Protocol
+	logger      hclog.Logger
+	doneCtx     context.Context
 }
 
 // ClientConfig is the configuration used to initialize a new
@@ -135,14 +140,32 @@ type ClientConfig struct {
 	// sync any of these streams.
 	SyncStdout io.Writer
 	SyncStderr io.Writer
+
+	// AllowedProtocols is a list of allowed protocols. If this isn't set,
+	// then only netrpc is allowed. This is so that older go-plugin systems
+	// can show friendly errors if they see a plugin with an unknown
+	// protocol.
+	//
+	// By setting this, you can cause an error immediately on plugin start
+	// if an unsupported protocol is used with a good error message.
+	//
+	// If this isn't set at all (nil value), then only net/rpc is accepted.
+	// This is done for legacy reasons. You must explicitly opt-in to
+	// new protocols.
+	AllowedProtocols []Protocol
+
+	// Logger is the logger that the client will used. If none is provided,
+	// it will default to hclog's default logger.
+	Logger hclog.Logger
 }
 
 // ReattachConfig is used to configure a client to reattach to an
 // already-running plugin process. You can retrieve this information by
 // calling ReattachConfig on Client.
 type ReattachConfig struct {
-	Addr net.Addr
-	Pid  int
+	Protocol Protocol
+	Addr     net.Addr
+	Pid      int
 }
 
 // SecureConfig is used to configure a client to verify the integrity of an
@@ -210,7 +233,6 @@ func CleanupClients() {
 	}
 	managedClientsLock.Unlock()
 
-	log.Println("[DEBUG] plugin: waiting for all plugin processes to complete...")
 	wg.Wait()
 }
 
@@ -242,7 +264,22 @@ func NewClient(config *ClientConfig) (c *Client) {
 		config.SyncStderr = ioutil.Discard
 	}
 
-	c = &Client{config: config}
+	if config.AllowedProtocols == nil {
+		config.AllowedProtocols = []Protocol{ProtocolNetRPC}
+	}
+
+	if config.Logger == nil {
+		config.Logger = hclog.New(&hclog.LoggerOptions{
+			Output: hclog.DefaultOutput,
+			Level:  hclog.Trace,
+			Name:   "plugin",
+		})
+	}
+
+	c = &Client{
+		config: config,
+		logger: config.Logger,
+	}
 	if config.Managed {
 		managedClientsLock.Lock()
 		managedClients = append(managedClients, c)
@@ -252,11 +289,11 @@ func NewClient(config *ClientConfig) (c *Client) {
 	return
 }
 
-// Client returns an RPC client for the plugin.
+// Client returns the protocol client for this connection.
 //
-// Subsequent calls to this will return the same RPC client.
-func (c *Client) Client() (*RPCClient, error) {
-	addr, err := c.Start()
+// Subsequent calls to this will return the same client.
+func (c *Client) Client() (ClientProtocol, error) {
+	_, err := c.Start()
 	if err != nil {
 		return nil, err
 	}
@@ -268,33 +305,18 @@ func (c *Client) Client() (*RPCClient, error) {
 		return c.client, nil
 	}
 
-	// Connect to the client
-	conn, err := net.Dial(addr.Network(), addr.String())
-	if err != nil {
-		return nil, err
-	}
-	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		// Make sure to set keep alive so that the connection doesn't die
-		tcpConn.SetKeepAlive(true)
+	switch c.protocol {
+	case ProtocolNetRPC:
+		c.client, err = newRPCClient(c)
+
+	case ProtocolGRPC:
+		c.client, err = newGRPCClient(c.doneCtx, c)
+
+	default:
+		return nil, fmt.Errorf("unknown server protocol: %s", c.protocol)
 	}
 
-	if c.config.TLSConfig != nil {
-		conn = tls.Client(conn, c.config.TLSConfig)
-	}
-
-	// Create the actual RPC client
-	c.client, err = NewRPCClient(conn, c.config.Plugins)
 	if err != nil {
-		conn.Close()
-		return nil, err
-	}
-
-	// Begin the stream syncing so that stdin, out, err work properly
-	err = c.client.SyncStreams(
-		c.config.SyncStdout,
-		c.config.SyncStderr)
-	if err != nil {
-		c.client.Close()
 		c.client = nil
 		return nil, err
 	}
@@ -346,8 +368,7 @@ func (c *Client) Kill() {
 			if err != nil {
 				// If there was an error just log it. We're going to force
 				// kill in a moment anyways.
-				log.Printf(
-					"[WARN] plugin: error closing client during Kill: %s", err)
+				c.logger.Warn("error closing client during Kill", "err", err)
 			}
 		}
 	}
@@ -402,6 +423,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 	// Create the logging channel for when we kill
 	c.doneLogging = make(chan struct{})
+	// Create a context for when we kill
+	var ctxCancel context.CancelFunc
+	c.doneCtx, ctxCancel = context.WithCancel(context.Background())
 
 	if c.config.Reattach != nil {
 		// Verify the process still exists. If not, then it is an error
@@ -427,7 +451,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 			pidWait(pid)
 
 			// Log so we can see it
-			log.Printf("[DEBUG] plugin: reattached plugin process exited\n")
+			c.logger.Debug("reattached plugin process exited")
 
 			// Mark it
 			c.l.Lock()
@@ -436,11 +460,19 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 			// Close the logging channel since that doesn't work on reattach
 			close(c.doneLogging)
+
+			// Cancel the context
+			ctxCancel()
 		}(p.Pid)
 
 		// Set the address and process
 		c.address = c.config.Reattach.Addr
 		c.process = p
+		c.protocol = c.config.Reattach.Protocol
+		if c.protocol == "" {
+			// Default the protocol to net/rpc for backwards compatibility
+			c.protocol = ProtocolNetRPC
+		}
 
 		return c.address, nil
 	}
@@ -469,7 +501,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 	}
 
-	log.Printf("[DEBUG] plugin: starting plugin: %s %#v", cmd.Path, cmd.Args)
+	c.logger.Debug("starting plugin", "path", cmd.Path, "args", cmd.Args)
 	err = cmd.Start()
 	if err != nil {
 		return
@@ -503,11 +535,14 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		cmd.Wait()
 
 		// Log and make sure to flush the logs write away
-		log.Printf("[DEBUG] plugin: %s: plugin process exited\n", cmd.Path)
+		c.logger.Debug("plugin process exited", "path", cmd.Path)
 		os.Stderr.Sync()
 
 		// Mark that we exited
 		close(exitCh)
+
+		// Cancel the context, marking that we exited
+		ctxCancel()
 
 		// Set that we exited, which takes a lock
 		c.l.Lock()
@@ -550,7 +585,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	timeout := time.After(c.config.StartTimeout)
 
 	// Start looking for the address
-	log.Printf("[DEBUG] plugin: waiting for RPC address for: %s", cmd.Path)
+	c.logger.Debug("waiting for RPC address", "path", cmd.Path)
 	select {
 	case <-timeout:
 		err = errors.New("timeout while waiting for plugin to start")
@@ -560,7 +595,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Trim the line and split by "|" in order to get the parts of
 		// the output.
 		line := strings.TrimSpace(string(lineBytes))
-		parts := strings.SplitN(line, "|", 4)
+		parts := strings.SplitN(line, "|", 6)
 		if len(parts) < 4 {
 			err = fmt.Errorf(
 				"Unrecognized remote plugin message: %s\n\n"+
@@ -580,7 +615,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 			if int(coreProtocol) != CoreProtocolVersion {
 				err = fmt.Errorf("Incompatible core API version with plugin. "+
-					"Plugin version: %s, Ours: %d\n\n"+
+					"Plugin version: %s, Core version: %d\n\n"+
 					"To fix this, the plugin usually only needs to be recompiled.\n"+
 					"Please report this to the plugin author.", parts[0], CoreProtocolVersion)
 				return
@@ -598,7 +633,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Test the API version
 		if uint(protocol) != c.config.ProtocolVersion {
 			err = fmt.Errorf("Incompatible API version with plugin. "+
-				"Plugin version: %s, Ours: %d", parts[1], c.config.ProtocolVersion)
+				"Plugin version: %s, Core version: %d", parts[1], c.config.ProtocolVersion)
 			return
 		}
 
@@ -610,6 +645,27 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		default:
 			err = fmt.Errorf("Unknown address type: %s", parts[3])
 		}
+
+		// If we have a server type, then record that. We default to net/rpc
+		// for backwards compatibility.
+		c.protocol = ProtocolNetRPC
+		if len(parts) >= 5 {
+			c.protocol = Protocol(parts[4])
+		}
+
+		found := false
+		for _, p := range c.config.AllowedProtocols {
+			if p == c.protocol {
+				found = true
+				break
+			}
+		}
+		if !found {
+			err = fmt.Errorf("Unsupported plugin protocol %q. Supported: %v",
+				c.protocol, c.config.AllowedProtocols)
+			return
+		}
+
 	}
 
 	c.address = addr
@@ -640,20 +696,90 @@ func (c *Client) ReattachConfig() *ReattachConfig {
 	}
 
 	return &ReattachConfig{
-		Addr: c.address,
-		Pid:  c.config.Cmd.Process.Pid,
+		Protocol: c.protocol,
+		Addr:     c.address,
+		Pid:      c.config.Cmd.Process.Pid,
 	}
+}
+
+// Protocol returns the protocol of server on the remote end. This will
+// start the plugin process if it isn't already started. Errors from
+// starting the plugin are surpressed and ProtocolInvalid is returned. It
+// is recommended you call Start explicitly before calling Protocol to ensure
+// no errors occur.
+func (c *Client) Protocol() Protocol {
+	_, err := c.Start()
+	if err != nil {
+		return ProtocolInvalid
+	}
+
+	return c.protocol
+}
+
+func netAddrDialer(addr net.Addr) func(string, time.Duration) (net.Conn, error) {
+	return func(_ string, _ time.Duration) (net.Conn, error) {
+		// Connect to the client
+		conn, err := net.Dial(addr.Network(), addr.String())
+		if err != nil {
+			return nil, err
+		}
+		if tcpConn, ok := conn.(*net.TCPConn); ok {
+			// Make sure to set keep alive so that the connection doesn't die
+			tcpConn.SetKeepAlive(true)
+		}
+
+		return conn, nil
+	}
+}
+
+// dialer is compatible with grpc.WithDialer and creates the connection
+// to the plugin.
+func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
+	conn, err := netAddrDialer(c.address)("", timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	// If we have a TLS config we wrap our connection. We only do this
+	// for net/rpc since gRPC uses its own mechanism for TLS.
+	if c.protocol == ProtocolNetRPC && c.config.TLSConfig != nil {
+		conn = tls.Client(conn, c.config.TLSConfig)
+	}
+
+	return conn, nil
 }
 
 func (c *Client) logStderr(r io.Reader) {
 	bufR := bufio.NewReader(r)
+	l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
+
 	for {
 		line, err := bufR.ReadString('\n')
 		if line != "" {
 			c.config.Stderr.Write([]byte(line))
-
 			line = strings.TrimRightFunc(line, unicode.IsSpace)
-			log.Printf("[DEBUG] plugin: %s: %s", filepath.Base(c.config.Cmd.Path), line)
+
+			entry, err := parseJSON(line)
+			// If output is not JSON format, print directly to Debug
+			if err != nil {
+				l.Debug(line)
+			} else {
+				out := flattenKVPairs(entry.KVPairs)
+
+				out = append(out, "timestamp", entry.Timestamp.Format(hclog.TimeFormat))
+				switch hclog.LevelFromString(entry.Level) {
+				case hclog.Trace:
+					l.Trace(entry.Message, out...)
+				case hclog.Debug:
+					l.Debug(entry.Message, out...)
+				case hclog.Info:
+					l.Info(entry.Message, out...)
+				case hclog.Warn:
+					l.Warn(entry.Message, out...)
+				case hclog.Error:
+					l.Error(entry.Message, out...)
+				}
+			}
 		}
 
 		if err == io.EOF {

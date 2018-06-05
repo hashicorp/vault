@@ -1,54 +1,47 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: Okta"
+page_title: "Okta - Auth Methods"
 sidebar_current: "docs-auth-okta"
 description: |-
-  The Okta auth backend allows users to authenticate with Vault using Okta credentials.
+  The Okta auth method allows users to authenticate with Vault using Okta
+  credentials.
 ---
 
-# Auth Backend: Okta
+# Okta Auth Method
 
-Name: `okta`
-
-The Okta auth backend allows authentication using Okta
-and user/password credentials. This allows Vault to be integrated
-into environments using Okta.
+The `okta` auth method allows authentication using Okta and user/password
+credentials. This allows Vault to be integrated into environments using Okta.
 
 The mapping of groups in Okta to Vault policies is managed by using the
 `users/` and `groups/` paths.
 
 ## Authentication
 
-#### Via the CLI
+### Via the CLI
 
-```
-$ vault auth -method=okta username=mitchellh
-Password (will be hidden):
-Successfully authenticated! The policies that are associated
-with this token are listed below:
+The default path is `/okta`. If this auth method was enabled at a different
+path, specify `-path=/my-path` in the CLI.
 
-admins
+```text
+$ vault login -method=okta username=my-username
 ```
 
-#### Via the API
+### Via the API
 
-The endpoint for the login is `auth/okta/login/<username>`.
-
-The password should be sent in the POST body encoded as JSON.
+The default endpoint is `auth/okta/login`. If this auth method was enabled
+at a different path, use that value instead of `okta`.
 
 ```shell
-$ curl $VAULT_ADDR/v1/auth/okta/login/mitchellh \
-    -d '{ "password": "foo" }'
+$ curl \
+    --request POST \
+    --data '{"password": "MY_PASSWORD"}' \
+    http://127.0.0.1:8200/v1/auth/okta/login/my-username
 ```
 
-The response will be in JSON. For example:
+The response will contain a token at `auth.client_token`:
 
-```javascript
+```json
 {
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
-  "data": null,
   "auth": {
     "client_token": "c4f280f6-fdb2-18eb-89d3-589e2e834cdb",
     "policies": [
@@ -56,104 +49,70 @@ The response will be in JSON. For example:
     ],
     "metadata": {
       "username": "mitchellh"
-    },
-    "lease_duration": 0,
-    "renewable": false
+    }
   }
 }
 ```
 
 ## Configuration
 
-First, you must enable the Okta auth backend:
+Auth methods must be configured in advance before users or machines can
+authenticate. These steps are usually completed by an operator or configuration
+management tool.
 
-```
-$ vault auth-enable okta
-Successfully enabled 'okta' at 'okta'!
-```
+### Via the CLI
 
-Now when you run `vault auth -methods`, the Okta backend is available:
+1. Enable the Okta auth method:
 
-```
-Path       Type      Description
-okta/      okta
-token/     token     token based credentials
-```
+    ```text
+    $ vault auth enable okta
+    ```
 
-To use the Okta auth backend, it must first be configured for your Okta account.
-The configuration options are categorized and detailed below.
+1. Configure Vault to communicate with your Okta account:
 
-Configuration is written to `auth/okta/config`.
+    ```text
+    $ vault write auth/okta/config \
+        base_url="okta.com" \
+        organization="dev-123456" \
+        token="00KzlTNCqDf0enpQKYSAYUt88KHqXax6dT11xEZz_g"
+    ```
 
-### Connection parameters
+    **If no token is supplied, Vault will function, but only locally configured
+    group membership will be available. Without a token, groups will not be
+    queried.**
 
-* `organization` (string, required) - The Okta organization.  This will be the first part of the url `https://XXX.okta.com` url.
-* `token` (string, optional) - The Okta API token.  This is required to query Okta for user group membership. If this is not supplied only locally configured groups will be enabled. This can be generated from http://developer.okta.com/docs/api/getting_started/getting_a_token.html
-* `base_url` (string, optional) - The Okta url. Examples: `oktapreview.com`, The default is `okta.com`
+    For the complete list of configuration options, please see the API
+    documentation.
 
-Use `vault path-help` for more details.
+1. Map an Okta group to a Vault policy:
 
-## Examples:
+    ```text
+    $ vault write auth/okta/groups/scientists policies=nuclear-reactor
+    ```
 
-### Scenario 1
+    In this example, anyone who successfully authenticates via Okta who is a
+    member of the "scientists" group will receive a Vault token with the
+    "nuclear-reactor" policy attached.
 
-* Okta organization `XXXTest`.
-* With no token supplied only locally configured group membership will be available.  Groups will not be queried from Okta.
+    ---
 
-```
-$ vault write auth/okta/config \
-    organization="XXXTest"
-...
-```
+    It is also possible to add users directly:
 
-### Scenario 2
+    ```text
+    $ vault write auth/okta/groups/engineers policies=autopilot
+    $ vault write auth/okta/users/tesla groups=engineers
+    ```
 
-* Okta organization `dev-123456`.
-* Okta base_url for developer account `oktapreview.com`
-* API token `00KzlTNCqDf0enpQKYSAYUt88KHqXax6dT11xEZz_g`. This will allow group membership to be queried.
+    This adds the Okta user "tesla" to the "engineers" group, which maps to
+    the "autopilot" Vault policy.
 
-```
-$ vault write auth/okta/config base_url="oktapreview.com" \
-    organization="dev-123456" \
-    token="00KzlTNCqDf0enpQKYSAYUt88KHqXax6dT11xEZz_g" 
-...
-```
+      **The user-policy mapping via group membership happens at token _creation
+      time_. Any changes in group membership in Okta will not affect existing
+      tokens that have already been provisioned. To see these changes, users
+      will need to re-authenticate. You can force this by revoking the
+      existing tokens.**
 
-## Okta Group -> Policy Mapping
+## API
 
-Next we want to create a mapping from an Okta group to a Vault policy:
-
-```
-$ vault write auth/okta/groups/scientists policies=foo,bar
-```
-
-This maps the Okta group "scientists" to the "foo" and "bar" Vault policies.
-
-We can also add specific Okta users to additional (potentially non-Okta) groups:
-
-```
-$ vault write auth/okta/groups/engineers policies=foobar
-$ vault write auth/okta/users/tesla groups=engineers
-```
-
-This adds the Okta user "tesla" to the "engineers" group, which maps to
-the "foobar" Vault policy.
-
-Finally, we can test this by authenticating:
-
-```
-$ vault auth -method=okta username=tesla
-Password (will be hidden):
-Successfully authenticated! The policies that are associated
-with this token are listed below:
-
-bar, foo, foobar
-```
-
-## Note on Okta Group's
-
-Groups can only be pulled from Okta if an API token is configured via `token`
-
-## Note on policy mapping
-
-It should be noted that user -> policy mapping (via group membership) happens at token creation time. And changes in group membership in Okta will not affect tokens that have already been provisioned. To see these changes, old tokens should be revoked and the user should be asked to reauthenticate.
+The Okta auth method has a full HTTP API. Please see the
+[Okta Auth API](/api/auth/okta/index.html) for more details.

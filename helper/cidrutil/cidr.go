@@ -5,8 +5,33 @@ import (
 	"net"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/strutil"
 )
+
+// RemoteAddrIsOk checks if the given remote address is either:
+//   - OK because there's no CIDR whitelist
+//   - OK because it's in the CIDR whitelist
+func RemoteAddrIsOk(remoteAddr string, boundCIDRs []*sockaddr.SockAddrMarshaler) bool {
+	if len(boundCIDRs) == 0 {
+		// There's no CIDR whitelist.
+		return true
+	}
+	remoteSockAddr, err := sockaddr.NewSockAddr(remoteAddr)
+	if err != nil {
+		// Can't tell, err on the side of less access.
+		return false
+	}
+	for _, cidr := range boundCIDRs {
+		if cidr.Contains(remoteSockAddr) {
+			// Whitelisted.
+			return true
+		}
+	}
+	// Not whitelisted.
+	return false
+}
 
 // IPBelongsToCIDR checks if the given IP is encompassed by the given CIDR block
 func IPBelongsToCIDR(ipAddr string, cidr string) (bool, error) {
@@ -29,30 +54,6 @@ func IPBelongsToCIDR(ipAddr string, cidr string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-// IPBelongsToCIDRBlocksString checks if the given IP is encompassed by any of
-// the given CIDR blocks, when the input is a string composed by joining all
-// the CIDR blocks using a separator. The input is separated based on the given
-// separator and the IP is checked to be belonged by any CIDR block.
-func IPBelongsToCIDRBlocksString(ipAddr string, cidrList, separator string) (bool, error) {
-	if ipAddr == "" {
-		return false, fmt.Errorf("missing IP address")
-	}
-
-	if cidrList == "" {
-		return false, fmt.Errorf("missing CIDR list")
-	}
-
-	if separator == "" {
-		return false, fmt.Errorf("missing separator")
-	}
-
-	if ip := net.ParseIP(ipAddr); ip == nil {
-		return false, fmt.Errorf("invalid IP address")
-	}
-
-	return IPBelongsToCIDRBlocksSlice(ipAddr, strutil.ParseDedupLowercaseAndSortStrings(cidrList, separator))
 }
 
 // IPBelongsToCIDRBlocksSlice checks if the given IP is encompassed by any of the given
@@ -126,7 +127,7 @@ func Subset(cidr1, cidr2 string) (bool, error) {
 
 	ip1, net1, err := net.ParseCIDR(cidr1)
 	if err != nil {
-		return false, fmt.Errorf("failed to parse the CIDR to be checked against: %q", err)
+		return false, errwrap.Wrapf("failed to parse the CIDR to be checked against: {{err}}", err)
 	}
 
 	zeroAddr := false
@@ -144,7 +145,7 @@ func Subset(cidr1, cidr2 string) (bool, error) {
 
 	ip2, net2, err := net.ParseCIDR(cidr2)
 	if err != nil {
-		return false, fmt.Errorf("failed to parse the CIDR that needs to be checked: %q", err)
+		return false, errwrap.Wrapf("failed to parse the CIDR that needs to be checked: {{err}}", err)
 	}
 
 	zeroAddr = false

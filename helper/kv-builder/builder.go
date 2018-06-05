@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/mitchellh/mapstructure"
 )
@@ -30,7 +31,7 @@ func (b *Builder) Map() map[string]interface{} {
 func (b *Builder) Add(args ...string) error {
 	for _, a := range args {
 		if err := b.add(a); err != nil {
-			return fmt.Errorf("Invalid key/value pair '%s': %s", a, err)
+			return errwrap.Wrapf(fmt.Sprintf("invalid key/value pair %q: {{err}}", a), err)
 		}
 	}
 
@@ -48,33 +49,36 @@ func (b *Builder) add(raw string) error {
 		return nil
 	}
 
-	// If the arg is exactly "-", then we need to read from stdin
-	// and merge the results into the resulting structure.
-	if raw == "-" {
-		if b.Stdin == nil {
-			return fmt.Errorf("stdin is not supported")
-		}
-		if b.stdin {
-			return fmt.Errorf("stdin already consumed")
-		}
-
-		b.stdin = true
-		return b.addReader(b.Stdin)
-	}
-
-	// If the arg begins with "@" then we need to read a file directly
-	if raw[0] == '@' {
-		f, err := os.Open(raw[1:])
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		return b.addReader(f)
-	}
-
 	// Split into key/value
 	parts := strings.SplitN(raw, "=", 2)
+
+	// If the arg is exactly "-", then we need to read from stdin
+	// and merge the results into the resulting structure.
+	if len(parts) == 1 {
+		if raw == "-" {
+			if b.Stdin == nil {
+				return fmt.Errorf("stdin is not supported")
+			}
+			if b.stdin {
+				return fmt.Errorf("stdin already consumed")
+			}
+
+			b.stdin = true
+			return b.addReader(b.Stdin)
+		}
+
+		// If the arg begins with "@" then we need to read a file directly
+		if raw[0] == '@' {
+			f, err := os.Open(raw[1:])
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			return b.addReader(f)
+		}
+	}
+
 	if len(parts) != 2 {
 		return fmt.Errorf("format must be key=value")
 	}
@@ -84,7 +88,7 @@ func (b *Builder) add(raw string) error {
 		if value[0] == '@' {
 			contents, err := ioutil.ReadFile(value[1:])
 			if err != nil {
-				return fmt.Errorf("error reading file: %s", err)
+				return errwrap.Wrapf("error reading file: {{err}}", err)
 			}
 
 			value = string(contents)

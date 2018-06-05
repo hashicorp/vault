@@ -250,7 +250,7 @@ commit_failure_policy: stop
 #
 # Valid values are either "auto" (omitting the value) or a value greater 0.
 #
-# Note that specifying a too large value will result in long running GCs and possbily
+# Note that specifying a too large value will result in long running GCs and possibly
 # out-of-memory errors. Keep the value at a small fraction of the heap.
 #
 # If you constantly see "prepared statements discarded in the last minute because
@@ -259,7 +259,7 @@ commit_failure_policy: stop
 # i.e. use bind markers for variable parts.
 #
 # Do only change the default value, if you really have more prepared statements than
-# fit in the cache. In most cases it is not neccessary to change this value.
+# fit in the cache. In most cases it is not necessary to change this value.
 # Constantly re-preparing statements is a performance penalty.
 #
 # Default value ("auto") is 1/256th of the heap or 10MB, whichever is greater
@@ -421,7 +421,7 @@ seed_provider:
       parameters:
           # seeds is actually a comma-delimited list of addresses.
           # Ex: "<ip1>,<ip2>,<ip3>"
-          - seeds: "172.17.0.3"
+          - seeds: "127.0.0.1"
 
 # For workloads with more data than can fit in memory, Cassandra's
 # bottleneck will be reads that need to fetch data from
@@ -572,7 +572,7 @@ ssl_storage_port: 7001
 #
 # Setting listen_address to 0.0.0.0 is always wrong.
 #
-listen_address: 172.17.0.3
+listen_address: 172.17.0.2
 
 # Set listen_address OR listen_interface, not both. Interfaces must correspond
 # to a single address, IP aliasing is not supported.
@@ -586,7 +586,7 @@ listen_address: 172.17.0.3
 
 # Address to broadcast to other Cassandra nodes
 # Leaving this blank will set it to the same value as listen_address
-broadcast_address: 172.17.0.3
+broadcast_address: 127.0.0.1
 
 # When using multiple physical network interfaces, set this
 # to true to listen on broadcast_address in addition to
@@ -668,7 +668,7 @@ rpc_port: 9160
 # be set to 0.0.0.0. If left blank, this will be set to the value of
 # rpc_address. If rpc_address is set to 0.0.0.0, broadcast_rpc_address must
 # be set.
-broadcast_rpc_address: 172.17.0.3
+broadcast_rpc_address: 127.0.0.1
 
 # enable or disable keepalive on rpc/native connections
 rpc_keepalive: true
@@ -1021,7 +1021,7 @@ client_encryption_options:
     keystore: conf/.keystore
     keystore_password: cassandra
     # require_client_auth: false
-    # Set trustore and truststore_password if require_client_auth is true
+    # Set truststore and truststore_password if require_client_auth is true
     # truststore: conf/.truststore
     # truststore_password: cassandra
     # More advanced defaults below:
@@ -1080,7 +1080,7 @@ windows_timer_interval: 1
 
 # Enables encrypting data at-rest (on disk). Different key providers can be plugged in, but the default reads from
 # a JCE-style keystore. A single keystore can hold multiple keys, but the one referenced by
-# the "key_alias" is the only key that will be used for encrypt opertaions; previously used keys
+# the "key_alias" is the only key that will be used for encrypt operations; previously used keys
 # can still (and should!) be in the keystore and will be used on decrypt operations
 # (to handle the case of key rotation).
 #
@@ -1114,7 +1114,7 @@ transparent_data_encryption_options:
 # tombstones seen in memory so we can return them to the coordinator, which
 # will use them to make sure other replicas also know about the deleted rows.
 # With workloads that generate a lot of tombstones, this can cause performance
-# problems and even exaust the server heap.
+# problems and even exhaust the server heap.
 # (http://www.datastax.com/dev/blog/cassandra-anti-patterns-queues-and-queue-like-datasets)
 # Adjust the thresholds here if you understand the dangers and want to
 # scan more tombstones anyway.  These thresholds may also be adjusted at runtime

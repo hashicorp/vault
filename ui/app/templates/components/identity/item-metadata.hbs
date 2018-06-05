@@ -1,0 +1,29 @@
+{{#each-in model.metadata as |key value|}}
+  <div class="box is-sideless is-marginless">
+    <div class="columns is-mobile">
+      <div class="column is-5 has-text-weight-semibold">
+        {{key}}
+      </div>
+      <div class="column is-5">
+        {{value}}
+      </div>
+      <div class="column has-text-right">
+        {{#if model.canEdit}}
+          {{identity/popup-metadata params=(array model key)}}
+        {{/if}}
+      </div>
+    </div>
+  </div>
+{{else}}
+  <div class="box is-bottomless has-background-white-bis">
+    <div class="columns is-centered">
+      <div class="column is-half has-text-centered">
+        <div class="box is-shadowless has-background-white-bis">
+          <p class="has-text-grey">
+            There is no metadata associated with {{model.name}}.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+{{/each-in}}

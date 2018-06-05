@@ -1,10 +1,12 @@
 package userpass
 
 import (
+	"context"
 	"crypto/subtle"
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -27,7 +29,8 @@ func pathLogin(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathLogin,
+			logical.UpdateOperation:         b.pathLogin,
+			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
 		},
 
 		HelpSynopsis:    pathLoginSyn,
@@ -35,8 +38,22 @@ func pathLogin(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathLogin(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	username := strings.ToLower(d.Get("username").(string))
+	if username == "" {
+		return nil, fmt.Errorf("missing username")
+	}
+
+	return &logical.Response{
+		Auth: &logical.Auth{
+			Alias: &logical.Alias{
+				Name: username,
+			},
+		},
+	}, nil
+}
+
+func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := strings.ToLower(d.Get("username").(string))
 
 	password := d.Get("password").(string)
@@ -45,12 +62,17 @@ func (b *backend) pathLogin(
 	}
 
 	// Get the user and validate auth
-	user, err := b.user(req.Storage, username)
+	user, err := b.user(ctx, req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
 	if user == nil {
 		return logical.ErrorResponse("invalid username or password"), nil
+	}
+
+	// Check for a CIDR match.
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.BoundCIDRs) {
+		return logical.ErrorResponse("login request originated from invalid CIDR"), nil
 	}
 
 	// Check for a password match. Check for a hash collision for Vault 0.2+,
@@ -75,16 +97,20 @@ func (b *backend) pathLogin(
 			DisplayName: username,
 			LeaseOptions: logical.LeaseOptions{
 				TTL:       user.TTL,
+				MaxTTL:    user.MaxTTL,
 				Renewable: true,
 			},
+			Alias: &logical.Alias{
+				Name: username,
+			},
+			BoundCIDRs: user.BoundCIDRs,
 		},
 	}, nil
 }
 
-func (b *backend) pathLoginRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the user
-	user, err := b.user(req.Storage, req.Auth.Metadata["username"])
+	user, err := b.user(ctx, req.Storage, req.Auth.Metadata["username"])
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +123,10 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	return framework.LeaseExtend(user.TTL, user.MaxTTL, b.System())(req, d)
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.TTL = user.TTL
+	resp.Auth.MaxTTL = user.MaxTTL
+	return resp, nil
 }
 
 const pathLoginSyn = `

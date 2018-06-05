@@ -1,8 +1,11 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -29,14 +32,14 @@ func pathCreds(b *backend) *framework.Path {
 }
 
 // Issues the credential based on the role name
-func (b *backend) pathCredsRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
 	}
 
 	// Get the role
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +60,7 @@ func (b *backend) pathCredsRead(req *logical.Request, d *framework.FieldData) (*
 	}
 
 	// Get the client configuration
-	client, err := b.Client(req.Storage)
+	client, err := b.Client(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -81,11 +84,12 @@ func (b *backend) pathCredsRead(req *logical.Request, d *framework.FieldData) (*
 			Write:     permission.Write,
 			Read:      permission.Read,
 		}); err != nil {
+			outerErr := errwrap.Wrapf(fmt.Sprintf("failed to update permissions to the %q user: {{err}}", username), err)
 			// Delete the user because it's in an unknown state
 			if _, rmErr := client.DeleteUser(username); rmErr != nil {
-				return nil, fmt.Errorf("failed to delete user:%s, err: %s. %s", username, err, rmErr)
+				return nil, multierror.Append(errwrap.Wrapf("failed to delete user: {{err}}", rmErr), outerErr)
 			}
-			return nil, fmt.Errorf("failed to update permissions to the %s user. err:%s", username, err)
+			return nil, outerErr
 		}
 	}
 
@@ -98,12 +102,14 @@ func (b *backend) pathCredsRead(req *logical.Request, d *framework.FieldData) (*
 	})
 
 	// Determine if we have a lease
-	lease, err := b.Lease(req.Storage)
+	lease, err := b.Lease(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
+
 	if lease != nil {
 		resp.Secret.TTL = lease.TTL
+		resp.Secret.MaxTTL = lease.MaxTTL
 	}
 
 	return resp, nil

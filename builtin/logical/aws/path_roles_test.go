@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"strconv"
 	"testing"
 
@@ -14,7 +15,7 @@ func TestBackend_PathListRoles(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 
 	b := Backend()
-	if _, err := b.Setup(config); err != nil {
+	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -30,13 +31,13 @@ func TestBackend_PathListRoles(t *testing.T) {
 
 	for i := 1; i <= 10; i++ {
 		roleReq.Path = "roles/testrole" + strconv.Itoa(i)
-		resp, err = b.HandleRequest(roleReq)
+		resp, err = b.HandleRequest(context.Background(), roleReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("bad: role creation failed. resp:%#v\n err:%v", resp, err)
 		}
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "roles",
 		Storage:   config.StorageView,
@@ -49,7 +50,7 @@ func TestBackend_PathListRoles(t *testing.T) {
 		t.Fatalf("failed to list all 10 roles")
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "roles/",
 		Storage:   config.StorageView,

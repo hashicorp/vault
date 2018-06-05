@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 
-	"github.com/fatih/structs"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -52,10 +51,8 @@ func (c *Sys) EnableAuth(path, authType, desc string) error {
 }
 
 func (c *Sys) EnableAuthWithOptions(path string, options *EnableAuthOptions) error {
-	body := structs.Map(options)
-
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/auth/%s", path))
-	if err := r.SetJSONBody(body); err != nil {
+	if err := r.SetJSONBody(options); err != nil {
 		return err
 	}
 
@@ -78,23 +75,45 @@ func (c *Sys) DisableAuth(path string) error {
 }
 
 // Structures for the requests/resposne are all down here. They aren't
-// individually documentd because the map almost directly to the raw HTTP API
+// individually documented because the map almost directly to the raw HTTP API
 // documentation. Please refer to that documentation for more details.
 
 type EnableAuthOptions struct {
-	Type        string `json:"type" structs:"type"`
-	Description string `json:"description" structs:"description"`
-	Local       bool   `json:"local" structs:"local"`
+	Type        string            `json:"type"`
+	Description string            `json:"description"`
+	Config      AuthConfigInput   `json:"config"`
+	Local       bool              `json:"local"`
+	PluginName  string            `json:"plugin_name,omitempty"`
+	SealWrap    bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
+	Options     map[string]string `json:"options" mapstructure:"options"`
+}
+
+type AuthConfigInput struct {
+	DefaultLeaseTTL           string   `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL               string   `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	PluginName                string   `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys   []string `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  []string `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility         string   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
+	PassthroughRequestHeaders []string `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
 }
 
 type AuthMount struct {
-	Type        string           `json:"type" structs:"type" mapstructure:"type"`
-	Description string           `json:"description" structs:"description" mapstructure:"description"`
-	Config      AuthConfigOutput `json:"config" structs:"config" mapstructure:"config"`
-	Local       bool             `json:"local" structs:"local" mapstructure:"local"`
+	Type        string            `json:"type" mapstructure:"type"`
+	Description string            `json:"description" mapstructure:"description"`
+	Accessor    string            `json:"accessor" mapstructure:"accessor"`
+	Config      AuthConfigOutput  `json:"config" mapstructure:"config"`
+	Local       bool              `json:"local" mapstructure:"local"`
+	SealWrap    bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
+	Options     map[string]string `json:"options" mapstructure:"options"`
 }
 
 type AuthConfigOutput struct {
-	DefaultLeaseTTL int `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL     int `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	DefaultLeaseTTL           int      `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL               int      `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	PluginName                string   `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys   []string `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  []string `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility         string   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
+	PassthroughRequestHeaders []string `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
 }

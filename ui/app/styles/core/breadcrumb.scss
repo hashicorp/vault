@@ -1,0 +1,56 @@
+.breadcrumb {
+  -ms-user-select: text;
+  -webkit-user-select: text;
+  user-select: text;
+  height: 1.5rem;
+  margin: 0;
+  overflow-x: auto;
+
+  &:not(:last-child) {
+    margin: 0;
+  }
+
+  .is-sidebar + .column & {
+    @include until($tablet) {
+      margin-left: $size-2;
+    }
+  }
+
+  li {
+    & + li::before {
+      display: none;
+    }
+
+    &:first-child {
+      .sep {
+        margin-left: 0;
+      }
+    }
+  }
+
+  a {
+    line-height: 1;
+    padding: 0 $size-11 0 0;
+    text-decoration: none;
+
+    &:hover {
+      color: $blue;
+    }
+  }
+
+  .sep {
+    display: inline-block;
+    color: transparent;
+    margin: 0.15rem 0.4rem 0 0.5rem;
+    overflow: hidden;
+    width: 0.5rem;
+
+    &::before {
+      color: $blue;
+      content: "❮";
+      font-size: 1rem;
+      line-height: 1;
+      opacity: 0.33;
+    }
+  }
+}

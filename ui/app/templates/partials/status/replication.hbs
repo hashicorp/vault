@@ -1,0 +1,31 @@
+<div class="popup-menu-content is-wide is-top-nav-popup">
+  <div class="box">
+    <nav class="menu">
+      <p class="menu-label">Disaster Recovery</p>
+      <ul>
+        <li>
+          {{replication-mode-summary
+            mode="dr"
+            display='menu'
+            cluster=cluster
+            tagName='a'
+            click=(action d.actions.close)
+          }}
+        </li>
+      </ul>
+      <hr />
+      <p class="menu-label">Performance</p>
+      <ul>
+        <li>
+          {{replication-mode-summary
+            mode="performance"
+            display='menu'
+            cluster=cluster
+            tagName='a'
+            click=(action d.actions.close)
+          }}
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>

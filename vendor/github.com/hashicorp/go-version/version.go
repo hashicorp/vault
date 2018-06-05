@@ -15,8 +15,8 @@ var versionRegexp *regexp.Regexp
 // The raw regular expression string used for testing the validity
 // of a version.
 const VersionRegexpRaw string = `v?([0-9]+(\.[0-9]+)*?)` +
-	`(-?([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
-	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
+	`(-?([0-9A-Za-z\-~]+(\.[0-9A-Za-z\-~]+)*))?` +
+	`(\+([0-9A-Za-z\-~]+(\.[0-9A-Za-z\-~]+)*))?` +
 	`?`
 
 // Version represents a single version.
@@ -166,14 +166,16 @@ func comparePart(preSelf string, preOther string) int {
 		return 0
 	}
 
+	var selfInt int64
 	selfNumeric := true
-	_, err := strconv.ParseInt(preSelf, 10, 64)
+	selfInt, err := strconv.ParseInt(preSelf, 10, 64)
 	if err != nil {
 		selfNumeric = false
 	}
 
+	var otherInt int64
 	otherNumeric := true
-	_, err = strconv.ParseInt(preOther, 10, 64)
+	otherInt, err = strconv.ParseInt(preOther, 10, 64)
 	if err != nil {
 		otherNumeric = false
 	}
@@ -197,7 +199,9 @@ func comparePart(preSelf string, preOther string) int {
 		return -1
 	} else if !selfNumeric && otherNumeric {
 		return 1
-	} else if preSelf > preOther {
+	} else if !selfNumeric && !otherNumeric && preSelf > preOther {
+		return 1
+	} else if selfInt > otherInt {
 		return 1
 	}
 

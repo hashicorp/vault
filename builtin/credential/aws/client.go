@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -8,6 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/logical"
@@ -20,18 +23,19 @@ import (
 // * Static credentials from 'config/client'
 // * Environment variables
 // * Instance metadata role
-func (b *backend) getRawClientConfig(s logical.Storage, region, clientType string) (*aws.Config, error) {
+func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, region, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{
 		Region: region,
 	}
 
 	// Read the configured secret key and access key
-	config, err := b.nonLockedClientConfigEntry(s)
+	config, err := b.nonLockedClientConfigEntry(ctx, s)
 	if err != nil {
 		return nil, err
 	}
 
 	endpoint := aws.String("")
+	var maxRetries int = aws.UseServiceDefaultRetries
 	if config != nil {
 		// Override the default endpoint with the configured endpoint.
 		switch {
@@ -45,6 +49,7 @@ func (b *backend) getRawClientConfig(s logical.Storage, region, clientType strin
 
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
+		maxRetries = config.MaxRetries
 	}
 
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
@@ -63,16 +68,17 @@ func (b *backend) getRawClientConfig(s logical.Storage, region, clientType strin
 		Region:      aws.String(region),
 		HTTPClient:  cleanhttp.DefaultClient(),
 		Endpoint:    endpoint,
+		MaxRetries:  aws.Int(maxRetries),
 	}, nil
 }
 
 // getClientConfig returns an aws-sdk-go config, with optionally assumed credentials
-// It uses getRawClientConfig to obtain config for the runtime environemnt, and if
+// It uses getRawClientConfig to obtain config for the runtime environment, and if
 // stsRole is a non-empty string, it will use AssumeRole to obtain a set of assumed
 // credentials. The credentials will expire after 15 minutes but will auto-refresh.
-func (b *backend) getClientConfig(s logical.Storage, region, stsRole, clientType string) (*aws.Config, error) {
+func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region, stsRole, accountID, clientType string) (*aws.Config, error) {
 
-	config, err := b.getRawClientConfig(s, region, clientType)
+	config, err := b.getRawClientConfig(ctx, s, region, clientType)
 	if err != nil {
 		return nil, err
 	}
@@ -80,20 +86,39 @@ func (b *backend) getClientConfig(s logical.Storage, region, stsRole, clientType
 		return nil, fmt.Errorf("could not compile valid credentials through the default provider chain")
 	}
 
+	stsConfig, err := b.getRawClientConfig(ctx, s, region, "sts")
+	if stsConfig == nil {
+		return nil, fmt.Errorf("could not configure STS client")
+	}
+	if err != nil {
+		return nil, err
+	}
 	if stsRole != "" {
-		assumeRoleConfig, err := b.getRawClientConfig(s, region, "sts")
-		if err != nil {
-			return nil, err
-		}
-		if assumeRoleConfig == nil {
-			return nil, fmt.Errorf("could not configure STS client")
-		}
-		assumedCredentials := stscreds.NewCredentials(session.New(assumeRoleConfig), stsRole)
+		assumedCredentials := stscreds.NewCredentials(session.New(stsConfig), stsRole)
 		// Test that we actually have permissions to assume the role
 		if _, err = assumedCredentials.Get(); err != nil {
 			return nil, err
 		}
 		config.Credentials = assumedCredentials
+	} else {
+		if b.defaultAWSAccountID == "" {
+			client := sts.New(session.New(stsConfig))
+			if client == nil {
+				return nil, errwrap.Wrapf("could not obtain sts client: {{err}}", err)
+			}
+			inputParams := &sts.GetCallerIdentityInput{}
+			identity, err := client.GetCallerIdentity(inputParams)
+			if err != nil {
+				return nil, errwrap.Wrapf("unable to fetch current caller: {{err}}", err)
+			}
+			if identity == nil {
+				return nil, fmt.Errorf("got nil result from GetCallerIdentity")
+			}
+			b.defaultAWSAccountID = *identity.Account
+		}
+		if b.defaultAWSAccountID != accountID {
+			return nil, fmt.Errorf("unable to fetch client for account ID %q -- default client is for account %q", accountID, b.defaultAWSAccountID)
+		}
 	}
 
 	return config, nil
@@ -121,8 +146,44 @@ func (b *backend) flushCachedIAMClients() {
 	}
 }
 
+// Gets an entry out of the user ID cache
+func (b *backend) getCachedUserId(userId string) string {
+	if userId == "" {
+		return ""
+	}
+	if entry, ok := b.iamUserIdToArnCache.Get(userId); ok {
+		b.iamUserIdToArnCache.SetDefault(userId, entry)
+		return entry.(string)
+	}
+	return ""
+}
+
+// Sets an entry in the user ID cache
+func (b *backend) setCachedUserId(userId, arn string) {
+	if userId != "" {
+		b.iamUserIdToArnCache.SetDefault(userId, arn)
+	}
+}
+
+func (b *backend) stsRoleForAccount(ctx context.Context, s logical.Storage, accountID string) (string, error) {
+	// Check if an STS configuration exists for the AWS account
+	sts, err := b.lockedAwsStsEntry(ctx, s, accountID)
+	if err != nil {
+		return "", errwrap.Wrapf(fmt.Sprintf("error fetching STS config for account ID %q: {{err}}", accountID), err)
+	}
+	// An empty STS role signifies the master account
+	if sts != nil {
+		return sts.StsRole, nil
+	}
+	return "", nil
+}
+
 // clientEC2 creates a client to interact with AWS EC2 API
-func (b *backend) clientEC2(s logical.Storage, region string, stsRole string) (*ec2.EC2, error) {
+func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, accountID string) (*ec2.EC2, error) {
+	stsRole, err := b.stsRoleForAccount(ctx, s, accountID)
+	if err != nil {
+		return nil, err
+	}
 	b.configMutex.RLock()
 	if b.EC2ClientsMap[region] != nil && b.EC2ClientsMap[region][stsRole] != nil {
 		defer b.configMutex.RUnlock()
@@ -142,8 +203,7 @@ func (b *backend) clientEC2(s logical.Storage, region string, stsRole string) (*
 
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
-	var err error
-	awsConfig, err = b.getClientConfig(s, region, stsRole, "ec2")
+	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, accountID, "ec2")
 
 	if err != nil {
 		return nil, err
@@ -168,7 +228,11 @@ func (b *backend) clientEC2(s logical.Storage, region string, stsRole string) (*
 }
 
 // clientIAM creates a client to interact with AWS IAM API
-func (b *backend) clientIAM(s logical.Storage, region string, stsRole string) (*iam.IAM, error) {
+func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, accountID string) (*iam.IAM, error) {
+	stsRole, err := b.stsRoleForAccount(ctx, s, accountID)
+	if err != nil {
+		return nil, err
+	}
 	b.configMutex.RLock()
 	if b.IAMClientsMap[region] != nil && b.IAMClientsMap[region][stsRole] != nil {
 		defer b.configMutex.RUnlock()
@@ -188,8 +252,7 @@ func (b *backend) clientIAM(s logical.Storage, region string, stsRole string) (*
 
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
-	var err error
-	awsConfig, err = b.getClientConfig(s, region, stsRole, "iam")
+	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, accountID, "iam")
 
 	if err != nil {
 		return nil, err

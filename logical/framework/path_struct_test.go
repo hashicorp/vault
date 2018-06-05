@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -19,8 +20,10 @@ func TestPathStruct(t *testing.T) {
 	storage := new(logical.InmemStorage)
 	var b logical.Backend = &Backend{Paths: p.Paths()}
 
+	ctx := context.Background()
+
 	// Write via HTTP
-	_, err := b.HandleRequest(&logical.Request{
+	_, err := b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "bar",
 		Data: map[string]interface{}{
@@ -33,7 +36,7 @@ func TestPathStruct(t *testing.T) {
 	}
 
 	// Read via HTTP
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "bar",
 		Storage:   storage,
@@ -46,7 +49,7 @@ func TestPathStruct(t *testing.T) {
 	}
 
 	// Read via API
-	v, err := p.Get(storage)
+	v, err := p.Get(ctx, storage)
 	if err != nil {
 		t.Fatalf("bad: %#v", err)
 	}
@@ -55,7 +58,7 @@ func TestPathStruct(t *testing.T) {
 	}
 
 	// Delete via HTTP
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.DeleteOperation,
 		Path:      "bar",
 		Data:      nil,
@@ -69,7 +72,7 @@ func TestPathStruct(t *testing.T) {
 	}
 
 	// Re-read via HTTP
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "bar",
 		Storage:   storage,
@@ -82,7 +85,7 @@ func TestPathStruct(t *testing.T) {
 	}
 
 	// Re-read via API
-	v, err = p.Get(storage)
+	v, err = p.Get(ctx, storage)
 	if err != nil {
 		t.Fatalf("bad: %#v", err)
 	}

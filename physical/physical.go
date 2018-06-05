@@ -1,10 +1,11 @@
 package physical
 
 import (
-	"fmt"
+	"context"
+	"strings"
 	"sync"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 )
 
 const DefaultParallelOperations = 128
@@ -30,17 +31,17 @@ type ShutdownChannel chan struct{}
 // are expected to be thread safe.
 type Backend interface {
 	// Put is used to insert or update an entry
-	Put(entry *Entry) error
+	Put(ctx context.Context, entry *Entry) error
 
 	// Get is used to fetch an entry
-	Get(key string) (*Entry, error)
+	Get(ctx context.Context, key string) (*Entry, error)
 
 	// Delete is used to permanently delete an entry
-	Delete(key string) error
+	Delete(ctx context.Context, key string) error
 
 	// List is used ot list all the keys under a given
 	// prefix, up to the next prefix.
-	List(prefix string) ([]string, error)
+	List(ctx context.Context, prefix string) ([]string, error)
 }
 
 // HABackend is an extensions to the standard physical
@@ -55,10 +56,12 @@ type HABackend interface {
 	HAEnabled() bool
 }
 
-// Purgable is an optional interface for backends that support
-// purging of their caches.
-type Purgable interface {
-	Purge()
+// ToggleablePurgemonster is an interface for backends that can toggle on or
+// off special functionality and/or support purging. This is only used for the
+// cache, don't use it for other things.
+type ToggleablePurgemonster interface {
+	Purge(ctx context.Context)
+	SetEnabled(bool)
 }
 
 // RedirectDetect is an optional interface that an HABackend
@@ -70,8 +73,8 @@ type RedirectDetect interface {
 }
 
 // Callback signatures for RunServiceDiscovery
-type activeFunction func() bool
-type sealedFunction func() bool
+type ActiveFunction func() bool
+type SealedFunction func() bool
 
 // ServiceDiscovery is an optional interface that an HABackend can implement.
 // If they do, the state of a backend is advertised to the service discovery
@@ -89,7 +92,7 @@ type ServiceDiscovery interface {
 
 	// Run executes any background service discovery tasks until the
 	// shutdown channel is closed.
-	RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string, activeFunc activeFunction, sealedFunc sealedFunction) error
+	RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string, activeFunc ActiveFunction, sealedFunc SealedFunction) error
 }
 
 type Lock interface {
@@ -108,52 +111,13 @@ type Lock interface {
 
 // Entry is used to represent data stored by the physical backend
 type Entry struct {
-	Key   string
-	Value []byte
+	Key      string
+	Value    []byte
+	SealWrap bool `json:"seal_wrap,omitempty"`
 }
 
 // Factory is the factory function to create a physical backend.
 type Factory func(config map[string]string, logger log.Logger) (Backend, error)
-
-// NewBackend returns a new backend with the given type and configuration.
-// The backend is looked up in the builtinBackends variable.
-func NewBackend(t string, logger log.Logger, conf map[string]string) (Backend, error) {
-	f, ok := builtinBackends[t]
-	if !ok {
-		return nil, fmt.Errorf("unknown physical backend type: %s", t)
-	}
-	return f(conf, logger)
-}
-
-// BuiltinBackends is the list of built-in physical backends that can
-// be used with NewBackend.
-var builtinBackends = map[string]Factory{
-	"inmem": func(_ map[string]string, logger log.Logger) (Backend, error) {
-		return NewInmem(logger), nil
-	},
-	"inmem_transactional": func(_ map[string]string, logger log.Logger) (Backend, error) {
-		return NewTransactionalInmem(logger), nil
-	},
-	"inmem_ha": func(_ map[string]string, logger log.Logger) (Backend, error) {
-		return NewInmemHA(logger), nil
-	},
-	"inmem_transactional_ha": func(_ map[string]string, logger log.Logger) (Backend, error) {
-		return NewTransactionalInmemHA(logger), nil
-	},
-	"file_transactional": newTransactionalFileBackend,
-	"consul":             newConsulBackend,
-	"zookeeper":          newZookeeperBackend,
-	"file":               newFileBackend,
-	"s3":                 newS3Backend,
-	"azure":              newAzureBackend,
-	"dynamodb":           newDynamoDBBackend,
-	"etcd":               newEtcdBackend,
-	"mssql":              newMsSQLBackend,
-	"mysql":              newMySQLBackend,
-	"postgresql":         newPostgreSQLBackend,
-	"swift":              newSwiftBackend,
-	"gcs":                newGCSBackend,
-}
 
 // PermitPool is used to limit maximum outstanding requests
 type PermitPool struct {
@@ -179,4 +143,16 @@ func (c *PermitPool) Acquire() {
 // Release returns a permit to the pool
 func (c *PermitPool) Release() {
 	<-c.sem
+}
+
+// Prefixes is a shared helper function returns all parent 'folders' for a
+// given vault key.
+// e.g. for 'foo/bar/baz', it returns ['foo', 'foo/bar']
+func Prefixes(s string) []string {
+	components := strings.Split(s, "/")
+	result := []string{}
+	for i := 1; i < len(components); i++ {
+		result = append(result, strings.Join(components[:i], "/"))
+	}
+	return result
 }

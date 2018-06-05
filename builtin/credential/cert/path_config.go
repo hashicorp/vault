@@ -1,8 +1,9 @@
 package cert
 
 import (
-	"fmt"
+	"context"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -24,8 +25,7 @@ func pathConfig(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathConfigWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	disableBinding := data.Get("disable_binding").(bool)
 
 	entry, err := logical.StorageEntryJSON("config", config{
@@ -35,15 +35,15 @@ func (b *backend) pathConfigWrite(
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
 // Config returns the configuration for this backend.
-func (b *backend) Config(s logical.Storage) (*config, error) {
-	entry, err := s.Get("config")
+func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error) {
+	entry, err := s.Get(ctx, "config")
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (b *backend) Config(s logical.Storage) (*config, error) {
 	var result config
 	if entry != nil {
 		if err := entry.DecodeJSON(&result); err != nil {
-			return nil, fmt.Errorf("error reading configuration: %s", err)
+			return nil, errwrap.Wrapf("error reading configuration: {{err}}", err)
 		}
 	}
 	return &result, nil

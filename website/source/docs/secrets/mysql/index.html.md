@@ -1,16 +1,21 @@
 ---
 layout: "docs"
-page_title: "MySQL Secret Backend"
+page_title: "MySQL - Secrets Engines"
 sidebar_current: "docs-secrets-mysql"
 description: |-
-  The MySQL secret backend for Vault generates database credentials to access MySQL.
+  The MySQL secrets engine for Vault generates database credentials to access MySQL.
 ---
 
-# MySQL Secret Backend
+# MySQL Secrets Engine
 
 Name: `mysql`
 
-The MySQL secret backend for Vault generates database credentials
+~> **Deprecation Note:** This secrets engine is deprecated in favor of the
+combined databases secrets engine added in v0.7.1. See the documentation for
+the new implementation of this secrets engine at
+[MySQL/MariaDB database plugin](/docs/secrets/databases/mysql-maria.html).
+
+The MySQL secrets engine for Vault generates database credentials
 dynamically based on configured roles. This means that services that need
 to access a database no longer need to hardcode credentials: they can request
 them from Vault, and use Vault's leasing mechanism to more easily roll keys.
@@ -23,17 +28,17 @@ instance of a service based on the SQL username.
 Vault makes use of its own internal revocation system to ensure that users
 become invalid within a reasonable time of the lease expiring.
 
-This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault path-help` after mounting the backend.
+This page will show a quick start for this secrets engine. For detailed documentation
+on every path, use `vault path-help` after mounting the secrets engine.
 
 ## Quick Start
 
-The first step to using the mysql backend is to mount it.
-Unlike the `generic` backend, the `mysql` backend is not mounted by default.
+The first step to using the mysql secrets engine is to mount it. Unlike the `kv`
+secrets engine, the `mysql` secrets engine is not mounted by default.
 
 ```
-$ vault mount mysql
-Successfully mounted 'mysql' at 'mysql'!
+$ vault secrets enable mysql
+Success! Enabled the mysql secrets engine at: mysql/
 ```
 
 Next, we must configure Vault to know how to connect to the MySQL
@@ -90,11 +95,12 @@ To generate a new set of credentials, we simply read from that role:
 
 ```
 $ vault read mysql/creds/readonly
-Key           	Value
-lease_id      	mysql/creds/readonly/bd404e98-0f35-b378-269a-b7770ef01897
-lease_duration	3600
-password      	132ae3ef-5a64-7499-351e-bfe59f3a2a21
-username      	readonly-aefa635a-18
+Key               Value
+---               -----
+lease_id          mysql/creds/readonly/bd404e98-0f35-b378-269a-b7770ef01897
+lease_duration    3600
+password          132ae3ef-5a64-7499-351e-bfe59f3a2a21
+username          readonly-aefa635a-18
 ```
 
 By reading from the `creds/readonly` path, Vault has generated a new
@@ -102,7 +108,7 @@ set of credentials using the `readonly` role configuration. Here we
 see the dynamically generated username and password, along with a one
 hour lease.
 
-Using ACLs, it is possible to restrict using the mysql backend such
+Using ACLs, it is possible to restrict using the mysql secrets engine such
 that trusted operators can manage the role definitions, and both
 users and applications are restricted in the credentials they are
 allowed to read.
@@ -119,6 +125,6 @@ the default on versions prior to that.
 
 ## API
 
-The MySQL secret backend has a full HTTP API. Please see the
-[MySQL secret backend API](/api/secret/mysql/index.html) for more
+The MySQL secrets engine has a full HTTP API. Please see the
+[MySQL secrets engine API](/api/secret/mysql/index.html) for more
 details.

@@ -1,14 +1,15 @@
 package vault
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 )
 
 // mockRollback returns a mock rollback manager
@@ -29,7 +30,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := router.Mount(backend, "foo", &MountEntry{UUID: meUUID}, view); err != nil {
+	if err := router.Mount(backend, "foo", &MountEntry{UUID: meUUID, Accessor: "noopaccessor"}, view); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -37,9 +38,9 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 		return mounts.Entries
 	}
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 
-	rb := NewRollbackManager(logger, mountsFunc, router)
+	rb := NewRollbackManager(logger, mountsFunc, router, context.Background())
 	rb.period = 10 * time.Millisecond
 	return rb, backend
 }
@@ -81,11 +82,12 @@ func TestRollbackManager_Join(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(3)
 
+	errCh := make(chan error, 3)
 	go func() {
 		defer wg.Done()
 		err := m.Rollback("foo")
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			errCh <- err
 		}
 	}()
 
@@ -93,7 +95,7 @@ func TestRollbackManager_Join(t *testing.T) {
 		defer wg.Done()
 		err := m.Rollback("foo")
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			errCh <- err
 		}
 	}()
 
@@ -101,8 +103,13 @@ func TestRollbackManager_Join(t *testing.T) {
 		defer wg.Done()
 		err := m.Rollback("foo")
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			errCh <- err
 		}
 	}()
 	wg.Wait()
+	close(errCh)
+	err := <-errCh
+	if err != nil {
+		t.Fatalf("Error on rollback:%v", err)
+	}
 }

@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/hashicorp/errwrap"
 )
 
 // ExternalTokenHelperPath takes the configured path to a helper and expands it to
@@ -36,6 +38,8 @@ func ExternalTokenHelperPath(path string) (string, error) {
 	return path, nil
 }
 
+var _ TokenHelper = (*ExternalTokenHelper)(nil)
+
 // ExternalTokenHelper is the struct that has all the logic for storing and retrieving
 // tokens from the token helper. The API for the helpers is simple: the
 // BinaryPath is executed within a shell with environment Env. The last argument
@@ -57,11 +61,10 @@ type ExternalTokenHelper struct {
 func (h *ExternalTokenHelper) Erase() error {
 	cmd, err := h.cmd("erase")
 	if err != nil {
-		return fmt.Errorf("Error: %s", err)
+		return err
 	}
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(
-			"Error: %s\n\n%s", err, string(output))
+		return errwrap.Wrapf(fmt.Sprintf("%q: {{err}}", string(output)), err)
 	}
 	return nil
 }
@@ -71,13 +74,12 @@ func (h *ExternalTokenHelper) Get() (string, error) {
 	var buf, stderr bytes.Buffer
 	cmd, err := h.cmd("get")
 	if err != nil {
-		return "", fmt.Errorf("Error: %s", err)
+		return "", err
 	}
 	cmd.Stdout = &buf
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf(
-			"Error: %s\n\n%s", err, stderr.String())
+		return "", errwrap.Wrapf(fmt.Sprintf("%q: {{err}}", stderr.String()), err)
 	}
 
 	return buf.String(), nil
@@ -88,12 +90,11 @@ func (h *ExternalTokenHelper) Store(v string) error {
 	buf := bytes.NewBufferString(v)
 	cmd, err := h.cmd("store")
 	if err != nil {
-		return fmt.Errorf("Error: %s", err)
+		return err
 	}
 	cmd.Stdin = buf
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(
-			"Error: %s\n\n%s", err, string(output))
+		return errwrap.Wrapf(fmt.Sprintf("%q: {{err}}", string(output)), err)
 	}
 
 	return nil

@@ -1,8 +1,9 @@
 package rabbitmq
 
 import (
-	"fmt"
+	"context"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/michaelklishin/rabbit-hole"
@@ -40,7 +41,7 @@ func pathConfigConnection(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathConnectionUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	uri := data.Get("connection_uri").(string)
 	if uri == "" {
 		return logical.ErrorResponse("missing connection_uri"), nil
@@ -62,12 +63,12 @@ func (b *backend) pathConnectionUpdate(req *logical.Request, data *framework.Fie
 		// Create RabbitMQ management client
 		client, err := rabbithole.NewClient(uri, username, password)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create client: %s", err)
+			return nil, errwrap.Wrapf("failed to create client: {{err}}", err)
 		}
 
 		// Verify that configured credentials is capable of listing
 		if _, err = client.ListUsers(); err != nil {
-			return nil, fmt.Errorf("failed to validate the connection: %s", err)
+			return nil, errwrap.Wrapf("failed to validate the connection: {{err}}", err)
 		}
 	}
 
@@ -80,12 +81,12 @@ func (b *backend) pathConnectionUpdate(req *logical.Request, data *framework.Fie
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	// Reset the client connection
-	b.resetClient()
+	b.resetClient(ctx)
 
 	return nil, nil
 }

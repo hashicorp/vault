@@ -1,6 +1,7 @@
 package totp
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/url"
@@ -40,7 +41,7 @@ func generateCode(key string, period uint, digits otplib.Digits, algorithm otpli
 func TestBackend_readCredentialsDefaultValues(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +76,7 @@ func TestBackend_readCredentialsDefaultValues(t *testing.T) {
 func TestBackend_readCredentialsEightDigitsThirtySecondPeriod(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +114,7 @@ func TestBackend_readCredentialsEightDigitsThirtySecondPeriod(t *testing.T) {
 func TestBackend_readCredentialsSixDigitsNinetySecondPeriod(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +152,7 @@ func TestBackend_readCredentialsSixDigitsNinetySecondPeriod(t *testing.T) {
 func TestBackend_readCredentialsSHA256(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +190,7 @@ func TestBackend_readCredentialsSHA256(t *testing.T) {
 func TestBackend_readCredentialsSHA512(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +228,7 @@ func TestBackend_readCredentialsSHA512(t *testing.T) {
 func TestBackend_keyCrudDefaultValues(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,8 +259,10 @@ func TestBackend_keyCrudDefaultValues(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
-			testAccStepValidateCode(t, "test", code, true),
-			testAccStepValidateCode(t, "test", invalidCode, false),
+			testAccStepValidateCode(t, "test", code, true, false),
+			// Next step should fail because it should be in the used cache
+			testAccStepValidateCode(t, "test", code, false, true),
+			testAccStepValidateCode(t, "test", invalidCode, false, false),
 			testAccStepDeleteKey(t, "test"),
 			testAccStepReadKey(t, "test", nil),
 		},
@@ -269,7 +272,7 @@ func TestBackend_keyCrudDefaultValues(t *testing.T) {
 func TestBackend_createKeyMissingKeyValue(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,7 +295,7 @@ func TestBackend_createKeyMissingKeyValue(t *testing.T) {
 func TestBackend_createKeyInvalidKeyValue(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,7 +319,7 @@ func TestBackend_createKeyInvalidKeyValue(t *testing.T) {
 func TestBackend_createKeyInvalidAlgorithm(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -344,7 +347,7 @@ func TestBackend_createKeyInvalidAlgorithm(t *testing.T) {
 func TestBackend_createKeyInvalidPeriod(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -372,7 +375,7 @@ func TestBackend_createKeyInvalidPeriod(t *testing.T) {
 func TestBackend_createKeyInvalidDigits(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -400,7 +403,7 @@ func TestBackend_createKeyInvalidDigits(t *testing.T) {
 func TestBackend_generatedKeyDefaultValues(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -434,7 +437,7 @@ func TestBackend_generatedKeyDefaultValues(t *testing.T) {
 func TestBackend_generatedKeyDefaultValuesNoQR(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -459,7 +462,7 @@ func TestBackend_generatedKeyDefaultValuesNoQR(t *testing.T) {
 func TestBackend_generatedKeyNonDefaultKeySize(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -493,7 +496,7 @@ func TestBackend_generatedKeyNonDefaultKeySize(t *testing.T) {
 func TestBackend_urlPassedNonGeneratedKeyInvalidPeriod(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,7 +520,7 @@ func TestBackend_urlPassedNonGeneratedKeyInvalidPeriod(t *testing.T) {
 func TestBackend_urlPassedNonGeneratedKeyInvalidDigits(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -541,7 +544,7 @@ func TestBackend_urlPassedNonGeneratedKeyInvalidDigits(t *testing.T) {
 func TestBackend_urlPassedNonGeneratedKeyIssuerInFirstPosition(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -575,7 +578,7 @@ func TestBackend_urlPassedNonGeneratedKeyIssuerInFirstPosition(t *testing.T) {
 func TestBackend_urlPassedNonGeneratedKeyIssuerInQueryString(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -609,7 +612,7 @@ func TestBackend_urlPassedNonGeneratedKeyIssuerInQueryString(t *testing.T) {
 func TestBackend_urlPassedNonGeneratedKeyMissingIssuer(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -643,7 +646,7 @@ func TestBackend_urlPassedNonGeneratedKeyMissingIssuer(t *testing.T) {
 func TestBackend_urlPassedNonGeneratedKeyMissingAccountName(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -677,7 +680,7 @@ func TestBackend_urlPassedNonGeneratedKeyMissingAccountName(t *testing.T) {
 func TestBackend_urlPassedNonGeneratedKeyMissingAccountNameandIssuer(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -711,7 +714,7 @@ func TestBackend_urlPassedNonGeneratedKeyMissingAccountNameandIssuer(t *testing.
 func TestBackend_generatedKeyInvalidSkew(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -735,7 +738,7 @@ func TestBackend_generatedKeyInvalidSkew(t *testing.T) {
 func TestBackend_generatedKeyInvalidQRSize(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -759,7 +762,7 @@ func TestBackend_generatedKeyInvalidQRSize(t *testing.T) {
 func TestBackend_generatedKeyInvalidKeySize(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -783,7 +786,7 @@ func TestBackend_generatedKeyInvalidKeySize(t *testing.T) {
 func TestBackend_generatedKeyMissingAccountName(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -805,7 +808,7 @@ func TestBackend_generatedKeyMissingAccountName(t *testing.T) {
 func TestBackend_generatedKeyMissingIssuer(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -827,7 +830,7 @@ func TestBackend_generatedKeyMissingIssuer(t *testing.T) {
 func TestBackend_invalidURLValue(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -849,7 +852,7 @@ func TestBackend_invalidURLValue(t *testing.T) {
 func TestBackend_urlAndGenerateTrue(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -871,7 +874,7 @@ func TestBackend_urlAndGenerateTrue(t *testing.T) {
 func TestBackend_keyAndGenerateTrue(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -893,7 +896,7 @@ func TestBackend_keyAndGenerateTrue(t *testing.T) {
 func TestBackend_generatedKeyExportedFalse(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1091,13 +1094,14 @@ func testAccStepReadKey(t *testing.T, name string, expected map[string]interface
 	}
 }
 
-func testAccStepValidateCode(t *testing.T, name string, code string, valid bool) logicaltest.TestStep {
+func testAccStepValidateCode(t *testing.T, name string, code string, valid, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "code/" + name,
 		Data: map[string]interface{}{
 			"code": code,
 		},
+		ErrorOk: expectError,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
 				return fmt.Errorf("bad: %#v", resp)

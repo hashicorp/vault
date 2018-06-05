@@ -1,0 +1,116 @@
+.popup-menu-content {
+  border-radius: 2px;
+  margin: -2px 0 0 0;
+
+  & > .box {
+    border-radius: 2px;
+    box-shadow: $box-shadow, $box-shadow-middle;
+    padding: 0;
+    position: relative;
+    width: 175px;
+  }
+
+  &.is-wide > .box {
+    width: 300px;
+  }
+
+  .confirm-action span .button {
+    display: block;
+    margin: .25rem auto;
+    width: 95%;
+  }
+
+  .menu {
+    padding: $size-11 0;
+
+    button.link,
+    a {
+      background: transparent;
+      box-shadow: none;
+      border: none;
+      color: $menu-item-color;
+      display: block;
+      height: auto;
+      font-size: $size-7;
+      font-weight: $font-weight-semibold;
+      padding: $size-9 $size-8;
+      text-align: left;
+      text-decoration: none;
+      width: 100%;
+
+      &:hover {
+        background-color: $menu-item-hover-background-color;
+        color: $menu-item-hover-color;
+      }
+
+      &.is-active {
+        background-color: $menu-item-active-background-color;
+        color: $menu-item-active-color;
+      }
+
+      &.is-destroy {
+        color: $red;
+
+        &:hover {
+          background-color: $red;
+          color: $white;
+        }
+      }
+    }
+  }
+
+  .menu-label {
+    color: $grey-dark;
+    font-size: $size-8;
+    font-weight: $font-weight-semibold;
+    letter-spacing: 0;
+    margin: 0;
+    padding: $size-10 $size-8 $size-11;
+    text-transform: none;
+  }
+
+  .menu-content {
+    padding: $size-10 $size-8;
+  }
+
+  hr {
+    background-color: $grey-light;
+    margin: $size-11 0;
+  }
+}
+
+.popup-menu-trigger {
+  height: 2rem;
+  min-width: 0;
+  padding: 0 $size-10;
+}
+
+.status-menu-content {
+  margin-top: 8px;
+}
+
+.ember-basic-dropdown-content {
+  &--left.popup-menu {
+    margin: 0px 0 0 -8px;
+  }
+
+  &--below {
+    &.ember-basic-dropdown--transitioning-in {
+      animation: drop-fade-above .15s;
+    }
+
+    &.ember-basic-dropdown--transitioning-out {
+      animation: drop-fade-above .15s reverse;
+    }
+  }
+
+  &--above {
+    &.ember-basic-dropdown--transitioning-in {
+      animation: drop-fade-below .15s;
+    }
+
+    &.ember-basic-dropdown--transitioning-out {
+      animation: drop-fade-below .15s reverse;
+    }
+  }
+}

@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+const (
+	// minRate is the minimum rate at which we allow an action to be performed
+	// across the whole cluster. The value is once a day: 1 / (1 * time.Day)
+	minRate = 1.0 / 86400
+)
+
 // DurationMinusBuffer returns a duration, minus a buffer and jitter
 // subtracted from the duration.  This function is used primarily for
 // servicing Consul TTL Checks in advance of the TTL.
@@ -31,7 +37,7 @@ func DurationMinusBufferDomain(intv time.Duration, buffer time.Duration, jitter 
 	return min, max
 }
 
-// Returns a random stagger interval between 0 and the duration
+// RandomStagger returns an interval between 0 and the duration
 func RandomStagger(intv time.Duration) time.Duration {
 	if intv == 0 {
 		return 0
@@ -43,7 +49,6 @@ func RandomStagger(intv time.Duration) time.Duration {
 // order to target an aggregate number of actions per second across the whole
 // cluster.
 func RateScaledInterval(rate float64, min time.Duration, n int) time.Duration {
-	const minRate = 1 / 86400 // 1/(1 * time.Day)
 	if rate <= minRate {
 		return min
 	}

@@ -1,6 +1,10 @@
 package cidrutil
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/hashicorp/go-sockaddr"
+)
 
 func TestCIDRUtil_IPBelongsToCIDR(t *testing.T) {
 	ip := "192.168.25.30"
@@ -40,50 +44,6 @@ func TestCIDRUtil_IPBelongsToCIDR(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
-}
-
-func TestCIDRUtil_IPBelongsToCIDRBlocksString(t *testing.T) {
-	ip := "192.168.27.29"
-	cidrList := "172.169.100.200/18,192.168.0.0/16,10.10.20.20/24"
-
-	belongs, err := IPBelongsToCIDRBlocksString(ip, cidrList, ",")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !belongs {
-		t.Fatalf("expected IP %q to belong to one of the CIDRs in %q", ip, cidrList)
-	}
-
-	ip = "10.197.192.6"
-	cidrList = "1.2.3.0/8,10.197.192.0/18,10.197.193.0/24"
-
-	belongs, err = IPBelongsToCIDRBlocksString(ip, cidrList, ",")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !belongs {
-		t.Fatalf("expected IP %q to belong to one of the CIDRs in %q", ip, cidrList)
-	}
-
-	ip = "192.168.27.29"
-	cidrList = "172.169.100.200/18,192.168.0.0.0/16,10.10.20.20/24"
-
-	belongs, err = IPBelongsToCIDRBlocksString(ip, cidrList, ",")
-	if err == nil {
-		t.Fatalf("expected an error")
-	}
-
-	ip = "30.40.50.60"
-	cidrList = "172.169.100.200/18,192.168.0.0/16,10.10.20.20/24"
-
-	belongs, err = IPBelongsToCIDRBlocksString(ip, cidrList, ",")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if belongs {
-		t.Fatalf("expected IP %q to not belong to one of the CIDRs in %q", ip, cidrList)
-	}
-
 }
 
 func TestCIDRUtil_IPBelongsToCIDRBlocksSlice(t *testing.T) {
@@ -236,5 +196,31 @@ func TestCIDRUtil_SubsetBlocks(t *testing.T) {
 	}
 	if subset {
 		t.Fatalf("expected CIDR blocks %q to not be a subset of CIDR blocks %q", cidrBlocks2, cidrBlocks1)
+	}
+}
+
+func TestCIDRUtil_RemoteAddrIsOk_NegativeTest(t *testing.T) {
+	addr, err := sockaddr.NewSockAddr("127.0.0.1/8")
+	if err != nil {
+		t.Fatal(err)
+	}
+	boundCIDRs := []*sockaddr.SockAddrMarshaler{
+		{addr},
+	}
+	if RemoteAddrIsOk("123.0.0.1", boundCIDRs) {
+		t.Fatal("remote address of 123.0.0.1/2 should not be allowed for 127.0.0.1/8")
+	}
+}
+
+func TestCIDRUtil_RemoteAddrIsOk_PositiveTest(t *testing.T) {
+	addr, err := sockaddr.NewSockAddr("127.0.0.1/8")
+	if err != nil {
+		t.Fatal(err)
+	}
+	boundCIDRs := []*sockaddr.SockAddrMarshaler{
+		{addr},
+	}
+	if !RemoteAddrIsOk("127.0.0.1", boundCIDRs) {
+		t.Fatal("remote address of 127.0.0.1 should be allowed for 127.0.0.1/8")
 	}
 }

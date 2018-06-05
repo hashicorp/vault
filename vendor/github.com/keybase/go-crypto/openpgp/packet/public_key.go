@@ -64,7 +64,16 @@ type edDSAkey struct {
 	ecdsaKey
 }
 
+func copyFrontFill(dst, src []byte, length int) int {
+	if srcLen := len(src); srcLen < length {
+		return copy(dst[length-srcLen:], src[:])
+	} else {
+		return copy(dst[:], src[:])
+	}
+}
+
 func (e *edDSAkey) Verify(payload []byte, r parsedMPI, s parsedMPI) bool {
+	const halfSigSize = ed25519.SignatureSize / 2
 	var sig [ed25519.SignatureSize]byte
 
 	// NOTE: The first byte is 0x40 - MPI header
@@ -77,8 +86,8 @@ func (e *edDSAkey) Verify(payload []byte, r parsedMPI, s parsedMPI) bool {
 	// ed25519 expects, but because we copy it over to an array of exact size,
 	// we will always pass correctly sized slice to Verify. Slice too short
 	// would make ed25519 panic().
-	n := copy(sig[:], r.bytes)
-	copy(sig[n:], s.bytes)
+	copyFrontFill(sig[:halfSigSize], r.bytes, halfSigSize)
+	copyFrontFill(sig[halfSigSize:], s.bytes, halfSigSize)
 
 	return ed25519.Verify(key, payload, sig[:])
 }
@@ -384,6 +393,14 @@ func (pk *PublicKey) parse(r io.Reader) (err error) {
 			return
 		}
 		pk.PublicKey, err = pk.ec.newECDH()
+	case PubKeyAlgoBadElGamal:
+		// Key has ElGamal format but nil-implementation - it will
+		// load but it's not possible to do any operations using this
+		// key.
+		err = pk.parseElGamal(r)
+		if err != nil {
+			pk.PublicKey = nil
+		}
 	default:
 		err = errors.UnsupportedError("public key type: " + strconv.Itoa(int(pk.PubKeyAlgo)))
 	}
@@ -499,7 +516,7 @@ func (pk *PublicKey) SerializeSignaturePrefix(h io.Writer) {
 		pLength += 2 + uint16(len(pk.q.bytes))
 		pLength += 2 + uint16(len(pk.g.bytes))
 		pLength += 2 + uint16(len(pk.y.bytes))
-	case PubKeyAlgoElGamal:
+	case PubKeyAlgoElGamal, PubKeyAlgoBadElGamal:
 		pLength += 2 + uint16(len(pk.p.bytes))
 		pLength += 2 + uint16(len(pk.g.bytes))
 		pLength += 2 + uint16(len(pk.y.bytes))
@@ -530,7 +547,7 @@ func (pk *PublicKey) Serialize(w io.Writer) (err error) {
 		length += 2 + len(pk.q.bytes)
 		length += 2 + len(pk.g.bytes)
 		length += 2 + len(pk.y.bytes)
-	case PubKeyAlgoElGamal:
+	case PubKeyAlgoElGamal, PubKeyAlgoBadElGamal:
 		length += 2 + len(pk.p.bytes)
 		length += 2 + len(pk.g.bytes)
 		length += 2 + len(pk.y.bytes)
@@ -578,7 +595,7 @@ func (pk *PublicKey) serializeWithoutHeaders(w io.Writer) (err error) {
 		return writeMPIs(w, pk.n, pk.e)
 	case PubKeyAlgoDSA:
 		return writeMPIs(w, pk.p, pk.q, pk.g, pk.y)
-	case PubKeyAlgoElGamal:
+	case PubKeyAlgoElGamal, PubKeyAlgoBadElGamal:
 		return writeMPIs(w, pk.p, pk.g, pk.y)
 	case PubKeyAlgoECDSA:
 		return pk.ec.serialize(w)
@@ -787,8 +804,8 @@ func keyRevocationHash(pk signingKey, hashFunc crypto.Hash) (h hash.Hash, err er
 
 // VerifyRevocationSignature returns nil iff sig is a valid signature, made by this
 // public key.
-func (pk *PublicKey) VerifyRevocationSignature(sig *Signature) (err error) {
-	h, err := keyRevocationHash(pk, sig.Hash)
+func (pk *PublicKey) VerifyRevocationSignature(revokedKey *PublicKey, sig *Signature) (err error) {
+	h, err := keyRevocationHash(revokedKey, sig.Hash)
 	if err != nil {
 		return err
 	}
@@ -901,7 +918,7 @@ func (pk *PublicKey) BitLength() (bitLength uint16, err error) {
 		bitLength = pk.n.bitLength
 	case PubKeyAlgoDSA:
 		bitLength = pk.p.bitLength
-	case PubKeyAlgoElGamal:
+	case PubKeyAlgoElGamal, PubKeyAlgoBadElGamal:
 		bitLength = pk.p.bitLength
 	case PubKeyAlgoECDH:
 		ecdhPublicKey := pk.PublicKey.(*ecdh.PublicKey)
@@ -918,4 +935,13 @@ func (pk *PublicKey) BitLength() (bitLength uint16, err error) {
 		err = errors.InvalidArgumentError("bad public-key algorithm")
 	}
 	return
+}
+
+func (pk *PublicKey) ErrorIfDeprecated() error {
+	switch pk.PubKeyAlgo {
+	case PubKeyAlgoBadElGamal:
+		return errors.DeprecatedKeyError("ElGamal Encrypt or Sign (algo 20) is deprecated")
+	default:
+		return nil
+	}
 }

@@ -32,4 +32,12 @@ govendor init
 echo "Fetching deps, will take some time..."
 govendor fetch +missing
 
+# Clean up after the logrus mess
+govendor remove github.com/Sirupsen/logrus
+cd vendor
+find -type f | grep '.go' | xargs sed -i -e 's/Sirupsen/sirupsen/'
+
+# Need the v2 branch for Azure
+govendor fetch github.com/coreos/go-oidc@v2
+
 echo "Done; to commit run \n\ncd ${GOPATH}/src/github.com/hashicorp/${TOOL}\n"

@@ -1,9 +1,11 @@
 package pki
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
@@ -24,6 +26,13 @@ func pathGenerateIntermediate(b *backend) *framework.Path {
 
 	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
+	ret.Fields["add_basic_constraints"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Whether to add a Basic Constraints
+extension with CA: true. Only needed as a
+workaround in some compatibility scenarios
+with Active Directory Certificate Services.`,
+	}
 
 	return ret
 }
@@ -53,8 +62,7 @@ endpoint.`,
 	return ret
 }
 
-func (b *backend) pathGenerateIntermediate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
 	exported, format, role, errorResp := b.getGenerationParams(data)
@@ -63,7 +71,12 @@ func (b *backend) pathGenerateIntermediate(
 	}
 
 	var resp *logical.Response
-	parsedBundle, err := generateIntermediateCSR(b, role, nil, req, data)
+	input := &dataBundle{
+		role:    role,
+		req:     req,
+		apiData: data,
+	}
+	parsedBundle, err := generateIntermediateCSR(b, input)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -75,7 +88,7 @@ func (b *backend) pathGenerateIntermediate(
 
 	csrb, err := parsedBundle.ToCSRBundle()
 	if err != nil {
-		return nil, fmt.Errorf("Error converting raw CSR bundle to CSR bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw CSR bundle to CSR bundle: {{err}}", err)
 	}
 
 	resp = &logical.Response{
@@ -106,6 +119,13 @@ func (b *backend) pathGenerateIntermediate(
 		}
 	}
 
+	if data.Get("private_key_format").(string) == "pkcs8" {
+		err = convertRespToPKCS8(resp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	cb := &certutil.CertBundle{}
 	cb.PrivateKey = csrb.PrivateKey
 	cb.PrivateKeyType = csrb.PrivateKeyType
@@ -114,7 +134,7 @@ func (b *backend) pathGenerateIntermediate(
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -122,8 +142,7 @@ func (b *backend) pathGenerateIntermediate(
 	return resp, nil
 }
 
-func (b *backend) pathSetSignedIntermediate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathSetSignedIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	cert := data.Get("certificate").(string)
 
 	if cert == "" {
@@ -145,7 +164,7 @@ func (b *backend) pathSetSignedIntermediate(
 	}
 
 	cb := &certutil.CertBundle{}
-	entry, err := req.Storage.Get("config/ca_bundle")
+	entry, err := req.Storage.Get(ctx, "config/ca_bundle")
 	if err != nil {
 		return nil, err
 	}
@@ -179,26 +198,26 @@ func (b *backend) pathSetSignedIntermediate(
 	}
 
 	if err := inputBundle.Verify(); err != nil {
-		return nil, fmt.Errorf("verification of parsed bundle failed: %s", err)
+		return nil, errwrap.Wrapf("verification of parsed bundle failed: {{err}}", err)
 	}
 
 	cb, err = inputBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("error converting raw values into cert bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw values into cert bundle: {{err}}", err)
 	}
 
 	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 
 	entry.Key = "certs/" + normalizeSerial(cb.SerialNumber)
 	entry.Value = inputBundle.CertificateBytes
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -207,13 +226,13 @@ func (b *backend) pathSetSignedIntermediate(
 	// location
 	entry.Key = "ca"
 	entry.Value = inputBundle.CertificateBytes
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 
 	// Build a fresh CRL
-	err = buildCRL(b, req)
+	err = buildCRL(ctx, b, req)
 
 	return nil, err
 }

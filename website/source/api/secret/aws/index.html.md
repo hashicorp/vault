@@ -1,19 +1,19 @@
 ---
 layout: "api"
-page_title: "AWS Secret Backend - HTTP API"
+page_title: "AWS - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-aws"
 description: |-
-  This is the API documentation for the Vault AWS secret backend.
+  This is the API documentation for the Vault AWS secrets engine.
 ---
 
-# AWS Secret Backend HTTP API
+# AWS Secrets Engine (API)
 
-This is the API documentation for the Vault AWS secret backend. For general
-information about the usage and operation of the AWS backend, please see the
-[Vault AWS backend documentation](/docs/secrets/aws/index.html).
+This is the API documentation for the Vault AWS secrets engine. For general
+information about the usage and operation of the AWS secrets engine, please see
+the [Vault AWS documentation](/docs/secrets/aws/index.html).
 
-This documentation assumes the AWS backend is mounted at the `/aws` path in
-Vault. Since it is possible to mount secret backends at any location, please
+This documentation assumes the AWS secrets engine is enabled at the `/aws` path
+in Vault. Since it is possible to enable secrets engines at any location, please
 update your API calls accordingly.
 
 ## Configure Root IAM Credentials
@@ -23,13 +23,17 @@ are multiple ways to pass root IAM credentials to the Vault server, specified
 below with the highest precedence first. If credentials already exist, this will
 overwrite them.
 
+The official AWS SDK is used for sourcing credentials from env vars, shared
+files, or IAM/ECS instances.
+
 - Static credentials provided to the API as a payload
 
 - Credentials in the `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, and `AWS_REGION`
   environment variables **on the server**
 
-- Querying the EC2 metadata service if the **Vault server** is on EC2 and has
-  querying capabilities
+- Shared credentials files
+
+- Assigned IAM role or ECS task role credentials
 
 At present, this endpoint does not confirm that the provided AWS credentials are
 valid AWS credentials with proper permissions.
@@ -40,11 +44,21 @@ valid AWS credentials with proper permissions.
 
 ### Parameters
 
+- `max_retries` `(int: -1)` - Number of max retries the client should use for
+  recoverable errors. The default (`-1`) falls back to the AWS SDK's default
+  behavior.
+
 - `access_key` `(string: <required>)` – Specifies the AWS access key ID.
 
 - `secret_key` `(string: <required>)` – Specifies the AWS secret access key.
 
-- `region` `(string: <required>)` – Specifies the AWS region.
+- `region` `(string: <optional>)` – Specifies the AWS region. If not set it
+  will use the `AWS_REGION` env var, `AWS_DEFAULT_REGION` env var, or
+  `us-east-1` in that order.
+
+- `iam_endpoint` `(string: <optional>)` – Specifies a custom HTTP IAM endpoint to use.
+
+- `sts_endpoint` `(string: <optional>)` – Specifies a custom HTTP STS endpoint to use.
 
 ### Sample Payload
 
@@ -63,12 +77,12 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/aws/config/root
+    http://127.0.0.1:8200/v1/aws/config/root
 ```
 
 ## Configure Lease
 
-This endpoint configures lease settings for the AWS secret backend. It is
+This endpoint configures lease settings for the AWS secrets engine. It is
 optional, as there are default values for `lease` and `lease_max`.
 
 | Method   | Path                         | Produces               |
@@ -100,12 +114,12 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/aws/config/lease
+    http://127.0.0.1:8200/v1/aws/config/lease
 ```
 
 ## Read Lease
 
-This endpoint returns the current lease settings for the AWS secret backend.
+This endpoint returns the current lease settings for the AWS secrets engine.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -116,7 +130,7 @@ This endpoint returns the current lease settings for the AWS secret backend.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/aws/config/lease
+    http://127.0.0.1:8200/v1/aws/config/lease
 ```
 
 ### Sample Response
@@ -158,7 +172,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/aws/roles/example-role
+    http://127.0.0.1:8200/v1/aws/roles/example-role
 ```
 
 ### Sample Payloads
@@ -198,7 +212,7 @@ exist, a 404 is returned.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/aws/roles/example-role
+    http://127.0.0.1:8200/v1/aws/roles/example-role
 ```
 
 ### Sample Responses
@@ -225,7 +239,7 @@ For an ARN:
 
 ## List Roles
 
-This endpoint lists all existing roles in the backend.
+This endpoint lists all existing roles in the secrets engine.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -237,7 +251,7 @@ This endpoint lists all existing roles in the backend.
 $ curl
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/aws/roles
+    http://127.0.0.1:8200/v1/aws/roles
 ```
 
 ### Sample Response
@@ -259,7 +273,7 @@ exist, a 404 is returned.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `DELET`  | `/aws/roles/:name`           | `204 (empty body)`     |
+| `DELETE`  | `/aws/roles/:name`           | `204 (empty body)`     |
 
 ### Parameters
 
@@ -272,7 +286,7 @@ exist, a 404 is returned.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/aws/roles/example-role
+    http://127.0.0.1:8200/v1/aws/roles/example-role
 ```
 
 ## Generate IAM Credentials
@@ -287,14 +301,14 @@ role must be created before queried.
 ### Parameters
 
 - `name` `(string: <required>)` – Specifies the name of the role to generate
-  credentials againts. This is part of the request URL.
+  credentials against. This is part of the request URL.
 
 ### Sample Request
 
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/aws/creds/example-role
+    http://127.0.0.1:8200/v1/aws/creds/example-role
 ```
 
 ### Sample Response
@@ -347,7 +361,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/aws/sts/example-role
+    http://127.0.0.1:8200/v1/aws/sts/example-role
 ```
 
 ### Sample Response

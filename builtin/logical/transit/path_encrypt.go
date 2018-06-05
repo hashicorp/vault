@@ -1,10 +1,12 @@
 package transit
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"sync"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -29,6 +31,9 @@ type BatchRequestItem struct {
 	// Nonce to be used when v1 convergent encryption is used
 	Nonce string `json:"nonce" structs:"nonce" mapstructure:"nonce"`
 
+	// The key version to be used for encryption
+	KeyVersion int `json:"key_version" structs:"key_version" mapstructure:"key_version"`
+
 	// DecodedNonce is the base64 decoded version of Nonce
 	DecodedNonce []byte
 }
@@ -39,7 +44,7 @@ type BatchResponseItem struct {
 	// request item
 	Ciphertext string `json:"ciphertext,omitempty" structs:"ciphertext" mapstructure:"ciphertext"`
 
-	// Plaintext for the ciphertext present in the corresponsding batch
+	// Plaintext for the ciphertext present in the corresponding batch
 	// request item
 	Plaintext string `json:"plaintext,omitempty" structs:"plaintext" mapstructure:"plaintext"`
 
@@ -100,6 +105,13 @@ same ciphertext is generated. It is *very important* when using this mode that
 you ensure that all nonces are unique for a given context.  Failing to do so
 will severely impact the ciphertext's security.`,
 			},
+
+			"key_version": &framework.FieldSchema{
+				Type: framework.TypeInt,
+				Description: `The version of the key to use for encryption.
+Must be 0 (for latest) or a value greater than or equal
+to the min_encryption_version configured on the key.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -114,10 +126,9 @@ will severely impact the ciphertext's security.`,
 	}
 }
 
-func (b *backend) pathEncryptExistenceCheck(
-	req *logical.Request, d *framework.FieldData) (bool, error) {
+func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -127,8 +138,7 @@ func (b *backend) pathEncryptExistenceCheck(
 	return p != nil, nil
 }
 
-func (b *backend) pathEncryptWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	var err error
 
@@ -137,7 +147,7 @@ func (b *backend) pathEncryptWrite(
 	if batchInputRaw != nil {
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse batch input: %v", err)
+			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
 		}
 
 		if len(batchInputItems) == 0 {
@@ -151,9 +161,10 @@ func (b *backend) pathEncryptWrite(
 
 		batchInputItems = make([]BatchRequestItem, 1)
 		batchInputItems[0] = BatchRequestItem{
-			Plaintext: valueRaw.(string),
-			Context:   d.Get("context").(string),
-			Nonce:     d.Get("nonce").(string),
+			Plaintext:  valueRaw.(string),
+			Context:    d.Get("context").(string),
+			Nonce:      d.Get("nonce").(string),
+			KeyVersion: d.Get("key_version").(int),
 		}
 	}
 
@@ -171,7 +182,7 @@ func (b *backend) pathEncryptWrite(
 
 		_, err := base64.StdEncoding.DecodeString(item.Plaintext)
 		if err != nil {
-			batchResponseItems[i].Error = "failed to base64-decode plaintext"
+			batchResponseItems[i].Error = err.Error()
 			continue
 		}
 
@@ -215,16 +226,18 @@ func (b *backend) pathEncryptWrite(
 		switch keyType {
 		case "aes256-gcm96":
 			polReq.KeyType = keysutil.KeyType_AES256_GCM96
+		case "chacha20-poly1305":
+			polReq.KeyType = keysutil.KeyType_ChaCha20_Poly1305
 		case "ecdsa-p256":
 			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 		}
 
-		p, lock, upserted, err = b.lm.GetPolicyUpsert(polReq)
+		p, lock, upserted, err = b.lm.GetPolicyUpsert(ctx, polReq)
 
 	} else {
-		p, lock, err = b.lm.GetPolicyShared(req.Storage, name)
+		p, lock, err = b.lm.GetPolicyShared(ctx, req.Storage, name)
 	}
 	if lock != nil {
 		defer lock.RUnlock()
@@ -233,7 +246,7 @@ func (b *backend) pathEncryptWrite(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
 	// Process batch request items. If encryption of any request
@@ -244,7 +257,7 @@ func (b *backend) pathEncryptWrite(
 			continue
 		}
 
-		ciphertext, err := p.Encrypt(item.DecodedContext, item.DecodedNonce, item.Plaintext)
+		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

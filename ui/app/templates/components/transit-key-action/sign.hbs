@@ -1,0 +1,117 @@
+<form {{action 'doSubmit' (hash input=input hash_algorithm=hash_algorithm signature_algorithm=signature_algorithm key_version=key_version context=context prehashed=prehashed) on="submit"}}>
+  {{#if signature}}
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <div class="field">
+        <label for="signature" class="is-label">Signature</label>
+        <div class="control">
+          <textarea readonly class="textarea" id="signature">{{signature}}</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        {{#copy-button
+          clipboardTarget="#signature"
+          class="button is-primary"
+          buttonType="button"
+          success=(action (set-flash-message 'Signature copied!'))
+        }}
+          Copy
+        {{/copy-button}}
+      </div>
+      <div class="control">
+        <button {{action 'onClear'}} type="button" class="button">
+          Back
+        </button>
+      </div>
+    </div>
+  {{else}}
+    <div class="box is-sideless is-fullwidth is-marginless">
+      {{key-version-select
+        key=key
+        onVersionChange=(action (mut key_version))
+        key_version=key_version
+      }}
+      <div class="field">
+        <label for="input" class="is-label">
+          Input
+        </label>
+        <div class="control is-relative">
+          {{textarea id="input" name="input" value=input class="textarea" data-test-transit-input="input"}}
+          {{b64-toggle value=input isInput=false data-test-transit-b64-toggle="input"}}
+        </div>
+      </div>
+      {{#if key.derived}}
+        <div class="field">
+          <label for="context" class="is-label">
+            Context
+          </label>
+          <div class="field has-addons">
+            <div class="control">
+              {{input type="text" id="context" value=context class="input" data-test-transit-input="context"}}
+            </div>
+            <div class="control">
+              {{b64-toggle value=context data-test-transit-b64-toggle="context"}}
+            </div>
+          </div>
+        </div>
+      {{/if}}
+      <div class="field">
+        <div class="level is-mobile">
+          <div class="level-left">
+            <label for="hash_algorithm" class="is-label">Hash Algorithm</label>
+          </div>
+          <div class="level-right">
+            <div class="control is-flex">
+              {{input  id="prehashed" type="checkbox" name="prehashed" class="switch is-rounded is-success is-small" checked=prehashed }}
+              <label for="prehashed">Prehashed</label>
+            </div>
+          </div>
+        </div>
+        <div class="control is-expanded">
+          <div class="select is-fullwidth">
+            <select
+             name="hash_algorithm"
+             id="hash_algorithm"
+             onchange={{action (mut hash_algorithm) value="target.value"}}
+             >
+             {{#each (sha2-digest-sizes) as |algo|}}
+               <option selected={{if hash_algorithm (eq hash_algorithm algo) (eq algo 'sha2-256')}} value={{algo}}>
+                 {{algo}}
+               </option>
+             {{/each}}
+            </select>
+          </div>
+        </div>
+      </div>
+      {{#if (or (eq key.type 'rsa-2048') (eq key.type 'rsa-4096'))}}
+        <div class="field">
+          <label for="signature_algorithm" class="is-label">Signature Algorithm</label>
+          <div class="control is-expanded">
+            <div class="select is-fullwidth">
+              <select
+               name="signature_algorithm"
+               id="signature_algorithm"
+               data-test-signature-algorithm="true"
+               onchange={{action (mut signature_algorithm) value="target.value"}}
+               >
+               {{#each (array 'pss' 'pkcs1v15') as |sigAlgo|}}
+                 <option selected={{if signature_algorithm (eq signature_algorithm sigAlgo) (eq sigAlgo 'pss')}} value={{sigAlgo}}>
+                   {{sigAlgo}}
+                 </option>
+               {{/each}}
+              </select>
+            </div>
+          </div>
+        </div>
+      {{/if}}
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="submit" disabled={{loading}} class="button is-primary {{if loading 'is-loading'}}">
+          Sign
+        </button>
+      </div>
+    </div>
+  {{/if}}
+</form>

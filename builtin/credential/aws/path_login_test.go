@@ -1,8 +1,12 @@
 package awsauth
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"testing"
 )
 
@@ -32,11 +36,17 @@ func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
 	expectedRoleArn := "arn:aws:sts::123456789012:assumed-role/RoleName/RoleSessionName"
 
 	parsedUserResponse, err := parseGetCallerIdentityResponse(responseFromUser)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if parsed_arn := parsedUserResponse.GetCallerIdentityResult[0].Arn; parsed_arn != expectedUserArn {
 		t.Errorf("expected to parse arn %#v, got %#v", expectedUserArn, parsed_arn)
 	}
 
 	parsedRoleResponse, err := parseGetCallerIdentityResponse(responseFromAssumedRole)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if parsed_arn := parsedRoleResponse.GetCallerIdentityResult[0].Arn; parsed_arn != expectedRoleArn {
 		t.Errorf("expected to parn arn %#v; got %#v", expectedRoleArn, parsed_arn)
 	}
@@ -48,36 +58,56 @@ func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
 }
 
 func TestBackend_pathLogin_parseIamArn(t *testing.T) {
-	userArn := "arn:aws:iam::123456789012:user/MyUserName"
-	assumedRoleArn := "arn:aws:sts::123456789012:assumed-role/RoleName/RoleSessionName"
-	baseRoleArn := "arn:aws:iam::123456789012:role/RoleName"
-
-	xformedUser, principalFriendlyName, sessionName, err := parseIamArn(userArn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if xformedUser != userArn {
-		t.Fatalf("expected to transform ARN %#v into %#v but got %#v instead", userArn, userArn, xformedUser)
-	}
-	if principalFriendlyName != "MyUserName" {
-		t.Fatalf("expected to extract MyUserName from ARN %#v but got %#v instead", userArn, principalFriendlyName)
-	}
-	if sessionName != "" {
-		t.Fatalf("expected to extract no session name from ARN %#v but got %#v instead", userArn, sessionName)
+	testParser := func(inputArn, expectedCanonicalArn string, expectedEntity iamEntity) {
+		entity, err := parseIamArn(inputArn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if expectedCanonicalArn != "" && entity.canonicalArn() != expectedCanonicalArn {
+			t.Fatalf("expected to canonicalize ARN %q into %q but got %q instead", inputArn, expectedCanonicalArn, entity.canonicalArn())
+		}
+		if *entity != expectedEntity {
+			t.Fatalf("expected to get iamEntity %#v from input ARN %q but instead got %#v", expectedEntity, inputArn, *entity)
+		}
 	}
 
-	xformedRole, principalFriendlyName, sessionName, err := parseIamArn(assumedRoleArn)
-	if err != nil {
-		t.Fatal(err)
+	testParser("arn:aws:iam::123456789012:user/UserPath/MyUserName",
+		"arn:aws:iam::123456789012:user/MyUserName",
+		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "user", Path: "UserPath", FriendlyName: "MyUserName"},
+	)
+	canonicalRoleArn := "arn:aws:iam::123456789012:role/RoleName"
+	testParser("arn:aws:sts::123456789012:assumed-role/RoleName/RoleSessionName",
+		canonicalRoleArn,
+		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "assumed-role", FriendlyName: "RoleName", SessionInfo: "RoleSessionName"},
+	)
+	testParser("arn:aws:iam::123456789012:role/RolePath/RoleName",
+		canonicalRoleArn,
+		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "role", Path: "RolePath", FriendlyName: "RoleName"},
+	)
+	testParser("arn:aws:iam::123456789012:instance-profile/profilePath/InstanceProfileName",
+		"",
+		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "instance-profile", Path: "profilePath", FriendlyName: "InstanceProfileName"},
+	)
+
+	// Test that it properly handles pathological inputs...
+	_, err := parseIamArn("")
+	if err == nil {
+		t.Error("expected error from empty input string")
 	}
-	if xformedRole != baseRoleArn {
-		t.Fatalf("expected to transform ARN %#v into %#v but got %#v instead", assumedRoleArn, baseRoleArn, xformedRole)
+
+	_, err = parseIamArn("arn:aws:iam::123456789012:role")
+	if err == nil {
+		t.Error("expected error from malformed ARN without a role name")
 	}
-	if principalFriendlyName != "RoleName" {
-		t.Fatalf("expected to extract principal name of RoleName from ARN %#v but got %#v instead", assumedRoleArn, sessionName)
+
+	_, err = parseIamArn("arn:aws:iam")
+	if err == nil {
+		t.Error("expected error from incomplete ARN (arn:aws:iam)")
 	}
-	if sessionName != "RoleSessionName" {
-		t.Fatalf("expected to extract role session name of RoleSessionName from ARN %#v but got %#v instead", assumedRoleArn, sessionName)
+
+	_, err = parseIamArn("arn:aws:iam::1234556789012:/")
+	if err == nil {
+		t.Error("expected error from empty principal type and no principal name (arn:aws:iam::1234556789012:/)")
 	}
 }
 
@@ -136,5 +166,45 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 	err = validateVaultHeaderValue(postHeadersSplit, requestUrl, canaryHeaderValue)
 	if err != nil {
 		t.Errorf("did NOT validate valid POST request with split Authorization header: %v", err)
+	}
+}
+
+func TestBackend_pathLogin_parseIamRequestHeaders(t *testing.T) {
+	testIamParser := func(headers interface{}, expectedHeaders http.Header) error {
+		headersJson, err := json.Marshal(headers)
+		if err != nil {
+			return fmt.Errorf("unable to JSON encode headers: %v", err)
+		}
+		headersB64 := base64.StdEncoding.EncodeToString(headersJson)
+
+		parsedHeaders, err := parseIamRequestHeaders(headersB64)
+		if err != nil {
+			return fmt.Errorf("error parsing encoded headers: %v", err)
+		}
+		if parsedHeaders == nil {
+			return fmt.Errorf("nil result from parsing headers")
+		}
+		if !reflect.DeepEqual(parsedHeaders, expectedHeaders) {
+			return fmt.Errorf("parsed headers not equal to input headers")
+		}
+		return nil
+	}
+
+	headersGoStyle := http.Header{
+		"Header1": []string{"Value1"},
+		"Header2": []string{"Value2"},
+	}
+	headersMixedType := map[string]interface{}{
+		"Header1": "Value1",
+		"Header2": []string{"Value2"},
+	}
+
+	err := testIamParser(headersGoStyle, headersGoStyle)
+	if err != nil {
+		t.Errorf("error parsing go-style headers: %v", err)
+	}
+	err = testIamParser(headersMixedType, headersGoStyle)
+	if err != nil {
+		t.Errorf("error parsing mixed-style headers: %v", err)
 	}
 }

@@ -1,0 +1,152 @@
+---
+layout: "docs"
+page_title: "Google Cloud Storage - Storage Backends - Configuration"
+sidebar_current: "docs-configuration-storage-google-cloud"
+description: |-
+  The Google Cloud Storage storage backend is used to persist Vault's data in
+  Google Cloud Storage.
+---
+
+# Google Cloud Storage Storage Backend
+
+The Google Cloud Storage storage backend is used to persist Vault's data in
+[Google Cloud Storage][gcs-docs].
+
+- **High Availability** – the Google Cloud Storage storage backend supports high
+  availability. Because the Google Cloud Storage storage backend uses the system
+  time on the Vault node to acquire sessions, clock skew across Vault servers
+  can cause lock contention.
+
+- **Community Supported** – the Google Cloud Storage storage backend is
+  supported by the community. While it has undergone review by HashiCorp
+  employees, they may not be as knowledgeable about the technology. If you
+  encounter problems with them, you may be referred to the original author.
+
+```hcl
+storage "gcs" {
+  bucket = "my-storage-bucket"
+}
+```
+
+For more information on schemas or Google Cloud Storage, please see the [Google
+Cloud Storage documentation][gcs-docs].
+
+## `gcs` Setup
+
+To use the Google Cloud Storage Vault storage backend, you must have a Google
+Cloud Platform account with permissions to create Google Cloud Storage buckets.
+
+To use the Google Cloud Storage Vault storage backend, you must have a Google
+Cloud Platform account. Either using the API or web interface, create a bucket
+using the [`gsutil`][cloud-sdk] command. Bucket names must be globally unique
+across all of Google Cloud, so choose a unique name:
+
+```sh
+$ gsutil mb gs://mycompany-vault-data
+```
+
+Even though the data is encrypted in transit and at rest, be sure to set the
+appropriate permissions on the bucket to limit exposure. You may want to create
+a service account that limits Vault's interactions with Google Cloud to objects
+in the storage bucket using IAM permissions.
+
+Here is a sample [Google Cloud IAM][iam] policy that grants the proper
+permissions to a [service account][service-accounts]. Be sure to replace the
+value with the value for your service account.
+
+```json
+{
+  "bindings": [
+    {
+      "role": "roles/storage.objectAdmin",
+      "members": [
+        "serviceAccount:my-vault@gserviceaccount.com"
+      ]
+    }
+  ]
+}
+```
+
+Then give Vault the service account's credential file as a configuration option.
+
+For more information on schemas or Google Cloud Storage, please see the [Google
+Cloud Storage documentation][gcs-docs].
+
+## `gcs` Authentication
+
+The Google Cloud Storage Vault storage backend uses the official Google Cloud
+Golang SDK. This means it supports the common ways of [providing credentials to
+Google Cloud][cloud-creds].
+
+1. The environment variable `GOOGLE_APPLICATION_CREDENTIALS`. This is specified
+as the **path** to a Google Cloud credentials file, typically for a service
+account. If this environment variable is present, the resulting credentials are
+used. If the credentials are invalid, an error is returned.
+
+1. Default instance credentials. When no environment variable is present, the
+default service account credentials are used.
+
+For more information on service accounts, please see the [Google Cloud Service
+Accounts documentation][service-accounts].
+
+To use this storage backend, the service account must have the following
+minimum scope(s):
+
+```text
+https://www.googleapis.com/auth/devstorage.read_write
+```
+
+## `gcs` Parameters
+
+- `bucket` `(string: <required>)` – Specifies the name of the bucket to use for
+  storage.
+
+- `chunk_size` `(string: "8192")` – Specifies the maximum size (in kilobytes) to
+  send in a single request. If set to 0, it will attempt to send the whole
+  object at once, but will not retry any failures. If you are not storing large
+  objects in Vault, it is recommended to set this to a low value (minimum is
+  256) since it will reduce the amount of memory Vault uses.
+
+- `max_parallel` `(int: 128)` - Specifies the maximum number of parallel
+  operations to take place.
+
+### High Availability Parameters
+
+- `ha_enabled` `(string: "false")` - Specifies if high availability mode is
+  enabled. This is a boolean value, but it is specified as a string like "true"
+  or "false".
+
+## `gcs` Examples
+
+### High Availability
+
+This example shows configuring Google Cloud Storage with high availability
+enabled.
+
+```hcl
+api_addr = "https://vault-leader.my-company.internal"
+
+storage "gcs" {
+  bucket        = "mycompany-vault-data"
+  ha_enabled    = "true"
+}
+```
+
+### Custom Chunk Size
+
+This example shows setting a custom chunk size for uploads. When uploading large
+data to Vault, setting a lower number can reduce Vault's memory consumption, but
+will increase the number of outbound requests.
+
+```hcl
+storage "gcs" {
+  bucket     = "mycompany-vault-data"
+  chunk_size = "512"
+}
+```
+
+[cloud-creds]: https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application
+[cloud-sdk]: https://cloud.google.com/sdk/downloads
+[gcs-docs]: https://cloud.google.com/storage/docs/
+[iam]: https://cloud.google.com/iam/docs/
+[service-accounts]: https://cloud.google.com/compute/docs/access/service-accounts

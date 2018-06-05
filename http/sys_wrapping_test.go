@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"net/http"
 	"reflect"
 	"testing"
 	"time"
@@ -14,29 +13,20 @@ import (
 
 // Test wrapping functionality
 func TestHTTP_Wrapping(t *testing.T) {
-	handler1 := http.NewServeMux()
-	handler2 := http.NewServeMux()
-	handler3 := http.NewServeMux()
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
 
-	coreConfig := &vault.CoreConfig{}
-
-	// Chicken-and-egg: Handler needs a core. So we create handlers first, then
-	// add routes chained to a Handler-created handler.
-	cores := vault.TestCluster(t, []http.Handler{handler1, handler2, handler3}, coreConfig, true)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
-	handler1.Handle("/", Handler(cores[0].Core))
-	handler2.Handle("/", Handler(cores[1].Core))
-	handler3.Handle("/", Handler(cores[2].Core))
+	cores := cluster.Cores
 
 	// make it easy to get access to the active
 	core := cores[0].Core
 	vault.TestWaitActive(t, core)
 
-	root := cores[0].Root
 	client := cores[0].Client
-	client.SetToken(root)
+	client.SetToken(cluster.RootToken)
 
 	// Write a value that we will use with wrapping for lookup
 	_, err := client.Logical().Write("secret/foo", map[string]interface{}{
@@ -78,7 +68,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 	// Second: basic things that should fail, unwrap edition
 	// Root token isn't a wrapping token
-	_, err = client.Logical().Unwrap(root)
+	_, err = client.Logical().Unwrap(cluster.RootToken)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -121,15 +111,18 @@ func TestHTTP_Wrapping(t *testing.T) {
 		secret, err = client.Logical().Write("sys/wrapping/lookup", map[string]interface{}{
 			"token": wrapInfo.Token,
 		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if secret == nil || secret.Data == nil {
 			t.Fatal("secret or secret data is nil")
 		}
 		creationTTL, _ := secret.Data["creation_ttl"].(json.Number).Int64()
 		if int(creationTTL) != wrapInfo.TTL {
-			t.Fatalf("mistmatched ttls: %d vs %d", creationTTL, wrapInfo.TTL)
+			t.Fatalf("mismatched ttls: %d vs %d", creationTTL, wrapInfo.TTL)
 		}
 		if secret.Data["creation_time"].(string) != wrapInfo.CreationTime.Format(time.RFC3339Nano) {
-			t.Fatalf("mistmatched creation times: %d vs %d", secret.Data["creation_time"].(string), wrapInfo.CreationTime.Format(time.RFC3339Nano))
+			t.Fatalf("mismatched creation times: %q vs %q", secret.Data["creation_time"].(string), wrapInfo.CreationTime.Format(time.RFC3339Nano))
 		}
 	}
 
@@ -150,6 +143,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	// Test unwrap via the client token
 	client.SetToken(wrapInfo.Token)
 	secret, err = client.Logical().Write("sys/wrapping/unwrap", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if secret == nil || secret.Data == nil {
 		t.Fatal("secret or secret data is nil")
 	}
@@ -161,7 +157,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	}
 
 	// Create a wrapping token
-	client.SetToken(root)
+	client.SetToken(cluster.RootToken)
 	secret, err = client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
@@ -175,6 +171,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	secret, err = client.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{
 		"token": wrapInfo.Token,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	ret2 := secret
 	// Should be expired and fail
 	_, err = client.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{
@@ -197,6 +196,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	// Read response directly
 	client.SetToken(wrapInfo.Token)
 	secret, err = client.Logical().Read("cubbyhole/response")
+	if err != nil {
+		t.Fatal(err)
+	}
 	ret3 := secret
 	// Should be expired and fail
 	_, err = client.Logical().Write("cubbyhole/response", nil)
@@ -205,7 +207,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	}
 
 	// Create a wrapping token
-	client.SetToken(root)
+	client.SetToken(cluster.RootToken)
 	secret, err = client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
@@ -217,6 +219,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 	// Read via Unwrap method
 	secret, err = client.Logical().Unwrap(wrapInfo.Token)
+	if err != nil {
+		t.Fatal(err)
+	}
 	ret4 := secret
 	// Should be expired and fail
 	_, err = client.Logical().Unwrap(wrapInfo.Token)
@@ -254,7 +259,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	// Custom wrapping
 	//
 
-	client.SetToken(root)
+	client.SetToken(cluster.RootToken)
 	data := map[string]interface{}{
 		"zip":   "zap",
 		"three": json.Number("2"),
@@ -303,10 +308,24 @@ func TestHTTP_Wrapping(t *testing.T) {
 	}
 	wrapInfo = secret.WrapInfo
 
+	// Check for correct CreationPath before rewrap
+	if wrapInfo.CreationPath != "secret/foo" {
+		t.Fatalf("error on wrapInfo.CreationPath: expected: secret/foo, got: %s", wrapInfo.CreationPath)
+	}
+
 	// Test rewrapping
 	secret, err = client.Logical().Write("sys/wrapping/rewrap", map[string]interface{}{
 		"token": wrapInfo.Token,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check for correct Creation path after rewrap
+	if wrapInfo.CreationPath != "secret/foo" {
+		t.Fatalf("error on wrapInfo.CreationPath: expected: secret/foo, got: %s", wrapInfo.CreationPath)
+	}
+
 	// Should be expired and fail
 	_, err = client.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{
 		"token": wrapInfo.Token,

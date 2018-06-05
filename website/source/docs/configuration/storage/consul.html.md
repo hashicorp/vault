@@ -66,7 +66,7 @@ at Consul's service discovery layer.
   [consistency mode][consul-consistency]. Possible values are `"default"` or
   `"strong"`.
 
-- `disable_registration` `(bool: false)` – Specifies whether Vault should
+- `disable_registration` `(string: "false")` – Specifies whether Vault should
   register itself with Consul.
 
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
@@ -86,9 +86,27 @@ at Consul's service discovery layer.
 - `service_tags` `(string: "")` – Specifies a comma-separated list of tags to
   attach to the service registration in Consul.
 
+- `service_address` `(string: nil)` – Specifies a service-specific address to
+  set on the service registration in Consul. If unset, Vault will use what it
+  knows to be the HA redirect address - which is usually desirable. Setting
+  this parameter to `""` will tell Consul to leverage the configuration of the
+  node the service is registered on dynamically. This could be beneficial if
+  you intend to leverage Consul's
+  [`translate_wan_addrs`][consul-translate-wan-addrs] parameter.
+
 - `token` `(string: "")` – Specifies the [Consul ACL token][consul-acl] with
   permission to read and write from the `path` in Consul's key-value store.
-  This is **not** a Vault token.
+  This is **not** a Vault token. See the ACL section below for help.
+
+- `session_ttl` `(string: "15s")` - Specifies the minimum allowed [session
+  TTL][consul-session-ttl]. Consul server has a lower limit of 10s on the
+  session TTL by default. The value of `session_ttl` here cannot be lesser than
+  10s unless the `session_ttl_min` on the consul server's configuration has a
+  lesser value.
+
+- `lock_wait_time` `(string: "15s")` - Specifies the wait time before a lock
+  lock acquisition is made. This affects the minimum time it takes to cancel a
+  lock acquisition.
 
 The following settings apply when communicating with Consul via an encrypted
 connection. You can read more about encrypting Consul connections on the
@@ -116,22 +134,42 @@ connection. You can read more about encrypting Consul connections on the
 - `tls_skip_verify` `(bool: false)` – Specifies if the TLS host verification
   should be disabled. It is highly discouraged that you disable this option.
 
-This backend also supports the following high availability parameters. These are
-discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
+## ACLs
 
-- `cluster_addr` `(string: "")` – Specifies the address to advertise to other
-  Vault servers in the cluster for request forwarding. This can also be provided
-  via the environment variable `VAULT_CLUSTER_ADDR`. This is a full URL, like
-  `redirect_addr`, but Vault will ignore the scheme (all cluster members always
-  use TLS with a private key/certificate).
+If using ACLs in Consul, you'll need appropriate permissions. For Consul 0.8,
+the following will work for most use-cases, assuming that your service name is
+`vault` and the prefix being used is `vault/`:
 
-- `disable_clustering` `(bool: false)` – Specifies whether clustering features
-  such as request forwarding are enabled. Setting this to true on one Vault node
-  will disable these features _only when that node is the active node_.
+```json
+{
+  "key": {
+    "vault/": {
+      "policy": "write"
+    }
+  },
+  "node": {
+    "": {
+      "policy": "write"
+    }
+  },
+  "service": {
+    "vault": {
+      "policy": "write"
+    }
+  },
+  "agent": {
+    "": {
+      "policy": "write"
+    }
 
-- `redirect_addr` `(string: <required>)` – Specifies the address (full URL) to
-  advertise to other Vault servers in the cluster for client redirection. This
-  can also be provided via the environment variable `VAULT_REDIRECT_ADDR`.
+  },
+  "session": {
+    "": {
+      "policy": "write"
+    }
+  }
+}
+```
 
 ## `consul` Examples
 
@@ -196,3 +234,5 @@ storage "consul" {
 [consul-acl]: https://www.consul.io/docs/guides/acl.html "Consul ACLs"
 [consul-consistency]: https://www.consul.io/api/index.html#consistency-modes "Consul Consistency Modes"
 [consul-encryption]: https://www.consul.io/docs/agent/encryption.html "Consul Encryption"
+[consul-translate-wan-addrs]: https://www.consul.io/docs/agent/options.html#translate_wan_addrs "Consul Configuration"
+[consul-session-ttl]: https://www.consul.io/docs/agent/options.html#session_ttl_min "Consul Configuration"

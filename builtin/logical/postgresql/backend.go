@@ -1,25 +1,36 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
 	"sync"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend(conf).Setup(conf)
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	b := Backend(conf)
+	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func Backend(conf *logical.BackendConfig) *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
+
+		PathsSpecial: &logical.Paths{
+			SealWrapStorage: []string{
+				"config/connection",
+			},
+		},
 
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
@@ -33,9 +44,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 			secretCreds(&b),
 		},
 
-		Clean: b.ResetDB,
-
-		Invalidate: b.invalidate,
+		Clean:       b.ResetDB,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeLogical,
 	}
 
 	b.logger = conf.Logger
@@ -52,9 +63,9 @@ type backend struct {
 }
 
 // DB returns the database connection.
-func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
-	b.logger.Trace("postgres/db: enter")
-	defer b.logger.Trace("postgres/db: exit")
+func (b *backend) DB(ctx context.Context, s logical.Storage) (*sql.DB, error) {
+	b.logger.Debug("postgres/db: enter")
+	defer b.logger.Debug("postgres/db: exit")
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -70,7 +81,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 	}
 
 	// Otherwise, attempt to make connection
-	entry, err := s.Get("config/connection")
+	entry, err := s.Get(ctx, "config/connection")
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +100,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 		conn = connConfig.ConnectionString
 	}
 
-	// Ensure timezone is set to UTC for all the conenctions
+	// Ensure timezone is set to UTC for all the connections
 	if strings.HasPrefix(conn, "postgres://") || strings.HasPrefix(conn, "postgresql://") {
 		if strings.Contains(conn, "?") {
 			conn += "&timezone=utc"
@@ -114,9 +125,9 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 }
 
 // ResetDB forces a connection next time DB() is called.
-func (b *backend) ResetDB() {
-	b.logger.Trace("postgres/resetdb: enter")
-	defer b.logger.Trace("postgres/resetdb: exit")
+func (b *backend) ResetDB(_ context.Context) {
+	b.logger.Debug("postgres/db: enter")
+	defer b.logger.Debug("postgres/db: exit")
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -128,16 +139,16 @@ func (b *backend) ResetDB() {
 	b.db = nil
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(ctx context.Context, key string) {
 	switch key {
 	case "config/connection":
-		b.ResetDB()
+		b.ResetDB(ctx)
 	}
 }
 
 // Lease returns the lease information
-func (b *backend) Lease(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get("config/lease")
+func (b *backend) Lease(ctx context.Context, s logical.Storage) (*configLease, error) {
+	entry, err := s.Get(ctx, "config/lease")
 	if err != nil {
 		return nil, err
 	}

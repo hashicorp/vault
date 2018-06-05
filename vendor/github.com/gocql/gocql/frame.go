@@ -16,6 +16,23 @@ import (
 	"time"
 )
 
+type unsetColumn struct{}
+
+var UnsetValue = unsetColumn{}
+
+type namedValue struct {
+	name  string
+	value interface{}
+}
+
+// NamedValue produce a value which will bind to the named parameter in a query
+func NamedValue(name string, value interface{}) interface{} {
+	return &namedValue{
+		name:  name,
+		value: value,
+	}
+}
+
 const (
 	protoDirectionMask = 0x80
 	protoVersionMask   = 0x7F
@@ -23,6 +40,7 @@ const (
 	protoVersion2      = 0x02
 	protoVersion3      = 0x03
 	protoVersion4      = 0x04
+	protoVersion5      = 0x05
 
 	maxFrameSize = 256 * 1024 * 1024
 )
@@ -179,45 +197,61 @@ func (c Consistency) String() string {
 	}
 }
 
-func ParseConsistency(s string) Consistency {
-	switch strings.ToUpper(s) {
+func (c Consistency) MarshalText() (text []byte, err error) {
+	return []byte(c.String()), nil
+}
+
+func (c *Consistency) UnmarshalText(text []byte) error {
+	switch string(text) {
 	case "ANY":
-		return Any
+		*c = Any
 	case "ONE":
-		return One
+		*c = One
 	case "TWO":
-		return Two
+		*c = Two
 	case "THREE":
-		return Three
+		*c = Three
 	case "QUORUM":
-		return Quorum
+		*c = Quorum
 	case "ALL":
-		return All
+		*c = All
 	case "LOCAL_QUORUM":
-		return LocalQuorum
+		*c = LocalQuorum
 	case "EACH_QUORUM":
-		return EachQuorum
+		*c = EachQuorum
 	case "LOCAL_ONE":
-		return LocalOne
+		*c = LocalOne
 	default:
-		panic("invalid consistency: " + s)
+		return fmt.Errorf("invalid consistency %q", string(text))
 	}
+
+	return nil
+}
+
+func ParseConsistency(s string) Consistency {
+	var c Consistency
+	if err := c.UnmarshalText([]byte(strings.ToUpper(s))); err != nil {
+		panic(err)
+	}
+	return c
 }
 
 // ParseConsistencyWrapper wraps gocql.ParseConsistency to provide an err
 // return instead of a panic
 func ParseConsistencyWrapper(s string) (consistency Consistency, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			var ok bool
-			err, ok = r.(error)
-			if !ok {
-				err = fmt.Errorf("ParseConsistencyWrapper: %v", r)
-			}
-		}
-	}()
-	consistency = ParseConsistency(s)
-	return consistency, nil
+	err = consistency.UnmarshalText([]byte(strings.ToUpper(s)))
+	return
+}
+
+// MustParseConsistency is the same as ParseConsistency except it returns
+// an error (never). It is kept here since breaking changes are not good.
+// DEPRECATED: use ParseConsistency if you want a panic on parse error.
+func MustParseConsistency(s string) (Consistency, error) {
+	c, err := ParseConsistencyWrapper(s)
+	if err != nil {
+		panic(err)
+	}
+	return c, nil
 }
 
 type SerialConsistency uint16
@@ -236,6 +270,23 @@ func (s SerialConsistency) String() string {
 	default:
 		return fmt.Sprintf("UNKNOWN_SERIAL_CONS_0x%x", uint16(s))
 	}
+}
+
+func (s SerialConsistency) MarshalText() (text []byte, err error) {
+	return []byte(s.String()), nil
+}
+
+func (s *SerialConsistency) UnmarshalText(text []byte) error {
+	switch string(text) {
+	case "SERIAL":
+		*s = Serial
+	case "LOCAL_SERIAL":
+		*s = LocalSerial
+	default:
+		return fmt.Errorf("invalid consistency %q", string(text))
+	}
+
+	return nil
 }
 
 const (
@@ -826,7 +877,7 @@ func (f *framer) parsePreparedMetadata() preparedMetadata {
 	}
 
 	if meta.flags&flagHasMorePages == flagHasMorePages {
-		meta.pagingState = f.readBytes()
+		meta.pagingState = copyBytes(f.readBytes())
 	}
 
 	if meta.flags&flagNoMetaData == flagNoMetaData {
@@ -911,7 +962,7 @@ func (f *framer) parseResultMetadata() resultMetadata {
 	meta.actualColCount = meta.colCount
 
 	if meta.flags&flagHasMorePages == flagHasMorePages {
-		meta.pagingState = f.readBytes()
+		meta.pagingState = copyBytes(f.readBytes())
 	}
 
 	if meta.flags&flagNoMetaData == flagNoMetaData {
@@ -1062,7 +1113,24 @@ func (f schemaChangeTable) String() string {
 	return fmt.Sprintf("[event schema_change change=%q keyspace=%q object=%q]", f.change, f.keyspace, f.object)
 }
 
+type schemaChangeType struct {
+	frameHeader
+
+	change   string
+	keyspace string
+	object   string
+}
+
 type schemaChangeFunction struct {
+	frameHeader
+
+	change   string
+	keyspace string
+	name     string
+	args     []string
+}
+
+type schemaChangeAggregate struct {
 	frameHeader
 
 	change   string
@@ -1106,7 +1174,7 @@ func (f *framer) parseResultSchemaChange() frame {
 			frame.keyspace = f.readString()
 
 			return frame
-		case "TABLE", "TYPE":
+		case "TABLE":
 			frame := &schemaChangeTable{
 				frameHeader: *f.header,
 				change:      change,
@@ -1116,8 +1184,29 @@ func (f *framer) parseResultSchemaChange() frame {
 			frame.object = f.readString()
 
 			return frame
-		case "FUNCTION", "AGGREGATE":
+		case "TYPE":
+			frame := &schemaChangeType{
+				frameHeader: *f.header,
+				change:      change,
+			}
+
+			frame.keyspace = f.readString()
+			frame.object = f.readString()
+
+			return frame
+		case "FUNCTION":
 			frame := &schemaChangeFunction{
+				frameHeader: *f.header,
+				change:      change,
+			}
+
+			frame.keyspace = f.readString()
+			frame.name = f.readString()
+			frame.args = f.readStringList()
+
+			return frame
+		case "AGGREGATE":
+			frame := &schemaChangeAggregate{
 				frameHeader: *f.header,
 				change:      change,
 			}
@@ -1255,8 +1344,10 @@ func (f *framer) writeAuthResponseFrame(streamID int, data []byte) error {
 
 type queryValues struct {
 	value []byte
+
 	// optional name, will set With names for values flag
-	name string
+	name    string
+	isUnset bool
 }
 
 type queryParams struct {
@@ -1319,11 +1410,16 @@ func (f *framer) writeQueryParams(opts *queryParams) {
 
 	if n := len(opts.values); n > 0 {
 		f.writeShort(uint16(n))
+
 		for i := 0; i < n; i++ {
 			if names {
 				f.writeString(opts.values[i].name)
 			}
-			f.writeBytes(opts.values[i].value)
+			if opts.values[i].isUnset {
+				f.writeUnset()
+			} else {
+				f.writeBytes(opts.values[i].value)
+			}
 		}
 	}
 
@@ -1404,7 +1500,11 @@ func (f *framer) writeExecuteFrame(streamID int, preparedID []byte, params *quer
 		n := len(params.values)
 		f.writeShort(uint16(n))
 		for i := 0; i < n; i++ {
-			f.writeBytes(params.values[i].value)
+			if params.values[i].isUnset {
+				f.writeUnset()
+			} else {
+				f.writeBytes(params.values[i].value)
+			}
 		}
 		f.writeConsistency(params.consistency)
 	}
@@ -1456,14 +1556,21 @@ func (f *framer) writeBatchFrame(streamID int, w *writeBatchFrame) error {
 
 		f.writeShort(uint16(len(b.values)))
 		for j := range b.values {
-			col := &b.values[j]
+			col := b.values[j]
 			if f.proto > protoVersion2 && col.name != "" {
 				// TODO: move this check into the caller and set a flag on writeBatchFrame
 				// to indicate using named values
+				if f.proto <= protoVersion5 {
+					return fmt.Errorf("gocql: named query values are not supported in batches, please see https://issues.apache.org/jira/browse/CASSANDRA-10246")
+				}
 				flags |= flagWithNameValues
 				f.writeString(col.name)
 			}
-			f.writeBytes(col.value)
+			if col.isUnset {
+				f.writeUnset()
+			} else {
+				f.writeBytes(col.value)
+			}
 		}
 	}
 
@@ -1784,6 +1891,14 @@ func (f *framer) writeStringList(l []string) {
 	for _, s := range l {
 		f.writeString(s)
 	}
+}
+
+func (f *framer) writeUnset() {
+	// Protocol version 4 specifies that bind variables do not require having a
+	// value when executing a statement.   Bind variables without a value are
+	// called 'unset'. The 'unset' bind variable is serialized as the int
+	// value '-2' without following bytes.
+	f.writeInt(-2)
 }
 
 func (f *framer) writeBytes(p []byte) {

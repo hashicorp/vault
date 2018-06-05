@@ -1,137 +1,131 @@
 ---
 layout: "docs"
-page_title: "AWS Secret Backend"
+page_title: "AWS - Secrets Engines"
 sidebar_current: "docs-secrets-aws"
 description: |-
-  The AWS secret backend for Vault generates access keys dynamically based on IAM policies.
+  The AWS secrets engine for Vault generates access keys dynamically based on
+  IAM policies.
 ---
 
-# AWS Secret Backend
+# AWS Secrets Engine
 
-Name: `aws`
+The AWS secrets engine generates AWS access credentials dynamically based on IAM
+policies. This generally makes working with AWS IAM easier, since it does not
+involve clicking in the web UI. Additionally, the process is codified and mapped
+to internal auth methods (such as LDAP). The AWS IAM credentials are time-based
+and are automatically revoked when the Vault lease expires.
 
-The AWS secret backend for Vault generates AWS access credentials dynamically
-based on IAM policies. This makes IAM much easier to use: credentials could
-be generated on the fly, and are automatically revoked when the Vault
-lease is expired.
+## Setup
 
-This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault path-help` after mounting the backend.
+Most secrets engines must be configured in advance before they can perform their
+functions. These steps are usually completed by an operator or configuration
+management tool.
 
-## Quick Start
+1. Enable the AWS secrets engine:
 
-The first step to using the aws backend is to mount it.
-Unlike the `generic` backend, the `aws` backend is not mounted by default.
+    ```text
+    $ vault secrets enable aws
+    Success! Enabled the aws secrets engine at: aws/
+    ```
 
-```text
-$ vault mount aws
-Successfully mounted 'aws' at 'aws'!
-```
+    By default, the secrets engine will mount at the name of the engine. To
+    enable the secrets engine at a different path, use the `-path` argument.
 
-Next, we must configure the root credentials that are used to manage IAM credentials:
+1. Configure the credentials that Vault uses to communicate with AWS to generate
+the IAM credentials:
 
-```text
-$ vault write aws/config/root \
-    access_key=AKIAJWVN5Z4FOFT7NLNA \
-    secret_key=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 \
-    region=us-east-1
-```
+    ```text
+    $ vault write aws/config/root \
+        access_key=AKIAJWVN5Z4FOFT7NLNA \
+        secret_key=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 \
+        region=us-east-1
+    ```
 
-The following parameters are required:
+    Internally, Vault will connect to AWS using these credentials. As such,
+    these credentials must be a superset of any policies which might be granted
+    on IAM credentials. Since Vault uses the official AWS SDK, it will use the
+    specified credentials. You can also specify the credentials via the standard
+    AWS environment credentials, shared file credentials, or IAM role/ECS task
+    credentials.  (Note that you can't authorize vault with IAM role credentials if you plan
+    on using STS Federation Tokens, since the temporary security credentials
+    associated with the role are not authorized to use GetFederationToken.)
 
-- `access_key` - the AWS access key that has permission to manage IAM
-  credentials.
-- `secret_key` - the AWS secret key that has permission to manage IAM
-  credentials.
-- `region` the AWS region for API calls.
+    ~> **Notice:** Even though the path above is `aws/config/root`, do not use
+    your AWS root account credentials. Instead generate a dedicated user or
+    role.
 
-Note: the client uses the official AWS SDK and will use environment variable or IAM
-role-provided credentials if available.
+1. Configure a role that maps a name in Vault to a policy or policy file in AWS.
+When users generate credentials, they are generated against this role:
 
-The next step is to configure a role. A role is a logical name that maps
-to a policy used to generated those credentials.
-You can either supply a user inline policy (via the policy argument), or
-provide a reference to an existing AWS policy by supplying the full ARN
-reference (via the arn argument).
-
-For example, lets first create a "deploy" role using an user inline policy as an example:
-
-```text
-$ vault write aws/roles/deploy \
-    policy=@policy.json
-```
-
-This path will create a named role along with the IAM policy used
-to restrict permissions for it. This is used to dynamically create
-a new pair of IAM credentials when needed.
-
-The `@` tells Vault to load the policy from the file named `policy.json`. Here
-is an example IAM policy to get started:
-
-```javascript
-{
-  "Version": "2012-10-17",
-  "Statement": [
+    ```text
+    $ vault write aws/roles/my-role \
+        policy=-<<EOF
     {
-      "Effect": "Allow",
-      "Action": "iam:*",
-      "Resource": "*"
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": "ec2:*",
+          "Resource": "*"
+        }
+      ]
     }
-  ]
-}
-```
+    EOF
+    ```
 
-As a second example, lets create a "readonly" role using an existing AWS policy as an example:
+    This creates a role named "my-role". When users generate credentials against
+    this role, the resulting IAM credential will have the permissions specified
+    in the policy provided as the argument.
 
-```text
-$ vault write aws/roles/readonly arn=arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
-```
+    You can either supply a user inline policy or provide a reference to an
+    existing AWS policy's full ARN:
 
-This path will create a named role pointing to an existing IAM policy used
-to restrict permissions for it. This is used to dynamically create
-a new pair of IAM credentials when needed.
+    ```text
+    $ vault write aws/roles/my-other-role \
+        arn=arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+    ```
 
-For more information on IAM policies, please see the
-[AWS IAM policy documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/PoliciesOverview.html).
+    For more information on IAM policies, please see the
+    [AWS IAM policy documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/PoliciesOverview.html).
 
+## Usage
 
-To generate a new set of IAM credentials, we simply read from that role:
+After the secrets engine is configured and a user/machine has a Vault token with
+the proper permission, it can generate credentials.
 
-```text
-$ vault read aws/creds/deploy
-Key             Value
-lease_id        aws/creds/deploy/7cb8df71-782f-3de1-79dd-251778e49f58
-lease_duration  3600
-access_key      AKIAIOMYUTSLGJOGLHTQ
-secret_key      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
-security_token  <nil>
-```
+1. Generate a new credential by reading from the `/creds` endpoint with the name
+of the role:
 
-If you run the command again, you will get a new set of credentials:
+    ```text
+    $ vault read aws/creds/my-role
+    Key                Value
+    ---                -----
+    lease_id           aws/creds/my-role/f3e92392-7d9c-09c8-c921-575d62fe80d8
+    lease_duration     768h
+    lease_renewable    true
+    access_key         AKIAIOWQXTLW36DV7IEA
+    secret_key         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
+    security_token     <nil>
+    ```
 
-```text
-$ vault read aws/creds/deploy
-Key             Value
-lease_id        aws/creds/deploy/82d89562-ff19-382e-6be9-cb45c8f6a42d
-lease_duration  3600
-access_key      AKIAJZ5YRPHFH3QHRRRQ
-secret_key      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
-security_token  <nil>
-```
+    Each invocation of the command will generate a new credential.
 
-## Dynamic IAM users
+    Unfortunately, IAM credentials are eventually consistent with respect to
+    other Amazon services. If you are planning on using these credential in a
+    pipeline, you may need to add a delay of 5-10 seconds (or more) after
+    fetching credentials before they can be used successfully.
 
-The `aws/creds` endpoint will dynamically create a new IAM user and respond
-with an IAM access key for the newly created user.
+    If you want to be able to use credentials without the wait, consider using
+    the STS method of fetching keys. IAM credentials supported by an STS token
+    are available for use as soon as they are generated.
 
-The [Quick Start](#quick-start) describes how to setup the `aws/creds` endpoint.
-
-## Root Credentials for Dynamic IAM users
+## Example IAM Policy for Vault
 
 The `aws/config/root` credentials need permission to manage dynamic IAM users.
-Here is an example IAM policy that would grant these permissions:
+Here is an example AWS IAM policy that grants the most commonly required
+permissions Vault needs:
 
-```javascript
+```json
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -160,28 +154,9 @@ Here is an example IAM policy that would grant these permissions:
 }
 ```
 
-Note that this policy example is unrelated to the policy you wrote to `aws/roles/deploy`.
-This policy example should be applied to the IAM user (or role) associated with
-the root credentials that you wrote to `aws/config/root`. You have to apply it
-yourself in IAM. The policy you wrote to `aws/roles/deploy` is the policy you
-want the AWS secret backend to apply to the temporary credentials it returns
-from `aws/creds/deploy`.
-
-Unfortunately, IAM credentials are eventually consistent with respect to other
-Amazon services. If you are planning on using these credential in a pipeline,
-you may need to add a delay of 5-10 seconds (or more) after fetching
-credentials before they can be used successfully.
-
-If you want to be able to use credentials without the wait, consider using the STS
-method of fetching keys. IAM credentials supported by an STS token are available for use
-as soon as they are generated.
-
 ## STS credentials
 
 Vault also supports an STS credentials instead of creating a new IAM user.
-
-The `aws/sts` endpoint will always fetch credentials with a 1hr ttl.
-Unlike the `aws/creds` endpoint, the ttl is enforced by STS.
 
 Vault supports two of the [STS APIs](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html),
 [STS federation tokens](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html) and
@@ -241,14 +216,14 @@ but STS would attach an implicit deny on `sts` that overrides the allow.)
 }
 ```
 
-To generate a new set of STS federation token credentials, we simply read from
+To generate a new set of STS federation token credentials, we simply write to
 the role using the aws/sts endpoint:
 
 ```text
-$vault read aws/sts/deploy
+$vault write aws/sts/deploy ttl=60m
 Key            	Value
 lease_id       	aws/sts/deploy/31d771a6-fb39-f46b-fdc5-945109106422
-lease_duration 	3600
+lease_duration 	60m0s
 lease_renewable	true
 access_key     	ASIAJYYYY2AA5K4WIXXX
 secret_key     	HSs0DYYYYYY9W81DXtI0K7X84H+OVZXK5BXXXX
@@ -310,14 +285,14 @@ $ vault write aws/roles/deploy \
     arn=arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:role/RoleNameToAssume
 ```
 
-To generate a new set of STS assumed role credentials, we again read from
+To generate a new set of STS assumed role credentials, we again write to
 the role using the aws/sts endpoint:
 
 ```text
-$vault read aws/sts/deploy
+$vault write aws/sts/deploy ttl=60m
 Key            	Value
 lease_id       	aws/sts/deploy/31d771a6-fb39-f46b-fdc5-945109106422
-lease_duration 	3600
+lease_duration 	60m0s
 lease_renewable	true
 access_key     	ASIAJYYYY2AA5K4WIXXX
 secret_key     	HSs0DYYYYYY9W81DXtI0K7X84H+OVZXK5BXXXX
@@ -366,6 +341,6 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
 
 ## API
 
-The AWS secret backend has a full HTTP API. Please see the
-[AWS secret backend API](/api/secret/aws/index.html) for more
+The AWS secrets engine has a full HTTP API. Please see the
+[AWS secrets engine API](/api/secret/aws/index.html) for more
 details.

@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -12,9 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -23,7 +25,7 @@ import (
 func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, err error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, keyBits)
 	if err != nil {
-		return "", "", fmt.Errorf("error generating RSA key-pair: %v", err)
+		return "", "", errwrap.Wrapf("error generating RSA key-pair: {{err}}", err)
 	}
 
 	privateKeyRsa = string(pem.EncodeToMemory(&pem.Block{
@@ -33,7 +35,7 @@ func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, er
 
 	sshPublicKey, err := ssh.NewPublicKey(privateKey.Public())
 	if err != nil {
-		return "", "", fmt.Errorf("error generating RSA key-pair: %v", err)
+		return "", "", errwrap.Wrapf("error generating RSA key-pair: {{err}}", err)
 	}
 	publicKeyRsa = "ssh-rsa " + base64.StdEncoding.EncodeToString(sshPublicKey.Marshal())
 	return
@@ -45,10 +47,10 @@ func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, er
 // authorized_keys file is hard coded to resemble Linux.
 //
 // The last param 'install' if false, uninstalls the key.
-func (b *backend) installPublicKeyInTarget(adminUser, username, ip string, port int, hostkey, dynamicPublicKey, installScript string, install bool) error {
+func (b *backend) installPublicKeyInTarget(ctx context.Context, adminUser, username, ip string, port int, hostkey, dynamicPublicKey, installScript string, install bool) error {
 	// Transfer the newly generated public key to remote host under a random
 	// file name. This is to avoid name collisions from other requests.
-	_, publicKeyFileName, err := b.GenerateSaltedOTP()
+	_, publicKeyFileName, err := b.GenerateSaltedOTP(ctx)
 	if err != nil {
 		return err
 	}
@@ -61,7 +63,7 @@ func (b *backend) installPublicKeyInTarget(adminUser, username, ip string, port 
 
 	err = comm.Upload(publicKeyFileName, bytes.NewBufferString(dynamicPublicKey), nil)
 	if err != nil {
-		return fmt.Errorf("error uploading public key: %v", err)
+		return errwrap.Wrapf("error uploading public key: {{err}}", err)
 	}
 
 	// Transfer the script required to install or uninstall the key to the remote
@@ -70,14 +72,14 @@ func (b *backend) installPublicKeyInTarget(adminUser, username, ip string, port 
 	scriptFileName := fmt.Sprintf("%s.sh", publicKeyFileName)
 	err = comm.Upload(scriptFileName, bytes.NewBufferString(installScript), nil)
 	if err != nil {
-		return fmt.Errorf("error uploading install script: %v", err)
+		return errwrap.Wrapf("error uploading install script: {{err}}", err)
 	}
 
 	// Create a session to run remote command that triggers the script to install
 	// or uninstall the key.
 	session, err := comm.NewSession()
 	if err != nil {
-		return fmt.Errorf("unable to create SSH Session using public keys: %v", err)
+		return errwrap.Wrapf("unable to create SSH Session using public keys: {{err}}", err)
 	}
 	if session == nil {
 		return fmt.Errorf("invalid session object")
@@ -105,7 +107,7 @@ func (b *backend) installPublicKeyInTarget(adminUser, username, ip string, port 
 
 // Takes an IP address and role name and checks if the IP is part
 // of CIDR blocks belonging to the role.
-func roleContainsIP(s logical.Storage, roleName string, ip string) (bool, error) {
+func roleContainsIP(ctx context.Context, s logical.Storage, roleName string, ip string) (bool, error) {
 	if roleName == "" {
 		return false, fmt.Errorf("missing role name")
 	}
@@ -114,9 +116,9 @@ func roleContainsIP(s logical.Storage, roleName string, ip string) (bool, error)
 		return false, fmt.Errorf("missing ip")
 	}
 
-	roleEntry, err := s.Get(fmt.Sprintf("roles/%s", roleName))
+	roleEntry, err := s.Get(ctx, fmt.Sprintf("roles/%s", roleName))
 	if err != nil {
-		return false, fmt.Errorf("error retrieving role %v", err)
+		return false, errwrap.Wrapf("error retrieving role {{err}}", err)
 	}
 	if roleEntry == nil {
 		return false, fmt.Errorf("role %q not found", roleName)
@@ -163,6 +165,7 @@ func createSSHComm(logger log.Logger, username, ip string, port int, hostkey str
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	connfunc := func() (net.Conn, error) {
@@ -210,4 +213,13 @@ func convertMapToStringValue(initial map[string]interface{}) map[string]string {
 		result[key] = fmt.Sprintf("%v", value)
 	}
 	return result
+}
+
+// Serve a template processor for custom format inputs
+func substQuery(tpl string, data map[string]string) string {
+	for k, v := range data {
+		tpl = strings.Replace(tpl, fmt.Sprintf("{{%s}}", k), v, -1)
+	}
+
+	return tpl
 }

@@ -18,7 +18,7 @@ This endpoint lists the plugins in the catalog.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/sys/plugins/catalog/`      | `200 application/json` |
+| `LIST`   | `/sys/plugins/catalog`      | `200 application/json`  |
 
 ### Sample Request
 
@@ -26,7 +26,7 @@ This endpoint lists the plugins in the catalog.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST
-    https://vault.rocks/v1/sys/plugins/catalog
+    http://127.0.0.1:8200/v1/sys/plugins/catalog
 ```
 
 ### Sample Response
@@ -62,7 +62,7 @@ supplied name.
   is what is used to look up plugins in the catalog. This is part of the request
   URL.
 
-- `sha_256` `(string: <required>)` – This is the SHA256 sum of the plugin's
+- `sha256` `(string: <required>)` – This is the SHA256 sum of the plugin's
   binary. Before a plugin is run it's SHA will be checked against this value, if
   they do not match the plugin can not be run.
 
@@ -86,7 +86,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/plugins/catalog/example-plugin
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/example-plugin
 ```
 
 ## Read Plugin
@@ -111,7 +111,7 @@ This endpoint returns the configuration data for the plugin with the given name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://vault.rocks/v1/sys/plugins/catalog/example-plugin
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/example-plugin
 ```
 
 ### Sample Response
@@ -119,13 +119,11 @@ $ curl \
 ```javascript
 {
 	"data": {
-		"plugin": {
-			"args": [],
-			"builtin": false,
-			"command": "/tmp/vault-plugins/mysql-database-plugin",
-			"name": "example-plugin",
-			"sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek="
-		}
+		"args": [],
+		"builtin": false,
+		"command": "/tmp/vault-plugins/mysql-database-plugin",
+		"name": "example-plugin",
+		"sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek="
 	}
 }
 ```
@@ -151,5 +149,5 @@ This endpoint removes the plugin with the given name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/plugins/catalog/example-plugin
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/example-plugin
 ```

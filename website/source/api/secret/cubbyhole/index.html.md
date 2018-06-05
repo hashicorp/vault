@@ -1,21 +1,21 @@
 ---
 layout: "api"
-page_title: "Cubbyhole Secret Backend - HTTP API"
+page_title: "Cubbyhole - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-cubbyhole"
 description: |-
-  This is the API documentation for the Vault Cubbyhole secret backend.
+  This is the API documentation for the Vault Cubbyhole secrets engine.
 ---
 
-# Cubbyhole Secret Backend HTTP API
+# Cubbyhole Secrets Engine (API)
 
-This is the API documentation for the Vault Cubbyhole secret backend. For
-general information about the usage and operation of the Cubbyhole backend,
-please see the
-[Vault Cubbyhole backend documentation](/docs/secrets/cubbyhole/index.html).
+This is the API documentation for the Vault Cubbyhole secrets engine. For
+general information about the usage and operation of the Cubbyhole secrets
+engine, please see the
+[Vault Cubbyhole documentation](/docs/secrets/cubbyhole/index.html).
 
-This documentation assumes the Cubbyhole backend is mounted at the `/cubbyhole`
-path in Vault. Since it is possible to mount secret backends at any location,
-please update your API calls accordingly.
+This documentation assumes the Cubbyhole secrets engine is enabled at the
+`/cubbyhole` path in Vault. Since it is possible to enable secrets engines at
+any location, please update your API calls accordingly.
 
 ## Read Secret
 
@@ -35,7 +35,7 @@ This endpoint retrieves the secret at the specified location.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/cubbyhole/my-secret
+    http://127.0.0.1:8200/v1/cubbyhole/my-secret
 ```
 
 ### Sample Response
@@ -60,7 +60,7 @@ not return a value. The values themselves are not accessible via this command.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `List`   | `/cubbyhole/:path`           | `200 application/json` |
+| `LIST`   | `/cubbyhole/:path`           | `200 application/json` |
 
 ### Parameters
 
@@ -73,7 +73,7 @@ not return a value. The values themselves are not accessible via this command.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/cubbyhole/my-secret
+    http://127.0.0.1:8200/v1/cubbyhole/my-secret
 ```
 
 ### Sample Response
@@ -129,7 +129,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/cubbyhole/my-secret
+    http://127.0.0.1:8200/v1/cubbyhole/my-secret
 ```
 
 ## Delete Secret
@@ -151,5 +151,5 @@ This endpoint deletes the secret at the specified location.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/cubbyhole/my-secret
+    http://127.0.0.1:8200/v1/cubbyhole/my-secret
 ```

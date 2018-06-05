@@ -1,23 +1,77 @@
 package radius
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
+	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
 const (
 	testSysTTL    = time.Hour * 10
 	testSysMaxTTL = time.Hour * 20
+
+	envRadiusRadiusHost = "RADIUS_HOST"
+	envRadiusPort       = "RADIUS_PORT"
+	envRadiusSecret     = "RADIUS_SECRET"
+	envRadiusUsername   = "RADIUS_USERNAME"
+	envRadiusUserPass   = "RADIUS_USERPASS"
 )
 
+func prepareRadiusTestContainer(t *testing.T) (func(), string, int) {
+	if os.Getenv(envRadiusRadiusHost) != "" {
+		port, _ := strconv.Atoi(os.Getenv(envRadiusPort))
+		return func() {}, os.Getenv(envRadiusRadiusHost), port
+	}
+
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		t.Fatalf("Failed to connect to docker: %s", err)
+	}
+
+	runOpts := &dockertest.RunOptions{
+		Repository:   "jumanjiman/radiusd",
+		Cmd:          []string{"-f", "-l", "stdout"},
+		ExposedPorts: []string{"1812/udp"},
+		Tag:          "latest",
+	}
+	resource, err := pool.RunWithOptions(runOpts)
+	if err != nil {
+		t.Fatalf("Could not start local radius docker container: %s", err)
+	}
+
+	cleanup := func() {
+		err := pool.Purge(resource)
+		if err != nil {
+			t.Fatalf("Failed to cleanup local container: %s", err)
+		}
+	}
+
+	port, _ := strconv.Atoi(resource.GetPort("1812/udp"))
+	address := fmt.Sprintf("127.0.0.1")
+
+	// exponential backoff-retry
+	if err = pool.Retry(func() error {
+		// There's no straightfoward way to check the state, but the server starts
+		// up quick so a 2 second sleep should be enough.
+		time.Sleep(2 * time.Second)
+		return nil
+	}); err != nil {
+		cleanup()
+		t.Fatalf("Could not connect to radius docker container: %s", err)
+	}
+	return cleanup, address, port
+}
+
 func TestBackend_Config(t *testing.T) {
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: testSysTTL,
@@ -28,31 +82,31 @@ func TestBackend_Config(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 
-	config_data_basic := map[string]interface{}{
+	configDataBasic := map[string]interface{}{
 		"host":   "test.radius.hostname.com",
 		"secret": "test-secret",
 	}
 
-	config_data_missingrequired := map[string]interface{}{
+	configDataMissingRequired := map[string]interface{}{
 		"host": "test.radius.hostname.com",
 	}
 
-	config_data_invalidport := map[string]interface{}{
+	configDataEmptyPort := map[string]interface{}{
+		"host":   "test.radius.hostname.com",
+		"port":   "",
+		"secret": "test-secret",
+	}
+
+	configDataInvalidPort := map[string]interface{}{
 		"host":   "test.radius.hostname.com",
 		"port":   "notnumeric",
 		"secret": "test-secret",
 	}
 
-	config_data_invalidbool := map[string]interface{}{
+	configDataInvalidBool := map[string]interface{}{
 		"host":                       "test.radius.hostname.com",
 		"secret":                     "test-secret",
 		"unregistered_user_policies": "test",
-	}
-
-	config_data_emptyport := map[string]interface{}{
-		"host":   "test.radius.hostname.com",
-		"port":   "",
-		"secret": "test-secret",
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -60,17 +114,17 @@ func TestBackend_Config(t *testing.T) {
 		// PreCheck:       func() { testAccPreCheck(t) },
 		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testConfigWrite(t, config_data_basic, false),
-			testConfigWrite(t, config_data_emptyport, true),
-			testConfigWrite(t, config_data_invalidport, true),
-			testConfigWrite(t, config_data_invalidbool, true),
-			testConfigWrite(t, config_data_missingrequired, true),
+			testConfigWrite(t, configDataBasic, false),
+			testConfigWrite(t, configDataMissingRequired, true),
+			testConfigWrite(t, configDataEmptyPort, true),
+			testConfigWrite(t, configDataInvalidPort, true),
+			testConfigWrite(t, configDataInvalidBool, true),
 		},
 	})
 }
 
 func TestBackend_users(t *testing.T) {
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: testSysTTL,
@@ -92,13 +146,12 @@ func TestBackend_users(t *testing.T) {
 }
 
 func TestBackend_acceptance(t *testing.T) {
-
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
 		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
 	}
 
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: testSysTTL,
@@ -109,10 +162,29 @@ func TestBackend_acceptance(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 
+	cleanup, host, port := prepareRadiusTestContainer(t)
+	defer cleanup()
+
+	// These defaults are specific to the jumanjiman/radiusd docker image
+	username := os.Getenv(envRadiusUsername)
+	if username == "" {
+		username = "test"
+	}
+
+	password := os.Getenv(envRadiusUserPass)
+	if password == "" {
+		password = "test"
+	}
+
+	secret := os.Getenv(envRadiusSecret)
+	if len(secret) == 0 {
+		secret = "testing123"
+	}
+
 	configDataAcceptanceAllowUnreg := map[string]interface{}{
-		"host":                       os.Getenv("RADIUS_HOST"),
-		"port":                       os.Getenv("RADIUS_PORT"),
-		"secret":                     os.Getenv("RADIUS_SECRET"),
+		"host":                       host,
+		"port":                       strconv.Itoa(port),
+		"secret":                     secret,
 		"unregistered_user_policies": "policy1,policy2",
 	}
 	if configDataAcceptanceAllowUnreg["port"] == "" {
@@ -120,9 +192,9 @@ func TestBackend_acceptance(t *testing.T) {
 	}
 
 	configDataAcceptanceNoAllowUnreg := map[string]interface{}{
-		"host":                       os.Getenv("RADIUS_HOST"),
-		"port":                       os.Getenv("RADIUS_PORT"),
-		"secret":                     os.Getenv("RADIUS_SECRET"),
+		"host":                       host,
+		"port":                       strconv.Itoa(port),
+		"secret":                     secret,
 		"unregistered_user_policies": "",
 	}
 	if configDataAcceptanceNoAllowUnreg["port"] == "" {
@@ -130,18 +202,16 @@ func TestBackend_acceptance(t *testing.T) {
 	}
 
 	dataRealpassword := map[string]interface{}{
-		"password": os.Getenv("RADIUS_USERPASS"),
+		"password": password,
 	}
 
 	dataWrongpassword := map[string]interface{}{
 		"password": "wrongpassword",
 	}
 
-	username := os.Getenv("RADIUS_USERNAME")
-
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend:        b,
-		PreCheck:       func() { testAccPreCheck(t) },
+		PreCheck:       testAccPreCheck(t, host, port),
 		AcceptanceTest: true,
 		Steps: []logicaltest.TestStep{
 			// Login with valid but unknown user will fail because unregistered_user_policies is emtpy
@@ -171,21 +241,15 @@ func TestBackend_acceptance(t *testing.T) {
 	})
 }
 
-func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("RADIUS_HOST"); v == "" {
-		t.Fatal("RADIUS_HOST must be set for acceptance tests")
-	}
+func testAccPreCheck(t *testing.T, host string, port int) func() {
+	return func() {
+		if host == "" {
+			t.Fatal("Host must be set for acceptance tests")
+		}
 
-	if v := os.Getenv("RADIUS_USERNAME"); v == "" {
-		t.Fatal("RADIUS_USERNAME must be set for acceptance tests")
-	}
-
-	if v := os.Getenv("RADIUS_USERPASS"); v == "" {
-		t.Fatal("RADIUS_USERPASS must be set for acceptance tests")
-	}
-
-	if v := os.Getenv("RADIUS_SECRET"); v == "" {
-		t.Fatal("RADIUS_SECRET must be set for acceptance tests")
+		if port == 0 {
+			t.Fatal("Port must be non-zero for acceptance tests")
+		}
 	}
 }
 
@@ -211,7 +275,7 @@ func testStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 		Path:      "users",
 		Check: func(resp *logical.Response) error {
 			if resp.IsError() {
-				return fmt.Errorf("Got error response: %#v", *resp)
+				return fmt.Errorf("got error response: %#v", *resp)
 			}
 
 			if !reflect.DeepEqual(users, resp.Data["keys"].([]string)) {
@@ -248,7 +312,7 @@ func testAccUserLoginPolicy(t *testing.T, user string, data map[string]interface
 		Operation:       logical.UpdateOperation,
 		Path:            "login/" + user,
 		Data:            data,
-		ErrorOk:         false,
+		ErrorOk:         expectError,
 		Unauthenticated: true,
 		//Check:           logicaltest.TestCheckAuth(policies),
 		Check: func(resp *logical.Response) error {

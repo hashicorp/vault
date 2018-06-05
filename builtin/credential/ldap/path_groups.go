@@ -1,6 +1,7 @@
 package ldap
 
 import (
+	"context"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -31,7 +32,7 @@ func pathGroups(b *backend) *framework.Path {
 			},
 
 			"policies": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated to the group.",
 			},
 		},
@@ -47,8 +48,8 @@ func pathGroups(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) Group(s logical.Storage, n string) (*GroupEntry, error) {
-	entry, err := s.Get("group/" + n)
+func (b *backend) Group(ctx context.Context, s logical.Storage, n string) (*GroupEntry, error) {
+	entry, err := s.Get(ctx, "group/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +65,8 @@ func (b *backend) Group(s logical.Storage, n string) (*GroupEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathGroupDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("group/" + d.Get("name").(string))
+func (b *backend) pathGroupDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete(ctx, "group/"+d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -74,9 +74,21 @@ func (b *backend) pathGroupDelete(
 	return nil, nil
 }
 
-func (b *backend) pathGroupRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	group, err := b.Group(req.Storage, d.Get("name").(string))
+func (b *backend) pathGroupRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	groupname := d.Get("name").(string)
+
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("ldap backend not configured"), nil
+	}
+	if !*cfg.CaseSensitiveNames {
+		groupname = strings.ToLower(groupname)
+	}
+
+	group, err := b.Group(ctx, req.Storage, groupname)
 	if err != nil {
 		return nil, err
 	}
@@ -86,30 +98,41 @@ func (b *backend) pathGroupRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"policies": strings.Join(group.Policies, ","),
+			"policies": group.Policies,
 		},
 	}, nil
 }
 
-func (b *backend) pathGroupWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	groupname := d.Get("name").(string)
+
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("ldap backend not configured"), nil
+	}
+	if !*cfg.CaseSensitiveNames {
+		groupname = strings.ToLower(groupname)
+	}
+
 	// Store it
-	entry, err := logical.StorageEntryJSON("group/"+d.Get("name").(string), &GroupEntry{
-		Policies: policyutil.ParsePolicies(d.Get("policies").(string)),
+	entry, err := logical.StorageEntryJSON("group/"+groupname, &GroupEntry{
+		Policies: policyutil.ParsePolicies(d.Get("policies")),
 	})
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathGroupList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groups, err := req.Storage.List("group/")
+func (b *backend) pathGroupList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	groups, err := req.Storage.List(ctx, "group/")
 	if err != nil {
 		return nil, err
 	}

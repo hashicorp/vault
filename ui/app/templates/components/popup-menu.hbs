@@ -1,0 +1,15 @@
+{{#basic-dropdown class="popup-menu" horizontalPosition="auto-right" verticalPosition="below" onOpen=onOpen as |d|}}
+  {{#d.trigger tagName="button" class=(concat "popup-menu-trigger button is-ghost" (if d.isOpen "is-active")) data-test-popup-menu-trigger=true}}
+    {{i-con
+      glyph="more"
+      class="has-text-black auto-width"
+      size=16
+      aria-label="More options"
+    }}
+  {{/d.trigger}}
+  {{#d.content class=(concat "popup-menu-content " contentClass)}}
+    <div class="box">
+      {{yield}}
+    </div>
+  {{/d.content}}
+{{/basic-dropdown}}

@@ -27,23 +27,20 @@
 
     <title><%= title_for(current_page) %></title>
 
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="https://use.typekit.net/wxf7mfi.css">
     <%= stylesheet_link_tag "application" %>
 
-    <!--[if lt IE 9]>
-      <%= javascript_include_tag "ie-compat" %>
-    <![endif]-->
-    <%= javascript_include_tag "application" %>
+    <!-- Site scripts -->
+    <!--[if lt IE 9]><%= javascript_include_tag "ie-compat", defer: true %><![endif]-->
+    <%= javascript_include_tag "application", defer: true %>
 
-    <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-NR2SD7C');</script>
+    <%= yield_content :scripts %>
 
-    <!-- Typekit script to import Klavika font -->
-    <script src="https://use.typekit.net/wxf7mfi.js"></script>
-    <script>try{Typekit.load({ async: true });}catch(e){}</script>
+    <!-- Analytics scrpts -->
+    <script defer>
+      !function(){var e=window.analytics=window.analytics||[];if(!e.initialize)if(e.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{e.invoked=!0,e.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on"],e.factory=function(t){return function(){var a=Array.prototype.slice.call(arguments);return a.unshift(t),e.push(a),e}};for(var t=0;t<e.methods.length;t++){var a=e.methods[t];e[a]=e.factory(a)}e.load=function(e){var t=document.createElement("script");t.type="text/javascript",t.async=!0,t.src=("https:"===document.location.protocol?"https://":"http://")+"cdn.segment.com/analytics.js/v1/"+e+"/analytics.min.js";var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(t,a)},e.SNIPPET_VERSION="4.0.0",e.load("<%= segmentId %>")}}();var om597a24292a958,om597a24292a958_poll=function(){var e=0;return function(t,a){clearInterval(e),e=setInterval(t,a)}}();!function(e,t,a){if(e.getElementById(a))om597a24292a958_poll(function(){if(window.om_loaded&&!om597a24292a958)return(om597a24292a958=new OptinMonsterApp).init({s:"35109.597a24292a958",staging:0,dev:0,beta:0})},25);else{var n=!1,o=e.createElement("script");o.id=a,o.src="//a.optnmstr.com/app/js/api.min.js",o.async=!0,o.onload=o.onreadystatechange=function(){if(!(n||this.readyState&&"loaded"!==this.readyState&&"complete"!==this.readyState))try{n=om_loaded=!0,(om597a24292a958=new OptinMonsterApp).init({s:"35109.597a24292a958",staging:0,dev:0,beta:0}),o.onload=o.onreadystatechange=null}catch(e){}},(document.getElementsByTagName("head")[0]||document.documentElement).appendChild(o)}}(document,0,"omapi-script");
+    </script>
 
     <%= yield_content :head %>
   </head>
@@ -73,9 +70,9 @@
               <nav class="navigation-links" role="navigation">
                 <ul class="main-links nav navbar-nav navbar-right">
                   <li><a href="/intro/index.html">Intro</a></li>
+                  <li><a href="/guides/index.html">Guides</a></li>
                   <li><a href="/docs/index.html">Docs</a></li>
                   <li><a href="/api/index.html">API</a></li>
-                  <li><a href="/community.html">Community</a></li>
                   <li><a href="https://www.hashicorp.com/vault.html?utm_source=oss&utm_medium=header-nav&utm_campaign=vault">Enterprise</a></li>
                   <li>
                     <a href="/downloads.html">
@@ -109,8 +106,10 @@
             <ul class="footer-links nav navbar-nav">
               <li><a href="/intro/index.html">Intro</a></li>
               <li><a href="/docs/index.html">Docs</a></li>
+              <li><a href="/guides/index.html">Guides</a></li>
               <li><a href="/api/index.html">API</a></li>
               <li><a href="/community.html">Community</a></li>
+              <li><a href="https://www.hashicorp.com/privacy">Privacy</a></li>
               <li><a href="/security.html">Security</a></li>
               <li><a href="/assets/files/press-kit.zip">Press Kit</a></li>
             </ul>
@@ -121,19 +120,6 @@
         </div>
       </div>
     </div>
-
-    <script>
-      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-      ga('create', 'UA-62364009-1', 'vaultproject.io');
-      ga('require', 'linkid');
-      ga('send', 'pageview', location.pathname);
-    </script>
-
-    <%= yield_content :scripts %>
 
     <script type="application/ld+json">
       {

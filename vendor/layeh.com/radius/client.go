@@ -1,32 +1,50 @@
-package radius // import "layeh.com/radius"
+package radius
 
 import (
+	"context"
 	"net"
 	"time"
 )
 
-// Client is a RADIUS client that can send and receive packets to and from a
-// RADIUS server.
+// Client is a RADIUS client that can exchange packets with a RADIUS server.
 type Client struct {
 	// Network on which to make the connection. Defaults to "udp".
 	Net string
 
-	// Local address to use for outgoing connections (can be nil).
-	LocalAddr net.Addr
+	// Dialer to use when making the outgoing connections.
+	Dialer net.Dialer
 
-	// Timeouts for various operations. Default values for each field is 10
-	// seconds.
-	DialTimeout  time.Duration
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
-
-	// Interval on which to resend packet.
+	// Interval on which to resend packet (zero or negative value means no
+	// retry).
 	Retry time.Duration
+
+	// MaxPacketErrors controls how many packet parsing and validation errors
+	// the client will ignore before returning the error from Exchange.
+	//
+	// If zero, Exchange will drop all packet parsing errors.
+	MaxPacketErrors int
+
+	// InsecureSkipVerify controls whether the client should skip verifying
+	// response packets received.
+	InsecureSkipVerify bool
 }
 
-// Exchange sends the packet to the given server address and waits for a
-// response. nil and an error is returned upon failure.
-func (c *Client) Exchange(packet *Packet, addr string) (*Packet, error) {
+// DefaultClient is the RADIUS client used by the Exchange function.
+var DefaultClient = &Client{}
+
+// Exchange uses DefaultClient to send the given RADIUS packet to the server at
+// address addr and waits for a response.
+func Exchange(ctx context.Context, packet *Packet, addr string) (*Packet, error) {
+	return DefaultClient.Exchange(ctx, packet, addr)
+}
+
+// Exchange sends the packet to the given server and waits for a response. ctx
+// must be non-nil.
+func (c *Client) Exchange(ctx context.Context, packet *Packet, addr string) (*Packet, error) {
+	if ctx == nil {
+		panic("nil context")
+	}
+
 	wire, err := packet.Encode()
 	if err != nil {
 		return nil, err
@@ -37,31 +55,21 @@ func (c *Client) Exchange(packet *Packet, addr string) (*Packet, error) {
 		connNet = "udp"
 	}
 
-	const defaultTimeout = 10 * time.Second
-	dialTimeout := c.DialTimeout
-	if dialTimeout == 0 {
-		dialTimeout = defaultTimeout
-	}
-
-	dialer := net.Dialer{
-		Timeout:   dialTimeout,
-		LocalAddr: c.LocalAddr,
-	}
-	conn, err := dialer.Dial(connNet, addr)
+	conn, err := c.Dialer.DialContext(ctx, connNet, addr)
 	if err != nil {
 		return nil, err
 	}
+	defer conn.Close()
 
-	writeTimeout := c.WriteTimeout
-	if writeTimeout == 0 {
-		writeTimeout = defaultTimeout
+	if deadline, deadlineSet := ctx.Deadline(); deadlineSet {
+		conn.SetDeadline(deadline)
 	}
-	conn.SetWriteDeadline(time.Now().Add(writeTimeout))
 
 	conn.Write(wire)
 
 	if c.Retry > 0 {
 		retry := time.NewTicker(c.Retry)
+		defer retry.Stop()
 		end := make(chan struct{})
 		defer close(end)
 		go func() {
@@ -69,32 +77,41 @@ func (c *Client) Exchange(packet *Packet, addr string) (*Packet, error) {
 				select {
 				case <-retry.C:
 					conn.Write(wire)
+				case <-ctx.Done():
+					return
 				case <-end:
-					retry.Stop()
 					return
 				}
 			}
 		}()
 	}
 
-	var incoming [maxPacketSize]byte
+	var packetErrorCount int
 
-	readTimeout := c.ReadTimeout
-	if readTimeout == 0 {
-		readTimeout = defaultTimeout
-	}
-	conn.SetReadDeadline(time.Now().Add(readTimeout))
-
+	var incoming [MaxPacketLength]byte
 	for {
 		n, err := conn.Read(incoming[:])
 		if err != nil {
-			conn.Close()
 			return nil, err
 		}
-		received, err := Parse(incoming[:n], packet.Secret, packet.Dictionary)
-		if err == nil && received.IsAuthentic(packet) {
-			conn.Close()
-			return received, nil
+
+		received, err := Parse(incoming[:n], packet.Secret)
+		if err != nil {
+			packetErrorCount++
+			if c.MaxPacketErrors > 0 && packetErrorCount >= c.MaxPacketErrors {
+				return nil, err
+			}
+			continue
 		}
+
+		if !c.InsecureSkipVerify && !IsAuthenticResponse(incoming[:n], wire, packet.Secret) {
+			packetErrorCount++
+			if c.MaxPacketErrors > 0 && packetErrorCount >= c.MaxPacketErrors {
+				return nil, &NonAuthenticResponseError{}
+			}
+			continue
+		}
+
+		return received, nil
 	}
 }

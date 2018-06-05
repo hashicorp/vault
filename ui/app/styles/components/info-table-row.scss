@@ -1,0 +1,57 @@
+.info-table-row {
+  box-shadow: 0 1px 0 $grey-light;
+  margin: 0 $size-6;
+
+  @include from($tablet) {
+    display: flex;
+  }
+
+  &.thead {
+    box-shadow: 0 1px 0 $grey-light, 0 -1px 0 $grey-light;
+    margin: 0;
+    padding: 0 $size-6;
+
+    .column {
+      padding: 0.5rem 0.75rem;
+    }
+  }
+
+  .column {
+    &.info-table-row-edit {
+      padding-bottom: 0.3rem;
+      padding-top: 0.3rem;
+    }
+
+    @include until($tablet) {
+      padding: 0;
+    }
+
+    &:first-child {
+      padding-left: 0;
+
+      @include until($tablet) {
+        padding: $size-8 0 0;
+      }
+    }
+
+    &:last-child {
+      padding-right: 0;
+
+      @include until($tablet) {
+        padding: 0 0 $size-8;
+      }
+    }
+
+    textarea {
+      min-height: 35px;
+    }
+  }
+}
+
+.info-table-row-header {
+  margin: 0;
+
+  @include until($tablet) {
+    display: none;
+  }
+}

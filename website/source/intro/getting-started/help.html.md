@@ -1,6 +1,6 @@
 ---
 layout: "intro"
-page_title: "Built-in Help"
+page_title: "Built-in Help - Getting Started"
 sidebar_current: "gettingstarted-help"
 description: |-
   Vault has a built-in help system to learn about the available paths in Vault and how to use them.
@@ -8,30 +8,30 @@ description: |-
 
 # Built-in Help
 
-You've now worked with `vault write` and `vault read` for multiple
-paths: the generic secret backend with `secret/` and dynamic AWS
-credentials with the AWS backend provider at `aws/`. In both cases, the
-structure and usage of each backend differed, for example the AWS
-backend has special paths like `aws/config`.
+You've now worked with `vault write` and `vault read` for multiple paths: the
+`kv` secrets engine with `kv/` and dynamic AWS credentials with the AWS secrets
+engine provider at `aws/`. In both cases, the structure and usage of each
+secrets engines differed, for example the AWS backend has special paths like
+`aws/config`.
 
-Instead of having to memorize or reference documentation constantly
-to determine what paths to use, we've built a help system directly into
-Vault. This help system can be accessed via the API or the command-line and
-generates human-readable help for any mounted backend.
+Instead of having to memorize or reference documentation constantly to determine
+what paths to use, Vault has a built-in help system. This help system can be
+accessed via the API or the command-line and generates human-readable help for
+any path.
 
-On this page, we'll learn how to use this help system. It is an invaluable
-tool as you continue to work with Vault.
+## Secrets Engines Overview
 
-## Backend Overview
+This section assumes you have the AWS secrets engine enabled at `aws/`. If you
+do not, enable it before continuing:
 
-For this, we'll assume you have the AWS backend mounted. If not, mount
-it with `vault mount aws`. Even if you don't have an AWS account, you
-can still mount the AWS backend.
-
-With the backend mounted, let's learn about it with the `vault
-path-help` command:
-
+```text
+$ vault secrets enable -path=aws aws
 ```
+
+With the secrets engine enabled, learn about it with the `vault path-help`
+command:
+
+```text
 $ vault path-help aws
 ## DESCRIPTION
 
@@ -63,25 +63,23 @@ you may or may not be able to access certain paths.
         Read and write IAM policies that access keys can be made for.
 ```
 
-The `vault path-help` command takes a path. By specifying the root path for
-a mount, it will give us the overview of that mount. Notice how the help
-not only contains a description, but also the exact regular expressions
-used to match routes for this backend along with a brief description
-of what the route is for.
+The `vault path-help` command takes a path. By specifying a root path, it will
+give us the overview of that secrets engine. Notice how the help not only
+contains a description, but also the exact regular expressions used to match
+routes for this backend along with a brief description of what the route is for.
 
 ## Path Help
 
-After seeing the overview, we can continue to dive deeper by getting
-help for an individual path. For this, just use `vault path-help` with a path
-that would match the regular expression for that path. Note that the path
-doesn't need to actually _work_. For example, we'll get the help below
-for accessing `aws/creds/operator`, even though we never created the `operator`
-role:
+After seeing the overview, we can continue to dive deeper by getting help for an
+individual path. For this, just use `vault path-help` with a path that would
+match the regular expression for that path. Note that the path doesn't need to
+actually _work_. For example, we'll get the help below for accessing
+`aws/creds/my-non-existent-role`, even though we never created the role:
 
-```
-$ vault path-help aws/creds/operator
-Request:        creds/operator
-Matching Route: ^creds/(?P<name>\w+)$
+```text
+$ vault path-help aws/creds/my-non-existent-role
+Request:        creds/my-non-existent-role
+Matching Route: ^creds/(?P<name>\w(([\w-.]+)?\w)?)$
 
 Generate an access key pair for a specific role.
 
@@ -101,22 +99,19 @@ The access keys will have a lease associated with them. The access keys
 can be revoked by using the lease ID.
 ```
 
-Within a path, we are given the parameters that this path requires.
-Some parameters come from the route itself. In this case, the `name`
-parameter is a named capture from the route regular expression.
+Within a path, we are given the parameters that this path requires. Some
+parameters come from the route itself. In this case, the `name` parameter is a
+named capture from the route regular expression. There is also a description of
+what that path does.
 
-There is also a description of what that path does.
-
-Go ahead and explore more paths! Mount other backends, traverse their
-help systems and learn about what they do. For example, learn about the
-generic `secret/` path.
+Go ahead and explore more paths! Enable other secrets engines, traverse their
+help systems, and learn about what they do.
 
 ## Next
 
-The help system may not be the most exciting feature of Vault, but it
-is indispensable in day-to-day usage of Vault. The help system lets you
-learn about how to use any backend within Vault without leaving the command
-line.
+The help system may not be the most exciting feature of Vault, but it is
+indispensable in day-to-day usage. The help system lets you learn about how to
+use any backend within Vault without leaving the command line.
 
-Next, we'll learn about
+Next, we will learn about
 [authentication](/intro/getting-started/authentication.html).

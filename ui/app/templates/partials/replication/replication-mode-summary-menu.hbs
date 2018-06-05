@@ -1,0 +1,42 @@
+<div class="level is-mobile">
+  <div class="level-left is-flex-1">
+    <div>
+      {{#if (or replicationUnsupported (and (eq mode 'performance') (not version.hasPerfReplication)))}}
+        <p>
+           Upgrade to Vault Enterprise Premium to use Performance Replication.
+        </p>
+      {{else if replicationEnabled}}
+        <span>
+          {{capitalize modeForUrl}}
+        </span>
+        {{#if secondaryId}}
+          <span class="tag">
+            <code>
+              {{secondaryId}}
+            </code>
+          </span>
+        {{/if}}
+        <span class="tag">
+          <code>
+            {{clusterIdDisplay}}
+          </code>
+        </span>
+      {{else}}
+        Enable
+      {{/if}}
+    </div>
+  </div>
+  <div class="level-right">
+    {{#if replicationEnabled}}
+      {{#if (get cluster (concat mode 'StateGlyph'))}}
+        <span class="has-text-success">
+          {{i-con size=16 glyph=(get cluster (concat mode 'StateGlyph'))}}
+        </span>
+      {{else if syncProgress}}
+        <progress value="{{syncProgressPercent}}" max="100" class="progress is-small is-narrow is-info">
+          {{syncProgress.progress}} of {{syncProgress.total}} keys
+        </progress>
+      {{/if}}
+    {{/if}}
+  </div>
+</div>

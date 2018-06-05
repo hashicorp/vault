@@ -1,12 +1,14 @@
 package cert
 
 import (
+	"context"
 	"crypto/x509"
 	"fmt"
 	"math/big"
 	"strings"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -41,7 +43,7 @@ using the same name as specified here.`,
 	}
 }
 
-func (b *backend) populateCRLs(storage logical.Storage) error {
+func (b *backend) populateCRLs(ctx context.Context, storage logical.Storage) error {
 	b.crlUpdateMutex.Lock()
 	defer b.crlUpdateMutex.Unlock()
 
@@ -51,19 +53,19 @@ func (b *backend) populateCRLs(storage logical.Storage) error {
 
 	b.crls = map[string]CRLInfo{}
 
-	keys, err := storage.List("crls/")
+	keys, err := storage.List(ctx, "crls/")
 	if err != nil {
-		return fmt.Errorf("error listing CRLs: %v", err)
+		return errwrap.Wrapf("error listing CRLs: {{err}}", err)
 	}
 	if keys == nil || len(keys) == 0 {
 		return nil
 	}
 
 	for _, key := range keys {
-		entry, err := storage.Get("crls/" + key)
+		entry, err := storage.Get(ctx, "crls/"+key)
 		if err != nil {
 			b.crls = nil
-			return fmt.Errorf("error loading CRL %s: %v", key, err)
+			return errwrap.Wrapf(fmt.Sprintf("error loading CRL %q: {{err}}", key), err)
 		}
 		if entry == nil {
 			continue
@@ -72,7 +74,7 @@ func (b *backend) populateCRLs(storage logical.Storage) error {
 		err = entry.DecodeJSON(&crlInfo)
 		if err != nil {
 			b.crls = nil
-			return fmt.Errorf("error decoding CRL %s: %v", key, err)
+			return errwrap.Wrapf(fmt.Sprintf("error decoding CRL %q: {{err}}", key), err)
 		}
 		b.crls[key] = crlInfo
 	}
@@ -102,34 +104,33 @@ func parseSerialString(input string) (*big.Int, error) {
 	case strings.Count(input, ":") > 0:
 		serialBytes := certutil.ParseHexFormatted(input, ":")
 		if serialBytes == nil {
-			return nil, fmt.Errorf("error parsing serial %s", input)
+			return nil, fmt.Errorf("error parsing serial %q", input)
 		}
 		ret.SetBytes(serialBytes)
 	case strings.Count(input, "-") > 0:
 		serialBytes := certutil.ParseHexFormatted(input, "-")
 		if serialBytes == nil {
-			return nil, fmt.Errorf("error parsing serial %s", input)
+			return nil, fmt.Errorf("error parsing serial %q", input)
 		}
 		ret.SetBytes(serialBytes)
 	default:
 		var success bool
 		ret, success = ret.SetString(input, 0)
 		if !success {
-			return nil, fmt.Errorf("error parsing serial %s", input)
+			return nil, fmt.Errorf("error parsing serial %q", input)
 		}
 	}
 
 	return ret, nil
 }
 
-func (b *backend) pathCRLDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCRLDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(d.Get("name").(string))
 	if name == "" {
 		return logical.ErrorResponse(`"name" parameter cannot be empty`), nil
 	}
 
-	if err := b.populateCRLs(req.Storage); err != nil {
+	if err := b.populateCRLs(ctx, req.Storage); err != nil {
 		return nil, err
 	}
 
@@ -143,7 +144,7 @@ func (b *backend) pathCRLDelete(
 		)), nil
 	}
 
-	if err := req.Storage.Delete("crls/" + name); err != nil {
+	if err := req.Storage.Delete(ctx, "crls/"+name); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"error deleting crl %s: %v", name, err),
 		), nil
@@ -154,14 +155,13 @@ func (b *backend) pathCRLDelete(
 	return nil, nil
 }
 
-func (b *backend) pathCRLRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(d.Get("name").(string))
 	if name == "" {
 		return logical.ErrorResponse(`"name" parameter must be set`), nil
 	}
 
-	if err := b.populateCRLs(req.Storage); err != nil {
+	if err := b.populateCRLs(ctx, req.Storage); err != nil {
 		return nil, err
 	}
 
@@ -184,8 +184,7 @@ func (b *backend) pathCRLRead(
 	}, nil
 }
 
-func (b *backend) pathCRLWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(d.Get("name").(string))
 	if name == "" {
 		return logical.ErrorResponse(`"name" parameter cannot be empty`), nil
@@ -200,7 +199,7 @@ func (b *backend) pathCRLWrite(
 		return logical.ErrorResponse("parsed CRL is nil"), nil
 	}
 
-	if err := b.populateCRLs(req.Storage); err != nil {
+	if err := b.populateCRLs(ctx, req.Storage); err != nil {
 		return nil, err
 	}
 
@@ -218,7 +217,7 @@ func (b *backend) pathCRLWrite(
 	if err != nil {
 		return nil, err
 	}
-	if err = req.Storage.Put(entry); err != nil {
+	if err = req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

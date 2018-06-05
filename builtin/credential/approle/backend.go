@@ -1,12 +1,21 @@
 package approle
 
 import (
+	"context"
 	"sync"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+)
+
+const (
+	secretIDPrefix              = "secret_id/"
+	secretIDLocalPrefix         = "secret_id_local/"
+	secretIDAccessorPrefix      = "accessor/"
+	secretIDAccessorLocalPrefix = "accessor_local/"
 )
 
 type backend struct {
@@ -49,12 +58,15 @@ type backend struct {
 	secretIDListingLock sync.RWMutex
 }
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(conf)
 	if err != nil {
 		return nil, err
 	}
-	return b.Setup(conf)
+	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func Backend(conf *logical.BackendConfig) (*backend, error) {
@@ -85,6 +97,10 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			Unauthenticated: []string{
 				"login",
 			},
+			LocalStorage: []string{
+				secretIDLocalPrefix,
+				secretIDAccessorLocalPrefix,
+			},
 		},
 		Paths: framework.PathAppend(
 			rolePaths(b),
@@ -93,12 +109,13 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 				pathTidySecretID(b),
 			},
 		),
-		Invalidate: b.invalidate,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeCredential,
 	}
 	return b, nil
 }
 
-func (b *backend) Salt() (*salt.Salt, error) {
+func (b *backend) Salt(ctx context.Context) (*salt.Salt, error) {
 	b.saltMutex.RLock()
 	if b.salt != nil {
 		defer b.saltMutex.RUnlock()
@@ -110,7 +127,7 @@ func (b *backend) Salt() (*salt.Salt, error) {
 	if b.salt != nil {
 		return b.salt, nil
 	}
-	salt, err := salt.NewSalt(b.view, &salt.Config{
+	salt, err := salt.NewSalt(ctx, b.view, &salt.Config{
 		HashFunc: salt.SHA256Hash,
 		Location: salt.DefaultLocation,
 	})
@@ -121,7 +138,7 @@ func (b *backend) Salt() (*salt.Salt, error) {
 	return salt, nil
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(_ context.Context, key string) {
 	switch key {
 	case salt.DefaultLocation:
 		b.saltMutex.Lock()
@@ -135,9 +152,11 @@ func (b *backend) invalidate(key string) {
 // This could mean that the SecretID may live in the backend upto 1 min after its
 // expiration. The deletion of SecretIDs are not security sensitive and it is okay
 // to delay the removal of SecretIDs by a minute.
-func (b *backend) periodicFunc(req *logical.Request) error {
+func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error {
 	// Initiate clean-up of expired SecretID entries
-	b.tidySecretID(req.Storage)
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		b.tidySecretID(ctx, req.Storage)
+	}
 	return nil
 }
 

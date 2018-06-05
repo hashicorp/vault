@@ -1,0 +1,14 @@
+<div class="popup-menu-content is-wide">
+  <div class="box">
+    <div class="menu-label">
+      In case of emergency
+    </div>
+    <div class="menu-content">
+      <p>
+        If you suspect your data has been compromised, you can
+        <a href="{{href-to 'vault.cluster.settings.seal' cluster.name}}" onclick={{action d.actions.close}} class="link">seal your vault</a>
+        to prevent access to your secrets.
+      </p>
+    </div>
+  </div>
+</div>

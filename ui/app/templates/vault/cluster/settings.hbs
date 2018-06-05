@@ -1,0 +1,22 @@
+<div class="columns">
+  {{#menu-sidebar title="Settings" class="is-3"}}
+    <li>
+      {{#link-to "vault.cluster.settings.mount-secret-backend" current-when="vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"}}
+        Secrets Engines
+      {{/link-to}}
+    </li>
+    <li>
+      {{#link-to "vault.cluster.settings.auth"}}
+        Auth Methods
+      {{/link-to}}
+    </li>
+    <li>
+      {{#link-to "vault.cluster.settings.seal"}}
+        Seal
+      {{/link-to}}
+    </li>
+  {{/menu-sidebar}}
+  <div class="column is-9">
+    {{outlet}}
+  </div>
+</div>

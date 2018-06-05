@@ -1,10 +1,12 @@
 package okta
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
 
+	"github.com/go-errors/errors"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -26,7 +28,8 @@ func pathLogin(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathLogin,
+			logical.UpdateOperation:         b.pathLogin,
+			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
 		},
 
 		HelpSynopsis:    pathLoginSyn,
@@ -34,12 +37,26 @@ func pathLogin(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathLogin(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	username := d.Get("username").(string)
+	if username == "" {
+		return nil, fmt.Errorf("missing username")
+	}
+
+	return &logical.Response{
+		Auth: &logical.Auth{
+			Alias: &logical.Alias{
+				Name: username,
+			},
+		},
+	}, nil
+}
+
+func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
 
-	policies, resp, err := b.Login(req, username, password)
+	policies, resp, groupNames, err := b.Login(ctx, req, username, password)
 	// Handle an internal error
 	if err != nil {
 		return nil, err
@@ -55,6 +72,11 @@ func (b *backend) pathLogin(
 
 	sort.Strings(policies)
 
+	cfg, err := b.getConfig(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
 	resp.Auth = &logical.Auth{
 		Policies: policies,
 		Metadata: map[string]string{
@@ -66,19 +88,32 @@ func (b *backend) pathLogin(
 		},
 		DisplayName: username,
 		LeaseOptions: logical.LeaseOptions{
+			TTL:       cfg.TTL,
+			MaxTTL:    cfg.MaxTTL,
 			Renewable: true,
 		},
+		Alias: &logical.Alias{
+			Name: username,
+		},
 	}
+
+	for _, groupName := range groupNames {
+		if groupName == "" {
+			continue
+		}
+		resp.Auth.GroupAliases = append(resp.Auth.GroupAliases, &logical.Alias{
+			Name: groupName,
+		})
+	}
+
 	return resp, nil
 }
 
-func (b *backend) pathLoginRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
 
-	loginPolicies, resp, err := b.Login(req, username, password)
+	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password)
 	if len(loginPolicies) == 0 {
 		return resp, err
 	}
@@ -87,7 +122,39 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	return framework.LeaseExtend(0, 0, b.System())(req, d)
+	cfg, err := b.getConfig(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	resp.Auth = req.Auth
+	resp.Auth.TTL = cfg.TTL
+	resp.Auth.MaxTTL = cfg.MaxTTL
+
+	// Remove old aliases
+	resp.Auth.GroupAliases = nil
+
+	for _, groupName := range groupNames {
+		resp.Auth.GroupAliases = append(resp.Auth.GroupAliases, &logical.Alias{
+			Name: groupName,
+		})
+	}
+
+	return resp, nil
+
+}
+
+func (b *backend) getConfig(ctx context.Context, req *logical.Request) (*ConfigEntry, error) {
+
+	cfg, err := b.Config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return nil, errors.New("Okta backend not configured")
+	}
+
+	return cfg, nil
 }
 
 const pathLoginSyn = `

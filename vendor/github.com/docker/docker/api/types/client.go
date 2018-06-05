@@ -1,4 +1,4 @@
-package types
+package types // import "github.com/docker/docker/api/types"
 
 import (
 	"bufio"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/go-units"
+	units "github.com/docker/go-units"
 )
 
 // CheckpointCreateOptions holds parameters to create a checkpoint from a container
@@ -74,6 +74,7 @@ type ContainerLogsOptions struct {
 	ShowStdout bool
 	ShowStderr bool
 	Since      string
+	Until      string
 	Timestamps bool
 	Follow     bool
 	Tail       string
@@ -178,6 +179,8 @@ type ImageBuildOptions struct {
 	SecurityOpt []string
 	ExtraHosts  []string // List of extra hosts
 	Target      string
+	SessionID   string
+	Platform    string
 }
 
 // ImageBuildResponse holds information
@@ -190,7 +193,8 @@ type ImageBuildResponse struct {
 
 // ImageCreateOptions holds information to create images.
 type ImageCreateOptions struct {
-	RegistryAuth string // RegistryAuth is the base64 encoded credentials for the registry
+	RegistryAuth string // RegistryAuth is the base64 encoded credentials for the registry.
+	Platform     string // Platform is the target platform of the image if it needs to be pulled from the registry.
 }
 
 // ImageImportSource holds source information for ImageImport
@@ -201,9 +205,10 @@ type ImageImportSource struct {
 
 // ImageImportOptions holds information to import images from the client host.
 type ImageImportOptions struct {
-	Tag     string   // Tag is the name to tag this image with. This attribute is deprecated.
-	Message string   // Message is the message to tag the image with
-	Changes []string // Changes are the raw changes to apply to this image
+	Tag      string   // Tag is the name to tag this image with. This attribute is deprecated.
+	Message  string   // Message is the message to tag the image with
+	Changes  []string // Changes are the raw changes to apply to this image
+	Platform string   // Platform is the target platform of the image
 }
 
 // ImageListOptions holds parameters to filter the list of images with.
@@ -224,6 +229,7 @@ type ImagePullOptions struct {
 	All           bool
 	RegistryAuth  string // RegistryAuth is the base64 encoded credentials for the registry
 	PrivilegeFunc RequestPrivilegeFunc
+	Platform      string
 }
 
 // RequestPrivilegeFunc is a function interface that
@@ -276,6 +282,12 @@ type ServiceCreateOptions struct {
 	//
 	// This field follows the format of the X-Registry-Auth header.
 	EncodedRegistryAuth string
+
+	// QueryRegistry indicates whether the service update requires
+	// contacting a registry. A registry may be contacted to retrieve
+	// the image digest and manifest, which in turn can be used to update
+	// platform or other information about the service.
+	QueryRegistry bool
 }
 
 // ServiceCreateResponse contains the information returned to a client
@@ -315,6 +327,12 @@ type ServiceUpdateOptions struct {
 	// The valid values are "previous" and "none". An empty value is the
 	// same as "none".
 	Rollback string
+
+	// QueryRegistry indicates whether the service update requires
+	// contacting a registry. A registry may be contacted to retrieve
+	// the image digest and manifest, which in turn can be used to update
+	// platform or other information about the service.
+	QueryRegistry bool
 }
 
 // ServiceListOptions holds parameters to list services with.

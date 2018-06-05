@@ -23,8 +23,6 @@ All of the methods of this package use exponential backoff to retry calls
 that fail with certain errors, as described in
 https://cloud.google.com/storage/docs/exponential-backoff.
 
-Note: This package is in beta.  Some backwards-incompatible changes may occur.
-
 
 Creating a Client
 
@@ -35,6 +33,13 @@ To start working with this package, create a client:
     if err != nil {
         // TODO: Handle error.
     }
+
+The client will use your default application credentials.
+
+If you only wish to access public data, you can create
+an unauthenticated client with
+
+    client, err := storage.NewClient(ctx, option.WithoutAuthentication())
 
 Buckets
 

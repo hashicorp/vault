@@ -1,0 +1,373 @@
+---
+layout: "api"
+page_title: "GCP - Secrets Engines - HTTP API"
+sidebar_current: "docs-http-secret-gcp"
+description: |-
+  This is the API documentation for the Vault GCP secrets engine.
+---
+
+# GCP Secrets Engine (API)
+
+This is the API documentation for the Vault GCP (Google Cloud Platform)
+secrets engine. For general information about the usage and operation of
+the GCP secrets engine, please see [these docs](/docs/secrets/gcp/index.html).
+
+This documentation assumes the GCP secrets engine is enabled at the `/gcp` path
+in Vault. Since it is possible to mount secrets engines at any path, please
+update your API calls accordingly.
+
+## Write Config
+
+| Method   | Path                     | Produces                  |
+| :------- | :------------------------| :------------------------ |
+| `POST`   | `/gcp/config`            | `204 (empty body)`        |
+
+This endpoint configures shared information for the secrets engine.
+
+### Parameters
+
+- `credentials` (`string:""`) - JSON credentials (either file contents or '@path/to/file')
+    See docs for [alternative ways](/docs/secrets/gcp/index.html#passing-credentials-to-vault)
+    to pass in to this parameter, as well as the
+    [required permissions](/docs/secrets/gcp/index.html#required-permissions).
+
+- `ttl` (`int: 0 || string:"0s"`) – Specifies default config TTL for long-lived credentials
+    (i.e. service account keys). Accepts integer number of seconds or Go duration format string.
+
+- `max_ttl` (`int: 0 || string:"0s"`)– Specifies the maximum config TTL for long-lived credentials
+    (i.e. service account keys). Accepts integer number of seconds or Go duration format string.**
+
+### Sample Payload
+
+```json
+{
+  "credentials": "<JSON string>",
+  "ttl": 3600,
+  "max_ttl": 14400
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/gcp/config
+```
+
+## Read Config
+
+| Method   | Path                     | Produces                  |
+| :------- | :------------------------| :------------------------ |
+| `GET`    | `/gcp/config`            | `200 application/json`    |
+
+Credentials will be omitted from returned data.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    https://vault.rocks/v1/gcp/config
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "ttl": "1h",
+    "max_ttl": "4h"
+  }
+}
+```
+
+## Create/Update Roleset
+
+| Method   | Path                     | Produces                  |
+| :------- | :------------------------| :------------------------ |
+| `POST`   | `/gcp/roleset/:name`     | `204 (empty body)`        |
+
+This method allows you to create a roleset or update an existing roleset. See [roleset docs](/docs/secrets/gcp/index.html#rolesets) for the GCP secrets backend
+to learn more about what happens when you create or update a roleset.
+
+
+**If you update a roleset's bindings, this will effectively revoke any secrets
+generated under this roleset.**
+
+### Parameters
+
+- `name` (`string: <required>`): Required. Name of the role. Cannot be updated.
+- `secret_type` (`string: "access_token"`): Type of secret generated for this role set. Accepted values: `access_token`, `service_account_key`. Cannot be updated.
+- `project` (`string: <required>`): Name of the GCP project that this roleset's service account will belong to. Cannot be updated.
+- `bindings` (`string: <required>`): Bindings configuration string (expects HCL or JSON format in raw or base64-encoded string)
+- `token_scopes` (`array: []`): List of OAuth scopes to assign to `access_token` secrets generated under this role set (`access_token` role sets only)
+
+### Sample Payload
+
+```json
+{
+  "secret_type": "access_token",
+  "project": "mygcpproject",
+  "bindings": "...",
+  "token_scopes": [
+    "https://www.googleapis.com/auth/cloud-platform",
+    "https://www.googleapis.com/auth/bigquery"
+  ]
+}
+```
+
+#### Sample Bindings:
+See [bindings format docs](/docs/secrets/gcp/index.html#roleset-bindings) for more information.
+
+```hcl
+resource "project/mygcpproject" {
+  roles = [
+    "roles/viewer"
+  ],
+}
+
+resource "https://selflink/to/my/resource" {
+  roles = [
+    "project/mygcpproject/roles/projcustomrole",
+    "organizations/myorg/roles/orgcustomrole"
+  ],
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/gcp/roleset/my-token-roleset
+```
+
+## Rotate Roleset Account
+
+| Method   | Path                             | Produces               |
+| :------- | :--------------------------------| :--------------------- |
+| `POST`    | `/gcp/roleset/:name/rotate`     | `204 (empty body)``    |
+
+This will rotate the service account this roleset uses to generate secrets.
+(this also replaces the key `access_token` roleset). This can be used to invalidate
+old secrets generated by the roleset or fix issues if a roleset's service account
+(and/or keys) was changed outside of Vault (i.e. through GCP APIs/cloud console).
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    https://vault.rocks/v1/consul/gcp/roleset/my-token-roleset/rotate
+```
+
+## Rotate Roleset Account Key (`access_token` Roleset Only)
+
+| Method   | Path                             | Produces               |
+| :------- | :--------------------------------| :--------------------- |
+| `POST`    | `/gcp/roleset/:name/rotate-key` | `204 (empty body)``    |
+
+This will rotate the service account key this roleset uses to generate
+access tokens. This does not recreate the roleset service account.
+
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    https://vault.rocks/v1/consul/gcp/roleset/my-token-roleset/rotate-key
+```
+
+## Read Roleset
+
+| Method   | Path                     | Produces                  |
+| :------- | :------------------------| :------------------------ |
+| `GET`    | `/gcp/roleset/:name`     | `200 application/json`    |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    https://vault.rocks/v1/consul/gcp/roleset/my-token-roleset
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "secret_type": "access_token",
+    "service_account_email": "vault-myroleset-XXXXXXXXXX@myproject.gserviceaccounts.com",
+    "service_account_project": "service-account-project",    
+    "bindings": {
+      "project/mygcpproject": [
+        "roles/viewer"
+      ],
+      "https://selflink/to/my/resource": [
+        "project/mygcpproject/roles/projcustomrole",
+        "organizations/myorg/roles/orgcustomrole"
+      ]
+    },
+    "token_scopes" : [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+  }
+}
+```
+
+## List Rolesets
+
+| Method   | Path                     | Produces                  |
+| :------- | :------------------------| :------------------------ |
+| `LIST`   | `/gcp/rolesets`          | `200 application/json`    |
+
+
+| Method   | Path                     | Produces                  |
+| :------- | :------------------------| :------------------------ |
+| `LIST`   | `/gcp/roleset`           | `200 application/json`    |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    https://vault.rocks/v1/gcp/rolesets
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+     "keys": [
+       "my-token-roleset",
+       "my-sakey-roleset"
+     ]
+   }
+ }
+```
+
+## Generate Secret (IAM Service Account Creds): OAuth2 Access Token
+
+
+| Method            | Path                            | Produces                  |
+| :---------------- | :-----------------------------  | :------------------------ |
+| `GET` | `POST`    | `/gcp/token/:roleset`           | `200 application/json`    |
+
+Generates an OAuth2 token with the scopes defined on the roleset. This OAuth access token can
+be used in GCP API calls, e.g. `curl -H "Authorization: Bearer $TOKEN" ...`
+
+Tokens are non-renewable and have a TTL of an hour by default.
+
+### Parameters
+
+- `roleset` (`string:<required>`): Name of an roleset with secret type `access_token` to generate access_token under.
+
+### Sample Request
+
+```sh
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    https://vault.rocks/v1/consul/gcp/roleset/my-token-roleset
+```
+
+### Sample Response
+
+```json
+{
+  "request_id":"<uuid>",
+  "lease_id":"gcp/token/my-token-roleset/<uuid>",
+  "renewable":false,
+  "lease_duration":3599,
+  "data": {
+    "token":"ya29.c.Elp5Be3ga87..."
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+## Generate Secret (IAM Service Account Creds): Service Account Key
+
+
+| Method            | Path                            | Produces                  |
+| :---------------- | :-----------------------------  | :------------------------ |
+| `GET` | `POST`    | `/gcp/key/:roleset`             | `200 application/json`    |
+
+If using `GET` ('read'), the  optional parameters will be set to their defaults. Use `POST` if you
+want to specify different values for these params.
+
+These keys are renewable and have TTL/max TTL as defined by either the backend config
+or the system default if config was not defined.
+
+### Parameters
+
+- `roleset` (`string:<required>`): Name of an roleset with secret type `service_account_key` to generate key under.
+- `key_algorithm` (`string:"KEY_ALG_RSA_2048"`): Key algorithm used to generate key. Defaults to 2k RSA key
+    You probably should not choose other values (i.e. 1k), but accepted values are
+    `enum(`[`ServiceAccountKeyAlgorithm`](https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts.keys#ServiceAccountKeyAlgorithm)`)`
+- `key_type` (`string:"TYPE_GOOGLE_CREDENTIALS_FILE`): Private key type to generate. Defaults to JSON credentials file.
+    Accepted values are `enum(`[`ServiceAccountPrivateKeyType`](https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts.keys#ServiceAccountPrivateKeyType)`)`
+
+
+### Sample Payload
+```json
+{
+  "key_algorithm": "TYPE_GOOGLE_CREDENTIALS_FILE",
+  "key_type": "KEY_ALG_RSA_2048"
+}
+```
+
+### Sample Request
+
+```sh
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    https://vault.rocks/v1/gcp/roleset/my-token-roleset
+```
+
+```sh
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/gcp/roleset/my-token-roleset
+```
+
+### Sample Response
+
+```json
+{
+  "request_id":"<uuid>",
+  "lease_id":"gcp/key/my-key-roleset/<uuid>",
+  "renewable":true,
+  "lease_duration":3600,
+  "data": {
+    "private_key_data":"<base64-encoded private key data>",
+    "key_algorithm": "TYPE_GOOGLE_CREDENTIALS_FILE",
+    "key_type": "KEY_ALG_RSA_2048"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+## Revoking/Renewing Secrets
+
+See docs on how to [renew](/api/system/leases.html#renew-lease) and [revoke](/api/system/leases.html#revoke-lease) leases.

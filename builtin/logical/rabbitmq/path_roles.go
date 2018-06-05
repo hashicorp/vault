@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/fatih/structs"
@@ -48,8 +49,8 @@ func pathRoles(b *backend) *framework.Path {
 }
 
 // Reads the role configuration from the storage
-func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
-	entry, err := s.Get("role/" + n)
+func (b *backend) Role(ctx context.Context, s logical.Storage, n string) (*roleEntry, error) {
+	entry, err := s.Get(ctx, "role/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -66,23 +67,23 @@ func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
 }
 
 // Deletes an existing role
-func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
 	}
 
-	return nil, req.Storage.Delete("role/" + name)
+	return nil, req.Storage.Delete(ctx, "role/"+name)
 }
 
 // Reads an existing role
-func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
 	}
 
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -96,9 +97,8 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 }
 
 // Lists all the roles registered with the backend
-func (b *backend) pathRoleList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roles, err := req.Storage.List("role/")
+func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	roles, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (b *backend) pathRoleList(
 }
 
 // Registers a new role with the backend
-func (b *backend) pathRoleUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
@@ -135,7 +135,7 @@ func (b *backend) pathRoleUpdate(req *logical.Request, d *framework.FieldData) (
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/go-uuid"
@@ -27,11 +28,11 @@ func pathCredsCreate(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathCredsCreateRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
 	// Get the role
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +41,7 @@ func (b *backend) pathCredsCreateRead(req *logical.Request, data *framework.Fiel
 	}
 
 	// Determine if we have a lease configuration
-	leaseConfig, err := b.LeaseConfig(req.Storage)
+	leaseConfig, err := b.LeaseConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +75,7 @@ func (b *backend) pathCredsCreateRead(req *logical.Request, data *framework.Fiel
 	}
 
 	// Get our connection
-	session, err := b.Session(req.Storage)
+	session, err := b.Session(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +96,8 @@ func (b *backend) pathCredsCreateRead(req *logical.Request, data *framework.Fiel
 		"db":       role.DB,
 	})
 	resp.Secret.TTL = leaseConfig.TTL
+	resp.Secret.MaxTTL = leaseConfig.MaxTTL
+
 	return resp, nil
 }
 

@@ -41,7 +41,7 @@ as a copy of [`git`](https://www.git-scm.com/) in your `PATH`.
   1. Clone the Vault repository from GitHub into your `GOPATH`:
 
     ```shell
-    $ mkdir -p $GOPATH/src/github.com/hashicorp && cd $!
+    $ mkdir -p $GOPATH/src/github.com/hashicorp && cd $_
     $ git clone https://github.com/hashicorp/vault.git
     $ cd vault
     ```
@@ -64,10 +64,10 @@ as a copy of [`git`](https://www.git-scm.com/) in your `PATH`.
 
 ## Verifying the Installation
 
-To verify Vault is properly installed, run `vault -v` on your system. You should
+To verify Vault is properly installed, run `vault -h` on your system. You should
 see help output. If you are executing it from the command line, make sure it is
 on your PATH or you may get an error about Vault not being found.
 
 ```shell
-$ vault -v
+$ vault -h
 ```

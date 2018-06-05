@@ -140,6 +140,10 @@ x, err := rmqc.GetUser("my.user")
 resp, err := rmqc.PutUser("my.user", UserSettings{Password: "s3krE7", Tags: "management,policymaker"})
 // => *http.Response, err
 
+// creates or updates individual user with no password
+resp, err := rmqc.PutUserWithoutPassword("my.user", UserSettings{Tags: "management,policymaker"})
+// => *http.Response, err
+
 // deletes individual user
 resp, err := rmqc.DeleteUser("my.user")
 // => *http.Response, err
@@ -281,6 +285,18 @@ resp, err := rmqc.DeleteShovel("/", "a.shovel")
 
 ```
 
+### Operations on cluster name
+``` go
+// Get cluster name
+cn, err := rmqc.GetClusterName()
+// => ClusterName, err
+
+// Rename cluster
+resp, err := rmqc.SetClusterName(ClusterName{Name: "rabbitmq@rabbit-hole"})
+// => *http.Response, err
+
+```
+
 ### HTTPS Connections
 
 ``` go
@@ -298,7 +314,7 @@ rmqc, err := NewTLSClient("https://127.0.0.1:15672", "guest", "guest", transport
 ``` go
 var transport *http.Transport
 
-... 
+...
 
 rmqc.SetTransport(transport)
 ```

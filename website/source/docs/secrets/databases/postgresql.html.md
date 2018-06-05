@@ -1,60 +1,81 @@
 ---
 layout: "docs"
-page_title: "PostgreSQL Database Plugin"
+page_title: "PostgreSQL - Database - Secrets Engines"
 sidebar_current: "docs-secrets-databases-postgresql"
 description: |-
-  The PostgreSQL plugin for Vault's Database backend generates database credentials to access PostgreSQL.
+  PostgreSQL is one of the supported plugins for the database secrets engine.
+  This plugin generates database credentials dynamically based on configured
+  roles for the PostgreSQL database.
 ---
 
-# PostgreSQL Database Plugin
+# PostgreSQL Database Secrets Engine
 
-Name: `postgresql-database-plugin`
+PostgreSQL is one of the supported plugins for the database secrets engine. This
+plugin generates database credentials dynamically based on configured roles for
+the PostgreSQL database.
 
-The PostgreSQL Database Plugin is one of the supported plugins for the Database
-backend. This plugin generates database credentials dynamically based on
-configured roles for the PostgreSQL database.
+See the [database secrets engine](/docs/secrets/databases/index.html) docs for
+more information about setting up the database secrets engine.
 
-See the [Database Backend](/docs/secrets/databases/index.html) docs for more
-information about setting up the Database Backend.
+## Setup
 
-## Quick Start
+1. Enable the database secrets engine if it is not already enabled:
 
-After the Database Backend is mounted you can configure a PostgreSQL connection
-by specifying this plugin as the `"plugin_name"` argument. Here is an example
-configuration: 
+    ```text
+    $ vault secrets enable database
+    Success! Enabled the database secrets engine at: database/
+    ```
 
-```
-$ vault write database/config/postgresql \
-    plugin_name=postgresql-database-plugin \
-    allowed_roles="readonly" \
-    connection_url="postgresql://root:root@localhost:5432/"
+    By default, the secrets engine will enable at the name of the engine. To
+    enable the secrets engine at a different path, use the `-path` argument.
 
-The following warnings were returned from the Vault server:
-* Read access to this endpoint should be controlled via ACLs as it will return the connection details as is, including passwords, if any.
-```
+1. Configure Vault with the proper plugin and connection information:
 
-Once the PostgreSQL connection is configured we can add a role. The PostgreSQL
-plugin replaces `{{expiration}}` in statements with a formated timestamp:
+    ```text
+    $ vault write database/config/my-postgresql-database \
+        plugin_name=postgresql-database-plugin \
+        allowed_roles="my-role" \
+        connection_url="postgresql://{{username}}:{{password}}@localhost:5432/" \
+        username="root" \
+        password="root"
+    ```
 
-```
-$ vault write database/roles/readonly \
-    db_name=postgresql \
-    creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
-        GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" \
-    default_ttl="1h" \
-    max_ttl="24h"
+1. Configure a role that maps a name in Vault to an SQL statement to execute to
+create the database credential:
 
-Success! Data written to: database/roles/readonly
-```
+    ```text
+    $ vault write database/roles/my-role \
+        db_name=my-postgresql-database \
+        creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; \
+            GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" \
+        default_ttl="1h" \
+        max_ttl="24h"
+    Success! Data written to: database/roles/my-role
+    ```
 
-This role can be used to retrieve a new set of credentials by querying the
-"database/creds/readonly" endpoint.
+## Usage
+
+After the secrets engine is configured and a user/machine has a Vault token with
+the proper permission, it can generate credentials.
+
+1. Generate a new credential by reading from the `/creds` endpoint with the name
+of the role:
+
+    ```text
+    $ vault read database/creds/my-role
+    Key                Value
+    ---                -----
+    lease_id           database/creds/my-role/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
+    lease_duration     1h
+    lease_renewable    true
+    password           8cab931c-d62e-a73d-60d3-5ee85139cd66
+    username           v-root-e2978cd0-
+    ```
 
 ## API
 
 The full list of configurable options can be seen in the [PostgreSQL database
 plugin API](/api/secret/databases/postgresql.html) page.
 
-For more information on the Database secret backend's HTTP API please see the [Database secret
-backend API](/api/secret/databases/index.html) page.
-
+For more information on the database secrets engine's HTTP API please see the
+[Database secrets engine API](/api/secret/databases/index.html) page.

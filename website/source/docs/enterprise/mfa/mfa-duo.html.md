@@ -1,0 +1,132 @@
+---
+layout: "docs"
+page_title: "Duo MFA - MFA Support - Vault Enterprise"
+sidebar_current: "docs-vault-enterprise-mfa-duo"
+description: |-
+  Vault Enterprise supports Duo MFA type.
+---
+
+# Duo MFA
+
+This page demonstrates the Duo MFA on ACL'd paths of Vault.
+
+## Configuration
+
+1. Enable the appropriate auth method:
+
+    ```text
+    $ vault auth enable userpass
+    ```
+
+1. Fetch the mount accessor for the enabled auth method:
+
+    ```text
+    $ vault auth list -detailed
+    ```
+
+    The response will look like:
+
+    ```text
+    Path         Type        Accessor                  Plugin    Default TTL    Max TTL    Replication    Description
+    ----         ----        --------                  ------    -----------    -------    -----------    -----------
+    token/       token       auth_token_289703e9       n/a       system         system     replicated     token based credentials
+    userpass/    userpass    auth_userpass_54b8e339    n/a       system         system     replicated     n/a
+    ```
+
+1. Configure Duo MFA:
+
+    ```text
+    $ vault write sys/mfa/method/duo/my_duo \
+        mount_accessor=auth_userpass_54b8e339 \
+        integration_key=BIACEUEAXI20BNWTEYXT \
+        secret_key=HIGTHtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz \
+        api_hostname=api-2b5c39f5.duosecurity.com
+    ```
+
+1. Create a policy that gives access to secret through the MFA method created
+   above:
+
+    ```text
+    $ vault policy write duo-policy -<<EOF
+    path "secret/foo" {
+      capabilities = ["read"]
+      mfa_methods  = ["my_duo"]
+    }
+    EOF
+    ```
+
+1. Create a user. MFA works only for tokens that have identity information on
+them. Tokens created by logging in using auth methods will have the associated
+identity information. Create a user in the `userpass` auth method and
+authenticate against it:
+
+
+    ```text
+    $ vault write auth/userpass/users/testuser \
+        password=testpassword \
+        policies=duo-policy
+    ```
+
+1. Create a login token:
+
+    ```text
+    $ vault write auth/userpass/login/testuser \
+        password=testpassword
+
+    Key                    Value
+    ---                    -----
+    token                  70f97438-e174-c03c-40fe-6bcdc1028d6c
+    token_accessor         a91d97f4-1c7d-6af3-e4bf-971f74f9fab9
+    token_duration         768h
+    token_renewable        true
+    token_policies         [default duo-policy]
+    token_meta_username    "testuser"
+    ```
+
+    Note that the CLI is not authenticated with the newly created token yet, we
+    did not call `vault login`, instead we used the login API to simply return a
+    token.
+
+1. Fetch the entity ID from the token. The caller identity is represented by the
+`entity_id` property of the token:
+
+    ```text
+    $ vault token lookup 70f97438-e174-c03c-40fe-6bcdc1028d6c
+
+    Key                 Value
+    ---                 -----
+    accessor            a91d97f4-1c7d-6af3-e4bf-971f74f9fab9
+    creation_time       1502245243
+    creation_ttl        2764800
+    display_name        userpass-testuser
+    entity_id           307d6c16-6f5c-4ae7-46a9-2d153ffcbc63
+    expire_time         2017-09-09T22:20:43.448543132-04:00
+    explicit_max_ttl    0
+    id                  70f97438-e174-c03c-40fe-6bcdc1028d6c
+    issue_time          2017-08-08T22:20:43.448543003-04:00
+    meta                map[username:testuser]
+    num_uses            0
+    orphan              true
+    path                auth/userpass/login/testuser
+    policies            [default duo-policy]
+    renewable           true
+    ttl                 2764623
+    ```
+
+1. Login as the user:
+
+    ```text
+    $ vault login 70f97438-e174-c03c-40fe-6bcdc1028d6c
+    ```
+
+1. Read a secret to trigger a Duo push. This will be a blocking call until
+the push notification is either approved or declined:
+
+    ```text
+    $ vault read secret/foo
+
+    Key                 Value
+    ---                 -----
+    refresh_interval    768h
+    data                which can only be read after MFA validation
+    ```

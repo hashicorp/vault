@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -33,7 +34,6 @@ import (
 	"github.com/docker/docker/pkg/homedir"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/net/context"
 	"golang.org/x/net/context/ctxhttp"
 )
@@ -151,7 +151,6 @@ type Client struct {
 	requestedAPIVersion APIVersion
 	serverAPIVersion    APIVersion
 	expectedAPIVersion  APIVersion
-	nativeHTTPClient    *http.Client
 }
 
 // Dialer is an interface that allows network connections to be dialed
@@ -212,15 +211,21 @@ func NewVersionedClient(endpoint string, apiVersionString string) (*Client, erro
 		}
 	}
 	c := &Client{
-		HTTPClient:          cleanhttp.DefaultClient(),
+		HTTPClient:          defaultClient(),
 		Dialer:              &net.Dialer{},
 		endpoint:            endpoint,
 		endpointURL:         u,
 		eventMonitor:        new(eventMonitoringState),
 		requestedAPIVersion: requestedAPIVersion,
 	}
-	c.initializeNativeClient()
+	c.initializeNativeClient(defaultTransport)
 	return c, nil
+}
+
+// WithTransport replaces underlying HTTP client of Docker Client by accepting
+// a function that returns pointer to a transport object.
+func (c *Client) WithTransport(trFunc func () *http.Transport) {
+	c.initializeNativeClient(trFunc)
 }
 
 // NewVersionnedTLSClient has been DEPRECATED, please use NewVersionedTLSClient.
@@ -326,7 +331,7 @@ func NewVersionedTLSClientFromBytes(endpoint string, certPEMBlock, keyPEMBlock, 
 		}
 		tlsConfig.RootCAs = caPool
 	}
-	tr := cleanhttp.DefaultTransport()
+	tr := defaultTransport()
 	tr.TLSClientConfig = tlsConfig
 	if err != nil {
 		return nil, err
@@ -340,19 +345,15 @@ func NewVersionedTLSClientFromBytes(endpoint string, certPEMBlock, keyPEMBlock, 
 		eventMonitor:        new(eventMonitoringState),
 		requestedAPIVersion: requestedAPIVersion,
 	}
-	c.initializeNativeClient()
+	c.initializeNativeClient(defaultTransport)
 	return c, nil
 }
 
-// SetTimeout takes a timeout and applies it to both the HTTPClient and
-// nativeHTTPClient. It should not be called concurrently with any other Client
-// methods.
+// SetTimeout takes a timeout and applies it to the HTTPClient. It should not
+// be called concurrently with any other Client methods.
 func (c *Client) SetTimeout(t time.Duration) {
 	if c.HTTPClient != nil {
 		c.HTTPClient.Timeout = t
-	}
-	if c.nativeHTTPClient != nil {
-		c.nativeHTTPClient.Timeout = t
 	}
 }
 
@@ -445,12 +446,10 @@ func (c *Client) do(method, path string, doOptions doOptions) (*http.Response, e
 			return nil, err
 		}
 	}
-	httpClient := c.HTTPClient
 	protocol := c.endpointURL.Scheme
 	var u string
 	switch protocol {
 	case unixProtocol, namedPipeProtocol:
-		httpClient = c.nativeHTTPClient
 		u = c.getFakeNativeURL(path)
 	default:
 		u = c.getURL(path)
@@ -476,7 +475,7 @@ func (c *Client) do(method, path string, doOptions doOptions) (*http.Response, e
 		ctx = context.Background()
 	}
 
-	resp, err := ctxhttp.Do(ctx, httpClient, req)
+	resp, err := ctxhttp.Do(ctx, c.HTTPClient, req)
 	if err != nil {
 		if strings.Contains(err.Error(), "connection refused") {
 			return nil, ErrConnectionRefused
@@ -498,6 +497,7 @@ type streamOptions struct {
 	in             io.Reader
 	stdout         io.Writer
 	stderr         io.Writer
+	reqSent        chan struct{}
 	// timeout is the initial connection timeout
 	timeout time.Duration
 	// Timeout with no data is received, it's reset every time new data
@@ -576,6 +576,9 @@ func (c *Client) stream(method, path string, streamOptions streamOptions) error 
 			dial.SetDeadline(time.Now().Add(streamOptions.timeout))
 		}
 
+		if streamOptions.reqSent != nil {
+			close(streamOptions.reqSent)
+		}
 		if resp, err = http.ReadResponse(breader, req); err != nil {
 			// Cancel timeout for future I/O operations
 			if streamOptions.timeout > 0 {
@@ -593,6 +596,9 @@ func (c *Client) stream(method, path string, streamOptions streamOptions) error 
 				return ErrConnectionRefused
 			}
 			return chooseError(subCtx, err)
+		}
+		if streamOptions.reqSent != nil {
+			close(streamOptions.reqSent)
 		}
 	}
 	defer resp.Body.Close()
@@ -946,12 +952,20 @@ type Error struct {
 }
 
 func newError(resp *http.Response) *Error {
+	type ErrMsg struct {
+		Message string `json:"message"`
+	}
 	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return &Error{Status: resp.StatusCode, Message: fmt.Sprintf("cannot read body, err: %v", err)}
 	}
-	return &Error{Status: resp.StatusCode, Message: string(data)}
+	var emsg ErrMsg
+	err = json.Unmarshal(data, &emsg)
+	if err != nil {
+		return &Error{Status: resp.StatusCode, Message: string(data)}
+	}
+	return &Error{Status: resp.StatusCode, Message: emsg.Message}
 }
 
 func (e *Error) Error() string {
@@ -1032,4 +1046,42 @@ func getDockerEnv() (*dockerEnv, error) {
 		dockerTLSVerify: dockerTLSVerify,
 		dockerCertPath:  dockerCertPath,
 	}, nil
+}
+
+// defaultTransport returns a new http.Transport with similar default values to
+// http.DefaultTransport, but with idle connections and keepalives disabled.
+func defaultTransport() *http.Transport {
+	transport := defaultPooledTransport()
+	transport.DisableKeepAlives = true
+	transport.MaxIdleConnsPerHost = -1
+	return transport
+}
+
+// defaultPooledTransport returns a new http.Transport with similar default
+// values to http.DefaultTransport. Do not use this for transient transports as
+// it can leak file descriptors over time. Only use this for transports that
+// will be re-used for the same host(s).
+func defaultPooledTransport() *http.Transport {
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		MaxIdleConnsPerHost:   runtime.GOMAXPROCS(0) + 1,
+	}
+	return transport
+}
+
+// defaultClient returns a new http.Client with similar default values to
+// http.Client, but with a non-shared Transport, idle connections disabled, and
+// keepalives disabled.
+func defaultClient() *http.Client {
+	return &http.Client{
+		Transport: defaultTransport(),
+	}
 }

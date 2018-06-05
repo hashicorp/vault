@@ -23,7 +23,7 @@ This endpoint lists all configured policies.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/policy
+    http://127.0.0.1:8200/v1/sys/policy
 ```
 
 ### Sample Response
@@ -36,7 +36,7 @@ $ curl \
 
 ## Read Policy
 
-This endpoint retrieve the rules for the named policy.
+This endpoint retrieve the policy body for the named policy.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -52,14 +52,14 @@ This endpoint retrieve the rules for the named policy.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/policy/my-policy
+    http://127.0.0.1:8200/v1/sys/policy/my-policy
 ```
 
 ### Sample Response
 
 ```json
 {
-  "rules": "path \"secret/foo\" {..."
+  "policy": "path \"secret/foo\" {..."
 }
 ```
 
@@ -77,13 +77,13 @@ updated, it takes effect immediately to all associated users.
 - `name` `(string: <required>)` – Specifies the name of the policy to create.
   This is specified as part of the request URL.
 
-- `rules` `(string: <required>)` - Specifies the policy document.
+- `policy` `(string: <required>)` - Specifies the policy document.
 
 ### Sample Payload
 
 ```json
 {
-  "rules": "path \"secret/foo\" {..."
+  "policy": "path \"secret/foo\" {..."
 }
 ```
 
@@ -93,8 +93,8 @@ updated, it takes effect immediately to all associated users.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
-    --data payload.json \
-    https://vault.rocks/v1/sys/policy/my-policy
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/policy/my-policy
 ```
 
 ## Delete Policy
@@ -117,5 +117,5 @@ affect all users associated with this policy.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/policy/my-policy
+    http://127.0.0.1:8200/v1/sys/policy/my-policy
 ```

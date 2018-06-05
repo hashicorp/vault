@@ -1,10 +1,14 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -33,23 +37,24 @@ func secretCreds(b *backend) *framework.Secret {
 	}
 }
 
-func (b *backend) secretCredsRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing username internal data")
 	}
 	username, ok := usernameRaw.(string)
-
+	if !ok {
+		return nil, fmt.Errorf("usernameRaw is not a string")
+	}
 	// Get our connection
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the lease information
-	lease, err := b.Lease(req.Storage)
+	lease, err := b.Lease(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -57,14 +62,16 @@ func (b *backend) secretCredsRenew(
 		lease = &configLease{}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
-	resp, err := f(req, d)
+	// Make sure we increase the VALID UNTIL endpoint for this user.
+	ttl, _, err := framework.CalculateTTL(b.System(), req.Secret.Increment, lease.Lease, 0, lease.LeaseMax, 0, req.Secret.IssueTime)
 	if err != nil {
 		return nil, err
 	}
-
-	// Make sure we increase the VALID UNTIL endpoint for this user.
-	if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
+	if ttl > 0 {
+		expireTime := time.Now().Add(ttl)
+		// Adding a small buffer since the TTL will be calculated again afeter this call
+		// to ensure the database credential does not expire before the lease
+		expireTime = expireTime.Add(5 * time.Second)
 		expiration := expireTime.Format("2006-01-02 15:04:05-0700")
 
 		query := fmt.Sprintf(
@@ -81,24 +88,28 @@ func (b *backend) secretCredsRenew(
 		}
 	}
 
+	resp := &logical.Response{Secret: req.Secret}
+	resp.Secret.TTL = lease.Lease
+	resp.Secret.MaxTTL = lease.LeaseMax
 	return resp, nil
 }
 
-func (b *backend) secretCredsRevoke(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing username internal data")
 	}
 	username, ok := usernameRaw.(string)
-
+	if !ok {
+		return nil, fmt.Errorf("usernameRaw is not a string")
+	}
 	var revocationSQL string
 	var resp *logical.Response
 
 	roleNameRaw, ok := req.Secret.InternalData["role"]
 	if ok {
-		role, err := b.Role(req.Storage, roleNameRaw.(string))
+		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +124,7 @@ func (b *backend) secretCredsRevoke(
 	}
 
 	// Get our connection
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -201,24 +212,17 @@ func (b *backend) secretCredsRevoke(
 		// many permissions as possible right now
 		var lastStmtError error
 		for _, query := range revocationStmts {
-			stmt, err := db.Prepare(query)
-			if err != nil {
-				lastStmtError = err
-				continue
-			}
-			defer stmt.Close()
-			_, err = stmt.Exec()
-			if err != nil {
+			if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
 				lastStmtError = err
 			}
 		}
 
 		// can't drop if not all privileges are revoked
 		if rows.Err() != nil {
-			return nil, fmt.Errorf("could not generate revocation statements for all rows: %s", rows.Err())
+			return nil, errwrap.Wrapf("could not generate revocation statements for all rows: {{err}}", rows.Err())
 		}
 		if lastStmtError != nil {
-			return nil, fmt.Errorf("could not perform all revocation statements: %s", lastStmtError)
+			return nil, errwrap.Wrapf("could not perform all revocation statements: {{err}}", lastStmtError)
 		}
 
 		// Drop this user
@@ -248,15 +252,10 @@ func (b *backend) secretCredsRevoke(
 				continue
 			}
 
-			stmt, err := tx.Prepare(Query(query, map[string]string{
+			m := map[string]string{
 				"name": username,
-			}))
-			if err != nil {
-				return nil, err
 			}
-			defer stmt.Close()
-
-			if _, err := stmt.Exec(); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return nil, err
 			}
 		}

@@ -1,0 +1,37 @@
+{{#if model.parentGroupIds.length}}
+  {{#each model.parentGroupIds as |gid|}}
+    {{#linked-block
+      "vault.cluster.access.identity.show"
+      "groups"
+      gid
+      details
+      class="box is-sideless is-marginless"
+    }}
+      <div class="columns is-mobile">
+        <div class="column is-10">
+          <a href={{href-to "vault.cluster.access.identity.show" "groups" gid "details" }}
+            class="is-block has-text-black has-text-weight-semibold"
+            >{{i-con
+              glyph='folder'
+              size=14
+              class="has-text-grey-light"
+              }}{{gid}}</a>
+        </div>
+        <div class="column has-text-right">
+        </div>
+      </div>
+    {{/linked-block}}
+  {{/each}}
+{{else}}
+  <div class="box is-bottomless has-background-white-bis">
+    <div class="columns is-centered">
+      <div class="column is-half has-text-centered">
+        <div class="box is-shadowless has-background-white-bis">
+          <p class="has-text-grey">
+            This group has no parent groups.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+{{/if}}

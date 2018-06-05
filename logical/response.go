@@ -1,12 +1,10 @@
 package logical
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
-	"reflect"
 
 	"github.com/hashicorp/vault/helper/wrapping"
-	"github.com/mitchellh/copystructure"
 )
 
 const (
@@ -26,6 +24,12 @@ const (
 	// This can only be specified for non-secrets, and should should be similarly
 	// avoided like the HTTPContentType. The value must be an integer.
 	HTTPStatusCode = "http_status_code"
+
+	// For unwrapping we may need to know whether the value contained in the
+	// raw body is already JSON-unmarshaled. The presence of this key indicates
+	// that it has already been unmarshaled. That way we don't need to simply
+	// ignore errors.
+	HTTPRawBodyAlreadyJSONDecoded = "http_raw_body_already_json_decoded"
 )
 
 // Response is a struct that stores the response of a request.
@@ -52,85 +56,18 @@ type Response struct {
 
 	// Warnings allow operations or backends to return warnings in response
 	// to user actions without failing the action outright.
-	// Making it private helps ensure that it is easy for various parts of
-	// Vault (backend, core, etc.) to add warnings without accidentally
-	// replacing what exists.
-	warnings []string `json:"warnings" structs:"warnings" mapstructure:"warnings"`
+	Warnings []string `json:"warnings" structs:"warnings" mapstructure:"warnings"`
 
 	// Information for wrapping the response in a cubbyhole
 	WrapInfo *wrapping.ResponseWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
 }
 
-func init() {
-	copystructure.Copiers[reflect.TypeOf(Response{})] = func(v interface{}) (interface{}, error) {
-		input := v.(Response)
-		ret := Response{
-			Redirect: input.Redirect,
-		}
-
-		if input.Secret != nil {
-			retSec, err := copystructure.Copy(input.Secret)
-			if err != nil {
-				return nil, fmt.Errorf("error copying Secret: %v", err)
-			}
-			ret.Secret = retSec.(*Secret)
-		}
-
-		if input.Auth != nil {
-			retAuth, err := copystructure.Copy(input.Auth)
-			if err != nil {
-				return nil, fmt.Errorf("error copying Auth: %v", err)
-			}
-			ret.Auth = retAuth.(*Auth)
-		}
-
-		if input.Data != nil {
-			retData, err := copystructure.Copy(&input.Data)
-			if err != nil {
-				return nil, fmt.Errorf("error copying Data: %v", err)
-			}
-			ret.Data = *(retData.(*map[string]interface{}))
-		}
-
-		if input.Warnings() != nil {
-			for _, warning := range input.Warnings() {
-				ret.AddWarning(warning)
-			}
-		}
-
-		if input.WrapInfo != nil {
-			retWrapInfo, err := copystructure.Copy(input.WrapInfo)
-			if err != nil {
-				return nil, fmt.Errorf("error copying WrapInfo: %v", err)
-			}
-			ret.WrapInfo = retWrapInfo.(*wrapping.ResponseWrapInfo)
-		}
-
-		return &ret, nil
-	}
-}
-
 // AddWarning adds a warning into the response's warning list
 func (r *Response) AddWarning(warning string) {
-	if r.warnings == nil {
-		r.warnings = make([]string, 0, 1)
+	if r.Warnings == nil {
+		r.Warnings = make([]string, 0, 1)
 	}
-	r.warnings = append(r.warnings, warning)
-}
-
-// Warnings returns the list of warnings set on the response
-func (r *Response) Warnings() []string {
-	return r.warnings
-}
-
-// ClearWarnings clears the response's warning list
-func (r *Response) ClearWarnings() {
-	r.warnings = make([]string, 0, 1)
-}
-
-// Copies the warnings from the other response to this one
-func (r *Response) CloneWarnings(other *Response) {
-	r.warnings = other.warnings
+	r.Warnings = append(r.Warnings, warning)
 }
 
 // IsError returns true if this response seems to indicate an error.
@@ -179,4 +116,47 @@ func ListResponse(keys []string) *Response {
 		resp.Data["keys"] = keys
 	}
 	return resp
+}
+
+// ListResponseWithInfo is used to format a response to a list operation and
+// return the keys as well as a map with corresponding key info.
+func ListResponseWithInfo(keys []string, keyInfo map[string]interface{}) *Response {
+	resp := ListResponse(keys)
+
+	keyInfoData := make(map[string]interface{})
+	for _, key := range keys {
+		val, ok := keyInfo[key]
+		if ok {
+			keyInfoData[key] = val
+		}
+	}
+
+	if len(keyInfoData) > 0 {
+		resp.Data["key_info"] = keyInfoData
+	}
+
+	return resp
+}
+
+// RespondWithStatusCode takes a response and converts it to a raw response with
+// the provided Status Code.
+func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, error) {
+	httpResp := LogicalResponseToHTTPResponse(resp)
+	httpResp.RequestID = req.ID
+
+	body, err := json.Marshal(httpResp)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Response{
+		Data: map[string]interface{}{
+			HTTPContentType: "application/json",
+			// We default to string here so that the value is HMAC'd via audit.
+			// Since this function is always marshaling to JSON, this is
+			// appropriate.
+			HTTPRawBody:    string(body),
+			HTTPStatusCode: code,
+		},
+	}, nil
 }

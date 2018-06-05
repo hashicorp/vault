@@ -1,10 +1,10 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	_ "github.com/lib/pq"
@@ -59,8 +59,8 @@ reduced to the same size.`,
 }
 
 // pathConnectionRead reads out the connection configuration
-func (b *backend) pathConnectionRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entry, err := req.Storage.Get("config/connection")
+func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	entry, err := req.Storage.Get(ctx, "config/connection")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read connection configuration")
 	}
@@ -72,13 +72,16 @@ func (b *backend) pathConnectionRead(req *logical.Request, data *framework.Field
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, err
 	}
+
 	return &logical.Response{
-		Data: structs.New(config).Map(),
+		Data: map[string]interface{}{
+			"max_open_connections": config.MaxOpenConnections,
+			"max_idle_connections": config.MaxIdleConnections,
+		},
 	}, nil
 }
 
-func (b *backend) pathConnectionWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	connValue := data.Get("value").(string)
 	connURL := data.Get("connection_url").(string)
 	if connURL == "" {
@@ -128,12 +131,12 @@ func (b *backend) pathConnectionWrite(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	// Reset the DB connection
-	b.ResetDB()
+	b.ResetDB(ctx)
 
 	resp := &logical.Response{}
 	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the connection string or URL as it is, including passwords, if any.")

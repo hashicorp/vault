@@ -1,16 +1,19 @@
 ---
 layout: "docs"
-page_title: "MSSQL Secret Backend"
+page_title: "MSSQL - Secrets Engines"
 sidebar_current: "docs-secrets-mssql"
 description: |-
-  The MSSQL secret backend for Vault generates database credentials to access Microsoft Sql Server.
+  The MSSQL secrets engine for Vault generates database credentials to access Microsoft Sql Server.
 ---
 
-# MSSQL Secret Backend
+# MSSQL Secrets Engine
 
-Name: `mssql`
+~> **Deprecation Note:** This secrets engine is deprecated in favor of the
+combined databases secrets engine added in v0.7.1. See the documentation for
+the new implementation of this secrets engine at
+[MSSQL database plugin](/docs/secrets/databases/mssql.html).
 
-The MSSQL secret backend for Vault generates database credentials
+The MSSQL secrets engine for Vault generates database credentials
 dynamically based on configured roles. This means that services that need
 to access a database no longer need to hardcode credentials: they can request
 them from Vault, and use Vault's leasing mechanism to more easily roll keys.
@@ -23,17 +26,17 @@ instance of a service based on the SQL username.
 Vault makes use of its own internal revocation system to ensure that users
 become invalid within a reasonable time of the lease expiring.
 
-This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault path-help` after mounting the backend.
+This page will show a quick start for this secrets engine. For detailed documentation
+on every path, use `vault path-help` after mounting the secrets engine.
 
 ## Quick Start
 
-The first step to using the mssql backend is to mount it.
-Unlike the `generic` backend, the `mssql` backend is not mounted by default.
+The first step to using the mssql secrets engine is to mount it. Unlike the `kv`
+secrets engine, the `mssql` secrets engine is not mounted by default.
 
 ```
-$ vault mount mssql
-Successfully mounted 'mssql' at 'mssql'!
+$ vault secrets enable mssql
+Success! Enabled the mssql secrets engine at: mssql/
 ```
 
 Next, we must configure Vault to know how to connect to the MSSQL
@@ -91,11 +94,12 @@ To generate a new set of credentials, we simply read from that role:
 
 ```
 $ vault read mssql/creds/readonly
-Key           	Value
-lease_id      	mssql/creds/readonly/cdf23ac8-6dbd-4bf9-9919-6acaaa86ba6c
-lease_duration	3600
-password      	ee202d0d-e4fd-4410-8d14-2a78c5c8cb76
-username      	root-a147d529-e7d6-4a16-8930-4c3e72170b19
+Key               Value
+---               -----
+lease_id          mssql/creds/readonly/cdf23ac8-6dbd-4bf9-9919-6acaaa86ba6c
+lease_duration    3600
+password          ee202d0d-e4fd-4410-8d14-2a78c5c8cb76
+username          root-a147d529-e7d6-4a16-8930-4c3e72170b19
 ```
 
 By reading from the `creds/readonly` path, Vault has generated a new
@@ -103,13 +107,13 @@ set of credentials using the `readonly` role configuration. Here we
 see the dynamically generated username and password, along with a one
 hour lease.
 
-Using ACLs, it is possible to restrict using the mssql backend such
+Using ACLs, it is possible to restrict using the mssql secrets engine such
 that trusted operators can manage the role definitions, and both
 users and applications are restricted in the credentials they are
 allowed to read.
 
 ## API
 
-The MSSQL secret backend has a full HTTP API. Please see the
-[MSSQL secret backend API](/api/secret/mssql/index.html) for more
+The MSSQL secrets engine has a full HTTP API. Please see the
+[MSSQL secrets engine API](/api/secret/mssql/index.html) for more
 details.

@@ -1,0 +1,23 @@
+.confirm-action > span {
+  @include from($tablet) {
+    align-items: center;
+    display: flex;
+  }
+
+  * {
+    margin-left: $size-8;
+  }
+
+  .confirm-action-text:not(.is-block) {
+    text-align: right;
+
+    @include until($tablet) {
+      display: block;
+      margin-bottom: $size-8;
+      text-align: left;
+    }
+  }
+  .confirm-action-text.is-block {
+    text-align: left;
+  }
+}

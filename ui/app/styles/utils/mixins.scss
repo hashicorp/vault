@@ -1,0 +1,62 @@
+@mixin css-arrow($vertical-direction, $size, $color, $border-width, $border-color, $left: 50%, $left-offset: 0px) {
+  & {
+    border: 1px solid $border-color;
+  }
+
+  &:after,
+  &:before {
+    @if ($vertical-direction == 'top') {
+      bottom: 100%;
+    } @else {
+      top: 100%;
+    }
+    border: solid transparent;
+    content: " ";
+    height: 0;
+    width: 0;
+    position: absolute;
+    pointer-events: none;
+  }
+
+  &:after {
+    border-color: rgba($color, 0);
+    border-bottom-color: $color;
+    border-width: $size;
+    left: calc(#{$left} + #{$left-offset});
+    margin-left: -$size;
+  }
+  &:before {
+    border-color: rgba($border-color, 0);
+    border-bottom-color: $border-color;
+    border-width: $size + round(1.41421356 * $border-width);
+    left: calc(#{$left} + #{$left-offset});
+    margin-left: -($size + round(1.41421356 * $border-width));
+  }
+  &:before,
+  &:after {
+    @if ($vertical-direction == 'bottom') {
+      transform: rotate(180deg);
+    }
+  }
+
+  @at-root .ember-basic-dropdown-content--left#{&} {
+    &:after,
+    &:before {
+      left: auto;
+      right: calc(#{$left} + #{$left-offset} - #{$size});
+    }
+  }
+}
+
+@mixin css-top-arrow($size, $color, $border-width, $border-color, $left: 50%, $left-offset: 0px) {
+  @include css-arrow('top', $size, $color, $border-width, $border-color, $left, $left-offset);
+}
+@mixin css-bottom-arrow($size, $color, $border-width, $border-color, $left: 50%, $left-offset: 0px) {
+  @include css-arrow('bottom', $size, $color, $border-width, $border-color, $left, $left-offset);
+}
+
+@mixin vault-block {
+  &:not(:last-child) {
+    margin-bottom: (5/14) + 0rem;
+  }
+}

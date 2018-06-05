@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -12,8 +13,12 @@ import (
 )
 
 // Factory creates and configures the backend
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	b := Backend()
+	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 // Creates a new backend with all the paths and secrets belonging to it
@@ -21,6 +26,12 @@ func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
+
+		PathsSpecial: &logical.Paths{
+			SealWrapStorage: []string{
+				"config/connection",
+			},
+		},
 
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
@@ -34,9 +45,9 @@ func Backend() *backend {
 			secretCreds(&b),
 		},
 
-		Clean: b.resetClient,
-
-		Invalidate: b.invalidate,
+		Clean:       b.resetClient,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeLogical,
 	}
 
 	return &b
@@ -50,7 +61,7 @@ type backend struct {
 }
 
 // DB returns the database connection.
-func (b *backend) Client(s logical.Storage) (*rabbithole.Client, error) {
+func (b *backend) Client(ctx context.Context, s logical.Storage) (*rabbithole.Client, error) {
 	b.lock.RLock()
 
 	// If we already have a client, return it
@@ -62,7 +73,7 @@ func (b *backend) Client(s logical.Storage) (*rabbithole.Client, error) {
 	b.lock.RUnlock()
 
 	// Otherwise, attempt to make connection
-	entry, err := s.Get("config/connection")
+	entry, err := s.Get(ctx, "config/connection")
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +89,7 @@ func (b *backend) Client(s logical.Storage) (*rabbithole.Client, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// If the client was creted during the lock switch, return it
+	// If the client was created during the lock switch, return it
 	if b.client != nil {
 		return b.client, nil
 	}
@@ -94,23 +105,23 @@ func (b *backend) Client(s logical.Storage) (*rabbithole.Client, error) {
 }
 
 // resetClient forces a connection next time Client() is called.
-func (b *backend) resetClient() {
+func (b *backend) resetClient(_ context.Context) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.client = nil
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(ctx context.Context, key string) {
 	switch key {
 	case "config/connection":
-		b.resetClient()
+		b.resetClient(ctx)
 	}
 }
 
 // Lease returns the lease information
-func (b *backend) Lease(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get("config/lease")
+func (b *backend) Lease(ctx context.Context, s logical.Storage) (*configLease, error) {
+	entry, err := s.Get(ctx, "config/lease")
 	if err != nil {
 		return nil, err
 	}

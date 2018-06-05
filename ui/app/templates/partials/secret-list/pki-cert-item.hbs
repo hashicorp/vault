@@ -1,0 +1,37 @@
+{{#linked-block
+  (concat
+    "vault.cluster.secrets.backend."
+    "show"
+    (if (not item.id) "-root")
+  )
+  item.idForNav
+  class="box is-sideless is-marginless linked-block"
+  data-test-secret-link=item.id
+  tagName="div"
+}}
+  <div class="columns is-mobile">
+    <div class="column is-10">
+      {{#link-to
+        (concat
+          "vault.cluster.secrets.backend."
+           "show"
+          (if (not item.id) "-root")
+        )
+        item.idForNav
+        class="has-text-black has-text-weight-semibold"
+      }}
+      {{i-con
+        glyph="file"
+        size=14
+        class="has-text-grey-light is-pulled-left"
+      }}
+      <div class="role-item-details">
+        <span class="is-underline">{{if (eq item.id " ") "(self)" (or item.keyWithoutParent item.id)}}</span>
+      </div>
+      {{/link-to}}
+    </div>
+    <div class="column has-text-right">
+      {{pki-cert-popup item=item}}
+    </div>
+  </div>
+{{/linked-block}}

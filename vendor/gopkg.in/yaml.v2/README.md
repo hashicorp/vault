@@ -48,6 +48,8 @@ The yaml package is licensed under the Apache License 2.0. Please see the LICENS
 Example
 -------
 
+Some more examples can be found in the "examples" folder.
+
 ```Go
 package main
 
@@ -65,6 +67,8 @@ b:
   d: [3, 4]
 `
 
+// Note: struct fields must be public in order for unmarshal to
+// correctly populate the data.
 type T struct {
         A string
         B struct {

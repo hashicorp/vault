@@ -1,6 +1,7 @@
 package mssql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -11,14 +12,24 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	b := Backend()
+	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
+
+		PathsSpecial: &logical.Paths{
+			SealWrapStorage: []string{
+				"config/connection",
+			},
+		},
 
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
@@ -32,9 +43,9 @@ func Backend() *backend {
 			secretCreds(&b),
 		},
 
-		Invalidate: b.invalidate,
-
-		Clean: b.ResetDB,
+		Invalidate:  b.invalidate,
+		Clean:       b.ResetDB,
+		BackendType: logical.TypeLogical,
 	}
 
 	return &b
@@ -49,7 +60,7 @@ type backend struct {
 }
 
 // DB returns the default database connection.
-func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
+func (b *backend) DB(ctx context.Context, s logical.Storage) (*sql.DB, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -64,7 +75,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 	}
 
 	// Otherwise, attempt to make connection
-	entry, err := s.Get("config/connection")
+	entry, err := s.Get(ctx, "config/connection")
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +114,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 }
 
 // ResetDB forces a connection next time DB() is called.
-func (b *backend) ResetDB() {
+func (b *backend) ResetDB(_ context.Context) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -114,16 +125,16 @@ func (b *backend) ResetDB() {
 	b.db = nil
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(ctx context.Context, key string) {
 	switch key {
 	case "config/connection":
-		b.ResetDB()
+		b.ResetDB(ctx)
 	}
 }
 
 // LeaseConfig returns the lease configuration
-func (b *backend) LeaseConfig(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get("config/lease")
+func (b *backend) LeaseConfig(ctx context.Context, s logical.Storage) (*configLease, error) {
+	entry, err := s.Get(ctx, "config/lease")
 	if err != nil {
 		return nil, err
 	}

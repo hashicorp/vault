@@ -56,12 +56,14 @@ config.Delim = "|"
 config.Glue = "  "
 config.Prefix = ""
 config.Empty = ""
+config.NoTrim = false
 ```
 
 * `Delim` is the string by which columns of **input** are delimited
 * `Glue` is the string by which columns of **output** are delimited
 * `Prefix` is a string by which each line of **output** is prefixed
 * `Empty` is a string used to replace blank values found in output
+* `NoTrim` is a boolean used to disable the automatic trimming of input values
 
 You can then pass the `Config` in using the `Format` method (signature below) to
 have text formatted to your liking.

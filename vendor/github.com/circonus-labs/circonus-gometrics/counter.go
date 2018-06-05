@@ -4,6 +4,8 @@
 
 package circonusgometrics
 
+import "fmt"
+
 // A Counter is a monotonically increasing unsigned integer.
 //
 // Use a counter to derive rates (e.g., record total number of requests, derive
@@ -38,6 +40,19 @@ func (m *CirconusMetrics) RemoveCounter(metric string) {
 	m.cm.Lock()
 	defer m.cm.Unlock()
 	delete(m.counters, metric)
+}
+
+// GetCounterTest returns the current value for a counter. (note: it is a function specifically for "testing", disable automatic submission during testing.)
+func (m *CirconusMetrics) GetCounterTest(metric string) (uint64, error) {
+	m.cm.Lock()
+	defer m.cm.Unlock()
+
+	if val, ok := m.counters[metric]; ok {
+		return val, nil
+	}
+
+	return 0, fmt.Errorf("Counter metric '%s' not found", metric)
+
 }
 
 // SetCounterFunc set counter to a function [called at flush interval]

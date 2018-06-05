@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"context"
 	"strings"
 	"sync"
 
@@ -8,11 +9,10 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
-	_, err := b.Setup(conf)
-	if err != nil {
-		return b, err
+	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
 	}
 	return b, nil
 }
@@ -21,13 +21,11 @@ func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
-
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"login",
 			},
 		},
-
 		Paths: append([]*framework.Path{
 			pathConfig(&b),
 			pathLogin(&b),
@@ -35,10 +33,9 @@ func Backend() *backend {
 			pathCerts(&b),
 			pathCRLs(&b),
 		}),
-
-		AuthRenew: b.pathLoginRenew,
-
-		Invalidate: b.invalidate,
+		AuthRenew:   b.pathLoginRenew,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeCredential,
 	}
 
 	b.crlUpdateMutex = &sync.RWMutex{}
@@ -54,7 +51,7 @@ type backend struct {
 	crlUpdateMutex *sync.RWMutex
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(_ context.Context, key string) {
 	switch {
 	case strings.HasPrefix(key, "crls/"):
 		b.crlUpdateMutex.Lock()

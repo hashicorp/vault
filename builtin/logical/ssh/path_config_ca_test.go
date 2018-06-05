@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -17,13 +18,13 @@ func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = b.Setup(config)
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Store at an older path
-	err = config.StorageView.Put(&logical.StorageEntry{
+	err = config.StorageView.Put(context.Background(), &logical.StorageEntry{
 		Key:   caPrivateKeyStoragePathDeprecated,
 		Value: []byte(privateKey),
 	})
@@ -32,7 +33,7 @@ func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
 	}
 
 	// Reading it should return the key as well as upgrade the storage path
-	privateKeyEntry, err := caKey(config.StorageView, caPrivateKey)
+	privateKeyEntry, err := caKey(context.Background(), config.StorageView, caPrivateKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +41,7 @@ func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
 		t.Fatalf("failed to read the stored private key")
 	}
 
-	entry, err := config.StorageView.Get(caPrivateKeyStoragePathDeprecated)
+	entry, err := config.StorageView.Get(context.Background(), caPrivateKeyStoragePathDeprecated)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +49,7 @@ func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
 		t.Fatalf("bad: expected a nil entry after upgrade")
 	}
 
-	entry, err = config.StorageView.Get(caPrivateKeyStoragePath)
+	entry, err = config.StorageView.Get(context.Background(), caPrivateKeyStoragePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +58,7 @@ func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
 	}
 
 	// Store at an older path
-	err = config.StorageView.Put(&logical.StorageEntry{
+	err = config.StorageView.Put(context.Background(), &logical.StorageEntry{
 		Key:   caPublicKeyStoragePathDeprecated,
 		Value: []byte(publicKey),
 	})
@@ -66,7 +67,7 @@ func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
 	}
 
 	// Reading it should return the key as well as upgrade the storage path
-	publicKeyEntry, err := caKey(config.StorageView, caPublicKey)
+	publicKeyEntry, err := caKey(context.Background(), config.StorageView, caPublicKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +75,7 @@ func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
 		t.Fatalf("failed to read the stored public key")
 	}
 
-	entry, err = config.StorageView.Get(caPublicKeyStoragePathDeprecated)
+	entry, err = config.StorageView.Get(context.Background(), caPublicKeyStoragePathDeprecated)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +83,7 @@ func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
 		t.Fatalf("bad: expected a nil entry after upgrade")
 	}
 
-	entry, err = config.StorageView.Get(caPublicKeyStoragePath)
+	entry, err = config.StorageView.Get(context.Background(), caPublicKeyStoragePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +98,7 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
@@ -109,20 +110,20 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 	}
 
 	// Auto-generate the keys
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v, resp:%v", err, resp)
 	}
 
 	// Fail to overwrite it
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
 
 	caReq.Operation = logical.DeleteOperation
 	// Delete the configured keys
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v, resp:%v", err, resp)
 	}
@@ -134,20 +135,20 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 	}
 
 	// Successfully create a new one
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v, resp:%v", err, resp)
 	}
 
 	// Fail to overwrite it
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
 
 	caReq.Operation = logical.DeleteOperation
 	// Delete the configured keys
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v, resp:%v", err, resp)
 	}
@@ -156,7 +157,7 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 	caReq.Data = nil
 
 	// Successfully create a new one
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v, resp:%v", err, resp)
 	}

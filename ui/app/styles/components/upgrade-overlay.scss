@@ -1,0 +1,61 @@
+.upgrade-overlay {
+  font-size: 1rem;
+  opacity: 0;
+  text-align: left;
+  transition: opacity $speed-slow;
+  will-change: opacity;
+  z-index: 300;
+
+  &.is-animated {
+    opacity: 1;
+  }
+
+  .modal-background {
+    background-image: url("/ui/vault-hex.svg"),
+      linear-gradient(90deg, #191a1c, #1b212d);
+    opacity: 0.97;
+  }
+
+  .modal-content {
+    overflow: auto;
+    overflow-x: hidden;
+    transform: translateY(20%) scale(0.9);
+    transition: transform $speed-slow;
+    will-change: transform;
+  }
+
+  &.is-animated {
+    .modal-content {
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .upgrade-overlay-title {
+    border-bottom: 1px solid $grey;
+    padding-bottom: $size-10;
+  }
+
+  .upgrade-overlay-icon svg {
+    height: 24px;
+    width: auto;
+  }
+
+  .columns {
+    margin-bottom: $size-4;
+    margin-top: $size-4;
+  }
+
+  .column {
+    display: flex;
+
+    .box {
+      border-radius: $radius;
+      box-shadow: inset 0 0 0 1px $grey;
+      width: 100%;
+    }
+  }
+
+  li {
+    list-style: inside disc;
+  }
+}

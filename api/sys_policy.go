@@ -50,12 +50,14 @@ func (c *Sys) GetPolicy(name string) (string, error) {
 		return "", err
 	}
 
-	var ok bool
-	if _, ok = result["rules"]; !ok {
-		return "", fmt.Errorf("rules not found in response")
+	if rulesRaw, ok := result["rules"]; ok {
+		return rulesRaw.(string), nil
+	}
+	if policyRaw, ok := result["policy"]; ok {
+		return policyRaw.(string), nil
 	}
 
-	return result["rules"].(string), nil
+	return "", fmt.Errorf("no policy found in response")
 }
 
 func (c *Sys) PutPolicy(name, rules string) error {

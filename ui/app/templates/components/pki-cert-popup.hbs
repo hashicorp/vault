@@ -1,0 +1,29 @@
+{{#popup-menu name="role-aws-nav" contentClass="is-wide"}}
+  <nav class="menu">
+    <ul class="menu-list">
+      <li class="action">
+        <a href={{href-to 'vault.cluster.secrets.backend.show' item.idForNav}} data-test-pki-cert-link="show">
+          Details
+        </a>
+      </li>
+      {{#if item.canRevoke}}
+        <li class="action">
+          {{#confirm-action
+            confirmButtonClasses="button is-primary"
+            buttonClasses="link is-destroy"
+            onConfirmAction=(action "delete" item)
+            confirmMessage=(concat "Are you sure you want to revoke " item.id "?")
+            showConfirm=(get this (concat "shouldDelete-" item.id))
+            class=(if (get this (concat "shouldDelete-" item.id)) "message is-block is-warning is-outline")
+            containerClasses="message-body is-block"
+            messageClasses="is-block"
+            confirmButtonText="Revoke"
+            data-test-cert-revoke-delete=item.id
+          }}
+            Revoke
+          {{/confirm-action}}
+        </li>
+      {{/if}}
+    </ul>
+  </nav>
+{{/popup-menu}}

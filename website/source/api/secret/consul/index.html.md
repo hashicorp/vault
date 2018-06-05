@@ -1,20 +1,20 @@
 ---
 layout: "api"
-page_title: "Consul Secret Backend - HTTP API"
+page_title: "Consul - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-consul"
 description: |-
-  This is the API documentation for the Vault Consul secret backend.
+  This is the API documentation for the Vault Consul secrets engine.
 ---
 
-# Consul Secret Backend HTTP API
+# Consul Secrets Engine (API)
 
-This is the API documentation for the Vault Consul secret backend. For general
-information about the usage and operation of the Consul backend, please see the
-[Vault Consul backend documentation](/docs/secrets/consul/index.html).
+This is the API documentation for the Vault Consul secrets engine. For general
+information about the usage and operation of the Consul secrets engine, please
+see the [Vault Consul documentation](/docs/secrets/consul/index.html).
 
-This documentation assumes the Consul backend is mounted at the `/consul` path
-in Vault. Since it is possible to mount secret backends at any location, please
-update your API calls accordingly.
+This documentation assumes the Consul secrets engine is enabled at the `/consul`
+path in Vault. Since it is possible to enable secrets engines at any location,
+please update your API calls accordingly.
 
 ## Configure Access
 
@@ -53,7 +53,7 @@ $ curl \
     --request POST \
     --header "X-Vault-Token: ..." \
     --data @payload.json \
-    https://vault.rocks/v1/consul/config/access
+    http://127.0.0.1:8200/v1/consul/config/access
 ```
 
 ## Create/Update Role
@@ -108,7 +108,7 @@ $ curl \
     --request POST \
     --header "X-Vault-Token: ..." \
     --data @payload.json \
-    https://vault.rocks/v1/consul/roles/example-role
+    http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
 ## Read Role
@@ -130,7 +130,7 @@ If no role exists with that name, a 404 is returned.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/consul/roles/example-role
+    http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
 ### Sample Response
@@ -147,11 +147,11 @@ $ curl \
 
 ## List Roles
 
-This endpoint lists all existing roles in the backend.
+This endpoint lists all existing roles in the secrets engine.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `LIST`    | `/consul/roles`             | `200 application/json` |
+| `LIST`   | `/consul/roles`              | `200 application/json` |
 
 ### Sample Request
 
@@ -159,7 +159,7 @@ This endpoint lists all existing roles in the backend.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/consul/roles
+    http://127.0.0.1:8200/v1/consul/roles
 ```
 
 ### Sample Response
@@ -194,7 +194,7 @@ not exist, this endpoint will still return a successful response.
 $ curl \
     --request DELETE \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/consul/roles/example-role
+    http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
 ## Generate Credential
@@ -216,7 +216,7 @@ definition.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/consul/creds/example-role
+    http://127.0.0.1:8200/v1/consul/creds/example-role
 ```
 
 ### Sample Response

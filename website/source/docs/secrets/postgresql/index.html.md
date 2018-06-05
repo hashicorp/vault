@@ -1,16 +1,21 @@
 ---
 layout: "docs"
-page_title: "PostgreSQL Secret Backend"
+page_title: "PostgreSQL - Secrets Engines"
 sidebar_current: "docs-secrets-postgresql"
 description: |-
-  The PostgreSQL secret backend for Vault generates database credentials to access PostgreSQL.
+  The PostgreSQL secrets engine for Vault generates database credentials to access PostgreSQL.
 ---
 
-# PostgreSQL Secret Backend
+# PostgreSQL Secrets Engine
 
 Name: `postgresql`
 
-The PostgreSQL secret backend for Vault generates database credentials
+~> **Deprecation Note:** This secrets engine is deprecated in favor of the
+combined databases secrets engine added in v0.7.1. See the documentation for
+the new implementation of this secrets engine at
+[PostgreSQL database plugin](/docs/secrets/databases/postgresql.html).
+
+The PostgreSQL secrets engine for Vault generates database credentials
 dynamically based on configured roles. This means that services that need
 to access a database no longer need to hardcode credentials: they can request
 them from Vault, and use Vault's leasing mechanism to more easily roll keys.
@@ -24,17 +29,17 @@ Vault makes use both of its own internal revocation system as well as the
 `VALID UNTIL` setting when creating PostgreSQL users to ensure that users
 become invalid within a reasonable time of the lease expiring.
 
-This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault path-help` after mounting the backend.
+This page will show a quick start for this secrets engine. For detailed documentation
+on every path, use `vault path-help` after mounting the secrets engine.
 
 ## Quick Start
 
-The first step to using the PostgreSQL backend is to mount it.
-Unlike the `generic` backend, the `postgresql` backend is not mounted by default.
+The first step to using the PostgreSQL secrets engine is to mount it. Unlike the
+`kv` secrets engine, the `postgresql` secrets engine is not mounted by default.
 
 ```text
-$ vault mount postgresql
-Successfully mounted 'postgresql' at 'postgresql'!
+$ vault secrets enable postgresql
+Success! Enabled the postgresql secrets engine at: postgresql/
 ```
 
 Next, Vault must be configured to connect to the PostgreSQL. This is done by
@@ -87,11 +92,12 @@ Vault is now configured to create and manage credentials for Postgres!
 
 ```text
 $ vault read postgresql/creds/readonly
-Key           	Value
-lease_id      	postgresql/creds/readonly/c888a097-b0e2-26a8-b306-fc7c84b98f07
-lease_duration	3600
-password      	34205e88-0de1-68b7-6267-72d8e32c5d3d
-username      	root-1430162075-7887
+Key               Value
+---               -----
+lease_id          postgresql/creds/readonly/c888a097-b0e2-26a8-b306-fc7c84b98f07
+lease_duration    3600
+password          34205e88-0de1-68b7-6267-72d8e32c5d3d
+username          root-1430162075-7887
 ```
 
 By reading from the `creds/readonly` path, Vault has generated a new
@@ -99,7 +105,7 @@ set of credentials using the `readonly` role configuration. Here we
 see the dynamically generated username and password, along with a one
 hour lease.
 
-Using ACLs, it is possible to restrict using the postgresql backend such
+Using ACLs, it is possible to restrict using the postgresql secrets engine such
 that trusted operators can manage the role definitions, and both
 users and applications are restricted in the credentials they are
 allowed to read.
@@ -109,6 +115,6 @@ subpath for interactive help output.
 
 ## API
 
-The PostgreSQL secret backend has a full HTTP API. Please see the
-[PostgreSQL secret backend API](/api/secret/postgresql/index.html) for more
+The PostgreSQL secrets engine has a full HTTP API. Please see the
+[PostgreSQL secrets engine API](/api/secret/postgresql/index.html) for more
 details.

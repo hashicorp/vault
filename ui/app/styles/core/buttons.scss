@@ -1,0 +1,199 @@
+$button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
+
+.button {
+  border: 1px solid $grey-light;
+  box-shadow: $box-shadow-low;
+  color: $grey-dark;
+  display: inline-block;
+  font-size: $size-small;
+  font-weight: $font-weight-bold;
+  height: 2.5rem;
+  line-height: 1.6;
+  min-width: 6rem;
+  padding: $size-10 $size-8;
+  text-decoration: none;
+  transition: background-color $speed, border-color $speed, box-shadow $speed,
+    color $speed;
+  vertical-align: middle;
+
+  &.is-icon {
+    padding: 0.25rem $size-3;
+  }
+
+  &:active,
+  &.is-active,
+  &:focus,
+  &.is-focused {
+    border-color: darken($grey-light, 10%);
+    box-shadow: $button-box-shadow-standard;
+    color: darken($grey-dark, 10%);
+  }
+
+  &.is-inverted.is-outlined {
+    box-shadow: none;
+  }
+
+  &.is-transparent {
+    color: currentColor;
+    background: none;
+    border: none;
+    box-shadow: none;
+    min-width: auto;
+    padding: 0;
+  }
+
+  @each $name, $pair in $colors {
+    $color: nth($pair, 1);
+    @if $name == "primary" {
+      $color: $blue;
+    }
+    $color-invert: nth($pair, 2);
+
+    &.is-#{$name} {
+      border-color: $color;
+      background-color: $color;
+      color: $color-invert;
+
+      &:hover,
+      &.is-hovered {
+        background-color: darken($color, 5%);
+        border-color: darken($color, 5%);
+        box-shadow: $box-shadow-middle;
+      }
+
+      &:active,
+      &.is-active {
+        background-color: darken($color, 10%);
+        border-color: darken($color, 10%);
+        box-shadow: $box-shadow-middle;
+      }
+
+      &:focus,
+      &.is-focused {
+        border-color: darken($color, 10%);
+        box-shadow: $button-box-shadow-standard;
+      }
+
+      &.is-outlined {
+        border-color: $color;
+        color: $color;
+        background-color: transparent;
+
+        &.is-important {
+          border-color: $color;
+        }
+
+        &:hover,
+        &.is-hovered,
+        &:focus,
+        &.is-focused {
+          background-color: transparent;
+          border-color: darken($color, 10%);
+          color: $color;
+        }
+
+        &:active,
+        &.is-active {
+          background-color: transparent;
+          border-color: darken($color, 10%);
+          color: darken($color, 10%);
+        }
+      }
+
+      &.is-inverted.is-outlined {
+        border-color: rgba($color-invert, 0.5);
+        color: rgba($color-invert, 0.9);
+
+        &:hover,
+        &.is-hovered,
+        &:focus,
+        &.is-focused {
+          background-color: transparent;
+          border-color: $color-invert;
+          color: $color-invert;
+        }
+
+        &:active,
+        &.is-active {
+          background-color: rgba($color-invert, 0.2);
+          border-color: $color-invert;
+          color: $color-invert;
+          box-shadow: none;
+        }
+      }
+    }
+  }
+
+  &.is-ghost {
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    color: $blue;
+
+    &:hover {
+      background-color: $grey-lighter;
+    }
+  }
+
+  &.is-orange {
+    background-color: $orange;
+    border-color: $orange;
+    color: $white;
+
+    &:hover,
+    &.is-hovered {
+      background-color: darken($orange, 5%);
+      border-color: darken($orange, 5%);
+    }
+  }
+  &.is-compact {
+    height: 2rem;
+    padding: $size-11 $size-8;
+  }
+
+  .has-text-info & {
+    font-weight: $font-weight-semibold;
+
+    .icon {
+      vertical-align: middle;
+    }
+  }
+
+  &.tool-tip-trigger {
+    color: $black;
+    min-width: auto;
+  }
+
+  &.has-icon-left,
+  &.has-icon-right {
+    .icon {
+      height: 16px;
+      min-width: auto;
+      width: 16px;
+    }
+  }
+
+  &.has-icon-left {
+    .icon {
+      &,
+      &:first-child:last-child {
+        margin-left: -$size-10;
+      }
+    }
+  }
+
+  &.has-icon-right {
+    .icon {
+      &,
+      &:first-child:last-child {
+        margin-left: $size-11;
+        margin-right: -$size-10;
+      }
+    }
+  }
+}
+
+.button .icon.auto-width {
+  width: auto;
+  margin: 0 !important;
+}

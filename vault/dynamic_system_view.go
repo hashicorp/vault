@@ -1,9 +1,11 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -25,11 +27,11 @@ func (d dynamicSystemView) MaxLeaseTTL() time.Duration {
 	return max
 }
 
-func (d dynamicSystemView) SudoPrivilege(path string, token string) bool {
+func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token string) bool {
 	// Resolve the token policy
-	te, err := d.core.tokenStore.Lookup(token)
+	te, err := d.core.tokenStore.Lookup(ctx, token)
 	if err != nil {
-		d.core.logger.Error("core: failed to lookup token", "error", err)
+		d.core.logger.Error("failed to lookup token", "error", err)
 		return false
 	}
 
@@ -40,7 +42,7 @@ func (d dynamicSystemView) SudoPrivilege(path string, token string) bool {
 	}
 
 	// Construct the corresponding ACL object
-	acl, err := d.core.policyStore.ACL(te.Policies...)
+	acl, err := d.core.policyStore.ACL(ctx, te.Policies...)
 	if err != nil {
 		d.core.logger.Error("failed to retrieve ACL for token's policies", "token_policies", te.Policies, "error", err)
 		return false
@@ -52,8 +54,8 @@ func (d dynamicSystemView) SudoPrivilege(path string, token string) bool {
 	req := new(logical.Request)
 	req.Operation = logical.ReadOperation
 	req.Path = path
-	_, rootPrivs := acl.AllowOperation(req)
-	return rootPrivs
+	authResults := acl.AllowOperation(req)
+	return authResults.RootPrivs
 }
 
 // TTLsByPath returns the default and max TTLs corresponding to a particular
@@ -82,18 +84,19 @@ func (d dynamicSystemView) CachingDisabled() bool {
 	return d.core.cachingDisabled || (d.mountEntry != nil && d.mountEntry.Config.ForceNoCache)
 }
 
-// Checks if this is a primary Vault instance.
+func (d dynamicSystemView) LocalMount() bool {
+	return d.mountEntry != nil && d.mountEntry.Local
+}
+
+// Checks if this is a primary Vault instance. Caller should hold the stateLock
+// in read mode.
 func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
-	var state consts.ReplicationState
-	d.core.clusterParamsLock.RLock()
-	state = d.core.replicationState
-	d.core.clusterParamsLock.RUnlock()
-	return state
+	return d.core.ReplicationState()
 }
 
 // ResponseWrapData wraps the given data in a cubbyhole and returns the
 // token used to unwrap.
-func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	req := &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "sys/wrapping/wrap",
@@ -110,7 +113,7 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 		resp.WrapInfo.Format = "jwt"
 	}
 
-	_, err := d.core.wrapInCubbyhole(req, resp)
+	_, err := d.core.wrapInCubbyhole(ctx, req, resp, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -120,13 +123,19 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 
 // LookupPlugin looks for a plugin with the given name in the plugin catalog. It
 // returns a PluginRunner or an error if no plugin was found.
-func (d dynamicSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
-	r, err := d.core.pluginCatalog.Get(name)
+func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string) (*pluginutil.PluginRunner, error) {
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.pluginCatalog == nil {
+		return nil, fmt.Errorf("system view core plugin catalog is nil")
+	}
+	r, err := d.core.pluginCatalog.Get(ctx, name)
 	if err != nil {
 		return nil, err
 	}
 	if r == nil {
-		return nil, fmt.Errorf("no plugin found with name: %s", name)
+		return nil, errwrap.Wrapf(fmt.Sprintf("{{err}}: %s", name), ErrPluginNotFound)
 	}
 
 	return r, nil
@@ -135,4 +144,47 @@ func (d dynamicSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, 
 // MlockEnabled returns the configuration setting for enabling mlock on plugins.
 func (d dynamicSystemView) MlockEnabled() bool {
 	return d.core.enableMlock
+}
+
+func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) {
+	// Requests from token created from the token backend will not have entity information.
+	// Return missing entity instead of error when requesting from MemDB.
+	if entityID == "" {
+		return nil, nil
+	}
+
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.identityStore == nil {
+		return nil, fmt.Errorf("system view identity store is nil")
+	}
+
+	// Retrieve the entity from MemDB
+	entity, err := d.core.identityStore.MemDBEntityByID(entityID, false)
+	if err != nil {
+		return nil, err
+	}
+	if entity == nil {
+		return nil, nil
+	}
+
+	aliases := make([]*logical.Alias, len(entity.Aliases))
+	for i, alias := range entity.Aliases {
+		aliases[i] = &logical.Alias{
+			MountAccessor: alias.MountAccessor,
+			Name:          alias.Name,
+		}
+		// MountType is not stored with the entity and must be looked up
+		if mount := d.core.router.validateMountByAccessor(alias.MountAccessor); mount != nil {
+			aliases[i].MountType = mount.MountType
+		}
+	}
+
+	// Only returning a subset of the data
+	return &logical.Entity{
+		ID:      entity.ID,
+		Name:    entity.Name,
+		Aliases: aliases,
+	}, nil
 }

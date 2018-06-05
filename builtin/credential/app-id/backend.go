@@ -1,6 +1,7 @@
 package appId
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hashicorp/vault/helper/salt"
@@ -8,15 +9,18 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(conf)
 	if err != nil {
 		return nil, err
 	}
-	return b.Setup(conf)
+	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
-func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
+func Backend(conf *logical.BackendConfig) (*backend, error) {
 	var b backend
 	b.MapAppId = &framework.PolicyMap{
 		PathMap: framework.PathMap{
@@ -60,7 +64,6 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 				"login/*",
 			},
 		},
-
 		Paths: framework.PathAppend([]*framework.Path{
 			pathLogin(&b),
 			pathLoginWithAppIDPath(&b),
@@ -68,15 +71,16 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			b.MapAppId.Paths(),
 			b.MapUserId.Paths(),
 		),
-
-		AuthRenew: b.pathLoginRenew,
-
-		Invalidate: b.invalidate,
+		AuthRenew:   b.pathLoginRenew,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeCredential,
 	}
 
 	b.view = conf.StorageView
+	b.MapAppId.SaltFunc = b.Salt
+	b.MapUserId.SaltFunc = b.Salt
 
-	return b.Backend, nil
+	return &b, nil
 }
 
 type backend struct {
@@ -89,7 +93,7 @@ type backend struct {
 	MapUserId *framework.PathMap
 }
 
-func (b *backend) Salt() (*salt.Salt, error) {
+func (b *backend) Salt(ctx context.Context) (*salt.Salt, error) {
 	b.SaltMutex.RLock()
 	if b.salt != nil {
 		defer b.SaltMutex.RUnlock()
@@ -101,7 +105,7 @@ func (b *backend) Salt() (*salt.Salt, error) {
 	if b.salt != nil {
 		return b.salt, nil
 	}
-	salt, err := salt.NewSalt(b.view, &salt.Config{
+	salt, err := salt.NewSalt(ctx, b.view, &salt.Config{
 		HashFunc: salt.SHA1Hash,
 		Location: salt.DefaultLocation,
 	})
@@ -109,13 +113,10 @@ func (b *backend) Salt() (*salt.Salt, error) {
 		return nil, err
 	}
 	b.salt = salt
-	b.MapAppId.SaltFunc = b.Salt
-	b.MapUserId.SaltFunc = b.Salt
-
 	return salt, nil
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(_ context.Context, key string) {
 	switch key {
 	case salt.DefaultLocation:
 		b.SaltMutex.Lock()

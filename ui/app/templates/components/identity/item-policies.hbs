@@ -1,0 +1,35 @@
+{{#each model.policies as |policyName|}}
+  {{#linked-block
+    "vault.cluster.policy.show"
+    "acl"
+    item
+    class="box is-sideless is-marginless"
+  }}
+    <div class="columns is-mobile">
+      <div class="column is-10">
+        <a href={{href-to "vault.cluster.policy.show" "acl" policyName}}
+          class="is-block has-text-black has-text-weight-semibold"
+          ><span class="is-underline">{{policyName}}</span>
+        </a>
+      </div>
+      <div class="column has-text-right">
+        {{#if model.canEdit}}
+          {{identity/popup-policy params=(array model policyName)}}
+        {{/if}}
+      </div>
+    </div>
+  {{/linked-block}}
+{{else}}
+  <div class="box is-bottomless has-background-white-bis">
+    <div class="columns is-centered">
+      <div class="column is-half has-text-centered">
+        <div class="box is-shadowless has-background-white-bis">
+          <p class="has-text-grey" data-test-no-entity-aliases-text>
+            There are no policies associated with {{model.name}}.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+{{/each}}
+

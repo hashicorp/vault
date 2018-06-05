@@ -10,7 +10,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
@@ -24,7 +25,7 @@ type Config struct {
 	Storage   *Storage    `hcl:"-"`
 	HAStorage *Storage    `hcl:"-"`
 
-	HSM *HSM `hcl:"-"`
+	Seal *Seal `hcl:"-"`
 
 	CacheSize       int         `hcl:"cache_size"`
 	DisableCache    bool        `hcl:"-"`
@@ -42,15 +43,29 @@ type Config struct {
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
 	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
 
-	ClusterName     string `hcl:"cluster_name"`
+	ClusterName         string `hcl:"cluster_name"`
+	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
+
 	PluginDirectory string `hcl:"plugin_directory"`
+
+	PidFile              string      `hcl:"pid_file"`
+	EnableRawEndpoint    bool        `hcl:"-"`
+	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
+
+	APIAddr              string      `hcl:"api_addr"`
+	ClusterAddr          string      `hcl:"cluster_addr"`
+	DisableClustering    bool        `hcl:"-"`
+	DisableClusteringRaw interface{} `hcl:"disable_clustering"`
+
+	DisableSealWrap    bool        `hcl:"-"`
+	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
 func DevConfig(ha, transactional bool) *Config {
 	ret := &Config{
-		DisableCache: false,
-		DisableMlock: true,
+		DisableMlock:      true,
+		EnableRawEndpoint: true,
 
 		Storage: &Storage{
 			Type: "inmem",
@@ -59,9 +74,11 @@ func DevConfig(ha, transactional bool) *Config {
 		Listeners: []*Listener{
 			&Listener{
 				Type: "tcp",
-				Config: map[string]string{
-					"address":     "127.0.0.1:8200",
-					"tls_disable": "1",
+				Config: map[string]interface{}{
+					"address":                         "127.0.0.1:8200",
+					"tls_disable":                     true,
+					"proxy_protocol_behavior":         "allow_authorized",
+					"proxy_protocol_authorized_addrs": "127.0.0.1:8200",
 				},
 			},
 		},
@@ -69,9 +86,6 @@ func DevConfig(ha, transactional bool) *Config {
 		EnableUI: true,
 
 		Telemetry: &Telemetry{},
-
-		MaxLeaseTTL:     32 * 24 * time.Hour,
-		DefaultLeaseTTL: 32 * 24 * time.Hour,
 	}
 
 	switch {
@@ -89,7 +103,7 @@ func DevConfig(ha, transactional bool) *Config {
 // Listener is the listener configuration for the server.
 type Listener struct {
 	Type   string
-	Config map[string]string
+	Config map[string]interface{}
 }
 
 func (l *Listener) GoString() string {
@@ -109,13 +123,13 @@ func (b *Storage) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
 }
 
-// HSM contains HSM configuration for the server
-type HSM struct {
+// Seal contains Seal configuration for the server
+type Seal struct {
 	Type   string
 	Config map[string]string
 }
 
-func (h *HSM) GoString() string {
+func (h *Seal) GoString() string {
 	return fmt.Sprintf("*%#v", *h)
 }
 
@@ -162,11 +176,11 @@ type Telemetry struct {
 	CirconusCheckID string `hcl:"circonus_check_id"`
 	// CirconusCheckForceMetricActivation will force enabling metrics, as they are encountered,
 	// if the metric already exists and is NOT active. If check management is enabled, the default
-	// behavior is to add new metrics as they are encoutered. If the metric already exists in the
+	// behavior is to add new metrics as they are encountered. If the metric already exists in the
 	// check, it will *NOT* be activated. This setting overrides that behavior.
 	// Default: "false"
 	CirconusCheckForceMetricActivation string `hcl:"circonus_check_force_metric_activation"`
-	// CirconusCheckInstanceID serves to uniquely identify the metrics comming from this "instance".
+	// CirconusCheckInstanceID serves to uniquely identify the metrics coming from this "instance".
 	// It can be used to maintain metric continuity with transient or ephemeral instances as
 	// they move around within an infrastructure.
 	// Default: hostname:app
@@ -196,6 +210,15 @@ type Telemetry struct {
 	// (e.g. a specific geo location or datacenter, dc:sfo)
 	// Default: none
 	CirconusBrokerSelectTag string `hcl:"circonus_broker_select_tag"`
+
+	// Dogstats:
+	// DogStatsdAddr is the address of a dogstatsd instance. If provided,
+	// metrics will be sent to that instance
+	DogStatsDAddr string `hcl:"dogstatsd_addr"`
+
+	// DogStatsdTags are the global tags that should be sent with each packet to dogstatsd
+	// It is a list of strings, where each string looks like "my_tag_name:my_tag_value"
+	DogStatsDTags []string `hcl:"dogstatsd_tags"`
 }
 
 func (s *Telemetry) GoString() string {
@@ -226,9 +249,9 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.HAStorage = c2.HAStorage
 	}
 
-	result.HSM = c.HSM
-	if c2.HSM != nil {
-		result.HSM = c2.HSM
+	result.Seal = c.Seal
+	if c2.Seal != nil {
+		result.Seal = c2.Seal
 	}
 
 	result.Telemetry = c.Telemetry
@@ -268,14 +291,34 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.ClusterName = c2.ClusterName
 	}
 
+	result.ClusterCipherSuites = c.ClusterCipherSuites
+	if c2.ClusterCipherSuites != "" {
+		result.ClusterCipherSuites = c2.ClusterCipherSuites
+	}
+
 	result.EnableUI = c.EnableUI
 	if c2.EnableUI {
 		result.EnableUI = c2.EnableUI
 	}
 
+	result.EnableRawEndpoint = c.EnableRawEndpoint
+	if c2.EnableRawEndpoint {
+		result.EnableRawEndpoint = c2.EnableRawEndpoint
+	}
+
 	result.PluginDirectory = c.PluginDirectory
 	if c2.PluginDirectory != "" {
 		result.PluginDirectory = c2.PluginDirectory
+	}
+
+	result.PidFile = c.PidFile
+	if c2.PidFile != "" {
+		result.PidFile = c2.PidFile
+	}
+
+	result.DisableSealWrap = c.DisableSealWrap
+	if c2.DisableSealWrap {
+		result.DisableSealWrap = c2.DisableSealWrap
 	}
 
 	return result
@@ -291,9 +334,8 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 
 	if fi.IsDir() {
 		return LoadConfigDir(path, logger)
-	} else {
-		return LoadConfigFile(path, logger)
 	}
+	return LoadConfigFile(path, logger)
 }
 
 // LoadConfigFile loads the configuration from the given file.
@@ -348,18 +390,36 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
+	if result.EnableRawEndpointRaw != nil {
+		if result.EnableRawEndpoint, err = parseutil.ParseBool(result.EnableRawEndpointRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisableClusteringRaw != nil {
+		if result.DisableClustering, err = parseutil.ParseBool(result.DisableClusteringRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisableSealWrapRaw != nil {
+		if result.DisableSealWrap, err = parseutil.ParseBool(result.DisableSealWrapRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
 	}
 
 	valid := []string{
-		"atlas",
 		"storage",
 		"ha_storage",
 		"backend",
 		"ha_backend",
 		"hsm",
+		"seal",
 		"listener",
 		"cache_size",
 		"disable_cache",
@@ -369,7 +429,14 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"default_lease_ttl",
 		"max_lease_ttl",
 		"cluster_name",
+		"cluster_cipher_suites",
 		"plugin_directory",
+		"pid_file",
+		"raw_storage_endpoint",
+		"api_addr",
+		"cluster_addr",
+		"disable_clustering",
+		"disable_sealwrap",
 	}
 	if err := checkHCLKeys(list, valid); err != nil {
 		return nil, err
@@ -378,43 +445,49 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
 		if err := parseStorage(&result, o, "storage"); err != nil {
-			return nil, fmt.Errorf("error parsing 'storage': %s", err)
+			return nil, errwrap.Wrapf("error parsing 'storage': {{err}}", err)
 		}
 	} else {
 		if o := list.Filter("backend"); len(o.Items) > 0 {
 			if err := parseStorage(&result, o, "backend"); err != nil {
-				return nil, fmt.Errorf("error parsing 'backend': %s", err)
+				return nil, errwrap.Wrapf("error parsing 'backend': {{err}}", err)
 			}
 		}
 	}
 
 	if o := list.Filter("ha_storage"); len(o.Items) > 0 {
 		if err := parseHAStorage(&result, o, "ha_storage"); err != nil {
-			return nil, fmt.Errorf("error parsing 'ha_storage': %s", err)
+			return nil, errwrap.Wrapf("error parsing 'ha_storage': {{err}}", err)
 		}
 	} else {
 		if o := list.Filter("ha_backend"); len(o.Items) > 0 {
 			if err := parseHAStorage(&result, o, "ha_backend"); err != nil {
-				return nil, fmt.Errorf("error parsing 'ha_backend': %s", err)
+				return nil, errwrap.Wrapf("error parsing 'ha_backend': {{err}}", err)
 			}
 		}
 	}
 
 	if o := list.Filter("hsm"); len(o.Items) > 0 {
-		if err := parseHSMs(&result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'hsm': %s", err)
+		if err := parseSeal(&result, o, "hsm"); err != nil {
+			return nil, errwrap.Wrapf("error parsing 'hsm': {{err}}", err)
+		}
+	}
+
+	if o := list.Filter("seal"); len(o.Items) > 0 {
+		if err := parseSeal(&result, o, "seal"); err != nil {
+			return nil, errwrap.Wrapf("error parsing 'seal': {{err}}", err)
 		}
 	}
 
 	if o := list.Filter("listener"); len(o.Items) > 0 {
 		if err := parseListeners(&result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'listener': %s", err)
+			return nil, errwrap.Wrapf("error parsing 'listener': {{err}}", err)
 		}
 	}
 
 	if o := list.Filter("telemetry"); len(o.Items) > 0 {
 		if err := parseTelemetry(&result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'telemetry': %s", err)
+			return nil, errwrap.Wrapf("error parsing 'telemetry': {{err}}", err)
 		}
 	}
 
@@ -435,9 +508,7 @@ func LoadConfigDir(dir string, logger log.Logger) (*Config, error) {
 		return nil, err
 	}
 	if !fi.IsDir() {
-		return nil, fmt.Errorf(
-			"configuration path must be a directory: %s",
-			dir)
+		return nil, fmt.Errorf("configuration path must be a directory: %q", dir)
 	}
 
 	var files []string
@@ -476,7 +547,7 @@ func LoadConfigDir(dir string, logger log.Logger) (*Config, error) {
 	for _, f := range files {
 		config, err := LoadConfigFile(f, logger)
 		if err != nil {
-			return nil, fmt.Errorf("Error loading %s: %s", f, err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("error loading %q: {{err}}", f), err)
 		}
 
 		if result == nil {
@@ -543,6 +614,19 @@ func parseStorage(result *Config, list *ast.ObjectList, name string) error {
 		delete(m, "disable_clustering")
 	}
 
+	// Override with top-level values if they are set
+	if result.APIAddr != "" {
+		redirectAddr = result.APIAddr
+	}
+
+	if result.ClusterAddr != "" {
+		clusterAddr = result.ClusterAddr
+	}
+
+	if result.DisableClusteringRaw != nil {
+		disableClustering = result.DisableClustering
+	}
+
 	result.Storage = &Storage{
 		RedirectAddr:      redirectAddr,
 		ClusterAddr:       clusterAddr,
@@ -598,6 +682,19 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 		delete(m, "disable_clustering")
 	}
 
+	// Override with top-level values if they are set
+	if result.APIAddr != "" {
+		redirectAddr = result.APIAddr
+	}
+
+	if result.ClusterAddr != "" {
+		clusterAddr = result.ClusterAddr
+	}
+
+	if result.DisableClusteringRaw != nil {
+		disableClustering = result.DisableClustering
+	}
+
 	result.HAStorage = &Storage{
 		RedirectAddr:      redirectAddr,
 		ClusterAddr:       clusterAddr,
@@ -608,38 +705,80 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 	return nil
 }
 
-func parseHSMs(result *Config, list *ast.ObjectList) error {
+func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 	if len(list.Items) > 1 {
-		return fmt.Errorf("only one 'hsm' block is permitted")
+		return fmt.Errorf("only one %q block is permitted", blockName)
 	}
 
 	// Get our item
 	item := list.Items[0]
 
-	key := "hsm"
+	key := blockName
 	if len(item.Keys) > 0 {
 		key = item.Keys[0].Token.Value().(string)
 	}
 
-	valid := []string{
-		"lib",
-		"slot",
-		"pin",
-		"mechanism",
-		"key_label",
-		"generate_key",
-		"regenerate_key",
+	var valid []string
+	// Valid parameter for the Seal types
+	switch key {
+	case "pkcs11":
+		valid = []string{
+			"lib",
+			"slot",
+			"token_label",
+			"pin",
+			"mechanism",
+			"hmac_mechanism",
+			"key_label",
+			"default_key_label",
+			"hmac_key_label",
+			"hmac_default_key_label",
+			"generate_key",
+			"regenerate_key",
+			"max_parallel",
+			"disable_auto_reinit_on_error",
+			"rsa_encrypt_local",
+			"rsa_oaep_hash",
+		}
+	case "awskms":
+		valid = []string{
+			"region",
+			"access_key",
+			"secret_key",
+			"kms_key_id",
+			"max_parallel",
+		}
+	case "gcpckms":
+		valid = []string{
+			"credentials",
+			"project",
+			"region",
+			"key_ring",
+			"crypto_key",
+		}
+	case "azurekeyvault":
+		valid = []string{
+			"tenant_id",
+			"client_id",
+			"client_secret",
+			"environment",
+			"vault_name",
+			"key_name",
+		}
+	default:
+		return fmt.Errorf("invalid seal type %q", key)
 	}
+
 	if err := checkHCLKeys(item.Val, valid); err != nil {
-		return multierror.Prefix(err, fmt.Sprintf("hsm.%s:", key))
+		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 	}
 
 	var m map[string]string
 	if err := hcl.DecodeObject(&m, item.Val); err != nil {
-		return multierror.Prefix(err, fmt.Sprintf("hsm.%s:", key))
+		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 	}
 
-	result.HSM = &HSM{
+	result.Seal = &Seal{
 		Type:   strings.ToLower(key),
 		Config: m,
 	}
@@ -648,8 +787,6 @@ func parseHSMs(result *Config, list *ast.ObjectList) error {
 }
 
 func parseListeners(result *Config, list *ast.ObjectList) error {
-	var foundAtlas bool
-
 	listeners := make([]*Listener, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "listener"
@@ -661,8 +798,14 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"address",
 			"cluster_address",
 			"endpoint",
+			"x_forwarded_for_authorized_addrs",
+			"x_forwarded_for_hop_skips",
+			"x_forwarded_for_reject_not_authorized",
+			"x_forwarded_for_reject_not_present",
 			"infrastructure",
 			"node_id",
+			"proxy_protocol_behavior",
+			"proxy_protocol_authorized_addrs",
 			"tls_disable",
 			"tls_cert_file",
 			"tls_key_file",
@@ -670,35 +813,20 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"tls_cipher_suites",
 			"tls_prefer_server_cipher_suites",
 			"tls_require_and_verify_client_cert",
+			"tls_disable_client_certs",
+			"tls_client_ca_file",
 			"token",
 		}
 		if err := checkHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
 		}
 
-		var m map[string]string
+		var m map[string]interface{}
 		if err := hcl.DecodeObject(&m, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
 		}
 
 		lnType := strings.ToLower(key)
-
-		if lnType == "atlas" {
-			if foundAtlas {
-				return multierror.Prefix(fmt.Errorf("only one listener of type 'atlas' is permitted"), fmt.Sprintf("listeners.%s", key))
-			}
-
-			foundAtlas = true
-			if m["token"] == "" {
-				return multierror.Prefix(fmt.Errorf("'token' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
-			}
-			if m["infrastructure"] == "" {
-				return multierror.Prefix(fmt.Errorf("'infrastructure' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
-			}
-			if m["node_id"] == "" {
-				return multierror.Prefix(fmt.Errorf("'node_id' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
-			}
-		}
 
 		listeners = append(listeners, &Listener{
 			Type:   lnType,
@@ -734,6 +862,8 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		"circonus_broker_id",
 		"circonus_broker_select_tag",
 		"disable_hostname",
+		"dogstatsd_addr",
+		"dogstatsd_tags",
 		"statsd_address",
 		"statsite_address",
 	}
@@ -776,8 +906,7 @@ func checkHCLKeys(node ast.Node, valid []string) error {
 	for _, item := range list.Items {
 		key := item.Keys[0].Token.Value().(string)
 		if _, ok := validMap[key]; !ok {
-			result = multierror.Append(result, fmt.Errorf(
-				"invalid key '%s' on line %d", key, item.Assign.Line))
+			result = multierror.Append(result, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
 		}
 	}
 

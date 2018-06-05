@@ -18,6 +18,8 @@
 package totp
 
 import (
+	"strings"
+
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/hotp"
 
@@ -174,7 +176,7 @@ func Generate(opts GenerateOpts) (*otp.Key, error) {
 		return nil, err
 	}
 
-	v.Set("secret", base32.StdEncoding.EncodeToString(secret))
+	v.Set("secret", strings.TrimRight(base32.StdEncoding.EncodeToString(secret), "="))
 	v.Set("issuer", opts.Issuer)
 	v.Set("period", strconv.FormatUint(uint64(opts.Period), 10))
 	v.Set("algorithm", opts.Algorithm.String())

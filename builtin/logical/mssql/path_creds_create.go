@@ -1,10 +1,12 @@
 package mssql
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -29,12 +31,11 @@ func pathCredsCreate(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathCredsCreateRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
 	// Get the role
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +44,7 @@ func (b *backend) pathCredsCreateRead(
 	}
 
 	// Determine if we have a lease configuration
-	leaseConfig, err := b.LeaseConfig(req.Storage)
+	leaseConfig, err := b.LeaseConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +68,7 @@ func (b *backend) pathCredsCreateRead(
 	}
 
 	// Get our handle
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -90,15 +91,11 @@ func (b *backend) pathCredsCreateRead(
 			continue
 		}
 
-		stmt, err := tx.Prepare(Query(query, map[string]string{
+		m := map[string]string{
 			"name":     username,
 			"password": password,
-		}))
-		if err != nil {
-			return nil, err
 		}
-		defer stmt.Close()
-		if _, err := stmt.Exec(); err != nil {
+		if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 			return nil, err
 		}
 	}
@@ -116,6 +113,8 @@ func (b *backend) pathCredsCreateRead(
 		"username": username,
 	})
 	resp.Secret.TTL = leaseConfig.TTL
+	resp.Secret.MaxTTL = leaseConfig.TTLMax
+
 	return resp, nil
 }
 

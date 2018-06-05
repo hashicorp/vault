@@ -49,12 +49,14 @@ func sealStatusRequest(c *Sys, r *Request) (*SealStatusResponse, error) {
 }
 
 type SealStatusResponse struct {
-	Sealed      bool   `json:"sealed"`
-	T           int    `json:"t"`
-	N           int    `json:"n"`
-	Progress    int    `json:"progress"`
-	Nonce       string `json:"nonce"`
-	Version     string `json:"version"`
-	ClusterName string `json:"cluster_name,omitempty"`
-	ClusterID   string `json:"cluster_id,omitempty"`
+	Type         string `json:"type"`
+	Sealed       bool   `json:"sealed"`
+	T            int    `json:"t"`
+	N            int    `json:"n"`
+	Progress     int    `json:"progress"`
+	Nonce        string `json:"nonce"`
+	Version      string `json:"version"`
+	ClusterName  string `json:"cluster_name,omitempty"`
+	ClusterID    string `json:"cluster_id,omitempty"`
+	RecoverySeal bool   `json:"recovery_seal"`
 }

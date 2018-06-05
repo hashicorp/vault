@@ -4,111 +4,86 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
 
-// StatusCommand is a Command that outputs the status of whether
-// Vault is sealed or not as well as HA information.
+var _ cli.Command = (*StatusCommand)(nil)
+var _ cli.CommandAutocomplete = (*StatusCommand)(nil)
+
 type StatusCommand struct {
-	meta.Meta
-}
-
-func (c *StatusCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("status", meta.FlagSetDefault)
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
-		return 1
-	}
-
-	client, err := c.Client()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
-		return 1
-	}
-
-	sealStatus, err := client.Sys().SealStatus()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error checking seal status: %s", err))
-		return 1
-	}
-
-	outStr := fmt.Sprintf(
-		"Sealed: %v\n"+
-			"Key Shares: %d\n"+
-			"Key Threshold: %d\n"+
-			"Unseal Progress: %d\n"+
-			"Unseal Nonce: %v\n"+
-			"Version: %s",
-		sealStatus.Sealed,
-		sealStatus.N,
-		sealStatus.T,
-		sealStatus.Progress,
-		sealStatus.Nonce,
-		sealStatus.Version)
-
-	if sealStatus.ClusterName != "" && sealStatus.ClusterID != "" {
-		outStr = fmt.Sprintf("%s\nCluster Name: %s\nCluster ID: %s", outStr, sealStatus.ClusterName, sealStatus.ClusterID)
-	}
-
-	c.Ui.Output(outStr)
-
-	// Mask the 'Vault is sealed' error, since this means HA is enabled,
-	// but that we cannot query for the leader since we are sealed.
-	leaderStatus, err := client.Sys().Leader()
-	if err != nil && strings.Contains(err.Error(), "Vault is sealed") {
-		leaderStatus = &api.LeaderResponse{HAEnabled: true}
-		err = nil
-	}
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error checking leader status: %s", err))
-		return 1
-	}
-
-	// Output if HA is enabled
-	c.Ui.Output("")
-	c.Ui.Output(fmt.Sprintf("High-Availability Enabled: %v", leaderStatus.HAEnabled))
-	if leaderStatus.HAEnabled {
-		if sealStatus.Sealed {
-			c.Ui.Output("\tMode: sealed")
-		} else {
-			mode := "standby"
-			if leaderStatus.IsSelf {
-				mode = "active"
-			}
-			c.Ui.Output(fmt.Sprintf("\tMode: %s", mode))
-
-			if leaderStatus.LeaderAddress == "" {
-				leaderStatus.LeaderAddress = "<none>"
-			}
-			c.Ui.Output(fmt.Sprintf("\tLeader: %s", leaderStatus.LeaderAddress))
-		}
-	}
-
-	if sealStatus.Sealed {
-		return 2
-	} else {
-		return 0
-	}
+	*BaseCommand
 }
 
 func (c *StatusCommand) Synopsis() string {
-	return "Outputs status of whether Vault is sealed and if HA mode is enabled"
+	return "Print seal and HA status"
 }
 
 func (c *StatusCommand) Help() string {
 	helpText := `
 Usage: vault status [options]
 
-  Outputs the state of the Vault, sealed or unsealed and if HA is enabled.
+  Prints the current state of Vault including whether it is sealed and if HA
+  mode is enabled. This command prints regardless of whether the Vault is
+  sealed.
 
-  This command outputs whether or not the Vault is sealed. The exit
-  code also reflects the seal status (0 unsealed, 2 sealed, 1 error).
+  The exit code reflects the seal status:
 
-General Options:
-` + meta.GeneralOptionsUsage()
+      - 0 - unsealed
+      - 1 - error
+      - 2 - sealed
+
+` + c.Flags().Help()
+
 	return strings.TrimSpace(helpText)
+}
+
+func (c *StatusCommand) Flags() *FlagSets {
+	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+}
+
+func (c *StatusCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
+}
+
+func (c *StatusCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
+}
+
+func (c *StatusCommand) Run(args []string) int {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	args = f.Args()
+	if len(args) > 0 {
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", len(args)))
+		return 1
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		// We return 2 everywhere else, but 2 is reserved for "sealed" here
+		return 1
+	}
+
+	status, err := client.Sys().SealStatus()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error checking seal status: %s", err))
+		return 1
+	}
+
+	// Do not return the int here yet, since we may want to return a custom error
+	// code depending on the seal status.
+	code := OutputSealStatus(c.UI, client, status)
+
+	if status.Sealed {
+		return 2
+	}
+
+	return code
 }

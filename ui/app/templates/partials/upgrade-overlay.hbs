@@ -1,0 +1,78 @@
+<div id="upgrade-modal" class="modal upgrade-overlay has-text-white {{if isActive "is-active"}} {{if isAnimated "is-animated"}}">
+  <div class="modal-background"></div>
+  <div class="modal-content">
+    <h2 class="title upgrade-overlay-title is-2 has-text-white">
+      Try Vault Enterprise Free for 30 Days
+    </h2>
+    <h3 class="title is-5 has-text-white">
+      Collaborate on secrets management and access
+    </h3>
+    <p>
+      Vault Enterprise has features to help unify disparate users and roles,
+      use collaboration workflows, and disaster recovery for system recovery,
+      provide governance over secrets management and access with multi-factor
+      authentication. You'll have access to all the features below.
+    </p>
+    <div class="columns">
+      <div class="column is-flex">
+        <div class="box has-background-transparent has-text-white ">
+          <div class="level">
+            <div class="level-left">
+              <h3 class="title is-4 has-text-white">
+                Pro
+                {{#unless (is-version "OSS")}}
+                  {{#unless version.hasPerfReplication}}
+                    {{edition-badge edition="Current"}}
+                  {{/unless}}
+                {{/unless}}
+              </h3>
+            </div>
+            <div class="level-right upgrade-overlay-icon">
+              {{partial "svg/edition-icon-pro"}}
+            </div>
+          </div>
+          <ul class="upgrade-features-list">
+            <li>All Open Source features</li>
+            <li>Disaster Recovery Replication</li>
+            <li>Cluster management</li>
+            <li>Init and unseal workflow</li>
+            <li>GCP Cloud KMS Auto-unseal</li>
+            <li>Silver support: 9x5 support w/SLA</li>
+          </ul>
+        </div>
+      </div>
+      <div class="column is-flex">
+        <div class="box has-background-transparent has-text-white">
+          <div class="level">
+            <div class="level-left">
+              <h3 class="title is-4 has-text-white">
+                Premium
+              </h3>
+            </div>
+            <div class="level-right upgrade-overlay-icon">
+              {{partial "svg/edition-icon-premium"}}
+            </div>
+          </div>
+          <ul class="upgrade-features-list">
+            <li>All Pro features</li>
+            <li>Performance Replication</li>
+            <li>HSM Autounseal</li>
+            <li>Mount Filters</li>
+            <li>Multi-Factor Authentication</li>
+            <li>Sentinel Integration</li>
+            <li>Control Groups</li>
+            <li>Seal Wrap / FIPS 140-2 Compliance</li>
+            <li>Gold support: 24&times;7 support w/SLA</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <p class="has-text-centered">
+      <a href="https://hashicorp.com/products/vault/trial?source={{trackingSource}}" class="button is-primary has-icon-right" target="_blank" rel="noreferrer noopener">
+        Start Trial
+        {{i-con glyph="chevron-right"}}
+      </a>
+    </p>
+  </div>
+  <button class="modal-close is-large" aria-label="close" {{action "closeOverlay"}}></button>
+</div>

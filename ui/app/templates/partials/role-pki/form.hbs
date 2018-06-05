@@ -1,0 +1,40 @@
+{{message-error model=model}}
+<form onsubmit={{action "createOrUpdate" "create"}} onchange={{action "handleChange"}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    {{partial "partials/form-field-groups-loop"}}
+  </div>
+  <div class="field is-grouped-split box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="submit"
+        disabled={{buttonDisabled}}
+        class="button is-primary"
+        data-test-role-create=true
+      >
+        {{#if (eq mode 'create')}}
+          Create role
+        {{else if (eq mode 'edit')}}
+          Save
+        {{/if}}
+      </button>
+      {{#secret-link
+        mode=(if (eq mode "create") "list" "show")
+        class="button"
+        secret=model.id
+      }}
+        Cancel
+      {{/secret-link}}
+    </div>
+    {{#if (and (eq mode 'edit') model.canDelete)}}
+      {{#confirm-action
+        data-test-role-delete
+        buttonClasses="button"
+        onConfirmAction=(action "delete")
+        confirmMessage=(concat "Are you sure you want to delete " model.id "?")
+        cancelButtonText="Cancel"
+      }}
+        Delete
+      {{/confirm-action}}
+    {{/if}}
+  </div>
+</form>

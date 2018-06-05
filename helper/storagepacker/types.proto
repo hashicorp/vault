@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/helper/storagepacker";
+
+package storagepacker;
+
+import "google/protobuf/any.proto";
+
+message Item {
+  string id = 1;
+  google.protobuf.Any message = 2;
+}
+
+message Bucket {
+  string key = 1;
+  repeated Item items = 2;
+}

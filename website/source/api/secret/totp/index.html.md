@@ -1,21 +1,20 @@
 ---
 layout: "api"
-page_title: "TOTP Secret Backend - HTTP API"
+page_title: "TOTP - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-totp"
 description: |-
-  This is the API documentation for the Vault TOTP secret backend.
+  This is the API documentation for the Vault TOTP secrets engine.
 ---
 
-# TOTP Secret Backend HTTP API
+# TOTP Secrets Engine (API)
 
-This is the API documentation for the Vault TOTP secret backend. For
-general information about the usage and operation of the TOTP backend,
-please see the
-[Vault TOTP backend documentation](/docs/secrets/totp/index.html).
+This is the API documentation for the Vault TOTP secrets engine. For general
+information about the usage and operation of the TOTP secrets engine, please see
+the [TOTP documentation](/docs/secrets/totp/index.html).
 
-This documentation assumes the TOTP backend is mounted at the
-`/totp` path in Vault. Since it is possible to mount secret backends at
-any location, please update your API calls accordingly.
+This documentation assumes the TOTP secrets engine is enabled at the `/totp`
+path in Vault. Since it is possible to enable secrets engines at any location,
+please update your API calls accordingly.
 
 ## Create Key
 
@@ -68,7 +67,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/totp/keys/my-key
+    http://127.0.0.1:8200/v1/totp/keys/my-key
 ```
 
 ### Sample Payload
@@ -88,7 +87,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/totp/keys/my-key
+    http://127.0.0.1:8200/v1/totp/keys/my-key
 ```
 
 ### Sample Response
@@ -125,7 +124,7 @@ This endpoint queries the key definition.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/totp/keys/my-key
+    http://127.0.0.1:8200/v1/totp/keys/my-key
 ```
 
 ### Sample Response
@@ -157,7 +156,7 @@ returned, not any values.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/totp/keys
+    http://127.0.0.1:8200/v1/totp/keys
 ```
 
 ### Sample Response
@@ -193,7 +192,7 @@ This endpoint deletes the key definition.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/totp/keys/my-key
+    http://127.0.0.1:8200/v1/totp/keys/my-key
 ```
 
 ## Generate Code
@@ -215,7 +214,7 @@ key.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/totp/code/my-key
+    http://127.0.0.1:8200/v1/totp/code/my-key
 ```
 
 ### Sample Response
@@ -258,7 +257,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/totp/code/my-key
+    http://127.0.0.1:8200/v1/totp/code/my-key
 ```
 
 ### Sample Response

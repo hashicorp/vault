@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -23,7 +24,7 @@ func secretOTP(b *backend) *framework.Secret {
 	}
 }
 
-func (b *backend) secretOTPRevoke(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretOTPRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	otpRaw, ok := req.Secret.InternalData["otp"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
@@ -33,11 +34,11 @@ func (b *backend) secretOTPRevoke(req *logical.Request, d *framework.FieldData) 
 		return nil, fmt.Errorf("secret is missing internal data")
 	}
 
-	salt, err := b.Salt()
+	salt, err := b.Salt(ctx)
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Delete("otp/" + salt.SaltID(otp))
+	err = req.Storage.Delete(ctx, "otp/"+salt.SaltID(otp))
 	if err != nil {
 		return nil, err
 	}

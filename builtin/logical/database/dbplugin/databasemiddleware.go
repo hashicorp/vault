@@ -1,10 +1,17 @@
 package dbplugin
 
 import (
+	"context"
+	"errors"
+	"net/url"
+	"strings"
+	"sync"
 	"time"
 
+	"github.com/hashicorp/errwrap"
+
 	metrics "github.com/armon/go-metrics"
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 )
 
 // ---- Tracing Middleware Domain ----
@@ -14,56 +21,68 @@ import (
 type databaseTracingMiddleware struct {
 	next   Database
 	logger log.Logger
-
-	typeStr string
 }
 
 func (mw *databaseTracingMiddleware) Type() (string, error) {
 	return mw.next.Type()
 }
 
-func (mw *databaseTracingMiddleware) CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (mw *databaseTracingMiddleware) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "CreateUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		mw.logger.Trace("create user", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "CreateUser", "status", "started", "type", mw.typeStr)
-	return mw.next.CreateUser(statements, usernamePrefix, expiration)
+	mw.logger.Trace("create user", "status", "started")
+	return mw.next.CreateUser(ctx, statements, usernameConfig, expiration)
 }
 
-func (mw *databaseTracingMiddleware) RenewUser(statements Statements, username string, expiration time.Time) (err error) {
+func (mw *databaseTracingMiddleware) RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) (err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "RenewUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		mw.logger.Trace("renew user", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "RenewUser", "status", "started", mw.typeStr)
-	return mw.next.RenewUser(statements, username, expiration)
+	mw.logger.Trace("renew user", "status", "started")
+	return mw.next.RenewUser(ctx, statements, username, expiration)
 }
 
-func (mw *databaseTracingMiddleware) RevokeUser(statements Statements, username string) (err error) {
+func (mw *databaseTracingMiddleware) RevokeUser(ctx context.Context, statements Statements, username string) (err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "RevokeUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		mw.logger.Trace("revoke user", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "RevokeUser", "status", "started", "type", mw.typeStr)
-	return mw.next.RevokeUser(statements, username)
+	mw.logger.Trace("revoke user", "status", "started")
+	return mw.next.RevokeUser(ctx, statements, username)
 }
 
-func (mw *databaseTracingMiddleware) Initialize(conf map[string]interface{}, verifyConnection bool) (err error) {
+func (mw *databaseTracingMiddleware) RotateRootCredentials(ctx context.Context, statements []string) (conf map[string]interface{}, err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "Initialize", "status", "finished", "type", mw.typeStr, "verify", verifyConnection, "err", err, "took", time.Since(then))
+		mw.logger.Trace("rotate root credentials", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "Initialize", "status", "started", "type", mw.typeStr)
-	return mw.next.Initialize(conf, verifyConnection)
+	mw.logger.Trace("rotate root credentials", "status", "started")
+	return mw.next.RotateRootCredentials(ctx, statements)
+}
+
+func (mw *databaseTracingMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
+	_, err := mw.Init(ctx, conf, verifyConnection)
+	return err
+}
+
+func (mw *databaseTracingMiddleware) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
+	defer func(then time.Time) {
+		mw.logger.Trace("initialize", "status", "finished", "verify", verifyConnection, "err", err, "took", time.Since(then))
+	}(time.Now())
+
+	mw.logger.Trace("initialize", "status", "started")
+	return mw.next.Init(ctx, conf, verifyConnection)
 }
 
 func (mw *databaseTracingMiddleware) Close() (err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "Close", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		mw.logger.Trace("close", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "Close", "status", "started", "type", mw.typeStr)
+	mw.logger.Trace("close", "status", "started")
 	return mw.next.Close()
 }
 
@@ -81,7 +100,7 @@ func (mw *databaseMetricsMiddleware) Type() (string, error) {
 	return mw.next.Type()
 }
 
-func (mw *databaseMetricsMiddleware) CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (mw *databaseMetricsMiddleware) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"database", "CreateUser"}, now)
 		metrics.MeasureSince([]string{"database", mw.typeStr, "CreateUser"}, now)
@@ -94,10 +113,10 @@ func (mw *databaseMetricsMiddleware) CreateUser(statements Statements, usernameP
 
 	metrics.IncrCounter([]string{"database", "CreateUser"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "CreateUser"}, 1)
-	return mw.next.CreateUser(statements, usernamePrefix, expiration)
+	return mw.next.CreateUser(ctx, statements, usernameConfig, expiration)
 }
 
-func (mw *databaseMetricsMiddleware) RenewUser(statements Statements, username string, expiration time.Time) (err error) {
+func (mw *databaseMetricsMiddleware) RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) (err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"database", "RenewUser"}, now)
 		metrics.MeasureSince([]string{"database", mw.typeStr, "RenewUser"}, now)
@@ -110,10 +129,10 @@ func (mw *databaseMetricsMiddleware) RenewUser(statements Statements, username s
 
 	metrics.IncrCounter([]string{"database", "RenewUser"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "RenewUser"}, 1)
-	return mw.next.RenewUser(statements, username, expiration)
+	return mw.next.RenewUser(ctx, statements, username, expiration)
 }
 
-func (mw *databaseMetricsMiddleware) RevokeUser(statements Statements, username string) (err error) {
+func (mw *databaseMetricsMiddleware) RevokeUser(ctx context.Context, statements Statements, username string) (err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"database", "RevokeUser"}, now)
 		metrics.MeasureSince([]string{"database", mw.typeStr, "RevokeUser"}, now)
@@ -126,10 +145,31 @@ func (mw *databaseMetricsMiddleware) RevokeUser(statements Statements, username 
 
 	metrics.IncrCounter([]string{"database", "RevokeUser"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "RevokeUser"}, 1)
-	return mw.next.RevokeUser(statements, username)
+	return mw.next.RevokeUser(ctx, statements, username)
 }
 
-func (mw *databaseMetricsMiddleware) Initialize(conf map[string]interface{}, verifyConnection bool) (err error) {
+func (mw *databaseMetricsMiddleware) RotateRootCredentials(ctx context.Context, statements []string) (conf map[string]interface{}, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"database", "RotateRootCredentials"}, now)
+		metrics.MeasureSince([]string{"database", mw.typeStr, "RotateRootCredentials"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"database", "RotateRootCredentials", "error"}, 1)
+			metrics.IncrCounter([]string{"database", mw.typeStr, "RotateRootCredentials", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"database", "RotateRootCredentials"}, 1)
+	metrics.IncrCounter([]string{"database", mw.typeStr, "RotateRootCredentials"}, 1)
+	return mw.next.RotateRootCredentials(ctx, statements)
+}
+
+func (mw *databaseMetricsMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
+	_, err := mw.Init(ctx, conf, verifyConnection)
+	return err
+}
+
+func (mw *databaseMetricsMiddleware) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"database", "Initialize"}, now)
 		metrics.MeasureSince([]string{"database", mw.typeStr, "Initialize"}, now)
@@ -142,7 +182,7 @@ func (mw *databaseMetricsMiddleware) Initialize(conf map[string]interface{}, ver
 
 	metrics.IncrCounter([]string{"database", "Initialize"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "Initialize"}, 1)
-	return mw.next.Initialize(conf, verifyConnection)
+	return mw.next.Init(ctx, conf, verifyConnection)
 }
 
 func (mw *databaseMetricsMiddleware) Close() (err error) {
@@ -159,4 +199,77 @@ func (mw *databaseMetricsMiddleware) Close() (err error) {
 	metrics.IncrCounter([]string{"database", "Close"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "Close"}, 1)
 	return mw.next.Close()
+}
+
+// ---- Error Sanitizer Middleware Domain ----
+
+// DatabaseErrorSanitizerMiddleware wraps an implementation of Databases and
+// sanitizes returned error messages
+type DatabaseErrorSanitizerMiddleware struct {
+	l         sync.RWMutex
+	next      Database
+	secretsFn func() map[string]interface{}
+}
+
+func NewDatabaseErrorSanitizerMiddleware(next Database, secretsFn func() map[string]interface{}) *DatabaseErrorSanitizerMiddleware {
+	return &DatabaseErrorSanitizerMiddleware{
+		next:      next,
+		secretsFn: secretsFn,
+	}
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) Type() (string, error) {
+	dbType, err := mw.next.Type()
+	return dbType, mw.sanitize(err)
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
+	username, password, err = mw.next.CreateUser(ctx, statements, usernameConfig, expiration)
+	return username, password, mw.sanitize(err)
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) (err error) {
+	return mw.sanitize(mw.next.RenewUser(ctx, statements, username, expiration))
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) RevokeUser(ctx context.Context, statements Statements, username string) (err error) {
+	return mw.sanitize(mw.next.RevokeUser(ctx, statements, username))
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) RotateRootCredentials(ctx context.Context, statements []string) (conf map[string]interface{}, err error) {
+	conf, err = mw.next.RotateRootCredentials(ctx, statements)
+	return conf, mw.sanitize(err)
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
+	_, err := mw.Init(ctx, conf, verifyConnection)
+	return err
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
+	saveConf, err = mw.next.Init(ctx, conf, verifyConnection)
+	return saveConf, mw.sanitize(err)
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) Close() (err error) {
+	return mw.sanitize(mw.next.Close())
+}
+
+// sanitize
+func (mw *DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errwrap.ContainsType(err, new(url.Error)) {
+		return errors.New("unable to parse connection url")
+	}
+	if mw.secretsFn != nil {
+		for k, v := range mw.secretsFn() {
+			if k == "" {
+				continue
+			}
+			err = errors.New(strings.Replace(err.Error(), k, v.(string), -1))
+		}
+	}
+	return err
 }

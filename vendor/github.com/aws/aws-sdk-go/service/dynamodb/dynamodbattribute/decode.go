@@ -16,7 +16,7 @@ import (
 // 			Value int
 // 		}
 //
-// 		type (u *exampleUnmarshaler) UnmarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) error {
+// 		func (u *exampleUnmarshaler) UnmarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) error {
 // 			if av.N == nil {
 // 				return nil
 // 			}
@@ -153,6 +153,7 @@ var stringInterfaceMapType = reflect.TypeOf(map[string]interface{}(nil))
 var byteSliceType = reflect.TypeOf([]byte(nil))
 var byteSliceSlicetype = reflect.TypeOf([][]byte(nil))
 var numberType = reflect.TypeOf(Number(""))
+var timeType = reflect.TypeOf(time.Time{})
 
 func (d *Decoder) decode(av *dynamodb.AttributeValue, v reflect.Value, fieldTag tag) error {
 	var u Unmarshaler
@@ -201,7 +202,7 @@ func (d *Decoder) decodeBinary(b []byte, v reflect.Value) error {
 		return nil
 	}
 
-	if v.Kind() != reflect.Slice {
+	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
 		return &UnmarshalTypeError{Value: "binary", Type: v.Type()}
 	}
 
@@ -219,7 +220,7 @@ func (d *Decoder) decodeBinary(b []byte, v reflect.Value) error {
 	switch v.Type().Elem().Kind() {
 	case reflect.Uint8:
 		// Fallback to reflection copy for type aliased of []byte type
-		if v.IsNil() || v.Cap() < len(b) {
+		if v.Kind() != reflect.Array && (v.IsNil() || v.Cap() < len(b)) {
 			v.Set(reflect.MakeSlice(v.Type(), len(b), len(b)))
 		} else if v.Len() != len(b) {
 			v.SetLen(len(b))
@@ -228,10 +229,17 @@ func (d *Decoder) decodeBinary(b []byte, v reflect.Value) error {
 			v.Index(i).SetUint(uint64(b[i]))
 		}
 	default:
-		if v.Kind() == reflect.Array && v.Type().Elem().Kind() == reflect.Uint8 {
-			reflect.Copy(v, reflect.ValueOf(b))
+		if v.Kind() == reflect.Array {
+			switch v.Type().Elem().Kind() {
+			case reflect.Uint8:
+				reflect.Copy(v, reflect.ValueOf(b))
+			default:
+				return &UnmarshalTypeError{Value: "binary", Type: v.Type()}
+			}
+
 			break
 		}
+
 		return &UnmarshalTypeError{Value: "binary", Type: v.Type()}
 	}
 
@@ -250,6 +258,8 @@ func (d *Decoder) decodeBool(b *bool, v reflect.Value) error {
 }
 
 func (d *Decoder) decodeBinarySet(bs [][]byte, v reflect.Value) error {
+	isArray := false
+
 	switch v.Kind() {
 	case reflect.Slice:
 		// Make room for the slice elements if needed
@@ -259,6 +269,7 @@ func (d *Decoder) decodeBinarySet(bs [][]byte, v reflect.Value) error {
 		}
 	case reflect.Array:
 		// Limited to capacity of existing array.
+		isArray = true
 	case reflect.Interface:
 		set := make([][]byte, len(bs))
 		for i, b := range bs {
@@ -273,7 +284,9 @@ func (d *Decoder) decodeBinarySet(bs [][]byte, v reflect.Value) error {
 	}
 
 	for i := 0; i < v.Cap() && i < len(bs); i++ {
-		v.SetLen(i + 1)
+		if !isArray {
+			v.SetLen(i + 1)
+		}
 		u, elem := indirect(v.Index(i), false)
 		if u != nil {
 			return u.UnmarshalDynamoDBAttributeValue(&dynamodb.AttributeValue{BS: bs})
@@ -338,12 +351,12 @@ func (d *Decoder) decodeNumber(n *string, v reflect.Value, fieldTag tag) error {
 		}
 		v.SetFloat(i)
 	default:
-		if _, ok := v.Interface().(time.Time); ok && fieldTag.AsUnixTime {
+		if v.Type().ConvertibleTo(timeType) && fieldTag.AsUnixTime {
 			t, err := decodeUnixTime(*n)
 			if err != nil {
 				return err
 			}
-			v.Set(reflect.ValueOf(t))
+			v.Set(reflect.ValueOf(t).Convert(v.Type()))
 			return nil
 		}
 		return &UnmarshalTypeError{Value: "number", Type: v.Type()}
@@ -362,6 +375,8 @@ func (d *Decoder) decodeNumberToInterface(n *string) (interface{}, error) {
 }
 
 func (d *Decoder) decodeNumberSet(ns []*string, v reflect.Value) error {
+	isArray := false
+
 	switch v.Kind() {
 	case reflect.Slice:
 		// Make room for the slice elements if needed
@@ -371,6 +386,7 @@ func (d *Decoder) decodeNumberSet(ns []*string, v reflect.Value) error {
 		}
 	case reflect.Array:
 		// Limited to capacity of existing array.
+		isArray = true
 	case reflect.Interface:
 		if d.UseNumber {
 			set := make([]Number, len(ns))
@@ -395,7 +411,9 @@ func (d *Decoder) decodeNumberSet(ns []*string, v reflect.Value) error {
 	}
 
 	for i := 0; i < v.Cap() && i < len(ns); i++ {
-		v.SetLen(i + 1)
+		if !isArray {
+			v.SetLen(i + 1)
+		}
 		u, elem := indirect(v.Index(i), false)
 		if u != nil {
 			return u.UnmarshalDynamoDBAttributeValue(&dynamodb.AttributeValue{NS: ns})
@@ -409,6 +427,8 @@ func (d *Decoder) decodeNumberSet(ns []*string, v reflect.Value) error {
 }
 
 func (d *Decoder) decodeList(avList []*dynamodb.AttributeValue, v reflect.Value) error {
+	isArray := false
+
 	switch v.Kind() {
 	case reflect.Slice:
 		// Make room for the slice elements if needed
@@ -418,6 +438,7 @@ func (d *Decoder) decodeList(avList []*dynamodb.AttributeValue, v reflect.Value)
 		}
 	case reflect.Array:
 		// Limited to capacity of existing array.
+		isArray = true
 	case reflect.Interface:
 		s := make([]interface{}, len(avList))
 		for i, av := range avList {
@@ -433,7 +454,10 @@ func (d *Decoder) decodeList(avList []*dynamodb.AttributeValue, v reflect.Value)
 
 	// If v is not a slice, array
 	for i := 0; i < v.Cap() && i < len(avList); i++ {
-		v.SetLen(i + 1)
+		if !isArray {
+			v.SetLen(i + 1)
+		}
+
 		if err := d.decode(avList[i], v.Index(i), tag{}); err != nil {
 			return err
 		}
@@ -502,12 +526,12 @@ func (d *Decoder) decodeString(s *string, v reflect.Value, fieldTag tag) error {
 
 	// To maintain backwards compatibility with ConvertFrom family of methods which
 	// converted strings to time.Time structs
-	if _, ok := v.Interface().(time.Time); ok {
+	if v.Type().ConvertibleTo(timeType) {
 		t, err := time.Parse(time.RFC3339, *s)
 		if err != nil {
 			return err
 		}
-		v.Set(reflect.ValueOf(t))
+		v.Set(reflect.ValueOf(t).Convert(v.Type()))
 		return nil
 	}
 
@@ -525,6 +549,8 @@ func (d *Decoder) decodeString(s *string, v reflect.Value, fieldTag tag) error {
 }
 
 func (d *Decoder) decodeStringSet(ss []*string, v reflect.Value) error {
+	isArray := false
+
 	switch v.Kind() {
 	case reflect.Slice:
 		// Make room for the slice elements if needed
@@ -533,6 +559,7 @@ func (d *Decoder) decodeStringSet(ss []*string, v reflect.Value) error {
 		}
 	case reflect.Array:
 		// Limited to capacity of existing array.
+		isArray = true
 	case reflect.Interface:
 		set := make([]string, len(ss))
 		for i, s := range ss {
@@ -547,7 +574,9 @@ func (d *Decoder) decodeStringSet(ss []*string, v reflect.Value) error {
 	}
 
 	for i := 0; i < v.Cap() && i < len(ss); i++ {
-		v.SetLen(i + 1)
+		if !isArray {
+			v.SetLen(i + 1)
+		}
 		u, elem := indirect(v.Index(i), false)
 		if u != nil {
 			return u.UnmarshalDynamoDBAttributeValue(&dynamodb.AttributeValue{SS: ss})
@@ -564,7 +593,7 @@ func decodeUnixTime(n string) (time.Time, error) {
 	v, err := strconv.ParseInt(n, 10, 64)
 	if err != nil {
 		return time.Time{}, &UnmarshalError{
-			Err: err, Value: n, Type: reflect.TypeOf(time.Time{}),
+			Err: err, Value: n, Type: timeType,
 		}
 	}
 

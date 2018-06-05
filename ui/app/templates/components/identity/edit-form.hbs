@@ -1,0 +1,48 @@
+<form {{action (perform save) on="submit"}}>
+  {{message-error model=model}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    {{#if (eq mode "merge")}}
+      {{#message-in-page type="warning"}}
+        Metadata on merged entities is not preserved, you will need to recreate it on the entity you merge to.
+      {{/message-in-page}}
+    {{/if}}
+    {{#each model.fields as |attr|}}
+      {{form-field data-test-field attr=attr model=model}}
+    {{/each}}
+  </div>
+
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <div class="field is-grouped">
+      <div class="control">
+        <button type="submit" data-test-identity-submit=true class="button is-primary {{if save.isRunning 'loading'}}" disabled={{save.isRunning}}>
+          {{#if (eq mode "create")}}
+            Create
+          {{else}}
+            Save
+          {{/if}}
+        </button>
+        {{#if (or (eq mode "merge") (eq mode "create" ))}}
+          <a href={{href-to cancelLink}} class="button" data-test-cancel-link>
+            Cancel
+          </a>
+        {{else}}
+          <a href={{href-to cancelLink model.id "details"}} class="button" data-test-cancel-link>
+            Cancel
+          </a>
+        {{/if}}
+      </div>
+    </div>
+
+      {{#if (and (eq mode "edit") model.canDelete)}}
+        {{#confirm-action
+          buttonClasses="button is-ghost"
+          onConfirmAction=(action "deleteItem" model)
+          confirmMessage=(concat "Are you sure you want to delete " model.id "?")
+          data-test-entity-item-delete=true
+        }}
+            Delete
+        {{/confirm-action}}
+      {{/if}}
+    
+  </div>
+</form>

@@ -1,0 +1,29 @@
+.ember-application > .ember-view {
+  display: flex;
+  flex-direction: column;
+}
+.page-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.section {
+  display: flex;
+  flex-grow: 1;
+  flex-direction: column;
+  padding-top: 0;
+  padding-bottom: 0;
+
+  > .container {
+    display: flex;
+    flex-grow: 1;
+    flex-direction: column;
+    width: 100%;
+
+    > .columns {
+      flex-grow: 1;
+    }
+  }
+}

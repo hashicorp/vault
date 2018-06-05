@@ -61,8 +61,13 @@ func (s *RepositoriesService) GetPagesInfo(ctx context.Context, owner, repo stri
 // ListPagesBuilds lists the builds for a GitHub Pages site.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/pages/#list-pages-builds
-func (s *RepositoriesService) ListPagesBuilds(ctx context.Context, owner, repo string) ([]*PagesBuild, *Response, error) {
+func (s *RepositoriesService) ListPagesBuilds(ctx context.Context, owner, repo string, opt *ListOptions) ([]*PagesBuild, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pages/builds", owner, repo)
+	u, err := addOptions(u, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, nil, err
@@ -99,7 +104,7 @@ func (s *RepositoriesService) GetLatestPagesBuild(ctx context.Context, owner, re
 // GetPageBuild fetches the specific build information for a GitHub pages site.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/pages/#list-a-specific-pages-build
-func (s *RepositoriesService) GetPageBuild(ctx context.Context, owner, repo string, id int) (*PagesBuild, *Response, error) {
+func (s *RepositoriesService) GetPageBuild(ctx context.Context, owner, repo string, id int64) (*PagesBuild, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pages/builds/%v", owner, repo, id)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {

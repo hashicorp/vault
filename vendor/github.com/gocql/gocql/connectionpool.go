@@ -132,7 +132,7 @@ func (p *policyConnPool) SetHosts(hosts []*HostInfo) {
 			// don't create a connection pool for a down host
 			continue
 		}
-		ip := host.Peer().String()
+		ip := host.ConnectAddress().String()
 		if _, exists := p.hostConnPools[ip]; exists {
 			// still have this host, so don't remove it
 			delete(toRemove, ip)
@@ -158,7 +158,7 @@ func (p *policyConnPool) SetHosts(hosts []*HostInfo) {
 		createCount--
 		if pool.Size() > 0 {
 			// add pool only if there a connections available
-			p.hostConnPools[string(pool.host.Peer())] = pool
+			p.hostConnPools[string(pool.host.ConnectAddress())] = pool
 		}
 	}
 
@@ -181,7 +181,7 @@ func (p *policyConnPool) Size() int {
 }
 
 func (p *policyConnPool) getPool(host *HostInfo) (pool *hostConnPool, ok bool) {
-	ip := host.Peer().String()
+	ip := host.ConnectAddress().String()
 	p.mu.RLock()
 	pool, ok = p.hostConnPools[ip]
 	p.mu.RUnlock()
@@ -200,7 +200,7 @@ func (p *policyConnPool) Close() {
 }
 
 func (p *policyConnPool) addHost(host *HostInfo) {
-	ip := host.Peer().String()
+	ip := host.ConnectAddress().String()
 	p.mu.Lock()
 	pool, ok := p.hostConnPools[ip]
 	if !ok {
@@ -278,7 +278,7 @@ func newHostConnPool(session *Session, host *HostInfo, port, size int,
 		session:  session,
 		host:     host,
 		port:     port,
-		addr:     (&net.TCPAddr{IP: host.Peer(), Port: host.Port()}).String(),
+		addr:     (&net.TCPAddr{IP: host.ConnectAddress(), Port: host.Port()}).String(),
 		size:     size,
 		keyspace: keyspace,
 		conns:    make([]*Conn, 0, size),
@@ -339,14 +339,32 @@ func (pool *hostConnPool) Size() int {
 //Close the connection pool
 func (pool *hostConnPool) Close() {
 	pool.mu.Lock()
-	defer pool.mu.Unlock()
 
 	if pool.closed {
+		pool.mu.Unlock()
 		return
 	}
 	pool.closed = true
 
-	pool.drainLocked()
+	// ensure we dont try to reacquire the lock in handleError
+	// TODO: improve this as the following can happen
+	// 1) we have locked pool.mu write lock
+	// 2) conn.Close calls conn.closeWithError(nil)
+	// 3) conn.closeWithError calls conn.Close() which returns an error
+	// 4) conn.closeWithError calls pool.HandleError with the error from conn.Close
+	// 5) pool.HandleError tries to lock pool.mu
+	// deadlock
+
+	// empty the pool
+	conns := pool.conns
+	pool.conns = nil
+
+	pool.mu.Unlock()
+
+	// close the connections
+	for _, conn := range conns {
+		conn.Close()
+	}
 }
 
 // Fill the connection pool
@@ -402,7 +420,7 @@ func (pool *hostConnPool) fill() {
 
 			// this is call with the connection pool mutex held, this call will
 			// then recursively try to lock it again. FIXME
-			go pool.session.handleNodeDown(pool.host.Peer(), pool.port)
+			go pool.session.handleNodeDown(pool.host.ConnectAddress(), pool.port)
 			return
 		}
 
@@ -424,7 +442,7 @@ func (pool *hostConnPool) logConnectErr(err error) {
 		// connection refused
 		// these are typical during a node outage so avoid log spam.
 		if gocqlDebug {
-			Logger.Printf("unable to dial %q: %v\n", pool.host.Peer(), err)
+			Logger.Printf("unable to dial %q: %v\n", pool.host.ConnectAddress(), err)
 		}
 	} else if err != nil {
 		// unexpected error
@@ -550,22 +568,4 @@ func (pool *hostConnPool) HandleError(conn *Conn, err error, closed bool) {
 			break
 		}
 	}
-}
-
-func (pool *hostConnPool) drainLocked() {
-	// empty the pool
-	conns := pool.conns
-	pool.conns = nil
-
-	// close the connections
-	for _, conn := range conns {
-		conn.Close()
-	}
-}
-
-// removes and closes all connections from the pool
-func (pool *hostConnPool) drain() {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-	pool.drainLocked()
 }

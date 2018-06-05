@@ -6,136 +6,148 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/kv-builder"
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
+
+var _ cli.Command = (*WriteCommand)(nil)
+var _ cli.CommandAutocomplete = (*WriteCommand)(nil)
 
 // WriteCommand is a Command that puts data into the Vault.
 type WriteCommand struct {
-	meta.Meta
+	*BaseCommand
 
-	// The fields below can be overwritten for tests
-	testStdin io.Reader
+	flagForce bool
+
+	testStdin io.Reader // for tests
+}
+
+func (c *WriteCommand) Synopsis() string {
+	return "Write data, configuration, and secrets"
+}
+
+func (c *WriteCommand) Help() string {
+	helpText := `
+Usage: vault write [options] PATH [DATA K=V...]
+
+  Writes data to Vault at the given path. The data can be credentials, secrets,
+  configuration, or arbitrary data. The specific behavior of this command is
+  determined at the thing mounted at the path.
+
+  Data is specified as "key=value" pairs. If the value begins with an "@", then
+  it is loaded from a file. If the value is "-", Vault will read the value from
+  stdin.
+
+  Persist data in the generic secrets engine:
+
+      $ vault write secret/my-secret foo=bar
+
+  Create a new encryption key in the transit secrets engine:
+
+      $ vault write -f transit/keys/my-key
+
+  Upload an AWS IAM policy from a file on disk:
+
+      $ vault write aws/roles/ops policy=@policy.json
+
+  Configure access to Consul by providing an access token:
+
+      $ echo $MY_TOKEN | vault write consul/config/access token=-
+
+  For a full list of examples and paths, please see the documentation that
+  corresponds to the secret engines in use.
+
+` + c.Flags().Help()
+
+	return strings.TrimSpace(helpText)
+}
+
+func (c *WriteCommand) Flags() *FlagSets {
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	f := set.NewFlagSet("Command Options")
+
+	f.BoolVar(&BoolVar{
+		Name:       "force",
+		Aliases:    []string{"f"},
+		Target:     &c.flagForce,
+		Default:    false,
+		EnvVar:     "",
+		Completion: complete.PredictNothing,
+		Usage: "Allow the operation to continue with no key=value pairs. This " +
+			"allows writing to keys that do not need or expect data.",
+	})
+
+	return set
+}
+
+func (c *WriteCommand) AutocompleteArgs() complete.Predictor {
+	// Return an anything predictor here. Without a way to access help
+	// information, we don't know what paths we could write to.
+	return complete.PredictAnything
+}
+
+func (c *WriteCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
 }
 
 func (c *WriteCommand) Run(args []string) int {
-	var field, format string
-	var force bool
-	flags := c.Meta.FlagSet("write", meta.FlagSetDefault)
-	flags.StringVar(&format, "format", "table", "")
-	flags.StringVar(&field, "field", "", "")
-	flags.BoolVar(&force, "force", false, "")
-	flags.BoolVar(&force, "f", false, "")
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
 		return 1
 	}
 
-	args = flags.Args()
-	if len(args) < 1 {
-		c.Ui.Error("write requires a path")
-		flags.Usage()
+	args = f.Args()
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		return 1
+	case len(args) == 1 && !c.flagForce:
+		c.UI.Error("Must supply data or use -force")
 		return 1
 	}
 
-	if len(args) < 2 && !force {
-		c.Ui.Error("write expects at least two arguments; use -f to perform the write anyways")
-		flags.Usage()
-		return 1
+	// Pull our fake stdin if needed
+	stdin := (io.Reader)(os.Stdin)
+	if c.testStdin != nil {
+		stdin = c.testStdin
 	}
 
-	path := args[0]
-	if path[0] == '/' {
-		path = path[1:]
-	}
+	path := sanitizePath(args[0])
 
-	data, err := c.parseData(args[1:])
+	data, err := parseArgsData(stdin, args[1:])
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error loading data: %s", err))
+		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
 		return 1
 	}
 
 	client, err := c.Client()
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
+		c.UI.Error(err.Error())
 		return 2
 	}
 
 	secret, err := client.Logical().Write(path, data)
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error writing data to %s: %s", path, err))
-		return 1
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
+		if secret != nil {
+			OutputSecret(c.UI, secret)
+		}
+		return 2
 	}
-
 	if secret == nil {
-		// Don't output anything if people aren't using the "human" output
-		if format == "table" {
-			c.Ui.Output(fmt.Sprintf("Success! Data written to: %s", path))
+		// Don't output anything unless using the "table" format
+		if Format(c.UI) == "table" {
+			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
 		}
 		return 0
 	}
 
 	// Handle single field output
-	if field != "" {
-		return PrintRawField(c.Ui, secret, field)
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
 	}
 
-	return OutputSecret(c.Ui, format, secret)
-}
-
-func (c *WriteCommand) parseData(args []string) (map[string]interface{}, error) {
-	var stdin io.Reader = os.Stdin
-	if c.testStdin != nil {
-		stdin = c.testStdin
-	}
-
-	builder := &kvbuilder.Builder{Stdin: stdin}
-	if err := builder.Add(args...); err != nil {
-		return nil, err
-	}
-
-	return builder.Map(), nil
-}
-
-func (c *WriteCommand) Synopsis() string {
-	return "Write secrets or configuration into Vault"
-}
-
-func (c *WriteCommand) Help() string {
-	helpText := `
-Usage: vault write [options] path [data]
-
-  Write data (secrets or configuration) into Vault.
-
-  Write sends data into Vault at the given path. The behavior of the write is
-  determined by the backend at the given path. For example, writing to
-  "aws/policy/ops" will create an "ops" IAM policy for the AWS backend
-  (configuration), but writing to "consul/foo" will write a value directly into
-  Consul at that key. Check the documentation of the logical backend you're
-  using for more information on key structure.
-
-  Data is sent via additional arguments in "key=value" pairs. If value begins
-  with an "@", then it is loaded from a file. Write expects data in the file to
-  be in JSON format. If you want to start the value with a literal "@", then
-  prefix the "@" with a slash: "\@".
-
-General Options:
-` + meta.GeneralOptionsUsage() + `
-Write Options:
-
-  -f | -force             Force the write to continue without any data values
-                          specified. This allows writing to keys that do not
-                          need or expect any fields to be specified.
-
-  -format=table           The format for output. By default it is a whitespace-
-                          delimited table. This can also be json or yaml.
-
-  -field=field            If included, the raw value of the specified field
-                          will be output raw to stdout.
-
-`
-	return strings.TrimSpace(helpText)
+	return OutputSecret(c.UI, secret)
 }

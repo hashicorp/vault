@@ -1,0 +1,151 @@
+<div class="page-container">
+  {{#if showNav}}
+  <header data-test-header-with-nav class="{{if consoleOpen 'panel-open'}} {{if consoleFullscreen ' panel-fullscreen'}}">
+      <nav class="navbar has-dark-grey-gradient is-grouped-split">
+        <div class="navbar-brand">
+          {{#home-link class="navbar-item has-text-white has-current-color-fill"}}
+            {{partial 'svg/vault-logo'}}
+          {{/home-link}}
+        </div>
+        <div class="navbar-end is-divider-list is-flex">
+          <div class="navbar-item">
+            <button type="button" class="button is-transparent" {{action 'toggleConsole'}} data-test-console-toggle>
+              {{#if consoleOpen}}
+                {{i-con glyph="console-active" size=24}}
+                {{i-con glyph="chevron-up" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
+              {{else}}
+                {{i-con glyph="console" size=24}}
+                {{i-con glyph="chevron-down" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
+              {{/if}}
+            </button>
+          </div>
+          <div class="navbar-item">
+            {{status-menu}}
+          </div>
+          <div class="navbar-item">
+            {{status-menu type="user"}}
+          </div>
+        </div>
+      </nav>
+      <ul class="navbar-sections tabs tabs-subnav">
+        <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
+          <a href="{{href-to "vault.cluster.secrets" activeClusterName}}">
+            Secrets
+          </a>
+        </li>
+        <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
+          <a href="{{href-to "vault.cluster.access" activeClusterName}}">
+            Access
+          </a>
+        </li>
+        <li class="{{if (is-active-route 'vault.cluster.replication') 'is-active'}}">
+          {{#if activeCluster.anyReplicationEnabled}}
+            {{status-menu type="replication"}}
+          {{else}}
+            <a href="{{href-to "vault.cluster.replication" activeClusterName}}">
+              Replication
+              {{#if (is-version "OSS")}}
+                {{edition-badge edition="Enterprise"}}
+              {{/if}}
+            </a>
+          {{/if}}
+        </li>
+        <li class="{{if (is-active-route (array 'vault.cluster.policies' 'vault.cluster.policy')) 'is-active'}}">
+          <a href="{{href-to "vault.cluster.policies" "acl" current-when='vault.cluster.policies vault.cluster.policy'}}">
+            Policies
+          </a>
+        </li>
+        <li class="{{if (is-active-route 'vault.cluster.tools') 'is-active'}}">
+          <a href="{{href-to "vault.cluster.tools" activeClusterName}}">
+            Tools
+          </a>
+        </li>
+        <li class="{{if (is-active-route 'vault.cluster.settings') 'is-active'}}">
+          <a href="{{href-to "vault.cluster.settings" activeClusterName}}">
+            Settings
+          </a>
+        </li>
+      </ul>
+      {{console/ui-panel isFullscreen=consoleFullscreen}}
+    </header>
+  {{/if}}
+  <div class="global-flash">
+    {{#each flashMessages.queue as |flash|}}
+      {{#flash-message data-test-flash-message=true flash=flash as |component flash close|}}
+        {{#if flash.componentName}}
+          {{component flash.componentName content=flash.content}}
+        {{else}}
+          <h5 class="title is-5 has-text-{{if (eq flash.type 'warning') 'dark-yellow' flash.type}}">
+            {{get (message-types flash.type) "text"}}
+          </h5>
+          <span data-test-flash-message-body=true>
+            {{flash.message}}
+          </span>
+          <button type="button" class="delete" {{action close}}>
+            {{i-con excludeIconClass=true glyph="close" aria-label="Close"}}
+          </button>
+        {{/if}}
+      {{/flash-message}}
+    {{/each}}
+  </div>
+  {{#if showNav}}
+    <section class="section">
+      <div class="container is-widescreen">
+        {{component
+          (if
+            (or
+              (is-after (now interval=1000) auth.tokenExpirationDate)
+              (and activeClusterName auth.currentToken)
+            )
+            'token-expire-warning'
+            null
+          )
+        }}
+        {{#unless (and
+            activeClusterName
+            auth.currentToken
+            (is-after (now interval=1000) auth.tokenExpirationDate)
+          )
+        }}
+          {{outlet}}
+        {{/unless}}
+      </div>
+    </section>
+  {{else}}
+    {{outlet}}
+  {{/if}}
+
+  <footer class="footer has-text-grey">
+    <div class="level">
+      <div class="level-item is-size-7 has-text-centered">
+        <span class="has-text-grey-light">
+          {{i-con glyph="hashicorp" size=18 aria-label="HashiCorp logo" }}
+        </span>
+        <span class="is-inline-block">
+          &copy; {{moment-format (now) "Y"}} HashiCorp, Inc.
+        </span>
+        <span>
+          Vault {{activeCluster.leaderNode.version}}
+        </span>
+        {{#if (is-version "OSS")}}
+          <span>
+            {{#upgrade-link linkClass="has-text-grey"}}
+              Upgrade to Vault Enterprise
+            {{/upgrade-link}}
+          </span>
+        {{/if}}
+        <span>
+          <a class="has-text-grey" target="_blank" href="https://www.vaultproject.io/docs/index.html">Documentation</a>
+        </span>
+      </div>
+    </div>
+  </footer>
+  {{#if (eq env "development") }}
+    <div class="env-banner level development">
+      <div class="level-item notification has-background-dark has-text-white">
+        {{i-con glyph="wand" class="type-icon"}}Local Development
+      </div>
+    </div>
+  {{/if}}
+  <div id="modal-wormhole"></div>
+</div>

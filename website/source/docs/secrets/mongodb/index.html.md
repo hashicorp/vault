@@ -1,16 +1,19 @@
 ---
 layout: "docs"
-page_title: "MongoDB Secret Backend"
+page_title: "MongoDB - Secrets Engines"
 sidebar_current: "docs-secrets-mongodb"
 description: |-
-  The mongodb secret backend for Vault generates database credentials to access MongoDB.
+  The mongodb secrets engine for Vault generates database credentials to access MongoDB.
 ---
 
-# MongoDB Secret Backend
+# MongoDB Secrets Engine
 
-Name: `mongodb`
+~> **Deprecation Note:** This secrets engine is deprecated in favor of the
+combined databases secrets engine added in v0.7.1. See the documentation for
+the new implementation of this secrets engine at
+[MongoDB database plugin](/docs/secrets/databases/mongodb.html).
 
-The `mongodb` secret backend for Vault generates MongoDB database credentials
+The `mongodb` secrets engine for Vault generates MongoDB database credentials
 dynamically based on configured roles. This means that services that need
 to access a MongoDB database no longer need to hard-code credentials: they
 can request them from Vault and use Vault's leasing mechanism to more easily
@@ -24,17 +27,17 @@ instance of a service based on the MongoDB username.
 Vault makes use of its own internal revocation system to ensure that users
 become invalid within a reasonable time of the lease expiring.
 
-This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault path-help` after mounting the backend.
+This page will show a quick start for this secrets engine. For detailed documentation
+on every path, use `vault path-help` after mounting the secrets engine.
 
 ## Quick Start
 
-The first step to using the mongodb backend is to mount it.
-Unlike the `generic` backend, the `mongodb` backend is not mounted by default.
+The first step to using the mongodb secrets engine is to mount it. Unlike the
+`kv` secrets engine, the `mongodb` secrets engine is not mounted by default.
 
 ```
-$ vault mount mongodb
-Successfully mounted 'mongodb' at 'mongodb'!
+$ vault secrets enable mongodb
+Success! Enabled the mongodb secrets engine at: mongodb/
 ```
 
 Next, we must tell Vault how to connect to MongoDB. This is done by providing
@@ -100,26 +103,26 @@ the credentials path for that role:
 
 ```
 $ vault read mongodb/creds/readonly
-Key            	Value
----            	-----
-lease_id       	mongodb/creds/readonly/91685212-3040-7dde-48b1-df997c5dc8e7
-lease_duration 	3600
-lease_renewable	true
-db             	foo
-password       	c3faa86d-0f93-9649-de91-c431765e62dd
-username       	vault-token-48729def-b0ca-2b17-d7b9-3ca7cb86f0ae
+Key                Value
+---                -----
+lease_id           mongodb/creds/readonly/91685212-3040-7dde-48b1-df997c5dc8e7
+lease_duration     3600
+lease_renewable    true
+db                 foo
+password           c3faa86d-0f93-9649-de91-c431765e62dd
+username           vault-token-48729def-b0ca-2b17-d7b9-3ca7cb86f0ae
 ```
 
 By reading from the `creds/readonly` path, Vault has generated a new set of
 credentials using the `readonly` role configuration. Here we see the
 dynamically generated username and password, along with a one hour lease.
 
-Using ACLs, it is possible to restrict using the `mongodb` backend such that
+Using ACLs, it is possible to restrict using the `mongodb` secrets engine such that
 trusted operators can manage the role definitions, and both users and
 applications are restricted in the credentials they are allowed to read.
 
 ## API
 
-The MongoDB secret backend has a full HTTP API. Please see the
-[MongoDB secret backend API](/api/secret/mongodb/index.html) for more
+The MongoDB secrets engine has a full HTTP API. Please see the
+[MongoDB secrets engine API](/api/secret/mongodb/index.html) for more
 details.

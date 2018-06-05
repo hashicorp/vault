@@ -1,9 +1,11 @@
 package totp
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	otplib "github.com/pquerna/otp"
@@ -34,12 +36,11 @@ func pathCode(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathReadCode(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathReadCode(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
 	// Get the key
-	key, err := b.Key(req.Storage, name)
+	key, err := b.Key(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -65,8 +66,7 @@ func (b *backend) pathReadCode(
 	}, nil
 }
 
-func (b *backend) pathValidateCode(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathValidateCode(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	code := data.Get("code").(string)
 
@@ -76,12 +76,19 @@ func (b *backend) pathValidateCode(
 	}
 
 	// Get the key's stored values
-	key, err := b.Key(req.Storage, name)
+	key, err := b.Key(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
 	if key == nil {
 		return logical.ErrorResponse(fmt.Sprintf("unknown key: %s", name)), nil
+	}
+
+	usedName := fmt.Sprintf("%s_%s", name, code)
+
+	_, ok := b.usedCodes.Get(usedName)
+	if ok {
+		return logical.ErrorResponse("code already used; wait until the next time period"), nil
 	}
 
 	valid, err := totplib.ValidateCustom(code, key.Key, time.Now(), totplib.ValidateOpts{
@@ -92,6 +99,16 @@ func (b *backend) pathValidateCode(
 	})
 	if err != nil && err != otplib.ErrValidateInputInvalidLength {
 		return logical.ErrorResponse("an error occured while validating the code"), err
+	}
+
+	// Take the key skew, add two for behind and in front, and multiple that by
+	// the period to cover the full possibility of the validity of the key
+	err = b.usedCodes.Add(usedName, nil, time.Duration(
+		int64(time.Second)*
+			int64(key.Period)*
+			int64((2+key.Skew))))
+	if err != nil {
+		return nil, errwrap.Wrapf("error adding code to used cache: {{err}}", err)
 	}
 
 	return &logical.Response{

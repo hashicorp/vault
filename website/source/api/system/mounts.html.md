@@ -3,16 +3,16 @@ layout: "api"
 page_title: "/sys/mounts - HTTP API"
 sidebar_current: "docs-http-system-mounts"
 description: |-
-  The `/sys/mounts` endpoint is used manage secret backends in Vault.
+  The `/sys/mounts` endpoint is used manage secrets engines in Vault.
 ---
 
 # `/sys/mounts`
 
-The `/sys/mounts` endpoint is used manage secret backends in Vault.
+The `/sys/mounts` endpoint is used manage secrets engines in Vault.
 
-## List Mounted Secret Backends
+## List Mounted Secrets Engines
 
-This endpoints lists all the mounted secret backends.
+This endpoints lists all the mounted secrets engines.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -23,7 +23,7 @@ This endpoints lists all the mounted secret backends.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/mounts
+    http://127.0.0.1:8200/v1/sys/mounts
 ```
 
 ### Sample Response
@@ -36,7 +36,9 @@ $ curl \
     "config": {
       "default_lease_ttl": 0,
       "max_lease_ttl": 0,
-      "force_no_cache": false
+      "force_no_cache": false,
+      "plugin_name": "",
+      "seal_wrap": false
     }
   },
   "sys": {
@@ -45,7 +47,9 @@ $ curl \
     "config": {
       "default_lease_ttl": 0,
       "max_lease_ttl": 0,
-      "force_no_cache": false
+      "force_no_cache": false,
+      "plugin_name": "",
+      "seal_wrap": false
     }
   }
 }
@@ -54,9 +58,9 @@ $ curl \
 `default_lease_ttl` or `max_lease_ttl` values of 0 mean that the system defaults
 are used by this backend.
 
-## Mount Secret Backend
+## Enable Secrets Engine
 
-This endpoint mounts a new secret backend at the given path.
+This endpoint enables a new secrets engine at the given path.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -64,7 +68,7 @@ This endpoint mounts a new secret backend at the given path.
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path where the secret backend
+- `path` `(string: <required>)` – Specifies the path where the secrets engine
   will be mounted. This is specified as part of the URL.
 
 - `type` `(string: <required>)` – Specifies the type of the backend, such as
@@ -74,22 +78,61 @@ This endpoint mounts a new secret backend at the given path.
   mount.
 
 - `config` `(map<string|string>: nil)` – Specifies configuration options for
-  this mount. This is an object with three possible values:
+  this mount. This is an object with four possible values:
 
-    - `default_lease_ttl`
-    - `max_lease_ttl`
-    - `force_no_cache`
+  - `default_lease_ttl` `(string: "")` - The default lease duration, specified
+     as a string duration like "5s" or "30m".
 
-    These control the default and maximum lease time-to-live, and force
-    disabling backend caching respectively. If set on a specific mount, this
-    overrides the global defaults.
+  - `max_lease_ttl` `(string: "")` - The maximum lease duration, specified as a
+     string duration like "5s" or "30m".
 
-Additionally, the following options are allowed in Vault open-source, but 
+  - `force_no_cache` `(bool: false)` - Disable caching.
+
+  - `plugin_name` `(string: "")` - The name of the plugin in the plugin catalog
+     to use.
+
+  - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
+     that will not be HMAC'd by audit devices in the request data object.
+
+  - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
+     that will not be HMAC'd by audit devices in the response data object.
+
+  - `listing_visibility` `(string: "")` - Speficies whether to show this mount
+     in the UI-specific listing endpoint.
+
+  - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
+     to whitelist and pass from the request to the backend.
+
+    These control the default and maximum lease time-to-live, force
+    disabling backend caching, and option plugin name for plugin backends
+    respectively. The first three options override the global defaults if
+    set on a specific mount. The plugin_name can be provided in the config
+    map or as a top-level option, with the former taking precedence.
+
+    When used with supported seals (`pkcs11`, `awskms`, etc.), `seal_wrap`
+    causes key material for supporting mounts to be wrapped by the seal's
+    encryption capability. This is currently only supported for `transit` and
+    `pki` backends. This is only available in Vault Enterprise.
+
+- `options` `(map<string|string>: nil)` - Specifies mount type specific options
+  that are passed to the backend. 
+  
+    *Key/Value (KV)*  
+    - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
+      KV v2.
+
+- `plugin_name` `(string: "")` – Specifies the name of the plugin to
+  use based from the name in the plugin catalog. Applies only to plugin
+  backends.
+
+Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
-- `local` `(bool: false)` – Specifies if the secret backend is a local mount  
+- `local` `(bool: false)` – Specifies if the secrets engine is a local mount
   only. Local mounts are not replicated nor (if a secondary) removed by
   replication.
+
+- `seal_wrap` `(bool: false)` - Enable seal wrapping for the mount.
 
 ### Sample Payload
 
@@ -108,13 +151,13 @@ relevant functionality is only supported in Vault Enterprise:
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --data payload.json \
-    https://vault.rocks/v1/sys/mounts/my-mount
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount
 ```
 
-## Unmount Secret Backend
+## Disable Secrets Engine
 
-This endpoint un-mounts the mount point specified in the URL.
+This endpoint disables the mount point specified in the URL.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -126,7 +169,7 @@ This endpoint un-mounts the mount point specified in the URL.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/mounts/my-mount
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount
 ```
 
 ## Read Mount Configuration
@@ -144,7 +187,7 @@ be the system default or a mount-specific value.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/mounts/my-mount/tune
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount/tune
 ```
 
 ### Sample Response
@@ -175,6 +218,23 @@ This endpoint tunes configuration parameters for a given mount point.
   overrides the global default. A value of `0` are equivalent and set to the
   system max TTL.
 
+- `description` `(string: "")` – Specifies the description of the mount. This
+  overrides the current stored value, if any.
+
+- `audit_non_hmac_request_keys` `(array: [])` - Specifies the comma-separated
+  list of keys that will not be HMAC'd by audit devices in the request data
+  object.
+
+- `audit_non_hmac_response_keys` `(array: [])` - Specifies the comma-separated
+  list of keys that will not be HMAC'd by audit devices in the response data
+  object.
+
+- `listing_visibility` `(string: "")` - Speficies whether to show this mount
+    in the UI-specific listing endpoint. Valid values are `"unauth"` or `""`.
+
+- `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
+    to whitelist and pass from the request to the backend.
+
 ### Sample Payload
 
 ```json
@@ -190,6 +250,6 @@ This endpoint tunes configuration parameters for a given mount point.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --data payload.json \
-    https://vault.rocks/v1/sys/mounts/my-mount/tune
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount/tune
 ```

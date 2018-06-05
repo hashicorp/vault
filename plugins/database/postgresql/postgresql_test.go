@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
@@ -50,6 +50,7 @@ func preparePostgresTestContainer(t *testing.T) (cleanup func(), retURL string) 
 		if err != nil {
 			return err
 		}
+		defer db.Close()
 		return db.Ping()
 	}); err != nil {
 		t.Fatalf("Could not connect to PostgreSQL docker container: %s", err)
@@ -63,20 +64,17 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
-		"connection_url": connURL,
+		"connection_url":       connURL,
+		"max_open_connections": 5,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*PostgreSQL)
-
-	connProducer := db.ConnectionProducer.(*connutil.SQLConnectionProducer)
-
-	err := db.Initialize(connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if !connProducer.Initialized {
+	if !db.Initialized {
 		t.Fatal("Database should be initalized")
 	}
 
@@ -84,6 +82,18 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	// Test decoding a string value for max_open_connections
+	connectionDetails = map[string]interface{}{
+		"connection_url":       connURL,
+		"max_open_connections": "5",
+	}
+
+	_, err = db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
 }
 
 func TestPostgreSQL_CreateUser(t *testing.T) {
@@ -94,24 +104,28 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*PostgreSQL)
-	err := db.Initialize(connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Test with no configured Creation Statememt
-	_, _, err = db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	// Test with no configured Creation Statement
+	_, _, err = db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConfig, time.Now().Add(time.Minute))
 	if err == nil {
 		t.Fatal("Expected error when no creation statement is provided")
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testPostgresRole,
+		Creation: []string{testPostgresRole},
 	}
 
-	username, password, err := db.CreateUser(statements, "test", time.Now().Add(time.Minute))
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -120,11 +134,14 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	statements.CreationStatements = testPostgresReadOnlyRole
-	username, password, err = db.CreateUser(statements, "test", time.Now().Add(time.Minute))
+	statements.Creation = []string{testPostgresReadOnlyRole}
+	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	// Sleep to make sure we haven't expired if granularity is only down to the second
+	time.Sleep(2 * time.Second)
 
 	if err = testCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
@@ -139,18 +156,22 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*PostgreSQL)
-	err := db.Initialize(connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testPostgresRole,
+		Creation: []string{testPostgresRole},
 	}
 
-	username, password, err := db.CreateUser(statements, "test", time.Now().Add(2*time.Second))
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(2*time.Second))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -159,7 +180,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	err = db.RenewUser(statements, username, time.Now().Add(time.Minute))
+	err = db.RenewUser(context.Background(), statements, username, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -169,6 +190,68 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 
 	if err = testCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+	statements.Renewal = []string{defaultPostgresRenewSQL}
+	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(2*time.Second))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err = testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	err = db.RenewUser(context.Background(), statements, username, time.Now().Add(time.Minute))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Sleep longer than the inital expiration time
+	time.Sleep(2 * time.Second)
+
+	if err = testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+}
+
+func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
+	cleanup, connURL := preparePostgresTestContainer(t)
+	defer cleanup()
+
+	connURL = strings.Replace(connURL, "postgres:secret", `{{username}}:{{password}}`, -1)
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":       connURL,
+		"max_open_connections": 5,
+		"username":             "postgres",
+		"password":             "secret",
+	}
+
+	db := new()
+
+	connProducer := db.SQLConnectionProducer
+
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if !connProducer.Initialized {
+		t.Fatal("Database should be initalized")
+	}
+
+	newConf, err := db.RotateRootCredentials(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if newConf["password"] == "secret" {
+		t.Fatal("password was not updated")
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("err: %s", err)
 	}
 }
 
@@ -180,18 +263,22 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*PostgreSQL)
-	err := db.Initialize(connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testPostgresRole,
+		Creation: []string{testPostgresRole},
 	}
 
-	username, password, err := db.CreateUser(statements, "test", time.Now().Add(2*time.Second))
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(2*time.Second))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -200,8 +287,8 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	// Test default revoke statememts
-	err = db.RevokeUser(statements, username)
+	// Test default revoke statements
+	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -210,7 +297,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 		t.Fatal("Credentials were not revoked")
 	}
 
-	username, password, err = db.CreateUser(statements, "test", time.Now().Add(2*time.Second))
+	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(2*time.Second))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -220,8 +307,8 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 	}
 
 	// Test custom revoke statements
-	statements.RevocationStatements = defaultPostgresRevocationSQL
-	err = db.RevokeUser(statements, username)
+	statements.Revocation = []string{defaultPostgresRevocationSQL}
+	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -232,6 +319,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 }
 
 func testCredsExist(t testing.TB, connURL, username, password string) error {
+	t.Helper()
 	// Log in with the new creds
 	connURL = strings.Replace(connURL, "postgres:secret", fmt.Sprintf("%s:%s", username, password), 1)
 	db, err := sql.Open("postgres", connURL)

@@ -14,7 +14,7 @@ import (
 // and unmarshaled with DynamoDB AttributeValues it will be done so as number
 // instead of string in seconds since January 1, 1970 UTC.
 //
-// This type is useful as an alterntitive to the struct tag `unixtime` when you
+// This type is useful as an alternative to the struct tag `unixtime` when you
 // want to have your time value marshaled as Unix time in seconds intead of
 // the default time.RFC3339.
 //
@@ -57,10 +57,9 @@ func (e *UnixTime) UnmarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) 
 //		type ExampleMarshaler struct {
 //			Value int
 //		}
-//		type (m *ExampleMarshaler) 	MarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) error {
+//		func (m *ExampleMarshaler) 	MarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) error {
 //			n := fmt.Sprintf("%v", m.Value)
 //			av.N = &n
-//
 //			return nil
 //		}
 //
@@ -159,6 +158,8 @@ func Marshal(in interface{}) (*dynamodb.AttributeValue, error) {
 
 // MarshalMap is an alias for Marshal func which marshals Go value
 // type to a map of AttributeValues.
+//
+// This is useful for DynamoDB APIs such as PutItem.
 func MarshalMap(in interface{}) (map[string]*dynamodb.AttributeValue, error) {
 	av, err := NewEncoder().Encode(in)
 	if err != nil || av == nil || av.M == nil {
@@ -284,7 +285,9 @@ func (e *Encoder) encode(av *dynamodb.AttributeValue, v reflect.Value, fieldTag 
 func (e *Encoder) encodeStruct(av *dynamodb.AttributeValue, v reflect.Value, fieldTag tag) error {
 	// To maintain backwards compatibility with ConvertTo family of methods which
 	// converted time.Time structs to strings
-	if t, ok := v.Interface().(time.Time); ok {
+	if v.Type().ConvertibleTo(timeType) {
+		var t time.Time
+		t = v.Convert(timeType).Interface().(time.Time)
 		if fieldTag.AsUnixTime {
 			return UnixTime(t).MarshalDynamoDBAttributeValue(av)
 		}
@@ -359,7 +362,10 @@ func (e *Encoder) encodeMap(av *dynamodb.AttributeValue, v reflect.Value, fieldT
 func (e *Encoder) encodeSlice(av *dynamodb.AttributeValue, v reflect.Value, fieldTag tag) error {
 	switch v.Type().Elem().Kind() {
 	case reflect.Uint8:
-		b := v.Bytes()
+		slice := reflect.MakeSlice(byteSliceType, v.Len(), v.Len())
+		reflect.Copy(slice, v)
+
+		b := slice.Bytes()
 		if len(b) == 0 {
 			encodeNull(av)
 			return nil

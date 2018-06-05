@@ -1,0 +1,134 @@
+.is-invisible {
+  visibility: hidden;
+}
+.is-underline {
+  text-decoration: underline;
+}
+.is-sideless {
+  box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
+}
+.is-bottomless {
+  box-shadow: 0 -1px 0 0 $grey-light;
+}
+.is-borderless {
+  border: none !important;
+}
+.is-relative {
+  position: relative;
+}
+.is-fullwidth {
+  width: 100%;
+}
+.is-in-bottom-right {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 10;
+}
+
+.has-background-transition {
+  transition: background-color $easing $speed;
+}
+.is-flex-column {
+  display: flex;
+  flex-direction: column;
+}
+.is-flex-v-centered {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  justify-content: center;
+}
+.is-flex-v-centered-tablet {
+  @include tablet {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    justify-content: center;
+  }
+}
+.is-flex-center {
+  display: flex;
+  align-items: center;
+}
+.is-flex-1 {
+  flex-grow: 1;
+}
+.is-flex-wrap {
+  flex-flow: row wrap;
+}
+.is-flex-end {
+  display: flex !important;
+  justify-content: flex-end;
+}
+.is-flex-full {
+  flex-basis: 100%;
+}
+.is-no-flex-grow {
+  flex-grow: 0 !important;
+}
+.is-auto-width {
+  width: auto;
+}
+
+.is-flex-between,
+.is-grouped-split {
+  display: flex;
+  justify-content: space-between !important;
+}
+.has-default-border {
+  border: 1px solid $grey !important;
+}
+.has-no-pointer {
+  pointer-events: none;
+}
+.has-pointer {
+  cursor: pointer;
+}
+.has-short-padding {
+  padding: 0.25rem 1.25rem;
+}
+
+.is-sideless.has-short-padding {
+  padding: 0.25rem 1.25rem;
+}
+.has-current-color-fill {
+  &,
+  & svg {
+    fill: currentColor;
+  }
+}
+.is-word-break {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.is-font-mono {
+  font-family: $family-monospace;
+}
+.is-size-8 {
+  font-size: $size-8 !important;
+}
+.is-size-9 {
+  font-size: $size-9 !important;
+}
+@each $name, $shade in $shades {
+  .has-background-#{$name} {
+    background: $shade !important;
+  }
+}
+.has-background-transparent {
+  background: transparent !important;
+}
+@each $name, $pair in $colors {
+  $color: nth($pair, 1);
+  .has-background-#{$name} {
+    background: $color !important;
+  }
+}
+.is-optional {
+  color: $grey;
+  font-size: $size-8;
+  text-transform: lowercase;
+}

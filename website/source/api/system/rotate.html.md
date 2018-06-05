@@ -17,6 +17,8 @@ that is used to encrypt data written to the storage backend, and is not provided
 to operators. This operation is done online. Future values are encrypted with
 the new key, while old values are decrypted with previous encryption keys.
 
+This path requires `sudo` capability in addition to `update`.
+
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `PUT`    | `/sys/rotate`                | `204 (empty body)`     |
@@ -27,5 +29,5 @@ the new key, while old values are decrypted with previous encryption keys.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
-    https://vault.rocks/v1/sys/rotate
+    http://127.0.0.1:8200/v1/sys/rotate
 ```

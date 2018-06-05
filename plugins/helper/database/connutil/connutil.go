@@ -1,12 +1,13 @@
 package connutil
 
 import (
+	"context"
 	"errors"
 	"sync"
 )
 
 var (
-	errNotInitialized = errors.New("connection has not been initalized")
+	ErrNotInitialized = errors.New("connection has not been initalized")
 )
 
 // ConnectionProducer can be used as an embeded interface in the Database
@@ -14,8 +15,11 @@ var (
 // connections and is used in all the builtin database types.
 type ConnectionProducer interface {
 	Close() error
-	Initialize(map[string]interface{}, bool) error
-	Connection() (interface{}, error)
+	Init(context.Context, map[string]interface{}, bool) (map[string]interface{}, error)
+	Connection(context.Context) (interface{}, error)
 
 	sync.Locker
+
+	// DEPRECATED, will be removed in 0.12
+	Initialize(context.Context, map[string]interface{}, bool) error
 }

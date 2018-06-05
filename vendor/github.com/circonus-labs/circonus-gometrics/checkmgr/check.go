@@ -166,7 +166,7 @@ func (cm *CheckManager) initializeTrapURL() error {
 			// new search (check.target != instanceid, instanceid encoded in notes field)
 			searchCriteria := fmt.Sprintf(
 				"(active:1)(type:\"%s\")(tags:%s)", cm.checkType, strings.Join(cm.checkSearchTag, ","))
-			filterCriteria := map[string][]string{"f_notes": []string{*cm.getNotes()}}
+			filterCriteria := map[string][]string{"f_notes": {*cm.getNotes()}}
 			checkBundle, err = cm.checkBundleSearch(searchCriteria, filterCriteria)
 			if err != nil {
 				return err
@@ -307,12 +307,9 @@ func (cm *CheckManager) createNewCheck() (*api.CheckBundle, *api.Broker, error) 
 		return nil, nil, err
 	}
 
-	config := &api.CheckBundle{
-		Brokers: []string{broker.CID},
-		Config: map[config.Key]string{
-			config.AsyncMetrics: "true",
-			config.Secret:       checkSecret,
-		},
+	chkcfg := &api.CheckBundle{
+		Brokers:     []string{broker.CID},
+		Config:      make(map[config.Key]string),
 		DisplayName: string(cm.checkDisplayName),
 		Metrics:     []api.CheckBundleMetric{},
 		MetricLimit: config.DefaultCheckBundleMetricLimit,
@@ -325,7 +322,24 @@ func (cm *CheckManager) createNewCheck() (*api.CheckBundle, *api.Broker, error) 
 		Type:        string(cm.checkType),
 	}
 
-	checkBundle, err := cm.apih.CreateCheckBundle(config)
+	if len(cm.customConfigFields) > 0 {
+		for fld, val := range cm.customConfigFields {
+			chkcfg.Config[config.Key(fld)] = val
+		}
+	}
+
+	//
+	// use the default config settings if these are NOT set by user configuration
+	//
+	if val, ok := chkcfg.Config[config.AsyncMetrics]; !ok || val == "" {
+		chkcfg.Config[config.AsyncMetrics] = "true"
+	}
+
+	if val, ok := chkcfg.Config[config.Secret]; !ok || val == "" {
+		chkcfg.Config[config.Secret] = checkSecret
+	}
+
+	checkBundle, err := cm.apih.CreateCheckBundle(chkcfg)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -1,8 +1,8 @@
 package pki
 
 import (
+	"context"
 	"fmt"
-	"strings"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/fatih/structs"
@@ -15,19 +15,19 @@ func pathConfigURLs(b *backend) *framework.Path {
 		Pattern: "config/urls",
 		Fields: map[string]*framework.FieldSchema{
 			"issuing_certificates": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
 for the issuing certificate attribute`,
 			},
 
 			"crl_distribution_points": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
 for the CRL distribution points attribute`,
 			},
 
 			"ocsp_servers": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
 for the OCSP servers attribute`,
 			},
@@ -53,8 +53,8 @@ func validateURLs(urls []string) string {
 	return ""
 }
 
-func getURLs(req *logical.Request) (*urlEntries, error) {
-	entry, err := req.Storage.Get("urls")
+func getURLs(ctx context.Context, req *logical.Request) (*urlEntries, error) {
+	entry, err := req.Storage.Get(ctx, "urls")
 	if err != nil {
 		return nil, err
 	}
@@ -70,16 +70,16 @@ func getURLs(req *logical.Request) (*urlEntries, error) {
 	return &entries, nil
 }
 
-func writeURLs(req *logical.Request, entries *urlEntries) error {
+func writeURLs(ctx context.Context, req *logical.Request, entries *urlEntries) error {
 	entry, err := logical.StorageEntryJSON("urls", entries)
 	if err != nil {
 		return err
 	}
 	if entry == nil {
-		return fmt.Errorf("Unable to marshal entry into JSON")
+		return fmt.Errorf("unable to marshal entry into JSON")
 	}
 
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return err
 	}
@@ -87,9 +87,8 @@ func writeURLs(req *logical.Request, entries *urlEntries) error {
 	return nil
 }
 
-func (b *backend) pathReadURL(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(req)
+func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -104,9 +103,8 @@ func (b *backend) pathReadURL(
 	return resp, nil
 }
 
-func (b *backend) pathWriteURL(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(req)
+func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -119,31 +117,28 @@ func (b *backend) pathWriteURL(
 	}
 
 	if urlsInt, ok := data.GetOk("issuing_certificates"); ok {
-		splitURLs := strings.Split(urlsInt.(string), ",")
-		entries.IssuingCertificates = splitURLs
+		entries.IssuingCertificates = urlsInt.([]string)
 		if badURL := validateURLs(entries.IssuingCertificates); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid URL found in issuing certificates: %s", badURL)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("crl_distribution_points"); ok {
-		splitURLs := strings.Split(urlsInt.(string), ",")
-		entries.CRLDistributionPoints = splitURLs
+		entries.CRLDistributionPoints = urlsInt.([]string)
 		if badURL := validateURLs(entries.CRLDistributionPoints); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid URL found in CRL distribution points: %s", badURL)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("ocsp_servers"); ok {
-		splitURLs := strings.Split(urlsInt.(string), ",")
-		entries.OCSPServers = splitURLs
+		entries.OCSPServers = urlsInt.([]string)
 		if badURL := validateURLs(entries.OCSPServers); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid URL found in OCSP servers: %s", badURL)), nil
 		}
 	}
 
-	return nil, writeURLs(req, entries)
+	return nil, writeURLs(ctx, req, entries)
 }
 
 type urlEntries struct {

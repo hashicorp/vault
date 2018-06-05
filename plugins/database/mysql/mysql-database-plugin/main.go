@@ -11,7 +11,7 @@ import (
 func main() {
 	apiClientMeta := &pluginutil.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()
-	flags.Parse(os.Args)
+	flags.Parse(os.Args[1:])
 
 	err := mysql.Run(apiClientMeta.GetTLSConfig())
 	if err != nil {

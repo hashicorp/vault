@@ -1,22 +1,27 @@
 package api
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"path"
+	"unicode"
 
-	"golang.org/x/net/http2"
-
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
+	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-rootcerts"
-	"github.com/sethgrid/pester"
+	"github.com/hashicorp/vault/helper/parseutil"
+	"golang.org/x/net/http2"
+	"golang.org/x/time/rate"
 )
 
 const EnvVaultAddress = "VAULT_ADDR"
@@ -24,11 +29,14 @@ const EnvVaultCACert = "VAULT_CACERT"
 const EnvVaultCAPath = "VAULT_CAPATH"
 const EnvVaultClientCert = "VAULT_CLIENT_CERT"
 const EnvVaultClientKey = "VAULT_CLIENT_KEY"
+const EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
 const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
 const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
 const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
 const EnvVaultToken = "VAULT_TOKEN"
+const EnvVaultMFA = "VAULT_MFA"
+const EnvRateLimit = "VAULT_RATE_LIMIT"
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
@@ -39,21 +47,42 @@ type WrappingLookupFunc func(operation, path string) string
 
 // Config is used to configure the creation of the client.
 type Config struct {
+	modifyLock sync.RWMutex
+
 	// Address is the address of the Vault server. This should be a complete
 	// URL such as "http://vault.example.com". If you need a custom SSL
 	// cert or want to enable insecure mode, you need to specify a custom
 	// HttpClient.
 	Address string
 
-	// HttpClient is the HTTP client to use, which will currently always have the
-	// same values as http.DefaultClient. This is used to control redirect behavior.
+	// HttpClient is the HTTP client to use. Vault sets sane defaults for the
+	// http.Client and its associated http.Transport created in DefaultConfig.
+	// If you must modify Vault's defaults, it is suggested that you start with
+	// that client and modify as needed rather than start with an empty client
+	// (or http.DefaultClient).
 	HttpClient *http.Client
 
-	redirectSetup sync.Once
-
-	// MaxRetries controls the maximum number of times to retry when a 5xx error
-	// occurs. Set to 0 or less to disable retrying. Defaults to 0.
+	// MaxRetries controls the maximum number of times to retry when a 5xx
+	// error occurs. Set to 0 to disable retrying. Defaults to 2 (for a total
+	// of three tries).
 	MaxRetries int
+
+	// Timeout is for setting custom timeout parameter in the HttpClient
+	Timeout time.Duration
+
+	// If there is an error when creating the configuration, this will be the
+	// error
+	Error error
+
+	// The Backoff function to use; a default is used if not provided
+	Backoff retryablehttp.Backoff
+
+	// Limiter is the rate limiter used by the client.
+	// If this pointer is nil, then there will be no limit set.
+	// In contrast, if this pointer is set, even to an empty struct,
+	// then that limiter will be used. Note that an empty Limiter
+	// is equivalent blocking all events.
+	Limiter *rate.Limiter
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -86,60 +115,94 @@ type TLSConfig struct {
 //
 // The default Address is https://127.0.0.1:8200, but this can be overridden by
 // setting the `VAULT_ADDR` environment variable.
+//
+// If an error is encountered, this will return nil.
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
 		HttpClient: cleanhttp.DefaultClient(),
 	}
 	config.HttpClient.Timeout = time.Second * 60
+
 	transport := config.HttpClient.Transport.(*http.Transport)
 	transport.TLSHandshakeTimeout = 10 * time.Second
 	transport.TLSClientConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
-
-	if v := os.Getenv(EnvVaultAddress); v != "" {
-		config.Address = v
+	if err := http2.ConfigureTransport(transport); err != nil {
+		config.Error = err
+		return config
 	}
+
+	if err := config.ReadEnvironment(); err != nil {
+		config.Error = err
+		return config
+	}
+
+	// Ensure redirects are not automatically followed
+	// Note that this is sane for the API client as it has its own
+	// redirect handling logic (and thus also for command/meta),
+	// but in e.g. http_test actual redirect handling is necessary
+	config.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		// Returning this value causes the Go net library to not close the
+		// response body and to nil out the error. Otherwise retry clients may
+		// try three times on every redirect because it sees an error from this
+		// function (to prevent redirects) passing through to it.
+		return http.ErrUseLastResponse
+	}
+
+	config.Backoff = retryablehttp.LinearJitterBackoff
+	config.MaxRetries = 2
 
 	return config
 }
 
-// ConfigureTLS takes a set of TLS configurations and applies those to the the HTTP client.
+// ConfigureTLS takes a set of TLS configurations and applies those to the the
+// HTTP client.
 func (c *Config) ConfigureTLS(t *TLSConfig) error {
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
 	}
+	clientTLSConfig := c.HttpClient.Transport.(*http.Transport).TLSClientConfig
 
 	var clientCert tls.Certificate
 	foundClientCert := false
-	if t.CACert != "" || t.CAPath != "" || t.ClientCert != "" || t.ClientKey != "" || t.Insecure {
-		if t.ClientCert != "" && t.ClientKey != "" {
-			var err error
-			clientCert, err = tls.LoadX509KeyPair(t.ClientCert, t.ClientKey)
-			if err != nil {
-				return err
-			}
-			foundClientCert = true
-		} else if t.ClientCert != "" || t.ClientKey != "" {
-			return fmt.Errorf("Both client cert and client key must be provided")
+
+	switch {
+	case t.ClientCert != "" && t.ClientKey != "":
+		var err error
+		clientCert, err = tls.LoadX509KeyPair(t.ClientCert, t.ClientKey)
+		if err != nil {
+			return err
+		}
+		foundClientCert = true
+	case t.ClientCert != "" || t.ClientKey != "":
+		return fmt.Errorf("both client cert and client key must be provided")
+	}
+
+	if t.CACert != "" || t.CAPath != "" {
+		rootConfig := &rootcerts.Config{
+			CAFile: t.CACert,
+			CAPath: t.CAPath,
+		}
+		if err := rootcerts.ConfigureTLS(clientTLSConfig, rootConfig); err != nil {
+			return err
 		}
 	}
 
-	clientTLSConfig := c.HttpClient.Transport.(*http.Transport).TLSClientConfig
-	rootConfig := &rootcerts.Config{
-		CAFile: t.CACert,
-		CAPath: t.CAPath,
+	if t.Insecure {
+		clientTLSConfig.InsecureSkipVerify = true
 	}
-	if err := rootcerts.ConfigureTLS(clientTLSConfig, rootConfig); err != nil {
-		return err
-	}
-
-	clientTLSConfig.InsecureSkipVerify = t.Insecure
 
 	if foundClientCert {
-		clientTLSConfig.Certificates = []tls.Certificate{clientCert}
+		// We use this function to ignore the server's preferential list of
+		// CAs, otherwise any CA used for the cert auth backend must be in the
+		// server's CA pool
+		clientTLSConfig.GetClientCertificate = func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
+			return &clientCert, nil
+		}
 	}
+
 	if t.TLSServerName != "" {
 		clientTLSConfig.ServerName = t.TLSServerName
 	}
@@ -147,18 +210,19 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 	return nil
 }
 
-// ReadEnvironment reads configuration information from the
-// environment. If there is an error, no configuration value
-// is updated.
+// ReadEnvironment reads configuration information from the environment. If
+// there is an error, no configuration value is updated.
 func (c *Config) ReadEnvironment() error {
 	var envAddress string
 	var envCACert string
 	var envCAPath string
 	var envClientCert string
 	var envClientKey string
+	var envClientTimeout time.Duration
 	var envInsecure bool
 	var envTLSServerName string
 	var envMaxRetries *uint64
+	var limit *rate.Limiter
 
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
@@ -183,11 +247,25 @@ func (c *Config) ReadEnvironment() error {
 	if v := os.Getenv(EnvVaultClientKey); v != "" {
 		envClientKey = v
 	}
+	if v := os.Getenv(EnvRateLimit); v != "" {
+		rateLimit, burstLimit, err := parseRateLimit(v)
+		if err != nil {
+			return err
+		}
+		limit = rate.NewLimiter(rate.Limit(rateLimit), burstLimit)
+	}
+	if t := os.Getenv(EnvVaultClientTimeout); t != "" {
+		clientTimeout, err := parseutil.ParseDurationSecond(t)
+		if err != nil {
+			return fmt.Errorf("could not parse %q", EnvVaultClientTimeout)
+		}
+		envClientTimeout = clientTimeout
+	}
 	if v := os.Getenv(EnvVaultInsecure); v != "" {
 		var err error
 		envInsecure, err = strconv.ParseBool(v)
 		if err != nil {
-			return fmt.Errorf("Could not parse VAULT_SKIP_VERIFY")
+			return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
 		}
 	}
 	if v := os.Getenv(EnvVaultTLSServerName); v != "" {
@@ -203,6 +281,12 @@ func (c *Config) ReadEnvironment() error {
 		TLSServerName: envTLSServerName,
 		Insecure:      envInsecure,
 	}
+
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	c.Limiter = limit
+
 	if err := c.ConfigureTLS(t); err != nil {
 		return err
 	}
@@ -212,33 +296,66 @@ func (c *Config) ReadEnvironment() error {
 	}
 
 	if envMaxRetries != nil {
-		c.MaxRetries = int(*envMaxRetries) + 1
+		c.MaxRetries = int(*envMaxRetries)
+	}
+
+	if envClientTimeout != 0 {
+		c.Timeout = envClientTimeout
 	}
 
 	return nil
 }
 
-// Client is the client to the Vault API. Create a client with
-// NewClient.
+func parseRateLimit(val string) (rate float64, burst int, err error) {
+
+	_, err = fmt.Sscanf(val, "%f:%d", &rate, &burst)
+	if err != nil {
+		rate, err = strconv.ParseFloat(val, 64)
+		if err != nil {
+			err = fmt.Errorf("%v was provided but incorrectly formatted", EnvRateLimit)
+		}
+		burst = int(rate)
+	}
+
+	return rate, burst, err
+
+}
+
+// Client is the client to the Vault API. Create a client with NewClient.
 type Client struct {
+	modifyLock         sync.RWMutex
 	addr               *url.URL
 	config             *Config
 	token              string
+	headers            http.Header
 	wrappingLookupFunc WrappingLookupFunc
+	mfaCreds           []string
+	policyOverride     bool
 }
 
 // NewClient returns a new client for the given configuration.
+//
+// If the configuration is nil, Vault will use configuration from
+// DefaultConfig(), which is the recommended starting configuration.
 //
 // If the environment variable `VAULT_TOKEN` is present, the token will be
 // automatically added to the client. Otherwise, you must manually call
 // `SetToken()`.
 func NewClient(c *Config) (*Client, error) {
-	if c == nil {
-		c = DefaultConfig()
-		if err := c.ReadEnvironment(); err != nil {
-			return nil, fmt.Errorf("error reading environment: %v", err)
-		}
+	def := DefaultConfig()
+	if def == nil {
+		return nil, fmt.Errorf("could not create/read default configuration")
 	}
+	if def.Error != nil {
+		return nil, errwrap.Wrapf("error encountered setting up default configuration: {{err}}", def.Error)
+	}
+
+	if c == nil {
+		c = def
+	}
+
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
 
 	u, err := url.Parse(c.Address)
 	if err != nil {
@@ -246,29 +363,11 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	if c.HttpClient == nil {
-		c.HttpClient = DefaultConfig().HttpClient
+		c.HttpClient = def.HttpClient
 	}
-
-	tp := c.HttpClient.Transport.(*http.Transport)
-	if err := http2.ConfigureTransport(tp); err != nil {
-		return nil, err
+	if c.HttpClient.Transport == nil {
+		c.HttpClient.Transport = def.HttpClient.Transport
 	}
-
-	redirFunc := func() {
-		// Ensure redirects are not automatically followed
-		// Note that this is sane for the API client as it has its own
-		// redirect handling logic (and thus also for command/meta),
-		// but in e.g. http_test actual redirect handling is necessary
-		c.HttpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			// Returning this value causes the Go net library to not close the
-			// response body and to nil out the error. Otherwise pester tries
-			// three times on every redirect because it sees an error from this
-			// function (to prevent redirects) passing through to it.
-			return http.ErrUseLastResponse
-		}
-	}
-
-	c.redirectSetup.Do(redirFunc)
 
 	client := &Client{
 		addr:   u,
@@ -276,7 +375,7 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
-		client.SetToken(token)
+		client.token = token
 	}
 
 	return client, nil
@@ -286,60 +385,195 @@ func NewClient(c *Config) (*Client, error) {
 // "<Scheme>://<Host>:<Port>". Setting this on a client will override the
 // value of VAULT_ADDR environment variable.
 func (c *Client) SetAddress(addr string) error {
-	var err error
-	if c.addr, err = url.Parse(addr); err != nil {
-		return fmt.Errorf("failed to set address: %v", err)
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	parsedAddr, err := url.Parse(addr)
+	if err != nil {
+		return errwrap.Wrapf("failed to set address: {{err}}", err)
 	}
 
+	c.addr = parsedAddr
 	return nil
 }
 
 // Address returns the Vault URL the client is configured to connect to
 func (c *Client) Address() string {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
 	return c.addr.String()
+}
+
+// SetLimiter will set the rate limiter for this client.
+// This method is thread-safe.
+// rateLimit and burst are specified according to https://godoc.org/golang.org/x/time/rate#NewLimiter
+func (c *Client) SetLimiter(rateLimit float64, burst int) {
+	c.modifyLock.RLock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+	c.modifyLock.RUnlock()
+
+	c.config.Limiter = rate.NewLimiter(rate.Limit(rateLimit), burst)
 }
 
 // SetMaxRetries sets the number of retries that will be used in the case of certain errors
 func (c *Client) SetMaxRetries(retries int) {
+	c.modifyLock.RLock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+	c.modifyLock.RUnlock()
+
 	c.config.MaxRetries = retries
+}
+
+// SetClientTimeout sets the client request timeout
+func (c *Client) SetClientTimeout(timeout time.Duration) {
+	c.modifyLock.RLock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+	c.modifyLock.RUnlock()
+
+	c.config.Timeout = timeout
+}
+
+// CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
+// for a given operation and path
+func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
+	return c.wrappingLookupFunc
 }
 
 // SetWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
 // for a given operation and path
 func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
 	c.wrappingLookupFunc = lookupFunc
+}
+
+// SetMFACreds sets the MFA credentials supplied either via the environment
+// variable or via the command line.
+func (c *Client) SetMFACreds(creds []string) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	c.mfaCreds = creds
 }
 
 // Token returns the access token being used by this client. It will
 // return the empty string if there is no token set.
 func (c *Client) Token() string {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
 	return c.token
 }
 
 // SetToken sets the token directly. This won't perform any auth
 // verification, it simply sets the token properly for future requests.
 func (c *Client) SetToken(v string) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
 	c.token = v
 }
 
 // ClearToken deletes the token if it is set or does nothing otherwise.
 func (c *Client) ClearToken() {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
 	c.token = ""
+}
+
+// SetHeaders sets the headers to be used for future requests.
+func (c *Client) SetHeaders(headers http.Header) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	c.headers = headers
+}
+
+// SetBackoff sets the backoff function to be used for future requests.
+func (c *Client) SetBackoff(backoff retryablehttp.Backoff) {
+	c.modifyLock.RLock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+	c.modifyLock.RUnlock()
+
+	c.config.Backoff = backoff
+}
+
+// Clone creates a new client with the same configuration. Note that the same
+// underlying http.Client is used; modifying the client from more than one
+// goroutine at once may not be safe, so modify the client as needed and then
+// clone.
+func (c *Client) Clone() (*Client, error) {
+	c.modifyLock.RLock()
+	c.config.modifyLock.RLock()
+	config := c.config
+	c.modifyLock.RUnlock()
+
+	newConfig := &Config{
+		Address:    config.Address,
+		HttpClient: config.HttpClient,
+		MaxRetries: config.MaxRetries,
+		Timeout:    config.Timeout,
+		Backoff:    config.Backoff,
+		Limiter:    config.Limiter,
+	}
+	config.modifyLock.RUnlock()
+
+	return NewClient(newConfig)
+}
+
+// SetPolicyOverride sets whether requests should be sent with the policy
+// override flag to request overriding soft-mandatory Sentinel policies (both
+// RGPs and EGPs)
+func (c *Client) SetPolicyOverride(override bool) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	c.policyOverride = override
 }
 
 // NewRequest creates a new raw request object to query the Vault server
 // configured for this client. This is an advanced method and generally
 // doesn't need to be called externally.
 func (c *Client) NewRequest(method, requestPath string) *Request {
+	c.modifyLock.RLock()
+	addr := c.addr
+	token := c.token
+	mfaCreds := c.mfaCreds
+	wrappingLookupFunc := c.wrappingLookupFunc
+	headers := c.headers
+	policyOverride := c.policyOverride
+	c.modifyLock.RUnlock()
+
+	// if SRV records exist (see https://tools.ietf.org/html/draft-andrews-http-srv-02), lookup the SRV
+	// record and take the highest match; this is not designed for high-availability, just discovery
+	var host string = addr.Host
+	if addr.Port() == "" {
+		// Internet Draft specifies that the SRV record is ignored if a port is given
+		_, addrs, err := net.LookupSRV("http", "tcp", addr.Hostname())
+		if err == nil && len(addrs) > 0 {
+			host = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
+		}
+	}
+
 	req := &Request{
 		Method: method,
 		URL: &url.URL{
-			User:   c.addr.User,
-			Scheme: c.addr.Scheme,
-			Host:   c.addr.Host,
-			Path:   path.Join(c.addr.Path, requestPath),
+			User:   addr.User,
+			Scheme: addr.Scheme,
+			Host:   host,
+			Path:   path.Join(addr.Path, requestPath),
 		},
-		ClientToken: c.token,
+		ClientToken: token,
 		Params:      make(map[string][]string),
 	}
 
@@ -352,11 +586,20 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	default:
 		lookupPath = requestPath
 	}
-	if c.wrappingLookupFunc != nil {
-		req.WrapTTL = c.wrappingLookupFunc(method, lookupPath)
+
+	req.MFAHeaderVals = mfaCreds
+
+	if wrappingLookupFunc != nil {
+		req.WrapTTL = wrappingLookupFunc(method, lookupPath)
 	} else {
 		req.WrapTTL = DefaultWrappingLookupFunc(method, lookupPath)
 	}
+
+	if headers != nil {
+		req.Headers = headers
+	}
+
+	req.PolicyOverride = policyOverride
 
 	return req
 }
@@ -365,26 +608,75 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 func (c *Client) RawRequest(r *Request) (*Response, error) {
+	c.modifyLock.RLock()
+	token := c.token
+
+	c.config.modifyLock.RLock()
+	limiter := c.config.Limiter
+	maxRetries := c.config.MaxRetries
+	backoff := c.config.Backoff
+	httpClient := c.config.HttpClient
+	timeout := c.config.Timeout
+	c.config.modifyLock.RUnlock()
+
+	c.modifyLock.RUnlock()
+
+	if limiter != nil {
+		limiter.Wait(context.Background())
+	}
+
+	// Sanity check the token before potentially erroring from the API
+	idx := strings.IndexFunc(token, func(c rune) bool {
+		return !unicode.IsPrint(c)
+	})
+	if idx != -1 {
+		return nil, fmt.Errorf("configured Vault token contains non-printable characters and cannot be used")
+	}
+
 	redirectCount := 0
 START:
-	req, err := r.ToHTTP()
+	req, err := r.toRetryableHTTP()
 	if err != nil {
 		return nil, err
 	}
+	if req == nil {
+		return nil, fmt.Errorf("nil request created")
+	}
 
-	client := pester.NewExtendedClient(c.config.HttpClient)
-	client.Backoff = pester.LinearJitterBackoff
-	client.MaxRetries = c.config.MaxRetries
+	// Set the timeout, if any
+	var cancelFunc context.CancelFunc
+	if timeout != 0 {
+		var ctx context.Context
+		ctx, cancelFunc = context.WithTimeout(context.Background(), timeout)
+		req.Request = req.Request.WithContext(ctx)
+	}
+
+	if backoff == nil {
+		backoff = retryablehttp.LinearJitterBackoff
+	}
+
+	client := &retryablehttp.Client{
+		HTTPClient:   httpClient,
+		RetryWaitMin: 1000 * time.Millisecond,
+		RetryWaitMax: 1500 * time.Millisecond,
+		RetryMax:     maxRetries,
+		CheckRetry:   retryablehttp.DefaultRetryPolicy,
+		Backoff:      backoff,
+		ErrorHandler: retryablehttp.PassthroughErrorHandler,
+	}
 
 	var result *Response
 	resp, err := client.Do(req)
+	if cancelFunc != nil {
+		cancelFunc()
+	}
 	if resp != nil {
 		result = &Response{Response: resp}
 	}
 	if err != nil {
 		if strings.Contains(err.Error(), "tls: oversized") {
-			err = fmt.Errorf(
-				"%s\n\n"+
+			err = errwrap.Wrapf(
+				"{{err}}\n\n"+
 					"This error usually means that the server is running with TLS disabled\n"+
 					"but the client is configured to use TLS. Please either enable TLS\n"+
 					"on the server or run the client with -address set to an address\n"+

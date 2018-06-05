@@ -8,13 +8,13 @@ import (
 )
 
 // This logic was pulled from the http package so that it can be used for
-// encoding wrapped responses as well. It simply translates the logical request
-// to an http response, with the values we want and omitting the values we
-// don't.
+// encoding wrapped responses as well. It simply translates the logical
+// response to an http response, with the values we want and omitting the
+// values we don't.
 func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 	httpResp := &HTTPResponse{
 		Data:     input.Data,
-		Warnings: input.Warnings(),
+		Warnings: input.Warnings,
 	}
 
 	if input.Secret != nil {
@@ -33,6 +33,7 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 			Metadata:      input.Auth.Metadata,
 			LeaseDuration: int(input.Auth.TTL.Seconds()),
 			Renewable:     input.Auth.Renewable,
+			EntityID:      input.Auth.EntityID,
 		}
 	}
 
@@ -42,7 +43,7 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
 	logicalResp := &Response{
 		Data:     input.Data,
-		warnings: input.Warnings,
+		Warnings: input.Warnings,
 	}
 
 	if input.LeaseID != "" {
@@ -59,6 +60,7 @@ func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
 			Accessor:    input.Auth.Accessor,
 			Policies:    input.Auth.Policies,
 			Metadata:    input.Auth.Metadata,
+			EntityID:    input.Auth.EntityID,
 		}
 		logicalResp.Auth.Renewable = input.Auth.Renewable
 		logicalResp.Auth.TTL = time.Second * time.Duration(input.Auth.LeaseDuration)
@@ -85,12 +87,15 @@ type HTTPAuth struct {
 	Metadata      map[string]string `json:"metadata"`
 	LeaseDuration int               `json:"lease_duration"`
 	Renewable     bool              `json:"renewable"`
+	EntityID      string            `json:"entity_id"`
 }
 
 type HTTPWrapInfo struct {
 	Token           string `json:"token"`
+	Accessor        string `json:"accessor"`
 	TTL             int    `json:"ttl"`
 	CreationTime    string `json:"creation_time"`
+	CreationPath    string `json:"creation_path"`
 	WrappedAccessor string `json:"wrapped_accessor,omitempty"`
 }
 

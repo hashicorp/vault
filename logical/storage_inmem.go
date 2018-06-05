@@ -1,27 +1,26 @@
 package logical
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/inmem"
 )
 
-// InmemStorage implements Storage and stores all data in memory.
+// InmemStorage implements Storage and stores all data in memory. It is
+// basically a straight copy of physical.Inmem, but it prevents backends from
+// having to load all of physical's dependencies (which are legion) just to
+// have some testing storage.
 type InmemStorage struct {
-	phys *physical.InmemBackend
-
-	once sync.Once
+	underlying physical.Backend
+	once       sync.Once
 }
 
-func (s *InmemStorage) List(prefix string) ([]string, error) {
+func (s *InmemStorage) Get(ctx context.Context, key string) (*StorageEntry, error) {
 	s.once.Do(s.init)
 
-	return s.phys.List(prefix)
-}
-
-func (s *InmemStorage) Get(key string) (*StorageEntry, error) {
-	s.once.Do(s.init)
-	entry, err := s.phys.Get(key)
+	entry, err := s.underlying.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -29,25 +28,40 @@ func (s *InmemStorage) Get(key string) (*StorageEntry, error) {
 		return nil, nil
 	}
 	return &StorageEntry{
-		Key:   entry.Key,
-		Value: entry.Value,
+		Key:      entry.Key,
+		Value:    entry.Value,
+		SealWrap: entry.SealWrap,
 	}, nil
 }
 
-func (s *InmemStorage) Put(entry *StorageEntry) error {
+func (s *InmemStorage) Put(ctx context.Context, entry *StorageEntry) error {
 	s.once.Do(s.init)
-	physEntry := &physical.Entry{
-		Key:   entry.Key,
-		Value: entry.Value,
-	}
-	return s.phys.Put(physEntry)
+
+	return s.underlying.Put(ctx, &physical.Entry{
+		Key:      entry.Key,
+		Value:    entry.Value,
+		SealWrap: entry.SealWrap,
+	})
 }
 
-func (s *InmemStorage) Delete(k string) error {
+func (s *InmemStorage) Delete(ctx context.Context, key string) error {
 	s.once.Do(s.init)
-	return s.phys.Delete(k)
+
+	return s.underlying.Delete(ctx, key)
+}
+
+func (s *InmemStorage) List(ctx context.Context, prefix string) ([]string, error) {
+	s.once.Do(s.init)
+
+	return s.underlying.List(ctx, prefix)
+}
+
+func (s *InmemStorage) Underlying() *inmem.InmemBackend {
+	s.once.Do(s.init)
+
+	return s.underlying.(*inmem.InmemBackend)
 }
 
 func (s *InmemStorage) init() {
-	s.phys = physical.NewInmem(nil)
+	s.underlying, _ = inmem.NewInmem(nil, nil)
 }

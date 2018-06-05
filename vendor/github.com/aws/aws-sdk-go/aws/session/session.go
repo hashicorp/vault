@@ -58,7 +58,12 @@ func New(cfgs ...*aws.Config) *Session {
 	envCfg := loadEnvConfig()
 
 	if envCfg.EnableSharedConfig {
-		s, err := newSession(Options{}, envCfg, cfgs...)
+		var cfg aws.Config
+		cfg.MergeIn(cfgs...)
+		s, err := NewSessionWithOptions(Options{
+			Config:            cfg,
+			SharedConfigState: SharedConfigEnable,
+		})
 		if err != nil {
 			// Old session.New expected all errors to be discovered when
 			// a request is made, and would report the errors then. This
@@ -155,6 +160,10 @@ type Options struct {
 	// and enable or disable the shared config functionality.
 	SharedConfigState SharedConfigState
 
+	// Ordered list of files the session will load configuration from.
+	// It will override environment variable AWS_SHARED_CREDENTIALS_FILE, AWS_CONFIG_FILE.
+	SharedConfigFiles []string
+
 	// When the SDK's shared config is configured to assume a role with MFA
 	// this option is required in order to provide the mechanism that will
 	// retrieve the MFA token. There is no default value for this field. If
@@ -218,7 +227,7 @@ type Options struct {
 //
 //     // Force enable Shared Config support
 //     sess := session.Must(session.NewSessionWithOptions(session.Options{
-//         SharedConfigState: SharedConfigEnable,
+//         SharedConfigState: session.SharedConfigEnable,
 //     }))
 func NewSessionWithOptions(opts Options) (*Session, error) {
 	var envCfg envConfig
@@ -304,13 +313,18 @@ func newSession(opts Options, envCfg envConfig, cfgs ...*aws.Config) (*Session, 
 	userCfg := &aws.Config{}
 	userCfg.MergeIn(cfgs...)
 
-	// Order config files will be loaded in with later files overwriting
+	// Ordered config files will be loaded in with later files overwriting
 	// previous config file values.
-	cfgFiles := []string{envCfg.SharedConfigFile, envCfg.SharedCredentialsFile}
-	if !envCfg.EnableSharedConfig {
-		// The shared config file (~/.aws/config) is only loaded if instructed
-		// to load via the envConfig.EnableSharedConfig (AWS_SDK_LOAD_CONFIG).
-		cfgFiles = cfgFiles[1:]
+	var cfgFiles []string
+	if opts.SharedConfigFiles != nil {
+		cfgFiles = opts.SharedConfigFiles
+	} else {
+		cfgFiles = []string{envCfg.SharedConfigFile, envCfg.SharedCredentialsFile}
+		if !envCfg.EnableSharedConfig {
+			// The shared config file (~/.aws/config) is only loaded if instructed
+			// to load via the envConfig.EnableSharedConfig (AWS_SDK_LOAD_CONFIG).
+			cfgFiles = cfgFiles[1:]
+		}
 	}
 
 	// Load additional config from file(s)

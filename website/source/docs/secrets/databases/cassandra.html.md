@@ -1,62 +1,82 @@
 ---
 layout: "docs"
-page_title: "Cassandra Database Plugin"
+page_title: "Cassandra - Database - Secrets Engines"
 sidebar_current: "docs-secrets-databases-cassandra"
 description: |-
-  The Cassandra plugin for Vault's Database backend generates database credentials to access Cassandra.
+  Cassandra is one of the supported plugins for the database secrets engine.
+  This plugin generates database credentials dynamically based on configured
+  roles for the Cassandra database.
 ---
 
-# Cassandra Database Plugin
+# Cassandra Database Secrets Engine
 
-Name: `cassandra-database-plugin`
+Cassandra is one of the supported plugins for the database secrets engine. This
+plugin generates database credentials dynamically based on configured roles for
+the Cassandra database.
 
-The Cassandra Database Plugin is one of the supported plugins for the Database
-backend. This plugin generates database credentials dynamically based on
-configured roles for the Cassandra database.
+See the [database secrets engine](/docs/secrets/databases/index.html) docs for
+more information about setting up the database secrets engine.
 
-See the [Database Backend](/docs/secrets/databases/index.html) docs for more
-information about setting up the Database Backend.
+## Setup
 
-## Quick Start
+1. Enable the database secrets engine if it is not already enabled:
 
-After the Database Backend is mounted you can configure a cassandra connection
-by specifying this plugin as the `"plugin_name"` argument. Here is an example
-cassandra configuration: 
+    ```text
+    $ vault secrets enable database
+    Success! Enabled the database secrets engine at: database/
+    ```
 
-```
-$ vault write database/config/cassandra \
-    plugin_name=cassandra-database-plugin \
-    allowed_roles="readonly" \
-    hosts=localhost \
-    username=cassandra \
-    password=cassandra
+    By default, the secrets engine will enable at the name of the engine. To
+    enable the secrets engine at a different path, use the `-path` argument.
 
-The following warnings were returned from the Vault server:
-* Read access to this endpoint should be controlled via ACLs as it will return the connection details as is, including passwords, if any.
-```
+1. Configure Vault with the proper plugin and connection information:
 
-Once the cassandra connection is configured we can add a role:
+    ```text
+    $ vault write database/config/my-cassandra-database \
+        plugin_name="cassandra-database-plugin" \
+        hosts=127.0.0.1 \
+        protocol_version=4 \
+        username=cassandra \
+        password=cassandra \
+        allowed_roles=my-role
+    ```
 
-```
-$ vault write database/roles/readonly \
-    db_name=cassandra \
-    creation_statements="CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER; \
-         GRANT SELECT ON ALL KEYSPACES TO {{username}};" \
-    default_ttl="1h" \
-    max_ttl="24h"
+1. Configure a role that maps a name in Vault to an SQL statement to execute to
+create the database credential:
 
+    ```text
+    $ vault write database/roles/my-role \
+        db_name=my-cassandra-database \
+        creation_statements="CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER; \
+             GRANT SELECT ON ALL KEYSPACES TO {{username}};" \
+        default_ttl="1h" \
+        max_ttl="24h"
+    Success! Data written to: database/roles/my-role
+    ```
 
-Success! Data written to: database/roles/readonly
-```
+## Usage
 
-This role can be used to retrieve a new set of credentials by querying the
-"database/creds/readonly" endpoint.
+After the secrets engine is configured and a user/machine has a Vault token with
+the proper permission, it can generate credentials.
+
+1. Generate a new credential by reading from the `/creds` endpoint with the name
+of the role:
+
+    ```text
+    $ vault read database/creds/my-role
+    Key                Value
+    ---                -----
+    lease_id           database/creds/my-role/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
+    lease_duration     1h
+    lease_renewable    true
+    password           8cab931c-d62e-a73d-60d3-5ee85139cd66
+    username           v-root-e2978cd0-
+    ```
 
 ## API
 
 The full list of configurable options can be seen in the [Cassandra database
 plugin API](/api/secret/databases/cassandra.html) page.
 
-For more information on the Database secret backend's HTTP API please see the [Database secret
-backend API](/api/secret/databases/index.html) page.
-
+For more information on the database secrets engine's HTTP API please see the [Database secret
+secrets engine API](/api/secret/databases/index.html) page.

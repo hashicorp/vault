@@ -1,20 +1,20 @@
 ---
 layout: "api"
-page_title: "RabbitMQ Secret Backend - HTTP API"
+page_title: "RabbitMQ - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-rabbitmq"
 description: |-
-  This is the API documentation for the Vault RabbitMQ secret backend.
+  This is the API documentation for the Vault RabbitMQ secrets engine.
 ---
 
-# RabbitMQ Secret Backend HTTP API
+# RabbitMQ Secrets Engine (API)
 
-This is the API documentation for the Vault RabbitMQ secret backend. For general
-information about the usage and operation of the RabbitMQ backend, please see
-the [Vault RabbitMQ backend documentation](/docs/secrets/rabbitmq/index.html).
+This is the API documentation for the Vault RabbitMQ secrets engine. For general
+information about the usage and operation of the RabbitMQ secrets engine, please
+see the [RabbitMQ documentation](/docs/secrets/rabbitmq/index.html).
 
-This documentation assumes the RabbitMQ backend is mounted at the `/rabbitmq`
-path in Vault. Since it is possible to mount secret backends at any location,
-please update your API calls accordingly.
+This documentation assumes the RabbitMQ secrets engine is enabled at the
+`/rabbitmq` path in Vault. Since it is possible to enable secrets engines at any
+location, please update your API calls accordingly.
 
 ## Configure Connection
 
@@ -56,13 +56,12 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/rabbitmq/config/connection
+    http://127.0.0.1:8200/v1/rabbitmq/config/connection
 ```
 
 ## Configure Lease
 
-This endpoint configures the lease settings for generated credentials. This is
-endpoint requires sudo privileges.
+This endpoint configures the lease settings for generated credentials.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -90,7 +89,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/rabbitmq/config/lease
+    http://127.0.0.1:8200/v1/rabbitmq/config/lease
 ```
 
 ## Create Role
@@ -127,7 +126,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/rabbitmq/roles/my-role
+    http://127.0.0.1:8200/v1/rabbitmq/roles/my-role
 ```
 
 ## Read Role
@@ -148,7 +147,7 @@ This endpoint queries the role definition.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/rabbitmq/roles/my-role
+    http://127.0.0.1:8200/v1/rabbitmq/roles/my-role
 ```
 
 ### Sample Response
@@ -168,7 +167,7 @@ This endpoint deletes the role definition.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/rabbitmq/roles/:namer`     | `204 (empty body)`     |
+| `DELETE` | `/rabbitmq/roles/:name`     | `204 (empty body)`     |
 
 ### Parameters
 
@@ -181,7 +180,7 @@ This endpoint deletes the role definition.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/rabbitmq/roles/my-role
+    http://127.0.0.1:8200/v1/rabbitmq/roles/my-role
 ```
 
 ## Generate Credentials
@@ -203,7 +202,7 @@ role.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/rabbitmq/creds/my-role
+    http://127.0.0.1:8200/v1/rabbitmq/creds/my-role
 ```
 
 ### Sample Response

@@ -1,0 +1,58 @@
+{{identity/entity-nav identityType=identityType}}
+{{#if model.meta.total}}
+  {{#each model as |item|}}
+    {{#linked-block
+      "vault.cluster.access.identity.aliases.show"
+      item.id
+      "details"
+      class="box is-sideless is-marginless"
+      data-test-identity-row=true
+      }}
+      <div class="columns is-mobile">
+        <div class="column is-10">
+          <a href={{href-to
+            "vault.cluster.access.identity.aliases.show"
+            item.id
+             "details"
+            }}
+            class="is-block has-text-black has-text-weight-semibold"
+            data-test-identity-link={{item.id}}
+          >{{i-con
+              glyph="role"
+              size=14
+              class="has-text-grey-light"
+            }}<span class="has-text-weight-semibold">{{item.name}}</span></a>
+          <div class="has-text-grey">
+            {{item.id}}
+          </div>
+          <span class="tag">{{item.mountType}}</span>
+          <span class="has-text-grey is-size-8">
+            {{item.mountAccessor}}
+          </span>
+        </div>
+        <div class="column has-text-right">
+          {{identity/popup-alias params=(array item) onSuccess=(action "onDelete")}}
+        </div>
+      </div>
+    {{/linked-block}}
+  {{/each}}
+{{else}}
+  <div class="box is-bottomless has-background-white-bis">
+    <div class="columns is-centered">
+      <div class="column is-half has-text-centered">
+        <div class="box is-shadowless has-background-white-bis">
+          <p class="has-text-grey">
+            There are currently no {{identityType}} aliases.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+{{/if}}
+{{#if (gt model.meta.lastPage 1) }}
+  {{list-pagination
+    page=model.meta.currentPage
+    lastPage=model.meta.lastPage
+    link="vault.cluster.access.identity.aliases.index"
+  }}
+{{/if}}

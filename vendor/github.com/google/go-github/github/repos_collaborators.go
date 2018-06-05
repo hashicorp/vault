@@ -10,10 +10,26 @@ import (
 	"fmt"
 )
 
+// ListCollaboratorsOptions specifies the optional parameters to the
+// RepositoriesService.ListCollaborators method.
+type ListCollaboratorsOptions struct {
+	// Affiliation specifies how collaborators should be filtered by their affiliation.
+	// Possible values are:
+	//     outside - All outside collaborators of an organization-owned repository
+	//     direct - All collaborators with permissions to an organization-owned repository,
+	//              regardless of organization membership status
+	//     all - All collaborators the authenticated user can see
+	//
+	// Default value is "all".
+	Affiliation string `url:"affiliation,omitempty"`
+
+	ListOptions
+}
+
 // ListCollaborators lists the GitHub users that have access to the repository.
 //
-// GitHub API docs: https://developer.github.com/v3/repos/collaborators/#list
-func (s *RepositoriesService) ListCollaborators(ctx context.Context, owner, repo string, opt *ListOptions) ([]*User, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/collaborators/#list-collaborators
+func (s *RepositoriesService) ListCollaborators(ctx context.Context, owner, repo string, opt *ListCollaboratorsOptions) ([]*User, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/collaborators", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -24,6 +40,8 @@ func (s *RepositoriesService) ListCollaborators(ctx context.Context, owner, repo
 	if err != nil {
 		return nil, nil, err
 	}
+
+	req.Header.Set("Accept", mediaTypeNestedTeamsPreview)
 
 	var users []*User
 	resp, err := s.client.Do(ctx, req, &users)
@@ -91,7 +109,8 @@ type RepositoryAddCollaboratorOptions struct {
 	Permission string `json:"permission,omitempty"`
 }
 
-// AddCollaborator adds the specified GitHub user as collaborator to the given repo.
+// AddCollaborator sends an invitation to the specified GitHub user
+// to become a collaborator to the given repo.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/collaborators/#add-user-as-a-collaborator
 func (s *RepositoriesService) AddCollaborator(ctx context.Context, owner, repo, user string, opt *RepositoryAddCollaboratorOptions) (*Response, error) {

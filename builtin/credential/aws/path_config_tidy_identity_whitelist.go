@@ -1,9 +1,9 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -43,23 +43,23 @@ expiration, before it is removed from the backend storage.`,
 	}
 }
 
-func (b *backend) pathConfigTidyIdentityWhitelistExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.lockedConfigTidyIdentities(req.Storage)
+func (b *backend) pathConfigTidyIdentityWhitelistExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+	entry, err := b.lockedConfigTidyIdentities(ctx, req.Storage)
 	if err != nil {
 		return false, err
 	}
 	return entry != nil, nil
 }
 
-func (b *backend) lockedConfigTidyIdentities(s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
+func (b *backend) lockedConfigTidyIdentities(ctx context.Context, s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	return b.nonLockedConfigTidyIdentities(s)
+	return b.nonLockedConfigTidyIdentities(ctx, s)
 }
 
-func (b *backend) nonLockedConfigTidyIdentities(s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
-	entry, err := s.Get(identityWhitelistConfigPath)
+func (b *backend) nonLockedConfigTidyIdentities(ctx context.Context, s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
+	entry, err := s.Get(ctx, identityWhitelistConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -74,11 +74,11 @@ func (b *backend) nonLockedConfigTidyIdentities(s logical.Storage) (*tidyWhiteli
 	return &result, nil
 }
 
-func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	configEntry, err := b.nonLockedConfigTidyIdentities(req.Storage)
+	configEntry, err := b.nonLockedConfigTidyIdentities(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -105,15 +105,15 @@ func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(req *logical.Reque
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathConfigTidyIdentityWhitelistRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	clientConfig, err := b.lockedConfigTidyIdentities(req.Storage)
+func (b *backend) pathConfigTidyIdentityWhitelistRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	clientConfig, err := b.lockedConfigTidyIdentities(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -122,20 +122,23 @@ func (b *backend) pathConfigTidyIdentityWhitelistRead(req *logical.Request, data
 	}
 
 	return &logical.Response{
-		Data: structs.New(clientConfig).Map(),
+		Data: map[string]interface{}{
+			"safety_buffer":         clientConfig.SafetyBuffer,
+			"disable_periodic_tidy": clientConfig.DisablePeriodicTidy,
+		},
 	}, nil
 }
 
-func (b *backend) pathConfigTidyIdentityWhitelistDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentityWhitelistDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	return nil, req.Storage.Delete(identityWhitelistConfigPath)
+	return nil, req.Storage.Delete(ctx, identityWhitelistConfigPath)
 }
 
 type tidyWhitelistIdentityConfig struct {
-	SafetyBuffer        int  `json:"safety_buffer" structs:"safety_buffer" mapstructure:"safety_buffer"`
-	DisablePeriodicTidy bool `json:"disable_periodic_tidy" structs:"disable_periodic_tidy" mapstructure:"disable_periodic_tidy"`
+	SafetyBuffer        int  `json:"safety_buffer"`
+	DisablePeriodicTidy bool `json:"disable_periodic_tidy"`
 }
 
 const pathConfigTidyIdentityWhitelistHelpSyn = `

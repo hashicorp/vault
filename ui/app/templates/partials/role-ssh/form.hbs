@@ -1,0 +1,59 @@
+{{message-error model=model}}
+<form onsubmit={{action "createOrUpdate" "create"}} onchange={{action "handleChange"}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    {{#with (if (eq model.keyType 'otp') 3 4) as |numRequired|}}
+      {{#each (take numRequired model.attrsForKeyType) as |attr|}}
+        {{#unless (and (eq mode 'edit') (eq attr.name 'name'))}}
+          {{partial "partials/form-field-from-model"}}
+        {{/unless}}
+      {{/each}}
+      {{toggle-button
+        toggleAttr="showOptions"
+        toggleTarget=this
+        openLabel="Hide options"
+        closedLabel="More options"
+        data-test-toggle-more="true"
+      }}
+      {{#if showOptions}}
+        <div class="box is-marginless">
+          {{#each (drop numRequired model.attrsForKeyType) as |attr|}}
+            {{partial "partials/form-field-from-model"}}
+          {{/each}}
+        </div>
+      {{/if}}
+    {{/with}}
+  </div>
+  <div class="field is-grouped-split box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="submit"
+        disabled={{buttonDisabled}}
+        class="button is-primary"
+        data-test-role-ssh-create=true
+      >
+        {{#if (eq mode 'create')}}
+          Create role
+        {{else if (eq mode 'edit')}}
+          Save
+        {{/if}}
+      </button>
+      {{#secret-link
+        mode=(if (eq mode "create") "list" "show")
+        class="button"
+        secret=model.id
+      }}
+        Cancel
+      {{/secret-link}}
+    </div>
+    {{#if (and (eq mode 'edit') model.canDelete)}}
+      {{#confirm-action
+        buttonClasses="button"
+        onConfirmAction=(action "delete")
+        confirmMessage=(concat "Are you sure you want to delete " model.id "?")
+        cancelButtonText="Cancel"
+      }}
+        Delete
+      {{/confirm-action}}
+    {{/if}}
+  </div>
+</form>

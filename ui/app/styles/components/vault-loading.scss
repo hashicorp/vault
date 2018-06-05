@@ -1,0 +1,52 @@
+@keyframes vault-loading-animation {
+  0%,
+  70%,
+  100% {
+    transform: scale3D(1, 1, 1);
+  }
+
+  35% {
+    transform: scale3D(0, 0, 1);
+  }
+}
+
+#vault-loading {
+  polygon {
+    animation: vault-loading-animation 1.3s infinite ease-in-out;
+    transform-origin: 50% 50%;
+    fill: #dce2e9;
+  }
+
+  .vault-loading-order-1 {
+    animation-delay: .1s;
+  }
+
+  .vault-loading-order-2 {
+    animation-delay: .2s;
+  }
+
+  .vault-loading-order-3 {
+    animation-delay: .3s;
+  }
+
+  .vault-loading-order-4 {
+    animation-delay: .4s;
+  }
+}
+
+#vault-loading-animated {
+  @media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+    // For IE11
+    display: none;
+  }
+}
+
+#vault-loading-static {
+  display: none;
+  font-size: 9px;
+
+  @media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+    // For IE11
+    display: block;
+  }
+}

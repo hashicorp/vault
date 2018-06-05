@@ -1,75 +1,73 @@
 ---
 layout: "docs"
-page_title: "Secret Backends"
+page_title: "Secrets Engines"
 sidebar_current: "docs-secrets"
 description: |-
-  Secret backends are mountable backends that store or generate secrets in Vault.
+  Secrets engines are mountable engines that store or generate secrets in Vault.
 ---
 
-# Secret Backends
+# Secrets Engines
 
-Secret backends are the components in Vault which store and generate
-secrets.
+Secrets engines are components which store, generate, or encrypt data. Secrets
+engines are incredibly flexible, so it is easiest to think about them in terms
+of their function. Secrets engines are provided some set of data, they take some
+action on that data, and they return a result.
 
-Some secret backends, such as "generic", simply store and read
-secrets verbatim. Other secret backends, such as "aws", create _dynamic
-secrets_: secrets that are made on demand.
+Some secrets engines simply store and read data - like encrypted
+Redis/Memcached. Other secrets engines connect to other services and generate
+dynamic credentials on demand. Other secrets engines provide encryption as a
+service, totp generation, certificates, and much more.
 
-Secret backends are part of the
-[mount system](#)
-in Vault. They behave very similarly to a virtual filesystem:
-any read/write/delete is sent to the secret backend, and the secret
-backend can choose to react to that operation however it sees fit.
+Secrets engines are enabled at a "path" in Vault. When a request comes to Vault,
+the router automatically routes anything with the route prefix to the secrets
+engine. In this way, each secrets engine defines its own paths and properties.
+To the user, secrets engines behave similar to a virtual filesystem, supporting
+operations like read, write, and delete.
 
-For example, the "generic" backend passes through any operation back
-to the configured storage backend for Vault. A "read" turns into a
-"read" of the storage backend at the same path, a "write" turns into
-a write, etc. This is a lot like a normal filesystem.
+## Secrets Engines Lifecycle
 
-The "aws" backend, on the other hand, behaves differently. When you
-write to `aws/config/root`, it expects a certain format and stores that
-information as configuration. You can't read from this path. When you
-read from `aws/<name>`, it looks up an IAM policy named `<name>` and
-generates AWS access credentials on demand and returns them. It doesn't
-behave at all like a typical filesystem: you're not simply storing and
-retrieving values, you're interacting with an API.
+Most secrets engines can be enabled, disabled, tuned, and moved via the CLI or
+API. Previous versions of Vault called these "mounts", but that term was
+overloaded.
 
-## Mounting/Unmounting Secret Backends
+- **Enable** - This enables a secrets engine at a given path. With few
+  exceptions, secrets engines can be enabled at multiple paths. Each secrets
+  engine is isolated to its path. By default, they are enabled at their "type"
+  (e.g. "aws" enables at "aws/").
 
-Secret backends can be mounted/unmounted using the CLI or the API.
-There are three operations that can be performed with a secret backend
-with regards to mounting:
+- **Disable** - This disables an existing secrets engine. When a secrets engine
+  is disabled, all of its secrets are revoked (if they support it), and all of
+  the data stored for that engine in the physical storage layer is deleted.
 
-  * **Mount** - This mounts a new secret backend. Multiple secret
-    backends of the same type can be mounted at the same time by
-    specifying different mount points. By default, secret backends are
-    mounted to the same path as their name. This is what you want most
-    of the time.
+- **Move** - This moves the path for an existing secrets engine. This process
+  revokes all secrets, since secret leases are tied to the path they were
+  created at. The configuration data stored for the engine persists through the
+  move.
 
-  * **Unmount** - This unmounts an existing secret backend. When a secret
-    backend is unmounted, all of its secrets are revoked (if they support
-    it), and all of the data stored for that backend in the physical storage
-    layer is deleted.
+- **Tune** - This tunes global configuration for the secrets engine such as the
+  TTLs.
 
-  * **Remount** - This moves the mount point for an existing secret backend.
-    This revokes all secrets, since secret leases are tied to the path they
-    were created at. The data stored for the backend won't be deleted.
+Once a secrets engine is enabled, you can interact with it directly at its path
+according to its own API. Use `vault path-help` to determine the paths it
+responds to.
 
-Once a secret backend is mounted, you can interact with it directly
-at its mount point according to its own API. You can use the `vault path-help`
-system to determine the paths it responds to.
+Note that mount points cannot conflict with each other in Vault. There are
+two broad implications of this fact. The first is that you cannot have
+a mount which is prefixed with an existing mount. The second is that you
+cannot create a mount point that is named as a prefix of an existing mount.
+As an example, the mounts `foo/bar` and `foo/baz` can peacefully coexist
+with each other whereas `foo` and `foo/baz` cannot
 
 ## Barrier View
 
-An important concept around secret backends is that they receive a
-_barrier view_ to the configured Vault physical storage. This is a lot
-like a [chroot](https://en.wikipedia.org/wiki/Chroot).
+Secrets engines receive a _barrier view_ to the configured Vault physical
+storage. This is a lot like a [chroot](https://en.wikipedia.org/wiki/Chroot).
 
-Whenever a secret backend is mounted, a random UUID is generated. This
-becomes the data root for that backend. Whenever that backend writes to
-the physical storage layer, it is prefixed with that UUID folder. Since
-the Vault storage layer doesn't support relative access (such as `..`),
-this makes it impossible for a mounted backend to access any other data.
+When a secrets engine is enabled, a random UUID is generated. This becomes the
+data root for that engine. Whenever that engine writes to the physical storage
+layer, it is prefixed with that UUID folder. Since the Vault storage layer
+doesn't support relative access (such as `../`), this makes it impossible for a
+enabled secrets engine to access other data.
 
-This is an important security feature in Vault: even a malicious backend
-can't access the data from any other backend.
+This is an important security feature in Vault - even a malicious engine
+cannot access the data from any other engine.

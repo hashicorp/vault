@@ -1,15 +1,22 @@
 package github
 
 import (
+	"context"
+
 	"github.com/google/go-github/github"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/mfa"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"golang.org/x/oauth2"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	b := Backend()
+	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func Backend() *backend {
@@ -29,11 +36,11 @@ func Backend() *backend {
 	}
 
 	allPaths := append(b.TeamMap.Paths(), b.UserMap.Paths()...)
-
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
+			Root: mfa.MFARootPaths(),
 			Unauthenticated: []string{
 				"login",
 			},
@@ -41,10 +48,9 @@ func Backend() *backend {
 
 		Paths: append([]*framework.Path{
 			pathConfig(&b),
-			pathLogin(&b),
-		}, allPaths...),
-
-		AuthRenew: b.pathLoginRenew,
+		}, append(allPaths, mfa.MFAPaths(b.Backend, pathLogin(&b))...)...),
+		AuthRenew:   b.pathLoginRenew,
+		BackendType: logical.TypeCredential,
 	}
 
 	return &b
@@ -63,7 +69,8 @@ type backend struct {
 func (b *backend) Client(token string) (*github.Client, error) {
 	tc := cleanhttp.DefaultClient()
 	if token != "" {
-		tc = oauth2.NewClient(oauth2.NoContext, &tokenSource{Value: token})
+		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, tc)
+		tc = oauth2.NewClient(ctx, &tokenSource{Value: token})
 	}
 
 	return github.NewClient(tc), nil

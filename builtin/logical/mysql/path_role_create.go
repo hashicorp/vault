@@ -1,10 +1,12 @@
 package mysql
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -30,12 +32,11 @@ func pathRoleCreate(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathRoleCreateRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
 	// Get the role
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +45,7 @@ func (b *backend) pathRoleCreateRead(
 	}
 
 	// Determine if we have a lease
-	lease, err := b.Lease(req.Storage)
+	lease, err := b.Lease(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +60,8 @@ func (b *backend) pathRoleCreateRead(
 	// - the token display name, truncated to role.displaynameLength (default 4)
 	// - a UUID
 	//
-	// the entire contactenated string is then truncated to role.usernameLength,
-	// which by default is 16 due to limitations in older but still-prevalant
+	// the entire concatenated string is then truncated to role.usernameLength,
+	// which by default is 16 due to limitations in older but still-prevalent
 	// versions of MySQL.
 	roleName := name
 	if len(roleName) > role.RolenameLength {
@@ -84,7 +85,7 @@ func (b *backend) pathRoleCreateRead(
 	}
 
 	// Get our handle
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -103,15 +104,11 @@ func (b *backend) pathRoleCreateRead(
 			continue
 		}
 
-		stmt, err := tx.Prepare(Query(query, map[string]string{
+		m := map[string]string{
 			"name":     username,
 			"password": password,
-		}))
-		if err != nil {
-			return nil, err
 		}
-		defer stmt.Close()
-		if _, err := stmt.Exec(); err != nil {
+		if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 			return nil, err
 		}
 	}
@@ -129,7 +126,10 @@ func (b *backend) pathRoleCreateRead(
 		"username": username,
 		"role":     name,
 	})
+
 	resp.Secret.TTL = lease.Lease
+	resp.Secret.MaxTTL = lease.LeaseMax
+
 	return resp, nil
 }
 

@@ -36,18 +36,20 @@
 # - Items are case-sensitive (please use all lowercase)
 #
 
+/api/secret/generic/index.html         /api/secret/kv/index.html
 /api/system/renew.html                 /api/system/leases.html
 /api/system/revoke.html                /api/system/leases.html
 /api/system/revoke-force.html          /api/system/leases.html
 /api/system/revoke-prefix.html         /api/system/leases.html
 /docs/config/index.html                /docs/configuration/index.html
+/docs/auth/aws-ec2.html                /docs/auth/aws.html
 /docs/install/install.html             /docs/install/index.html
-/docs/install/upgrade.html             /docs/guides/upgrading/index.html
-/docs/install/upgrade-to-0.5.html      /docs/guides/upgrading/upgrade-to-0.5.0.html
-/docs/install/upgrade-to-0.5.1.html    /docs/guides/upgrading/upgrade-to-0.5.1.html
-/docs/install/upgrade-to-0.6.html      /docs/guides/upgrading/upgrade-to-0.6.0.html
-/docs/install/upgrade-to-0.6.1.html    /docs/guides/upgrading/upgrade-to-0.6.1.html
-/docs/install/upgrade-to-0.6.2.html    /docs/guides/upgrading/upgrade-to-0.6.2.html
+/docs/install/upgrade.html             /guides/upgrading/index.html
+/docs/install/upgrade-to-0.5.html      /guides/upgrading/upgrade-to-0.5.0.html
+/docs/install/upgrade-to-0.5.1.html    /guides/upgrading/upgrade-to-0.5.1.html
+/docs/install/upgrade-to-0.6.html      /guides/upgrading/upgrade-to-0.6.0.html
+/docs/install/upgrade-to-0.6.1.html    /guides/upgrading/upgrade-to-0.6.1.html
+/docs/install/upgrade-to-0.6.2.html    /guides/upgrading/upgrade-to-0.6.2.html
 /docs/http/sys-init.html               /api/system/init.html
 /docs/http/sys-seal-status.html        /api/system/seal-status.html
 /docs/http/sys-seal.html               /api/system/seal.html
@@ -66,3 +68,63 @@
 /docs/http/sys-rotate.html             /api/system/rotate.html
 /docs/http/sys-raw.html                /api/system/raw.html
 /docs/http/sys-health.html             /api/system/health.html
+
+/docs/guides/generate-root.html        /guides/operations/generate-root.html
+/docs/guides/index.html                /guides/index.html
+/docs/guides/production.html           /guides/operations/production.html
+/docs/guides/replication.html          /guides/operations/replication.html
+/docs/guides/upgrading/index.html      /guides/upgrading/index.html
+/docs/guides/upgrading/upgrade-to-0.5.0.html /guides/upgrading/upgrade-to-0.5.0.html
+/docs/guides/upgrading/upgrade-to-0.5.1.html /guides/upgrading/upgrade-to-0.5.1.html
+/docs/guides/upgrading/upgrade-to-0.6.0.html /guides/upgrading/upgrade-to-0.6.0.html
+/docs/guides/upgrading/upgrade-to-0.6.1.html /guides/upgrading/upgrade-to-0.6.1.html
+/docs/guides/upgrading/upgrade-to-0.6.2.html /guides/upgrading/upgrade-to-0.6.2.html
+/docs/guides/upgrading/upgrade-to-0.6.3.html /guides/upgrading/upgrade-to-0.6.3.html
+/docs/guides/upgrading/upgrade-to-0.6.4.html /guides/upgrading/upgrade-to-0.6.4.html
+/docs/guides/upgrading/upgrade-to-0.7.0.html /guides/upgrading/upgrade-to-0.7.0.html
+/guides/production.html                /guides/operations/production.html
+/guides/replication.html               /guides/operations/replication.html
+/guides/policies.html                  /guides/identity/policies.html
+/guides/authentication.html            /guides/identity/authentication.html
+/guides/lease.html                     /guides/identity/lease.html
+/guides/generate-root.html             /guides/operations/generate-root.html
+/guides/rekeying-and-rotating.html     /guides/operations/rekeying-and-rotating.html
+/guides/plugin-backends.html           /guides/operations/plugin-backends.html
+/guides/static-secrets.html            /guides/secret-mgmt/static-secrets.html
+/guides/dynamic-secret.html            /guides/secret-mgmt/dynamic-secret.html
+/guides/cubbyhole.html                 /guides/secret-mgmt/cubbyhole.html
+/docs/secrets/custom.html              /docs/plugin/index.html
+/docs/secrets/generic/index.html       /docs/secrets/kv/index.html
+/intro/getting-started/acl.html        /intro/getting-started/policies.html
+/intro/getting-started/secret-backends.html   /intro/getting-started/secrets-engines.html
+
+/guides/configuration/policies.html                /guides/identity/policies.html
+/guides/configuration/authentication.html          /guides/identity/authentication.html
+/guides/configuration/lease.html                   /guides/identity/lease.html
+/guides/configuration/generate-root.html           /guides/operations/generate-root.html
+/guides/configuration/rekeying-and-rotating.html   /guides/operations/rekeying-and-rotating.html
+/guides/configuration/plugin-backends.html         /guides/operations/plugin-backends.html
+
+/docs/vault-enterprise/index.html               /docs/enterprise/index.html
+/docs/vault-enterprise/replication/index.html   /docs/enterprise/replication/index.html
+/docs/vault-enterprise/hsm/index.html           /docs/enterprise/hsm/index.html
+/docs/vault-enterprise/hsm/behavior.html        /docs/enterprise/hsm/behavior.html
+/docs/vault-enterprise/hsm/configuration.html   /docs/enterprise/hsm/configuration.html
+/docs/vault-enterprise/hsm/security.html        /docs/enterprise/hsm/security.html
+/docs/vault-enterprise/identity/index.html      /docs/enterprise/identity/index.html
+/docs/vault-enterprise/mfa/index.html           /docs/enterprise/mfa/index.html
+/docs/vault-enterprise/mfa/mfa-duo.html         /docs/enterprise/mfa/mfa-duo.html
+/docs/vault-enterprise/mfa/mfa-okta.html        /docs/enterprise/mfa/mfa-okta.html
+/docs/vault-enterprise/mfa/mfa-pingid.html      /docs/enterprise/mfa/mfa-pingid.html
+/docs/vault-enterprise/mfa/mfa-totp.html        /docs/enterprise/mfa/mfa-totp.html
+
+/docs/commands/environment.html        /docs/commands/index.html#environment-variables
+/docs/commands/read-write.html         /docs/commands/index.html#reading-and-writing-data
+/docs/commands/help.html               /docs/commands/path-help.html
+
+/docs/enterprise/hsm/configuration.html /docs/configuration/seal/pkcs11.html
+/docs/configuration/storage/google-cloud.html /docs/configuration/storage/google-cloud-storage.html
+/docs/configuration/storage/spanner.html /docs/configuration/storage/google-cloud-spanner.html
+
+/docs/vault-enterprise/ui/index.html  /docs/configuration/ui/index.html
+/docs/enterprise/ui/index.html        /docs/configuration/ui/index.html

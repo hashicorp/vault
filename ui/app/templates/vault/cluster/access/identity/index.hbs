@@ -1,0 +1,129 @@
+{{identity/entity-nav identityType=identityType}}
+{{#if model.meta.total}}
+  {{#each model as |item|}}
+    {{#linked-block
+      "vault.cluster.access.identity.show"
+      item.id
+      "details"
+      class="box is-sideless is-marginless"
+      data-test-identity-row=true
+      }}
+      <div class="columns is-mobile">
+        <div class="column is-7-tablet is-10-mobile">
+          <a href={{href-to
+            "vault.cluster.access.identity.show"
+            item.id
+            "details"
+            }}
+            class="is-block has-text-black has-text-weight-semibold"
+            data-test-identity-link=true
+          >{{i-con
+              glyph="role"
+              size=14
+              class="has-text-grey-light"
+            }}<span class="has-text-weight-semibold">{{item.name}}</span></a>
+          <div class="has-text-grey is-size-8">
+            {{item.id}}
+          </div>
+        </div>
+        <div class="column is-3 is-hidden-mobile">
+          {{#if item.aliases.length}}
+            {{pluralize item.aliases.length "alias"}}
+          {{/if}}
+        </div>
+        <div class="column has-text-right">
+          {{#popup-menu name="identity-item" onOpen=(action "reloadRecord" item)}}
+            <nav class="menu">
+              <ul class="menu-list">
+                <li class="action">
+                  <a href={{href-to "vault.cluster.access.identity.show" item.id "details" }}>
+                    Details
+                  </a>
+                </li>
+                {{#if (or item.isReloading item.updatePath.isPending item.aliasPath.isPending)}}
+                  <li class="action">
+                    <button disabled=true type="button" class="link button is-loading is-transparent">
+                      loading
+                    </button>
+                  </li>
+                {{else}}
+                  {{#if item.canEdit}}
+                    <li class="action">
+                      <a href={{href-to 'vault.cluster.access.identity.edit' item.id}}>
+                        Edit
+                      </a>
+                    </li>
+                    <li class="action">
+                      {{#if item.disabled}}
+                        <button type="button" {{action "toggleDisabled" item}} class="link">
+                          Enable
+                        </button>
+                      {{else}}
+                        {{#confirm-action
+                          confirmButtonClasses="button is-primary"
+                          confirmButtonText="Disable"
+                          buttonClasses="link"
+                          onConfirmAction=(action "toggleDisabled" item)
+                          confirmMessage=(concat "Are you sure you want to disable " item.id "?")
+                          showConfirm=(get this (concat "shouldDisable-" item.id))
+                          class=(if (get this (concat "shouldDisable-" item.id)) "message is-block is-warning is-outline")
+                          containerClasses="message-body is-block"
+                          messageClasses="is-block"
+                        }}
+                          Disable
+                        {{/confirm-action}}
+                      {{/if}}
+                    </li>
+                  {{/if}}
+                  {{#if item.canAddAlias}}
+                    <li class="action">
+                      <a href={{href-to 'vault.cluster.access.identity.aliases.add' (pluralize identityType) item.id}}>
+                        Add alias
+                      </a>
+                    </li>
+                  {{/if}}
+                  {{#if item.canDelete}}
+                    <li class="action">
+                      {{#confirm-action
+                        data-test-item-delete=true
+                        confirmButtonClasses="button is-primary"
+                        buttonClasses="link"
+                        onConfirmAction=(action "delete" item)
+                        confirmMessage=(concat "Are you sure you want to delete " item.id "?")
+                        showConfirm=(get this (concat "shouldDelete-" item.id))
+                        class=(if (get this (concat "shouldDelete-" item.id)) "message is-block is-warning is-outline")
+                        containerClasses="message-body is-block"
+                        messageClasses="is-block"
+                      }}
+                        Delete
+                      {{/confirm-action}}
+                    </li>
+                  {{/if}}
+                {{/if}}
+              </ul>
+            </nav>
+          {{/popup-menu}}
+        </div>
+      </div>
+    {{/linked-block}}
+  {{/each}}
+{{else}}
+  <div class="box is-bottomless has-background-white-bis">
+    <div class="columns is-centered">
+      <div class="column is-half has-text-centered">
+        <div class="box is-shadowless has-background-white-bis">
+          <p class="has-text-grey">
+            There are currently no {{pluralize identityType}}.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+{{/if}}
+{{#if (gt model.meta.lastPage 1) }}
+  {{list-pagination
+    page=model.meta.currentPage
+    lastPage=model.meta.lastPage
+    link="vault.cluster.access.identity.index"
+  }}
+{{/if}}

@@ -164,7 +164,7 @@ func (s *RepositoriesService) GetContents(ctx context.Context, owner, repo, path
 	if directoryUnmarshalError == nil {
 		return nil, directoryContent, resp, nil
 	}
-	return nil, nil, resp, fmt.Errorf("unmarshalling failed for both file and directory content: %s and %s ", fileUnmarshalError, directoryUnmarshalError)
+	return nil, nil, resp, fmt.Errorf("unmarshalling failed for both file and directory content: %s and %s", fileUnmarshalError, directoryUnmarshalError)
 }
 
 // CreateFile creates a new file in a repository at the given path and returns
@@ -248,7 +248,7 @@ func (s *RepositoriesService) GetArchiveLink(ctx context.Context, owner, repo st
 	}
 	var resp *http.Response
 	// Use http.DefaultTransport if no custom Transport is configured
-	ctx, req = withContext(ctx, req)
+	req = withContext(ctx, req)
 	if s.client.client.Transport == nil {
 		resp, err = http.DefaultTransport.RoundTrip(req)
 	} else {

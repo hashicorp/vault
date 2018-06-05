@@ -1,0 +1,54 @@
+<nav class="tabs sub-nav is-marginless">
+  <ul>
+    {{#each (supported-auth-backends) as |backend|}}
+      <li class="{{if (eq selectedAuthBackend.type backend.type) 'is-active' ''}}" data-test-auth-method>
+        <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with=backend.type)}}" data-test-auth-method-link={{backend.type}}>
+          {{capitalize backend.type}}
+        </a>
+      </li>
+    {{/each}}
+  </ul>
+</nav>
+<form
+  id="auth-form"
+  {{action (action "doSubmit") on="submit"}}
+>
+  <div class="box is-marginless is-shadowless">
+    {{#if (and cluster.standby hasCSPError)}}
+      {{message-error errorMessage=cspErrorText data-test-auth-error=true}}
+    {{else}}
+      {{message-error errorMessage=error data-test-auth-error=true}}
+    {{/if}}
+    {{partial providerPartialName}}
+    <div class="box has-slim-padding is-shadowless">
+      {{#unless (eq selectedAuthBackend.type "token")}}
+        {{toggle-button toggleTarget=this toggleAttr="useCustomPath"}}
+        <div class="field">
+          {{#if useCustomPath}}
+            <label for="custom-path" class="is-label">
+              Mount path
+            </label>
+            <div class="control">
+              <input
+                 type="text"
+                 name="custom-path"
+                 id="custom-path"
+                 class="input"
+                 value={{customPath}}
+                 oninput={{action (mut customPath) value="target.value"}}
+              />
+            </div>
+              <p class="help has-text-grey-dark">
+              If this backend was mounted using a non-default path, enter it here.
+              </p>
+          {{/if}}
+        </div>
+      {{/unless}}
+    </div>
+  </div>
+  <div class="box is-marginless is-shadowless has-background-white-bis">
+    <button data-test-auth-submit=true type="submit" disabled={{loading}} class="button is-primary {{if loading 'is-loading'}}" id="auth-submit">
+      Sign In
+    </button>
+  </div>
+</form>

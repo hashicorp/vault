@@ -1,0 +1,31 @@
+{{#basic-dropdown-hover horizontalPosition="auto-left" verticalPosition="below" as |d|}}
+  {{#d.trigger tagName=(if (eq type "replication") "span" "button") class=(if (eq type "replication") "" "button is-transparent")}}
+    {{#if (eq type "user")}}
+      <div class="status-menu-user-trigger">
+        {{i-con
+          glyph=glyphName
+          class="has-text-dark-grey auto-width"
+          size=16
+          aria-label=ariaLabel
+        }}
+      </div>
+      {{i-con glyph="chevron-down" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
+    {{else if (eq type "replication")}}
+      <span class="link">
+        Replication
+      {{i-con glyph="chevron-down" aria-hidden="true" excludeIconClass=true size=8 class="auto-width is-status-chevron is-marginless"}}
+      </span>
+    {{else}}
+      {{i-con
+        glyph=glyphName
+        class="has-text-white auto-width"
+        size=16
+        aria-label=ariaLabel
+      }}
+      {{i-con glyph="chevron-down" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
+    {{/if}}
+  {{/d.trigger}}
+  {{#d.content class=(concat "status-menu-content status-menu-content-" type)}}
+    {{partial partialName}}
+  {{/d.content}}
+{{/basic-dropdown-hover}}

@@ -1,0 +1,77 @@
+{{#if model.replicationAttrs.isPrimary}}
+  {{#if model.replicationAttrs.knownSecondaries.length}}
+    {{#each model.replicationAttrs.knownSecondaries as |secondary|}}
+      <div class="box is-shadowless is-marginless" data-test-secondary-name={{secondary}}>
+        <div class="columns is-mobile">
+          <div class="column is-10">
+            {{secondary}}
+          </div>
+          <div class="column has-text-right">
+            {{#if (or (eq replicationMode 'performance') model.canRevokeSecondary)}}
+              {{#popup-menu name="secondary-details"}}
+                <nav class="menu">
+                  <ul class="menu-list">
+                    {{#if model.canRevokeSecondary}}
+                      <li class="action">
+                        {{#confirm-action
+                          onConfirmAction=(action "onSubmit" "revoke-secondary" "primary" (hash id=secondary))
+                          confirmMessage=(concat "Are you sure you want to revoke " secondary "?")
+                          confirmButtonText="Revoke"
+                          cancelButtonText="Cancel"
+                          buttonClasses="button link is-destroy"
+                          confirmButtonClasses="is-danger is-outlined button"
+                          showConfirm=(get this (concat secondary '-isRevoking'))
+                          containerClasses="is-block"
+                          messageClasses="box is-shadowless is-marginless"
+                          class=(if (get this (concat secondary '-isRevoking')) "is-block ")
+                        }}
+                          Revoke
+                        {{/confirm-action}}
+                      </li>
+                    {{/if}}
+                    {{#if (eq replicationMode 'performance')}}
+                      <li class="action">
+                        <a href={{href-to 'vault.cluster.replication.mode.secondaries.config-show' model.name replicationMode secondary}} data-test-replication-mount-filter-link=true>
+                          Mount filter config
+                        </a>
+                      </li>
+                    {{/if}}
+                  </ul>
+                </nav>
+              {{/popup-menu}}
+            {{/if}}
+          </div>
+        </div>
+      </div>
+      <hr class="is-marginless" />
+    {{/each}}
+  {{else}}
+    <div class="box is-bottomless has-background-white-bis is-marginless">
+      <div class="columns is-centered">
+        <div class="column is-half has-text-centered">
+          <div class="box is-shadowless has-background-white-bis">
+            <p class="has-text-grey">
+              There are currently no known {{performanceMode}} secondary clusters associated with this cluster.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+  <div class="field is-grouped box is-shadowless is-fullwidth">
+    {{#if model.canAddSecondary}}
+      <div class="control">
+        {{#link-to 'vault.cluster.replication.mode.secondaries.add' model.name replicationMode class="button" data-test-secondary-add=true }}
+          Add
+        {{/link-to}}
+      </div>
+    {{/if}}
+    {{#if model.canRevokeSecondary}}
+      <div class="control">
+        {{#link-to 'vault.cluster.replication.mode.secondaries.revoke' model.name replicationMode class="button"}}
+          Revoke
+        {{/link-to}}
+      </div>
+    {{/if}}
+  </div>
+{{/if}}

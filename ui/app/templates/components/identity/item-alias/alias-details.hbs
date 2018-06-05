@@ -1,0 +1,29 @@
+{{info-table-row label="Name" value=model.name data-test-alias-name=true}}
+{{info-table-row label="ID" value=model.id }}
+{{#info-table-row label=(if (eq model.identityType "entity-alias") "Entity ID" "Group ID") value=model.canonicalId}}
+  <a href={{href-to 'vault.cluster.access.identity.show' (if (eq model.identityType "entity-alias") "entities" "groups") model.canonicalId "details"}}
+     class="has-text-black is-font-mono"
+  >
+    {{model.canonicalId}}
+  </a>
+{{/info-table-row}}
+{{info-table-row label="Merged from Entity ID" value=model.mergedFromCanonicalIds}}
+{{#info-table-row label="Mount" value=model.mountAccessor }}
+  <div>
+    {{model.mountPath}}
+    <div>
+      <span class="tag">{{model.mountType}}</span>
+      <code class="has-text-grey is-size-8">{{model.mountAccessor}}</code>
+    </div>
+  </div>
+{{/info-table-row}}
+{{#info-table-row label="Created" value=model.creationTime}}
+  <time datetime={{model.creationTime}} title={{model.creationTime}}>
+    {{moment-format model.creationTime 'MMM DD, YYYY [at] h:mm a'}}
+  </time>
+{{/info-table-row}}
+{{#info-table-row label="Last Updated" value=model.lastUpdateTime}}
+  <time datetime={{model.lastUpdateTime}} title={{model.lastUpdateTime}}>
+    {{moment-format model.lastUpdateTime 'MMM DD, YYYY [at] h:mm a'}}
+  </time>
+{{/info-table-row}}

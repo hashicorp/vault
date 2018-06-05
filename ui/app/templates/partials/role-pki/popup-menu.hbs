@@ -1,0 +1,76 @@
+{{#popup-menu name="role-aws-nav" contentClass="is-wide"}}
+  <nav class="menu">
+    {{#if (or item.generatePath.isPending item.signPath.isPending)}}
+      <ul class="menu-list">
+        <li class="action">
+          <button disabled=true type="button" class="link button is-loading is-transparent">
+            loading
+          </button>
+        </li>
+      </ul>
+    {{else if (or item.canGenerate item.canSign)}}
+      <ul class="menu-list">
+        {{#if item.canGenerate}}
+          <li class="action">
+            <a href={{href-to 'vault.cluster.secrets.backend.credentials' item.id (query-params action="sign")}} data-test-role-pki-link="generate-certificate">
+              Generate Certificate
+            </a>
+          </li>
+        {{/if}}
+        {{#if item.canSign}}
+          <li class="action">
+            <a href={{href-to 'vault.cluster.secrets.backend.credentials' item.id (query-params action="sign")}} data-test-role-pki-link="sign-certificate">
+              Sign Certificate
+            </a>
+          </li>
+        {{/if}}
+      </ul>
+    {{/if}}
+    <ul class="menu-list">
+      {{#if item.updatePath.isPending}}
+        <li class="action">
+          <button disabled=true type="button" class="link button is-loading is-transparent">
+            loading
+          </button>
+        </li>
+        <li class="action">
+          <button disabled=true type="button" class="link button is-loading is-transparent">
+            loading
+          </button>
+        </li>
+      {{else}}
+        {{#if item.canRead}}
+          <li class="action">
+            <a href={{href-to 'vault.cluster.secrets.backend.show' item.id}} data-test-role-pki-link="show">
+              Details
+            </a>
+          </li>
+        {{/if}}
+        {{#if item.canEdit}}
+          <li class="action">
+            <a href={{href-to 'vault.cluster.secrets.backend.edit' item.id}} data-test-role-pki-link="edit">
+              Edit
+            </a>
+          </li>
+        {{/if}}
+        {{#if item.canDelete}}
+          <li class="action">
+            {{#confirm-action
+              confirmButtonClasses="button is-primary"
+              buttonClasses="link is-destroy"
+              onConfirmAction=(action "delete" item)
+              confirmMessage=(concat "Are you sure you want to delete " item.id "?")
+              showConfirm=(get this (concat "shouldDelete-" item.id))
+              class=(if (get this (concat "shouldDelete-" item.id)) "message is-block is-warning is-outline")
+              containerClasses="message-body is-block"
+              messageClasses="is-block"
+              data-test-aws-role-delete=item.id
+            }}
+              Delete
+            {{/confirm-action}}
+          </li>
+        {{/if}}
+      {{/if}}
+    </ul>
+  </nav>
+{{/popup-menu}}

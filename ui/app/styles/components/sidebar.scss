@@ -1,0 +1,80 @@
+.is-sidebar {
+  border-right: $base-border;
+  display: flex;
+  flex: 1;
+  margin: 0.75rem 0.75rem 0.75rem 0;
+  padding: 0 0 0 0.75rem;
+
+  @include until($tablet) {
+    background-color: $white;
+    bottom: 0;
+    left: -1.5rem;
+    margin: 0;
+    max-width: 300px;
+    padding-left: 0;
+    position: absolute;
+    right: $size-2;
+    transform: translateX(-100%);
+    transition: transform $speed;
+    top: -3rem;
+    z-index: 5;
+  }
+
+  &.is-active {
+    @include until($tablet) {
+      transform: translateX(0);
+    }
+  }
+
+  .menu-toggle {
+    color: $blue;
+    cursor: pointer;
+    display: none;
+
+    @include until($tablet) {
+      display: block;
+      margin-left: $size-8;
+      position: absolute;
+      top: 4.2rem;
+      left: 100%;
+    }
+
+    .button {
+      min-width: 0;
+    }
+  }
+
+  .menu {
+    flex: 1;
+    padding-top: 5.25rem;
+    position: relative;
+
+    @include until($tablet) {
+      padding-top: $size-6;
+    }
+  }
+
+  .menu-label {
+    color: $grey;
+    font-weight: $font-weight-semibold;
+    font-size: $size-small;
+    line-height: 1;
+    margin-bottom: $size-8;
+    padding-left: $size-5;
+  }
+
+  .menu-list {
+    border-top: $base-border;
+    padding: $size-9 0;
+
+    a {
+      color: $grey-dark;
+      padding-left: $size-5;
+      transition: 250ms border-width;
+
+      &.is-active {
+        border-right: 4px solid $blue;
+      }
+    }
+  }
+}

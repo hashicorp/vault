@@ -1,0 +1,16 @@
+.is-status-chevron {
+  line-height: 0;
+  padding: 0.3em 0 0 $size-11;
+}
+
+.status-menu-user-trigger {
+  height: 1.5em;
+  width: 1.5em;
+  background: $white-bis;
+  box-shadow: 0 0 0 1px $white;
+  margin-right: 0.25rem;
+
+  .icon {
+    min-width: 0;
+  }
+}

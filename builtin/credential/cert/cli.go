@@ -10,13 +10,13 @@ import (
 
 type CLIHandler struct{}
 
-func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
+func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	var data struct {
 		Mount string `mapstructure:"mount"`
 		Name  string `mapstructure:"name"`
 	}
 	if err := mapstructure.WeakDecode(m, &data); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if data.Mount == "" {
@@ -29,28 +29,33 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	path := fmt.Sprintf("auth/%s/login", data.Mount)
 	secret, err := c.Logical().Write(path, options)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if secret == nil {
-		return "", fmt.Errorf("empty response from credential provider")
+		return nil, fmt.Errorf("empty response from credential provider")
 	}
 
-	return secret.Auth.ClientToken, nil
+	return secret, nil
 }
 
 func (h *CLIHandler) Help() string {
 	help := `
-The "cert" credential provider allows you to authenticate with a
-client certificate. No other authentication materials are needed.
-Optionally, you may specify the specific certificate role to
-authenticate against with the "name" parameter.
+Usage: vault login -method=cert [CONFIG K=V...]
 
-    Example: vault auth -method=cert \
-                        -client-cert=/path/to/cert.pem \
-                        -client-key=/path/to/key.pem
-                        name=cert1
+  The certificate auth method allows users to authenticate with a
+  client certificate passed with the request. The -client-cert and -client-key
+  flags are included with the "vault login" command, NOT as configuration to the
+  auth method.
 
-	`
+  Authenticate using a local client certificate:
+
+      $ vault login -method=cert -client-cert=cert.pem -client-key=key.pem
+
+Configuration:
+
+  name=<string>
+      Certificate role to authenticate against.
+`
 
 	return strings.TrimSpace(help)
 }

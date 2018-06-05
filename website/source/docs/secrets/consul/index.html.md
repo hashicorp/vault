@@ -1,103 +1,95 @@
 ---
 layout: "docs"
-page_title: "Consul Secret Backend"
+page_title: "Consul - Secrets Engines"
 sidebar_current: "docs-secrets-consul"
 description: |-
-  The Consul secret backend for Vault generates tokens for Consul dynamically.
+  The Consul secrets engine for Vault generates tokens for Consul dynamically.
 ---
 
-# Consul Secret Backend
+# Consul Secrets Engine
 
-Name: `consul`
+The Consul secrets engine generates [Consul](https://www.consul.io) API tokens
+dynamically based on Consul ACL policies.
 
-The Consul secret backend for Vault generates
-[Consul](https://www.consul.io)
-API tokens dynamically based on Consul ACL policies.
+## Setup
 
-This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault path-help` after mounting the backend.
+Most secrets engines must be configured in advance before they can perform their
+functions. These steps are usually completed by an operator or configuration
+management tool.
 
-## Quick Start
+1. Enable the Consul secrets engine:
 
-The first step to using the consul backend is to mount it.
-Unlike the `generic` backend, the `consul` backend is not mounted by default.
+    ```text
+    $ vault secrets enable consul
+    Success! Enabled the consul secrets engine at: consul/
+    ```
 
-```
-$ vault mount consul
-Successfully mounted 'consul' at 'consul'!
-```
+    By default, the secrets engine will mount at the name of the engine. To
+    enable the secrets engine at a different path, use the `-path` argument.
 
-[Acquire a management token from
-Consul](https://www.consul.io/docs/agent/http/acl.html#acl_create), using the
-`acl_master_token` from your Consul configuration file or any other management
+1. Acquire a [management token][consul-mgmt-token] from Consul, using the
+`acl_master_token` from your Consul configuration file or another management
 token:
 
-```shell
-$ curl \
-    -H "X-Consul-Token: secret" \
-    -X PUT \
-    -d '{"Name": "sample", "Type": "management"}' \
-    http://127.0.0.1:8500/v1/acl/create
-```
-```javascript
-{
-  "ID": "adf4238a-882b-9ddc-4a9d-5b6758e4159e"
-}
-```
+    ```sh
+    $ curl \
+        --header "X-Consul-Token: my-management-token" \
+        --request PUT \
+        --data '{"Name": "sample", "Type": "management"}' \
+        https://consul.rocks/v1/acl/create
+    ```
 
-Next, we must configure Vault to know how to contact Consul.
-This is done by writing the access information:
+    Vault must have a management type token so that it can create and revoke ACL
+    tokens. The response will return a new token:
 
-```
-$ vault write consul/config/access \
-    address=127.0.0.1:8500 \
-    token=adf4238a-882b-9ddc-4a9d-5b6758e4159e
-Success! Data written to: consul/config/access
-```
+    ```json
+    {
+      "ID": "7652ba4c-0f6e-8e75-5724-5e083d72cfe4"
+    }
+    ```
 
-In this case, we've configured Vault to connect to Consul
-on the default port with the loopback address. We've also provided
-an ACL token to use with the `token` parameter. Vault must have a management
-type token so that it can create and revoke ACL tokens.
+1. Configure Vault to connect and authenticate to Consul:
 
-The next step is to configure a role. A role is a logical name that maps
-to a role used to generate those credentials. For example, lets create
-a "readonly" role:
+    ```text
+    $ vault write consul/config/access \
+        address=127.0.0.1:8500 \
+        token=7652ba4c-0f6e-8e75-5724-5e083d72cfe4
+    Success! Data written to: consul/config/access
+    ```
 
-```
-POLICY='key "" { policy = "read" }'
-$ echo $POLICY | base64 | vault write consul/roles/readonly policy=-
-Success! Data written to: consul/roles/readonly
-```
+1. Configure a role that maps a name in Vault to a Consul ACL policy.
+When users generate credentials, they are generated against this role:
 
-The backend expects the policy to be base64 encoded, so we need to encode it
-properly before writing. The policy language is [documented by
-Consul](https://www.consul.io/docs/internals/acl.html), but we've defined a
-read-only policy.
+    ```text
+    $ vault write consul/roles/my-role policy=$(base64 <<< 'key "" { policy = "read" }')
+    Success! Data written to: consul/roles/my-role
+    ```
 
-To generate a new set Consul ACL token, we simply read from that role:
+    The policy must be base64-encoded. The policy language is [documented by
+    Consul](https://www.consul.io/docs/internals/acl.html).
 
-```
-$ vault read consul/creds/readonly
-Key           	Value
-lease_id      	consul/creds/readonly/c7a3bd77-e9af-cfc4-9cba-377f0ef10e6c
-lease_duration	3600
-token         	973a31ea-1ec4-c2de-0f63-623f477c2510
-```
+## Usage
 
-Here we can see that Vault has generated a new Consul ACL token for us.
-We can test this token out, and verify that it is read-only:
+After the secrets engine is configured and a user/machine has a Vault token with
+the proper permission, it can generate credentials.
 
-```
-$ curl 127.0.0.1:8500/v1/kv/foo?token=973a31ea-1ec4-c2de-0f63-623f477c25100
-[{"CreateIndex":12,"ModifyIndex":53,"LockIndex":4,"Key":"foo","Flags":3304740253564472344,"Value":"YmF6"}]
+Generate a new credential by reading from the `/creds` endpoint with the name
+of the role:
 
-$ curl -X PUT -d 'test' 127.0.0.1:8500/v1/kv/foo?token=973a31ea-1ec4-c2de-0f63-623f477c2510
-Permission denied
+```text
+$ vault read consul/creds/my-role
+Key                Value
+---                -----
+lease_id           consul/creds/my-role/b2469121-f55f-53c5-89af-a3ba52b1d6d8
+lease_duration     768h
+lease_renewable    true
+token              642783bf-1540-526f-d4de-fe1ac1aed6f0
 ```
 
 ## API
 
-The Consul secret backend has a full HTTP API. Please see the
-[Consul secret backend API](/api/secret/consul/index.html) for more
+The Consul secrets engine has a full HTTP API. Please see the
+[Consul secrets engine API](/api/secret/consul/index.html) for more
 details.
+
+[consul-mgmt-token]: https://www.consul.io/docs/agent/http/acl.html#acl_create

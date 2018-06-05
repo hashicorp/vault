@@ -1,0 +1,15 @@
+.level:not(:last-child) {
+  @include vault-block;
+}
+
+.level.has-padded-items {
+  .level-item {
+    flex: 0 1 auto;
+  }
+  .level-item {
+    padding-right: 1.5rem;
+  }
+  .level-item.is-fixed-25 {
+    flex-basis: 25%;
+  }
+}

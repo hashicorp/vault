@@ -1,0 +1,57 @@
+{{#if label}}
+  <label class="title is-5" data-test-kv-label="true">
+    {{label}}
+    {{#if helpText}}
+      {{#info-tooltip}}
+        {{helpText}}
+      {{/info-tooltip}}
+    {{/if}}
+  </label>
+{{/if}}
+{{#each kvData as |row index|}}
+  <div class="columns is-variable is-1" data-test-kv-row>
+    <div class="column is-one-quarter">
+      {{input
+        data-test-kv-key=true
+        value=row.name
+        placeholder="key"
+        change=(action "updateRow" row index)
+        class="input"
+      }}
+    </div>
+    <div class="column">
+      {{textarea
+        data-test-kv-value=true
+        name=row.name
+        change=(action "updateRow" row index)
+        value=row.value
+        wrap="off"
+        class="input"
+        placeholder="value"
+        rows=1
+      }}
+    </div>
+    <div class="column is-narrow">
+      {{#if (eq kvData.length (inc index))}}
+        <button type="button" {{action "addRow"}} class="button is-outlined is-primary" data-test-kv-add-row=true>
+          Add
+        </button>
+      {{else}}
+        <button
+          class="button has-text-grey is-expanded is-icon"
+          type="button"
+          {{action "deleteRow" row index}}
+          aria-label="Delete row"
+          data-test-kv-delete-row
+        >
+          {{i-con size=22 glyph='trash-a' excludeIconClass=true class="is-large has-text-grey-light"}}
+        </button>
+      {{/if}}
+    </div>
+  </div>
+{{/each}}
+{{#if kvHasDuplicateKeys}}
+  {{#message-in-page type="warning" class="is-marginless" data-test-duplicate-error-warnings=true}}
+    More than one key shares the same name. Please be sure to have unique key names or some data may be lost when saving.
+  {{/message-in-page}}
+{{/if}}

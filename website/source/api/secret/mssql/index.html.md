@@ -1,19 +1,24 @@
 ---
 layout: "api"
-page_title: "MSSQL Secret Backend - HTTP API"
+page_title: "MSSQL - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-mssql"
 description: |-
-  This is the API documentation for the Vault MSSQL secret backend.
+  This is the API documentation for the Vault MSSQL secrets engine.
 ---
 
-# MSSQL Secret Backend HTTP API
+# MSSQL Secrets Engine (API)
 
-This is the API documentation for the Vault MSSQL secret backend. For general
-information about the usage and operation of the MSSQL backend, please see
-the [Vault MSSQL backend documentation](/docs/secrets/mssql/index.html).
+~> **Deprecation Note:** This secrets engine is deprecated in favor of the
+combined databases secrets engine added in v0.7.1. See the API documentation for
+the new implementation of this secrets engine at
+[MSSQL database plugin HTTP API](/api/secret/databases/mssql.html).
 
-This documentation assumes the MSSQL backend is mounted at the `/mssql`
-path in Vault. Since it is possible to mount secret backends at any location,
+This is the API documentation for the Vault MSSQL secrets engine. For general
+information about the usage and operation of the MSSQL secrets engine, please
+see the [Vault MSSQL documentation](/docs/secrets/mssql/index.html).
+
+This documentation assumes the MSSQL secrets engine is enabled at the `/mssql`
+path in Vault. Since it is possible to enable secrets engines at any location,
 please update your API calls accordingly.
 
 ## Configure Connection
@@ -52,7 +57,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/mssql/config/connection
+    http://127.0.0.1:8200/v1/mssql/config/connection
 ```
 
 ## Configure Lease
@@ -88,7 +93,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/mssql/config/lease
+    http://127.0.0.1:8200/v1/mssql/config/lease
 ```
 
 ## Create Role
@@ -122,7 +127,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/mssql/roles/my-role
+    http://127.0.0.1:8200/v1/mssql/roles/my-role
 ```
 
 ## Read Role
@@ -143,7 +148,7 @@ This endpoint queries the role definition.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/mssql/roles/my-role
+    http://127.0.0.1:8200/v1/mssql/roles/my-role
 ```
 
 ### Sample Response
@@ -171,7 +176,7 @@ returned, not any values.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/mssql/roles
+    http://127.0.0.1:8200/v1/mssql/roles
 ```
 
 ### Sample Response
@@ -207,7 +212,7 @@ This endpoint deletes the role definition.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/mssql/roles/my-role
+    http://127.0.0.1:8200/v1/mssql/roles/my-role
 ```
 
 ## Generate Credentials
@@ -229,7 +234,7 @@ role.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/mssql/creds/my-role
+    http://127.0.0.1:8200/v1/mssql/creds/my-role
 ```
 
 ### Sample Response

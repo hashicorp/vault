@@ -1,0 +1,71 @@
+<form {{action 'doSubmit' (hash input=input algorithm=algorithm key_version=key_version) on="submit"}}>
+  {{#if hmac}}
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <div class="field">
+        <label for="hmac" class="is-label">HMAC</label>
+        <div class="control">
+          <textarea readonly class="textarea" id="hmac">{{hmac}}</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        {{#copy-button
+          clipboardTarget="#hmac"
+          class="button is-primary"
+          buttonType="button"
+          success=(action (set-flash-message 'HMAC copied!'))
+        }}
+          Copy
+        {{/copy-button}}
+      </div>
+      <div class="control">
+        <button {{action 'onClear'}} type="button" class="button">
+          Back
+        </button>
+      </div>
+    </div>
+  {{else}}
+    <div class="box is-sideless is-fullwidth is-marginless">
+      {{key-version-select
+        key=key
+        onVersionChange=(action (mut key_version))
+        key_version=key_version
+      }}
+      <div class="field">
+        <label for="input" class="is-label">
+          Input
+        </label>
+        <div class="control is-relative">
+          {{textarea id="input" name="input" value=input class="textarea" data-test-transit-input="input"}}
+          {{b64-toggle value=input isInput=false data-test-transit-b64-toggle="input"}}
+        </div>
+      </div>
+      <div class="field">
+        <label for="algorithm" class="is-label">Hash Algorithm</label>
+        <div class="control is-expanded">
+          <div class="select is-fullwidth">
+            <select
+             name="algorithm"
+             id="algorithm"
+             onchange={{action (mut algorithm) value="target.value"}}
+             >
+               {{#each (sha2-digest-sizes) as |algo|}}
+                 <option selected={{if algorithm (eq algorithm algo)}} value={{algo}}>
+                   <code>{{algo}}</code>
+                 </option>
+               {{/each}}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="submit" class="button is-primary">
+          HMAC
+        </button>
+      </div>
+    </div>
+  {{/if}}
+</form>

@@ -1,0 +1,81 @@
+syntax = "proto3";
+package kv;
+
+import "google/protobuf/timestamp.proto";
+
+// If values are added to this, be sure to update the config() function
+message Configuration {
+	uint32 max_versions = 1;
+	bool cas_required = 2;
+}
+
+message VersionMetadata {
+	// CreatedTime is when the version was created.
+	google.protobuf.Timestamp created_time = 1;
+
+	// DeletionTime is the time this version becomes invalid. 
+	// Set to Now() to delete the version before the configured 
+	// delete time.
+	google.protobuf.Timestamp deletion_time = 2;
+
+	// Destroyed is used to specify this version is
+	// a has been removed and the underlying data deleted.
+	bool destroyed = 3;
+}
+
+message KeyMetadata {
+	// Key is the key for this entry
+	string key = 1;
+
+	// Versions is the map of versionID -> VersionMetadata.
+	// Useful when listing all versions.
+	map<uint64, VersionMetadata> versions = 2;
+
+	// CurrentVersion is the latest version of the value
+	uint64 current_version = 3;
+
+	// OldestVersion is the oldest version of the value.
+	uint64 oldest_version = 4;
+
+	// Created time is when the metadata was created.
+	google.protobuf.Timestamp created_time = 5;
+
+	// Updated time was the last time the metadata version 
+	// was updated.
+	google.protobuf.Timestamp updated_time = 6;
+
+	// MaxVersions specifies how many versions to keep around. 
+	// If empty value, defaults to the configured Max 
+	// for the mount.
+	uint32 max_versions = 7;
+
+	// CasRequired specifies if the cas parameter is 
+	// required for this key
+	bool cas_required = 8;
+}
+
+
+message Version {
+	// Data is a JSON object with string keys that 
+	// represents the user supplied data.
+	bytes data = 1;
+
+	// CreatedTime is when the version was created.
+	google.protobuf.Timestamp created_time = 2;
+
+	// DeletionTime is the time this version becomes invalid. 
+	// Set to Now() to delete the version before the configured 
+	// deletion time.
+	google.protobuf.Timestamp deletion_time = 3;
+}
+
+message UpgradeInfo {
+	// Started time is when the upgrade was started.
+	google.protobuf.Timestamp started_time = 1;
+
+	// done is set to true once the backend has been successfully
+	// upgraded. 
+	bool done = 2;
+}
+
+

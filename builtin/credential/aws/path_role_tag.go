@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -35,7 +36,7 @@ If set, the created tag can only be used by the instance with the given ID.`,
 			},
 
 			"policies": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Policies to be associated with the tag. If set, must be a subset of the role's policies. If set, but set to an empty value, only the 'default' policy will be given to issued tokens.",
 			},
 
@@ -69,16 +70,14 @@ If set, the created tag can only be used by the instance with the given ID.`,
 
 // pathRoleTagUpdate is used to create an EC2 instance tag which will
 // identify the Vault resources that the instance will be authorized for.
-func (b *backend) pathRoleTagUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := strings.ToLower(data.Get("role").(string))
 	if roleName == "" {
 		return logical.ErrorResponse("missing role"), nil
 	}
 
 	// Fetch the role entry
-	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
+	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -107,9 +106,9 @@ func (b *backend) pathRoleTagUpdate(
 	// should be inherited. So, by leaving the policies var unset to anything when it is not
 	// supplied, we ensure that it inherits all the policies on the role.
 	var policies []string
-	policiesStr, ok := data.GetOk("policies")
+	policiesRaw, ok := data.GetOk("policies")
 	if ok {
-		policies = policyutil.ParsePolicies(policiesStr.(string))
+		policies = policyutil.ParsePolicies(policiesRaw)
 	}
 	if !strutil.StrListSubset(roleEntry.Policies, policies) {
 		resp.AddWarning("Policies on the tag are not a subset of the policies set on the role. Login will not be allowed with this tag unless the role policies are updated.")
@@ -122,6 +121,10 @@ func (b *backend) pathRoleTagUpdate(
 	allowInstanceMigration := data.Get("allow_instance_migration").(bool)
 	if allowInstanceMigration && !roleEntry.AllowInstanceMigration {
 		resp.AddWarning("Role does not allow instance migration. Login will not be allowed with this tag unless the role value is updated.")
+	}
+
+	if disallowReauthentication && allowInstanceMigration {
+		return logical.ErrorResponse("cannot set both disallow_reauthentication and allow_instance_migration"), nil
 	}
 
 	// max_ttl for the role tag should be less than the max_ttl set on the role.
@@ -285,7 +288,7 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 
 // Parses the tag from string form into a struct form. This method
 // also verifies the correctness of the parsed role tag.
-func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
+func (b *backend) parseAndVerifyRoleTagValue(ctx context.Context, s logical.Storage, tag string) (*roleTag, error) {
 	tagItems := strings.Split(tag, ":")
 
 	// Tag must contain version, nonce, policies and HMAC
@@ -316,29 +319,29 @@ func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*ro
 	for _, tagItem := range tagItems {
 		var err error
 		switch {
-		case strings.Contains(tagItem, "i="):
+		case strings.HasPrefix(tagItem, "i="):
 			rTag.InstanceID = strings.TrimPrefix(tagItem, "i=")
-		case strings.Contains(tagItem, "r="):
+		case strings.HasPrefix(tagItem, "r="):
 			rTag.Role = strings.TrimPrefix(tagItem, "r=")
-		case strings.Contains(tagItem, "p="):
+		case strings.HasPrefix(tagItem, "p="):
 			rTag.Policies = strings.Split(strings.TrimPrefix(tagItem, "p="), ",")
-		case strings.Contains(tagItem, "d="):
+		case strings.HasPrefix(tagItem, "d="):
 			rTag.DisallowReauthentication, err = strconv.ParseBool(strings.TrimPrefix(tagItem, "d="))
 			if err != nil {
 				return nil, err
 			}
-		case strings.Contains(tagItem, "m="):
+		case strings.HasPrefix(tagItem, "m="):
 			rTag.AllowInstanceMigration, err = strconv.ParseBool(strings.TrimPrefix(tagItem, "m="))
 			if err != nil {
 				return nil, err
 			}
-		case strings.Contains(tagItem, "t="):
+		case strings.HasPrefix(tagItem, "t="):
 			rTag.MaxTTL, err = time.ParseDuration(fmt.Sprintf("%ss", strings.TrimPrefix(tagItem, "t=")))
 			if err != nil {
 				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("unrecognized item %s in tag", tagItem)
+			return nil, fmt.Errorf("unrecognized item %q in tag", tagItem)
 		}
 	}
 
@@ -346,12 +349,12 @@ func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*ro
 		return nil, fmt.Errorf("missing role name")
 	}
 
-	roleEntry, err := b.lockedAWSRole(s, rTag.Role)
+	roleEntry, err := b.lockedAWSRole(ctx, s, rTag.Role)
 	if err != nil {
 		return nil, err
 	}
 	if roleEntry == nil {
-		return nil, fmt.Errorf("entry not found for %s", rTag.Role)
+		return nil, fmt.Errorf("entry not found for %q", rTag.Role)
 	}
 
 	// Create a HMAC of the plaintext value of role tag and compare it with the given value.
@@ -387,17 +390,17 @@ func createRoleTagNonce() (string, error) {
 	}
 }
 
-// Struct roleTag represents a role tag in a struc form.
+// Struct roleTag represents a role tag in a struct form.
 type roleTag struct {
-	Version                  string        `json:"version" structs:"version" mapstructure:"version"`
-	InstanceID               string        `json:"instance_id" structs:"instance_id" mapstructure:"instance_id"`
-	Nonce                    string        `json:"nonce" structs:"nonce" mapstructure:"nonce"`
-	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
-	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	Role                     string        `json:"role" structs:"role" mapstructure:"role"`
-	HMAC                     string        `json:"hmac" structs:"hmac" mapstructure:"hmac"`
-	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
-	AllowInstanceMigration   bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
+	Version                  string        `json:"version"`
+	InstanceID               string        `json:"instance_id"`
+	Nonce                    string        `json:"nonce"`
+	Policies                 []string      `json:"policies"`
+	MaxTTL                   time.Duration `json:"max_ttl"`
+	Role                     string        `json:"role"`
+	HMAC                     string        `json:"hmac"`
+	DisallowReauthentication bool          `json:"disallow_reauthentication"`
+	AllowInstanceMigration   bool          `json:"allow_instance_migration"`
 }
 
 func (rTag1 *roleTag) Equal(rTag2 *roleTag) bool {

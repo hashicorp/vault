@@ -74,14 +74,6 @@ func (s *Scanner) next() rune {
 		return eof
 	}
 
-	if ch == utf8.RuneError && size == 1 {
-		s.srcPos.Column++
-		s.srcPos.Offset += size
-		s.lastCharLen = size
-		s.err("illegal UTF-8 encoding")
-		return ch
-	}
-
 	// remember last position
 	s.prevPos = s.srcPos
 
@@ -89,16 +81,25 @@ func (s *Scanner) next() rune {
 	s.lastCharLen = size
 	s.srcPos.Offset += size
 
+	if ch == utf8.RuneError && size == 1 {
+		s.err("illegal UTF-8 encoding")
+		return ch
+	}
+
 	if ch == '\n' {
 		s.srcPos.Line++
 		s.lastLineLen = s.srcPos.Column
 		s.srcPos.Column = 0
 	}
 
-	// If we see a null character with data left, then that is an error
-	if ch == '\x00' && s.buf.Len() > 0 {
+	if ch == '\x00' {
 		s.err("unexpected null character (0x00)")
 		return eof
+	}
+
+	if ch == '\uE123' {
+		s.err("unicode code point U+E123 reserved for internal use")
+		return utf8.RuneError
 	}
 
 	// debug
@@ -351,7 +352,7 @@ func (s *Scanner) scanNumber(ch rune) token.Type {
 	return token.NUMBER
 }
 
-// scanMantissa scans the mantissa begining from the rune. It returns the next
+// scanMantissa scans the mantissa beginning from the rune. It returns the next
 // non decimal rune. It's used to determine wheter it's a fraction or exponent.
 func (s *Scanner) scanMantissa(ch rune) rune {
 	scanned := false

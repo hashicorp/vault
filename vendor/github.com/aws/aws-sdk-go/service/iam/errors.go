@@ -144,8 +144,15 @@ const (
 	// "PolicyEvaluation".
 	//
 	// The request failed because a provided policy could not be successfully evaluated.
-	// An additional detail message indicates the source of the failure.
+	// An additional detailed message indicates the source of the failure.
 	ErrCodePolicyEvaluationException = "PolicyEvaluation"
+
+	// ErrCodePolicyNotAttachableException for service response error code
+	// "PolicyNotAttachable".
+	//
+	// The request failed because AWS service role policies can only be attached
+	// to the service-linked role for that service.
+	ErrCodePolicyNotAttachableException = "PolicyNotAttachable"
 
 	// ErrCodeServiceFailureException for service response error code
 	// "ServiceFailure".
@@ -159,6 +166,15 @@ const (
 	//
 	// The specified service does not support service-specific credentials.
 	ErrCodeServiceNotSupportedException = "NotSupportedService"
+
+	// ErrCodeUnmodifiableEntityException for service response error code
+	// "UnmodifiableEntity".
+	//
+	// The request was rejected because only the service that depends on the service-linked
+	// role can modify or delete the role on your behalf. The error message includes
+	// the name of the service that depends on this service-linked role. You must
+	// request the change through that service.
+	ErrCodeUnmodifiableEntityException = "UnmodifiableEntity"
 
 	// ErrCodeUnrecognizedPublicKeyEncodingException for service response error code
 	// "UnrecognizedPublicKeyEncoding".

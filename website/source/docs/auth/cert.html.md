@@ -1,20 +1,18 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: TLS Certificates"
+page_title: "TLS Certificates - Auth Methods"
 sidebar_current: "docs-auth-cert"
 description: |-
-  The "cert" auth backend allows users to authenticate with Vault using TLS client certificates.
+  The "cert" auth method allows users to authenticate with Vault using TLS client certificates.
 ---
 
-# Auth Backend: TLS Certificates
+# TLS Certificates Auth Method
 
-Name: `cert`
-
-The "cert" auth backend allows authentication using SSL/TLS client certificates
+The `cert` auth method allows authentication using SSL/TLS client certificates
 which are either signed by a CA or self-signed.
 
-The trusted certificates and CAs are configured directly to the auth backend
-using the `certs/` path. This backend cannot read trusted certificates from an
+The trusted certificates and CAs are configured directly to the auth method
+using the `certs/` path. This method cannot read trusted certificates from an
 external source.
 
 CA certs are associated with a role; role names and CRL names are normalized to
@@ -22,7 +20,7 @@ lower-case.
 
 ## Revocation Checking
 
-Since Vault 0.4, the backend supports revocation checking.
+Since Vault 0.4, the method supports revocation checking.
 
 An authorised user can submit PEM-formatted CRLs identified by a given name;
 these can be updated or deleted at will. (Note: Vault **does not** fetch CRLs;
@@ -34,6 +32,7 @@ When there are CRLs present, at the time of client authentication:
 
 * If the client presents any chain where no certificate in the chain matches a
   revoked serial number, authentication is allowed
+
 * If there is no chain presented by the client without a revoked serial number,
   authentication is denied
 
@@ -45,429 +44,83 @@ the initial intermediate CA is revoked, the chain containing the replacement
 will still allow the client to successfully authenticate.
 
 **N.B.**: Matching is performed by *serial number only*. For most CAs,
-including Vault's `pki` backend, multiple CRLs can successfully be used as
+including Vault's `pki` method, multiple CRLs can successfully be used as
 serial numbers are globally unique. However, since RFCs only specify that
 serial numbers must be unique per-CA, some CAs issue serial numbers in-order,
 which may cause clashes if attempting to use CRLs from two such CAs in the same
-mount of the backend. The workaround here is to mount multiple copies of the
-`cert` backend, configure each with one CA/CRL, and have clients connect to the
+mount of the method. The workaround here is to mount multiple copies of the
+`cert` method, configure each with one CA/CRL, and have clients connect to the
 appropriate mount.
 
-In addition, since the backend does not fetch the CRLs itself, the CRL's
+In addition, since the method does not fetch the CRLs itself, the CRL's
 designated time to next update is not considered. If a CRL is no longer in use,
-it is up to the administrator to remove it from the backend.
+it is up to the administrator to remove it from the method.
 
 ## Authentication
 
 ### Via the CLI
+
 The below requires Vault to present a certificate signed by `ca.pem` and
 presents `cert.pem` (using `key.pem`) to authenticate against the `web` cert
-role. If a certificate role name is not specified, the auth backend will try to
-authenticate against all trusted certificates.
+role. Note that the name of `web` ties out with the configuration example 
+below writing to a path of `auth/cert/certs/web`. If a certificate role name 
+is not specified, the auth method will try to authenticate against all trusted 
+certificates.
 
 ```
-$ vault auth -method=cert \
-    -ca-cert=ca.pem -client-cert=cert.pem -client-key=key.pem \
+$ vault login \
+    -method=cert \
+    -ca-cert=ca.pem \
+    -client-cert=cert.pem \
+    -client-key=key.pem \
     name=web
 ```
 
 ### Via the API
-The endpoint for the login is `/login`. The client simply connects with their TLS
-certificate and when the login endpoint is hit, the auth backend will determine
-if there is a matching trusted certificate to authenticate the client. Optionally,
-you may specify a single certificate role to authenticate against.
 
-```
-$ curl --cacert ca.pem --cert cert.pem --key key.pem -d name=web \
-    $VAULT_ADDR/v1/auth/cert/login -XPOST
+The endpoint for the login is `/login`. The client simply connects with their
+TLS certificate and when the login endpoint is hit, the auth method will
+determine if there is a matching trusted certificate to authenticate the client.
+Optionally, you may specify a single certificate role to authenticate against.
+
+```sh
+$ curl \
+    --request POST \
+    --cacert ca.pem \
+    --cert cert.pem \
+    --key key.pem \
+    --data '{"name": "web"}' \
+    http://127.0.0.1:8200/v1/auth/cert/login
 ```
 
 ## Configuration
 
-First, you must enable the certificate auth backend:
+Auth methods must be configured in advance before users or machines can
+authenticate. These steps are usually completed by an operator or configuration
+management tool.
 
-```
-$ vault auth-enable cert
-Successfully enabled 'cert' at 'cert'!
-```
+1. Enable the certificate auth method:
 
-Now when you run `vault auth -methods`, the certificate backend is available:
+    ```text
+    $ vault auth enable cert
+    ```
 
-```
-Path       Type      Description
-cert/      cert
-token/     token     token based credentials
-```
+1. Configure it with trusted certificates that are allowed to authenticate:
 
-To use the "cert" auth backend, an operator must configure it with
-trusted certificates that are allowed to authenticate. An example is shown below.
-Use `vault path-help` for more details.
+    ```text
+    $ vault write auth/cert/certs/web \
+        display_name=web \
+        policies=web,prod \
+        certificate=@web-cert.pem \
+        ttl=3600
+    ```
 
-```
-$ vault write auth/cert/certs/web \
-    display_name=web \
-    policies=web,prod \
-    certificate=@web-cert.pem \
-    ttl=3600
-...
-```
-
-The above creates a new trusted certificate "web" with same display name
-and the "web" and "prod" policies. The certificate (public key) used to verify
-clients is given by the "web-cert.pem" file. Lastly, an optional `ttl` value
-can be provided in seconds to limit the lease duration.
-
-#### Via the API
-
-The token is set directly as a header for the HTTP API. The name
-of the header should be "X-Vault-Token" and the value should be the token.
+    This creates a new trusted certificate "web" with same display name and the
+    "web" and "prod" policies. The certificate (public key) used to verify
+    clients is given by the "web-cert.pem" file. Lastly, an optional `ttl` value
+    can be provided in seconds to limit the lease duration.
 
 ## API
 
-### /auth/cert/certs
-
-#### DELETE
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Deletes the named role and CA cert from the backend mount.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>DELETE</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/cert/certs/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
-
-#### GET
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Gets information associated with the named role.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/cert/certs/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-    ```javascript
-    {
-      "lease_id": "",
-      "renewable": false,
-      "lease_duration": 0,
-      "data": {
-        "certificate": "-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----",
-        "display_name": "test",
-        "policies": "",
-        "allowed_names": "",
-        "ttl": 2764800
-      },
-      "warnings": null,
-      "auth": null
-    }
-    ```
-
-  </dd>
-</dl>
-
-#### LIST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Lists configured certificate names.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>LIST/GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/cert/certs` (LIST) or `/auth/cert/certs?list=true` (GET)</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-    ```javascript
-    {
-      "lease_id": "",
-      "renewable": false,
-      "lease_duration": 0,
-      "data": {
-        "keys": ["cert1", "cert2"]
-      },
-      "warnings": null,
-      "auth": null
-    }
-    ```
-
-  </dd>
-</dl>
-
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Sets a CA cert and associated parameters in a role name.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/cert/certs/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">certificate</span>
-        <span class="param-flags">required</span>
-        The PEM-format CA certificate.
-      </li>
-      <li>
-        <span class="param">allowed_names</span>
-        <span class="param-flags">optional</span>
-        Constrain the Common and Alternative Names in the client certificate
-        with a [globbed pattern](https://github.com/ryanuber/go-glob/blob/master/README.md#example).
-        Value is a comma-separated list of patterns.
-        Authentication requires at least one Name matching at least one pattern.
-        If not set, defaults to allowing all names.
-      </li>
-      <li>
-        <span class="param">policies</span>
-        <span class="param-flags">optional</span>
-        A comma-separated list of policies to set on tokens issued when
-        authenticating against this CA certificate.
-      </li>
-      <li>
-        <span class="param">display_name</span>
-        <span class="param-flags">optional</span>
-        The `display_name` to set on tokens issued when authenticating
-        against this CA certificate. If not set, defaults to the name
-        of the role.
-      </li>
-      <li>
-        <span class="param">ttl</span>
-        <span class="param-flags">optional</span>
-        The TTL period of the token, provided as a number of seconds. If not
-        provided, the token is valid for the the mount or system default TTL
-        time, in that order.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
-
-### /auth/cert/crls
-
-#### DELETE
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Deletes the named CRL from the backend mount.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>DELETE</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/cert/crls/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
-
-#### GET
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Gets information associated with the named CRL (currently, the serial
-    numbers contained within).  As the serials can be integers up to an
-    arbitrary size, these are returned as strings.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/cert/crls/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-    ```javascript
-    {
-        "auth": null,
-        "data": {
-            "serials": {
-                "13": {}
-            }
-        },
-        "lease_duration": 0,
-        "lease_id": "",
-        "renewable": false,
-        "warnings": null
-    }
-
-    ```
-
-  </dd>
-</dl>
-
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Sets a named CRL.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/cert/crls/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">crl</span>
-        <span class="param-flags">required</span>
-        The PEM-format CRL.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
-
-### /auth/cert/login
-
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Log in and fetch a token. If there is a valid chain to a CA configured in
-    the backend and all role constraints are matched, a token will be issued.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/cert/login`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">name</span>
-        <span class="param-flags">optional</span>
-        Authenticate against only the named certificate role, returning its
-        policy list if successful. If not set, defaults to trying all
-        certificate roles and returning any one that matches.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-    ```javascript
-    {
-      "auth": {
-        "client_token": "ABCD",
-        "policies": ["web", "stage"],
-        "lease_duration": 3600,
-        "renewable": true,
-      }
-    }
-    ```
-
-  </dd>
-</dl>
-
-### /auth/cert/config
-
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Configuration options for the backend.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/cert/config`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">disable_binding</span>
-        <span class="param-flags">optional</span>
-	  If set, during renewal, skips the matching of presented client identity with the client identity used during login. Defaults to false.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
+The TLS Certificate auth method has a full HTTP API. Please see the
+[TLS Certificate API](/api/auth/cert/index.html) for more details.

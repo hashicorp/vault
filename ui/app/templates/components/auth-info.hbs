@@ -1,0 +1,57 @@
+<div class="popup-menu-content">
+  <div class="box">
+    <div class="menu-label">
+      {{auth.authData.displayName}}
+    </div>
+
+    <nav class="menu">
+      <ul class="menu-list">
+        {{#if (is-before (now interval=1000) auth.tokenExpirationDate)}}
+          {{#if auth.authData.renewable}}
+            <li class="action">
+              <button type="button" {{action "renewToken"}} class="link button {{if isRenewing 'is-loading'}}">
+                Renew token
+              </button>
+            </li>
+            <li class="action">
+              {{#confirm-action
+              onConfirmAction=(action "revokeToken")
+              confirmMessage=(concat "Are you sure you want to revoke the token for " (get auth 'authData.displayName') "?")
+              confirmButtonText="Revoke"
+              confirmButtonClasses="button is-primary"
+              buttonClasses="button link"
+              showConfirm=shouldRevoke
+              class=(if shouldRevoke "message is-block is-warning is-outline")
+              containerClasses="message-body is-block"
+              messageClasses="is-block"
+              }}
+                Revoke token
+              {{/confirm-action}}
+            </li>
+          {{else}}
+            <li class="action text-right">
+              {{#confirm-action
+              onConfirmAction=(action "revokeToken")
+              confirmMessage=(concat "Are you sure you want to revoke the token for " (get auth 'authData.displayName') "?")
+              confirmButtonText="Revoke"
+              confirmButtonClasses="button is-primary"
+              buttonClasses="button link"
+              showConfirm=shouldRevoke
+              class=(if shouldRevoke "message is-block is-warning is-outline")
+              containerClasses="message-body is-block"
+              messageClasses="is-block"
+              }}
+                Revoke token
+              {{/confirm-action}}
+            </li>
+          {{/if}}
+        {{/if}}
+        <li class="action">
+          <a href="{{href-to "vault.cluster.logout" activeClusterName }}" id="logout">
+            Sign out
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>

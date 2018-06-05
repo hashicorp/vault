@@ -1,0 +1,166 @@
+syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/helper/identity";
+
+package identity;
+
+import "google/protobuf/timestamp.proto";
+
+// Group represents an identity group.
+message Group {
+	// ID is the unique identifier for this group
+	string id = 1;
+
+	// Name is the unique name for this group
+	string name = 2;
+
+	// Policies are the vault policies to be granted to members of this group
+	repeated string policies = 3;
+
+	// ParentGroupIDs are the identifiers of those groups to which this group is a
+	// member of. These will serve as references to the parent group in the
+	// hierarchy.
+	repeated string parent_group_ids = 4;
+
+	// MemberEntityIDs are the identifiers of entities which are members of this
+	// group
+	repeated string member_entity_ids = 5;
+
+	// Metadata represents the custom data tied with this group
+	map<string, string> metadata = 6;
+
+	// CreationTime is the time at which this group was created
+	google.protobuf.Timestamp creation_time = 7;
+
+	// LastUpdateTime is the time at which this group was last modified
+	google.protobuf.Timestamp last_update_time= 8;
+
+	// ModifyIndex tracks the number of updates to the group. It is useful to detect
+	// updates to the groups.
+	uint64 modify_index = 9;
+
+	// BucketKeyHash is the MD5 hash of the storage bucket key into which this
+	// group is stored in the underlying storage. This is useful to find all
+	// the groups belonging to a particular bucket during invalidation of the
+	// storage key.
+	string bucket_key_hash = 10;
+
+	// Alias is used to mark this group as an internal mapping of a group that
+	// is external to the identity store. Alias can only be set if the 'type'
+	// is set to 'external'.
+	Alias alias = 11;
+
+	// Type indicates if this group is an internal group or an external group.
+	// Memberships of the internal groups can be managed over the API whereas
+	// the memberships on the external group --for which a corresponding alias
+	// will be set-- will be managed automatically.
+	string type = 12;
+}
+
+
+// Entity represents an entity that gets persisted and indexed.
+// Entity is fundamentally composed of zero or many aliases.
+message Entity {
+	// Aliases are the identities that this entity is made of. This can be
+	// empty as well to favor being able to create the entity first and then
+	// incrementally adding aliases.
+	repeated Alias aliases = 1;
+
+	// ID is the unique identifier of the entity which always be a UUID. This
+	// should never be allowed to be updated.
+	string id = 2;
+
+	// Name is a unique identifier of the entity which is intended to be
+	// human-friendly. The default name might not be human friendly since it
+	// gets suffixed by a UUID, but it can optionally be updated, unlike the ID
+	// field.
+	string name = 3;
+
+	// Metadata represents the explicit metadata which is set by the
+	// clients.  This is useful to tie any information pertaining to the
+	// aliases. This is a non-unique field of entity, meaning multiple
+	// entities can have the same metadata set. Entities will be indexed based
+	// on this explicit metadata. This enables virtual groupings of entities
+	// based on its metadata.
+	map<string, string> metadata = 4;
+
+	// CreationTime is the time at which this entity is first created.
+	google.protobuf.Timestamp creation_time = 5;
+
+	// LastUpdateTime is the most recent time at which the properties of this
+	// entity got modified. This is helpful in filtering out entities based on
+	// its age and to take action on them, if desired.
+	google.protobuf.Timestamp last_update_time= 6;
+
+	// MergedEntityIDs are the entities which got merged to this one. Entities
+	// will be indexed based on all the entities that got merged into it. This
+	// helps to apply the actions on this entity on the tokens that are merged
+	// to the merged entities. Merged entities will be deleted entirely and
+	// this is the only trackable trail of its earlier presence.
+	repeated string merged_entity_ids = 7;
+
+	// Policies the entity is entitled to
+	repeated string policies = 8;
+
+	// BucketKeyHash is the MD5 hash of the storage bucket key into which this
+	// entity is stored in the underlying storage. This is useful to find all
+	// the entities belonging to a particular bucket during invalidation of the
+	// storage key.
+	string bucket_key_hash = 9;
+
+	// **Enterprise only**
+	// MFASecrets holds the MFA secrets indexed by the identifier of the MFA
+	// method configuration.
+	//map<string, mfa.Secret> mfa_secrets = 10;
+
+	// Disabled indicates whether tokens associated with the account should not
+	// be able to be used
+	bool disabled = 11;
+}
+
+// Alias represents the alias that gets stored inside of the
+// entity object in storage and also represents in an in-memory index of an
+// alias object.
+message Alias {
+	// ID is the unique identifier that represents this alias
+	string id = 1;
+
+	// CanonicalID is the entity identifier to which this alias belongs to
+	string canonical_id = 2;
+
+	// MountType is the backend mount's type to which this alias belongs to.
+	// This enables categorically querying aliases of specific backend types.
+	string mount_type = 3;
+
+	// MountAccessor is the backend mount's accessor to which this alias 
+	// belongs to.
+	string mount_accessor = 4;
+
+	// MountPath is the backend mount's path to which the Maccessor belongs to. This
+	// field is not used for any operational purposes. This is only returned when
+	// alias is read, only as a nicety.
+	string mount_path = 5;
+
+	// Metadata is the explicit metadata that clients set against an entity
+	// which enables virtual grouping of aliases. Aliases will be indexed
+	// against their metadata.
+	map<string, string> metadata = 6;
+
+	// Name is the identifier of this alias in its authentication source.
+	// This does not uniquely identify an alias in Vault. This in conjunction
+	// with MountAccessor form to be the factors that represent an alias in a
+	// unique way. Aliases will be indexed based on this combined uniqueness
+	// factor.
+	string name = 7;
+
+	// CreationTime is the time at which this alias was first created
+	google.protobuf.Timestamp creation_time = 8;
+
+	// LastUpdateTime is the most recent time at which the properties of this
+	// alias got modified. This is helpful in filtering out aliases based
+	// on its age and to take action on them, if desired.
+	google.protobuf.Timestamp last_update_time = 9;
+
+	// MergedFromCanonicalIDs is the FIFO history of merging activity
+	repeated string merged_from_canonical_ids = 10;
+}

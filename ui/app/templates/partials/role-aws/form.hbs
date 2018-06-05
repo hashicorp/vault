@@ -1,0 +1,86 @@
+{{message-error model=model}}
+<form onsubmit={{action "createOrUpdate" "create"}} onchange={{action "handleChange"}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    {{#if (eq mode 'create')}}
+      <div class="field">
+        <label for="name" class="is-label">
+          Role Name
+        </label>
+        <div class="control">
+          {{input id="name" value=model.id class="input" data-test-input="name"}}
+        </div>
+      </div>
+    {{/if}}
+    <div class="field">
+      <div class="level">
+        <div class="level-left">
+          {{#if useARN}}
+            <label for="arn" class="is-label">
+              ARN
+            </label>
+          {{else}}
+            <label for="policy" class="is-label">
+              Policy
+            </label>
+          {{/if}}
+        </div>
+        <div class="level-right">
+          <div class="control is-flex">
+            {{input
+              data-test-aws-toggle-use-arn=true
+              id="use-arn"
+              type="checkbox"
+              name="use-arn"
+              class="switch is-rounded is-success is-small"
+              checked=useARN
+            }}
+            <label for="use-arn">Use Amazon Resource Name</label>
+          </div>
+        </div>
+      </div>
+      <div class="control">
+        {{#if useARN}}
+          {{input id="arn" value=model.arn class="input" data-test-input="arn"}}
+        {{else}}
+          {{json-editor
+            value=(if model.policy (stringify (jsonify model.policy)) emptyData)
+            valueUpdated=(action "codemirrorUpdated" "policy")
+          }}
+        {{/if}}
+      </div>
+    </div>
+  </div>
+  <div class="field is-grouped-split box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="submit"
+        disabled={{buttonDisabled}}
+        class="button is-primary"
+        data-test-role-aws-create=true
+      >
+        {{#if (eq mode 'create')}}
+          Create role
+        {{else if (eq mode 'edit')}}
+          Save
+        {{/if}}
+      </button>
+      {{#secret-link
+        mode=(if (eq mode "create") "list" "show")
+        class="button"
+        secret=model.id
+      }}
+        Cancel
+      {{/secret-link}}
+    </div>
+    {{#if (and (eq mode 'edit') model.canDelete)}}
+      {{#confirm-action
+        buttonClasses="button"
+        onConfirmAction=(action "delete")
+        confirmMessage=(concat "Are you sure you want to delete " model.id "?")
+        cancelButtonText="Cancel"
+      }}
+        Delete
+      {{/confirm-action}}
+    {{/if}}
+  </div>
+</form>

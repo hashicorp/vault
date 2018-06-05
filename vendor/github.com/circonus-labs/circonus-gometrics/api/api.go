@@ -20,7 +20,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -52,6 +51,9 @@ type TokenKeyType string
 // TokenAppType - Circonus API Token app name
 type TokenAppType string
 
+// TokenAccountIDType - Circonus API Token account id
+type TokenAccountIDType string
+
 // CIDType Circonus object cid
 type CIDType *string
 
@@ -72,12 +74,25 @@ type TagType []string
 
 // Config options for Circonus API
 type Config struct {
-	URL      string
+	// URL defines the API URL - default https://api.circonus.com/v2/
+	URL string
+
+	// TokenKey defines the key to use when communicating with the API
 	TokenKey string
+
+	// TokenApp defines the app to use when communicating with the API
 	TokenApp string
-	CACert   *x509.CertPool
-	Log      *log.Logger
-	Debug    bool
+
+	TokenAccountID string
+
+	// CACert deprecating, use TLSConfig instead
+	CACert *x509.CertPool
+
+	// TLSConfig defines a custom tls configuration to use when communicating with the API
+	TLSConfig *tls.Config
+
+	Log   *log.Logger
+	Debug bool
 }
 
 // API Circonus API
@@ -85,7 +100,9 @@ type API struct {
 	apiURL                  *url.URL
 	key                     TokenKeyType
 	app                     TokenAppType
+	accountID               TokenAccountIDType
 	caCert                  *x509.CertPool
+	tlsConfig               *tls.Config
 	Debug                   bool
 	Log                     *log.Logger
 	useExponentialBackoff   bool
@@ -119,6 +136,8 @@ func New(ac *Config) (*API, error) {
 		app = defaultAPIApp
 	}
 
+	acctID := TokenAccountIDType(ac.TokenAccountID)
+
 	au := string(ac.URL)
 	if au == "" {
 		au = defaultAPIURL
@@ -137,12 +156,14 @@ func New(ac *Config) (*API, error) {
 	}
 
 	a := &API{
-		apiURL: apiURL,
-		key:    key,
-		app:    app,
-		caCert: ac.CACert,
-		Debug:  ac.Debug,
-		Log:    ac.Log,
+		apiURL:    apiURL,
+		key:       key,
+		app:       app,
+		accountID: acctID,
+		caCert:    ac.CACert,
+		tlsConfig: ac.TLSConfig,
+		Debug:     ac.Debug,
+		Log:       ac.Log,
 		useExponentialBackoff: false,
 	}
 
@@ -219,7 +240,7 @@ func (a *API) apiRequest(reqMethod string, reqPath string, data []byte) ([]byte,
 			if !a.useExponentialBackoff {
 				break
 			}
-			if matched, _ := regexp.MatchString("code 403", err.Error()); matched {
+			if strings.Contains(err.Error(), "code 403") {
 				break
 			}
 		}
@@ -291,9 +312,18 @@ func (a *API) apiCall(reqMethod string, reqPath string, data []byte) ([]byte, er
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("X-Circonus-Auth-Token", string(a.key))
 	req.Header.Add("X-Circonus-App-Name", string(a.app))
+	if string(a.accountID) != "" {
+		req.Header.Add("X-Circonus-Account-ID", string(a.accountID))
+	}
 
 	client := retryablehttp.NewClient()
-	if a.apiURL.Scheme == "https" && a.caCert != nil {
+	if a.apiURL.Scheme == "https" {
+		var tlscfg *tls.Config
+		if a.tlsConfig != nil { // preference full custom tls config
+			tlscfg = a.tlsConfig
+		} else if a.caCert != nil {
+			tlscfg = &tls.Config{RootCAs: a.caCert}
+		}
 		client.HTTPClient.Transport = &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			Dial: (&net.Dialer{
@@ -301,7 +331,7 @@ func (a *API) apiCall(reqMethod string, reqPath string, data []byte) ([]byte, er
 				KeepAlive: 30 * time.Second,
 			}).Dial,
 			TLSHandshakeTimeout: 10 * time.Second,
-			TLSClientConfig:     &tls.Config{RootCAs: a.caCert},
+			TLSClientConfig:     tlscfg,
 			DisableKeepAlives:   true,
 			MaxIdleConnsPerHost: -1,
 			DisableCompression:  true,

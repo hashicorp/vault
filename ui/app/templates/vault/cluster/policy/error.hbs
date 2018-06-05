@@ -1,0 +1,25 @@
+    {{#if (eq model.httpStatus 404)}}
+      {{not-found model=model}}
+    {{else}}
+      <header class="page-header">
+        <div class="level">
+          <div class="level-left">
+            <h1 class="title is-3 has-text-grey">
+              {{#if (eq model.httpStatus 403)}}
+                Not authorized
+              {{else}}
+                Error
+              {{/if}}
+            </h1>
+          </div>
+        </div>
+      </header>
+      <div class="box is-sideless has-background-white-bis has-text-grey has-text-centered">
+        {{#if model.message}}
+          <p>{{model.message}}</p>
+        {{/if}}
+        {{#each model.errors as |error|}}
+          <p>{{error}}</p>
+        {{/each}}
+      </div>
+    {{/if}}

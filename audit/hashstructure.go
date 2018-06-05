@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/salt"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
@@ -23,7 +24,7 @@ func HashString(salter *salt.Salt, data string) string {
 // it will be passed through.
 //
 // The structure is modified in-place.
-func Hash(salter *salt.Salt, raw interface{}) error {
+func Hash(salter *salt.Salt, raw interface{}, nonHMACDataKeys []string) error {
 	fn := salter.GetIdentifiedHMAC
 
 	switch s := raw.(type) {
@@ -43,7 +44,7 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 			return nil
 		}
 		if s.Auth != nil {
-			if err := Hash(salter, s.Auth); err != nil {
+			if err := Hash(salter, s.Auth, nil); err != nil {
 				return err
 			}
 		}
@@ -56,7 +57,7 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 			s.ClientTokenAccessor = fn(s.ClientTokenAccessor)
 		}
 
-		data, err := HashStructure(s.Data, fn)
+		data, err := HashStructure(s.Data, fn, nonHMACDataKeys)
 		if err != nil {
 			return err
 		}
@@ -69,18 +70,18 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 		}
 
 		if s.Auth != nil {
-			if err := Hash(salter, s.Auth); err != nil {
+			if err := Hash(salter, s.Auth, nil); err != nil {
 				return err
 			}
 		}
 
 		if s.WrapInfo != nil {
-			if err := Hash(salter, s.WrapInfo); err != nil {
+			if err := Hash(salter, s.WrapInfo, nil); err != nil {
 				return err
 			}
 		}
 
-		data, err := HashStructure(s.Data, fn)
+		data, err := HashStructure(s.Data, fn, nonHMACDataKeys)
 		if err != nil {
 			return err
 		}
@@ -93,6 +94,7 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 		}
 
 		s.Token = fn(s.Token)
+		s.Accessor = fn(s.Accessor)
 
 		if s.WrappedAccessor != "" {
 			s.WrappedAccessor = fn(s.WrappedAccessor)
@@ -106,13 +108,13 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 // the structure. Only _values_ are hashed: keys of objects are not.
 //
 // For the HashCallback, see the built-in HashCallbacks below.
-func HashStructure(s interface{}, cb HashCallback) (interface{}, error) {
+func HashStructure(s interface{}, cb HashCallback, ignoredKeys []string) (interface{}, error) {
 	s, err := copystructure.Copy(s)
 	if err != nil {
 		return nil, err
 	}
 
-	walker := &hashWalker{Callback: cb}
+	walker := &hashWalker{Callback: cb, IgnoredKeys: ignoredKeys}
 	if err := reflectwalk.Walk(s, walker); err != nil {
 		return nil, err
 	}
@@ -132,6 +134,9 @@ type hashWalker struct {
 	// to be hashed. If there is an error, walking will be halted
 	// immediately and the error returned.
 	Callback HashCallback
+
+	// IgnoreKeys are the keys that wont have the HashCallback applied
+	IgnoredKeys []string
 
 	key         []string
 	lastValue   reflect.Value
@@ -243,6 +248,12 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 		v = v.Elem()
 	}
 	if v.Kind() != reflect.String {
+		return nil
+	}
+
+	// See if the current key is part of the ignored keys
+	currentKey := w.key[len(w.key)-1]
+	if strutil.StrListContains(w.IgnoredKeys, currentKey) {
 		return nil
 	}
 

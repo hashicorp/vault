@@ -1,0 +1,177 @@
+$light-grey: #dde3e7;
+$light-gray: #a4a4a4;
+$light-grey-blue: #6c7b81;
+$dark-grey: #788290;
+$faded-gray: #eaeaea;
+// Product colors
+$atlas: #127eff;
+$vagrant: #2f88f7;
+$consul: #69499a;
+$terraform: #822ff7;
+$serf: #dd4e58;
+$packer: #1ddba3;
+
+// Our colors
+$gray: lighten($black, 89%);
+$red: #ff3d3d;
+$green: #39b54a;
+$dark-gray: #535f73;
+
+$gutter-grey: #2a2f36;
+
+.CodeMirror-lint-tooltip {
+  background-color: #f9f9fa;
+  border: 1px solid $light-gray;
+  border-radius: 0;
+  color: lighten($black, 13%);
+  font-family: $family-monospace;
+  font-size: 13px;
+  padding: 7px 8px 9px;
+}
+
+.cm-s-hashi {
+  &.CodeMirror {
+    background-color: $black !important;
+    color: #cfd2d1 !important;
+    border: none;
+    font-family: $family-monospace;
+    -webkit-font-smoothing: auto;
+    line-height: 1.4;
+  }
+
+  .CodeMirror-gutters {
+    color: $dark-grey;
+    background-color: $gutter-grey;
+    border: none;
+  }
+
+  .CodeMirror-cursor {
+    border-left: solid thin #f8f8f0;
+  }
+
+  .CodeMirror-linenumber {
+    color: #6d8a88;
+  }
+
+  &.CodeMirror-focused div.CodeMirror-selected {
+    background: rgba(255, 255, 255, 0.10);
+  }
+
+  .CodeMirror-line::selection,
+  .CodeMirror-line > span::selection,
+  .CodeMirror-line > span > span::selection {
+    background: rgba(255, 255, 255, 0.10);
+  }
+
+  .CodeMirror-line::-moz-selection,
+  .CodeMirror-line > span::-moz-selection,
+  .CodeMirror-line > span > span::-moz-selection {
+    background: rgba(255, 255, 255, 0.10);
+  }
+
+  span.cm-comment {
+    color: $light-grey;
+  }
+
+  span.cm-string,
+  span.cm-string-2 {
+    color: $packer;
+  }
+
+  span.cm-number {
+    color: $serf;
+  }
+
+  span.cm-variable {
+    color: lighten($consul, 20%);
+  }
+
+  span.cm-variable-2 {
+    color: lighten($consul, 20%);
+  }
+
+  span.cm-def {
+    color: $packer;
+  }
+
+  span.cm-operator {
+    color: $gray;
+  }
+  span.cm-keyword {
+    color: $yellow;
+  }
+
+  span.cm-atom {
+    color: $serf;
+  }
+
+  span.cm-meta {
+    color: $packer;
+  }
+
+  span.cm-tag {
+    color: $packer;
+  }
+
+  span.cm-attribute {
+    color: #9fca56;
+  }
+
+  span.cm-qualifier {
+    color: #9fca56;
+  }
+
+  span.cm-property {
+    color: lighten($consul, 20%);
+  }
+
+  span.cm-variable-3 {
+    color: #9fca56;
+  }
+
+  span.cm-builtin {
+    color: #9fca56;
+  }
+
+  .CodeMirror-activeline-background {
+    background: #101213;
+  }
+
+  .CodeMirror-matchingbracket {
+    text-decoration: underline;
+    color: white !important;
+  }
+}
+
+.readonly-codemirror {
+  .CodeMirror-cursors {
+    display: none;
+  }
+
+  .cm-s-hashi {
+    span {
+      color: $light-grey;
+    }
+
+    span.cm-string,
+    span.cm-string-2 {
+      color: $faded-gray;
+    }
+
+    span.cm-number {
+      color: lighten($dark-gray, 30%);
+    }
+
+    span.cm-property {
+      color: white;
+    }
+
+    span.cm-variable-2 {
+      color: $light-grey-blue;
+    }
+  }
+}
+
+.cm-s-auto-height.CodeMirror {
+  height: auto;
+}

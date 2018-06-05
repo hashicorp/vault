@@ -1,46 +1,45 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: Username & Password"
+page_title: "Userpass - Auth Methods"
 sidebar_current: "docs-auth-userpass"
 description: |-
-  The "userpass" auth backend allows users to authenticate with Vault using a username and password.
+  The "userpass" auth method allows users to authenticate with Vault using a username and password.
 ---
 
-# Auth Backend: Username & Password
+# Userpass Auth Method
 
-Name: `userpass`
-
-The "userpass" auth backend allows users to authenticate with Vault using
+The `userpass` auth method allows users to authenticate with Vault using
 a username and password combination.
 
 The username/password combinations are configured directly to the auth
-backend using the `users/` path. This backend cannot read usernames and
+method using the `users/` path. This method cannot read usernames and
 passwords from an external source.
+
+The method lowercases all submitted usernames, e.g. `Mary` and `mary` are the
+same entry.
 
 ## Authentication
 
-#### Via the CLI
+### Via the CLI
 
-```
-$ vault auth -method=userpass \
+```text
+$ vault login -method=userpass \
     username=foo \
     password=bar
 ```
 
-#### Via the API
-
-The endpoint for the login is `auth/userpass/login/<username>`.
-
-The password should be sent in the POST body encoded as JSON.
+### Via the API
 
 ```shell
-$ curl $VAULT_ADDR/v1/auth/userpass/login/mitchellh \
-    -d '{ "password": "foo" }'
+$ curl \
+    --request POST \
+    --data '{"password": "foo"}' \
+    http://127.0.0.1:8200/v1/auth/userpass/login/mitchellh
 ```
 
-The response will be in JSON. For example:
+The response will contain the token at `auth.client_token`:
 
-```javascript
+```json
 {
   "lease_id": "",
   "renewable": false,
@@ -62,336 +61,30 @@ The response will be in JSON. For example:
 
 ## Configuration
 
-First, you must enable the username/password auth backend:
+Auth methods must be configured in advance before users or machines can
+authenticate. These steps are usually completed by an operator or configuration
+management tool.
 
-```
-$ vault auth-enable userpass
-Successfully enabled 'userpass' at 'userpass'!
-```
+1. Enable the userpass auth method:
 
-Now when you run `vault auth -methods`, the username/password backend is
-available:
+    ```text
+    $ vault auth enable userpass
+    ```
 
-```
-Path       Type      Description
-token/     token     token based credentials
-userpass/  userpass
-```
+1. Configure it with users that are allowed to authenticate:
 
-To use the "userpass" auth backend, an operator must configure it with
-users that are allowed to authenticate. An example is shown below.
-Use `vault path-help` for more details.
+    ```text
+    $ vault write auth/userpass/users/mitchellh \
+        password=foo \
+        policies=admins
+    ```
 
-```
-$ vault write auth/userpass/users/mitchellh \
-    password=foo \
-    policies=admins
-...
-```
-
-The above creates a new user "mitchellh" with the password "foo" that
-will be associated with the "admins" policy. This is the only configuration
-necessary.
+    This creates a new user "mitchellh" with the password "foo" that will be
+    associated with the "admins" policy. This is the only configuration
+    necessary.
 
 ## API
 
-### /auth/userpass/users/[username]
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-      Create a new user or update an existing user.
-      This path honors the distinction between the `create` and `update` capabilities inside ACL policies.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/userpass/users/<username>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">username</span>
-        <span class="param-flags">required</span>
-            Username for this user.
-      </li>
-    </ul>
-  </dd>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">password</span>
-        <span class="param-flags">required</span>
-            Password for this user.
-      </li>
-    </ul>
-  </dd>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">policies</span>
-        <span class="param-flags">optional</span>
-            Comma-separated list of policies.
-            If set to empty string, only the `default` policy will be applicable to the user.
-      </li>
-    </ul>
-  </dd>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">ttl</span>
-        <span class="param-flags">optional</span>
-            The lease duration which decides login expiration.
-      </li>
-    </ul>
-  </dd>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">max_ttl</span>
-        <span class="param-flags">optional</span>
-            Maximum duration after which login should expire.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>`204` response code.
-  </dd>
-</dl>
-
-#### GET
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-  Reads the properties of an existing username.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/userpass/users/[username]`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None.
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-```javascript
-{
-        "request_id": "812229d7-a82e-0b20-c35b-81ce8c1b9fa6",
-        "lease_id": "",
-        "lease_duration": 0,
-        "renewable": false,
-        "data": {
-                "max_ttl": 0,
-                "policies": "default,dev",
-                "ttl": 0
-        },
-        "warnings": null
-}
-```
-
-  </dd>
-</dl>
-
-
-#### DELETE
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-  Deletes an existing username from the backend.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>DELETE</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/userpass/users/[username]`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None.
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>`204` response code.
-  </dd>
-</dl>
-
-
-
-
-### /auth/userpass/users/[username]/password
-#### POST
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-      Update the password for an existing user.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/userpass/users/<username>/password`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">username</span>
-        <span class="param-flags">required</span>
-            Username for this user.
-      </li>
-    </ul>
-  </dd>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">password</span>
-        <span class="param-flags">required</span>
-            Password for this user.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>`204` response code.
-  </dd>
-</dl>
-
-### /auth/userpass/users/[username]/policies
-#### POST
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-      Update the policies associated with an existing user.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/userpass/users/<username>/policies`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">username</span>
-        <span class="param-flags">required</span>
-            Username for this user.
-      </li>
-    </ul>
-  </dd>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">policies</span>
-        <span class="param-flags">optional</span>
-            Comma-separated list of policies.
-            If this is field is not supplied, the policies will be unchanged.
-            If set to empty string, only the `default` policy will be applicable to the user.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>`204` response code.
-  </dd>
-</dl>
-
-
-### /auth/userpass/login/[username]
-#### POST
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-      Login with the username and password.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/userpass/login/<username>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">password</span>
-        <span class="param-flags">required</span>
-            Password for this user.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-   ```javascript
-   {
-	"lease_id": "",
-	"renewable": false,
-	"lease_duration": 0,
-	"data": null,
-	"warnings": null,
-	"auth": {
-		"client_token": "64d2a8f2-2a2f-5688-102b-e6088b76e344",
-		"accessor": "18bb8f89-826a-56ee-c65b-1736dc5ea27d",
-		"policies": ["default"],
-		"metadata": {
-			"username": "vishal"
-		},
-		"lease_duration": 7200,
-		"renewable": true
-	}
-   }
-   ```
-
-  </dd>
-</dl>
-
-### /auth/userpass/users
-#### LIST
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-List the users registered with the backend.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>LIST/GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/auth/userpass/users` (LIST) `/auth/userpass/users?list=true` (GET)</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-   ```javascript
-[
-        "devuser",
-	"produser"
-]
-   ```
-
-  </dd>
-</dl>
-
-
+The Userpass auth method has a full HTTP API. Please see the
+[Userpass auth method API](/api/auth/userpass/index.html) for more
+details.

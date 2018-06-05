@@ -1,6 +1,7 @@
 package salt
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"hash"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 )
@@ -50,7 +52,7 @@ type Config struct {
 }
 
 // NewSalt creates a new salt based on the configuration
-func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
+func NewSalt(ctx context.Context, view logical.Storage, config *Config) (*Salt, error) {
 	// Setup the configuration
 	if config == nil {
 		config = &Config{}
@@ -75,9 +77,9 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 	var raw *logical.StorageEntry
 	var err error
 	if view != nil {
-		raw, err = view.Get(config.Location)
+		raw, err = view.Get(ctx, config.Location)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read salt: %v", err)
+			return nil, errwrap.Wrapf("failed to read salt: {{err}}", err)
 		}
 	}
 
@@ -90,7 +92,7 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 	if s.salt == "" {
 		s.salt, err = uuid.GenerateUUID()
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate uuid: %v", err)
+			return nil, errwrap.Wrapf("failed to generate uuid: {{err}}", err)
 		}
 		s.generated = true
 		if view != nil {
@@ -98,8 +100,8 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 				Key:   config.Location,
 				Value: []byte(s.salt),
 			}
-			if err := view.Put(raw); err != nil {
-				return nil, fmt.Errorf("failed to persist salt: %v", err)
+			if err := view.Put(ctx, raw); err != nil {
+				return nil, errwrap.Wrapf("failed to persist salt: {{err}}", err)
 			}
 		}
 	}
@@ -137,6 +139,12 @@ func (s *Salt) GetIdentifiedHMAC(data string) string {
 // on initialization or if an existing salt value was loaded
 func (s *Salt) DidGenerate() bool {
 	return s.generated
+}
+
+// SaltIDHashFunc uses the supplied hash function instead of the configured
+// hash func in the salt.
+func (s *Salt) SaltIDHashFunc(id string, hashFunc HashFunc) string {
+	return SaltID(s.salt, id, hashFunc)
 }
 
 // SaltID is used to apply a salt and hash function to an ID to make sure

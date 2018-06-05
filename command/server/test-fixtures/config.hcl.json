@@ -3,14 +3,8 @@
 		"tcp": {
 			"address": "127.0.0.1:443"
 		}
-	}, {
-		"atlas": {
-			"token": "foobar",
-			"infrastructure": "foo/bar",
-			"endpoint": "https://foo.bar:1111",
-			"node_id": "foo_node"
-		}
 	}],
+	"cluster_cipher_suites": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
 	"storage": {
 		"consul": {
 			"foo": "bar",
@@ -23,5 +17,7 @@
 	"max_lease_ttl": "10h",
 	"default_lease_ttl": "10h",
 	"cluster_name":"testcluster",
-	"ui":true
+	"ui":true,
+	"pid_file":"./pidfile",
+	"raw_storage_endpoint":true
 }

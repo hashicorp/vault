@@ -1,0 +1,57 @@
+.tool-tip {
+  font-size: $size-7;
+  text-transform: none;
+  margin: 8px 0px 0 -4px;
+  .box {
+    position: relative;
+    color: $white;
+    max-width: 200px;
+    background: $grey;
+    padding: 0.5rem;
+    line-height: 1.4;
+  }
+  @include css-top-arrow(8px, $grey, 1px, $grey-dark, 20px);
+  &.ember-basic-dropdown-content--below.ember-basic-dropdown--transitioning-in {
+    animation: drop-fade-above .15s;
+  }
+  &.ember-basic-dropdown-content--below.ember-basic-dropdown--transitioning-out {
+    animation: drop-fade-above .15s reverse;
+  }
+  &.ember-basic-dropdown-content--above.ember-basic-dropdown--transitioning-in {
+    animation: drop-fade-below .15s;
+  }
+  &.ember-basic-dropdown-content--above.ember-basic-dropdown--transitioning-out {
+    animation: drop-fade-below .15s reverse;
+  }
+}
+
+.ember-basic-dropdown-content--left.tool-tip {
+  margin: 8px 0 0 -11px;
+}
+
+.ember-basic-dropdown-content--below.ember-basic-dropdown-content--right.tool-tip {
+  @include css-top-arrow(8px, $grey, 1px, $grey-dark, calc(100% - 20px));
+}
+.ember-basic-dropdown-content--above.ember-basic-dropdown-content--right.tool-tip {
+  @include css-bottom-arrow(8px, $grey, 1px, $grey-dark, calc(100% - 20px));
+}
+.ember-basic-dropdown-content--above.tool-tip {
+  margin-top: -2px;
+}
+.tool-tip-trigger {
+  border: none;
+  border-radius: 20px;
+  height: 18px;
+  width: 18px;
+  outline: none;
+  box-shadow: none;
+  cursor: pointer;
+  padding: 0;
+  olor: $grey-dark;
+  margin-left: 8px;
+}
+
+.b-checkbox .tool-tip-trigger {
+  position: relative;
+  top: -3px;
+}

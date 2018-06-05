@@ -1,0 +1,42 @@
+{{#each (if model.alias.id (array model.alias) model.aliases) as |item|}}
+  {{#linked-block
+    "vault.cluster.access.identity.aliases.show"
+    item.id
+    "details"
+    class="box is-sideless is-marginless"
+  }}
+    <div class="columns is-mobile">
+      <div class="column is-10">
+        <a href={{href-to "vault.cluster.access.identity.aliases.show" item.id "details"}}
+          class="has-text-black has-text-weight-semibold"
+          >{{i-con
+            glyph='role'
+            size=14
+            class="has-text-grey-light"
+            }}<span class="has-text-weight-semibold">{{item.name}}</span></a>
+        <div class="has-text-grey">
+          {{item.id}}
+        </div>
+        <span class="tag">{{item.mountType}}</span>
+        <span class="has-text-grey is-size-8">
+          {{item.mountAccessor}}
+        </span>
+      </div>
+      <div class="column has-text-right">
+        {{identity/popup-alias params=(array item)}}
+      </div>
+    </div>
+  {{/linked-block}}
+{{else}}
+  <div class="box is-bottomless has-background-white-bis">
+    <div class="columns is-centered">
+      <div class="column is-half has-text-centered">
+        <div class="box is-shadowless has-background-white-bis">
+          <p class="has-text-grey" data-test-no-entity-aliases-text>
+            There are no {{model.identityType}} aliases for {{model.name}}.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+{{/each}}

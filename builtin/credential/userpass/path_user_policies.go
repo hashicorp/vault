@@ -1,6 +1,7 @@
 package userpass
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -17,7 +18,7 @@ func pathUserPolicies(b *backend) *framework.Path {
 				Description: "Username for this user.",
 			},
 			"policies": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies",
 			},
 		},
@@ -31,12 +32,10 @@ func pathUserPolicies(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathUserPoliciesUpdate(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathUserPoliciesUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := d.Get("username").(string)
 
-	userEntry, err := b.user(req.Storage, username)
+	userEntry, err := b.user(ctx, req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
@@ -44,9 +43,9 @@ func (b *backend) pathUserPoliciesUpdate(
 		return nil, fmt.Errorf("username does not exist")
 	}
 
-	userEntry.Policies = policyutil.ParsePolicies(d.Get("policies").(string))
+	userEntry.Policies = policyutil.ParsePolicies(d.Get("policies"))
 
-	return nil, b.setUser(req.Storage, username, userEntry)
+	return nil, b.setUser(ctx, req.Storage, username, userEntry)
 }
 
 const pathUserPoliciesHelpSyn = `

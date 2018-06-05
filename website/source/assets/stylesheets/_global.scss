@@ -19,17 +19,12 @@ body {
 h1, h2, h3, h4, h5 {
   font-family: $font-family-klavika;
   -webkit-font-smoothing: antialiased;
+
+  code, tt {
+    font-size: inherit !important;
+  }
 }
 
 h1 {
   margin-bottom: 24px;
-}
-
-// Avoid FOUT
-.wf-loading {
-  visibility: hidden;
-}
-
-.wf-active, .wf-inactive {
-  visibility: visible;
 }

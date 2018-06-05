@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -52,20 +53,22 @@ func wrapTLS(addr, scheme string, tlsinfo *TLSInfo, l net.Listener) (net.Listene
 	if scheme != "https" && scheme != "unixs" {
 		return l, nil
 	}
-	return newTLSListener(l, tlsinfo)
+	return newTLSListener(l, tlsinfo, checkSAN)
 }
 
 type TLSInfo struct {
-	CertFile       string
-	KeyFile        string
-	CAFile         string
-	TrustedCAFile  string
-	ClientCertAuth bool
+	CertFile           string
+	KeyFile            string
+	CAFile             string // TODO: deprecate this in v4
+	TrustedCAFile      string
+	ClientCertAuth     bool
+	CRLFile            string
+	InsecureSkipVerify bool
 
 	// ServerName ensures the cert matches the given host in case of discovery / virtual hosting
 	ServerName string
 
-	// HandshakeFailure is optinally called when a connection fails to handshake. The
+	// HandshakeFailure is optionally called when a connection fails to handshake. The
 	// connection will be closed immediately afterwards.
 	HandshakeFailure func(*tls.Conn, error)
 
@@ -74,10 +77,13 @@ type TLSInfo struct {
 	// parseFunc exists to simplify testing. Typically, parseFunc
 	// should be left nil. In that case, tls.X509KeyPair will be used.
 	parseFunc func([]byte, []byte) (tls.Certificate, error)
+
+	// AllowedCN is a CN which must be provided by a client.
+	AllowedCN string
 }
 
 func (info TLSInfo) String() string {
-	return fmt.Sprintf("cert = %s, key = %s, ca = %s, trusted-ca = %s, client-cert-auth = %v", info.CertFile, info.KeyFile, info.CAFile, info.TrustedCAFile, info.ClientCertAuth)
+	return fmt.Sprintf("cert = %s, key = %s, ca = %s, trusted-ca = %s, client-cert-auth = %v, crl-file = %s", info.CertFile, info.KeyFile, info.CAFile, info.TrustedCAFile, info.ClientCertAuth, info.CRLFile)
 }
 
 func (info TLSInfo) Empty() bool {
@@ -172,6 +178,28 @@ func (info TLSInfo) baseConfig() (*tls.Config, error) {
 		MinVersion:   tls.VersionTLS12,
 		ServerName:   info.ServerName,
 	}
+
+	if info.AllowedCN != "" {
+		cfg.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			for _, chains := range verifiedChains {
+				if len(chains) != 0 {
+					if info.AllowedCN == chains[0].Subject.CommonName {
+						return nil
+					}
+				}
+			}
+			return errors.New("CommonName authentication failed")
+		}
+	}
+
+	// this only reloads certs when there's a client request
+	// TODO: support server-side refresh (e.g. inotify, SIGHUP), caching
+	cfg.GetCertificate = func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		return tlsutil.NewCert(info.CertFile, info.KeyFile, info.parseFunc)
+	}
+	cfg.GetClientCertificate = func(unused *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+		return tlsutil.NewCert(info.CertFile, info.KeyFile, info.parseFunc)
+	}
 	return cfg, nil
 }
 
@@ -227,6 +255,7 @@ func (info TLSInfo) ClientConfig() (*tls.Config, error) {
 	} else {
 		cfg = &tls.Config{ServerName: info.ServerName}
 	}
+	cfg.InsecureSkipVerify = info.InsecureSkipVerify
 
 	CAFiles := info.cafiles()
 	if len(CAFiles) > 0 {
@@ -240,35 +269,6 @@ func (info TLSInfo) ClientConfig() (*tls.Config, error) {
 		cfg.InsecureSkipVerify = true
 	}
 	return cfg, nil
-}
-
-// ShallowCopyTLSConfig copies *tls.Config. This is only
-// work-around for go-vet tests, which complains
-//
-//   assignment copies lock value to p: crypto/tls.Config contains sync.Once contains sync.Mutex
-//
-// Keep up-to-date with 'go/src/crypto/tls/common.go'
-func ShallowCopyTLSConfig(cfg *tls.Config) *tls.Config {
-	ncfg := tls.Config{
-		Time:                     cfg.Time,
-		Certificates:             cfg.Certificates,
-		NameToCertificate:        cfg.NameToCertificate,
-		GetCertificate:           cfg.GetCertificate,
-		RootCAs:                  cfg.RootCAs,
-		NextProtos:               cfg.NextProtos,
-		ServerName:               cfg.ServerName,
-		ClientAuth:               cfg.ClientAuth,
-		ClientCAs:                cfg.ClientCAs,
-		InsecureSkipVerify:       cfg.InsecureSkipVerify,
-		CipherSuites:             cfg.CipherSuites,
-		PreferServerCipherSuites: cfg.PreferServerCipherSuites,
-		SessionTicketKey:         cfg.SessionTicketKey,
-		ClientSessionCache:       cfg.ClientSessionCache,
-		MinVersion:               cfg.MinVersion,
-		MaxVersion:               cfg.MaxVersion,
-		CurvePreferences:         cfg.CurvePreferences,
-	}
-	return &ncfg
 }
 
 // IsClosedConnError returns true if the error is from closing listener, cmux.
