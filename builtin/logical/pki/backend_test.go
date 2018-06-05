@@ -3221,6 +3221,129 @@ func TestBackend_OID_SANs(t *testing.T) {
 	t.Logf("certificate 3 to check:\n%s", certStr)
 }
 
+func TestBackend_AllowedSerialNumbers(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("root", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var resp *api.Secret
+	var certStr string
+	var block *pem.Block
+	var cert *x509.Certificate
+
+	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// First test that Serial Numbers are not allowed
+	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar",
+		"ttl":         "1h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name":   "foobar",
+		"ttl":           "1h",
+		"serial_number": "foobar",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Update the role to allow serial numbers
+	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+		"allow_any_name":         true,
+		"enforce_hostnames":      false,
+		"allowed_serial_numbers": "f00*,b4r*",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar",
+		"ttl":         "1h",
+		// Not a valid serial number
+		"serial_number": "foobar",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Valid for first possibility
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name":   "foobar",
+		"serial_number": "f00bar",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	certStr = resp.Data["certificate"].(string)
+	block, _ = pem.Decode([]byte(certStr))
+	cert, err = x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cert.Subject.SerialNumber != "f00bar" {
+		t.Fatalf("unexpected Subject SerialNumber %s", cert.Subject.SerialNumber)
+	}
+	t.Logf("certificate 1 to check:\n%s", certStr)
+
+	// Valid for second possibility
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name":   "foobar",
+		"serial_number": "b4rf00",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	certStr = resp.Data["certificate"].(string)
+	block, _ = pem.Decode([]byte(certStr))
+	cert, err = x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cert.Subject.SerialNumber != "b4rf00" {
+		t.Fatalf("unexpected Subject SerialNumber %s", cert.Subject.SerialNumber)
+	}
+	t.Logf("certificate 2 to check:\n%s", certStr)
+}
+
 func setCerts() {
 	cak, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {

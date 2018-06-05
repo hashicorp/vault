@@ -268,6 +268,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		AllowIPSANs:           true,
 		EnforceHostnames:      false,
 		KeyType:               "any",
+		AllowedSerialNumbers:  []string{"*"},
 		AllowExpirationPastCA: true,
 	}
 
