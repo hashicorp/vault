@@ -169,6 +169,13 @@ this value.`,
 this value.`,
 	}
 
+	fields["serial_number"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested serial number, if any. If you want
+more than one, specify alternative names in
+the alt_names map using OID 2.5.4.5.`,
+	}
+
 	return fields
 }
 

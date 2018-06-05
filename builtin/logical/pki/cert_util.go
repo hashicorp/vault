@@ -724,7 +724,6 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 	{
 		if data.csr != nil && data.role.UseCSRCommonName {
 			cn = data.csr.Subject.CommonName
-			ridSerialNumber = data.csr.Subject.SerialNumber
 		}
 		if cn == "" {
 			cn = data.apiData.Get("common_name").(string)
@@ -732,11 +731,12 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 				return errutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true, unless "require_cn" is set to false`}
 			}
 		}
+
+		if data.csr != nil && len(data.role.AllowedSerialNumbers) > 0 {
+			ridSerialNumber = data.csr.Subject.SerialNumber
+		}
 		if ridSerialNumber == "" {
-			ridSerialNumberRaw, ok := data.apiData.GetOk("serial_number")
-			if ok {
-				ridSerialNumber = ridSerialNumberRaw.(string)
-			}
+			ridSerialNumber = data.apiData.Get("serial_number").(string)
 		}
 
 		if data.csr != nil && data.role.UseCSRSANs {
