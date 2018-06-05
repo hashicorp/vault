@@ -52,6 +52,7 @@ IMPROVEMENTS:
  * identity: Adds ability to request entity information through system view
    [GH_4681]
  * secret/pki: Add custom extended key usages [GH-4667]
+ * secret/pki: Add custom PKIX serial numbers [GH-4694]
  * secret/ssh: Use hostname instead of IP in OTP mode, similar to CA mode
    [GH-4673]
  * storage/file: Attempt in some error conditions to do more cleanup [GH-4684]
