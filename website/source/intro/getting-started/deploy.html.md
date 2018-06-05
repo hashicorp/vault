@@ -133,7 +133,7 @@ Vault does not store the generated master key. Without at least 3 key to
 reconstruct the master key, Vault will remain permanently sealed!
 
 It is possible to generate new unseal keys, provided you have a quorum of
-existing unseal keys shares. See "vault rekey" for more information.
+existing unseal keys shares. See "vault operator rekey" for more information.
 ```
 
 Initialization outputs two incredibly important pieces of information:
