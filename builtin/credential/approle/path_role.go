@@ -242,16 +242,47 @@ can only be set during role creation and once set, it can't be reset later.`,
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				// Deprecated
 				"bound_cidr_list": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
 					Description: `Deprecated: Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can perform the login operation.`,
 				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: b.pathRoleBoundCIDRUpdate,
+				logical.ReadOperation:   b.pathRoleBoundCIDRListRead,
+				logical.DeleteOperation: b.pathRoleBoundCIDRListDelete,
+			},
+			HelpSynopsis:    strings.TrimSpace(roleHelp["role-bound-cidr-list"][0]),
+			HelpDescription: strings.TrimSpace(roleHelp["role-bound-cidr-list"][1]),
+		},
+		&framework.Path{
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-bound-cidrs$",
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the role.",
+				},
 				"secret_id_bound_cidrs": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can perform the login operation.`,
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: b.pathRoleBoundCIDRUpdate,
+				logical.ReadOperation:   b.pathRoleSecretIDBoundCIDRRead,
+				logical.DeleteOperation: b.pathRoleSecretIDBoundCIDRDelete,
+			},
+			HelpSynopsis:    strings.TrimSpace(roleHelp["secret-id-bound-cidrs"][0]),
+			HelpDescription: strings.TrimSpace(roleHelp["secret-id-bound-cidrs"][1]),
+		},
+		&framework.Path{
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-bound-cidrs$",
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the role.",
 				},
 				"token_bound_cidrs": &framework.FieldSchema{
 					Type: framework.TypeCommaStringSlice,
@@ -260,12 +291,12 @@ IP addresses which can use the returned token.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.pathRoleBoundCIDRListUpdate,
-				logical.ReadOperation:   b.pathRoleBoundCIDRListRead,
-				logical.DeleteOperation: b.pathRoleBoundCIDRListDelete,
+				logical.UpdateOperation: b.pathRoleBoundCIDRUpdate,
+				logical.ReadOperation:   b.pathRoleTokenBoundCIDRRead,
+				logical.DeleteOperation: b.pathRoleTokenBoundCIDRDelete,
 			},
-			HelpSynopsis:    strings.TrimSpace(roleHelp["role-bound-cidr-list"][0]),
-			HelpDescription: strings.TrimSpace(roleHelp["role-bound-cidr-list"][1]),
+			HelpSynopsis:    strings.TrimSpace(roleHelp["token-bound-cidrs"][0]),
+			HelpDescription: strings.TrimSpace(roleHelp["token-bound-cidrs"][1]),
 		},
 		&framework.Path{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/bind-secret-id$",
@@ -1349,7 +1380,7 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 	return nil, nil
 }
 
-func (b *backend) pathRoleBoundCIDRListUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleBoundCIDRUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1368,12 +1399,21 @@ func (b *backend) pathRoleBoundCIDRListUpdate(ctx context.Context, req *logical.
 		return nil, nil
 	}
 
-	role.BoundCIDRList = data.Get("bound_cidr_list").([]string)
-	if len(role.BoundCIDRList) == 0 {
+	var cidrs []string
+	if cidrsIfc, ok := data.GetOk("bound_cidr_list"); ok {
+		cidrs = cidrsIfc.([]string)
+		role.BoundCIDRList = cidrs
+	} else if cidrsIfc, ok := data.GetOk("secret_id_bound_cidrs"); ok {
+		cidrs = cidrsIfc.([]string)
+		role.SecretIDBoundCIDRs = cidrs
+	} else if cidrsIfc, ok := data.GetOk("token_bound_cidrs"); ok {
+		cidrs = cidrsIfc.([]string)
+		role.TokenBoundCIDRs = cidrs
+	}
+	if len(cidrs) == 0 {
 		return logical.ErrorResponse("missing bound_cidr_list"), nil
 	}
-
-	valid, err := cidrutil.ValidateCIDRListSlice(role.BoundCIDRList)
+	valid, err := cidrutil.ValidateCIDRListSlice(cidrs)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
 	}
@@ -1401,11 +1441,57 @@ func (b *backend) pathRoleBoundCIDRListRead(ctx context.Context, req *logical.Re
 	} else {
 		resp := &logical.Response{
 			Data: map[string]interface{}{
-				// TODO - remove this deprecated field in future versions,
-				// and its associated warning below.
-				"bound_cidr_list":       role.SecretIDBoundCIDRs,
+				"bound_cidr_list": role.SecretIDBoundCIDRs,
+			},
+		}
+		resp.AddWarning(`The "bound_cidr_list" parameter is deprecated and will be removed. Please use "secret_id_bound_cidrs" instead.`)
+		return resp, nil
+	}
+}
+
+func (b *backend) pathRoleSecretIDBoundCIDRRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleName := data.Get("role_name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	lock := b.roleLock(roleName)
+	lock.Lock()
+	defer lock.Unlock()
+
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
+		return nil, err
+	} else if role == nil {
+		return nil, nil
+	} else {
+		resp := &logical.Response{
+			Data: map[string]interface{}{
 				"secret_id_bound_cidrs": role.SecretIDBoundCIDRs,
-				"token_bound_cidrs":     role.TokenBoundCIDRs,
+			},
+		}
+		resp.AddWarning(`The "bound_cidr_list" parameter is deprecated and will be removed. Please use "secret_id_bound_cidrs" instead.`)
+		return resp, nil
+	}
+}
+
+func (b *backend) pathRoleTokenBoundCIDRRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleName := data.Get("role_name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	lock := b.roleLock(roleName)
+	lock.Lock()
+	defer lock.Unlock()
+
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
+		return nil, err
+	} else if role == nil {
+		return nil, nil
+	} else {
+		resp := &logical.Response{
+			Data: map[string]interface{}{
+				"token_bound_cidrs": role.TokenBoundCIDRs,
 			},
 		}
 		resp.AddWarning(`The "bound_cidr_list" parameter is deprecated and will be removed. Please use "secret_id_bound_cidrs" instead.`)
@@ -1432,7 +1518,54 @@ func (b *backend) pathRoleBoundCIDRListDelete(ctx context.Context, req *logical.
 	}
 
 	// Deleting a field implies setting the value to it's default value.
+	role.BoundCIDRList = data.GetDefaultOrZero("bound_cidr_list").([]string)
+
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
+}
+
+func (b *backend) pathRoleSecretIDBoundCIDRDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleName := data.Get("role_name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	lock := b.roleLock(roleName)
+	lock.Lock()
+	defer lock.Unlock()
+
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, nil
+	}
+
+	// Deleting a field implies setting the value to it's default value.
 	role.SecretIDBoundCIDRs = data.GetDefaultOrZero("secret_id_bound_cidrs").([]string)
+
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
+}
+
+func (b *backend) pathRoleTokenBoundCIDRDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleName := data.Get("role_name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	lock := b.roleLock(roleName)
+	lock.Lock()
+	defer lock.Unlock()
+
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, nil
+	}
+
+	// Deleting a field implies setting the value to it's default value.
 	role.TokenBoundCIDRs = data.GetDefaultOrZero("token_bound_cidrs").([]string)
 
 	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
@@ -2295,11 +2428,25 @@ configured using the parameters of this endpoint.`,
 The value of 'secret_id' can be retrieved using 'role/<role_name>/secret-id' endpoint.`,
 	},
 	"role-bound-cidr-list": {
+		`Deprecated: Comma separated list of CIDR blocks, if set, specifies blocks of IP
+addresses which can perform the login operation`,
+		`During login, the IP address of the client will be checked to see if it
+belongs to the CIDR blocks specified. If CIDR blocks were set and if the
+IP is not encompassed by it, login fails`,
+	},
+	"secret-id-bound-cidrs": {
 		`Comma separated list of CIDR blocks, if set, specifies blocks of IP
 addresses which can perform the login operation`,
 		`During login, the IP address of the client will be checked to see if it
 belongs to the CIDR blocks specified. If CIDR blocks were set and if the
 IP is not encompassed by it, login fails`,
+	},
+	"token-bound-cidrs": {
+		`Comma separated string or list of CIDR blocks. If set, specifies the blocks of
+IP addresses which can use the returned token.`,
+		`During use of the returned token, the IP address of the client will be checked to see if it
+belongs to the CIDR blocks specified. If CIDR blocks were set and if the
+IP is not encompassed by it, token use fails`,
 	},
 	"role-policies": {
 		"Policies of the role.",
