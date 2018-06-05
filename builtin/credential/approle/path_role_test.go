@@ -45,7 +45,7 @@ func TestAppRole_LocalSecretIDsRead(t *testing.T) {
 	}
 }
 
-func TestApprole_LocalNonLocalSecretIDs(t *testing.T) {
+func TestAppRole_LocalNonLocalSecretIDs(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
@@ -131,7 +131,7 @@ func TestApprole_LocalNonLocalSecretIDs(t *testing.T) {
 	}
 }
 
-func TestApprole_UpgradeSecretIDPrefix(t *testing.T) {
+func TestAppRole_UpgradeSecretIDPrefix(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
@@ -173,7 +173,7 @@ func TestApprole_UpgradeSecretIDPrefix(t *testing.T) {
 	}
 }
 
-func TestApprole_LocalSecretIDImmutability(t *testing.T) {
+func TestAppRole_LocalSecretIDImmutability(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
@@ -209,7 +209,7 @@ func TestApprole_LocalSecretIDImmutability(t *testing.T) {
 	}
 }
 
-func TestApprole_UpgradeBoundCIDRList(t *testing.T) {
+func TestAppRole_UpgradeBoundCIDRList(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
@@ -309,7 +309,7 @@ func TestApprole_UpgradeBoundCIDRList(t *testing.T) {
 	}
 }
 
-func TestApprole_RoleNameLowerCasing(t *testing.T) {
+func TestAppRole_RoleNameLowerCasing(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	var roleID, secretID string

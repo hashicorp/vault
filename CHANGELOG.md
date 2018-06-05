@@ -2,7 +2,7 @@
 
 SECURITY:
 
- * The Vault team identified a race condition that could occur if a token's
+ * Tokens: A race condition was identified that could occur if a token's
    lease expired while Vault was not running. In this case, when Vault came
    back online, sometimes it would properly revoke the lease but other times it
    would not, leading to a Vault token that no longer had an expiration and had
@@ -12,6 +12,11 @@ SECURITY:
    future issues. In addition, the logic we have put in place ensures that such
    lease-less tokens can no longer be used (unless they are root tokens that
    never had an expiration to begin with).
+ * AppRole case-sensitive role name secret-id leaking: When using a mixed-case
+   role name via AppRole, deleting a secret-id via accessor or other operations
+   could end up leaving the secret-id behind and valid but without an accessor.
+   This has now been fixed, and we have put checks in place to prevent these
+   secret-ids from being used.
 
 DEPRECATIONS/CHANGES:
 
