@@ -32,12 +32,13 @@ IMPROVEMENTS:
    expecting a final value through doneCh behave correctly [GH-4472]
  * auth/cert: Break out `allowed_names` into component parts and add
    `allowed_uri_sans` [GH-4231]
+ * auth/ldap: Obfuscate error messages pre-bind for greater security [GH-4700]
  * cli: `vault login` now supports a `-no-print` flag to suppress printing
    token information but still allow storing into the token helper [GH-4454]
  * core/pkcs11 (enterprise): Add support for CKM_AES_CBC_PAD, CKM_RSA_PKCS, and 
    CKM_RSA_PKCS_OAEP mechanisms
- * core/pkcs11 (enterprise): HSM slots can now be selected by token label instead
-   of just slot number
+ * core/pkcs11 (enterprise): HSM slots can now be selected by token label
+   instead of just slot number
  * core/token: Optimize token revocation by removing unnecessary list call
    against the storage backend when calling revoke-orphan on tokens [GH-4465]
  * core/token: Refactor token revocation logic to not block on the call when
@@ -49,10 +50,13 @@ IMPROVEMENTS:
  * identity: Provide more contextual key information when listing entities,
    groups, and aliases
  * identity: Passthrough EntityID to backends [GH-4663]
- * identity: Adds ability to request entity information through system view [GH_4681]
+ * identity: Adds ability to request entity information through system view
+   [GH_4681]
  * secret/pki: Add custom extended key usages [GH-4667]
+ * secret/pki: Add custom PKIX serial numbers [GH-4694]
  * secret/ssh: Use hostname instead of IP in OTP mode, similar to CA mode
    [GH-4673]
+ * storage/file: Attempt in some error conditions to do more cleanup [GH-4684]
  * ui: wrapping lookup now distplays the path [GH-4644]
  * ui: Identity interface now has more inline actions to make editing and adding
    aliases to an entity or group easier [GH-4502]

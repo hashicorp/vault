@@ -128,16 +128,17 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 	}
 
 	entry := &roleEntry{
-		TTL:              b.System().DefaultLeaseTTL(),
-		MaxTTL:           b.System().MaxLeaseTTL(),
-		AllowLocalhost:   true,
-		AllowAnyName:     true,
-		AllowIPSANs:      true,
-		EnforceHostnames: false,
-		KeyType:          "any",
-		UseCSRCommonName: true,
-		UseCSRSANs:       true,
-		GenerateLease:    new(bool),
+		TTL:                  b.System().DefaultLeaseTTL(),
+		MaxTTL:               b.System().MaxLeaseTTL(),
+		AllowLocalhost:       true,
+		AllowAnyName:         true,
+		AllowIPSANs:          true,
+		EnforceHostnames:     false,
+		KeyType:              "any",
+		UseCSRCommonName:     true,
+		UseCSRSANs:           true,
+		AllowedSerialNumbers: []string{"*"},
+		GenerateLease:        new(bool),
 	}
 
 	*entry.GenerateLease = false
