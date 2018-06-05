@@ -16,6 +16,8 @@ services:
 go:
   - "1.10.2"
 
+go_import_path: github.com/hashicorp/vault
+
 matrix:
   allow_failures:
     - go: tip
