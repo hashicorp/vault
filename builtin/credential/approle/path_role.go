@@ -720,6 +720,7 @@ func validateRoleConstraints(role *roleStorageEntry) error {
 	// At least one constraint should be enabled on the role
 	switch {
 	case role.BindSecretID:
+	case len(role.BoundCIDRList) != 0:
 	case len(role.SecretIDBoundCIDRs) != 0:
 	case len(role.TokenBoundCIDRs) != 0:
 	default:
@@ -1469,7 +1470,6 @@ func (b *backend) pathRoleSecretIDBoundCIDRRead(ctx context.Context, req *logica
 				"secret_id_bound_cidrs": role.SecretIDBoundCIDRs,
 			},
 		}
-		resp.AddWarning(`The "bound_cidr_list" parameter is deprecated and will be removed. Please use "secret_id_bound_cidrs" instead.`)
 		return resp, nil
 	}
 }
@@ -1494,7 +1494,6 @@ func (b *backend) pathRoleTokenBoundCIDRRead(ctx context.Context, req *logical.R
 				"token_bound_cidrs": role.TokenBoundCIDRs,
 			},
 		}
-		resp.AddWarning(`The "bound_cidr_list" parameter is deprecated and will be removed. Please use "secret_id_bound_cidrs" instead.`)
 		return resp, nil
 	}
 }
