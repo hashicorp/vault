@@ -732,11 +732,11 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 			}
 		}
 
-		if data.csr != nil && len(data.role.AllowedSerialNumbers) > 0 {
+		ridSerialNumber = data.apiData.Get("serial_number").(string)
+
+		// only take serial number from CSR if one was not supplied via API
+		if ridSerialNumber == "" && data.csr != nil {
 			ridSerialNumber = data.csr.Subject.SerialNumber
-		}
-		if ridSerialNumber == "" {
-			ridSerialNumber = data.apiData.Get("serial_number").(string)
 		}
 
 		if data.csr != nil && data.role.UseCSRSANs {
