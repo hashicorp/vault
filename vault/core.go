@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -896,15 +897,15 @@ func (c *Core) versionCheck() error {
 	// Get data version
 	rawDataVer, err := c.barrier.Get(coreDataVersionPath)
 	if err != nil {
-		c.logger.Error("core: data version check failed", "error", err)
+		c.logger.Error("data version check failed", "error", err)
 		c.barrier.Seal()
-		c.logger.Warn("core: vault is sealed")
+		c.logger.Warn("vault is sealed")
 		c.versionCompatible = false
 		return err
 	}
 	// If data version is empty, skip version comparison
 	if rawDataVer == nil {
-		c.logger.Warn("core: data version not found, ignoring version check")
+		c.logger.Warn("data version not found, ignoring version check")
 		c.persistVersion()
 		return nil
 	}
@@ -912,35 +913,39 @@ func (c *Core) versionCheck() error {
 	verStruct := &versionStruct{}
 	err = jsonutil.DecodeJSON(rawDataVer.Value, verStruct)
 	if err != nil {
-		c.logger.Warn("core: could not decode version information", "version_val", string(rawDataVer.Value))
+		c.logger.Warn("could not decode version information", "version_val", string(rawDataVer.Value))
 		return err
 	}
 	dataVer, err := gov.NewVersion(verStruct.Version)
 	if err != nil {
-		c.logger.Warn("core: could not parse saved data version", "saved_version", verStruct.Version)
+		c.logger.Warn("could not parse saved data version", "saved_version", verStruct.Version)
 		return err
 	}
 
 	// Get local version
-	localVer, err := gov.NewVersion(version.GetVersion().VersionNumber())
+	localVerNum := version.GetVersion().VersionNumber()
+	if strings.Contains(localVerNum, "version unknown") {
+		// Allow it, but don't persist it
+		c.logger.Warn("version could not be detected", "local_version", localVerNum)
+		return nil
+	}
+
+	localVer, err := gov.NewVersion(localVerNum)
 	if err != nil {
 		// Don't do anything; this could be an unknown case such as during
 		// tests; we also don't want to persist the local version if we can't
 		// parse it
-		c.logger.Warn("core: could not perform data version check", "local_version", version.GetVersion().VersionNumber())
+		c.logger.Warn("could not perform data version check", "local_version", localVerNum)
 		return err
 	}
 
-	// Perform comparison
+	// Perform comparison. For right now we only perform specific checks
+	// instead of the general downgrade case because there are a lot of edge
+	// cases we haven't sorted through
 	switch localVer.Compare(dataVer) {
-	case -1:
-		c.logger.Error("core: downgrade detected and not supported, re-sealing")
-		c.barrier.Seal()
-		c.logger.Warn("core: vault is sealed")
-		c.versionCompatible = false
-		return fmt.Errorf("downgrade detected and not supported; to proceed anyways delete %q and unseal Vault again", coreDataVersionPath)
 	case 1:
 		c.persistVersion()
+		c.versionCompatible = true
 	case 0:
 		c.versionCompatible = true
 	}
