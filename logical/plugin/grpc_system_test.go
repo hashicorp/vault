@@ -164,3 +164,26 @@ func TestSystem_GRPC_mlockEnabled(t *testing.T) {
 		t.Fatalf("expected: %v, got: %v", expected, actual)
 	}
 }
+
+func TestSystem_GRPC_entityInfo(t *testing.T) {
+	sys := logical.TestSystemView()
+	sys.EntityVal = &logical.Entity{
+		ID:   "id",
+		Name: "name",
+	}
+	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
+		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{
+			impl: sys,
+		})
+	})
+	defer client.Close()
+	testSystemView := newGRPCSystemView(client)
+
+	actual, err := testSystemView.EntityInfo("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sys.EntityVal.ID != actual.ID || sys.EntityVal.Name != actual.Name {
+		t.Fatalf("expected: %v, got: %v", sys.EntityVal, actual)
+	}
+}

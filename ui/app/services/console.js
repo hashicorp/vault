@@ -61,8 +61,10 @@ export default Service.extend({
 
   logAndOutput(command, logContent) {
     let log = this.get('log');
-    log.pushObject({ type: 'command', content: command });
-    this.set('commandIndex', null);
+    if (command) {
+      log.pushObject({ type: 'command', content: command });
+      this.set('commandIndex', null);
+    }
     if (logContent) {
       log.pushObject(logContent);
     }
