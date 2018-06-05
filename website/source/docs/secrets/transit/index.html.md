@@ -66,6 +66,34 @@ types also generate separate HMAC keys):
 * `rsa-4096`: 4096-bit RSA key; supports encryption, decryption, signing, and
   signature verification
 
+## Convergent Encryption
+
+Convergent encryption is a mode where the same set of plaintext+context always
+result in the same ciphertext. It does this by deriving a key using a key
+derivation function but also by deterministically deriving a nonce. Because
+these properties differ for any combination of plaintext and ciphertext over a
+keyspace the size of 2^256, the risk of nonce reuse is near zero.
+
+This has many practical uses. A key usage mode is to allow values to be stored
+encrypted in a database, but with limited lookup/query support, so that rows
+with the same value for a specific field can be returned from a query.
+
+To accommodate for any needed upgrades to the algorithm, different versions of
+convergent encryption have historically been supported:
+
+* Version 1 required the client to provide their own nonce, which is highly
+  flexible but if done incorrectly can be dangerous. This was only in Vault
+  0.6.1, and keys using this version cannot be upgraded.
+* Version 2 used an algorithmic approach to deriving the parameters. However,
+  the algorithm used was susceptible to offline plaintext-confirmation attacks,
+  which could allow attackers to brute force decryption if the plaintext size
+  was small. Keys using version 2 can be upgraded by simply performing a rotate
+  operation to a new key version; existing values can then be rewrapped against
+  the new key version and will use the version 3 algorithm.
+* Version 3 uses a different algorithm designed to be resistant to offline
+  plaintext-confirmation attacks. It is similar to AES-SIV in that it uses a
+  PRF to generate the nonce from the plaintext.
+
 ## Setup
 
 Most secrets engines must be configured in advance before they can perform their
