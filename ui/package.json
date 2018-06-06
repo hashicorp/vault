@@ -11,6 +11,7 @@
   "scripts": {
     "build": "ember build -prod",
     "start": "export VAULT_ADDR=http://localhost:8200; ember server --proxy=$VAULT_ADDR",
+    "start-debug": "export VAULT_ADDR=http://localhost:8200; node --inspect --debug-brk node_modules/ember-cli/bin/ember server --proxy=$VAULT_ADDR",
     "start2": "ember server --proxy=http://localhost:8202 --port=4202",
     "test": "node scripts/start-vault.js & ember test",
     "test-oss": "yarn run test -f='!enterprise'",
