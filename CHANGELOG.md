@@ -32,6 +32,9 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * Active Directory Secrets Backend: A new `ad` secrets backend has been
+   created which allows Vault to rotate and provide credentials for configured
+   AD accounts.
  * Rekey Verification: Rekey operations can now require verification. This
    turns on a two-phase process where the existing key shares authorize
    generating a new master key, and a threshold of the new, returned key shares
