@@ -33,7 +33,6 @@ import (
 	"golang.org/x/net/http2"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/logging"
@@ -303,58 +302,6 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 	}
 
 	return core, keys, token
-}
-
-func testTokenStore(t testing.T, c *Core) *TokenStore {
-	me := &MountEntry{
-		Table:       credentialTableType,
-		Path:        "token/",
-		Type:        "token",
-		Description: "token based credentials",
-	}
-
-	meUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		t.Fatal(err)
-	}
-	me.UUID = meUUID
-
-	view := NewBarrierView(c.barrier, credentialBarrierPrefix+me.UUID+"/")
-	sysView := c.mountEntrySysView(me)
-
-	tokenstore, _ := c.newCredentialBackend(context.Background(), me, sysView, view)
-	ts := tokenstore.(*TokenStore)
-
-	err = c.router.Unmount(context.Background(), "auth/token/")
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = c.router.Mount(ts, "auth/token/", &MountEntry{Table: credentialTableType, UUID: "authtokenuuid", Path: "auth/token", Accessor: "authtokenaccessor"}, ts.view)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ts.SetExpirationManager(c.expiration)
-
-	return ts
-}
-
-// TestCoreWithTokenStore returns an in-memory core that has a token store
-// mounted, so that logical token functions can be used
-func TestCoreWithTokenStore(t testing.T) (*Core, *TokenStore, [][]byte, string) {
-	c, keys, root := TestCoreUnsealed(t)
-
-	return c, c.tokenStore, keys, root
-}
-
-// TestCoreWithBackendTokenStore returns a core that has a token store
-// mounted and used the provided physical backend, so that logical token
-// functions can be used
-func TestCoreWithBackendTokenStore(t testing.T, backend physical.Backend) (*Core, *TokenStore, [][]byte, string) {
-	c, keys, root := TestCoreUnsealedBackend(t, backend)
-	ts := testTokenStore(t, c)
-
-	return c, ts, keys, root
 }
 
 // TestKeyCopy is a silly little function to just copy the key so that
@@ -1205,6 +1152,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		ClusterAddr:        fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port+105),
 		DisableMlock:       true,
 		EnableUI:           true,
+		EnableRaw:          true,
 	}
 
 	if base != nil {
@@ -1216,6 +1164,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.PluginDirectory = base.PluginDirectory
 		coreConfig.Seal = base.Seal
 		coreConfig.DevToken = base.DevToken
+		coreConfig.EnableRaw = base.EnableRaw
 
 		if !coreConfig.DisableMlock {
 			base.DisableMlock = false

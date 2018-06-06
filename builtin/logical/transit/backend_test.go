@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path"
 	"reflect"
 	"strconv"
 	"strings"
@@ -865,12 +866,12 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 		t.Fatalf("bad KDF value by default; counter val is %d, KDF val is %d, policy is %#v", keysutil.Kdf_hmac_sha256_counter, p.KDF, *p)
 	}
 
-	derBytesOld, err := p.DeriveKey(keyContext, 1)
+	derBytesOld, err := p.DeriveKey(keyContext, 1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	derBytesOld2, err := p.DeriveKey(keyContext, 1)
+	derBytesOld2, err := p.DeriveKey(keyContext, 1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -884,12 +885,12 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 		t.Fatal("expected no upgrade needed")
 	}
 
-	derBytesNew, err := p.DeriveKey(keyContext, 1)
+	derBytesNew, err := p.DeriveKey(keyContext, 1, 64)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	derBytesNew2, err := p.DeriveKey(keyContext, 1)
+	derBytesNew2, err := p.DeriveKey(keyContext, 1, 64)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -907,6 +908,8 @@ func TestConvergentEncryption(t *testing.T) {
 	testConvergentEncryptionCommon(t, 0, keysutil.KeyType_AES256_GCM96)
 	testConvergentEncryptionCommon(t, 2, keysutil.KeyType_AES256_GCM96)
 	testConvergentEncryptionCommon(t, 2, keysutil.KeyType_ChaCha20_Poly1305)
+	testConvergentEncryptionCommon(t, 3, keysutil.KeyType_AES256_GCM96)
+	testConvergentEncryptionCommon(t, 3, keysutil.KeyType_ChaCha20_Poly1305)
 }
 
 func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyType) {
@@ -928,7 +931,6 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 			"convergent_encryption": true,
 		},
 	}
-
 	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
@@ -940,17 +942,68 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		t.Fatalf("bad: expected error response, got %#v", *resp)
 	}
 
-	p := &keysutil.Policy{
-		Name:                 "testkey",
-		Type:                 keyType,
-		Derived:              true,
-		ConvergentEncryption: true,
-		ConvergentVersion:    ver,
+	req = &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/testkey",
+		Data: map[string]interface{}{
+			"derived":               true,
+			"convergent_encryption": true,
+		},
 	}
-
-	err = p.Rotate(context.Background(), storage)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatal("expected nil response")
+	}
+
+	p, err := keysutil.LoadPolicy(context.Background(), storage, path.Join("policy", "testkey"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p == nil {
+		t.Fatal("got nil policy")
+	}
+
+	if ver > 2 {
+		p.ConvergentVersion = -1
+	} else {
+		p.ConvergentVersion = ver
+	}
+	err = p.Persist(context.Background(), storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.invalidate(context.Background(), "policy/testkey")
+
+	if ver < 3 {
+		// There will be an embedded key version of 3, so specifically clear it
+		key := p.Keys[strconv.Itoa(p.LatestVersion)]
+		key.ConvergentVersion = 0
+		p.Keys[strconv.Itoa(p.LatestVersion)] = key
+		err = p.Persist(context.Background(), storage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b.invalidate(context.Background(), "policy/testkey")
+
+		// Verify it
+		p, err = keysutil.LoadPolicy(context.Background(), storage, path.Join(p.StoragePrefix, "policy", "testkey"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if p == nil {
+			t.Fatal("got nil policy")
+		}
+		if p.ConvergentVersion != ver {
+			t.Fatalf("bad convergent version %d", p.ConvergentVersion)
+		}
+		key = p.Keys[strconv.Itoa(p.LatestVersion)]
+		if key.ConvergentVersion != 0 {
+			t.Fatalf("bad convergent key version %d", key.ConvergentVersion)
+		}
 	}
 
 	// First, test using an invalid length of nonce -- this is only used for v1 convergent
@@ -963,7 +1016,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		}
 		resp, err = b.HandleRequest(context.Background(), req)
 		if err == nil {
-			t.Fatal("expected error, got nil")
+			t.Fatalf("expected error, got nil, version is %d", ver)
 		}
 		if resp == nil {
 			t.Fatal("expected non-nil response")
@@ -1098,6 +1151,80 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 	}
 	if ciphertext3 == ciphertext5 {
 		t.Fatalf("expected different ciphertexts")
+	}
+
+	// If running version 2, check upgrade handling
+	if ver == 2 {
+		curr, err := keysutil.LoadPolicy(context.Background(), storage, path.Join(p.StoragePrefix, "policy", "testkey"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if curr == nil {
+			t.Fatal("got nil policy")
+		}
+		if curr.ConvergentVersion != 2 {
+			t.Fatalf("bad convergent version %d", curr.ConvergentVersion)
+		}
+		key := curr.Keys[strconv.Itoa(curr.LatestVersion)]
+		if key.ConvergentVersion != 0 {
+			t.Fatalf("bad convergent key version %d", key.ConvergentVersion)
+		}
+
+		curr.ConvergentVersion = 3
+		err = curr.Persist(context.Background(), storage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b.invalidate(context.Background(), "policy/testkey")
+
+		// Different algorithm, should be different value
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.IsError() {
+			t.Fatalf("got error response: %#v", *resp)
+		}
+		ciphertext7 := resp.Data["ciphertext"].(string)
+
+		// Now do it via key-specified version
+		if len(curr.Keys) != 1 {
+			t.Fatalf("unexpected length of keys %d", len(curr.Keys))
+		}
+		key = curr.Keys[strconv.Itoa(curr.LatestVersion)]
+		key.ConvergentVersion = 3
+		curr.Keys[strconv.Itoa(curr.LatestVersion)] = key
+		curr.ConvergentVersion = 2
+		err = curr.Persist(context.Background(), storage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b.invalidate(context.Background(), "policy/testkey")
+
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.IsError() {
+			t.Fatalf("got error response: %#v", *resp)
+		}
+		ciphertext8 := resp.Data["ciphertext"].(string)
+
+		if ciphertext7 != ciphertext8 {
+			t.Fatalf("expected the same ciphertext but got %s and %s", ciphertext7, ciphertext8)
+		}
+		if ciphertext6 == ciphertext7 {
+			t.Fatalf("expected different ciphertexts")
+		}
+		if ciphertext3 == ciphertext7 {
+			t.Fatalf("expected different ciphertexts")
+		}
 	}
 
 	// Finally, check operations on empty values

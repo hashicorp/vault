@@ -25,13 +25,13 @@ var (
 
 // mockExpiration returns a mock expiration manager
 func mockExpiration(t testing.TB) *ExpirationManager {
-	_, ts, _, _ := TestCoreWithTokenStore(t)
-	return ts.expiration
+	c, _, _ := TestCoreUnsealed(t)
+	return c.expiration
 }
 
 func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
-	c, ts, _, _ := TestCoreWithBackendTokenStore(t, backend)
-	return c, ts.expiration
+	c, _, _ := TestCoreUnsealedBackend(t, backend)
+	return c, c.expiration
 }
 
 func TestExpiration_Tidy(t *testing.T) {
@@ -293,7 +293,8 @@ func BenchmarkExpiration_Restore_InMem(b *testing.B) {
 }
 
 func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, numLeases int) {
-	c, exp := mockBackendExpiration(b, physicalBackend)
+	c, _, _ := TestCoreUnsealedBackend(b, physicalBackend)
+	exp := c.expiration
 	noop := &NoopBackend{}
 	view := NewBarrierView(c.barrier, "logical/")
 	meUUID, err := uuid.GenerateUUID()
@@ -1603,7 +1604,7 @@ func TestLeaseEntry(t *testing.T) {
 }
 
 func TestExpiration_RevokeForce(t *testing.T) {
-	core, _, _, root := TestCoreWithTokenStore(t)
+	core, _, root := TestCoreUnsealed(t)
 
 	core.logicalBackends["badrenew"] = badRenewFactory
 	me := &MountEntry{
@@ -1651,7 +1652,7 @@ func TestExpiration_RevokeForce(t *testing.T) {
 }
 
 func TestExpiration_RevokeForceSingle(t *testing.T) {
-	core, _, _, root := TestCoreWithTokenStore(t)
+	core, _, root := TestCoreUnsealed(t)
 
 	core.logicalBackends["badrenew"] = badRenewFactory
 	me := &MountEntry{

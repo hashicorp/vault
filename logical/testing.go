@@ -3,15 +3,15 @@ package logical
 import (
 	"context"
 	"reflect"
-	"testing"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/mitchellh/go-testing-interface"
 )
 
 // TestRequest is a helper to create a purely in-memory Request struct.
-func TestRequest(t *testing.T, op Operation, path string) *Request {
+func TestRequest(t testing.T, op Operation, path string) *Request {
 	return &Request{
 		Operation: op,
 		Path:      path,
@@ -22,7 +22,7 @@ func TestRequest(t *testing.T, op Operation, path string) *Request {
 
 // TestStorage is a helper that can be used from unit tests to verify
 // the behavior of a Storage impl.
-func TestStorage(t *testing.T, s Storage) {
+func TestStorage(t testing.T, s Storage) {
 	keys, err := s.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("list error: %s", err)

@@ -77,17 +77,32 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 				return err
 			}
 
+			// If a secret ID entry does not have a corresponding accessor
+			// entry, revoke the secret ID immediately
+			accessorEntry, err := b.secretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
+			if err != nil {
+				return errwrap.Wrapf("failed to read secret ID accessor entry: {{err}}", err)
+			}
+			if accessorEntry == nil {
+				if err := s.Delete(ctx, entryIndex); err != nil {
+					return errwrap.Wrapf(fmt.Sprintf("error deleting secret ID %q from storage: {{err}}", secretIDHMAC), err)
+				}
+				return nil
+			}
+
 			// ExpirationTime not being set indicates non-expiring SecretIDs
 			if !result.ExpirationTime.IsZero() && time.Now().After(result.ExpirationTime) {
 				// Clean up the accessor of the secret ID first
 				err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
 				if err != nil {
-					return err
+					return errwrap.Wrapf("failed to delete secret ID accessor entry: {{err}}", err)
 				}
 
 				if err := s.Delete(ctx, entryIndex); err != nil {
 					return errwrap.Wrapf(fmt.Sprintf("error deleting SecretID %q from storage: {{err}}", secretIDHMAC), err)
 				}
+
+				return nil
 			}
 
 			// At this point, the secret ID is not expired and is valid. Delete

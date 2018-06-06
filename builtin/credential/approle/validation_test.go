@@ -51,9 +51,7 @@ func TestAppRole_SecretIDNumUsesUpgrade(t *testing.T) {
 	}
 
 	// Check if the response contains the value set for secret_id_num_uses
-	// and not SecretIDNumUses
-	if resp.Data["secret_id_num_uses"] != 10 ||
-		resp.Data["SecretIDNumUses"] != 0 {
+	if resp.Data["secret_id_num_uses"] != 10 {
 		t.Fatal("invalid secret_id_num_uses")
 	}
 }

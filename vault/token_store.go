@@ -1028,19 +1028,6 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 		return nil, nil
 	}
 
-	// If we are still restoring the expiration manager, we want to ensure the
-	// token is not expired
-	if ts.expiration == nil {
-		return nil, errors.New("expiration manager is nil on tokenstore")
-	}
-	check, err := ts.expiration.RestoreSaltedTokenCheck(entry.Path, saltedID)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to check token in restore mode: {{err}}", err)
-	}
-	if !check {
-		return nil, nil
-	}
-
 	persistNeeded := false
 
 	// Upgrade the deprecated fields
@@ -1076,6 +1063,48 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 		persistNeeded = true
 	}
 
+	// Perform these checks on upgraded fields, but before persisting
+
+	// If we are still restoring the expiration manager, we want to ensure the
+	// token is not expired
+	if ts.expiration == nil {
+		return nil, errors.New("expiration manager is nil on tokenstore")
+	}
+	le, err := ts.expiration.FetchLeaseTimesByToken(entry.Path, entry.ID)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to fetch lease times: {{err}}", err)
+	}
+
+	var ret *TokenEntry
+
+	switch {
+	// It's a root token with unlimited creation TTL (so never had an
+	// expiration); this may or may not have a lease (based on when it was
+	// generated, for later revocation purposes) but it doesn't matter, it's
+	// allowed
+	case len(entry.Policies) == 1 && entry.Policies[0] == "root" && entry.TTL == 0:
+		ret = entry
+
+	// It's any kind of expiring token with no lease, immediately delete it
+	case le == nil:
+		leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(entry)
+		if err != nil {
+			return nil, err
+		}
+
+		err = ts.expiration.Revoke(leaseID)
+		if err != nil {
+			return nil, err
+		}
+
+	// Only return if we're not past lease expiration (or if tainted is true),
+	// otherwise assume expmgr is working on revocation
+	default:
+		if !le.ExpireTime.Before(time.Now()) || tainted {
+			ret = entry
+		}
+	}
+
 	// If fields are getting upgraded, store the changes
 	if persistNeeded {
 		if err := ts.store(ctx, entry); err != nil {
@@ -1083,7 +1112,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 		}
 	}
 
-	return entry, nil
+	return ret, nil
 }
 
 // Revoke is used to invalidate a given token, any child tokens
@@ -2070,6 +2099,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		EntityID:       te.EntityID,
 		Period:         periodToUse,
 		ExplicitMaxTTL: explicitMaxTTLToUse,
+		CreationPath:   te.Path,
 	}
 
 	if ts.policyLookupFunc != nil {
