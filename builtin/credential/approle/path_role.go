@@ -1478,7 +1478,7 @@ func (b *backend) pathRoleFieldRead(ctx context.Context, req *logical.Request, d
 	}
 }
 
-func (b *backend) pathRoleBoundCIDRListDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleBoundCIDRDelete(ctx context.Context, req *logical.Request, data *framework.FieldData, fieldName string) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1497,57 +1497,27 @@ func (b *backend) pathRoleBoundCIDRListDelete(ctx context.Context, req *logical.
 	}
 
 	// Deleting a field implies setting the value to it's default value.
-	role.BoundCIDRList = data.GetDefaultOrZero("bound_cidr_list").([]string)
-
+	switch fieldName {
+	case "bound_cidr_list":
+		role.BoundCIDRList = data.GetDefaultOrZero("bound_cidr_list").([]string)
+	case "secret_id_bound_cidrs":
+		role.SecretIDBoundCIDRs = data.GetDefaultOrZero("secret_id_bound_cidrs").([]string)
+	case "token_bound_cidrs":
+		role.TokenBoundCIDRs = data.GetDefaultOrZero("token_bound_cidrs").([]string)
+	}
 	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
+}
+
+func (b *backend) pathRoleBoundCIDRListDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.pathRoleBoundCIDRDelete(ctx, req, data, "bound_cidr_list")
 }
 
 func (b *backend) pathRoleSecretIDBoundCIDRDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleName := data.Get("role_name").(string)
-	if roleName == "" {
-		return logical.ErrorResponse("missing role_name"), nil
-	}
-
-	lock := b.roleLock(roleName)
-	lock.Lock()
-	defer lock.Unlock()
-
-	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
-	if err != nil {
-		return nil, err
-	}
-	if role == nil {
-		return nil, nil
-	}
-
-	// Deleting a field implies setting the value to it's default value.
-	role.SecretIDBoundCIDRs = data.GetDefaultOrZero("secret_id_bound_cidrs").([]string)
-
-	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
+	return b.pathRoleBoundCIDRDelete(ctx, req, data, "secret_id_bound_cidrs")
 }
 
 func (b *backend) pathRoleTokenBoundCIDRDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleName := data.Get("role_name").(string)
-	if roleName == "" {
-		return logical.ErrorResponse("missing role_name"), nil
-	}
-
-	lock := b.roleLock(roleName)
-	lock.Lock()
-	defer lock.Unlock()
-
-	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
-	if err != nil {
-		return nil, err
-	}
-	if role == nil {
-		return nil, nil
-	}
-
-	// Deleting a field implies setting the value to it's default value.
-	role.TokenBoundCIDRs = data.GetDefaultOrZero("token_bound_cidrs").([]string)
-
-	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
+	return b.pathRoleBoundCIDRDelete(ctx, req, data, "token_bound_cidrs")
 }
 
 func (b *backend) pathRoleBindSecretIDUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
