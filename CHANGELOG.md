@@ -1,4 +1,4 @@
-## 0.10.2 (Unreleased)
+## 0.10.2 (June 6th, 2018)
 
 SECURITY:
 
