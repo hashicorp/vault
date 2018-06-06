@@ -1599,13 +1599,14 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	b, storage := createBackendWithStorage(t)
 
 	roleData := map[string]interface{}{
-		"policies":           "p,q,r,s",
-		"secret_id_num_uses": 10,
-		"secret_id_ttl":      300,
-		"token_ttl":          400,
-		"token_max_ttl":      500,
-		"token_num_uses":     600,
-		"token_bound_cidrs":  "127.0.0.1/32,127.0.0.1/16",
+		"policies":              "p,q,r,s",
+		"secret_id_num_uses":    10,
+		"secret_id_ttl":         300,
+		"token_ttl":             400,
+		"token_max_ttl":         500,
+		"token_num_uses":        600,
+		"secret_id_bound_cidrs": "127.0.0.1/32,127.0.0.1/16",
+		"token_bound_cidrs":     "127.0.0.1/32,127.0.0.1/16",
 	}
 	roleReq := &logical.Request{
 		Operation: logical.CreateOperation,
@@ -1634,8 +1635,8 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 		"token_max_ttl":         500,
 		"token_num_uses":        600,
 		"token_bound_cidrs":     []string{"127.0.0.1/32", "127.0.0.1/16"},
-		"secret_id_bound_cidrs": []string{},
-		"bound_cidr_list":       []string{}, // provided for backwards compatibility
+		"secret_id_bound_cidrs": []string{"127.0.0.1/32", "127.0.0.1/16"},
+		"bound_cidr_list":       []string{"127.0.0.1/32", "127.0.0.1/16"}, // provided for backwards compatibility
 	}
 
 	var expectedStruct roleStorageEntry
@@ -1698,42 +1699,19 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 		t.Fatalf("bad:\nexpected:%#v\nactual:%#v\n", expectedStruct, actualStruct)
 	}
 
-	// RU for role_id field
-	roleReq.Path = "role/role1/role-id"
+	// RUD for secret-id-bound-cidrs field
+	roleReq.Path = "role/role1/secret-id-bound-cidrs"
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
-	if resp.Data["role_id"].(string) != "test_role_id" {
-		t.Fatalf("bad: role_id: expected:test_role_id actual:%s\n", resp.Data["role_id"].(string))
+	if resp.Data["secret_id_bound_cidrs"].([]string)[0] != "127.0.0.1/32" ||
+		resp.Data["secret_id_bound_cidrs"].([]string)[1] != "127.0.0.1/16" {
+		t.Fatalf("bad: secret_id_bound_cidrs: expected:127.0.0.1/32,127.0.0.1/16 actual:%d\n", resp.Data["secret_id_bound_cidrs"].(int))
 	}
 
-	roleReq.Data = map[string]interface{}{"role_id": "custom_role_id"}
-	roleReq.Operation = logical.UpdateOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-	if resp.Data["role_id"].(string) != "custom_role_id" {
-		t.Fatalf("bad: role_id: expected:custom_role_id actual:%s\n", resp.Data["role_id"].(string))
-	}
-
-	// RUD for bind_secret_id field
-	roleReq.Path = "role/role1/bind-secret-id"
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Data = map[string]interface{}{"bind_secret_id": false}
+	roleReq.Data = map[string]interface{}{"secret_id_bound_cidrs": []string{"127.0.0.1/20"}}
 	roleReq.Operation = logical.UpdateOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1746,9 +1724,10 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	if resp.Data["bind_secret_id"].(bool) {
-		t.Fatalf("bad: bind_secret_id: expected:false actual:%t\n", resp.Data["bind_secret_id"].(bool))
+	if resp.Data["secret_id_bound_cidrs"].([]string)[0] != "127.0.0.1/20" {
+		t.Fatalf("bad: secret_id_bound_cidrs: expected:127.0.0.1/20 actual:%s\n", resp.Data["secret_id_bound_cidrs"].([]string)[0])
 	}
+
 	roleReq.Operation = logical.DeleteOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1761,101 +1740,23 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	if !resp.Data["bind_secret_id"].(bool) {
-		t.Fatalf("expected the default value of 'true' to be set")
-	}
-
-	// RUD for policies field
-	roleReq.Path = "role/role1/policies"
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Data = map[string]interface{}{"policies": "a1,b1,c1,d1"}
-	roleReq.Operation = logical.UpdateOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	if !reflect.DeepEqual(resp.Data["policies"].([]string), []string{"a1", "b1", "c1", "d1"}) {
-		t.Fatalf("bad: policies: actual:%s\n", resp.Data["policies"].([]string))
-	}
-	roleReq.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	expectedPolicies := []string{"default"}
-	actualPolicies := resp.Data["policies"].([]string)
-	if !policyutil.EquivalentPolicies(expectedPolicies, actualPolicies) {
-		t.Fatalf("bad: policies: expected:%s actual:%s", expectedPolicies, actualPolicies)
-	}
-
-	// RUD for secret-id-num-uses field
-	roleReq.Path = "role/role1/secret-id-num-uses"
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Data = map[string]interface{}{"secret_id_num_uses": 200}
-	roleReq.Operation = logical.UpdateOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	if resp.Data["secret_id_num_uses"].(int) != 200 {
-		t.Fatalf("bad: secret_id_num_uses: expected:200 actual:%d\n", resp.Data["secret_id_num_uses"].(int))
-	}
-	roleReq.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	if resp.Data["secret_id_num_uses"].(int) != 0 {
+	if len(resp.Data["secret_id_bound_cidrs"].([]string)) != 0 {
 		t.Fatalf("expected value to be reset")
 	}
 
-	// RUD for secret_id_ttl field
-	roleReq.Path = "role/role1/secret-id-ttl"
+	// RUD for token-bound-cidrs field
+	roleReq.Path = "role/role1/token-bound-cidrs"
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+	if resp.Data["token_bound_cidrs"].([]string)[0] != "127.0.0.1/32" ||
+		resp.Data["token_bound_cidrs"].([]string)[1] != "127.0.0.1/16" {
+		t.Fatalf("bad: token_bound_cidrs: expected:127.0.0.1/32,127.0.0.1/16 actual:%d\n", resp.Data["token_bound_cidrs"].(int))
+	}
 
-	roleReq.Data = map[string]interface{}{"secret_id_ttl": 3001}
+	roleReq.Data = map[string]interface{}{"token_bound_cidrs": []string{"127.0.0.1/20"}}
 	roleReq.Operation = logical.UpdateOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1868,51 +1769,8 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	if resp.Data["secret_id_ttl"].(time.Duration) != 3001 {
-		t.Fatalf("bad: secret_id_ttl: expected:3001 actual:%d\n", resp.Data["secret_id_ttl"].(time.Duration))
-	}
-	roleReq.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	if resp.Data["secret_id_ttl"].(time.Duration) != 0 {
-		t.Fatalf("expected value to be reset")
-	}
-
-	// RUD for secret-id-num-uses field
-	roleReq.Path = "role/role1/token-num-uses"
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-	if resp.Data["token_num_uses"].(int) != 600 {
-		t.Fatalf("bad: token_num_uses: expected:600 actual:%d\n", resp.Data["token_num_uses"].(int))
-	}
-
-	roleReq.Data = map[string]interface{}{"token_num_uses": 60}
-	roleReq.Operation = logical.UpdateOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	if resp.Data["token_num_uses"].(int) != 60 {
-		t.Fatalf("bad: token_num_uses: expected:60 actual:%d\n", resp.Data["token_num_uses"].(int))
+	if resp.Data["token_bound_cidrs"].([]string)[0] != "127.0.0.1/20" {
+		t.Fatalf("bad: token_bound_cidrs: expected:127.0.0.1/20 actual:%s\n", resp.Data["token_bound_cidrs"].([]string)[0])
 	}
 
 	roleReq.Operation = logical.DeleteOperation
@@ -1927,127 +1785,7 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	if resp.Data["token_num_uses"].(int) != 0 {
-		t.Fatalf("expected value to be reset")
-	}
-
-	// RUD for 'period' field
-	roleReq.Path = "role/role1/period"
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Data = map[string]interface{}{"period": 9001}
-	roleReq.Operation = logical.UpdateOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	if resp.Data["period"].(time.Duration) != 9001 {
-		t.Fatalf("bad: period: expected:9001 actual:%d\n", resp.Data["9001"].(time.Duration))
-	}
-	roleReq.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	if resp.Data["period"].(time.Duration) != 0 {
-		t.Fatalf("expected value to be reset")
-	}
-
-	// RUD for token_ttl field
-	roleReq.Path = "role/role1/token-ttl"
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Data = map[string]interface{}{"token_ttl": 4001}
-	roleReq.Operation = logical.UpdateOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	if resp.Data["token_ttl"].(time.Duration) != 4001 {
-		t.Fatalf("bad: token_ttl: expected:4001 actual:%d\n", resp.Data["token_ttl"].(time.Duration))
-	}
-	roleReq.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	if resp.Data["token_ttl"].(time.Duration) != 0 {
-		t.Fatalf("expected value to be reset")
-	}
-
-	// RUD for token_max_ttl field
-	roleReq.Path = "role/role1/token-max-ttl"
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Data = map[string]interface{}{"token_max_ttl": 5001}
-	roleReq.Operation = logical.UpdateOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	if resp.Data["token_max_ttl"].(time.Duration) != 5001 {
-		t.Fatalf("bad: token_max_ttl: expected:5001 actual:%d\n", resp.Data["token_max_ttl"].(time.Duration))
-	}
-	roleReq.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	if resp.Data["token_max_ttl"].(time.Duration) != 0 {
+	if len(resp.Data["token_bound_cidrs"].([]string)) != 0 {
 		t.Fatalf("expected value to be reset")
 	}
 

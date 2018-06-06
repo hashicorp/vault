@@ -80,6 +80,19 @@ func (d *FieldData) GetDefaultOrZero(k string) interface{} {
 	return schema.DefaultOrZero()
 }
 
+// GetFirst gets the value for the given field names, in order from first
+// to last. This can be useful for fields with a current name, and one or
+// more deprecated names. The second return value will be false if the keys
+// are invalid or the keys are not set at all.
+func (d *FieldData) GetFirst(k ...string) (interface{}, bool) {
+	for _, v := range k {
+		if result, ok := d.GetOk(v); ok {
+			return result, ok
+		}
+	}
+	return nil, false
+}
+
 // GetOk gets the value for the given field. The second return value
 // will be false if the key is invalid or the key is not set at all.
 func (d *FieldData) GetOk(k string) (interface{}, bool) {
