@@ -69,9 +69,6 @@ enabled while creating or updating a role.
 - `role_name` `(string: <required>)` - Name of the AppRole.
 - `bind_secret_id` `(bool: true)` - Require `secret_id` to be presented when
   logging in using this AppRole.
-- `bound_cidr_list` `(array: [])` - Deprecated: Comma-separated string or list of CIDR
-  blocks; if set, specifies blocks of IP addresses which can perform the login
-  operation.
 - `secret_id_bound_cidrs` `(array: [])` - Comma-separated string or list of CIDR
   blocks; if set, specifies blocks of IP addresses which can perform the login
   operation.
