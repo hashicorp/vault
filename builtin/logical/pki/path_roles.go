@@ -109,11 +109,10 @@ CN and SANs. Defaults to true.`,
 Any valid IP is accepted.`,
 			},
 
-			"allow_uri_sans": &framework.FieldSchema{
-				Type:    framework.TypeBool,
-				Default: true,
-				Description: `If set, URI Subject Alternative Names are allowed.
-Any valid URI is accepted.`,
+			"allowed_uri_sans": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `If set, an array of allowed URIs to put in the URI Subject Alternative Names.
+Any valid URI is accepted, these values support globbing.`,
 			},
 
 			"allowed_other_sans": &framework.FieldSchema{
@@ -459,7 +458,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		AllowAnyName:                  data.Get("allow_any_name").(bool),
 		EnforceHostnames:              data.Get("enforce_hostnames").(bool),
 		AllowIPSANs:                   data.Get("allow_ip_sans").(bool),
-		AllowURISANs:                  data.Get("allow_uri_sans").(bool),
+		AllowedURISANs:                data.Get("allowed_uri_sans").([]string),
 		ServerFlag:                    data.Get("server_flag").(bool),
 		ClientFlag:                    data.Get("client_flag").(bool),
 		CodeSigningFlag:               data.Get("code_signing_flag").(bool),
@@ -592,7 +591,6 @@ type roleEntry struct {
 	AllowAnyName                  bool          `json:"allow_any_name" mapstructure:"allow_any_name"`
 	EnforceHostnames              bool          `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
 	AllowIPSANs                   bool          `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
-	AllowURISANs                  bool          `json:"allow_uri_sans" mapstructure:"allow_uri_sans"`
 	ServerFlag                    bool          `json:"server_flag" mapstructure:"server_flag"`
 	ClientFlag                    bool          `json:"client_flag" mapstructure:"client_flag"`
 	CodeSigningFlag               bool          `json:"code_signing_flag" mapstructure:"code_signing_flag"`
@@ -618,6 +616,7 @@ type roleEntry struct {
 	RequireCN                     bool          `json:"require_cn" mapstructure:"require_cn"`
 	AllowedOtherSANs              []string      `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
 	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers" mapstructure:"allowed_serial_numbers"`
+	AllowedURISANs                []string      `json:"allowed_uri_sans" mapstructure:"allowed_uri_sans"`
 	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
 	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
@@ -639,7 +638,6 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"allow_any_name":                     r.AllowAnyName,
 		"enforce_hostnames":                  r.EnforceHostnames,
 		"allow_ip_sans":                      r.AllowIPSANs,
-		"allow_uri_sans":                     r.AllowURISANs,
 		"server_flag":                        r.ServerFlag,
 		"client_flag":                        r.ClientFlag,
 		"code_signing_flag":                  r.CodeSigningFlag,
@@ -660,6 +658,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"no_store":                           r.NoStore,
 		"allowed_other_sans":                 r.AllowedOtherSANs,
 		"allowed_serial_numbers":             r.AllowedSerialNumbers,
+		"allowed_uri_sans":                   r.AllowedURISANs,
 		"require_cn":                         r.RequireCN,
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,

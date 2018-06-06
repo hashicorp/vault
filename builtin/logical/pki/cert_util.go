@@ -889,9 +889,28 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 	{
 		if data.csr != nil && data.role.UseCSRSANs {
 			if len(data.csr.URIs) > 0 {
-				if !data.role.AllowURISANs {
+				if len(data.role.AllowedURISANs) == 0 {
 					return errutil.UserError{Err: fmt.Sprintf(
-						"URI Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+						"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
+					}
+				}
+
+				// validate uri sans
+				valid := false
+				for _, uri := range data.csr.URIs {
+					for _, allowed := range data.role.AllowedURISANs {
+						validURI := glob.Glob(allowed, uri.String())
+						if validURI {
+							valid = true
+							break
+						}
+					}
+				}
+
+				if !valid {
+					return errutil.UserError{Err: fmt.Sprintf(
+						"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+					}
 				}
 
 				URIs = data.csr.URIs
@@ -901,17 +920,36 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 			if ok {
 				uriAlt := uriAltInt.(string)
 				if len(uriAlt) != 0 {
-					if !data.role.AllowURISANs {
+					if len(data.role.AllowedURISANs) == 0 {
 						return errutil.UserError{Err: fmt.Sprintf(
-							"URI Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+							"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
+						}
 					}
+
 					for _, v := range strings.Split(uriAlt, ",") {
+						valid := false
+						for _, allowed := range data.role.AllowedURISANs {
+							validURI := glob.Glob(allowed, v)
+							if validURI {
+								valid = true
+								break
+							}
+						}
+
+						if !valid {
+							return errutil.UserError{Err: fmt.Sprintf(
+								"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+							}
+						}
+
 						parsedURI, err := url.Parse(v)
 						if parsedURI == nil || err != nil {
 							return errutil.UserError{Err: fmt.Sprintf(
-								"the value '%s' is not a valid IP address", v)}
+								"the provided URI Subject Alternative Name '%s' is not a valid URI", v),
+							}
 						}
 						URIs = append(URIs, parsedURI)
+
 					}
 				}
 			}

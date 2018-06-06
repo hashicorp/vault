@@ -42,7 +42,7 @@ comma-delimited list`,
 	fields["uri_sans"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The requested URI SANs, if any, in a
-comma-delimited list`,
+comma-delimited list.`,
 	}
 
 	fields["other_sans"] = &framework.FieldSchema{

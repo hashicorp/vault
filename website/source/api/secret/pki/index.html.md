@@ -768,9 +768,11 @@ request is denied.
   Alternative Names. No authorization checking is performed except to verify
   that the given values are valid IP addresses.
 
-- `allow_uri_sans` `(bool: true)` - Specifies if clients can request URI Subject
+- `allowed_uri_sans` `(string: "")` - Defines allowed URI Subject
   Alternative Names. No authorization checking is performed except to verify
-  that the given values are valid URIs.
+  that the given values are valid URIs. This can be a comma-delimited list or
+  a JSON string slice. Values can contain glob patterns (e.g. 
+  `spiffe://hostname/*`).
 
 - `allowed_other_sans` `(string: "")` – Defines allowed custom OID/UTF8-string
   SANs. This field supports globbing. The format is the same as OpenSSL:
