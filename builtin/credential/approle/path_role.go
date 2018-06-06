@@ -65,7 +65,7 @@ type roleStorageEntry struct {
 	BoundCIDRList []string `json:"bound_cidr_list_list" mapstructure:"bound_cidr_list"`
 
 	// A constraint, if set, specifies the CIDR blocks from which logins should be allowed
-	SecretIDBoundCIDRs []string `json:"secret_id_bound_cidrs" mapstructure:"bound_cidr_list"`
+	SecretIDBoundCIDRs []string `json:"secret_id_bound_cidrs" mapstructure:"secret_id_bound_cidrs"`
 
 	// A constraint, if set, specifies the CIDR blocks from which token use should be allowed
 	TokenBoundCIDRs []string `json:"token_bound_cidrs" mapstructure:"token_bound_cidrs"`
