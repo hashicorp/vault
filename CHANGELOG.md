@@ -13,11 +13,13 @@ SECURITY:
    lease-less tokens can no longer be used (unless they are root tokens that
    never had an expiration to begin with).
  * Convergent Encryption: The version 2 algorithm used in `transit`'s
-   convergent encryption feature is susceptible to offline chosen plaintext
-   attacks. As a result, we are introducing a version 3 algorithm that
-   mitigates this. If you are currently using convergent encryption, we
-   recommend upgrading, rotating your encryption key (the new key version will
-   use the new algorithm), and rewrapping your data.
+   convergent encryption feature is susceptible to offline
+   plaintext-confirmation attacks. As a result, we are introducing a version 3
+   algorithm that mitigates this. If you are currently using convergent
+   encryption, we recommend upgrading, rotating your encryption key (the new
+   key version will use the new algorithm), and rewrapping your data (the
+   `rewrap` endpoint can be used to allow a relatively non-privileged user to
+   perform the rewrapping while never divulging the plaintext).
  * AppRole case-sensitive role name secret-id leaking: When using a mixed-case
    role name via AppRole, deleting a secret-id via accessor or other operations
    could end up leaving the secret-id behind and valid but without an accessor.
