@@ -1,5 +1,6 @@
 import Ember from 'ember';
 import { task } from 'ember-concurrency';
+import ControlGroupError from 'vault/lib/control-group-error';
 import {
   parseCommand,
   extractDataAndFlags,
@@ -12,6 +13,9 @@ import {
 const { inject, computed, getOwner, run } = Ember;
 
 export default Ember.Component.extend({
+  console: inject.service(),
+  router: inject.service(),
+  controlGroup: inject.service(),
   classNames: 'console-ui-panel-scroller',
   classNameBindings: ['isFullscreen:fullscreen'],
   isFullscreen: false,
@@ -77,6 +81,10 @@ export default Ember.Component.extend({
       let resp = yield service[method].call(service, path, data, flags.wrapTTL);
       this.logAndOutput(command, logFromResponse(resp, path, method, flags));
     } catch (error) {
+      if (error instanceof ControlGroupError) {
+        this.logAndOutput(command, {type: 'error', content: `Control Group encountered at ${error.creation_path}. Close the console for more details.`});
+        return this.get('controlGroup').handleError(error);
+      }
       this.logAndOutput(command, logFromError(error, path, method));
     }
   }),
