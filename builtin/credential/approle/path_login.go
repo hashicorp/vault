@@ -262,7 +262,9 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	}
 
 	// Always include the role name, for later filtering
-	metadata["role_name"] = role.name
+	if metadata != nil {
+		metadata["role_name"] = role.name
+	}
 
 	auth := &logical.Auth{
 		NumUses: role.TokenNumUses,
