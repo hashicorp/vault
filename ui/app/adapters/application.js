@@ -3,11 +3,13 @@ import DS from 'ember-data';
 import fetch from 'fetch';
 
 const POLLING_URL_PATTERNS = ['sys/seal-status', 'sys/health', 'sys/replication/status'];
+const { inject, assign, set, RSVP } = Ember;
 
 export default DS.RESTAdapter.extend({
-  auth: Ember.inject.service(),
+  auth: inject.service(),
+  controlGroup: inject.service(),
 
-  flashMessages: Ember.inject.service(),
+  flashMessages: inject.service(),
 
   namespace: 'v1/sys',
 
@@ -26,11 +28,11 @@ export default DS.RESTAdapter.extend({
   _preRequest(url, options) {
     const token = this.get('auth.currentToken');
     if (token && !options.unauthenticated) {
-      options.headers = Ember.assign(options.headers || {}, {
+      options.headers = assign(options.headers || {}, {
         'X-Vault-Token': token,
       });
       if (options.wrapTTL) {
-        Ember.assign(options.headers, { 'X-Vault-Wrap-TTL': options.wrapTTL });
+        assign(options.headers, { 'X-Vault-Wrap-TTL': options.wrapTTL });
       }
     }
     const isPolling = POLLING_URL_PATTERNS.some(str => url.includes(str));
@@ -55,7 +57,8 @@ export default DS.RESTAdapter.extend({
           flash.info(message);
         });
       }
-      return Ember.RSVP.resolve(...args);
+      return this.get('controlGroup')
+        .checkForControlGroup(args, resp, options.wrapTTL);
     });
   },
 
@@ -67,9 +70,9 @@ export default DS.RESTAdapter.extend({
       headers: opts.headers | {},
     }).then(response => {
       if (response.status >= 200 && response.status < 300) {
-        return Ember.RSVP.resolve(response);
+        return RSVP.resolve(response);
       } else {
-        return Ember.RSVP.reject();
+        return RSVP.reject();
       }
     });
   },
@@ -78,8 +81,8 @@ export default DS.RESTAdapter.extend({
     const returnVal = this._super(...arguments);
     // ember data errors don't have the status code, so we add it here
     if (returnVal instanceof DS.AdapterError) {
-      Ember.set(returnVal, 'httpStatus', status);
-      Ember.set(returnVal, 'path', requestData.url);
+      set(returnVal, 'httpStatus', status);
+      set(returnVal, 'path', requestData.url);
     }
     return returnVal;
   },
