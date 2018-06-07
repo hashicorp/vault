@@ -79,8 +79,10 @@ export default Ember.Component.extend({
       this.logAndOutput(command, logFromResponse(resp, path, method, flags));
     } catch(error) {
       if (error instanceof ControlGroupError) {
-        this.logAndOutput(command, {type: 'error', content: `Control Group encountered at ${error.creation_path}. Close the console for more details.`});
-        return this.get('controlGroup').handleError(error);
+        return this.logAndOutput(
+          command,
+          this.get('controlGroup').logFromError(error)
+        );
       }
       this.logAndOutput(command, logFromError(error, path, method));
     }
