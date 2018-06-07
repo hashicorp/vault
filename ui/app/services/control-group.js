@@ -8,7 +8,7 @@ export default Service.extend({
   router: inject.service(),
 
   checkForControlGroup(callbackArgs, response, wasWrapTTLRequested) {
-    if (this.get('version.isOSS') || wasWrapTTLRequested || !response.wrap_info) {
+    if (this.get('version.isOSS') || wasWrapTTLRequested || !response || (response && !response.wrap_info)) {
       return RSVP.resolve(...callbackArgs);
     }
     let error = new ControlGroupError();
