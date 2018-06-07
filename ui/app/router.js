@@ -28,9 +28,12 @@ Router.map(function() {
           this.route('index', { path: '/' });
           this.route('section', { path: '/:section_name' });
         });
+        this.route('control-groups');
       });
       this.route('unseal');
       this.route('tools', function() {
+        this.route('control-groups');
+        this.route('control-group-accessor', { path: '/control-groups/:accessor'});
         this.route('tool', { path: '/:selectedAction' });
       });
       this.route('access', function() {
@@ -63,6 +66,8 @@ Router.map(function() {
             this.route('show', { path: '/:item_alias_id/:section' });
           });
         });
+        this.route('control-groups');
+        this.route('control-group-accessor', '/control-groups/:accessor');
       });
       this.route('secrets', function() {
         this.route('backends', { path: '/' });
