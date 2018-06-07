@@ -13,7 +13,7 @@ export default Ember.Route.extend({
       if (err instanceof ControlGroupError) {
         return this.get('controlGroup').handleError(err, transition);
       }
-      throw err;
+      return true;
     }
   },
 });
