@@ -1,5 +1,4 @@
 import { moduleFor, test } from 'ember-qunit';
-import { sanitizePath, ensureTrailingSlash } from 'vault/services/console';
 import sinon from 'sinon';
 
 import Ember from 'ember';
@@ -77,3 +76,19 @@ let resolvesArgs = (assert, result, expectedArgs) => {
     return expectation(assert, result);
   });
 });
+
+test(`handleError: transitions to accessor when there is no transition passed in`, function(assert) {
+  let service = this.subject();
+  service.handleError({ accessor: '12345'});
+  assert.ok(this.router.transitionTo.calledWith('vault.cluster.access.control-group-accessor', '12345'));
+});
+
+test(`logFromError: returns correct content string`, function(assert) {
+  let service = this.subject();
+  let contentString = service.logFromError({ accessor: '12345', creation_path: '/this/path/', token: 'asdf'});
+  assert.ok(this.router.urlFor.calledWith('vault.cluster.access.control-group-accessor', '12345'), 'calls urlFor with accessor');
+  assert.ok(contentString.content.includes('12345'), 'contains accessor');
+  assert.ok(contentString.content.includes('/this/path/'), 'contains creation path');
+  assert.ok(contentString.content.includes('asdf'), 'contains token');
+});
+

@@ -16,11 +16,9 @@ export default Service.extend({
     return RSVP.reject(error);
   },
 
-  handleError(error, transition) {
+  handleError(error) {
     let {accessor} = error;
-    if (transition) {
-      transition.intent
-    }
+
     return this.get('router')
       .transitionTo('vault.cluster.access.control-group-accessor', accessor);
   },
