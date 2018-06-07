@@ -5,6 +5,10 @@ $grey-lighter: #f9f9f9;
 $grey: #929dab;
 $grey-dark: $vault-grey;
 $blue: #1563ff;
+//we use this for a fill attribute that is a data url in a css file
+//in Firefox, # is a reserved character in URLs, so we need to escape it
+//in order to interpolate it into our inlined SVG (see bulma-radio-checkboxes.scss)
+$blue-url-escaped: '%231563ff';
 
 //
 $orange: #f9bb2d;
