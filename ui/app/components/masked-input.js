@@ -2,6 +2,7 @@ import Ember from 'ember';
 const { computed } = Ember;
 
 export default Ember.Component.extend({
+	tagName: "",
 	value: null,
 	shouldObscure: computed("isMasked", "isFocused", function(){
 		if(this.get('isFocused') === true){

@@ -1,0 +1,15 @@
+.masked-input {
+	position: relative;
+}
+
+.masked-input .input {
+	padding-right: 2rem;
+}
+
+.masked-input-toggle {
+	position: absolute;
+	top: $size-6/4;
+	right: $size-6/4;
+	min-width: 0;
+  padding: 0 $size-8;
+}
