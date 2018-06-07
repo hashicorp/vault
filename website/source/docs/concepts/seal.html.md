@@ -43,7 +43,7 @@ decrypt the data.
 
 ## Unsealing
 
-The unseal process is done by running `vault unseal` or via the API.
+The unseal process is done by running `vault operator unseal` or via the API.
 This process is stateful: each key can be entered via multiple mechanisms
 on multiple computers and it will work. This allows each shard of the master
 key to be on a distinct machine for better security.

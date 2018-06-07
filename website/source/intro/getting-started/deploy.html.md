@@ -191,17 +191,17 @@ nature of the algorithm, Vault doesn't know if it has the _correct_ key until
 the threshold is reached.
 
 Also notice that the unseal process is stateful. You can go to another computer,
-use `vault unseal`, and as long as it's pointing to the same server, that other
-computer can continue the unseal process. This is incredibly important to the
-design of the unseal process: multiple people with multiple keys are required to
-unseal the Vault. The Vault can be unsealed from multiple computers and the keys
-should never be together. A single malicious operator does not have enough keys
-to be malicious.
+use `vault operator unseal`, and as long as it's pointing to the same server,
+that other computer can continue the unseal process. This is incredibly
+important to the design of the unseal process: multiple people with multiple
+keys are required to unseal the Vault. The Vault can be unsealed from multiple
+computers and the keys should never be together. A single malicious operator
+does not have enough keys to be malicious.
 
-Continue with `vault unseal` to complete unsealing the Vault. To unseal the
-vault you must use three _different_ keys, the same key repeated will not work.
-As you use keys, as long as they are correct, you should soon see output like
-this:
+Continue with `vault operator unseal` to complete unsealing the Vault. To unseal
+the vault you must use three _different_ keys, the same key repeated will not
+work. As you use keys, as long as they are correct, you should soon see output
+like this:
 
 ```text
 $ vault operator unseal
@@ -249,9 +249,9 @@ token_renewable    false
 token_policies     [root]
 ```
 
-As a root user, you can reseal the Vault with `vault seal`. A single operator is
-allowed to do this. This lets a single operator lock down the Vault in an
-emergency without consulting other operators.
+As a root user, you can reseal the Vault with `vault operator seal`. A single
+operator is allowed to do this. This lets a single operator lock down the
+Vault in an emergency without consulting other operators.
 
 When the Vault is sealed again, it clears all of its state (including the
 encryption key) from memory. The Vault is secure and locked down from access.
