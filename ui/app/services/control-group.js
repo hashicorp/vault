@@ -17,10 +17,27 @@ export default Service.extend({
   },
 
   handleError(error, transition) {
+    let {accessor} = error;
+    if (transition) {
+      transition.intent
+    }
+    return this.get('router')
+      .transitionTo('vault.cluster.access.control-group-accessor', accessor);
+  },
 
-    //console requests won't have a transition
-    if (transition) {}
-    debugger;
+  logFromError(error) {
+    let {accessor} = error;
+    let href = this.get('router').urlFor('vault.cluster.access.control-group-accessor', accessor);
+    let lines = [
+      `A Control Group was encountered at ${error.creation_path}.`,
+      `The Control Group Token is ${error.token}.`,
+      `The Accessor is ${error.accessor}.`,
+      `Visit <a href='${href}'>${href}</a> for more details.`
+    ];
+    return {
+      type: 'error-with-html',
+      content: lines.join('\n')
+    };
   }
 
 });
