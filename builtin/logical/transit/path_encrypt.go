@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"sync"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/errutil"
@@ -128,13 +127,17 @@ to the min_encryption_version configured on the key.`,
 
 func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
-	if lock != nil {
-		defer lock.RUnlock()
-	}
+	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+		Storage: req.Storage,
+		Name:    name,
+	})
 	if err != nil {
 		return false, err
 	}
+	if p != nil && b.System().CachingDisabled() {
+		p.Unlock()
+	}
+
 	return p != nil, nil
 }
 
@@ -207,15 +210,16 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 	// Get the policy
 	var p *keysutil.Policy
-	var lock *sync.RWMutex
 	var upserted bool
+	var polReq keysutil.PolicyRequest
 	if req.Operation == logical.CreateOperation {
 		convergent := d.Get("convergent_encryption").(bool)
 		if convergent && !contextSet {
 			return logical.ErrorResponse("convergent encryption requires derivation to be enabled, so context is required"), nil
 		}
 
-		polReq := keysutil.PolicyRequest{
+		polReq = keysutil.PolicyRequest{
+			Upsert:     true,
 			Storage:    req.Storage,
 			Name:       name,
 			Derived:    contextSet,
@@ -233,21 +237,23 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 		}
-
-		p, lock, upserted, err = b.lm.GetPolicyUpsert(ctx, polReq)
-
 	} else {
-		p, lock, err = b.lm.GetPolicyShared(ctx, req.Storage, name)
+		polReq = keysutil.PolicyRequest{
+			Storage: req.Storage,
+			Name:    name,
+		}
 	}
-	if lock != nil {
-		defer lock.RUnlock()
-	}
+	p, upserted, err = b.lm.GetPolicy(ctx, polReq)
 	if err != nil {
 		return nil, err
 	}
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
+	if !b.System().CachingDisabled() {
+		p.Lock(false)
+	}
+	defer p.Unlock()
 
 	// Process batch request items. If encryption of any request
 	// item fails, respectively mark the error in the response

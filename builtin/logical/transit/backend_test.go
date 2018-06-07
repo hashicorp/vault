@@ -41,6 +41,28 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	return b, config.StorageView
 }
 
+func createBackendWithSysView(t *testing.T) (*backend, logical.Storage) {
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	conf := &logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	}
+
+	b := Backend(conf)
+	if b == nil {
+		t.Fatal("failed to create backend")
+	}
+
+	err := b.Backend.Setup(context.Background(), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return b, storage
+}
+
 func TestTransit_RSA(t *testing.T) {
 	testTransit_RSA(t, "rsa-2048")
 	testTransit_RSA(t, "rsa-4096")
@@ -913,14 +935,7 @@ func TestConvergentEncryption(t *testing.T) {
 }
 
 func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyType) {
-	var b *backend
-	sysView := logical.TestSystemView()
-	storage := &logical.InmemStorage{}
-
-	b = Backend(&logical.BackendConfig{
-		StorageView: storage,
-		System:      sysView,
-	})
+	b, storage := createBackendWithSysView(t)
 
 	req := &logical.Request{
 		Storage:   storage,
@@ -1282,16 +1297,17 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 func TestPolicyFuzzing(t *testing.T) {
 	var be *backend
 	sysView := logical.TestSystemView()
-
-	be = Backend(&logical.BackendConfig{
+	conf := &logical.BackendConfig{
 		System: sysView,
-	})
+	}
+
+	be = Backend(conf)
+	be.Setup(context.Background(), conf)
 	testPolicyFuzzingCommon(t, be)
 
 	sysView.CachingDisabledVal = true
-	be = Backend(&logical.BackendConfig{
-		System: sysView,
-	})
+	be = Backend(conf)
+	be.Setup(context.Background(), conf)
 	testPolicyFuzzingCommon(t, be)
 }
 
@@ -1307,9 +1323,11 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 	doFuzzy := func(id int) {
 		// Check for panics, otherwise notify we're done
 		defer func() {
-			if err := recover(); err != nil {
-				t.Fatalf("got a panic: %v", err)
-			}
+			/*
+				if err := recover(); err != nil {
+					t.Errorf("got a panic: %v", err)
+				}
+			*/
 			wg.Done()
 		}()
 
@@ -1344,7 +1362,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 			// Try to write the key to make sure it exists
 			_, err := be.pathPolicyWrite(context.Background(), req, fd)
 			if err != nil {
-				t.Fatalf("got an error: %v", err)
+				t.Errorf("got an error: %v", err)
 			}
 
 			switch chosenFunc {
@@ -1355,7 +1373,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				fd.Schema = be.pathEncrypt().Fields
 				resp, err := be.pathEncryptWrite(context.Background(), req, fd)
 				if err != nil {
-					t.Fatalf("got an error: %v, resp is %#v", err, *resp)
+					t.Errorf("got an error: %v, resp is %#v", err, *resp)
 				}
 				latestEncryptedText[chosenKey] = resp.Data["ciphertext"].(string)
 
@@ -1365,7 +1383,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				fd.Schema = be.pathRotate().Fields
 				resp, err := be.pathRotateWrite(context.Background(), req, fd)
 				if err != nil {
-					t.Fatalf("got an error: %v, resp is %#v, chosenKey is %s", err, *resp, chosenKey)
+					t.Errorf("got an error: %v, resp is %#v, chosenKey is %s", err, *resp, chosenKey)
 				}
 
 			// Decrypt the ciphertext and compare the result
@@ -1384,16 +1402,20 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 					if resp.Data["error"].(string) == keysutil.ErrTooOld {
 						continue
 					}
-					t.Fatalf("got an error: %v, resp is %#v, ciphertext was %s, chosenKey is %s, id is %d", err, *resp, ct, chosenKey, id)
+					t.Errorf("got an error: %v, resp is %#v, ciphertext was %s, chosenKey is %s, id is %d", err, *resp, ct, chosenKey, id)
 				}
-				ptb64 := resp.Data["plaintext"].(string)
+				ptb64, ok := resp.Data["plaintext"].(string)
+				if !ok {
+					t.Errorf("no plaintext found, response was %#v", *resp)
+					return
+				}
 				pt, err := base64.StdEncoding.DecodeString(ptb64)
 				if err != nil {
-					t.Fatalf("got an error decoding base64 plaintext: %v", err)
+					t.Errorf("got an error decoding base64 plaintext: %v", err)
 					return
 				}
 				if string(pt) != testPlaintext {
-					t.Fatalf("got bad plaintext back: %s", pt)
+					t.Errorf("got bad plaintext back: %s", pt)
 				}
 
 			// Change the min version, which also tests the archive functionality
@@ -1401,7 +1423,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				resp, err := be.pathPolicyRead(context.Background(), req, fd)
 				if err != nil {
-					t.Fatalf("got an error reading policy %s: %v", chosenKey, err)
+					t.Errorf("got an error reading policy %s: %v", chosenKey, err)
 				}
 				latestVersion := resp.Data["latest_version"].(int)
 
@@ -1411,7 +1433,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				fd.Schema = be.pathConfig().Fields
 				resp, err = be.pathConfigWrite(context.Background(), req, fd)
 				if err != nil {
-					t.Fatalf("got an error setting min decryption version: %v", err)
+					t.Errorf("got an error setting min decryption version: %v", err)
 				}
 			}
 		}
@@ -1428,14 +1450,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 }
 
 func TestBadInput(t *testing.T) {
-	var b *backend
-	sysView := logical.TestSystemView()
-	storage := &logical.InmemStorage{}
-
-	b = Backend(&logical.BackendConfig{
-		StorageView: storage,
-		System:      sysView,
-	})
+	b, storage := createBackendWithSysView(t)
 
 	req := &logical.Request{
 		Storage:   storage,
