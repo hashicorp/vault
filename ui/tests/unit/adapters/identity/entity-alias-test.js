@@ -3,7 +3,7 @@ import testCases from './_test-cases';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
 moduleFor('adapter:identity/entity-alias', 'Unit | Adapter | identity/entity-alias', {
-  needs: ['service:auth', 'service:flash-messages'],
+  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
   beforeEach() {
     this.server = apiStub();
   },
