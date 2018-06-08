@@ -3,7 +3,7 @@ import testCases from './_test-cases';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
 moduleFor('adapter:identity/group-alias', 'Unit | Adapter | identity/group-alias', {
-  needs: ['service:auth', 'service:flash-messages'],
+  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
   beforeEach() {
     this.server = apiStub();
   },

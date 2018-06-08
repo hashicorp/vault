@@ -2,7 +2,7 @@ import { moduleFor, test } from 'ember-qunit';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
 moduleFor('adapter:secret-engine', 'Unit | Adapter | secret engine', {
-  needs: ['service:auth', 'service:flash-messages'],
+  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
   beforeEach() {
     this.server = apiStub();
   },
