@@ -97,6 +97,8 @@ IMPROVEMENTS:
  * ui: Identity interface now lists groups by name [GH-4655]
  * ui: Permission denied errors still render the sidebar in the Access section
    [GH-4658]
+ * replication: Improve performance of index page flushes and WAL garbage 
+   collecting
 
 BUG FIXES:
 
