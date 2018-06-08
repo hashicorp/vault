@@ -1,9 +1,10 @@
-import { text, triggerable, collection, fillable, value, isPresent } from 'ember-cli-page-object';
+import { text, triggerable, clickable, collection, fillable, value, isPresent } from 'ember-cli-page-object';
 import { getter } from 'ember-cli-page-object/macros';
 
 import keys from 'vault/lib/keycodes';
 
 export default {
+  toggle: clickable('[data-test-console-toggle]'),
   consoleInput: fillable('[data-test-component="console/command-input"] input'),
   consoleInputValue: value('[data-test-component="console/command-input"] input'),
   logOutput: text('[data-test-component="console/output-log"]'),
