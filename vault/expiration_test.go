@@ -736,7 +736,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 	}
 
 	// Should nuke all the keys
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		ID: "foobarbaz",
 	}
 	if err := exp.RevokeByToken(te); err != nil {
@@ -823,7 +823,7 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 	}
 
 	// Should nuke all the keys
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		ID: "foobarbaz",
 	}
 	if err := exp.RevokeByToken(te); err != nil {
@@ -899,7 +899,7 @@ func TestExpiration_RenewToken(t *testing.T) {
 
 func TestExpiration_RenewToken_period(t *testing.T) {
 	exp := mockExpiration(t)
-	root := &TokenEntry{
+	root := &logical.TokenEntry{
 		Policies:     []string{"root"},
 		Path:         "auth/token/root",
 		DisplayName:  "root",

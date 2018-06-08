@@ -557,7 +557,7 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 // This is done by using the secondary index. It also removes the lease entry
 // for the token itself. As a result it should *ONLY* ever be called from the
 // token store's revokeSalted function.
-func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
+func (m *ExpirationManager) RevokeByToken(te *logical.TokenEntry) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
 
 	// Lookup the leases
@@ -1227,7 +1227,7 @@ func (m *ExpirationManager) removeIndexByToken(token, leaseID string) error {
 // CreateOrFetchRevocationLeaseByToken is used to create or fetch the matching
 // leaseID for a particular token. The lease is set to expire immediately after
 // it's created.
-func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(te *TokenEntry) (string, error) {
+func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(te *logical.TokenEntry) (string, error) {
 	// Fetch the saltedID of the token and construct the leaseID
 	saltedID, err := m.tokenStore.SaltID(m.quitContext, te.ID)
 	if err != nil {

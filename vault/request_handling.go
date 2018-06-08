@@ -77,7 +77,7 @@ func (c *Core) fetchEntityAndDerivedPolicies(entityID string) (*identity.Entity,
 	return entity, policies, err
 }
 
-func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *TokenEntry, *identity.Entity, error) {
+func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical.TokenEntry, *identity.Entity, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
 
 	// Ensure there is a client token
@@ -91,10 +91,17 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *TokenEn
 	}
 
 	// Resolve the token policy
-	te, err := c.tokenStore.Lookup(c.activeContext, req.ClientToken)
-	if err != nil {
-		c.logger.Error("failed to lookup token", "error", err)
-		return nil, nil, nil, ErrInternalError
+	var te *logical.TokenEntry
+	switch req.TokenEntry() {
+	case nil:
+		var err error
+		te, err = c.tokenStore.Lookup(c.activeContext, req.ClientToken)
+		if err != nil {
+			c.logger.Error("failed to lookup token", "error", err)
+			return nil, nil, nil, ErrInternalError
+		}
+	default:
+		te = req.TokenEntry()
 	}
 
 	// Ensure the token is valid
@@ -142,11 +149,11 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *TokenEn
 	return acl, te, entity, nil
 }
 
-func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *TokenEntry, error) {
+func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
 	var acl *ACL
-	var te *TokenEntry
+	var te *logical.TokenEntry
 	var entity *identity.Entity
 	var err error
 
@@ -783,7 +790,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		}
 
 		// Generate a token
-		te := TokenEntry{
+		te := logical.TokenEntry{
 			Path:         req.Path,
 			Policies:     auth.Policies,
 			Meta:         auth.Metadata,
