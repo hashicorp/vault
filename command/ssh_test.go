@@ -140,7 +140,7 @@ func TestParseSSHCommand(t *testing.T) {
 
 			hostname, username, port, err := cmd.parseSSHCommand(test.args)
 			if err != test.err {
-				t.Errorf("got error: %q want %q")
+				t.Errorf("got error: %q want %q", err, test.err)
 			}
 			if hostname != test.hostname {
 				t.Errorf("got hostname: %q want %q", hostname, test.hostname)
