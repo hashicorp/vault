@@ -60,7 +60,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 ## Authentication
 
-Authentication-related values must be provided, either as enviroment
+Authentication-related values must be provided, either as environment
 variables or as configuration parameters.
 
 ```text
