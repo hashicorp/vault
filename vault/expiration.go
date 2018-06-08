@@ -52,6 +52,11 @@ const (
 	maxLeaseThreshold = 256000
 )
 
+type pendingInfo struct {
+	exportLeaseTimes *leaseEntry
+	timer            *time.Timer
+}
+
 // ExpirationManager is used by the Core to manage leases. Secrets
 // can provide a lease, meaning that they can be renewed or revoked.
 // If a secret is not renewed in timely manner, it may be expired, and
@@ -63,7 +68,7 @@ type ExpirationManager struct {
 	tokenStore *TokenStore
 	logger     log.Logger
 
-	pending     map[string]*time.Timer
+	pending     map[string]pendingInfo
 	pendingLock sync.RWMutex
 
 	tidyLock int32
@@ -91,7 +96,7 @@ func NewExpirationManager(c *Core, view *BarrierView, logger log.Logger) *Expira
 		tokenView:  view.SubView(tokenViewPrefix),
 		tokenStore: c.tokenStore,
 		logger:     logger,
-		pending:    make(map[string]*time.Timer),
+		pending:    make(map[string]pendingInfo),
 
 		// new instances of the expiration manager will go immediately into
 		// restore mode
@@ -455,10 +460,10 @@ func (m *ExpirationManager) Stop() error {
 	close(m.quitCh)
 
 	m.pendingLock.Lock()
-	for _, timer := range m.pending {
-		timer.Stop()
+	for _, pending := range m.pending {
+		pending.timer.Stop()
 	}
-	m.pending = make(map[string]*time.Timer)
+	m.pending = make(map[string]pendingInfo)
 	m.pendingLock.Unlock()
 
 	if m.inRestoreMode() {
@@ -523,8 +528,8 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 
 	// Clear the expiration handler
 	m.pendingLock.Lock()
-	if timer, ok := m.pending[leaseID]; ok {
-		timer.Stop()
+	if pending, ok := m.pending[leaseID]; ok {
+		pending.timer.Stop()
 		delete(m.pending, leaseID)
 	}
 	m.pendingLock.Unlock()
@@ -948,6 +953,14 @@ func (m *ExpirationManager) FetchLeaseTimesByToken(source, token string) (*lease
 func (m *ExpirationManager) FetchLeaseTimes(leaseID string) (*leaseEntry, error) {
 	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times"}, time.Now())
 
+	m.pendingLock.RLock()
+	val := m.pending[leaseID]
+	m.pendingLock.RUnlock()
+
+	if val.exportLeaseTimes != nil {
+		return val.exportLeaseTimes, nil
+	}
+
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
 	if err != nil {
@@ -957,6 +970,11 @@ func (m *ExpirationManager) FetchLeaseTimes(leaseID string) (*leaseEntry, error)
 		return nil, nil
 	}
 
+	return m.leaseTimesForExport(le), nil
+}
+
+// Returns lease times for outside callers based on the full leaseEntry passed in
+func (m *ExpirationManager) leaseTimesForExport(le *leaseEntry) *leaseEntry {
 	ret := &leaseEntry{
 		IssueTime:       le.IssueTime,
 		ExpireTime:      le.ExpireTime,
@@ -973,26 +991,27 @@ func (m *ExpirationManager) FetchLeaseTimes(leaseID string) (*leaseEntry, error)
 		ret.Auth.TTL = le.Auth.TTL
 	}
 
-	return ret, nil
+	return ret
 }
 
 // updatePending is used to update a pending invocation for a lease
 func (m *ExpirationManager) updatePending(le *leaseEntry, leaseTotal time.Duration) {
 	m.pendingLock.Lock()
 	defer m.pendingLock.Unlock()
+
 	m.updatePendingInternal(le, leaseTotal)
 }
 
 func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal time.Duration) {
 	// Check for an existing timer
-	timer, ok := m.pending[le.LeaseID]
+	pending, ok := m.pending[le.LeaseID]
 
 	// If there is no expiry time, don't do anything
 	if le.ExpireTime.IsZero() {
 		// if the timer happened to exist, stop the time and delete it from the
 		// pending timers.
 		if ok {
-			timer.Stop()
+			pending.timer.Stop()
 			delete(m.pending, le.LeaseID)
 		}
 		return
@@ -1003,12 +1022,18 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 		timer := time.AfterFunc(leaseTotal, func() {
 			m.expireID(le.LeaseID)
 		})
-		m.pending[le.LeaseID] = timer
+		pending := pendingInfo{
+			timer:            timer,
+			exportLeaseTimes: m.leaseTimesForExport(le),
+		}
+		m.pending[le.LeaseID] = pending
 		return
 	}
 
 	// Extend the timer by the lease total
-	timer.Reset(leaseTotal)
+	pending.timer.Reset(leaseTotal)
+	pending.exportLeaseTimes = m.leaseTimesForExport(le)
+	m.pending[le.LeaseID] = pending
 }
 
 // expireID is invoked when a given ID is expired
