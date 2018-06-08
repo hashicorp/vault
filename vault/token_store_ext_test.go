@@ -1,13 +1,16 @@
 package vault_test
 
 import (
+	"encoding/base64"
 	"reflect"
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
@@ -334,5 +337,156 @@ func TestTokenStore_CIDRBlocks(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "permission denied") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestTokenStore_RevocationOnStartup(t *testing.T) {
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+	client := cluster.Cores[0].Client
+	rootToken := client.Token()
+
+	type leaseEntry struct {
+		LeaseID         string                 `json:"lease_id"`
+		ClientToken     string                 `json:"client_token"`
+		Path            string                 `json:"path"`
+		Data            map[string]interface{} `json:"data"`
+		Secret          *logical.Secret        `json:"secret"`
+		Auth            *logical.Auth          `json:"auth"`
+		IssueTime       time.Time              `json:"issue_time"`
+		ExpireTime      time.Time              `json:"expire_time"`
+		LastRenewalTime time.Time              `json:"last_renewal_time"`
+	}
+
+	var secret *api.Secret
+	var err error
+	var tokens []string
+	// Create tokens
+	for i := 0; i < 500; i++ {
+		secret, err = client.Auth().Token().Create(&api.TokenCreateRequest{
+			Policies: []string{"default"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		tokens = append(tokens, secret.Auth.ClientToken)
+	}
+
+	const tokenPath string = "sys/raw/sys/token/id/"
+	secret, err = client.Logical().List(tokenPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	totalTokens := len(secret.Data["keys"].([]interface{}))
+
+	// Get the list of leases
+	const leasePath string = "sys/raw/sys/expire/id/auth/token/create/"
+	secret, err = client.Logical().List(leasePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	leases := secret.Data["keys"].([]interface{})
+	if len(leases) != 500 {
+		t.Fatalf("unexpected number of leases: %d", len(leases))
+	}
+
+	// Holds non-root leases
+	var validLeases []string
+	// Fake times in the past
+	for _, lease := range leases {
+		secret, err = client.Logical().Read(leasePath + lease.(string))
+		var entry leaseEntry
+		if err := jsonutil.DecodeJSON([]byte(secret.Data["value"].(string)), &entry); err != nil {
+			t.Fatal(err)
+		}
+		if entry.ExpireTime.IsZero() {
+			continue
+		}
+		validLeases = append(validLeases, lease.(string))
+		entry.IssueTime = entry.IssueTime.Add(-1 * time.Hour * 24 * 365)
+		entry.ExpireTime = entry.ExpireTime.Add(-1 * time.Hour * 24 * 365)
+		jsonEntry, err := jsonutil.EncodeJSON(&entry)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Logical().Write(leasePath+lease.(string), map[string]interface{}{
+			"value": string(jsonEntry),
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := client.Sys().Seal(); err != nil {
+		t.Fatal(err)
+	}
+
+	var status *api.SealStatusResponse
+	for i := 0; i < len(cluster.BarrierKeys); i++ {
+		status, err = client.Sys().Unseal(string(base64.StdEncoding.EncodeToString(cluster.BarrierKeys[i])))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !status.Sealed {
+			break
+		}
+	}
+	if status.Sealed {
+		t.Fatal("did not unseal properly")
+	}
+
+	// Give lease loading some time to process
+	time.Sleep(5 * time.Second)
+
+	for i, token := range tokens {
+		client.SetToken(token)
+		_, err := client.Logical().Write("cubbyhole/foo", map[string]interface{}{
+			"value": "bar",
+		})
+		if err == nil {
+			t.Errorf("expected error but did not get one, token num %d", i)
+		}
+	}
+
+	expectedLeases := len(leases) - len(validLeases)
+
+	client.SetToken(rootToken)
+	secret, err = client.Logical().List(leasePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	switch {
+	case secret == nil:
+		if expectedLeases != 0 {
+			t.Fatalf("nil secret back but expected %d leases", expectedLeases)
+		}
+
+	case secret.Data == nil:
+		if expectedLeases != 0 {
+			t.Fatalf("nil secret data back but expected %d leases, secret is %#v", expectedLeases, *secret)
+		}
+
+	default:
+		leasesLeft := len(secret.Data["keys"].([]interface{}))
+		if leasesLeft != expectedLeases {
+			t.Fatalf("found %d leases left, expected %d", leasesLeft, expectedLeases)
+		}
+	}
+
+	expectedTokens := totalTokens - len(validLeases)
+	secret, err = client.Logical().List(tokenPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tokensLeft := len(secret.Data["keys"].([]interface{}))
+	if tokensLeft != expectedTokens {
+		t.Fatalf("found %d tokens left, expected %d", tokensLeft, expectedTokens)
 	}
 }

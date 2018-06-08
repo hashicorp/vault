@@ -96,6 +96,7 @@
     "prettier": "^1.5.3",
     "prettier-eslint-cli": "^4.2.1",
     "qunit-dom": "^0.6.2",
+    "sass-svg-uri": "^1.0.0",
     "string.prototype.startswith": "mathiasbynens/String.prototype.startsWith",
     "text-encoder-lite": "1.0.0",
     "yargs-parser": "^10.0.0"
@@ -106,7 +107,7 @@
   "private": true,
   "ember-addon": {
     "paths": [
-      "lib/bulma"
+      "lib/css"
     ]
   }
 }

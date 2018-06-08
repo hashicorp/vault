@@ -2610,7 +2610,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		}
 
 		policy.Raw = data.Get("policy").(string)
-		if policy.Raw == "" {
+		if policy.Raw == "" && policyType == PolicyTypeACL && strings.HasPrefix(req.Path, "policy") {
 			policy.Raw = data.Get("rules").(string)
 			if resp == nil {
 				resp = &logical.Response{}

@@ -79,10 +79,6 @@ func NewEncryptedKeyStorageWrapper(config EncryptedKeyStorageConfig) (*Encrypted
 		return nil, ErrPolicyConvergentEncryption
 	}
 
-	if config.Policy.ConvergentVersion < 2 {
-		return nil, ErrPolicyConvergentVersion
-	}
-
 	if config.Prefix == "" {
 		config.Prefix = DefaultPrefix
 	}

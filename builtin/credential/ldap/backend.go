@@ -68,6 +68,10 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		return nil, logical.ErrorResponse("ldap backend not configured"), nil, nil
 	}
 
+	if cfg.DenyNullBind && len(password) == 0 {
+		return nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied"), nil, nil
+	}
+
 	ldapClient := ldaputil.Client{
 		Logger: b.Logger(),
 		LDAP:   ldaputil.NewLDAP(),
@@ -86,15 +90,14 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	userBindDN, err := ldapClient.GetUserBindDN(cfg, c, username)
 	if err != nil {
-		return nil, logical.ErrorResponse(err.Error()), nil, nil
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("error getting user bind DN", "error", err)
+		}
+		return nil, logical.ErrorResponse("ldap operation failed"), nil, nil
 	}
 
 	if b.Logger().IsDebug() {
 		b.Logger().Debug("user binddn fetched", "username", username, "binddn", userBindDN)
-	}
-
-	if cfg.DenyNullBind && len(password) == 0 {
-		return nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied"), nil, nil
 	}
 
 	// Try to bind as the login user. This is where the actual authentication takes place.
@@ -104,14 +107,20 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		err = c.UnauthenticatedBind(userBindDN)
 	}
 	if err != nil {
-		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil, nil
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("ldap bind failed", "error", err)
+		}
+		return nil, logical.ErrorResponse("ldap operation failed"), nil, nil
 	}
 
 	// We re-bind to the BindDN if it's defined because we assume
 	// the BindDN should be the one to search, not the user logging in.
 	if cfg.BindDN != "" && cfg.BindPassword != "" {
 		if err := c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
-			return nil, logical.ErrorResponse(fmt.Sprintf("Encountered an error while attempting to re-bind with the BindDN User: %s", err.Error())), nil, nil
+			if b.Logger().IsDebug() {
+				b.Logger().Debug("error while attempting to re-bind with the BindDN User", "error", err)
+			}
+			return nil, logical.ErrorResponse("ldap operation failed"), nil, nil
 		}
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("re-bound to original binddn")

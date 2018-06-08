@@ -7522,6 +7522,10 @@ sass-graph@^2.2.4:
     scss-tokenizer "^0.2.3"
     yargs "^7.0.0"
 
+sass-svg-uri@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/sass-svg-uri/-/sass-svg-uri-1.0.0.tgz#01e992e4e3ce8d1ec4eac4c8280c0f2ef45c6be8"
+
 sax@>=0.6.0:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/sax/-/sax-1.2.4.tgz#2816234e2378bddc4e5354fab5caa895df7100d9"

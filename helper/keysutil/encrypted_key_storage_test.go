@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"sync"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -91,16 +91,14 @@ func TestBase58(t *testing.T) {
 }
 
 func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
-	policy := &Policy{
+	policy := NewPolicy(PolicyConfig{
 		Name:                 "metadata",
 		Type:                 KeyType_AES256_GCM96,
 		Derived:              false,
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: true,
-		ConvergentVersion:    2,
 		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
-		versionPrefixCache:   &sync.Map{},
-	}
+	})
 
 	_, err := NewEncryptedKeyStorageWrapper(EncryptedKeyStorageConfig{
 		Policy: policy,
@@ -110,16 +108,14 @@ func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
 		t.Fatalf("Unexpected Error: %s", err)
 	}
 
-	policy = &Policy{
+	policy = NewPolicy(PolicyConfig{
 		Name:                 "metadata",
 		Type:                 KeyType_AES256_GCM96,
 		Derived:              true,
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: false,
-		ConvergentVersion:    2,
 		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
-		versionPrefixCache:   &sync.Map{},
-	}
+	})
 
 	_, err = NewEncryptedKeyStorageWrapper(EncryptedKeyStorageConfig{
 		Policy: policy,
@@ -129,49 +125,33 @@ func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
 		t.Fatalf("Unexpected Error: %s", err)
 	}
 
-	policy = &Policy{
+	policy = NewPolicy(PolicyConfig{
 		Name:                 "metadata",
 		Type:                 KeyType_AES256_GCM96,
 		Derived:              true,
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: true,
-		ConvergentVersion:    1,
 		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
-		versionPrefixCache:   &sync.Map{},
-	}
-
+	})
 	_, err = NewEncryptedKeyStorageWrapper(EncryptedKeyStorageConfig{
 		Policy: policy,
 		Prefix: "prefix",
 	})
-	if err != ErrPolicyConvergentVersion {
+	if err != nil {
 		t.Fatalf("Unexpected Error: %s", err)
-	}
-
-	policy = &Policy{
-		Name:                 "metadata",
-		Type:                 KeyType_AES256_GCM96,
-		Derived:              true,
-		KDF:                  Kdf_hkdf_sha256,
-		ConvergentEncryption: true,
-		ConvergentVersion:    2,
-		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
-		versionPrefixCache:   &sync.Map{},
 	}
 }
 
 func TestEncryptedKeysStorage_List(t *testing.T) {
 	s := &logical.InmemStorage{}
-	policy := &Policy{
+	policy := NewPolicy(PolicyConfig{
 		Name:                 "metadata",
 		Type:                 KeyType_AES256_GCM96,
 		Derived:              true,
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: true,
-		ConvergentVersion:    2,
 		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
-		versionPrefixCache:   &sync.Map{},
-	}
+	})
 
 	ctx := context.Background()
 
@@ -223,7 +203,7 @@ func TestEncryptedKeysStorage_List(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(keys) != 2 || keys[0] != "foo1/" || keys[1] != "foo" {
+	if len(keys) != 2 || !strutil.StrListContains(keys, "foo1/") || !strutil.StrListContains(keys, "foo") {
 		t.Fatalf("bad keys: %#v", keys)
 	}
 
@@ -231,7 +211,7 @@ func TestEncryptedKeysStorage_List(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(keys) != 2 || keys[0] != "test" || keys[1] != "test/" {
+	if len(keys) != 2 || !strutil.StrListContains(keys, "test") || !strutil.StrListContains(keys, "test/") {
 		t.Fatalf("bad keys: %#v", keys)
 	}
 
@@ -246,16 +226,14 @@ func TestEncryptedKeysStorage_List(t *testing.T) {
 
 func TestEncryptedKeysStorage_CRUD(t *testing.T) {
 	s := &logical.InmemStorage{}
-	policy := &Policy{
+	policy := NewPolicy(PolicyConfig{
 		Name:                 "metadata",
 		Type:                 KeyType_AES256_GCM96,
 		Derived:              true,
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: true,
-		ConvergentVersion:    2,
 		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
-		versionPrefixCache:   &sync.Map{},
-	}
+	})
 
 	ctx := context.Background()
 
@@ -299,7 +277,7 @@ func TestEncryptedKeysStorage_CRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(keys) != 2 || keys[0] != "foo1/" || keys[1] != "foo" {
+	if len(keys) != 2 || !strutil.StrListContains(keys, "foo1/") || !strutil.StrListContains(keys, "foo") {
 		t.Fatalf("bad keys: %#v", keys)
 	}
 
@@ -309,7 +287,7 @@ func TestEncryptedKeysStorage_CRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(keys) != 2 || keys[0] != "foo1/" || keys[1] != "foo" {
+	if len(keys) != 2 || !strutil.StrListContains(keys, "foo1/") || !strutil.StrListContains(keys, "foo") {
 		t.Fatalf("bad keys: %#v", keys)
 	}
 
@@ -338,16 +316,14 @@ func TestEncryptedKeysStorage_CRUD(t *testing.T) {
 
 func BenchmarkEncrytedKeyStorage_List(b *testing.B) {
 	s := &logical.InmemStorage{}
-	policy := &Policy{
+	policy := NewPolicy(PolicyConfig{
 		Name:                 "metadata",
 		Type:                 KeyType_AES256_GCM96,
 		Derived:              true,
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: true,
-		ConvergentVersion:    2,
 		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
-		versionPrefixCache:   &sync.Map{},
-	}
+	})
 
 	ctx := context.Background()
 
@@ -386,16 +362,14 @@ func BenchmarkEncrytedKeyStorage_List(b *testing.B) {
 
 func BenchmarkEncrytedKeyStorage_Put(b *testing.B) {
 	s := &logical.InmemStorage{}
-	policy := &Policy{
+	policy := NewPolicy(PolicyConfig{
 		Name:                 "metadata",
 		Type:                 KeyType_AES256_GCM96,
 		Derived:              true,
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: true,
-		ConvergentVersion:    2,
 		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
-		versionPrefixCache:   &sync.Map{},
-	}
+	})
 
 	ctx := context.Background()
 
