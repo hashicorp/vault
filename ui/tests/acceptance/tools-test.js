@@ -7,9 +7,6 @@ moduleForAcceptance('Acceptance | tools', {
   beforeEach() {
     return authLogin();
   },
-  afterEach() {
-    return authLogout();
-  },
 });
 
 const DATA_TO_WRAP = JSON.stringify({ tools: 'tests' });
