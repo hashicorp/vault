@@ -580,11 +580,16 @@ func (m *ExpirationManager) RevokeByToken(te *logical.TokenEntry) error {
 		if le != nil {
 			le.ExpireTime = time.Now()
 
-			if err := m.persistEntry(le); err != nil {
-				return err
-			}
+			{
+				m.pendingLock.Lock()
+				if err := m.persistEntry(le); err != nil {
+					m.pendingLock.Unlock()
+					return err
+				}
 
-			m.updatePending(le, 0)
+				m.updatePendingInternal(le, 0)
+				m.pendingLock.Unlock()
+			}
 		}
 	}
 
@@ -707,12 +712,18 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	le.Secret = resp.Secret
 	le.ExpireTime = resp.Secret.ExpirationTime()
 	le.LastRenewalTime = time.Now()
-	if err := m.persistEntry(le); err != nil {
-		return nil, err
-	}
 
-	// Update the expiration time
-	m.updatePending(le, resp.Secret.LeaseTotal())
+	{
+		m.pendingLock.Lock()
+		if err := m.persistEntry(le); err != nil {
+			m.pendingLock.Unlock()
+			return nil, err
+		}
+
+		// Update the expiration time
+		m.updatePendingInternal(le, resp.Secret.LeaseTotal())
+		m.pendingLock.Unlock()
+	}
 
 	// Return the response
 	return resp, nil
@@ -782,12 +793,18 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	le.Auth = resp.Auth
 	le.ExpireTime = resp.Auth.ExpirationTime()
 	le.LastRenewalTime = time.Now()
-	if err := m.persistEntry(le); err != nil {
-		return nil, err
-	}
 
-	// Update the expiration time
-	m.updatePending(le, resp.Auth.LeaseTotal())
+	{
+		m.pendingLock.Lock()
+		if err := m.persistEntry(le); err != nil {
+			m.pendingLock.Unlock()
+			return nil, err
+		}
+
+		// Update the expiration time
+		m.updatePendingInternal(le, resp.Auth.LeaseTotal())
+		m.pendingLock.Unlock()
+	}
 
 	retResp.Auth = resp.Auth
 	return retResp, nil
@@ -963,7 +980,10 @@ func (m *ExpirationManager) FetchLeaseTimes(leaseID string) (*leaseEntry, error)
 func (m *ExpirationManager) updatePending(le *leaseEntry, leaseTotal time.Duration) {
 	m.pendingLock.Lock()
 	defer m.pendingLock.Unlock()
+	m.updatePendingInternal(le, leaseTotal)
+}
 
+func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal time.Duration) {
 	// Check for an existing timer
 	timer, ok := m.pending[le.LeaseID]
 
