@@ -3,12 +3,28 @@ import ControlGroupError from 'vault/lib/control-group-error';
 
 const { Service, assign, inject, RSVP } = Ember;
 
+// list of endpoints that return wrapped responses
+// without `wrap-ttl`
+const WRAPPED_RESPONSE_PATHS = [
+  'sys/wrapping/rewrap',
+  'sys/wrapping/wrap',
+  'sys/replication/performance/primary/secondary-token',
+  'sys/replication/dr/primary/secondary-token',
+];
+
 export default Service.extend({
   version: inject.service(),
   router: inject.service(),
 
   checkForControlGroup(callbackArgs, response, wasWrapTTLRequested) {
-    if (this.get('version.isOSS') || wasWrapTTLRequested || !response || (response && !response.wrap_info)) {
+    let creationPath = response && Ember.get(response, 'wrap_info.creation_path');
+    if (
+      this.get('version.isOSS') ||
+      wasWrapTTLRequested ||
+      !response ||
+      (creationPath && WRAPPED_RESPONSE_PATHS.includes(creationPath)) ||
+      (response && !response.wrap_info)
+    ) {
       return RSVP.resolve(...callbackArgs);
     }
     let error = new ControlGroupError();
@@ -18,7 +34,6 @@ export default Service.extend({
 
   handleError(error) {
     let {accessor} = error;
-
     return this.get('router')
       .transitionTo('vault.cluster.access.control-group-accessor', accessor);
   },
