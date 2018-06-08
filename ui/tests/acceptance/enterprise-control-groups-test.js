@@ -8,8 +8,11 @@ const consoleComponent = create(console);
 
 moduleForAcceptance('Acceptance | Enterprise | control groups', {
   beforeEach() {
-    authLogin();
+    return authLogin();
   },
+  afterEach() {
+    return authLogout();
+  }
 });
 const POLICY = `path "kv/foo" {
     capabilities = ["create", "read", "update", "delete", "list"]
@@ -30,9 +33,9 @@ const POLICY = `path "kv/foo" {
     }
 }`;
 
-test('it creates a thing', function(assert) {
-  visit('/vault/secrets');
+const setupControlGroup = () => {
   let token;
+  visit('/vault/secrets');
   andThen(() => {
     consoleComponent.runCommands([
       'write sys/mounts/kv type=kv',
@@ -47,8 +50,33 @@ test('it creates a thing', function(assert) {
     authLogout();
     return authLogin(token);
   });
+};
+
+test('it redirects you if you try to navigate to a Control Group restricted path', function(assert) {
+  setupControlGroup();
   visit('/vault/secrets/kv/show/foo');
   andThen(() => {
-    debugger;
+    assert.equal(
+      currentPath(),
+      'vault.cluster.access.control-group-accessor',
+      'redirects to access control group route'
+    );
   });
-})
+});
+
+test('it displays the warning in the console when making a request to a Control Group path', function(assert) {
+  setupControlGroup();
+  andThen(() => {
+    consoleComponent.toggle();
+  });
+  andThen(() => {
+    consoleComponent.runCommands('read kv/foo');
+  });
+  andThen(() => {
+    let output = consoleComponent.lastLogOutput;
+    assert.ok(output.includes('A Control Group was encountered at kv/foo'));
+    assert.ok(output.includes('The Control Group Token is'));
+    assert.ok(output.includes('The Accessor is'));
+    assert.ok(output.includes('Visit /ui/vault/access/control-groups/'));
+  });
+});
