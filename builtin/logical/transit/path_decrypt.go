@@ -125,7 +125,6 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
-	defer p.Unlock()
 
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
@@ -139,6 +138,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 				batchResponseItems[i].Error = err.Error()
 				continue
 			default:
+				p.Unlock()
 				return nil, err
 			}
 		}
@@ -152,6 +152,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {
+			p.Unlock()
 			return logical.ErrorResponse(batchResponseItems[0].Error), logical.ErrInvalidRequest
 		}
 		resp.Data = map[string]interface{}{
@@ -159,6 +160,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
+	p.Unlock()
 	return resp, nil
 }
 

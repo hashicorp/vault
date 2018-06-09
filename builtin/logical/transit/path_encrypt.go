@@ -253,7 +253,6 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
-	defer p.Unlock()
 
 	// Process batch request items. If encryption of any request
 	// item fails, respectively mark the error in the response
@@ -270,11 +269,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 				batchResponseItems[i].Error = err.Error()
 				continue
 			default:
+				p.Unlock()
 				return nil, err
 			}
 		}
 
 		if ciphertext == "" {
+			p.Unlock()
 			return nil, fmt.Errorf("empty ciphertext returned for input item %d", i)
 		}
 
@@ -288,6 +289,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {
+			p.Unlock()
 			return logical.ErrorResponse(batchResponseItems[0].Error), logical.ErrInvalidRequest
 		}
 		resp.Data = map[string]interface{}{
@@ -298,6 +300,8 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	if req.Operation == logical.CreateOperation && !upserted {
 		resp.AddWarning("Attempted creation of the key during the encrypt operation, but it was created beforehand")
 	}
+
+	p.Unlock()
 	return resp, nil
 }
 

@@ -44,11 +44,11 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	if !b.System().CachingDisabled() {
 		p.Lock(true)
 	}
-	defer p.Unlock()
 
 	// Rotate the policy
 	err = p.Rotate(ctx, req.Storage)
 
+	p.Unlock()
 	return nil, err
 }
 

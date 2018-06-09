@@ -192,9 +192,9 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
-	defer p.Unlock()
 
 	if !p.Type.SigningSupported() {
+		p.Unlock()
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
 	}
 
@@ -203,6 +203,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	if len(contextRaw) != 0 {
 		context, err = base64.StdEncoding.DecodeString(contextRaw)
 		if err != nil {
+			p.Unlock()
 			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
 		}
 	}
@@ -219,6 +220,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		case "sha2-512":
 			hf = sha512.New()
 		default:
+			p.Unlock()
 			return logical.ErrorResponse(fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)), nil
 		}
 		hf.Write(input)
@@ -227,9 +229,11 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 	sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm)
 	if err != nil {
+		p.Unlock()
 		return nil, err
 	}
 	if sig == nil {
+		p.Unlock()
 		return nil, fmt.Errorf("signature could not be computed")
 	}
 
@@ -244,6 +248,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		resp.Data["public_key"] = sig.PublicKey
 	}
 
+	p.Unlock()
 	return resp, nil
 }
 
@@ -293,9 +298,9 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
-	defer p.Unlock()
 
 	if !p.Type.SigningSupported() {
+		p.Unlock()
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support verification", p.Type)), logical.ErrInvalidRequest
 	}
 
@@ -304,6 +309,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	if len(contextRaw) != 0 {
 		context, err = base64.StdEncoding.DecodeString(contextRaw)
 		if err != nil {
+			p.Unlock()
 			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
 		}
 	}
@@ -320,6 +326,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		case "sha2-512":
 			hf = sha512.New()
 		default:
+			p.Unlock()
 			return logical.ErrorResponse(fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)), nil
 		}
 		hf.Write(input)
@@ -330,10 +337,13 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
+			p.Unlock()
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		case errutil.InternalError:
+			p.Unlock()
 			return nil, err
 		default:
+			p.Unlock()
 			return nil, err
 		}
 	}
@@ -344,6 +354,8 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 			"valid": valid,
 		},
 	}
+
+	p.Unlock()
 	return resp, nil
 }
 
