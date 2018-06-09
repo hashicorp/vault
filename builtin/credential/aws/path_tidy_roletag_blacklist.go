@@ -34,9 +34,9 @@ expiration, before it is removed from the backend storage.`,
 
 // tidyBlacklistRoleTag is used to clean-up the entries in the role tag blacklist.
 func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, safety_buffer int) error {
-	grabbed := atomic.CompareAndSwapUint32(&b.tidyBlacklistCASGuard, 0, 1)
+	grabbed := atomic.CompareAndSwapUint32(b.tidyBlacklistCASGuard, 0, 1)
 	if grabbed {
-		defer atomic.StoreUint32(&b.tidyBlacklistCASGuard, 0)
+		defer atomic.StoreUint32(b.tidyBlacklistCASGuard, 0)
 	} else {
 		return fmt.Errorf("roletag blacklist tidy operation already running")
 	}

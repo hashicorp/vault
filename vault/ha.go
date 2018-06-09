@@ -29,17 +29,18 @@ func (c *Core) Standby() (bool, error) {
 
 // Leader is used to get the current active leader
 func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err error) {
+	// Check if HA enabled. We don't need the lock for this check as it's set
+	// on startup and never modified
+	if c.ha == nil {
+		return false, "", "", ErrHANotEnabled
+	}
+
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 
 	// Check if sealed
 	if c.sealed {
 		return false, "", "", consts.ErrSealed
-	}
-
-	// Check if HA enabled
-	if c.ha == nil {
-		return false, "", "", ErrHANotEnabled
 	}
 
 	// Check if we are the leader
@@ -419,7 +420,7 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 		case <-stopCh:
 			// This case comes from sealInternal; we will already be having the
 			// state lock held so we do toggle grabStateLock to false
-			if atomic.LoadUint32(&c.keepHALockOnStepDown) == 1 {
+			if atomic.LoadUint32(c.keepHALockOnStepDown) == 1 {
 				releaseHALock = false
 			}
 			grabStateLock = false
@@ -466,13 +467,13 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 // the result.
 func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
-	var opCount int32
+	opCount := new(int32)
 	for {
 		select {
 		case <-time.After(leaderCheckInterval):
-			count := atomic.AddInt32(&opCount, 1)
+			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
-				atomic.AddInt32(&opCount, -1)
+				atomic.AddInt32(opCount, -1)
 				continue
 			}
 			// We do this in a goroutine because otherwise if this refresh is
@@ -480,7 +481,7 @@ func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 			// deadlock, which then means stopCh can never been seen and we can
 			// block shutdown
 			go func() {
-				defer atomic.AddInt32(&opCount, -1)
+				defer atomic.AddInt32(opCount, -1)
 				c.Leader()
 			}()
 		case <-stopCh:
@@ -492,18 +493,18 @@ func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
 func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
-	var opCount int32
+	opCount := new(int32)
 	for {
 		select {
 		case <-time.After(keyRotateCheckInterval):
-			count := atomic.AddInt32(&opCount, 1)
+			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
-				atomic.AddInt32(&opCount, -1)
+				atomic.AddInt32(opCount, -1)
 				continue
 			}
 
 			go func() {
-				defer atomic.AddInt32(&opCount, -1)
+				defer atomic.AddInt32(opCount, -1)
 				// Only check if we are a standby
 				c.stateLock.RLock()
 				standby := c.standby
