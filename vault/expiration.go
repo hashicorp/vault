@@ -1002,6 +1002,8 @@ func (m *ExpirationManager) updatePending(le *leaseEntry, leaseTotal time.Durati
 	m.updatePendingInternal(le, leaseTotal)
 }
 
+// updatePendingInternal is the locked version of updatePending; do not call
+// this without a write lock on m.pending
 func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal time.Duration) {
 	// Check for an existing timer
 	pending, ok := m.pending[le.LeaseID]
@@ -1017,22 +1019,21 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry, leaseTotal tim
 		return
 	}
 
-	// Create entry if it does not exist
-	if !ok {
+	// Create entry if it does not exist or reset if it does
+	if ok {
+		pending.timer.Reset(leaseTotal)
+	} else {
 		timer := time.AfterFunc(leaseTotal, func() {
 			m.expireID(le.LeaseID)
 		})
-		pending := pendingInfo{
-			timer:            timer,
-			exportLeaseTimes: m.leaseTimesForExport(le),
+		pending = pendingInfo{
+			timer: timer,
 		}
-		m.pending[le.LeaseID] = pending
-		return
 	}
 
 	// Extend the timer by the lease total
-	pending.timer.Reset(leaseTotal)
 	pending.exportLeaseTimes = m.leaseTimesForExport(le)
+
 	m.pending[le.LeaseID] = pending
 }
 
