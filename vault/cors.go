@@ -79,6 +79,11 @@ func (c *Core) loadCORSConfig(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	if newConfig.Enabled == nil {
+		newConfig.Enabled = new(uint32)
+	}
+
 	newConfig.core = c
 
 	c.corsConfig = newConfig

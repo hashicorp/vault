@@ -517,7 +517,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Load CORS config and provide a value for the core field.
-	c.corsConfig = &CORSConfig{core: c}
+	c.corsConfig = &CORSConfig{
+		core:    c,
+		Enabled: new(uint32),
+	}
 
 	phys := conf.Physical
 	_, txnOK := conf.Physical.(physical.Transactional)
