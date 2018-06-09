@@ -130,7 +130,7 @@ type TokenStore struct {
 	saltLock sync.RWMutex
 	salt     *salt.Salt
 
-	tidyLock int64
+	tidyLock *int32
 
 	identityPoliciesDeriverFunc func(string) (*identity.Entity, []string, error)
 }
@@ -150,6 +150,7 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 		tokensPendingDeletion:       &sync.Map{},
 		saltLock:                    sync.RWMutex{},
 		identityPoliciesDeriverFunc: c.fetchEntityAndDerivedPolicies,
+		tidyLock:                    new(int32),
 	}
 
 	if c.policyStore != nil {
@@ -1284,12 +1285,12 @@ func (ts *TokenStore) lookupBySaltedAccessor(ctx context.Context, saltedAccessor
 func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var tidyErrors *multierror.Error
 
-	if !atomic.CompareAndSwapInt64(&ts.tidyLock, 0, 1) {
+	if !atomic.CompareAndSwapInt32(ts.tidyLock, 0, 1) {
 		ts.logger.Warn("tidy operation on tokens is already in progress")
 		return nil, fmt.Errorf("tidy operation on tokens is already in progress")
 	}
 
-	defer atomic.CompareAndSwapInt64(&ts.tidyLock, 1, 0)
+	defer atomic.CompareAndSwapInt32(ts.tidyLock, 1, 0)
 
 	ts.logger.Info("beginning tidy operation on tokens")
 	defer ts.logger.Info("finished tidy operation on tokens")
