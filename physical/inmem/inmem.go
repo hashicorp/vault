@@ -68,6 +68,10 @@ func NewTransactionalInmem(_ map[string]string, logger log.Logger) (physical.Bac
 			root:       radix.New(),
 			permitPool: physical.NewPermitPool(1),
 			logger:     logger,
+			failGet:    new(uint32),
+			failPut:    new(uint32),
+			failDelete: new(uint32),
+			failList:   new(uint32),
 		},
 	}
 	return in, nil
