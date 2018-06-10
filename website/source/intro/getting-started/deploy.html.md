@@ -115,7 +115,7 @@ operator init`. This is an _unauthenticated_ request, but it only works on brand
 Vaults with no data:
 
 ```text
-$ vault operator init
+$ vault operator init -address=http://127.0.0.1:8200
 Unseal Key 1: E4GnjX+VP9G50uWQNcwpCflzGAMKGR38BbQywgq4I6L8
 Unseal Key 2: PYMxcCOswEYMNz7N6UW53Up6nu6y+SjAPwTJOTtkju3d
 Unseal Key 3: yuJ5cSxC7tSBR5mMVJ/WJ9bfhhfGb+uwWw9FQR0JKILh
