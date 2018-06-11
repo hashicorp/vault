@@ -3,13 +3,39 @@
 }
 
 .masked-input .input {
-	padding-right: 2rem;
+	padding-left: 2.50rem;
 }
 
 .masked-input-toggle {
+	background: transparent;
 	position: absolute;
 	top: $size-6/4;
-	right: $size-6/4;
+	left: 1px;
 	min-width: 0;
   padding: 0 $size-8;
+  z-index: 100;
+  border: 0;
+  box-shadow: none;
+  color: $blue;
+
+  &:active,
+  &.is-active,
+  &:focus,
+  &.is-focused,
+  &:hover,
+  &:focus:not(:active) { 
+		color: $blue;  
+		border: 0;
+		box-shadow: none;
+  }
+
+}
+
+.masked-input .input:focus + .masked-input-toggle {
+	background: rgba($white, 0.95);
+}
+
+.masked-input.masked textarea,
+.masked-input.masked .masked-input-toggle {
+	color: $grey-light;
 }

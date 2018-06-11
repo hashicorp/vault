@@ -54,7 +54,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   didRender() {
     const textareas = this.$('textarea');
     if (textareas.length) {
-      autosize(textareas);
+      //autosize(textareas);
     }
   },
 
