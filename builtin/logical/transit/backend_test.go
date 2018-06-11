@@ -1323,11 +1323,6 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 	doFuzzy := func(id int) {
 		// Check for panics, otherwise notify we're done
 		defer func() {
-			/*
-				if err := recover(); err != nil {
-					t.Errorf("got a panic: %v", err)
-				}
-			*/
 			wg.Done()
 		}()
 
