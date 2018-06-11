@@ -5,6 +5,8 @@ BUG FIXES:
  * secrets/kv: Fix writing to the root of a KVv2 mount from `vault kv` commands
    incorrectly operating on a root+mount path instead of being an error
    [GH-4726]
+ * seal/pkcs11: Add `CKK_SHA256_HMAC` to the search list when finding HMAC
+   keys, fixing lookup on some Thales devices
 
 ## 0.10.2 (June 6th, 2018)
 
