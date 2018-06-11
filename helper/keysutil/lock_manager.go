@@ -191,7 +191,7 @@ func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage
 
 // When the function returns, if caching was disabled, the Policy's lock must
 // be unlocked when the caller is done (and it should not be re-locked).
-func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (*Policy, bool, error) {
+func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (retP *Policy, retUpserted bool, retErr error) {
 	var p *Policy
 	var err error
 
@@ -213,9 +213,15 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (*Polic
 
 	// If we are using the cache, defer the lock unlock; otherwise we will
 	// return from here with the lock still held.
-	cleanup := func() {}
-	if lm.useCache {
-		cleanup = func() {
+	cleanup := func() {
+		switch {
+		// If using the cache we always unlock, the caller locks the policy
+		// themselves
+		case lm.useCache:
+			lock.Unlock()
+			// If not using the cache, if we aren't returning a policy the caller
+			// doesn't have a lock, so we must unlock
+		case retP == nil:
 			lock.Unlock()
 		}
 	}
@@ -228,8 +234,9 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (*Polic
 			cleanup()
 			return nil, false, nil
 		}
+		retP = p
 		cleanup()
-		return p, false, nil
+		return
 	}
 
 	// Load it from storage
@@ -321,8 +328,10 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (*Polic
 		}
 
 		// We don't need to worry about upgrading since it will be a new policy
+		retP = p
+		retUpserted = true
 		cleanup()
-		return p, true, nil
+		return
 	}
 
 	if p.NeedsUpgrade() {
@@ -339,8 +348,9 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (*Polic
 		p.writeLocked = true
 	}
 
+	retP = p
 	cleanup()
-	return p, false, nil
+	return
 }
 
 func (lm *LockManager) DeletePolicy(ctx context.Context, storage logical.Storage, name string) error {
