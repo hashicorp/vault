@@ -636,9 +636,9 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 	// and end of a handler's life (or after a handler wakes up from
 	// sleeping during a back-off/retry).
 	var shutdown bool
-	var checkLock int64
 	var registeredServiceID string
-	var serviceRegLock int64
+	checkLock := new(int32)
+	serviceRegLock := new(int32)
 
 	for !shutdown {
 		select {
@@ -654,10 +654,10 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 
 			// Abort if service discovery is disabled or a
 			// reconcile handler is already active
-			if !c.disableRegistration && atomic.CompareAndSwapInt64(&serviceRegLock, 0, 1) {
+			if !c.disableRegistration && atomic.CompareAndSwapInt32(serviceRegLock, 0, 1) {
 				// Enter handler with serviceRegLock held
 				go func() {
-					defer atomic.CompareAndSwapInt64(&serviceRegLock, 1, 0)
+					defer atomic.CompareAndSwapInt32(serviceRegLock, 1, 0)
 					for !shutdown {
 						serviceID, err := c.reconcileConsul(registeredServiceID, activeFunc, sealedFunc)
 						if err != nil {
@@ -680,10 +680,10 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 			checkTimer.Reset(c.checkDuration())
 			// Abort if service discovery is disabled or a
 			// reconcile handler is active
-			if !c.disableRegistration && atomic.CompareAndSwapInt64(&checkLock, 0, 1) {
+			if !c.disableRegistration && atomic.CompareAndSwapInt32(checkLock, 0, 1) {
 				// Enter handler with checkLock held
 				go func() {
-					defer atomic.CompareAndSwapInt64(&checkLock, 1, 0)
+					defer atomic.CompareAndSwapInt32(checkLock, 1, 0)
 					for !shutdown {
 						sealed := sealedFunc()
 						if err := c.runCheck(sealed); err != nil {

@@ -109,7 +109,7 @@ DONELISTHANDLING:
 	// wrapping token ID in the audit logs, so that it can be determined from
 	// the audit logs whether the token was ever actually used.
 	creationTime := time.Now()
-	te := TokenEntry{
+	te := logical.TokenEntry{
 		Path:           req.Path,
 		Policies:       []string{"response-wrapping"},
 		CreationTime:   creationTime.Unix(),

@@ -276,7 +276,7 @@ func TestCore_Seal_BadToken(t *testing.T) {
 // GH-3497
 func TestCore_Seal_SingleUse(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	c.tokenStore.create(context.Background(), &TokenEntry{
+	c.tokenStore.create(context.Background(), &logical.TokenEntry{
 		ID:       "foo",
 		NumUses:  1,
 		Policies: []string{"root"},
@@ -719,7 +719,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	expect := &TokenEntry{
+	expect := &logical.TokenEntry{
 		ID:       clientToken,
 		Accessor: te.Accessor,
 		Parent:   "",
@@ -1022,7 +1022,7 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	expect := &TokenEntry{
+	expect := &logical.TokenEntry{
 		ID:           clientToken,
 		Accessor:     te.Accessor,
 		Parent:       root,
@@ -1067,7 +1067,7 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	expect := &TokenEntry{
+	expect := &logical.TokenEntry{
 		ID:           clientToken,
 		Accessor:     te.Accessor,
 		Parent:       root,

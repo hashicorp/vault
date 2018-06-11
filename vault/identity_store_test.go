@@ -29,7 +29,7 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 	}
 
 	// Create a token with the above created entity set on it
-	ent := &TokenEntry{
+	ent := &logical.TokenEntry{
 		ID:           "testtokenid",
 		Path:         "test",
 		Policies:     []string{"root"},
@@ -221,7 +221,7 @@ func TestIdentityStore_WrapInfoInheritance(t *testing.T) {
 
 	// Create a token which has EntityID set and has update permissions to
 	// sys/wrapping/wrap
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		Path:     "test",
 		Policies: []string{"default", responseWrappingPolicyName},
 		EntityID: entityID,
@@ -260,7 +260,7 @@ func TestIdentityStore_TokenEntityInheritance(t *testing.T) {
 	ts := c.tokenStore
 
 	// Create a token which has EntityID set
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		Path:     "test",
 		Policies: []string{"dev", "prod"},
 		EntityID: "testentityid",

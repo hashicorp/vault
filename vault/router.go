@@ -485,6 +485,9 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		}
 	}
 
+	reqTokenEntry := req.TokenEntry()
+	req.SetTokenEntry(nil)
+
 	// Reset the request before returning
 	defer func() {
 		req.Path = originalPath
@@ -506,6 +509,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.MountAccessor = re.mountEntry.Accessor
 
 		req.EntityID = originalEntityID
+
+		req.SetTokenEntry(reqTokenEntry)
 	}()
 
 	// Invoke the backend

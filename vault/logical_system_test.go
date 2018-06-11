@@ -1283,7 +1283,7 @@ func TestSystemBackend_revokePrefixAuth_newUrl(t *testing.T) {
 
 	exp := ts.expiration
 
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		ID:   "foo",
 		Path: "auth/github/login/bar",
 		TTL:  time.Hour,
@@ -1346,7 +1346,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 
 	exp := ts.expiration
 
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		ID:   "foo",
 		Path: "auth/github/login/bar",
 		TTL:  time.Hour,
