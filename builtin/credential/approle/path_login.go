@@ -83,7 +83,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		return logical.ErrorResponse("invalid role ID"), nil
 	}
 
-	metadata := make(map[string]string)
+	var metadata map[string]string
 	if role.BindSecretID {
 		secretID := strings.TrimSpace(data.Get("secret_id").(string))
 		if secretID == "" {
