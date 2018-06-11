@@ -75,6 +75,9 @@ func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 	if !upserted {
 		t.Fatal("expected an upsert")
 	}
+	if !lm.useCache {
+		p.Unlock()
+	}
 
 	testBytes := make([]byte, len(p.Keys["1"].Key))
 	copy(testBytes, p.Keys["1"].Key)
@@ -118,6 +121,9 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 	if p == nil {
 		t.Fatal("nil policy")
+	}
+	if !lm.useCache {
+		p.Unlock()
 	}
 
 	// Store the initial key in the archive
@@ -173,6 +179,9 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
+	if !lm.useCache {
+		p.Unlock()
+	}
 
 	checkKeys(t, ctx, p, storage, keysArchive, "upgrade", 10, 10, 10)
 
@@ -209,6 +218,9 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 	if p == nil {
 		t.Fatal("policy nil after bad delete")
+	}
+	if !lm.useCache {
+		p.Unlock()
 	}
 
 	// Now do it properly
@@ -267,6 +279,9 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 	}
 	if p == nil {
 		t.Fatal("nil policy")
+	}
+	if !lm.useCache {
+		p.Unlock()
 	}
 
 	// Store the initial key in the archive
@@ -472,6 +487,7 @@ func Test_BadUpgrade(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	orig.(*Policy).l = p.l
 
 	p.Key = p.Keys["1"].Key
 	p.Keys = nil
