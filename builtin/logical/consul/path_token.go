@@ -59,7 +59,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	// Generate a name for the token
 	tokenName := fmt.Sprintf("Vault %s %s %d", role, req.DisplayName, time.Now().UnixNano())
 
-	writeOpts := &api.WriteOpts{}
+	writeOpts := &api.WriteOptions{}
 	writeOpts = writeOpts.WithContext(ctx)
 
 	// Create it
