@@ -394,7 +394,10 @@ func (c *ConsulBackend) Transaction(ctx context.Context, txns []*physical.TxnEnt
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	ok, resp, _, err := c.kv.Txn(ops, nil)
+	queryOpts := &api.QueryOptions{}
+	queryOpts = queryOpts.WithContext(ctx)
+
+	ok, resp, _, err := c.kv.Txn(ops, queryOpts)
 	if err != nil {
 		return err
 	}
@@ -422,7 +425,10 @@ func (c *ConsulBackend) Put(ctx context.Context, entry *physical.Entry) error {
 		Value: entry.Value,
 	}
 
-	_, err := c.kv.Put(pair, nil)
+	writeOpts := &api.WriteOptions{}
+	writeOpts = writeOpts.WithContext(ctx)
+
+	_, err := c.kv.Put(pair, writeOpts)
 	return err
 }
 
@@ -433,14 +439,14 @@ func (c *ConsulBackend) Get(ctx context.Context, key string) (*physical.Entry, e
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	var queryOptions *api.QueryOptions
+	queryOpts := &api.QueryOptions{}
+	queryOpts = queryOpts.WithContext(ctx)
+
 	if c.consistencyMode == consistencyModeStrong {
-		queryOptions = &api.QueryOptions{
-			RequireConsistent: true,
-		}
+		queryOpts.RequireConsistent = true
 	}
 
-	pair, _, err := c.kv.Get(c.path+key, queryOptions)
+	pair, _, err := c.kv.Get(c.path+key, queryOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -461,7 +467,10 @@ func (c *ConsulBackend) Delete(ctx context.Context, key string) error {
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	_, err := c.kv.Delete(c.path+key, nil)
+	writeOpts := &api.WriteOptions{}
+	writeOpts = writeOpts.WithContext(ctx)
+
+	_, err := c.kv.Delete(c.path+key, writeOpts)
 	return err
 }
 
@@ -481,7 +490,10 @@ func (c *ConsulBackend) List(ctx context.Context, prefix string) ([]string, erro
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	out, _, err := c.kv.Keys(scan, "/", nil)
+	queryOpts := &api.QueryOptions{}
+	queryOpts = queryOpts.WithContext(ctx)
+
+	out, _, err := c.kv.Keys(scan, "/", queryOpts)
 	for idx, val := range out {
 		out[idx] = strings.TrimPrefix(val, scan)
 	}
