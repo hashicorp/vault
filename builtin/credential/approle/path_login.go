@@ -261,10 +261,14 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		}
 	}
 
-	// Always include the role name, for later filtering
-	if metadata != nil {
-		metadata["role_name"] = role.name
+	// For some reason, if metadata was set to nil while processing secret ID
+	// binding, ensure that it is initialized again to avoid a panic.
+	if metadata == nil {
+		metadata = make(map[string]string)
 	}
+
+	// Always include the role name, for later filtering
+	metadata["role_name"] = role.name
 
 	auth := &logical.Auth{
 		NumUses: role.TokenNumUses,
