@@ -1,5 +1,10 @@
 ## 0.10.3 (Unreleased)
 
+IMPROVEMENTS:
+
+ * storage/consul: Add context support so that requests are cancelable
+   [GH-4739]
+
 BUG FIXES:
 
  * secrets/kv: Fix writing to the root of a KVv2 mount from `vault kv` commands
