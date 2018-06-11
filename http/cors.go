@@ -22,13 +22,18 @@ func wrapCORSHandler(h http.Handler, core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		corsConf := core.CORSConfig()
 
-		origin := req.Header.Get("Origin")
-		requestMethod := req.Header.Get("Access-Control-Request-Method")
-
 		// If CORS is not enabled or if no Origin header is present (i.e. the request
 		// is from the Vault CLI. A browser will always send an Origin header), then
 		// just return a 204.
-		if !corsConf.IsEnabled() || origin == "" {
+		if !corsConf.IsEnabled() {
+			h.ServeHTTP(w, req)
+			return
+		}
+
+		origin := req.Header.Get("Origin")
+		requestMethod := req.Header.Get("Access-Control-Request-Method")
+
+		if origin == "" {
 			h.ServeHTTP(w, req)
 			return
 		}

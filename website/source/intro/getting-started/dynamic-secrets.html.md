@@ -60,7 +60,7 @@ these credentials when communicating with AWS in future requests.
 ## Creating a Role
 
 The next step is to configure a "role". A "role" in Vault is a human-friendly
-identifier to an action. Think of it like a symlink.
+identifier to an action. Think of it as a symlink.
 
 Vault knows how to create an IAM user via the AWS API, but it does not know what
 permissions, groups, and policies you want to attach to that user. This is where
