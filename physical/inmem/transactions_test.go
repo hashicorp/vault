@@ -71,6 +71,10 @@ func newFaultyPseudo(logger log.Logger, faultyPaths []string) *faultyPseudo {
 			root:       radix.New(),
 			permitPool: physical.NewPermitPool(1),
 			logger:     logger.Named("storage.inmembackend"),
+			failGet:    new(uint32),
+			failPut:    new(uint32),
+			failDelete: new(uint32),
+			failList:   new(uint32),
 		},
 		faultyPaths: make(map[string]struct{}, len(faultyPaths)),
 	}

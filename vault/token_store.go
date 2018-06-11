@@ -130,7 +130,7 @@ type TokenStore struct {
 	saltLock sync.RWMutex
 	salt     *salt.Salt
 
-	tidyLock int64
+	tidyLock *int32
 
 	identityPoliciesDeriverFunc func(string) (*identity.Entity, []string, error)
 }
@@ -150,6 +150,7 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 		tokensPendingDeletion:       &sync.Map{},
 		saltLock:                    sync.RWMutex{},
 		identityPoliciesDeriverFunc: c.fetchEntityAndDerivedPolicies,
+		tidyLock:                    new(int32),
 	}
 
 	if c.policyStore != nil {
@@ -951,6 +952,20 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 		persistNeeded = true
 	}
 
+	// It's a root token with unlimited creation TTL (so never had an
+	// expiration); this may or may not have a lease (based on when it was
+	// generated, for later revocation purposes) but it doesn't matter, it's
+	// allowed. Fast-path this.
+	if len(entry.Policies) == 1 && entry.Policies[0] == "root" && entry.TTL == 0 {
+		// If fields are getting upgraded, store the changes
+		if persistNeeded {
+			if err := ts.store(ctx, entry); err != nil {
+				return nil, errwrap.Wrapf("failed to persist token upgrade: {{err}}", err)
+			}
+		}
+		return entry, nil
+	}
+
 	// Perform these checks on upgraded fields, but before persisting
 
 	// If we are still restoring the expiration manager, we want to ensure the
@@ -966,13 +981,6 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 	var ret *logical.TokenEntry
 
 	switch {
-	// It's a root token with unlimited creation TTL (so never had an
-	// expiration); this may or may not have a lease (based on when it was
-	// generated, for later revocation purposes) but it doesn't matter, it's
-	// allowed
-	case len(entry.Policies) == 1 && entry.Policies[0] == "root" && entry.TTL == 0:
-		ret = entry
-
 	// It's any kind of expiring token with no lease, immediately delete it
 	case le == nil:
 		leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(entry)
@@ -1284,12 +1292,12 @@ func (ts *TokenStore) lookupBySaltedAccessor(ctx context.Context, saltedAccessor
 func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var tidyErrors *multierror.Error
 
-	if !atomic.CompareAndSwapInt64(&ts.tidyLock, 0, 1) {
+	if !atomic.CompareAndSwapInt32(ts.tidyLock, 0, 1) {
 		ts.logger.Warn("tidy operation on tokens is already in progress")
 		return nil, fmt.Errorf("tidy operation on tokens is already in progress")
 	}
 
-	defer atomic.CompareAndSwapInt64(&ts.tidyLock, 1, 0)
+	defer atomic.CompareAndSwapInt32(ts.tidyLock, 1, 0)
 
 	ts.logger.Info("beginning tidy operation on tokens")
 	defer ts.logger.Info("finished tidy operation on tokens")

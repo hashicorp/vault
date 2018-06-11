@@ -71,9 +71,9 @@ type ExpirationManager struct {
 	pending     map[string]pendingInfo
 	pendingLock sync.RWMutex
 
-	tidyLock int32
+	tidyLock *int32
 
-	restoreMode        int32
+	restoreMode        *int32
 	restoreModeLock    sync.RWMutex
 	restoreRequestLock sync.RWMutex
 	restoreLocks       []*locksutil.LockEntry
@@ -82,7 +82,7 @@ type ExpirationManager struct {
 
 	coreStateLock     *sync.RWMutex
 	quitContext       context.Context
-	leaseCheckCounter uint32
+	leaseCheckCounter *uint32
 
 	logLeaseExpirations bool
 }
@@ -97,19 +97,21 @@ func NewExpirationManager(c *Core, view *BarrierView, logger log.Logger) *Expira
 		tokenStore: c.tokenStore,
 		logger:     logger,
 		pending:    make(map[string]pendingInfo),
+		tidyLock:   new(int32),
 
 		// new instances of the expiration manager will go immediately into
 		// restore mode
-		restoreMode:  1,
+		restoreMode:  new(int32),
 		restoreLocks: locksutil.CreateLocks(),
 		quitCh:       make(chan struct{}),
 
 		coreStateLock:     &c.stateLock,
 		quitContext:       c.activeContext,
-		leaseCheckCounter: 0,
+		leaseCheckCounter: new(uint32),
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
 	}
+	*exp.restoreMode = 1
 
 	if exp.logger == nil {
 		opts := log.LoggerOptions{Name: "expiration_manager"}
@@ -173,7 +175,7 @@ func (m *ExpirationManager) unlockLease(leaseID string) {
 
 // inRestoreMode returns if we are currently in restore mode
 func (m *ExpirationManager) inRestoreMode() bool {
-	return atomic.LoadInt32(&m.restoreMode) == 1
+	return atomic.LoadInt32(m.restoreMode) == 1
 }
 
 // Tidy cleans up the dangling storage entries for leases. It scans the storage
@@ -189,12 +191,12 @@ func (m *ExpirationManager) Tidy() error {
 
 	var tidyErrors *multierror.Error
 
-	if !atomic.CompareAndSwapInt32(&m.tidyLock, 0, 1) {
+	if !atomic.CompareAndSwapInt32(m.tidyLock, 0, 1) {
 		m.logger.Warn("tidy operation on leases is already in progress")
 		return fmt.Errorf("tidy operation on leases is already in progress")
 	}
 
-	defer atomic.CompareAndSwapInt32(&m.tidyLock, 1, 0)
+	defer atomic.CompareAndSwapInt32(m.tidyLock, 1, 0)
 
 	m.logger.Info("beginning tidy operation on leases")
 	defer m.logger.Info("finished tidy operation on leases")
@@ -299,7 +301,7 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 		// if restore mode finished successfully, restore mode was already
 		// disabled with the lock. In an error state, this will allow the
 		// Stop() function to shut everything down.
-		atomic.StoreInt32(&m.restoreMode, 0)
+		atomic.StoreInt32(m.restoreMode, 0)
 
 		switch {
 		case retErr == nil:
@@ -414,7 +416,7 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	m.restoreModeLock.Lock()
 	m.restoreLoaded = sync.Map{}
 	m.restoreLocks = nil
-	atomic.StoreInt32(&m.restoreMode, 0)
+	atomic.StoreInt32(m.restoreMode, 0)
 	m.restoreModeLock.Unlock()
 
 	m.logger.Info("lease restore complete")
@@ -1357,11 +1359,11 @@ func (m *ExpirationManager) emitMetrics() {
 	metrics.SetGauge([]string{"expire", "num_leases"}, float32(num))
 	// Check if lease count is greater than the threshold
 	if num > maxLeaseThreshold {
-		if atomic.LoadUint32(&m.leaseCheckCounter) > 59 {
+		if atomic.LoadUint32(m.leaseCheckCounter) > 59 {
 			m.logger.Warn("lease count exceeds warning lease threshold")
-			atomic.StoreUint32(&m.leaseCheckCounter, 0)
+			atomic.StoreUint32(m.leaseCheckCounter, 0)
 		} else {
-			atomic.AddUint32(&m.leaseCheckCounter, 1)
+			atomic.AddUint32(m.leaseCheckCounter, 1)
 		}
 	}
 }

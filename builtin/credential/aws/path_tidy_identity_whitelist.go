@@ -34,9 +34,9 @@ expiration, before it is removed from the backend storage.`,
 
 // tidyWhitelistIdentity is used to delete entries in the whitelist that are expired.
 func (b *backend) tidyWhitelistIdentity(ctx context.Context, s logical.Storage, safety_buffer int) error {
-	grabbed := atomic.CompareAndSwapUint32(&b.tidyWhitelistCASGuard, 0, 1)
+	grabbed := atomic.CompareAndSwapUint32(b.tidyWhitelistCASGuard, 0, 1)
 	if grabbed {
-		defer atomic.StoreUint32(&b.tidyWhitelistCASGuard, 0)
+		defer atomic.StoreUint32(b.tidyWhitelistCASGuard, 0)
 	} else {
 		return fmt.Errorf("identity whitelist tidy operation already running")
 	}
