@@ -952,6 +952,20 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 		persistNeeded = true
 	}
 
+	// It's a root token with unlimited creation TTL (so never had an
+	// expiration); this may or may not have a lease (based on when it was
+	// generated, for later revocation purposes) but it doesn't matter, it's
+	// allowed. Fast-path this.
+	if len(entry.Policies) == 1 && entry.Policies[0] == "root" && entry.TTL == 0 {
+		// If fields are getting upgraded, store the changes
+		if persistNeeded {
+			if err := ts.store(ctx, entry); err != nil {
+				return nil, errwrap.Wrapf("failed to persist token upgrade: {{err}}", err)
+			}
+		}
+		return entry, nil
+	}
+
 	// Perform these checks on upgraded fields, but before persisting
 
 	// If we are still restoring the expiration manager, we want to ensure the
@@ -967,13 +981,6 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 	var ret *logical.TokenEntry
 
 	switch {
-	// It's a root token with unlimited creation TTL (so never had an
-	// expiration); this may or may not have a lease (based on when it was
-	// generated, for later revocation purposes) but it doesn't matter, it's
-	// allowed
-	case len(entry.Policies) == 1 && entry.Policies[0] == "root" && entry.TTL == 0:
-		ret = entry
-
 	// It's any kind of expiring token with no lease, immediately delete it
 	case le == nil:
 		leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(entry)
