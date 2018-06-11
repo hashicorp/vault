@@ -14,6 +14,8 @@ It currently does not support a configurable syslog destination, and always
 sends to the local agent. This device is only supported on Unix systems,
 and should not be enabled if any standby Vault instances do not support it.
 
+~> **Warning:** Many syslog implementations limit the line length, which may cause vault to not be able to complete the write and make vault unresponsive to API requests if it's your only audit log configured.  Vault line lengths can get very long, so you should test and verify your configuration before putting in production.
+
 ## Examples
 
 Audit `syslog` device can be enabled by the following command:
