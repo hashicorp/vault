@@ -14,7 +14,7 @@ moduleForAcceptance('Acceptance | Enterprise | control groups', {
     return authLogout();
   }
 });
-const POLICY = `path "kv/foo" {
+const POLICY = `'path "kv/foo" {
     capabilities = ["create", "read", "update", "delete", "list"]
     control_group = {
         max_ttl = "24h"
@@ -31,7 +31,7 @@ const POLICY = `path "kv/foo" {
             }
         }
     }
-}`;
+}'`;
 
 const setupControlGroup = () => {
   let token;
@@ -41,7 +41,7 @@ const setupControlGroup = () => {
       'write sys/mounts/kv type=kv',
       'write kv/foo bar=baz',
       'write sys/auth/userpass type=userpass',
-      `write sys/policies/acl/kv-control-group policy='${POLICY}'`,
+      `write sys/policies/acl/kv-control-group policy=${POLICY}`,
       'write -field=client_token auth/token/create policies=kv-control-group'
     ]);
   });
