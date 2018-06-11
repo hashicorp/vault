@@ -1,7 +1,7 @@
 import Ember from 'ember';
 import ControlGroupError from 'vault/lib/control-group-error';
 
-const { Service, assign, inject, RSVP } = Ember;
+const { Service, inject, RSVP } = Ember;
 
 // list of endpoints that return wrapped responses
 // without `wrap-ttl`
@@ -23,12 +23,11 @@ export default Service.extend({
       wasWrapTTLRequested ||
       !response ||
       (creationPath && WRAPPED_RESPONSE_PATHS.includes(creationPath)) ||
-      (response && !response.wrap_info)
+      !response.wrap_info
     ) {
       return RSVP.resolve(...callbackArgs);
     }
-    let error = new ControlGroupError();
-    error = assign(error, response.wrap_info);
+    let error = new ControlGroupError(response.wrap_info);
     return RSVP.reject(error);
   },
 

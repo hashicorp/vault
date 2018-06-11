@@ -57,6 +57,9 @@ let resolvesArgs = (assert, result, expectedArgs) => {
     isEnt,
     [[{'one': 'two', 'three': 'four'}], {foo: 'bar', wrap_info: {token: 'secret', accessor: 'lookup'}}, false],
     (assert, result) => {
+      // ensure failure if we ever don't reject
+      assert.expect(2);
+
       return result.then(
         () => {},
         (err) => {
