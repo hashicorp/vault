@@ -95,6 +95,44 @@ func TestMSSQL_CreateUser(t *testing.T) {
 	}
 }
 
+func TestMSSQL_RotateRootCredentials(t *testing.T) {
+	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
+		return
+	}
+	connURL := os.Getenv("MSSQL_URL")
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+		"username":       "sa",
+		"password":       "yourStrong(!)Password",
+	}
+
+	db := new()
+
+	connProducer := db.SQLConnectionProducer
+
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if !connProducer.Initialized {
+		t.Fatal("Database should be initalized")
+	}
+
+	newConf, err := db.RotateRootCredentials(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if newConf["password"] == "yourStrong(!)Password" {
+		t.Fatal("password was not updated")
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
 func TestMSSQL_RevokeUser(t *testing.T) {
 	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
 		return

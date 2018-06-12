@@ -17,6 +17,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -24,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/crypto/chacha20poly1305"
@@ -246,6 +248,7 @@ type PolicyConfig struct {
 // NewPolicy takes a policy config and returns a Policy with those settings.
 func NewPolicy(config PolicyConfig) *Policy {
 	return &Policy{
+		l:                    new(sync.RWMutex),
 		Name:                 config.Name,
 		Type:                 config.Type,
 		Derived:              config.Derived,
@@ -257,7 +260,6 @@ func NewPolicy(config PolicyConfig) *Policy {
 		AllowPlaintextBackup: config.AllowPlaintextBackup,
 		VersionTemplate:      config.VersionTemplate,
 		StoragePrefix:        config.StoragePrefix,
-		versionPrefixCache:   &sync.Map{},
 	}
 }
 
@@ -279,12 +281,24 @@ func LoadPolicy(ctx context.Context, s logical.Storage, path string) (*Policy, e
 		return nil, err
 	}
 
-	policy.versionPrefixCache = &sync.Map{}
+	policy.l = new(sync.RWMutex)
+
 	return &policy, nil
 }
 
 // Policy is the struct used to store metadata
 type Policy struct {
+	// This is a pointer on purpose: if we are running with cache disabled we
+	// need to actually swap in the lock manager's lock for this policy with
+	// the local lock.
+	l *sync.RWMutex
+	// writeLocked allows us to implement Lock() and Unlock()
+	writeLocked bool
+	// Stores whether it's been deleted. This acts as a guard for operations
+	// that may write data, e.g. if one request rotates and that request is
+	// served after a delete.
+	deleted uint32
+
 	Name string      `json:"name"`
 	Key  []byte      `json:"key,omitempty"` //DEPRECATED
 	Keys keyEntryMap `json:"keys"`
@@ -341,9 +355,27 @@ type Policy struct {
 	// policy object.
 	StoragePrefix string `json:"storage_prefix"`
 
-	// versionPrefixCache stores caches of verison prefix strings and the split
+	// versionPrefixCache stores caches of version prefix strings and the split
 	// version template.
-	versionPrefixCache *sync.Map
+	versionPrefixCache sync.Map
+}
+
+func (p *Policy) Lock(exclusive bool) {
+	if exclusive {
+		p.l.Lock()
+		p.writeLocked = true
+	} else {
+		p.l.RLock()
+	}
+}
+
+func (p *Policy) Unlock() {
+	if p.writeLocked {
+		p.writeLocked = false
+		p.l.Unlock()
+	} else {
+		p.l.RUnlock()
+	}
 }
 
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane
@@ -470,6 +502,10 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 }
 
 func (p *Policy) Persist(ctx context.Context, storage logical.Storage) (retErr error) {
+	if atomic.LoadUint32(&p.deleted) == 1 {
+		return errors.New("key has been deleted, not persisting")
+	}
+
 	// Other functions will take care of restoring other values; this is just
 	// responsible for archiving and keys since the archive function can modify
 	// keys. At the moment one of the other functions calling persist will also
