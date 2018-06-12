@@ -1,6 +1,6 @@
 import Ember from 'ember';
 import DS from 'ember-data';
-import { queryRecord } from 'ember-computed-query';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { fragment } from 'ember-data-model-fragments/attributes';
 
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -81,16 +81,7 @@ export default DS.Model.extend({
     });
   },
 
-  zeroAddressPath: queryRecord(
-    'capabilities',
-    context => {
-      const { id } = context.getProperties('backend', 'id');
-      return {
-        id: `${id}/config/zeroaddress`,
-      };
-    },
-    'id'
-  ),
+  zeroAddressPath: lazyCapabilities(apiPath`${'id'}/config/zeroaddress`, 'id'),
   canEditZeroAddress: computed.alias('zeroAddressPath.canUpdate'),
 
   // aws backend attrs

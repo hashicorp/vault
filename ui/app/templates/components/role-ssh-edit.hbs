@@ -1,67 +1,67 @@
-<header class="page-header">
-  {{key-value-header
-    baseKey=model
-    path="vault.cluster.secrets.backend.list"
-    mode=mode
-    root=root
-    showCurrent=true
-  }}
-  <div class="level">
-    <div class="level-left">
-      <h1 class="title is-3" data-test-secret-header="true">
-        {{#if (eq mode "create") }}
-          Create an SSH Role
-        {{else if (eq mode 'edit')}}
-          Edit SSH Role
-        {{else}}
-          SSH Role <code>{{model.id}}</code>
-        {{/if}}
-      </h1>
-    </div>
-    <div class="level-right">
-      <div class="field is-grouped">
-        {{#if (eq mode "show") }}
-          {{#if (or model.canUpdate model.canDelete)}}
-            <div class="control">
-              {{#secret-link
-                secret=model.id
-                mode="edit"
-                replace=true
-                class="button has-icon-right is-ghost is-compact"
-                }}
-                Edit role
-                {{i-con glyph="chevron-right" size=11}}
-              {{/secret-link}}
-            </div>
-          {{/if}}
+<PageHeader as |p|>
+  <p.top>
+    {{key-value-header
+      baseKey=model
+      path="vault.cluster.secrets.backend.list"
+      mode=mode
+      root=root
+      showCurrent=true
+    }}
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header="true">
+      {{#if (eq mode "create") }}
+        Create an SSH Role
+      {{else if (eq mode 'edit')}}
+        Edit SSH Role
+      {{else}}
+        SSH Role <code>{{model.id}}</code>
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+  <p.levelRight>
+    <div class="field is-grouped">
+      {{#if (eq mode "show") }}
+        {{#if (or model.canUpdate model.canDelete)}}
           <div class="control">
-            {{#if (eq model.keyType "otp")}}
-              {{#secret-link
-                mode="credentials"
-                secret=model.id
-                class="button has-icon-right is-ghost is-compact"
-                data-test-backend-credentials=true
+            {{#secret-link
+              secret=model.id
+              mode="edit"
+              replace=true
+              class="button has-icon-right is-ghost is-compact"
               }}
-               Generate Credentials
-               {{i-con glyph="chevron-right" size=11}}
-              {{/secret-link}}
-            {{else}}
-              {{#secret-link
-                mode="sign"
-                secret=model.id
-                class="button has-icon-right is-ghost is-compact"
-                data-test-backend-credentials=true
-              }}
-                Sign Keys
-                {{i-con glyph="chevron-right" size=11}}
-              {{/secret-link}}
-            {{/if}}
+              Edit role
+              {{i-con glyph="chevron-right" size=11}}
+            {{/secret-link}}
           </div>
         {{/if}}
-      </div>
+        <div class="control">
+          {{#if (eq model.keyType "otp")}}
+            {{#secret-link
+              mode="credentials"
+              secret=model.id
+              class="button has-icon-right is-ghost is-compact"
+              data-test-backend-credentials=true
+            }}
+             Generate Credentials
+             {{i-con glyph="chevron-right" size=11}}
+            {{/secret-link}}
+          {{else}}
+            {{#secret-link
+              mode="sign"
+              secret=model.id
+              class="button has-icon-right is-ghost is-compact"
+              data-test-backend-credentials=true
+            }}
+              Sign Keys
+              {{i-con glyph="chevron-right" size=11}}
+            {{/secret-link}}
+          {{/if}}
+        </div>
+      {{/if}}
     </div>
-  </div>
-</header>
+  </p.levelRight>
+</PageHeader>
 
 {{#if (or (eq mode 'edit') (eq mode 'create'))}}
   {{partial 'partials/role-ssh/form'}}
