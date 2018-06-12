@@ -227,7 +227,15 @@ export default DS.Model.extend({
           'allowedDomains',
         ],
       },
-      { 'Extended Key Usage': ['serverFlag', 'clientFlag', 'codeSigningFlag', 'emailProtectionFlag', 'extKeyUsageOids'] },
+      {
+        'Extended Key Usage': [
+          'serverFlag',
+          'clientFlag',
+          'codeSigningFlag',
+          'emailProtectionFlag',
+          'extKeyUsageOids',
+        ],
+      },
       {
         Advanced: ['generateLease', 'noStore', 'basicConstraintsValidForNonCA', 'policyIdentifiers'],
       },

@@ -48,7 +48,9 @@ test('it creates and can view a secret with the generic backend', function(asser
   });
 });
 
-test('upgrading generic to version 2 lists all existing secrets, and CRUD continues to work', function(assert) {
+test('upgrading generic to version 2 lists all existing secrets, and CRUD continues to work', function(
+  assert
+) {
   const path = `generic-${new Date().getTime()}`;
   const kvPath = `generic-kv-${new Date().getTime()}`;
   cli.consoleInput(`write sys/mounts/${path} type=generic`);
