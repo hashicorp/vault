@@ -3472,7 +3472,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 		var entity *identity.Entity
 		// Load the ACL policies so we can walk the prefix for this mount
-		acl, _, entity, err = b.Core.fetchACLTokenEntryAndEntity(req)
+		acl, _, entity, _, err = b.Core.fetchACLTokenEntryAndEntity(req)
 		if err != nil {
 			return nil, err
 		}
@@ -3553,7 +3553,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	resp.Data["path"] = me.Path
 
 	// Load the ACL policies so we can walk the prefix for this mount
-	acl, _, entity, err := b.Core.fetchACLTokenEntryAndEntity(req)
+	acl, _, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
 		return nil, err
 	}
@@ -3574,7 +3574,7 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		return nil, nil
 	}
 
-	acl, _, entity, err := b.Core.fetchACLTokenEntryAndEntity(req)
+	acl, _, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
 		return nil, err
 	}

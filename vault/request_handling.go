@@ -77,17 +77,17 @@ func (c *Core) fetchEntityAndDerivedPolicies(entityID string) (*identity.Entity,
 	return entity, policies, err
 }
 
-func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical.TokenEntry, *identity.Entity, error) {
+func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical.TokenEntry, *identity.Entity, []string, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
 
 	// Ensure there is a client token
 	if req.ClientToken == "" {
-		return nil, nil, nil, fmt.Errorf("missing client token")
+		return nil, nil, nil, nil, fmt.Errorf("missing client token")
 	}
 
 	if c.tokenStore == nil {
 		c.logger.Error("token store is unavailable")
-		return nil, nil, nil, ErrInternalError
+		return nil, nil, nil, nil, ErrInternalError
 	}
 
 	// Resolve the token policy
@@ -98,7 +98,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical
 		te, err = c.tokenStore.Lookup(c.activeContext, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to lookup token", "error", err)
-			return nil, nil, nil, ErrInternalError
+			return nil, nil, nil, nil, ErrInternalError
 		}
 	default:
 		te = req.TokenEntry()
@@ -106,7 +106,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical
 
 	// Ensure the token is valid
 	if te == nil {
-		return nil, nil, nil, logical.ErrPermissionDenied
+		return nil, nil, nil, nil, logical.ErrPermissionDenied
 	}
 
 	// CIDR checks bind all tokens except non-expiring root tokens
@@ -117,7 +117,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical
 			if c.Logger().IsDebug() {
 				c.Logger().Debug("could not parse remote addr into sockaddr", "error", err, "remote_addr", req.Connection.RemoteAddr)
 			}
-			return nil, nil, nil, logical.ErrPermissionDenied
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
 		for _, cidr := range te.BoundCIDRs {
 			if cidr.Contains(remoteSockAddr) {
@@ -126,27 +126,27 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical
 			}
 		}
 		if !valid {
-			return nil, nil, nil, logical.ErrPermissionDenied
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
 	}
 
-	tokenPolicies := te.Policies
+	allPolicies := te.Policies
 
 	entity, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(te.EntityID)
 	if err != nil {
-		return nil, nil, nil, ErrInternalError
+		return nil, nil, nil, nil, ErrInternalError
 	}
 
-	tokenPolicies = append(tokenPolicies, derivedPolicies...)
+	allPolicies = append(allPolicies, derivedPolicies...)
 
 	// Construct the corresponding ACL object
-	acl, err := c.policyStore.ACL(c.activeContext, tokenPolicies...)
+	acl, err := c.policyStore.ACL(c.activeContext, allPolicies...)
 	if err != nil {
 		c.logger.Error("failed to construct ACL", "error", err)
-		return nil, nil, nil, ErrInternalError
+		return nil, nil, nil, nil, ErrInternalError
 	}
 
-	return acl, te, entity, nil
+	return acl, te, entity, allPolicies, nil
 }
 
 func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
@@ -155,13 +155,14 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 	var acl *ACL
 	var te *logical.TokenEntry
 	var entity *identity.Entity
+	var allPolicies []string
 	var err error
 
 	// Even if unauth, if a token is provided, there's little reason not to
 	// gather as much info as possible for the audit log and to e.g. control
 	// trace mode for EGPs.
 	if !unauth || (unauth && req.ClientToken != "") {
-		acl, te, entity, err = c.fetchACLTokenEntryAndEntity(req)
+		acl, te, entity, allPolicies, err = c.fetchACLTokenEntryAndEntity(req)
 		// In the unauth case we don't want to fail the command, since it's
 		// unauth, we just have no information to attach to the request, so
 		// ignore errors...this was best-effort anyways
@@ -221,10 +222,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
 		Accessor:    req.ClientTokenAccessor,
+		Policies:    allPolicies,
 	}
 
 	if te != nil {
-		auth.Policies = te.Policies
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
@@ -617,6 +618,14 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			return nil, auth, retErr
 		}
 
+		_, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(resp.Auth.EntityID)
+		if err != nil {
+			c.tokenStore.revokeOrphan(ctx, te.ID)
+			return nil, nil, ErrInternalError
+		}
+
+		resp.Auth.Policies = policyutil.SanitizePolicies(append(resp.Auth.Policies, derivedPolicies...), policyutil.DoNotAddDefaultPolicy)
+
 		if err := c.expiration.RegisterAuth(resp.Auth.CreationPath, resp.Auth); err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
@@ -763,10 +772,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 		}
 
-		if strutil.StrListSubset(auth.Policies, []string{"root"}) {
-			return logical.ErrorResponse("auth methods cannot create root tokens"), nil, logical.ErrInvalidRequest
-		}
-
 		// Determine the source of the login
 		source := c.router.MatchingMount(req.Path)
 		source = strings.TrimPrefix(source, credentialRoutePrefix)
@@ -789,6 +794,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			resp.AddWarning(warning)
 		}
 
+		// We first assign token policies to what was returned from the backend
+		// via auth.Policies. Then, we get the full set of policies into
+		// auth.Policies from the backend + entity information -- this is not
+		// stored in the token, but we perform sanity checks on it and return
+		// that information to the user.
+
 		// Generate a token
 		te := logical.TokenEntry{
 			Path:         req.Path,
@@ -802,10 +813,22 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			BoundCIDRs:   auth.BoundCIDRs,
 		}
 
-		te.Policies = policyutil.SanitizePolicies(te.Policies, true)
+		te.Policies = policyutil.SanitizePolicies(te.Policies, policyutil.AddDefaultPolicy)
 
-		// Prevent internal policies from being assigned to tokens
-		for _, policy := range te.Policies {
+		_, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(auth.EntityID)
+		if err != nil {
+			return nil, nil, ErrInternalError
+		}
+
+		auth.Policies = policyutil.SanitizePolicies(append(auth.Policies, derivedPolicies...), policyutil.AddDefaultPolicy)
+
+		// Prevent internal policies from being assigned to tokens. We check
+		// this on auth.Policies including derived ones from Identity before
+		// actually making the token.
+		for _, policy := range auth.Policies {
+			if policy == "root" {
+				return logical.ErrorResponse("auth methods cannot create root tokens"), nil, logical.ErrInvalidRequest
+			}
 			if strutil.StrListContains(nonAssignablePolicies, policy) {
 				return logical.ErrorResponse(fmt.Sprintf("cannot assign policy %q", policy)), nil, logical.ErrInvalidRequest
 			}
@@ -819,7 +842,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Populate the client token, accessor, and TTL
 		auth.ClientToken = te.ID
 		auth.Accessor = te.Accessor
-		auth.Policies = te.Policies
 		auth.TTL = te.TTL
 
 		// Register with the expiration manager

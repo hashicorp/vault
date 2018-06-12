@@ -1004,7 +1004,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	}
 
 	// Validate the token is a root token
-	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req)
+	acl, te, entity, allPolicies, err := c.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
 		c.stateLock.RUnlock()
@@ -1014,9 +1014,9 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
+		Policies:    allPolicies,
 	}
 	if te != nil {
-		auth.Policies = te.Policies
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
