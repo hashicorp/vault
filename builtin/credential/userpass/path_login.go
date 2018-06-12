@@ -3,7 +3,6 @@ package userpass
 import (
 	"context"
 	"crypto/subtle"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -124,15 +123,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	// Check for a CIDR match.
-	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.BoundCIDRs) {
-		return nil, errors.New("renewal request originated from invalid CIDR")
-	}
-
 	resp := &logical.Response{Auth: req.Auth}
 	resp.Auth.TTL = user.TTL
 	resp.Auth.MaxTTL = user.MaxTTL
-	resp.Auth.BoundCIDRs = user.BoundCIDRs
 	return resp, nil
 }
 

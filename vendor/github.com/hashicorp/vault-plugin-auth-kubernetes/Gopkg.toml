@@ -1,6 +1,6 @@
 # Gopkg.toml example
 #
-# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# Refer to https://golang.github.io/dep/docs/Gopkg.toml.html
 # for detailed Gopkg.toml documentation.
 #
 # required = ["github.com/user/thing/cmd/thing"]
@@ -26,8 +26,8 @@
 
 
 [[constraint]]
+  branch = "master"
   name = "github.com/SermoDigital/jose"
-  version = "1.1.0"
 
 [[constraint]]
   branch = "master"
@@ -35,7 +35,15 @@
 
 [[constraint]]
   branch = "master"
+  name = "github.com/hashicorp/go-hclog"
+
+[[constraint]]
+  branch = "master"
   name = "github.com/hashicorp/go-multierror"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/hashicorp/go-sockaddr"
 
 [[constraint]]
   name = "github.com/hashicorp/vault"
@@ -46,11 +54,11 @@
   name = "github.com/mitchellh/mapstructure"
 
 [[constraint]]
-  branch = "release-1.8"
+  branch = "master"
   name = "k8s.io/api"
 
 [[constraint]]
-  branch = "release-1.8"
+  branch = "master"
   name = "k8s.io/apimachinery"
 
 [prune]

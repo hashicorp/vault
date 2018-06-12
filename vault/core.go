@@ -191,7 +191,7 @@ type Core struct {
 	standbyDoneCh        chan struct{}
 	standbyStopCh        chan struct{}
 	manualStepDownCh     chan struct{}
-	keepHALockOnStepDown uint32
+	keepHALockOnStepDown *uint32
 	heldHALock           physical.Lock
 
 	// unlockInfo has the keys provided to Unseal until the threshold number of parts is available, as well as the operation nonce
@@ -500,6 +500,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		localClusterCert:                 new(atomic.Value),
 		localClusterParsedCert:           new(atomic.Value),
 		activeNodeReplicationState:       new(uint32),
+		keepHALockOnStepDown:             new(uint32),
 	}
 
 	atomic.StoreUint32(c.replicationState, uint32(consts.ReplicationDRDisabled|consts.ReplicationPerformanceDisabled))
@@ -516,7 +517,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Load CORS config and provide a value for the core field.
-	c.corsConfig = &CORSConfig{core: c}
+	c.corsConfig = &CORSConfig{
+		core:    c,
+		Enabled: new(uint32),
+	}
 
 	phys := conf.Physical
 	_, txnOK := conf.Physical.(physical.Transactional)
@@ -1138,7 +1142,7 @@ func (c *Core) sealInternal(keepLock bool) error {
 		}
 	} else {
 		if keepLock {
-			atomic.StoreUint32(&c.keepHALockOnStepDown, 1)
+			atomic.StoreUint32(c.keepHALockOnStepDown, 1)
 		}
 		// If we are trying to acquire the lock, force it to return with nil so
 		// runStandby will exit
@@ -1150,7 +1154,7 @@ func (c *Core) sealInternal(keepLock bool) error {
 
 		// Wait for runStandby to stop
 		<-c.standbyDoneCh
-		atomic.StoreUint32(&c.keepHALockOnStepDown, 0)
+		atomic.StoreUint32(c.keepHALockOnStepDown, 0)
 		c.logger.Debug("runStandby done")
 	}
 

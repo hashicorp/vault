@@ -62,6 +62,7 @@ type creationParameters struct {
 	NotAfter                      time.Time
 	KeyUsage                      x509.KeyUsage
 	ExtKeyUsage                   certExtKeyUsage
+	ExtKeyUsageOIDs               []string
 	PolicyIdentifiers             []string
 	BasicConstraintsValidForNonCA bool
 
@@ -497,6 +498,29 @@ func parseOtherSANs(others []string) (map[string][]string, error) {
 	return result, nil
 }
 
+func validateSerialNumber(data *dataBundle, serialNumber string) string {
+	valid := false
+	if len(data.role.AllowedSerialNumbers) > 0 {
+		for _, currSerialNumber := range data.role.AllowedSerialNumbers {
+			if currSerialNumber == "" {
+				continue
+			}
+
+			if (strings.Contains(currSerialNumber, "*") &&
+				glob.Glob(currSerialNumber, serialNumber)) ||
+				currSerialNumber == serialNumber {
+				valid = true
+				break
+			}
+		}
+	}
+	if !valid {
+		return serialNumber
+	} else {
+		return ""
+	}
+}
+
 func generateCert(ctx context.Context,
 	b *backend,
 	data *dataBundle,
@@ -694,6 +718,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 
 	// Read in names -- CN, DNS and email addresses
 	var cn string
+	var ridSerialNumber string
 	dnsNames := []string{}
 	emailAddresses := []string{}
 	{
@@ -705,6 +730,13 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 			if cn == "" && data.role.RequireCN {
 				return errutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true, unless "require_cn" is set to false`}
 			}
+		}
+
+		ridSerialNumber = data.apiData.Get("serial_number").(string)
+
+		// only take serial number from CSR if one was not supplied via API
+		if ridSerialNumber == "" && data.csr != nil {
+			ridSerialNumber = data.csr.Subject.SerialNumber
 		}
 
 		if data.csr != nil && data.role.UseCSRSANs {
@@ -770,6 +802,14 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 			if len(badName) != 0 {
 				return errutil.UserError{Err: fmt.Sprintf(
 					"common name %s not allowed by this role", badName)}
+			}
+		}
+
+		if ridSerialNumber != "" {
+			badName := validateSerialNumber(data, ridSerialNumber)
+			if len(badName) != 0 {
+				return errutil.UserError{Err: fmt.Sprintf(
+					"serial_number %s not allowed by this role", badName)}
 			}
 		}
 
@@ -844,6 +884,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 
 	subject := pkix.Name{
 		CommonName:         cn,
+		SerialNumber:       ridSerialNumber,
 		Country:            strutil.RemoveDuplicates(data.role.Country, false),
 		Organization:       strutil.RemoveDuplicates(data.role.Organization, false),
 		OrganizationalUnit: strutil.RemoveDuplicates(data.role.OU, false),
@@ -918,6 +959,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		NotAfter:                      notAfter,
 		KeyUsage:                      x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
 		ExtKeyUsage:                   extUsage,
+		ExtKeyUsageOIDs:               data.role.ExtKeyUsageOIDs,
 		PolicyIdentifiers:             data.role.PolicyIdentifiers,
 		BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
 	}
@@ -989,6 +1031,16 @@ func addPolicyIdentifiers(data *dataBundle, certTemplate *x509.Certificate) {
 	}
 }
 
+// addExtKeyUsageOids adds custom extended key usage OIDs to certificate
+func addExtKeyUsageOids(data *dataBundle, certTemplate *x509.Certificate) {
+	for _, oidstr := range data.params.ExtKeyUsageOIDs {
+		oid, err := stringToOid(oidstr)
+		if err == nil {
+			certTemplate.UnknownExtKeyUsage = append(certTemplate.UnknownExtKeyUsage, oid)
+		}
+	}
+}
+
 // Performs the heavy lifting of creating a certificate. Returns
 // a fully-filled-in ParsedCertBundle.
 func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
@@ -1044,6 +1096,8 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	addPolicyIdentifiers(data, certTemplate)
 
 	addKeyUsages(data, certTemplate)
+
+	addExtKeyUsageOids(data, certTemplate)
 
 	certTemplate.IssuingCertificateURL = data.params.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = data.params.URLs.CRLDistributionPoints
@@ -1253,6 +1307,8 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	addPolicyIdentifiers(data, certTemplate)
 
 	addKeyUsages(data, certTemplate)
+
+	addExtKeyUsageOids(data, certTemplate)
 
 	var certBytes []byte
 

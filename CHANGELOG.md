@@ -1,4 +1,47 @@
-## 0.10.2 (Unreleased)
+## 0.10.3 (Unreleased)
+
+IMPROVEMENTS:
+
+ * storage/consul: Add context support so that requests are cancelable
+   [GH-4739]
+
+BUG FIXES:
+
+ * auth/approle: Fix panic due to metadata being nil [GH-4719]
+ * secrets/database: Fix default MySQL root rotation statement [GH-4748]
+ * secrets/kv: Fix writing to the root of a KVv2 mount from `vault kv` commands
+   incorrectly operating on a root+mount path instead of being an error
+   [GH-4726]
+ * seal/pkcs11: Add `CKK_SHA256_HMAC` to the search list when finding HMAC
+   keys, fixing lookup on some Thales devices
+
+## 0.10.2 (June 6th, 2018)
+
+SECURITY:
+
+ * Tokens: A race condition was identified that could occur if a token's
+   lease expired while Vault was not running. In this case, when Vault came
+   back online, sometimes it would properly revoke the lease but other times it
+   would not, leading to a Vault token that no longer had an expiration and had
+   essentially unlimited lifetime. This race was per-token, not all-or-nothing
+   for all tokens that may have expired during Vault's downtime. We have fixed
+   the behavior and put extra checks in place to help prevent any similar
+   future issues. In addition, the logic we have put in place ensures that such
+   lease-less tokens can no longer be used (unless they are root tokens that
+   never had an expiration to begin with).
+ * Convergent Encryption: The version 2 algorithm used in `transit`'s
+   convergent encryption feature is susceptible to offline
+   plaintext-confirmation attacks. As a result, we are introducing a version 3
+   algorithm that mitigates this. If you are currently using convergent
+   encryption, we recommend upgrading, rotating your encryption key (the new
+   key version will use the new algorithm), and rewrapping your data (the
+   `rewrap` endpoint can be used to allow a relatively non-privileged user to
+   perform the rewrapping while never divulging the plaintext).
+ * AppRole case-sensitive role name secret-id leaking: When using a mixed-case
+   role name via AppRole, deleting a secret-id via accessor or other operations
+   could end up leaving the secret-id behind and valid but without an accessor.
+   This has now been fixed, and we have put checks in place to prevent these
+   secret-ids from being used.
 
 DEPRECATIONS/CHANGES:
 
@@ -8,17 +51,17 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * Active Directory Secrets Engine: A new `ad` secrets engine has been created
+   which allows Vault to rotate and provide credentials for configured AD
+   accounts.
  * Rekey Verification: Rekey operations can now require verification. This
    turns on a two-phase process where the existing key shares authorize
    generating a new master key, and a threshold of the new, returned key shares
    must be provided to verify that they have been successfully received in
    order for the actual master key to be rotated.
- * Cert auth CIDR restrictions: When using the `cert` auth method you can now
-   limit authentication to specific CIDRs; these will also be encoded in
-   resultant tokens to limit their use.
- * Userpass auth CIDR restrictions: When using the `userpass` auth method you
-   can now limit authentication to specific CIDRs; these will also be encoded
-   in resultant tokens to limit their use.
+ * CIDR restrictions for `cert`, `userpass`, and `kubernetes` auth methods:
+   You can now limit authentication to specific CIDRs; these will also be
+   encoded in resultant tokens to limit their use.
  * Vault UI Browser CLI: The UI now supports usage of read/write/list/delete
    commands in a CLI that can be accessed from the nav bar. Complex inputs such
    as JSON files are not currently supported. This surfaces features otherwise
@@ -32,12 +75,13 @@ IMPROVEMENTS:
    expecting a final value through doneCh behave correctly [GH-4472]
  * auth/cert: Break out `allowed_names` into component parts and add
    `allowed_uri_sans` [GH-4231]
+ * auth/ldap: Obfuscate error messages pre-bind for greater security [GH-4700]
  * cli: `vault login` now supports a `-no-print` flag to suppress printing
    token information but still allow storing into the token helper [GH-4454]
  * core/pkcs11 (enterprise): Add support for CKM_AES_CBC_PAD, CKM_RSA_PKCS, and 
    CKM_RSA_PKCS_OAEP mechanisms
- * core/pkcs11 (enterprise): HSM slots can now be selected by token label instead
-   of just slot number
+ * core/pkcs11 (enterprise): HSM slots can now be selected by token label
+   instead of just slot number
  * core/token: Optimize token revocation by removing unnecessary list call
    against the storage backend when calling revoke-orphan on tokens [GH-4465]
  * core/token: Refactor token revocation logic to not block on the call when
@@ -49,11 +93,21 @@ IMPROVEMENTS:
  * identity: Provide more contextual key information when listing entities,
    groups, and aliases
  * identity: Passthrough EntityID to backends [GH-4663]
+ * identity: Adds ability to request entity information through system view
+   [GH_4681]
+ * secret/pki: Add custom extended key usages [GH-4667]
+ * secret/pki: Add custom PKIX serial numbers [GH-4694]
+ * secret/ssh: Use hostname instead of IP in OTP mode, similar to CA mode
+   [GH-4673]
+ * storage/file: Attempt in some error conditions to do more cleanup [GH-4684]
  * ui: wrapping lookup now distplays the path [GH-4644]
  * ui: Identity interface now has more inline actions to make editing and adding
    aliases to an entity or group easier [GH-4502]
  * ui: Identity interface now lists groups by name [GH-4655]
- * ui: Permission denied errors still render the sidebar in the Access section [GH-4658]
+ * ui: Permission denied errors still render the sidebar in the Access section
+   [GH-4658]
+ * replication: Improve performance of index page flushes and WAL garbage 
+   collecting
 
 BUG FIXES:
 
@@ -74,8 +128,11 @@ BUG FIXES:
  * secret/pki: Fix `key_type` not being allowed to be set to `any` [GH-4595]
  * secret/pki: Fix path length parameter being ignored when using
    `use_csr_values` and signing an intermediate CA cert [GH-4459]
+ * secret/ssh: Only append UserKnownHostsFile to args when configured with a
+   value [GH-4674]
  * storage/dynamodb: Fix listing when one child is left within a nested path
    [GH-4570]
+ * storage/gcs: Fix swallowing an error on connection close [GH-4691]
  * ui: Fix HMAC algorithm in transit [GH-4604]
  * ui: Fix unwrap of auth responses via the UI's unwrap tool [GH-4611]
  * ui (enterprise): Fix parsing of version string that blocked some users from seeing
@@ -86,6 +143,7 @@ BUG FIXES:
  * replication: Fix issue with token store lookups after a secondary's mount table
    is invalidated.
  * replication: Improve startup time when a large merkle index is in use.
+ * replication: Fix panic when storage becomes unreachable during unseal.
 
 ## 0.10.1/0.9.7 (April 25th, 2018)
 

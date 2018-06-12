@@ -59,12 +59,15 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	// Generate a name for the token
 	tokenName := fmt.Sprintf("Vault %s %s %d", role, req.DisplayName, time.Now().UnixNano())
 
+	writeOpts := &api.WriteOptions{}
+	writeOpts = writeOpts.WithContext(ctx)
+
 	// Create it
 	token, _, err := c.ACL().Create(&api.ACLEntry{
 		Name:  tokenName,
 		Type:  result.TokenType,
 		Rules: result.Policy,
-	}, nil)
+	}, writeOpts)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}

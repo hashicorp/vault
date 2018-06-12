@@ -130,6 +130,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	polReq := keysutil.PolicyRequest{
+		Upsert:               true,
 		Storage:              req.Storage,
 		Name:                 name,
 		Derived:              derived,
@@ -154,15 +155,15 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
 
-	p, lock, upserted, err := b.lm.GetPolicyUpsert(ctx, polReq)
-	if lock != nil {
-		defer lock.RUnlock()
-	}
+	p, upserted, err := b.lm.GetPolicy(ctx, polReq)
 	if err != nil {
 		return nil, err
 	}
 	if p == nil {
 		return nil, fmt.Errorf("error generating key: returned policy was nil")
+	}
+	if b.System().CachingDisabled() {
+		p.Unlock()
 	}
 
 	resp := &logical.Response{}
@@ -183,16 +184,20 @@ type asymKey struct {
 func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
-	if lock != nil {
-		defer lock.RUnlock()
-	}
+	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+		Storage: req.Storage,
+		Name:    name,
+	})
 	if err != nil {
 		return nil, err
 	}
 	if p == nil {
 		return nil, nil
 	}
+	if !b.System().CachingDisabled() {
+		p.Lock(false)
+	}
+	defer p.Unlock()
 
 	// Return the response
 	resp := &logical.Response{
@@ -280,7 +285,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 						if err != nil {
 							return nil, errwrap.Wrapf(fmt.Sprintf("invalid version %q: {{err}}", k), err)
 						}
-						derived, err := p.DeriveKey(context, ver)
+						derived, err := p.DeriveKey(context, ver, 32)
 						if err != nil {
 							return nil, fmt.Errorf("failed to derive key to return public component")
 						}

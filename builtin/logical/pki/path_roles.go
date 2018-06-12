@@ -114,6 +114,11 @@ Any valid IP is accepted.`,
 				Description: `If set, an array of allowed other names to put in SANs. These values support globbing.`,
 			},
 
+			"allowed_serial_numbers": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: `If set, an array of allowed serial numbers to put in Subject. These values support globbing.`,
+			},
+
 			"server_flag": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
@@ -164,6 +169,11 @@ https://golang.org/pkg/crypto/x509/#KeyUsage
 -- simply drop the "KeyUsage" part of the name.
 To remove all key usages from being set, set
 this value to an empty list.`,
+			},
+
+			"ext_key_usage_oids": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: `A comma-separated string or list of extended key usage oids.`,
 			},
 
 			"use_csr_common_name": &framework.FieldSchema{
@@ -451,6 +461,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
 		KeyUsage:                      data.Get("key_usage").([]string),
+		ExtKeyUsageOIDs:               data.Get("ext_key_usage_oids").([]string),
 		OU:                            data.Get("ou").([]string),
 		Organization:                  data.Get("organization").([]string),
 		Country:                       data.Get("country").([]string),
@@ -461,6 +472,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		GenerateLease:                 new(bool),
 		NoStore:                       data.Get("no_store").(bool),
 		RequireCN:                     data.Get("require_cn").(bool),
+		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
 		PolicyIdentifiers:             data.Get("policy_identifiers").([]string),
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
 	}
@@ -493,6 +505,15 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 
 	if errResp := validateKeyTypeLength(entry.KeyType, entry.KeyBits); errResp != nil {
 		return errResp, nil
+	}
+
+	if len(entry.ExtKeyUsageOIDs) > 0 {
+		for _, oidstr := range entry.ExtKeyUsageOIDs {
+			_, err := stringToOid(oidstr)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for an extended key usage", oidstr)), nil
+			}
+		}
 	}
 
 	if len(entry.PolicyIdentifiers) > 0 {
@@ -587,7 +608,9 @@ type roleEntry struct {
 	NoStore                       bool          `json:"no_store" mapstructure:"no_store"`
 	RequireCN                     bool          `json:"require_cn" mapstructure:"require_cn"`
 	AllowedOtherSANs              []string      `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
+	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers" mapstructure:"allowed_serial_numbers"`
 	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
+	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
 
 	// Used internally for signing intermediates
@@ -616,6 +639,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"key_type":                           r.KeyType,
 		"key_bits":                           r.KeyBits,
 		"key_usage":                          r.KeyUsage,
+		"ext_key_usage_oids":                 r.ExtKeyUsageOIDs,
 		"ou":                                 r.OU,
 		"organization":                       r.Organization,
 		"country":                            r.Country,
@@ -625,6 +649,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"postal_code":                        r.PostalCode,
 		"no_store":                           r.NoStore,
 		"allowed_other_sans":                 r.AllowedOtherSANs,
+		"allowed_serial_numbers":             r.AllowedSerialNumbers,
 		"require_cn":                         r.RequireCN,
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,

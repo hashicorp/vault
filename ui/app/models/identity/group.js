@@ -27,10 +27,10 @@ export default IdentityModel.extend({
     readOnly: true,
   }),
   numMemberEntities: attr('number', {
-    readOnly: true
+    readOnly: true,
   }),
   numParentGroups: attr('number', {
-    readOnly: true
+    readOnly: true,
   }),
   metadata: attr('object', {
     editType: 'kv',

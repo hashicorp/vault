@@ -74,6 +74,12 @@ type Auth struct {
 
 	// The set of CIDRs that this token can be used with
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
+
+	// CreationPath is a path that the backend can return to use in the lease.
+	// This is currently only supported for the token store where roles may
+	// change the perceived path of the lease, even though they don't change
+	// the request path itself.
+	CreationPath string `json:"creation_path"`
 }
 
 func (a *Auth) GoString() string {

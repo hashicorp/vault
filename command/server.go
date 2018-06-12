@@ -108,9 +108,9 @@ Usage: vault server [options]
 
   This command starts a Vault server that responds to API requests. By default,
   Vault will start in a "sealed" state. The Vault cluster must be initialized
-  before use, usually by the "vault init" command. Each Vault server must also
-  be unsealed using the "vault unseal" command or the API before the server can
-  respond to requests.
+  before use, usually by the "vault operator init" command. Each Vault server must
+  also be unsealed using the "vault operator unseal" command or the API before the
+  server can respond to requests.
 
   Start a server with a configuration file:
 

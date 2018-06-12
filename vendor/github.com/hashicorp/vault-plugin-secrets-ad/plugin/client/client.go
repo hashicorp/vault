@@ -64,19 +64,12 @@ func (c *Client) UpdateEntry(cfg *ldaputil.ConfigEntry, filters map[*Field][]str
 		return fmt.Errorf("filter of %s doesn't match just one entry: %s", filters, entries)
 	}
 
-	replaceAttributes := make([]ldap.PartialAttribute, len(newValues))
-	i := 0
-	for field, vals := range newValues {
-		replaceAttributes[i] = ldap.PartialAttribute{
-			Type: field.String(),
-			Vals: vals,
-		}
-		i++
+	modifyReq := &ldap.ModifyRequest{
+		DN: entries[0].DN,
 	}
 
-	modifyReq := &ldap.ModifyRequest{
-		DN:                entries[0].DN,
-		ReplaceAttributes: replaceAttributes,
+	for field, vals := range newValues {
+		modifyReq.Replace(field.String(), vals)
 	}
 
 	conn, err := c.ldap.DialLDAP(cfg)
