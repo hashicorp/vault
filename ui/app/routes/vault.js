@@ -1,5 +1,4 @@
 import Ember from 'ember';
-const SPLASH_DELAY = Ember.testing ? 0 : 300;
 
 export default Ember.Route.extend({
   version: Ember.inject.service(),
@@ -18,11 +17,7 @@ export default Ember.Route.extend({
       },
     };
     this.store.push(fixture);
-    return new Ember.RSVP.Promise(resolve => {
-      Ember.run.later(() => {
-        resolve(this.store.peekAll('cluster'));
-      }, SPLASH_DELAY);
-    });
+    return this.store.peekAll('cluster');
   },
 
   redirect(model, transition) {

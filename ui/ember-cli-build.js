@@ -39,6 +39,11 @@ module.exports = function(defaults) {
         "defaults",
         "ie 11"
       ]
+    },
+    'ember-app-shell': {
+      visitPath: '/ui/app-shell',
+      root: config.rootURL,
+      skipCritical: true
     }
   });
 
