@@ -36,10 +36,11 @@ export default Ember.Route.extend({
     };
     let backendModel = this.store.peekRecord('secret-engine', backend);
     let defaultType = 'secret';
-    if (backendModel.get('type') === 'kv' && backendModel.get('options.version') === 2) {
+    let type = backendModel.get('type');
+    if ((type === 'generic' || type === 'kv') && backendModel.get('options.version') === 2) {
       defaultType = 'secret-v2';
     }
-    return types[backendModel.get('type')] || defaultType;
+    return types[type] || defaultType;
   },
 
   model(params) {
