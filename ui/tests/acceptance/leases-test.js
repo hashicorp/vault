@@ -4,7 +4,7 @@
 //
 // TODO revisit this when it's easier to create leases
 
-import { test, skip } from 'qunit';
+import { skip } from 'qunit';
 import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
 import secretList from 'vault/tests/pages/secrets/backend/list';
 import secretEdit from 'vault/tests/pages/secrets/backend/kv/edit-secret';
