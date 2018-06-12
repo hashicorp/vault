@@ -96,9 +96,9 @@ func TestMSSQL_CreateUser(t *testing.T) {
 }
 
 func TestMSSQL_RotateRootCredentials(t *testing.T) {
-	// if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-	// 	return
-	// }
+	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
+		return
+	}
 	connURL := os.Getenv("MSSQL_URL")
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
