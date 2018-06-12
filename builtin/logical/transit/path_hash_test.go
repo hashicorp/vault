@@ -8,14 +8,7 @@ import (
 )
 
 func TestTransit_Hash(t *testing.T) {
-	var b *backend
-	sysView := logical.TestSystemView()
-	storage := &logical.InmemStorage{}
-
-	b = Backend(&logical.BackendConfig{
-		StorageView: storage,
-		System:      sysView,
-	})
+	b, storage := createBackendWithSysView(t)
 
 	req := &logical.Request{
 		Storage:   storage,

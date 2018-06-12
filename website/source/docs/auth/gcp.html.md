@@ -379,13 +379,13 @@ If a GCE token is provided for login under an `iam` role, the service account as
 
 #### Enable GCP authentication in Vault
 
-```
+```sh
 $ vault auth enable gcp
 ```
 
 #### Configure the GCP Auth Method
 
-```
+```sh
 $ vault write auth/gcp/config credentials=@path/to/creds.json
 ```
 
@@ -400,7 +400,7 @@ to learn more about parameters.
 
 #### Create a role
 
-```
+```sh
 $ vault write auth/gcp/role/dev-role \
     type="iam" \
     project_id="project-123456" \
@@ -416,7 +416,7 @@ configuration for the generated auth tokens.
 
 We also expose a helper path for updating the service accounts attached to an existing `iam` role:
 
-```
+```sh
 $ vault write auth/gcp/role/iam-role/service-accounts \
     add='serviceAccountToAdd,...' \
     remove='serviceAccountToRemove,...' \
@@ -424,7 +424,7 @@ $ vault write auth/gcp/role/iam-role/service-accounts \
 
 and for updating the labels attached to an existing `gce` role:
 
-```
+```sh
 $ vault write auth/gcp/role/gce-role/labels \
     add='label1:value1,foo:bar,...' \
     remove='key1,key2,...' \
@@ -439,7 +439,7 @@ parameters for role creation and updates.
 Once the backend is setup and roles are registered with the backend,
 the user can login against a specific role.
 
-```
+```sh
 $ vault write auth/gcp/login role='dev-role' jwt='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
@@ -452,20 +452,20 @@ authenticating entity.
 
 #### Enable GCP authentication in Vault
 
-```
+```sh
 $ curl $VAULT_ADDR/v1/sys/auth/gcp -d '{ "type": "gcp" }'
 ```
 
 #### Configure the GCP Auth Method
 
-```
+```sh
 $ curl $VAULT_ADDR/v1/auth/gcp/config \
 -d '{  "credentials": "{...}" }'
 ```
 
 #### Create a role
 
-```
+```sh
 $ curl $VAULT_ADDR/v1/auth/gcp/role/dev-role \
 -d '{ "type": "iam", "project_id": "project-123456", ...}'
 ```
@@ -479,7 +479,7 @@ If you have mounted the `gcp` backend with a different mountpoint, use that valu
 
 The `role` and `jwt` should be sent in the POST body encoded as JSON.
 
-```
+```sh
 $ curl $VAULT_ADDR/v1/auth/gcp/login \
     -d '{ "role": "dev-role", "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }'
 ```

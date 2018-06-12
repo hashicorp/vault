@@ -69,7 +69,7 @@ path "secret/sample" {
 	entityID := resp.Data["id"].(string)
 
 	// Create a token for the entity and assign policy2 on the token
-	ent := &TokenEntry{
+	ent := &logical.TokenEntry{
 		ID:       "capabilitiestoken",
 		Path:     "secret/sample",
 		Policies: []string{"policy2"},
@@ -135,7 +135,7 @@ func TestCapabilities(t *testing.T) {
 	}
 
 	// Create a token for the policy
-	ent := &TokenEntry{
+	ent := &logical.TokenEntry{
 		ID:       "capabilitiestoken",
 		Path:     "testpath",
 		Policies: []string{"dev"},
