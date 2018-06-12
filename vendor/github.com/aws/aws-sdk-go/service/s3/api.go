@@ -3,14 +3,20 @@
 package s3
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/private/protocol"
+	"github.com/aws/aws-sdk-go/private/protocol/eventstream"
+	"github.com/aws/aws-sdk-go/private/protocol/eventstream/eventstreamapi"
+	"github.com/aws/aws-sdk-go/private/protocol/rest"
 	"github.com/aws/aws-sdk-go/private/protocol/restxml"
 )
 
@@ -18,7 +24,7 @@ const opAbortMultipartUpload = "AbortMultipartUpload"
 
 // AbortMultipartUploadRequest generates a "aws/request.Request" representing the
 // client's request for the AbortMultipartUpload operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -101,7 +107,7 @@ const opCompleteMultipartUpload = "CompleteMultipartUpload"
 
 // CompleteMultipartUploadRequest generates a "aws/request.Request" representing the
 // client's request for the CompleteMultipartUpload operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -175,7 +181,7 @@ const opCopyObject = "CopyObject"
 
 // CopyObjectRequest generates a "aws/request.Request" representing the
 // client's request for the CopyObject operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -255,7 +261,7 @@ const opCreateBucket = "CreateBucket"
 
 // CreateBucketRequest generates a "aws/request.Request" representing the
 // client's request for the CreateBucket operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -337,7 +343,7 @@ const opCreateMultipartUpload = "CreateMultipartUpload"
 
 // CreateMultipartUploadRequest generates a "aws/request.Request" representing the
 // client's request for the CreateMultipartUpload operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -417,7 +423,7 @@ const opDeleteBucket = "DeleteBucket"
 
 // DeleteBucketRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBucket operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -494,7 +500,7 @@ const opDeleteBucketAnalyticsConfiguration = "DeleteBucketAnalyticsConfiguration
 
 // DeleteBucketAnalyticsConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBucketAnalyticsConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -571,7 +577,7 @@ const opDeleteBucketCors = "DeleteBucketCors"
 
 // DeleteBucketCorsRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBucketCors operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -647,7 +653,7 @@ const opDeleteBucketEncryption = "DeleteBucketEncryption"
 
 // DeleteBucketEncryptionRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBucketEncryption operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -723,7 +729,7 @@ const opDeleteBucketInventoryConfiguration = "DeleteBucketInventoryConfiguration
 
 // DeleteBucketInventoryConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBucketInventoryConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -800,7 +806,7 @@ const opDeleteBucketLifecycle = "DeleteBucketLifecycle"
 
 // DeleteBucketLifecycleRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBucketLifecycle operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -876,7 +882,7 @@ const opDeleteBucketMetricsConfiguration = "DeleteBucketMetricsConfiguration"
 
 // DeleteBucketMetricsConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBucketMetricsConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -953,7 +959,7 @@ const opDeleteBucketPolicy = "DeleteBucketPolicy"
 
 // DeleteBucketPolicyRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBucketPolicy operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1029,7 +1035,7 @@ const opDeleteBucketReplication = "DeleteBucketReplication"
 
 // DeleteBucketReplicationRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBucketReplication operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1105,7 +1111,7 @@ const opDeleteBucketTagging = "DeleteBucketTagging"
 
 // DeleteBucketTaggingRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBucketTagging operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1181,7 +1187,7 @@ const opDeleteBucketWebsite = "DeleteBucketWebsite"
 
 // DeleteBucketWebsiteRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBucketWebsite operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1257,7 +1263,7 @@ const opDeleteObject = "DeleteObject"
 
 // DeleteObjectRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteObject operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1333,7 +1339,7 @@ const opDeleteObjectTagging = "DeleteObjectTagging"
 
 // DeleteObjectTaggingRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteObjectTagging operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1407,7 +1413,7 @@ const opDeleteObjects = "DeleteObjects"
 
 // DeleteObjectsRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteObjects operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1482,7 +1488,7 @@ const opGetBucketAccelerateConfiguration = "GetBucketAccelerateConfiguration"
 
 // GetBucketAccelerateConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketAccelerateConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1556,7 +1562,7 @@ const opGetBucketAcl = "GetBucketAcl"
 
 // GetBucketAclRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketAcl operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1630,7 +1636,7 @@ const opGetBucketAnalyticsConfiguration = "GetBucketAnalyticsConfiguration"
 
 // GetBucketAnalyticsConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketAnalyticsConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1705,7 +1711,7 @@ const opGetBucketCors = "GetBucketCors"
 
 // GetBucketCorsRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketCors operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1779,7 +1785,7 @@ const opGetBucketEncryption = "GetBucketEncryption"
 
 // GetBucketEncryptionRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketEncryption operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1853,7 +1859,7 @@ const opGetBucketInventoryConfiguration = "GetBucketInventoryConfiguration"
 
 // GetBucketInventoryConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketInventoryConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -1928,7 +1934,7 @@ const opGetBucketLifecycle = "GetBucketLifecycle"
 
 // GetBucketLifecycleRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketLifecycle operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2005,7 +2011,7 @@ const opGetBucketLifecycleConfiguration = "GetBucketLifecycleConfiguration"
 
 // GetBucketLifecycleConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketLifecycleConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2079,7 +2085,7 @@ const opGetBucketLocation = "GetBucketLocation"
 
 // GetBucketLocationRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketLocation operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2153,7 +2159,7 @@ const opGetBucketLogging = "GetBucketLogging"
 
 // GetBucketLoggingRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketLogging operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2228,7 +2234,7 @@ const opGetBucketMetricsConfiguration = "GetBucketMetricsConfiguration"
 
 // GetBucketMetricsConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketMetricsConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2303,7 +2309,7 @@ const opGetBucketNotification = "GetBucketNotification"
 
 // GetBucketNotificationRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketNotification operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2380,7 +2386,7 @@ const opGetBucketNotificationConfiguration = "GetBucketNotificationConfiguration
 
 // GetBucketNotificationConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketNotificationConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2454,7 +2460,7 @@ const opGetBucketPolicy = "GetBucketPolicy"
 
 // GetBucketPolicyRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketPolicy operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2528,7 +2534,7 @@ const opGetBucketReplication = "GetBucketReplication"
 
 // GetBucketReplicationRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketReplication operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2602,7 +2608,7 @@ const opGetBucketRequestPayment = "GetBucketRequestPayment"
 
 // GetBucketRequestPaymentRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketRequestPayment operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2676,7 +2682,7 @@ const opGetBucketTagging = "GetBucketTagging"
 
 // GetBucketTaggingRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketTagging operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2750,7 +2756,7 @@ const opGetBucketVersioning = "GetBucketVersioning"
 
 // GetBucketVersioningRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketVersioning operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2824,7 +2830,7 @@ const opGetBucketWebsite = "GetBucketWebsite"
 
 // GetBucketWebsiteRequest generates a "aws/request.Request" representing the
 // client's request for the GetBucketWebsite operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2898,7 +2904,7 @@ const opGetObject = "GetObject"
 
 // GetObjectRequest generates a "aws/request.Request" representing the
 // client's request for the GetObject operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -2977,7 +2983,7 @@ const opGetObjectAcl = "GetObjectAcl"
 
 // GetObjectAclRequest generates a "aws/request.Request" representing the
 // client's request for the GetObjectAcl operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -3056,7 +3062,7 @@ const opGetObjectTagging = "GetObjectTagging"
 
 // GetObjectTaggingRequest generates a "aws/request.Request" representing the
 // client's request for the GetObjectTagging operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -3130,7 +3136,7 @@ const opGetObjectTorrent = "GetObjectTorrent"
 
 // GetObjectTorrentRequest generates a "aws/request.Request" representing the
 // client's request for the GetObjectTorrent operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -3204,7 +3210,7 @@ const opHeadBucket = "HeadBucket"
 
 // HeadBucketRequest generates a "aws/request.Request" representing the
 // client's request for the HeadBucket operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -3286,7 +3292,7 @@ const opHeadObject = "HeadObject"
 
 // HeadObjectRequest generates a "aws/request.Request" representing the
 // client's request for the HeadObject operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -3365,7 +3371,7 @@ const opListBucketAnalyticsConfigurations = "ListBucketAnalyticsConfigurations"
 
 // ListBucketAnalyticsConfigurationsRequest generates a "aws/request.Request" representing the
 // client's request for the ListBucketAnalyticsConfigurations operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -3439,7 +3445,7 @@ const opListBucketInventoryConfigurations = "ListBucketInventoryConfigurations"
 
 // ListBucketInventoryConfigurationsRequest generates a "aws/request.Request" representing the
 // client's request for the ListBucketInventoryConfigurations operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -3513,7 +3519,7 @@ const opListBucketMetricsConfigurations = "ListBucketMetricsConfigurations"
 
 // ListBucketMetricsConfigurationsRequest generates a "aws/request.Request" representing the
 // client's request for the ListBucketMetricsConfigurations operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -3587,7 +3593,7 @@ const opListBuckets = "ListBuckets"
 
 // ListBucketsRequest generates a "aws/request.Request" representing the
 // client's request for the ListBuckets operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -3661,7 +3667,7 @@ const opListMultipartUploads = "ListMultipartUploads"
 
 // ListMultipartUploadsRequest generates a "aws/request.Request" representing the
 // client's request for the ListMultipartUploads operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -3791,7 +3797,7 @@ const opListObjectVersions = "ListObjectVersions"
 
 // ListObjectVersionsRequest generates a "aws/request.Request" representing the
 // client's request for the ListObjectVersions operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -3921,7 +3927,7 @@ const opListObjects = "ListObjects"
 
 // ListObjectsRequest generates a "aws/request.Request" representing the
 // client's request for the ListObjects operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -4058,7 +4064,7 @@ const opListObjectsV2 = "ListObjectsV2"
 
 // ListObjectsV2Request generates a "aws/request.Request" representing the
 // client's request for the ListObjectsV2 operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -4196,7 +4202,7 @@ const opListParts = "ListParts"
 
 // ListPartsRequest generates a "aws/request.Request" representing the
 // client's request for the ListParts operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -4326,7 +4332,7 @@ const opPutBucketAccelerateConfiguration = "PutBucketAccelerateConfiguration"
 
 // PutBucketAccelerateConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketAccelerateConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -4402,7 +4408,7 @@ const opPutBucketAcl = "PutBucketAcl"
 
 // PutBucketAclRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketAcl operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -4478,7 +4484,7 @@ const opPutBucketAnalyticsConfiguration = "PutBucketAnalyticsConfiguration"
 
 // PutBucketAnalyticsConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketAnalyticsConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -4555,7 +4561,7 @@ const opPutBucketCors = "PutBucketCors"
 
 // PutBucketCorsRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketCors operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -4631,7 +4637,7 @@ const opPutBucketEncryption = "PutBucketEncryption"
 
 // PutBucketEncryptionRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketEncryption operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -4708,7 +4714,7 @@ const opPutBucketInventoryConfiguration = "PutBucketInventoryConfiguration"
 
 // PutBucketInventoryConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketInventoryConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -4785,7 +4791,7 @@ const opPutBucketLifecycle = "PutBucketLifecycle"
 
 // PutBucketLifecycleRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketLifecycle operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -4864,7 +4870,7 @@ const opPutBucketLifecycleConfiguration = "PutBucketLifecycleConfiguration"
 
 // PutBucketLifecycleConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketLifecycleConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -4941,7 +4947,7 @@ const opPutBucketLogging = "PutBucketLogging"
 
 // PutBucketLoggingRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketLogging operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5019,7 +5025,7 @@ const opPutBucketMetricsConfiguration = "PutBucketMetricsConfiguration"
 
 // PutBucketMetricsConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketMetricsConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5096,7 +5102,7 @@ const opPutBucketNotification = "PutBucketNotification"
 
 // PutBucketNotificationRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketNotification operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5175,7 +5181,7 @@ const opPutBucketNotificationConfiguration = "PutBucketNotificationConfiguration
 
 // PutBucketNotificationConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketNotificationConfiguration operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5251,7 +5257,7 @@ const opPutBucketPolicy = "PutBucketPolicy"
 
 // PutBucketPolicyRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketPolicy operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5328,7 +5334,7 @@ const opPutBucketReplication = "PutBucketReplication"
 
 // PutBucketReplicationRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketReplication operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5405,7 +5411,7 @@ const opPutBucketRequestPayment = "PutBucketRequestPayment"
 
 // PutBucketRequestPaymentRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketRequestPayment operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5485,7 +5491,7 @@ const opPutBucketTagging = "PutBucketTagging"
 
 // PutBucketTaggingRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketTagging operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5561,7 +5567,7 @@ const opPutBucketVersioning = "PutBucketVersioning"
 
 // PutBucketVersioningRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketVersioning operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5638,7 +5644,7 @@ const opPutBucketWebsite = "PutBucketWebsite"
 
 // PutBucketWebsiteRequest generates a "aws/request.Request" representing the
 // client's request for the PutBucketWebsite operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5714,7 +5720,7 @@ const opPutObject = "PutObject"
 
 // PutObjectRequest generates a "aws/request.Request" representing the
 // client's request for the PutObject operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5788,7 +5794,7 @@ const opPutObjectAcl = "PutObjectAcl"
 
 // PutObjectAclRequest generates a "aws/request.Request" representing the
 // client's request for the PutObjectAcl operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5868,7 +5874,7 @@ const opPutObjectTagging = "PutObjectTagging"
 
 // PutObjectTaggingRequest generates a "aws/request.Request" representing the
 // client's request for the PutObjectTagging operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -5942,7 +5948,7 @@ const opRestoreObject = "RestoreObject"
 
 // RestoreObjectRequest generates a "aws/request.Request" representing the
 // client's request for the RestoreObject operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -6017,11 +6023,92 @@ func (c *S3) RestoreObjectWithContext(ctx aws.Context, input *RestoreObjectInput
 	return out, req.Send()
 }
 
+const opSelectObjectContent = "SelectObjectContent"
+
+// SelectObjectContentRequest generates a "aws/request.Request" representing the
+// client's request for the SelectObjectContent operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfuly.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See SelectObjectContent for more information on using the SelectObjectContent
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//
+//    // Example sending a request using the SelectObjectContentRequest method.
+//    req, resp := client.SelectObjectContentRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/s3-2006-03-01/SelectObjectContent
+func (c *S3) SelectObjectContentRequest(input *SelectObjectContentInput) (req *request.Request, output *SelectObjectContentOutput) {
+	op := &request.Operation{
+		Name:       opSelectObjectContent,
+		HTTPMethod: "POST",
+		HTTPPath:   "/{Bucket}/{Key+}?select&select-type=2",
+	}
+
+	if input == nil {
+		input = &SelectObjectContentInput{}
+	}
+
+	output = &SelectObjectContentOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(restxml.UnmarshalHandler.Name, rest.UnmarshalHandler)
+	req.Handlers.Unmarshal.PushBack(output.runEventStreamLoop)
+	return
+}
+
+// SelectObjectContent API operation for Amazon Simple Storage Service.
+//
+// This operation filters the contents of an Amazon S3 object based on a simple
+// Structured Query Language (SQL) statement. In the request, along with the
+// SQL expression, you must also specify a data serialization format (JSON or
+// CSV) of the object. Amazon S3 uses this to parse object data into records,
+// and returns only records that match the specified SQL expression. You must
+// also specify the data serialization format for the response.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon Simple Storage Service's
+// API operation SelectObjectContent for usage and error information.
+// See also, https://docs.aws.amazon.com/goto/WebAPI/s3-2006-03-01/SelectObjectContent
+func (c *S3) SelectObjectContent(input *SelectObjectContentInput) (*SelectObjectContentOutput, error) {
+	req, out := c.SelectObjectContentRequest(input)
+	return out, req.Send()
+}
+
+// SelectObjectContentWithContext is the same as SelectObjectContent with the addition of
+// the ability to pass a context and additional request options.
+//
+// See SelectObjectContent for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *S3) SelectObjectContentWithContext(ctx aws.Context, input *SelectObjectContentInput, opts ...request.Option) (*SelectObjectContentOutput, error) {
+	req, out := c.SelectObjectContentRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opUploadPart = "UploadPart"
 
 // UploadPartRequest generates a "aws/request.Request" representing the
 // client's request for the UploadPart operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -6101,7 +6188,7 @@ const opUploadPartCopy = "UploadPartCopy"
 
 // UploadPartCopyRequest generates a "aws/request.Request" representing the
 // client's request for the UploadPartCopy operation. The "output" return
-// value will be populated with the request's response once the request complets
+// value will be populated with the request's response once the request completes
 // successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
@@ -6807,6 +6894,9 @@ func (s *BucketLifecycleConfiguration) SetRules(v []*LifecycleRule) *BucketLifec
 type BucketLoggingStatus struct {
 	_ struct{} `type:"structure"`
 
+	// Container for logging information. Presence of this element indicates that
+	// logging is enabled. Parameters TargetBucket and TargetPrefix are required
+	// in this case.
 	LoggingEnabled *LoggingEnabled `type:"structure"`
 }
 
@@ -7469,6 +7559,32 @@ func (s *Condition) SetHttpErrorCodeReturnedEquals(v string) *Condition {
 func (s *Condition) SetKeyPrefixEquals(v string) *Condition {
 	s.KeyPrefixEquals = &v
 	return s
+}
+
+type ContinuationEvent struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s ContinuationEvent) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ContinuationEvent) GoString() string {
+	return s.String()
+}
+
+// The ContinuationEvent is and event in the SelectObjectContentEventStream group of events.
+func (s *ContinuationEvent) eventSelectObjectContentEventStream() {}
+
+// UnmarshalEvent unmarshals the EventStream Message into the ContinuationEvent value.
+// This method is only used internally within the SDK's EventStream handling.
+func (s *ContinuationEvent) UnmarshalEvent(
+	payloadUnmarshaler protocol.PayloadUnmarshaler,
+	msg eventstream.Message,
+) error {
+	return nil
 }
 
 type CopyObjectInput struct {
@@ -9916,6 +10032,32 @@ func (s *EncryptionConfiguration) SetReplicaKmsKeyID(v string) *EncryptionConfig
 	return s
 }
 
+type EndEvent struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation
+func (s EndEvent) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s EndEvent) GoString() string {
+	return s.String()
+}
+
+// The EndEvent is and event in the SelectObjectContentEventStream group of events.
+func (s *EndEvent) eventSelectObjectContentEventStream() {}
+
+// UnmarshalEvent unmarshals the EventStream Message into the EndEvent value.
+// This method is only used internally within the SDK's EventStream handling.
+func (s *EndEvent) UnmarshalEvent(
+	payloadUnmarshaler protocol.PayloadUnmarshaler,
+	msg eventstream.Message,
+) error {
+	return nil
+}
+
 type Error struct {
 	_ struct{} `type:"structure"`
 
@@ -10720,6 +10862,9 @@ func (s *GetBucketLoggingInput) getBucket() (v string) {
 type GetBucketLoggingOutput struct {
 	_ struct{} `type:"structure"`
 
+	// Container for logging information. Presence of this element indicates that
+	// logging is enabled. Parameters TargetBucket and TargetPrefix are required
+	// in this case.
 	LoggingEnabled *LoggingEnabled `type:"structure"`
 }
 
@@ -12865,6 +13010,13 @@ type InputSerialization struct {
 
 	// Describes the serialization of a CSV-encoded object.
 	CSV *CSVInput `type:"structure"`
+
+	// Specifies object's compression format. Valid values: NONE, GZIP. Default
+	// Value: NONE.
+	CompressionType *string `type:"string" enum:"CompressionType"`
+
+	// Specifies JSON as object's input serialization format.
+	JSON *JSONInput `type:"structure"`
 }
 
 // String returns the string representation
@@ -12880,6 +13032,18 @@ func (s InputSerialization) GoString() string {
 // SetCSV sets the CSV field's value.
 func (s *InputSerialization) SetCSV(v *CSVInput) *InputSerialization {
 	s.CSV = v
+	return s
+}
+
+// SetCompressionType sets the CompressionType field's value.
+func (s *InputSerialization) SetCompressionType(v string) *InputSerialization {
+	s.CompressionType = &v
+	return s
+}
+
+// SetJSON sets the JSON field's value.
+func (s *InputSerialization) SetJSON(v *JSONInput) *InputSerialization {
+	s.JSON = v
 	return s
 }
 
@@ -13270,6 +13434,52 @@ func (s *InventorySchedule) Validate() error {
 // SetFrequency sets the Frequency field's value.
 func (s *InventorySchedule) SetFrequency(v string) *InventorySchedule {
 	s.Frequency = &v
+	return s
+}
+
+type JSONInput struct {
+	_ struct{} `type:"structure"`
+
+	// The type of JSON. Valid values: Document, Lines.
+	Type *string `type:"string" enum:"JSONType"`
+}
+
+// String returns the string representation
+func (s JSONInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s JSONInput) GoString() string {
+	return s.String()
+}
+
+// SetType sets the Type field's value.
+func (s *JSONInput) SetType(v string) *JSONInput {
+	s.Type = &v
+	return s
+}
+
+type JSONOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The value used to separate individual records in the output.
+	RecordDelimiter *string `type:"string"`
+}
+
+// String returns the string representation
+func (s JSONOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s JSONOutput) GoString() string {
+	return s.String()
+}
+
+// SetRecordDelimiter sets the RecordDelimiter field's value.
+func (s *JSONOutput) SetRecordDelimiter(v string) *JSONOutput {
+	s.RecordDelimiter = &v
 	return s
 }
 
@@ -15397,6 +15607,9 @@ func (s *Location) SetUserMetadata(v []*MetadataEntry) *Location {
 	return s
 }
 
+// Container for logging information. Presence of this element indicates that
+// logging is enabled. Parameters TargetBucket and TargetPrefix are required
+// in this case.
 type LoggingEnabled struct {
 	_ struct{} `type:"structure"`
 
@@ -15406,13 +15619,17 @@ type LoggingEnabled struct {
 	// to deliver their logs to the same target bucket. In this case you should
 	// choose a different TargetPrefix for each source bucket so that the delivered
 	// log files can be distinguished by key.
-	TargetBucket *string `type:"string"`
+	//
+	// TargetBucket is a required field
+	TargetBucket *string `type:"string" required:"true"`
 
 	TargetGrants []*TargetGrant `locationNameList:"Grant" type:"list"`
 
 	// This element lets you specify a prefix for the keys that the log files will
 	// be stored under.
-	TargetPrefix *string `type:"string"`
+	//
+	// TargetPrefix is a required field
+	TargetPrefix *string `type:"string" required:"true"`
 }
 
 // String returns the string representation
@@ -15428,6 +15645,12 @@ func (s LoggingEnabled) GoString() string {
 // Validate inspects the fields of the type to determine if they are valid.
 func (s *LoggingEnabled) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "LoggingEnabled"}
+	if s.TargetBucket == nil {
+		invalidParams.Add(request.NewErrParamRequired("TargetBucket"))
+	}
+	if s.TargetPrefix == nil {
+		invalidParams.Add(request.NewErrParamRequired("TargetPrefix"))
+	}
 	if s.TargetGrants != nil {
 		for i, v := range s.TargetGrants {
 			if v == nil {
@@ -15762,10 +15985,11 @@ func (s *NoncurrentVersionExpiration) SetNoncurrentDays(v int64) *NoncurrentVers
 }
 
 // Container for the transition rule that describes when noncurrent objects
-// transition to the STANDARD_IA or GLACIER storage class. If your bucket is
-// versioning-enabled (or versioning is suspended), you can set this action
-// to request that Amazon S3 transition noncurrent object versions to the STANDARD_IA
-// or GLACIER storage class at a specific period in the object's lifetime.
+// transition to the STANDARD_IA, ONEZONE_IA or GLACIER storage class. If your
+// bucket is versioning-enabled (or versioning is suspended), you can set this
+// action to request that Amazon S3 transition noncurrent object versions to
+// the STANDARD_IA, ONEZONE_IA or GLACIER storage class at a specific period
+// in the object's lifetime.
 type NoncurrentVersionTransition struct {
 	_ struct{} `type:"structure"`
 
@@ -16187,6 +16411,9 @@ type OutputSerialization struct {
 
 	// Describes the serialization of CSV-encoded Select results.
 	CSV *CSVOutput `type:"structure"`
+
+	// Specifies JSON as request's output serialization format.
+	JSON *JSONOutput `type:"structure"`
 }
 
 // String returns the string representation
@@ -16202,6 +16429,12 @@ func (s OutputSerialization) GoString() string {
 // SetCSV sets the CSV field's value.
 func (s *OutputSerialization) SetCSV(v *CSVOutput) *OutputSerialization {
 	s.CSV = v
+	return s
+}
+
+// SetJSON sets the JSON field's value.
+func (s *OutputSerialization) SetJSON(v *JSONOutput) *OutputSerialization {
+	s.JSON = v
 	return s
 }
 
@@ -16284,6 +16517,87 @@ func (s *Part) SetPartNumber(v int64) *Part {
 func (s *Part) SetSize(v int64) *Part {
 	s.Size = &v
 	return s
+}
+
+type Progress struct {
+	_ struct{} `type:"structure"`
+
+	// Current number of uncompressed object bytes processed.
+	BytesProcessed *int64 `type:"long"`
+
+	// Current number of bytes of records payload data returned.
+	BytesReturned *int64 `type:"long"`
+
+	// Current number of object bytes scanned.
+	BytesScanned *int64 `type:"long"`
+}
+
+// String returns the string representation
+func (s Progress) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Progress) GoString() string {
+	return s.String()
+}
+
+// SetBytesProcessed sets the BytesProcessed field's value.
+func (s *Progress) SetBytesProcessed(v int64) *Progress {
+	s.BytesProcessed = &v
+	return s
+}
+
+// SetBytesReturned sets the BytesReturned field's value.
+func (s *Progress) SetBytesReturned(v int64) *Progress {
+	s.BytesReturned = &v
+	return s
+}
+
+// SetBytesScanned sets the BytesScanned field's value.
+func (s *Progress) SetBytesScanned(v int64) *Progress {
+	s.BytesScanned = &v
+	return s
+}
+
+type ProgressEvent struct {
+	_ struct{} `type:"structure" payload:"Details"`
+
+	// The Progress event details.
+	Details *Progress `locationName:"Details" type:"structure"`
+}
+
+// String returns the string representation
+func (s ProgressEvent) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ProgressEvent) GoString() string {
+	return s.String()
+}
+
+// SetDetails sets the Details field's value.
+func (s *ProgressEvent) SetDetails(v *Progress) *ProgressEvent {
+	s.Details = v
+	return s
+}
+
+// The ProgressEvent is and event in the SelectObjectContentEventStream group of events.
+func (s *ProgressEvent) eventSelectObjectContentEventStream() {}
+
+// UnmarshalEvent unmarshals the EventStream Message into the ProgressEvent value.
+// This method is only used internally within the SDK's EventStream handling.
+func (s *ProgressEvent) UnmarshalEvent(
+	payloadUnmarshaler protocol.PayloadUnmarshaler,
+	msg eventstream.Message,
+) error {
+	if err := payloadUnmarshaler.UnmarshalPayload(
+		bytes.NewReader(msg.Payload), s,
+	); err != nil {
+		return fmt.Errorf("failed to unmarshal payload, %v", err)
+	}
+	return nil
 }
 
 type PutBucketAccelerateConfigurationInput struct {
@@ -18528,6 +18842,45 @@ func (s *QueueConfigurationDeprecated) SetQueue(v string) *QueueConfigurationDep
 	return s
 }
 
+type RecordsEvent struct {
+	_ struct{} `type:"structure" payload:"Payload"`
+
+	// The byte array of partial, one or more result records.
+	//
+	// Payload is automatically base64 encoded/decoded by the SDK.
+	Payload []byte `type:"blob"`
+}
+
+// String returns the string representation
+func (s RecordsEvent) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RecordsEvent) GoString() string {
+	return s.String()
+}
+
+// SetPayload sets the Payload field's value.
+func (s *RecordsEvent) SetPayload(v []byte) *RecordsEvent {
+	s.Payload = v
+	return s
+}
+
+// The RecordsEvent is and event in the SelectObjectContentEventStream group of events.
+func (s *RecordsEvent) eventSelectObjectContentEventStream() {}
+
+// UnmarshalEvent unmarshals the EventStream Message into the RecordsEvent value.
+// This method is only used internally within the SDK's EventStream handling.
+func (s *RecordsEvent) UnmarshalEvent(
+	payloadUnmarshaler protocol.PayloadUnmarshaler,
+	msg eventstream.Message,
+) error {
+	s.Payload = make([]byte, len(msg.Payload))
+	copy(s.Payload, msg.Payload)
+	return nil
+}
+
 type Redirect struct {
 	_ struct{} `type:"structure"`
 
@@ -18845,6 +19198,30 @@ func (s *RequestPaymentConfiguration) SetPayer(v string) *RequestPaymentConfigur
 	return s
 }
 
+type RequestProgress struct {
+	_ struct{} `type:"structure"`
+
+	// Specifies whether periodic QueryProgress frames should be sent. Valid values:
+	// TRUE, FALSE. Default value: FALSE.
+	Enabled *bool `type:"boolean"`
+}
+
+// String returns the string representation
+func (s RequestProgress) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RequestProgress) GoString() string {
+	return s.String()
+}
+
+// SetEnabled sets the Enabled field's value.
+func (s *RequestProgress) SetEnabled(v bool) *RequestProgress {
+	s.Enabled = &v
+	return s
+}
+
 type RestoreObjectInput struct {
 	_ struct{} `type:"structure" payload:"RestoreRequest"`
 
@@ -19148,10 +19525,11 @@ type Rule struct {
 	NoncurrentVersionExpiration *NoncurrentVersionExpiration `type:"structure"`
 
 	// Container for the transition rule that describes when noncurrent objects
-	// transition to the STANDARD_IA or GLACIER storage class. If your bucket is
-	// versioning-enabled (or versioning is suspended), you can set this action
-	// to request that Amazon S3 transition noncurrent object versions to the STANDARD_IA
-	// or GLACIER storage class at a specific period in the object's lifetime.
+	// transition to the STANDARD_IA, ONEZONE_IA or GLACIER storage class. If your
+	// bucket is versioning-enabled (or versioning is suspended), you can set this
+	// action to request that Amazon S3 transition noncurrent object versions to
+	// the STANDARD_IA, ONEZONE_IA or GLACIER storage class at a specific period
+	// in the object's lifetime.
 	NoncurrentVersionTransition *NoncurrentVersionTransition `type:"structure"`
 
 	// Prefix identifying one or more objects to which the rule applies.
@@ -19295,6 +19673,436 @@ func (s SSES3) String() string {
 // GoString returns the string representation
 func (s SSES3) GoString() string {
 	return s.String()
+}
+
+// SelectObjectContentEventStream provides handling of EventStreams for
+// the SelectObjectContent API.
+//
+// Use this type to receive SelectObjectContentEventStream events. The events
+// can be read from the Events channel member.
+//
+// The events that can be received are:
+//
+//     * ContinuationEvent
+//     * EndEvent
+//     * ProgressEvent
+//     * RecordsEvent
+//     * StatsEvent
+type SelectObjectContentEventStream struct {
+	// Reader is the EventStream reader for the SelectObjectContentEventStream
+	// events. This value is automatically set by the SDK when the API call is made
+	// Use this member when unit testing your code with the SDK to mock out the
+	// EventStream Reader.
+	//
+	// Must not be nil.
+	Reader SelectObjectContentEventStreamReader
+
+	// StreamCloser is the io.Closer for the EventStream connection. For HTTP
+	// EventStream this is the response Body. The stream will be closed when
+	// the Close method of the EventStream is called.
+	StreamCloser io.Closer
+}
+
+// Close closes the EventStream. This will also cause the Events channel to be
+// closed. You can use the closing of the Events channel to terminate your
+// application's read from the API's EventStream.
+//
+// Will close the underlying EventStream reader. For EventStream over HTTP
+// connection this will also close the HTTP connection.
+//
+// Close must be called when done using the EventStream API. Not calling Close
+// may result in resource leaks.
+func (es *SelectObjectContentEventStream) Close() (err error) {
+	es.Reader.Close()
+	return es.Err()
+}
+
+// Err returns any error that occurred while reading EventStream Events from
+// the service API's response. Returns nil if there were no errors.
+func (es *SelectObjectContentEventStream) Err() error {
+	if err := es.Reader.Err(); err != nil {
+		return err
+	}
+	es.StreamCloser.Close()
+
+	return nil
+}
+
+// Events returns a channel to read EventStream Events from the
+// SelectObjectContent API.
+//
+// These events are:
+//
+//     * ContinuationEvent
+//     * EndEvent
+//     * ProgressEvent
+//     * RecordsEvent
+//     * StatsEvent
+func (es *SelectObjectContentEventStream) Events() <-chan SelectObjectContentEventStreamEvent {
+	return es.Reader.Events()
+}
+
+// SelectObjectContentEventStreamEvent groups together all EventStream
+// events read from the SelectObjectContent API.
+//
+// These events are:
+//
+//     * ContinuationEvent
+//     * EndEvent
+//     * ProgressEvent
+//     * RecordsEvent
+//     * StatsEvent
+type SelectObjectContentEventStreamEvent interface {
+	eventSelectObjectContentEventStream()
+}
+
+// SelectObjectContentEventStreamReader provides the interface for reading EventStream
+// Events from the SelectObjectContent API. The
+// default implementation for this interface will be SelectObjectContentEventStream.
+//
+// The reader's Close method must allow multiple concurrent calls.
+//
+// These events are:
+//
+//     * ContinuationEvent
+//     * EndEvent
+//     * ProgressEvent
+//     * RecordsEvent
+//     * StatsEvent
+type SelectObjectContentEventStreamReader interface {
+	// Returns a channel of events as they are read from the event stream.
+	Events() <-chan SelectObjectContentEventStreamEvent
+
+	// Close will close the underlying event stream reader. For event stream over
+	// HTTP this will also close the HTTP connection.
+	Close() error
+
+	// Returns any error that has occured while reading from the event stream.
+	Err() error
+}
+
+type readSelectObjectContentEventStream struct {
+	eventReader *eventstreamapi.EventReader
+	stream      chan SelectObjectContentEventStreamEvent
+	errVal      atomic.Value
+
+	done      chan struct{}
+	closeOnce sync.Once
+}
+
+func newReadSelectObjectContentEventStream(
+	reader io.ReadCloser,
+	unmarshalers request.HandlerList,
+	logger aws.Logger,
+	logLevel aws.LogLevelType,
+) *readSelectObjectContentEventStream {
+	r := &readSelectObjectContentEventStream{
+		stream: make(chan SelectObjectContentEventStreamEvent),
+		done:   make(chan struct{}),
+	}
+
+	r.eventReader = eventstreamapi.NewEventReader(
+		reader,
+		protocol.HandlerPayloadUnmarshal{
+			Unmarshalers: unmarshalers,
+		},
+		r.unmarshalerForEventType,
+	)
+	r.eventReader.UseLogger(logger, logLevel)
+
+	return r
+}
+
+// Close will close the underlying event stream reader. For EventStream over
+// HTTP this will also close the HTTP connection.
+func (r *readSelectObjectContentEventStream) Close() error {
+	r.closeOnce.Do(r.safeClose)
+
+	return r.Err()
+}
+
+func (r *readSelectObjectContentEventStream) safeClose() {
+	close(r.done)
+	err := r.eventReader.Close()
+	if err != nil {
+		r.errVal.Store(err)
+	}
+}
+
+func (r *readSelectObjectContentEventStream) Err() error {
+	if v := r.errVal.Load(); v != nil {
+		return v.(error)
+	}
+
+	return nil
+}
+
+func (r *readSelectObjectContentEventStream) Events() <-chan SelectObjectContentEventStreamEvent {
+	return r.stream
+}
+
+func (r *readSelectObjectContentEventStream) readEventStream() {
+	defer close(r.stream)
+
+	for {
+		event, err := r.eventReader.ReadEvent()
+		if err != nil {
+			if err == io.EOF {
+				return
+			}
+			select {
+			case <-r.done:
+				// If closed already ignore the error
+				return
+			default:
+			}
+			r.errVal.Store(err)
+			return
+		}
+
+		select {
+		case r.stream <- event.(SelectObjectContentEventStreamEvent):
+		case <-r.done:
+			return
+		}
+	}
+}
+
+func (r *readSelectObjectContentEventStream) unmarshalerForEventType(
+	eventType string,
+) (eventstreamapi.Unmarshaler, error) {
+	switch eventType {
+	case "Cont":
+		return &ContinuationEvent{}, nil
+
+	case "End":
+		return &EndEvent{}, nil
+
+	case "Progress":
+		return &ProgressEvent{}, nil
+
+	case "Records":
+		return &RecordsEvent{}, nil
+
+	case "Stats":
+		return &StatsEvent{}, nil
+	default:
+		return nil, fmt.Errorf(
+			"unknown event type name, %s, for SelectObjectContentEventStream", eventType)
+	}
+}
+
+// Request to filter the contents of an Amazon S3 object based on a simple Structured
+// Query Language (SQL) statement. In the request, along with the SQL expression,
+// you must also specify a data serialization format (JSON or CSV) of the object.
+// Amazon S3 uses this to parse object data into records, and returns only records
+// that match the specified SQL expression. You must also specify the data serialization
+// format for the response. For more information, go to S3Select API Documentation
+// (https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectSELECTContent.html)
+type SelectObjectContentInput struct {
+	_ struct{} `locationName:"SelectObjectContentRequest" type:"structure" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
+
+	// The S3 Bucket.
+	//
+	// Bucket is a required field
+	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
+
+	// The expression that is used to query the object.
+	//
+	// Expression is a required field
+	Expression *string `type:"string" required:"true"`
+
+	// The type of the provided expression (e.g., SQL).
+	//
+	// ExpressionType is a required field
+	ExpressionType *string `type:"string" required:"true" enum:"ExpressionType"`
+
+	// Describes the format of the data in the object that is being queried.
+	//
+	// InputSerialization is a required field
+	InputSerialization *InputSerialization `type:"structure" required:"true"`
+
+	// The Object Key.
+	//
+	// Key is a required field
+	Key *string `location:"uri" locationName:"Key" min:"1" type:"string" required:"true"`
+
+	// Describes the format of the data that you want Amazon S3 to return in response.
+	//
+	// OutputSerialization is a required field
+	OutputSerialization *OutputSerialization `type:"structure" required:"true"`
+
+	// Specifies if periodic request progress information should be enabled.
+	RequestProgress *RequestProgress `type:"structure"`
+
+	// The SSE Algorithm used to encrypt the object. For more information, go to
+	//  Server-Side Encryption (Using Customer-Provided Encryption Keys (https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html)
+	SSECustomerAlgorithm *string `location:"header" locationName:"x-amz-server-side-encryption-customer-algorithm" type:"string"`
+
+	// The SSE Customer Key. For more information, go to  Server-Side Encryption
+	// (Using Customer-Provided Encryption Keys (https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html)
+	SSECustomerKey *string `location:"header" locationName:"x-amz-server-side-encryption-customer-key" type:"string"`
+
+	// The SSE Customer Key MD5. For more information, go to  Server-Side Encryption
+	// (Using Customer-Provided Encryption Keys (https://docs.aws.amazon.com/AmazonS3/latest/dev/ServerSideEncryptionCustomerKeys.html)
+	SSECustomerKeyMD5 *string `location:"header" locationName:"x-amz-server-side-encryption-customer-key-MD5" type:"string"`
+}
+
+// String returns the string representation
+func (s SelectObjectContentInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s SelectObjectContentInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *SelectObjectContentInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "SelectObjectContentInput"}
+	if s.Bucket == nil {
+		invalidParams.Add(request.NewErrParamRequired("Bucket"))
+	}
+	if s.Expression == nil {
+		invalidParams.Add(request.NewErrParamRequired("Expression"))
+	}
+	if s.ExpressionType == nil {
+		invalidParams.Add(request.NewErrParamRequired("ExpressionType"))
+	}
+	if s.InputSerialization == nil {
+		invalidParams.Add(request.NewErrParamRequired("InputSerialization"))
+	}
+	if s.Key == nil {
+		invalidParams.Add(request.NewErrParamRequired("Key"))
+	}
+	if s.Key != nil && len(*s.Key) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Key", 1))
+	}
+	if s.OutputSerialization == nil {
+		invalidParams.Add(request.NewErrParamRequired("OutputSerialization"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetBucket sets the Bucket field's value.
+func (s *SelectObjectContentInput) SetBucket(v string) *SelectObjectContentInput {
+	s.Bucket = &v
+	return s
+}
+
+func (s *SelectObjectContentInput) getBucket() (v string) {
+	if s.Bucket == nil {
+		return v
+	}
+	return *s.Bucket
+}
+
+// SetExpression sets the Expression field's value.
+func (s *SelectObjectContentInput) SetExpression(v string) *SelectObjectContentInput {
+	s.Expression = &v
+	return s
+}
+
+// SetExpressionType sets the ExpressionType field's value.
+func (s *SelectObjectContentInput) SetExpressionType(v string) *SelectObjectContentInput {
+	s.ExpressionType = &v
+	return s
+}
+
+// SetInputSerialization sets the InputSerialization field's value.
+func (s *SelectObjectContentInput) SetInputSerialization(v *InputSerialization) *SelectObjectContentInput {
+	s.InputSerialization = v
+	return s
+}
+
+// SetKey sets the Key field's value.
+func (s *SelectObjectContentInput) SetKey(v string) *SelectObjectContentInput {
+	s.Key = &v
+	return s
+}
+
+// SetOutputSerialization sets the OutputSerialization field's value.
+func (s *SelectObjectContentInput) SetOutputSerialization(v *OutputSerialization) *SelectObjectContentInput {
+	s.OutputSerialization = v
+	return s
+}
+
+// SetRequestProgress sets the RequestProgress field's value.
+func (s *SelectObjectContentInput) SetRequestProgress(v *RequestProgress) *SelectObjectContentInput {
+	s.RequestProgress = v
+	return s
+}
+
+// SetSSECustomerAlgorithm sets the SSECustomerAlgorithm field's value.
+func (s *SelectObjectContentInput) SetSSECustomerAlgorithm(v string) *SelectObjectContentInput {
+	s.SSECustomerAlgorithm = &v
+	return s
+}
+
+// SetSSECustomerKey sets the SSECustomerKey field's value.
+func (s *SelectObjectContentInput) SetSSECustomerKey(v string) *SelectObjectContentInput {
+	s.SSECustomerKey = &v
+	return s
+}
+
+func (s *SelectObjectContentInput) getSSECustomerKey() (v string) {
+	if s.SSECustomerKey == nil {
+		return v
+	}
+	return *s.SSECustomerKey
+}
+
+// SetSSECustomerKeyMD5 sets the SSECustomerKeyMD5 field's value.
+func (s *SelectObjectContentInput) SetSSECustomerKeyMD5(v string) *SelectObjectContentInput {
+	s.SSECustomerKeyMD5 = &v
+	return s
+}
+
+type SelectObjectContentOutput struct {
+	_ struct{} `type:"structure" payload:"Payload"`
+
+	// Use EventStream to use the API's stream.
+	EventStream *SelectObjectContentEventStream `type:"structure"`
+}
+
+// String returns the string representation
+func (s SelectObjectContentOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s SelectObjectContentOutput) GoString() string {
+	return s.String()
+}
+
+// SetEventStream sets the EventStream field's value.
+func (s *SelectObjectContentOutput) SetEventStream(v *SelectObjectContentEventStream) *SelectObjectContentOutput {
+	s.EventStream = v
+	return s
+}
+
+func (s *SelectObjectContentOutput) runEventStreamLoop(r *request.Request) {
+	if r.Error != nil {
+		return
+	}
+	reader := newReadSelectObjectContentEventStream(
+		r.HTTPResponse.Body,
+		r.Handlers.UnmarshalStream,
+		r.Config.Logger,
+		r.Config.LogLevel.Value(),
+	)
+	go reader.readEventStream()
+
+	eventStream := &SelectObjectContentEventStream{
+		StreamCloser: r.HTTPResponse.Body,
+		Reader:       reader,
+	}
+	s.EventStream = eventStream
 }
 
 // Describes the parameters for Select job types.
@@ -19599,6 +20407,87 @@ func (s *SseKmsEncryptedObjects) Validate() error {
 func (s *SseKmsEncryptedObjects) SetStatus(v string) *SseKmsEncryptedObjects {
 	s.Status = &v
 	return s
+}
+
+type Stats struct {
+	_ struct{} `type:"structure"`
+
+	// Total number of uncompressed object bytes processed.
+	BytesProcessed *int64 `type:"long"`
+
+	// Total number of bytes of records payload data returned.
+	BytesReturned *int64 `type:"long"`
+
+	// Total number of object bytes scanned.
+	BytesScanned *int64 `type:"long"`
+}
+
+// String returns the string representation
+func (s Stats) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s Stats) GoString() string {
+	return s.String()
+}
+
+// SetBytesProcessed sets the BytesProcessed field's value.
+func (s *Stats) SetBytesProcessed(v int64) *Stats {
+	s.BytesProcessed = &v
+	return s
+}
+
+// SetBytesReturned sets the BytesReturned field's value.
+func (s *Stats) SetBytesReturned(v int64) *Stats {
+	s.BytesReturned = &v
+	return s
+}
+
+// SetBytesScanned sets the BytesScanned field's value.
+func (s *Stats) SetBytesScanned(v int64) *Stats {
+	s.BytesScanned = &v
+	return s
+}
+
+type StatsEvent struct {
+	_ struct{} `type:"structure" payload:"Details"`
+
+	// The Stats event details.
+	Details *Stats `locationName:"Details" type:"structure"`
+}
+
+// String returns the string representation
+func (s StatsEvent) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s StatsEvent) GoString() string {
+	return s.String()
+}
+
+// SetDetails sets the Details field's value.
+func (s *StatsEvent) SetDetails(v *Stats) *StatsEvent {
+	s.Details = v
+	return s
+}
+
+// The StatsEvent is and event in the SelectObjectContentEventStream group of events.
+func (s *StatsEvent) eventSelectObjectContentEventStream() {}
+
+// UnmarshalEvent unmarshals the EventStream Message into the StatsEvent value.
+// This method is only used internally within the SDK's EventStream handling.
+func (s *StatsEvent) UnmarshalEvent(
+	payloadUnmarshaler protocol.PayloadUnmarshaler,
+	msg eventstream.Message,
+) error {
+	if err := payloadUnmarshaler.UnmarshalPayload(
+		bytes.NewReader(msg.Payload), s,
+	); err != nil {
+		return fmt.Errorf("failed to unmarshal payload, %v", err)
+	}
+	return nil
 }
 
 type StorageClassAnalysis struct {
@@ -20781,6 +21670,14 @@ const (
 	BucketVersioningStatusSuspended = "Suspended"
 )
 
+const (
+	// CompressionTypeNone is a CompressionType enum value
+	CompressionTypeNone = "NONE"
+
+	// CompressionTypeGzip is a CompressionType enum value
+	CompressionTypeGzip = "GZIP"
+)
+
 // Requests Amazon S3 to encode the object keys in the response and specifies
 // the encoding method to use. An object key may contain any Unicode character;
 // however, XML 1.0 parser cannot parse some characters, such as characters
@@ -20902,6 +21799,14 @@ const (
 )
 
 const (
+	// JSONTypeDocument is a JSONType enum value
+	JSONTypeDocument = "DOCUMENT"
+
+	// JSONTypeLines is a JSONType enum value
+	JSONTypeLines = "LINES"
+)
+
+const (
 	// MFADeleteEnabled is a MFADelete enum value
 	MFADeleteEnabled = "Enabled"
 
@@ -20957,6 +21862,12 @@ const (
 
 	// ObjectStorageClassGlacier is a ObjectStorageClass enum value
 	ObjectStorageClassGlacier = "GLACIER"
+
+	// ObjectStorageClassStandardIa is a ObjectStorageClass enum value
+	ObjectStorageClassStandardIa = "STANDARD_IA"
+
+	// ObjectStorageClassOnezoneIa is a ObjectStorageClass enum value
+	ObjectStorageClassOnezoneIa = "ONEZONE_IA"
 )
 
 const (
@@ -21078,6 +21989,9 @@ const (
 
 	// StorageClassStandardIa is a StorageClass enum value
 	StorageClassStandardIa = "STANDARD_IA"
+
+	// StorageClassOnezoneIa is a StorageClass enum value
+	StorageClassOnezoneIa = "ONEZONE_IA"
 )
 
 const (
@@ -21110,6 +22024,9 @@ const (
 
 	// TransitionStorageClassStandardIa is a TransitionStorageClass enum value
 	TransitionStorageClassStandardIa = "STANDARD_IA"
+
+	// TransitionStorageClassOnezoneIa is a TransitionStorageClass enum value
+	TransitionStorageClassOnezoneIa = "ONEZONE_IA"
 )
 
 const (
