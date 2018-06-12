@@ -1,28 +1,28 @@
-<header class="page-header">
-  <nav class="breadcrumb">
-    <ul>
-      <li>
-        <span class="sep">&#x0002f;</span>
-        <a href={{href-to "vault.cluster.access.identity.aliases"}}>
-          {{pluralize (humanize model.identityType)}}
-        </a>
-      </li>
-    </ul>
-  </nav>
-  <div class="level">
-    <div class="level-left">
-      <h1 class="title is-3">
-        {{model.name}}
-      </h1>
-    </div>
-    <div class="level-right">
-      <a href="{{href-to 'vault.cluster.access.identity.aliases.edit' model.id}}" class="button has-icon-right is-ghost is-compact" data-test-alias-edit-link=true>
-        Edit {{lowercase (humanize model.identityType)}}
-        {{i-con glyph="chevron-right" size=11}}
-      </a>
-    </div>
-  </div>
-</header>
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          <a href={{href-to "vault.cluster.access.identity.aliases"}}>
+            {{pluralize (humanize model.identityType)}}
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{model.name}}
+    </h1>
+  </p.levelLeft>
+  <p.levelRight>
+    <a href="{{href-to 'vault.cluster.access.identity.aliases.edit' model.id}}" class="button has-icon-right is-ghost is-compact" data-test-alias-edit-link=true>
+      Edit {{lowercase (humanize model.identityType)}}
+      {{i-con glyph="chevron-right" size=11}}
+    </a>
+  </p.levelRight>
+</PageHeader>
 <div class="box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs sub-nav">
     <ul>

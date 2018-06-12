@@ -1,33 +1,33 @@
-<header class="page-header">
-  {{key-value-header
-    baseKey=model
-    path="vault.cluster.access.method"
-    root=root
-    showCurrent=true
-  }}
-  <div class="level">
-    <div class="level-left">
-      <h1 class="title is-3">
-        Configure {{get (find-by "type" model.type (mountable-auth-methods)) "displayName"}}
-      </h1>
-    </div>
-    <div class="level-right">
-      <div class="field is-grouped">
-        <div class="control">
-          {{#link-to
-            "vault.cluster.access.method"
-            model.id
-            class="button is-ghost has-icon-right is-compact"
-            data-test-backend-view-link=true
-          }}
-            View method
-            {{i-con glyph="chevron-right" size=11}}
-          {{/link-to}}
-        </div>
+<PageHeader as |p|>
+  <p.top>
+    {{key-value-header
+      baseKey=model
+      path="vault.cluster.access.method"
+      root=root
+      showCurrent=true
+    }}
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Configure {{get (find-by "type" model.type (mountable-auth-methods)) "displayName"}}
+    </h1>
+  </p.levelLeft>
+  <p.levelRight>
+    <div class="field is-grouped">
+      <div class="control">
+        {{#link-to
+          "vault.cluster.access.method"
+          model.id
+          class="button is-ghost has-icon-right is-compact"
+          data-test-backend-view-link=true
+        }}
+          View method
+          {{i-con glyph="chevron-right" size=11}}
+        {{/link-to}}
       </div>
     </div>
-  </div>
-</header>
+  </p.levelRight>
+</PageHeader>
 
 {{section-tabs model}}
 {{outlet}}

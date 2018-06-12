@@ -1,7 +1,8 @@
 import DS from 'ember-data';
 import Ember from 'ember';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 const { attr } = DS;
-const { computed, get } = Ember;
+const { computed } = Ember;
 const CREATE_FIELDS = ['ttl'];
 
 const DISPLAY_FIELDS = ['accessKey', 'secretKey', 'securityToken', 'leaseId', 'renewable', 'leaseDuration'];
@@ -27,18 +28,7 @@ export default DS.Model.extend({
 
   attrs: computed('accessKey', function() {
     let keys = this.get('accessKey') ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
-    get(this.constructor, 'attributes').forEach((meta, name) => {
-      const index = keys.indexOf(name);
-      if (index === -1) {
-        return;
-      }
-      keys.replace(index, 1, {
-        type: meta.type,
-        name,
-        options: meta.options,
-      });
-    });
-    return keys;
+    return expandAttributeMeta(this, keys);
   }),
 
   toCreds: computed('accessKey', 'secretKey', 'securityToken', 'leaseId', function() {
