@@ -17,7 +17,10 @@ export default Ember.Component.extend({
 		this._super(...arguments);
 		autosize.destroy(this.element.querySelector('textarea'));
 	},
-	shouldObscure: computed("isMasked", "isFocused", function(){
+	shouldObscure: computed("isMasked", "isFocused", "value", function(){
+		if(this.get('value') === "" ){
+			return false;
+		}
 		if(this.get('isFocused') === true){
 			return false;
 		}

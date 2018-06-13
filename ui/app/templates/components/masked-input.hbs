@@ -1,6 +1,6 @@
 <div class="masked-input {{if shouldObscure "masked"}}" data-test-masked-input>
 	{{textarea class="input" rows=1 wrap="off" placeholder="value" value=(readonly displayValue) focus-in=(action "setFocus" true) focus-out=(action "setFocus" false) key-down=(action onKeyDown) change=(action updateValue) data-test-textarea="true"}}	
 	<button {{action "toggleMask"}}  class="masked-input-toggle button is-compact" data-test-button>
-    {{i-con glyph=(if isMasked "hidden" "visible") aria-hidden="true" size=16}}
+    {{i-con glyph=(if shouldObscure "hidden" "visible") aria-hidden="true" size=16}}
 	</button>
 </div>
