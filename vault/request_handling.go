@@ -130,14 +130,12 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical
 		}
 	}
 
-	allPolicies := te.Policies
-
-	entity, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(te.EntityID)
+	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(te.EntityID)
 	if err != nil {
 		return nil, nil, nil, nil, ErrInternalError
 	}
 
-	allPolicies = append(allPolicies, derivedPolicies...)
+	allPolicies := append(te.Policies, identityPolicies...)
 
 	// Construct the corresponding ACL object
 	acl, err := c.policyStore.ACL(c.activeContext, allPolicies...)
@@ -146,7 +144,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical
 		return nil, nil, nil, nil, ErrInternalError
 	}
 
-	return acl, te, entity, allPolicies, nil
+	return acl, te, entity, identityPolicies, nil
 }
 
 func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
@@ -155,14 +153,14 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 	var acl *ACL
 	var te *logical.TokenEntry
 	var entity *identity.Entity
-	var allPolicies []string
+	var identityPolicies []string
 	var err error
 
 	// Even if unauth, if a token is provided, there's little reason not to
 	// gather as much info as possible for the audit log and to e.g. control
 	// trace mode for EGPs.
 	if !unauth || (unauth && req.ClientToken != "") {
-		acl, te, entity, allPolicies, err = c.fetchACLTokenEntryAndEntity(req)
+		acl, te, entity, identityPolicies, err = c.fetchACLTokenEntryAndEntity(req)
 		// In the unauth case we don't want to fail the command, since it's
 		// unauth, we just have no information to attach to the request, so
 		// ignore errors...this was best-effort anyways
@@ -220,9 +218,11 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 	}
 	// Create the auth response
 	auth := &logical.Auth{
-		ClientToken: req.ClientToken,
-		Accessor:    req.ClientTokenAccessor,
-		Policies:    allPolicies,
+		ClientToken:      req.ClientToken,
+		Accessor:         req.ClientTokenAccessor,
+		Policies:         append(te.Policies, identityPolicies...),
+		TokenPolicies:    te.Policies,
+		IdentityPolicies: identityPolicies,
 	}
 
 	if te != nil {
@@ -618,13 +618,15 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			return nil, auth, retErr
 		}
 
-		_, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(resp.Auth.EntityID)
+		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(resp.Auth.EntityID)
 		if err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			return nil, nil, ErrInternalError
 		}
 
-		resp.Auth.Policies = policyutil.SanitizePolicies(append(resp.Auth.Policies, derivedPolicies...), policyutil.DoNotAddDefaultPolicy)
+		resp.Auth.TokenPolicies = policyutil.SanitizePolicies(resp.Auth.Policies, policyutil.DoNotAddDefaultPolicy)
+		resp.Auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies, policyutil.DoNotAddDefaultPolicy)
+		resp.Auth.Policies = policyutil.SanitizePolicies(append(resp.Auth.Policies, identityPolicies...), policyutil.DoNotAddDefaultPolicy)
 
 		if err := c.expiration.RegisterAuth(resp.Auth.CreationPath, resp.Auth); err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
@@ -815,12 +817,14 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		te.Policies = policyutil.SanitizePolicies(te.Policies, policyutil.AddDefaultPolicy)
 
-		_, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(auth.EntityID)
+		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(auth.EntityID)
 		if err != nil {
 			return nil, nil, ErrInternalError
 		}
 
-		auth.Policies = policyutil.SanitizePolicies(append(auth.Policies, derivedPolicies...), policyutil.AddDefaultPolicy)
+		auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, policyutil.DoNotAddDefaultPolicy)
+		auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies, policyutil.DoNotAddDefaultPolicy)
+		auth.Policies = policyutil.SanitizePolicies(append(auth.Policies, identityPolicies...), policyutil.DoNotAddDefaultPolicy)
 
 		// Prevent internal policies from being assigned to tokens. We check
 		// this on auth.Policies including derived ones from Identity before
