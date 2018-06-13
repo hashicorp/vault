@@ -9,13 +9,13 @@
 // we want to style the boxes the same everywhere so they
 // need to be the same font and small
 .masked-input.masked .masked-value {
-  font-size: 12px;
+  font-size: 9px;
 	font-family: $family-primary;
 }
 
 // aligns the boxes on the input page
 .masked-input.masked:not(.display-only) .masked-value {
-  line-height: 2.25;
+  line-height: 3;
 }
 
 //override bulma's pre styling
@@ -31,6 +31,7 @@
 	top: $size-6/4;
 	bottom: $size-6/4;
 	left: 1px;
+	line-height: 1rem;
 	min-width: 0;
 	max-height: 2rem;
   padding: 0 $size-8;

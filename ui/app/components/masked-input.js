@@ -28,7 +28,7 @@ export default Ember.Component.extend({
 	}),
 	displayValue: computed("shouldObscure", function(){
 		if(this.get("shouldObscure")){
-			return "■ ■ ■ ■ ■ ■";
+			return "■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■";
 		}
 		else{
 			return this.get('value');
