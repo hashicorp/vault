@@ -115,14 +115,14 @@
   </form>
 {{else}}
   <form {{action 'onSubmit' (hash key=key) on="submit"}} id="shamir">
-      <div class="box is-shadowless no-padding-bottom is-marginless">
-        {{message-error errors=errors}}
-        {{#if hasBlock}}
-          {{yield}}
-        {{else}}
-          <p> {{formText}} </p>
-        {{/if}}
-      </div>
+    <div class="box is-shadowless no-padding-bottom is-marginless">
+      {{message-error errors=errors}}
+      {{#if hasBlock}}
+        {{yield}}
+      {{else}}
+        <p>{{formText}}</p>
+      {{/if}}
+    </div>
     <div class="box is-marginless is-shadowless">
       <div class="field">
         <label for="key" class="is-label">
@@ -147,10 +147,10 @@
         </div>
         <div class="column is-flex-v-centered is-flex-end">
           {{#if (or started hasProgress)}}
-            {{shamir-progress
-              threshold=threshold
-              progress=progress
-            }}
+            <ShamirProgress
+              @threshold={{threshold}}
+              @progress={{progress}}
+            />
           {{/if}}
         </div>
       </div>
