@@ -38,8 +38,8 @@ primary, it will look something like:
   "data": {
     "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
     "known_secondaries": [],
-    "last_wal": 0,
-    "merkle_root": "c3260c4c682ff2d6eb3c8bfd877134b3cec022d1",
+    "last_wal": 241,
+    "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
     "mode": "primary"
   },
 }
@@ -57,7 +57,6 @@ secondary, it will look something like:
       "https://127.0.0.1:8201"
     ],
     "last_remote_wal": 241,
-    "last_wal": 215,
     "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
     "mode": "secondary",
     "primary_cluster_addr": "https://127.0.0.1:8201",
