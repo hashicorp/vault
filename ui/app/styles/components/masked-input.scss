@@ -13,6 +13,9 @@
 	font-family: $family-primary;
 }
 
+.masked-input.masked .masked-value {
+  line-height: 2.5;
+}
 // aligns the boxes on the input page
 .masked-input.masked:not(.display-only) .masked-value {
   line-height: 3;

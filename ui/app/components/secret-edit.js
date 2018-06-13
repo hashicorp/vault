@@ -156,7 +156,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    handleKeyDown(_, e) {
+    handleKeyDown(e) {
       e.stopPropagation();
       if (!(e.keyCode === keys.ENTER && e.metaKey)) {
         return;

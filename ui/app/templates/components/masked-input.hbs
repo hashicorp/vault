@@ -2,9 +2,20 @@
 	{{#if displayOnly}}
 		<pre class="masked-value display-only">{{displayValue}}</pre>
 	{{else}}
-		{{textarea class="input masked-value" rows=1 wrap="off" placeholder="value" value=(readonly displayValue) focus-in=(action "setFocus" true) focus-out=(action "setFocus" false) key-down=(action onKeyDown) change=(action updateValue) data-test-textarea="true"}}	
+  <textarea
+    class="input masked-value"
+    rows=1
+    wrap="off"
+    placeholder="value"
+    onfocus={{action "setFocus" true}}
+    onblur={{action "setFocus" false}}
+    onkeydown={{action onKeyDown}}
+    onchange={{action updateValue}}
+    value={{readonly displayValue}}
+    data-test-textarea
+    />
 	{{/if}}
-	<button {{action "toggleMask"}}  class="masked-input-toggle button is-compact" data-test-button>
+  <button {{action "toggleMask"}}  class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button is-compact" data-test-button>
     {{i-con glyph=(if shouldObscure "hidden" "visible") aria-hidden="true" size=16}}
 	</button>
 </div>
