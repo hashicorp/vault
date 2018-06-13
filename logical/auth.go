@@ -29,6 +29,11 @@ type Auth struct {
 	// is associated with.
 	Policies []string `json:"policies" mapstructure:"policies" structs:"policies"`
 
+	// TokenPolicies and IdentityPolicies break down the list in Policies to
+	// help determine where a policy was sourced
+	TokenPolicies    []string `json:"token_policies" mapstructure:"token_policies" structs:"token_policies"`
+	IdentityPolicies []string `json:"identity_policies" mapstructure:"identity_policies" structs:"identity_policies"`
+
 	// Metadata is used to attach arbitrary string-type metadata to
 	// an authenticated user. This metadata will be outputted into the
 	// audit log.

@@ -234,10 +234,12 @@ type SecretWrapInfo struct {
 
 // SecretAuth is the structure containing auth information if we have it.
 type SecretAuth struct {
-	ClientToken string            `json:"client_token"`
-	Accessor    string            `json:"accessor"`
-	Policies    []string          `json:"policies"`
-	Metadata    map[string]string `json:"metadata"`
+	ClientToken      string            `json:"client_token"`
+	Accessor         string            `json:"accessor"`
+	Policies         []string          `json:"policies"`
+	TokenPolicies    []string          `json:"token_policies"`
+	IdentityPolicies []string          `json:"identity_policies"`
+	Metadata         map[string]string `json:"metadata"`
 
 	LeaseDuration int  `json:"lease_duration"`
 	Renewable     bool `json:"renewable"`
