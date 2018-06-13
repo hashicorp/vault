@@ -85,6 +85,7 @@ func Backend() *backend {
 	}
 
 	b.crlLifetime = time.Hour * 72
+	b.tidyCASGuard = new(uint32)
 
 	return &b
 }
@@ -94,6 +95,7 @@ type backend struct {
 
 	crlLifetime       time.Duration
 	revokeStorageLock sync.RWMutex
+	tidyCASGuard      *uint32
 }
 
 const backendHelp = `
