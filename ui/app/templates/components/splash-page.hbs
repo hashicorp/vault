@@ -1,15 +1,17 @@
+<NavHeader as |Nav|>
+  <Nav.home>
+    <HomeLink @class="navbar-item splash-page-logo">
+      {{partial "svg/vault-edition-logo"}}
+    </HomeLink>
+  </Nav.home>
+  <Nav.items>
+  </Nav.items>
+</NavHeader>
 <div class="is-flex-v-centered-tablet is-flex-1 is-fullwidth">
   <div class="columns is-centered is-gapless is-fullwidth">
-    <div class="column is-4-desktop is-7-tablet">
+    <div class="column is-6">
+      {{yield (hash header=(component 'splash-page/splash-header'))}}
       <div class="login-form box is-paddingless is-relative">
-        <div class="hero has-dark-grey-gradient">
-          <div class="hero-body">
-            <div class="has-current-color-fill has-text-white">
-              {{partial "svg/vault-edition-logo"}}
-            </div>
-            {{yield (hash header=(component 'splash-page/splash-header'))}}
-          </div>
-        </div>
         {{yield (hash content=(component 'splash-page/splash-content'))}}
       </div>
       {{yield (hash footer=(component 'splash-page/splash-content')) }}
