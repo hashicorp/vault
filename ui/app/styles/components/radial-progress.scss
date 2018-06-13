@@ -1,0 +1,9 @@
+.radial-progress {
+  transform: rotate(-90deg);
+}
+
+.radial-progress circle {
+  transition: stroke-dashoffset $speed ease-in;
+  will-change: stroke-dashoffset;
+  stroke-linecap: round;
+}
