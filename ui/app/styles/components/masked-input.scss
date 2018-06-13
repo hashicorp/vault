@@ -2,21 +2,34 @@
 	position: relative;
 }
 
-.masked-input .input {
+.masked-input .masked-value {
 	padding-left: 2.50rem;
 }
 
-.masked-input.masked .input{
+.masked-input.masked .masked-value {
   font-size: 12px;
-  line-height: 2.25;
+}
+
+.masked-input.masked .masked-value {
+	font-family: $family-primary;
+	height: 36px;
+	line-height: 36px;
+}
+
+.masked-input .display-only {
+	line-height: 1.5;
+	font-size: 1rem;
 }
 
 .masked-input-toggle {
 	background: transparent;
 	position: absolute;
+	height: auto;
 	top: $size-6/4;
+	bottom: $size-6/4;
 	left: 1px;
 	min-width: 0;
+	max-height: 2rem;
   padding: 0 $size-8;
   z-index: 100;
   border: 0;
@@ -40,7 +53,7 @@
 	background: rgba($white, 0.95);
 }
 
-.masked-input.masked .input,
+.masked-input.masked .masked-value,
 .masked-input.masked .masked-input-toggle {
 	color: $grey-light;
 }

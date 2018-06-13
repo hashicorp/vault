@@ -36,6 +36,7 @@ export default Ember.Component.extend({
 	}),
 	isMasked: true,
 	isFocused: false,
+	displayOnly: false,
 	onKeyDown(){},
 	onChange(){},
 	updateValue(e){
