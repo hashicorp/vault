@@ -6,7 +6,7 @@ export default Ember.Component.extend({
   classNames: 'radial-progress',
   attributeBindings: ['size:width', 'size:height', 'viewBox'],
   progressDecimal: null,
-  size: 24,
+  size: 18,
   strokeWidth: 2,
 
   viewBox: computed('size', function() {
