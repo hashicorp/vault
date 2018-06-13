@@ -47,7 +47,7 @@ primary, it will look something like:
 ### Sample Response from Secondary
 
 The printed status of the replication environment. As an example, for a
-primary, it will look something like:
+secondary, it will look something like:
 
 ```json
 {
