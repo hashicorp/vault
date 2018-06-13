@@ -279,7 +279,7 @@ $ curl --header "X-Vault-Token: ..." --request POST --data @payload.json \
 $ cat payload.json
 {
 	"db_name": "postgres",
-	"creation_statements": []"CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';
+	"creation_statements": ["CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';
   GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"],
 	"default_ttl": "1h",
 	"max_ttl": "24h"
