@@ -1,0 +1,9 @@
+<nav class="navbar has-dark-grey-gradient is-grouped-split">
+  <div class="navbar-brand">
+    {{yield (hash home=(component 'nav-header/home'))}}
+  </div>
+  <div class="navbar-end is-divider-list is-flex">
+    {{yield (hash items=(component 'nav-header/items'))}}
+  </div>
+</nav>
+{{yield (hash main=(component 'nav-header/main'))}}
