@@ -146,3 +146,9 @@ Group Managed Service Accounts are a successor to Managed Service Accounts. Plea
 Active Directory promises _eventual consistency_, which means that new passwords may not be propagated to all instances
 immediately. To deal with this, Vault returns the current password with the last password if it's known. That way, if a new
 password isn't fully operational, the last password can also be used.
+
+## API
+
+The Active Directory secrets engine has a full HTTP API. Please see the
+[Active Directory secrets engine API](/api/secret/ad/index.html) for more
+details.
