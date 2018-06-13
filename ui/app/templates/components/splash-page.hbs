@@ -10,7 +10,9 @@
 <div class="is-flex-v-centered-tablet is-flex-1 is-fullwidth">
   <div class="columns is-centered is-gapless is-fullwidth">
     <div class="column is-6">
-      {{yield (hash header=(component 'splash-page/splash-header'))}}
+      <div class="splash-page-header">
+        {{yield (hash header=(component 'splash-page/splash-header'))}}
+      </div>
       <div class="login-form box is-paddingless is-relative">
         {{yield (hash content=(component 'splash-page/splash-content'))}}
       </div>

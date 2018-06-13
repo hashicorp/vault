@@ -1,8 +1,12 @@
 a.splash-page-logo {
   color: $white;
-
   svg {
     transform: scale(.5);
+    transform-origin: left;
     fill: currentColor;
   }
+}
+
+.splash-page-header {
+  padding: .75rem 1.5rem;
 }
