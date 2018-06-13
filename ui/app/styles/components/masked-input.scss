@@ -6,6 +6,11 @@
 	padding-left: 2.50rem;
 }
 
+.masked-input.masked .input{
+  font-size: 12px;
+  line-height: 2.25;
+}
+
 .masked-input-toggle {
 	background: transparent;
 	position: absolute;
@@ -35,7 +40,7 @@
 	background: rgba($white, 0.95);
 }
 
-.masked-input.masked textarea,
+.masked-input.masked .input,
 .masked-input.masked .masked-input-toggle {
 	color: $grey-light;
 }
