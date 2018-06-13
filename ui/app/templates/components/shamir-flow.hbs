@@ -115,25 +115,25 @@
   </form>
 {{else}}
   <form {{action 'onSubmit' (hash key=key) on="submit"}} id="shamir">
-    <div class="box is-marginless is-shadowless">
-      {{message-error errors=errors}}
-      <div class="box has-slim-padding is-shadowless is-marginless">
+      <div class="box is-shadowless no-padding-bottom is-marginless">
+        {{message-error errors=errors}}
         {{#if hasBlock}}
           {{yield}}
         {{else}}
           <p> {{formText}} </p>
         {{/if}}
       </div>
+    <div class="box is-marginless is-shadowless">
       <div class="field">
         <label for="key" class="is-label">
-          Key
+          Master Key Portion
         </label>
         <div class="control">
           {{input class="input"type="password" name="key" value=key data-test-shamir-input=true}}
         </div>
       </div>
     </div>
-    <div class="box is-marginless is-shadowless has-background-white-bis">
+    <div class="box is-marginless is-shadowless">
       <div class="columns is-mobile">
         <div class="column is-narrow">
           <button
