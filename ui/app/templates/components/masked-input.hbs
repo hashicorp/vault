@@ -1,4 +1,4 @@
-<div class="masked-input {{if shouldObscure "masked"}}" data-test-masked-input>
+<div class="masked-input {{if shouldObscure "masked"}} {{if displayOnly "display-only"}}" data-test-masked-input>
 	{{#if displayOnly}}
 		<pre class="masked-value display-only">{{displayValue}}</pre>
 	{{else}}
