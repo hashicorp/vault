@@ -135,8 +135,7 @@ performnace secondary and DR primary node, it will look something like:
       "known_primary_cluster_addrs": [
         "https://127.0.0.1:8201"
       ],
-      "last_remote_wal": 279,
-      "last_wal": 455,
+      "last_remote_wal": 291,
       "merkle_root": "43f40fc775b40cc76cd5d7e289b2e6eaf4ba138c",
       "mode": "secondary",
       "primary_cluster_addr": "https://127.0.0.1:8201",
