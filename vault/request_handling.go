@@ -805,7 +805,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Generate a token
 		te := logical.TokenEntry{
 			Path:         req.Path,
-			Policies:     auth.Policies,
 			Meta:         auth.Metadata,
 			DisplayName:  auth.DisplayName,
 			CreationTime: time.Now().Unix(),
@@ -815,16 +814,16 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			BoundCIDRs:   auth.BoundCIDRs,
 		}
 
-		te.Policies = policyutil.SanitizePolicies(te.Policies, policyutil.AddDefaultPolicy)
+		te.Policies = policyutil.SanitizePolicies(auth.Policies, policyutil.AddDefaultPolicy)
 
 		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(auth.EntityID)
 		if err != nil {
 			return nil, nil, ErrInternalError
 		}
 
-		auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, policyutil.DoNotAddDefaultPolicy)
+		auth.TokenPolicies = te.Policies
 		auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies, policyutil.DoNotAddDefaultPolicy)
-		auth.Policies = policyutil.SanitizePolicies(append(auth.Policies, identityPolicies...), policyutil.DoNotAddDefaultPolicy)
+		auth.Policies = policyutil.SanitizePolicies(append(te.Policies, identityPolicies...), policyutil.DoNotAddDefaultPolicy)
 
 		// Prevent internal policies from being assigned to tokens. We check
 		// this on auth.Policies including derived ones from Identity before
