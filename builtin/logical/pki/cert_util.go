@@ -716,8 +716,6 @@ func signCert(b *backend,
 // from the various endpoints and generates a creationParameters with the
 // parameters that can be used to issue or sign
 func generateCreationBundle(b *backend, data *dataBundle) error {
-	var ok bool
-
 	// Read in names -- CN, DNS and email addresses
 	var cn string
 	var ridSerialNumber string
@@ -852,7 +850,6 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 
 	// Get and verify any IP SANs
 	ipAddresses := []net.IP{}
-	var ipAltInt interface{}
 	{
 		if data.csr != nil && data.role.UseCSRSANs {
 			if len(data.csr.IPAddresses) > 0 {
@@ -863,29 +860,25 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 				ipAddresses = data.csr.IPAddresses
 			}
 		} else {
-			ipAltInt, ok = data.apiData.GetOk("ip_sans")
-			if ok {
-				ipAlt := ipAltInt.(string)
-				if len(ipAlt) != 0 {
-					if !data.role.AllowIPSANs {
+			ipAlt := data.apiData.Get("ip_sans").([]string)
+			if len(ipAlt) > 0 {
+				if !data.role.AllowIPSANs {
+					return errutil.UserError{Err: fmt.Sprintf(
+						"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
+				}
+				for _, v := range ipAlt {
+					parsedIP := net.ParseIP(v)
+					if parsedIP == nil {
 						return errutil.UserError{Err: fmt.Sprintf(
-							"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
+							"the value '%s' is not a valid IP address", v)}
 					}
-					for _, v := range strings.Split(ipAlt, ",") {
-						parsedIP := net.ParseIP(v)
-						if parsedIP == nil {
-							return errutil.UserError{Err: fmt.Sprintf(
-								"the value '%s' is not a valid IP address", v)}
-						}
-						ipAddresses = append(ipAddresses, parsedIP)
-					}
+					ipAddresses = append(ipAddresses, parsedIP)
 				}
 			}
 		}
 	}
 
 	URIs := []*url.URL{}
-	var uriAltInt interface{}
 	{
 		if data.csr != nil && data.role.UseCSRSANs {
 			if len(data.csr.URIs) > 0 {
@@ -896,8 +889,8 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 				}
 
 				// validate uri sans
-				valid := false
 				for _, uri := range data.csr.URIs {
+					valid := false
 					for _, allowed := range data.role.AllowedURISANs {
 						validURI := glob.Glob(allowed, uri.String())
 						if validURI {
@@ -905,52 +898,49 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 							break
 						}
 					}
-				}
 
-				if !valid {
-					return errutil.UserError{Err: fmt.Sprintf(
-						"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+					if !valid {
+						return errutil.UserError{Err: fmt.Sprintf(
+							"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+						}
 					}
-				}
 
-				URIs = data.csr.URIs
+					URIs = append(URIs, uri)
+				}
 			}
 		} else {
-			uriAltInt, ok = data.apiData.GetOk("uri_sans")
-			if ok {
-				uriAlt := uriAltInt.(string)
-				if len(uriAlt) != 0 {
-					if len(data.role.AllowedURISANs) == 0 {
+			uriAlt := data.apiData.Get("uri_sans").([]string)
+			if len(uriAlt) > 0 {
+				if len(data.role.AllowedURISANs) == 0 {
+					return errutil.UserError{Err: fmt.Sprintf(
+						"URI Subject Alternative Names are not allowed in this role, but were provided via the API"),
+					}
+				}
+
+				for _, uri := range uriAlt {
+					valid := false
+					for _, allowed := range data.role.AllowedURISANs {
+						validURI := glob.Glob(allowed, uri)
+						if validURI {
+							valid = true
+							break
+						}
+					}
+
+					if !valid {
 						return errutil.UserError{Err: fmt.Sprintf(
-							"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
+							"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
 						}
 					}
 
-					for _, v := range strings.Split(uriAlt, ",") {
-						valid := false
-						for _, allowed := range data.role.AllowedURISANs {
-							validURI := glob.Glob(allowed, v)
-							if validURI {
-								valid = true
-								break
-							}
+					parsedURI, err := url.Parse(uri)
+					if parsedURI == nil || err != nil {
+						return errutil.UserError{Err: fmt.Sprintf(
+							"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
 						}
-
-						if !valid {
-							return errutil.UserError{Err: fmt.Sprintf(
-								"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
-							}
-						}
-
-						parsedURI, err := url.Parse(v)
-						if parsedURI == nil || err != nil {
-							return errutil.UserError{Err: fmt.Sprintf(
-								"the provided URI Subject Alternative Name '%s' is not a valid URI", v),
-							}
-						}
-						URIs = append(URIs, parsedURI)
-
 					}
+
+					URIs = append(URIs, parsedURI)
 				}
 			}
 		}
