@@ -920,10 +920,10 @@ $ curl \
   "data": {
     "allow_any_name": false,
     "allow_ip_sans": true,
-    "allow_uri_sans": true,
     "allow_localhost": true,
     "allow_subdomains": false,
     "allowed_domains": ["example.com", "foobar.com"],
+    "allow_uri_sans": ["example.com","spiffe://*"],
     "client_flag": true,
     "code_signing_flag": false,
     "key_bits": 2048,
@@ -1385,8 +1385,8 @@ root CA need be in a client's trust store.
   is the default).
 
 - `uri_sans` `(string: "")` – Specifies the requested URI Subject Alternative
-  Names, in a comma-delimited list. Only valid if the role allows URI SANs (which
-  is the default).
+  Names, in a comma-delimited list. If any requested URIs do not match role policy, 
+  the entire request will be denied.
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live. Cannot be greater
   than the role's `max_ttl` value. If not provided, the role's `ttl` value will
