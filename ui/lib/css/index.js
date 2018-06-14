@@ -23,6 +23,7 @@ module.exports = {
     this.bulmaPath = path.dirname(require.resolve('bulma'));
     this.bulmaSwitchPath = path.dirname(require.resolve('bulma-switch/switch.sass'));
     this.bulmaCheckPath = path.dirname(require.resolve('cool-checkboxes-for-bulma.io'));
+    this.sassSVGURIPath = path.dirname(require.resolve('sass-svg-uri'));
     return app;
   },
 
@@ -43,7 +44,12 @@ module.exports = {
       destDir: 'app/styles/bulma',
       annotation: 'Funnel (bulma-check)',
     });
+    var sassSVGURI = new Funnel(this.sassSVGURIPath, {
+      srcDir: '/',
+      destDir: 'app/styles/sass-svg-uri',
+      annotation: 'Sass SVG URI',
+    });
 
-    return mergeTrees([bulmaCheck, bulmaSwitch, bulma], { overwrite: true });
+    return mergeTrees([bulmaCheck, bulmaSwitch, bulma, sassSVGURI], { overwrite: true });
   },
 };

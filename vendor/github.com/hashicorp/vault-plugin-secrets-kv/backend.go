@@ -168,6 +168,13 @@ func (b *versionedKVBackend) upgradeDone(ctx context.Context, s logical.Storage)
 
 func pathInvalid(b *versionedKVBackend) []*framework.Path {
 	handler := func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		switch req.Path {
+		case "metadata", "data", "delete", "undelete", "destroy":
+			resp := &logical.Response{}
+			resp.AddWarning("Non-listing operations on the root of a K/V v2 mount are not supported.")
+			return logical.RespondWithStatusCode(resp, req, http.StatusNotFound)
+		}
+
 		var subCommand string
 		switch req.Operation {
 		case logical.CreateOperation, logical.UpdateOperation:

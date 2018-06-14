@@ -15,7 +15,7 @@ The trusted certificates and CAs are configured directly to the auth method
 using the `certs/` path. This method cannot read trusted certificates from an
 external source.
 
-CA certs are associated with a role; role names and CRL names are normalized to
+CA certificates are associated with a role; role names and CRL names are normalized to
 lower-case.
 
 ## Revocation Checking

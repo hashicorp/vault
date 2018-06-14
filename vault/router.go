@@ -209,9 +209,9 @@ func (r *Router) MatchingMountByUUID(mountID string) *MountEntry {
 	}
 
 	r.l.RLock()
-	defer r.l.RUnlock()
-
 	_, raw, ok := r.mountUUIDCache.LongestPrefix(mountID)
+	r.l.RUnlock()
+
 	if !ok {
 		return nil
 	}
@@ -226,9 +226,9 @@ func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 	}
 
 	r.l.RLock()
-	defer r.l.RUnlock()
-
 	_, raw, ok := r.mountAccessorCache.LongestPrefix(mountAccessor)
+	r.l.RUnlock()
+
 	if !ok {
 		return nil
 	}
@@ -239,8 +239,8 @@ func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 // MatchingMount returns the mount prefix that would be used for a path
 func (r *Router) MatchingMount(path string) string {
 	r.l.RLock()
-	defer r.l.RUnlock()
-	var mount = r.matchingMountInternal(path)
+	mount := r.matchingMountInternal(path)
+	r.l.RUnlock()
 	return mount
 }
 
@@ -406,10 +406,10 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	// Grab a read lock on the route entry, this protects against the backend
 	// being reloaded during a request.
 	re.l.RLock()
-	defer re.l.RUnlock()
 
 	// Filtered mounts will have a nil backend
 	if re.backend == nil {
+		re.l.RUnlock()
 		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 
@@ -419,6 +419,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:
+			re.l.RUnlock()
 			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 		}
 	}
@@ -448,6 +449,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		// salted ID, so we double-salt what's going to the cubbyhole backend
 		salt, err := r.tokenStoreSaltFunc(ctx)
 		if err != nil {
+			re.l.RUnlock()
 			return nil, false, false, err
 		}
 		req.ClientToken = re.SaltID(salt.SaltID(req.ClientToken))
@@ -485,8 +487,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		}
 	}
 
+	reqTokenEntry := req.TokenEntry()
+	req.SetTokenEntry(nil)
+
 	// Reset the request before returning
-	defer func() {
+	resetFunc := func() {
 		req.Path = originalPath
 		req.MountPoint = mount
 		req.MountType = re.mountEntry.Type
@@ -506,11 +511,15 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.MountAccessor = re.mountEntry.Accessor
 
 		req.EntityID = originalEntityID
-	}()
+
+		req.SetTokenEntry(reqTokenEntry)
+	}
 
 	// Invoke the backend
 	if existenceCheck {
 		ok, exists, err := re.backend.HandleExistenceCheck(ctx, req)
+		resetFunc()
+		re.l.RUnlock()
 		return nil, ok, exists, err
 	} else {
 		resp, err := re.backend.HandleRequest(ctx, req)
@@ -535,6 +544,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 				alias.MountAccessor = re.mountEntry.Accessor
 			}
 		}
+		resetFunc()
+		re.l.RUnlock()
 		return resp, false, false, err
 	}
 }

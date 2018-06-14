@@ -39,8 +39,8 @@ type backend struct {
 	blacklistMutex sync.RWMutex
 
 	// Guards the blacklist/whitelist tidy functions
-	tidyBlacklistCASGuard uint32
-	tidyWhitelistCASGuard uint32
+	tidyBlacklistCASGuard *uint32
+	tidyWhitelistCASGuard *uint32
 
 	// Duration after which the periodic function of the backend needs to
 	// tidy the blacklist and whitelist entries.
@@ -82,10 +82,12 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 	b := &backend{
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
-		tidyCooldownPeriod:  time.Hour,
-		EC2ClientsMap:       make(map[string]map[string]*ec2.EC2),
-		IAMClientsMap:       make(map[string]map[string]*iam.IAM),
-		iamUserIdToArnCache: cache.New(7*24*time.Hour, 24*time.Hour),
+		tidyCooldownPeriod:    time.Hour,
+		EC2ClientsMap:         make(map[string]map[string]*ec2.EC2),
+		IAMClientsMap:         make(map[string]map[string]*iam.IAM),
+		iamUserIdToArnCache:   cache.New(7*24*time.Hour, 24*time.Hour),
+		tidyBlacklistCASGuard: new(uint32),
+		tidyWhitelistCASGuard: new(uint32),
 	}
 
 	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId

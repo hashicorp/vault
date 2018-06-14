@@ -445,10 +445,10 @@
 			"revisionTime": "2018-02-09T23:01:02Z"
 		},
 		{
-			"checksumSHA1": "/I6I2nR59isqKtSpEnTfLRWZ8Mc=",
+			"checksumSHA1": "dweeMPBmsx8OdMN7S8Ad/+dqge8=",
 			"path": "github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute",
-			"revision": "fb9d53b0db7e801eb0d4fa021f5860794d845da3",
-			"revisionTime": "2018-02-09T23:01:02Z"
+			"revision": "44b48b90a2c30b9c22c31940bb3e8d85a00f79fe",
+			"revisionTime": "2018-06-12T01:50:13Z"
 		},
 		{
 			"checksumSHA1": "6m97gyHt25GPBhd48PdPaAXCT9Y=",
@@ -1363,10 +1363,10 @@
 			"revisionTime": "2018-06-06T02:42:09Z"
 		},
 		{
-			"checksumSHA1": "zyIz4QL1DddbGjsP6W2qbf3Uh28=",
+			"checksumSHA1": "grTzIH3YAjsrME6m9IBXpS77W14=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
-			"revision": "730a019907e33c96abded11bbbd9aadf6e5b97d3",
-			"revisionTime": "2018-06-06T02:56:43Z"
+			"revision": "f34be853827f3b0511169188ff1db08adacfd3ac",
+			"revisionTime": "2018-06-08T17:47:30Z"
 		},
 		{
 			"checksumSHA1": "vTfeYxi0Z1y176bjQaYh1/FpQ9s=",

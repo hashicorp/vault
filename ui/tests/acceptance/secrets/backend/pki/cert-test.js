@@ -68,10 +68,10 @@ test('it views a cert', function(assert) {
   generatePage.issueCert('foo');
   listPage.visitRoot({ backend: path, tab: 'certs' });
   andThen(() => {
-    assert.ok(listPage.secrets().count > 0, 'lists certs');
+    assert.ok(listPage.secrets.length > 0, 'lists certs');
   });
 
-  listPage.secrets(0).click();
+  listPage.secrets.objectAt(0).click();
   andThen(() => {
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'navigates to the show page');
     assert.ok(showPage.hasCert, 'shows the cert');

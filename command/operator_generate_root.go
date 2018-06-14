@@ -367,7 +367,7 @@ func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string, dr
 	if !status.Started {
 		c.UI.Error(wrapAtLength(
 			"No root generation is in progress. Start a root generation by " +
-				"running \"vault generate-root -init\"."))
+				"running \"vault operator generate-root -init\"."))
 		return 1
 	}
 

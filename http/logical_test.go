@@ -207,6 +207,7 @@ func TestLogical_CreateToken(t *testing.T) {
 		"wrap_info":      nil,
 		"auth": map[string]interface{}{
 			"policies":       []interface{}{"root"},
+			"token_policies": []interface{}{"root"},
 			"metadata":       nil,
 			"lease_duration": json.Number("0"),
 			"renewable":      false,

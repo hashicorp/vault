@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/hclutil"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -89,7 +89,7 @@ func ParseConfig(contents string) (*DefaultConfig, error) {
 	valid := []string{
 		"token_helper",
 	}
-	if err := checkHCLKeys(list, valid); err != nil {
+	if err := hclutil.CheckHCLKeys(list, valid); err != nil {
 		return nil, err
 	}
 
@@ -98,31 +98,4 @@ func ParseConfig(contents string) (*DefaultConfig, error) {
 		return nil, err
 	}
 	return &c, nil
-}
-
-func checkHCLKeys(node ast.Node, valid []string) error {
-	var list *ast.ObjectList
-	switch n := node.(type) {
-	case *ast.ObjectList:
-		list = n
-	case *ast.ObjectType:
-		list = n.List
-	default:
-		return fmt.Errorf("cannot check HCL keys of type %T", n)
-	}
-
-	validMap := make(map[string]struct{}, len(valid))
-	for _, v := range valid {
-		validMap[v] = struct{}{}
-	}
-
-	var result error
-	for _, item := range list.Items {
-		key := item.Keys[0].Token.Value().(string)
-		if _, ok := validMap[key]; !ok {
-			result = multierror.Append(result, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
-		}
-	}
-
-	return result
 }

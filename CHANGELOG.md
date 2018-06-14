@@ -1,4 +1,61 @@
-## 0.10.2 (Unreleased)
+## 0.10.3 (Unreleased)
+
+DEPRECATIONS/CHANGES:
+
+ * In the audit log and in client responses, policies are now split into three
+   parameters: policies that came only from tokens, policies that came only
+   from Identity, and the combined set. Any previous location of policies via
+   the API now contains the full, combined set.
+
+IMPROVEMENTS:
+
+ * core: Report policies in token, identity, and full sets [GH-4747]
+ * secrets/ssh: Allow standard SSH command arguments to be used, without
+   requiring username@hostname syntax [GH-4710]
+ * storage/consul: Add context support so that requests are cancelable
+   [GH-4739]
+
+BUG FIXES:
+
+ * auth/approle: Fix panic due to metadata being nil [GH-4719]
+ * core: Optimizations to remove some speed regressions due to the
+   security-related changes in 0.10.2
+ * secrets/database: Fix default MySQL root rotation statement [GH-4748]
+ * secrets/kv: Fix writing to the root of a KVv2 mount from `vault kv` commands
+   incorrectly operating on a root+mount path instead of being an error
+   [GH-4726]
+ * seal/pkcs11: Add `CKK_SHA256_HMAC` to the search list when finding HMAC
+   keys, fixing lookup on some Thales devices
+ * replication: Fix issue enabling replication when a non-auth mount and auth
+   mount have the same name
+
+## 0.10.2 (June 6th, 2018)
+
+SECURITY:
+
+ * Tokens: A race condition was identified that could occur if a token's
+   lease expired while Vault was not running. In this case, when Vault came
+   back online, sometimes it would properly revoke the lease but other times it
+   would not, leading to a Vault token that no longer had an expiration and had
+   essentially unlimited lifetime. This race was per-token, not all-or-nothing
+   for all tokens that may have expired during Vault's downtime. We have fixed
+   the behavior and put extra checks in place to help prevent any similar
+   future issues. In addition, the logic we have put in place ensures that such
+   lease-less tokens can no longer be used (unless they are root tokens that
+   never had an expiration to begin with).
+ * Convergent Encryption: The version 2 algorithm used in `transit`'s
+   convergent encryption feature is susceptible to offline
+   plaintext-confirmation attacks. As a result, we are introducing a version 3
+   algorithm that mitigates this. If you are currently using convergent
+   encryption, we recommend upgrading, rotating your encryption key (the new
+   key version will use the new algorithm), and rewrapping your data (the
+   `rewrap` endpoint can be used to allow a relatively non-privileged user to
+   perform the rewrapping while never divulging the plaintext).
+ * AppRole case-sensitive role name secret-id leaking: When using a mixed-case
+   role name via AppRole, deleting a secret-id via accessor or other operations
+   could end up leaving the secret-id behind and valid but without an accessor.
+   This has now been fixed, and we have put checks in place to prevent these
+   secret-ids from being used.
 
 DEPRECATIONS/CHANGES:
 
@@ -8,6 +65,9 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * Active Directory Secrets Engine: A new `ad` secrets engine has been created
+   which allows Vault to rotate and provide credentials for configured AD
+   accounts.
  * Rekey Verification: Rekey operations can now require verification. This
    turns on a two-phase process where the existing key shares authorize
    generating a new master key, and a threshold of the new, returned key shares
@@ -60,6 +120,8 @@ IMPROVEMENTS:
  * ui: Identity interface now lists groups by name [GH-4655]
  * ui: Permission denied errors still render the sidebar in the Access section
    [GH-4658]
+ * replication: Improve performance of index page flushes and WAL garbage 
+   collecting
 
 BUG FIXES:
 

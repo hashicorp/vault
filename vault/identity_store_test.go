@@ -29,7 +29,7 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 	}
 
 	// Create a token with the above created entity set on it
-	ent := &TokenEntry{
+	ent := &logical.TokenEntry{
 		ID:           "testtokenid",
 		Path:         "test",
 		Policies:     []string{"root"},
@@ -221,15 +221,13 @@ func TestIdentityStore_WrapInfoInheritance(t *testing.T) {
 
 	// Create a token which has EntityID set and has update permissions to
 	// sys/wrapping/wrap
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		Path:     "test",
 		Policies: []string{"default", responseWrappingPolicyName},
 		EntityID: entityID,
+		TTL:      time.Hour,
 	}
-
-	if err := ts.create(context.Background(), te); err != nil {
-		t.Fatal(err)
-	}
+	testMakeTokenDirectly(t, ts, te)
 
 	wrapReq := &logical.Request{
 		Path:        "sys/wrapping/wrap",
@@ -258,18 +256,17 @@ func TestIdentityStore_WrapInfoInheritance(t *testing.T) {
 }
 
 func TestIdentityStore_TokenEntityInheritance(t *testing.T) {
-	_, ts, _, _ := TestCoreWithTokenStore(t)
+	c, _, _ := TestCoreUnsealed(t)
+	ts := c.tokenStore
 
 	// Create a token which has EntityID set
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		Path:     "test",
 		Policies: []string{"dev", "prod"},
 		EntityID: "testentityid",
+		TTL:      time.Hour,
 	}
-
-	if err := ts.create(context.Background(), te); err != nil {
-		t.Fatal(err)
-	}
+	testMakeTokenDirectly(t, ts, te)
 
 	// Create a child token; this should inherit the EntityID
 	tokenReq := &logical.Request{
@@ -301,14 +298,12 @@ func TestIdentityStore_TokenEntityInheritance(t *testing.T) {
 
 func testCoreWithIdentityTokenGithub(t *testing.T) (*Core, *IdentityStore, *TokenStore, string) {
 	is, ghAccessor, core := testIdentityStoreWithGithubAuth(t)
-	ts := testTokenStore(t, core)
-	return core, is, ts, ghAccessor
+	return core, is, core.tokenStore, ghAccessor
 }
 
 func testCoreWithIdentityTokenGithubRoot(t *testing.T) (*Core, *IdentityStore, *TokenStore, string, string) {
 	is, ghAccessor, core, root := testIdentityStoreWithGithubAuthRoot(t)
-	ts := testTokenStore(t, core)
-	return core, is, ts, ghAccessor, root
+	return core, is, core.tokenStore, ghAccessor, root
 }
 
 func testIdentityStoreWithGithubAuth(t *testing.T) (*IdentityStore, string, *Core) {

@@ -79,7 +79,7 @@ func (c *Core) startForwarding(ctx context.Context) error {
 	fws := &http2.Server{}
 
 	// Shutdown coordination logic
-	var shutdown uint32
+	shutdown := new(uint32)
 	shutdownWg := &sync.WaitGroup{}
 
 	for _, addr := range c.clusterListenerAddrs {
@@ -120,7 +120,7 @@ func (c *Core) startForwarding(ctx context.Context) error {
 			}
 
 			for {
-				if atomic.LoadUint32(&shutdown) > 0 {
+				if atomic.LoadUint32(shutdown) > 0 {
 					return
 				}
 
@@ -213,7 +213,7 @@ func (c *Core) startForwarding(ctx context.Context) error {
 
 		// Set the shutdown flag. This will cause the listeners to shut down
 		// within the deadline in clusterListenerAcceptDeadline
-		atomic.StoreUint32(&shutdown, 1)
+		atomic.StoreUint32(shutdown, 1)
 		c.logger.Info("forwarding rpc listeners stopped")
 
 		// Wait for them all to shut down
