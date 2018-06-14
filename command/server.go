@@ -935,8 +935,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		server := &http.Server{
-			Handler:     handler,
-			IdleTimeout: 10 * time.Minute,
+			Handler:           handler,
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			IdleTimeout:       5 * time.Minute,
 		}
 		go server.Serve(ln.Listener)
 	}
