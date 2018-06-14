@@ -9,12 +9,15 @@ DEPRECATIONS/CHANGES:
 
 IMPROVEMENTS:
 
+ * core: Report policies in token, identity, and full sets [GH-4747]
  * storage/consul: Add context support so that requests are cancelable
    [GH-4739]
 
 BUG FIXES:
 
  * auth/approle: Fix panic due to metadata being nil [GH-4719]
+ * core: Optimizations to remove some speed regressions due to the
+   security-related changes in 0.10.2
  * secrets/database: Fix default MySQL root rotation statement [GH-4748]
  * secrets/kv: Fix writing to the root of a KVv2 mount from `vault kv` commands
    incorrectly operating on a root+mount path instead of being an error
