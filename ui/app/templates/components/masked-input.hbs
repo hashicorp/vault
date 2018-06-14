@@ -1,0 +1,21 @@
+<div class="masked-input {{if shouldObscure "masked"}} {{if displayOnly "display-only"}}" data-test-masked-input>
+	{{#if displayOnly}}
+		<pre class="masked-value display-only">{{displayValue}}</pre>
+	{{else}}
+  <textarea
+    class="input masked-value"
+    rows=1
+    wrap="off"
+    placeholder="value"
+    onfocus={{action (mut isFocused) true}}
+    onblur={{action (mut isFocused) false}}
+    onkeydown={{action onKeyDown}}
+    onchange={{action "updateValue"}}
+    value={{readonly displayValue}}
+    data-test-textarea
+    />
+	{{/if}}
+  <button {{action "toggleMask"}}  class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button is-compact" data-test-button>
+    {{i-con glyph=(if shouldObscure "hidden" "visible") aria-hidden="true" size=16}}
+	</button>
+</div>
