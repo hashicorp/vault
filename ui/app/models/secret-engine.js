@@ -23,6 +23,16 @@ export default DS.Model.extend({
   local: attr('boolean'),
   sealWrap: attr('boolean'),
 
+  modelTypeForKV: computed('type', 'options.version', function() {
+    let type = this.get('type');
+    let version = this.get('options.version');
+    let modelType = 'secret';
+    if ((type === 'kv' || type === 'generic') && version === 2) {
+      modelType = 'secret-v2';
+    }
+    return modelType;
+  }),
+
   formFields: [
     'type',
     'path',
