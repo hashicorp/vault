@@ -14,6 +14,8 @@ BUG FIXES:
    [GH-4726]
  * seal/pkcs11: Add `CKK_SHA256_HMAC` to the search list when finding HMAC
    keys, fixing lookup on some Thales devices
+ * replication: Fix issue enabling replication when a non-auth mount and auth
+   mount have the same name
 
 ## 0.10.2 (June 6th, 2018)
 
