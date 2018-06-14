@@ -161,7 +161,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 
 	ctx := c.activeContext
 
-	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req)
+	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
 		return retErr
@@ -169,10 +169,13 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
-		ClientToken: req.ClientToken,
+		ClientToken:      req.ClientToken,
+		Policies:         identityPolicies,
+		IdentityPolicies: identityPolicies,
 	}
 	if te != nil {
-		auth.Policies = te.Policies
+		auth.TokenPolicies = te.Policies
+		auth.Policies = append(te.Policies, identityPolicies...)
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID

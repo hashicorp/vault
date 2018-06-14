@@ -34,6 +34,10 @@ func RawField(secret *api.Secret, field string) interface{} {
 		case "token_renewable":
 			val = secret.Auth.Renewable
 		case "token_policies":
+			val = secret.Auth.TokenPolicies
+		case "identity_policies":
+			val = secret.Auth.IdentityPolicies
+		case "policies":
 			val = secret.Auth.Policies
 		default:
 			val = secret.Data[field]
