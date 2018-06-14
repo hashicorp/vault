@@ -1253,6 +1253,7 @@ func createCSR(data *dataBundle) (*certutil.ParsedCSRBundle, error) {
 		DNSNames:       data.params.DNSNames,
 		EmailAddresses: data.params.EmailAddresses,
 		IPAddresses:    data.params.IPAddresses,
+		URIs:           data.params.URIs,
 	}
 
 	if err := handleOtherCSRSANs(csrTemplate, data.params.OtherSANs); err != nil {
@@ -1353,6 +1354,7 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		certTemplate.DNSNames = data.csr.DNSNames
 		certTemplate.EmailAddresses = data.csr.EmailAddresses
 		certTemplate.IPAddresses = data.csr.IPAddresses
+		certTemplate.URIs = data.csr.URIs
 
 		for _, name := range data.csr.Extensions {
 			if !name.Id.Equal(oidExtensionBasicConstraints) {
@@ -1364,6 +1366,7 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		certTemplate.DNSNames = data.params.DNSNames
 		certTemplate.EmailAddresses = data.params.EmailAddresses
 		certTemplate.IPAddresses = data.params.IPAddresses
+		certTemplate.URIs = data.csr.URIs
 	}
 
 	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {
@@ -1530,6 +1533,7 @@ func handleOtherCSRSANs(in *x509.CertificateRequest, sans map[string][]string) e
 		DNSNames:       in.DNSNames,
 		IPAddresses:    in.IPAddresses,
 		EmailAddresses: in.EmailAddresses,
+		URIs:           in.URIs,
 	}
 	if err := handleOtherSANs(certTemplate, sans); err != nil {
 		return err
@@ -1586,7 +1590,7 @@ func handleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
 	}
 
 	// Append any existing SANs, sans marshalling
-	rawValues = append(rawValues, marshalSANs(in.DNSNames, in.EmailAddresses, in.IPAddresses)...)
+	rawValues = append(rawValues, marshalSANs(in.DNSNames, in.EmailAddresses, in.IPAddresses, in.URIs)...)
 
 	// Marshal and add to ExtraExtensions
 	ext := pkix.Extension{
@@ -1603,16 +1607,23 @@ func handleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
 	return nil
 }
 
+const (
+	nameTypeEmail = 1
+	nameTypeDNS   = 2
+	nameTypeURI   = 6
+	nameTypeIP    = 8
+)
+
 // Note: Taken from the Go source code since it's not public, plus changed to not marshal
 // marshalSANs marshals a list of addresses into a the contents of an X.509
 // SubjectAlternativeName extension.
-func marshalSANs(dnsNames, emailAddresses []string, ipAddresses []net.IP) []asn1.RawValue {
+func marshalSANs(dnsNames, emailAddresses []string, ipAddresses []net.IP, uris []*url.URL) []asn1.RawValue {
 	var rawValues []asn1.RawValue
 	for _, name := range dnsNames {
-		rawValues = append(rawValues, asn1.RawValue{Tag: 2, Class: 2, Bytes: []byte(name)})
+		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeDNS, Class: 2, Bytes: []byte(name)})
 	}
 	for _, email := range emailAddresses {
-		rawValues = append(rawValues, asn1.RawValue{Tag: 1, Class: 2, Bytes: []byte(email)})
+		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeEmail, Class: 2, Bytes: []byte(email)})
 	}
 	for _, rawIP := range ipAddresses {
 		// If possible, we always want to encode IPv4 addresses in 4 bytes.
@@ -1620,7 +1631,10 @@ func marshalSANs(dnsNames, emailAddresses []string, ipAddresses []net.IP) []asn1
 		if ip == nil {
 			ip = rawIP
 		}
-		rawValues = append(rawValues, asn1.RawValue{Tag: 7, Class: 2, Bytes: ip})
+		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeIP, Class: 2, Bytes: ip})
+	}
+	for _, uri := range uris {
+		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeURI, Class: 2, Bytes: []byte(uri.String())})
 	}
 	return rawValues
 }
