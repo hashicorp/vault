@@ -41,8 +41,8 @@ input::-webkit-inner-spin-button {
   margin: 0;
   padding: 0;
   text-decoration: underline;
-  -webkit-user-select: text;  /* Chrome all / Safari all */
-  -moz-user-select: text;     /* Firefox all */
-  -ms-user-select: text;      /* IE 10+ */
-  user-select: text; 
+  -webkit-user-select: text; /* Chrome all / Safari all */
+  -moz-user-select: text; /* Firefox all */
+  -ms-user-select: text; /* IE 10+ */
+  user-select: text;
 }

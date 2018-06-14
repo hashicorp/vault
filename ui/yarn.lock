@@ -443,9 +443,9 @@ autoprefixer@^7.0.0:
     postcss "^6.0.17"
     postcss-value-parser "^3.2.3"
 
-autosize@3.0.17:
-  version "3.0.17"
-  resolved "https://registry.yarnpkg.com/autosize/-/autosize-3.0.17.tgz#f5a2cd35b96d864634cffc600c8c628c658d805b"
+autosize@^4.0.0:
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/autosize/-/autosize-4.0.2.tgz#073cfd07c8bf45da4b9fd153437f5bafbba1e4c9"
 
 aws-sign2@~0.6.0:
   version "0.6.0"
