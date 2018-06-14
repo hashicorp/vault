@@ -1014,11 +1014,12 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
 		ClientToken:      req.ClientToken,
-		Policies:         append(te.Policies, identityPolicies...),
-		TokenPolicies:    te.Policies,
+		Policies:         identityPolicies,
 		IdentityPolicies: identityPolicies,
 	}
 	if te != nil {
+		auth.TokenPolicies = te.Policies
+		auth.Policies = append(te.Policies, identityPolicies...)
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
