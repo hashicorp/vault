@@ -12,6 +12,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -1429,6 +1430,20 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				"tidy_cert_store":      true,
 				"tidy_revocation_list": true,
 			},
+			Check: func(resp *logical.Response) error {
+				if resp.IsError() {
+					return fmt.Errorf("got an error resp: %v", resp.Error())
+				}
+				if len(resp.Warnings) != 1 {
+					return fmt.Errorf("expected a warning, resp is %#v", *resp)
+				}
+
+				// Give time for the certificates to pass the safety buffer
+				t.Logf("Sleeping for 15 seconds to allow tidy to work")
+				t.Logf(time.Now().String())
+				time.Sleep(45 * time.Second)
+				return nil
+			},
 		},
 
 		// We do *not* expect to find these
@@ -1436,8 +1451,10 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
+				t.Logf(time.Now().String())
 				if resp != nil {
-					return fmt.Errorf("expected no response")
+					t.Logf("failed at first check, resp is %#v", *resp)
+					return errors.New("expected no response")
 				}
 
 				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
@@ -1451,6 +1468,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
 				if resp != nil {
+					t.Logf("failed at second check, resp is %#v", *resp)
 					return fmt.Errorf("expected no response")
 				}
 
