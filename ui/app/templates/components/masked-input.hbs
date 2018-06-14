@@ -7,8 +7,8 @@
     rows=1
     wrap="off"
     placeholder="value"
-    onfocus={{action "setFocus" true}}
-    onblur={{action "setFocus" false}}
+    onfocus={{action (mut isFocused) true}}
+    onblur={{action (mut isFocused) false}}
     onkeydown={{action onKeyDown}}
     onchange={{action updateValue}}
     value={{readonly displayValue}}

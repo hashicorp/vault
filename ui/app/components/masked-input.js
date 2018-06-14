@@ -9,7 +9,7 @@ export default Ember.Component.extend({
 		this._super(...arguments);
 		autosize(this.element.querySelector('textarea'));
 	},
-	didRender(){
+	didUpdate(){
 		this._super(...arguments);
 		autosize.update(this.element.querySelector('textarea'));
 	},
@@ -41,14 +41,11 @@ export default Ember.Component.extend({
 	onChange(){},
 	updateValue(e){
 		this.set('value', e.target.value);
-		this.get('onChange')();
+		this.onChange();
 	},
 	actions: {
 		toggleMask(){
 			this.toggleProperty('isMasked');
-		},
-		setFocus(isFocused){
-			this.set('isFocused', isFocused);
 		}
 	}
 });
