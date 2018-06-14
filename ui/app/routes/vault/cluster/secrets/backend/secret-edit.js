@@ -44,18 +44,17 @@ export default Ember.Route.extend(UnloadModelRoute, {
   },
 
   modelType(backend, secret) {
+    let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
+    let type = backendModel.get('type');
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
       aws: 'role-aws',
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
+      kv: backendModel.get('modelTypeForKV'),
+      generic: backendModel.get('modelTypeForKV'),
     };
-    let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
-    let defaultType = 'secret';
-    if (backendModel.get('type') === 'kv' && backendModel.get('options.version') === 2) {
-      defaultType = 'secret-v2';
-    }
-    return types[backendModel.get('type')] || defaultType;
+    return types[type];
   },
 
   model(params) {

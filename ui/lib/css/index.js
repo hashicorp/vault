@@ -50,7 +50,6 @@ module.exports = {
       annotation: 'Sass SVG URI',
     });
 
-
     return mergeTrees([bulmaCheck, bulmaSwitch, bulma, sassSVGURI], { overwrite: true });
   },
 };
