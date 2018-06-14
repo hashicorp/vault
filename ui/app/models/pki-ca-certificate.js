@@ -1,7 +1,7 @@
 import Certificate from './pki-certificate';
 import Ember from 'ember';
 import DS from 'ember-data';
-import { queryRecord } from 'ember-computed-query';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const { computed } = Ember;
 const { attr } = DS;
@@ -146,15 +146,6 @@ export default Certificate.extend({
   }),
   expiration: attr(),
 
-  deletePath: queryRecord(
-    'capabilities',
-    context => {
-      const { backend } = context.getProperties('backend');
-      return {
-        id: `${backend}/root`,
-      };
-    },
-    'backend'
-  ),
+  deletePath: lazyCapabilities( apiPath`${'backend'}/root`, 'backend'),
   canDeleteRoot: computed.and('deletePath.canDelete', 'deletePath.canSudo'),
 });

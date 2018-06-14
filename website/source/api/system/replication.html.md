@@ -83,36 +83,65 @@ $ curl \
 ### Sample Response
 
 The printed status of the replication environment. As an example, for a
-primary, it will look something like:
+performance primary and DR primary node, it will look something like:
 
 ```json
 {
-	"request_id": "d13e9665-d610-fea0-357f-8d652aa308cb",
-	"lease_id": "",
-	"lease_duration": 0,
-	"renewable": false,
-	"data": {
-		"dr": {
-			"cluster_id": "a876f38b-7577-25ac-6007-277528c99a1a",
-			"known_secondaries": [
-				"2"
-			],
-			"last_wal": 43,
-			"merkle_root": "86d67839f47045f7d24beb4f39b14504d15a146c",
-			"mode": "primary",
-			"primary_cluster_addr": ""
-		},
-		"performance": {
-			"cluster_id": "11ab01df-32ea-1d79-b4bc-8bc973c1b749",
-			"known_secondaries": [
-				"1"
-			],
-			"last_wal": 43,
-			"merkle_root": "e0531d566b23403101b0868e85b63d6774ba0ef2",
-			"mode": "primary",
-			"primary_cluster_addr": ""
-		}
-	},
-	"warnings": null
+  "data": {
+    "dr": {
+      "cluster_id": "f2c21cb5-523f-617b-20ac-c913d9154ba6",
+      "known_secondaries": [
+        "3"
+      ],
+      "last_wal": 291,
+      "merkle_root": "38543b95d44132138003939addbaf94125ec184e",
+      "mode": "primary",
+      "primary_cluster_addr": ""
+    },
+    "performance": {
+      "cluster_id": "1598d434-dfec-1f48-f019-3d22a8075bf9",
+      "known_secondaries": [
+        "2"
+      ],
+      "last_wal": 291,
+      "merkle_root": "43f40fc775b40cc76cd5d7e289b2e6eaf4ba138c",
+      "mode": "primary",
+      "primary_cluster_addr": ""
+    }
+  },
+}
+```
+
+### Sample Response from Performance Secondary & DR Primary
+
+The printed status of the replication environment. As an example, for a
+performnace secondary and DR primary node, it will look something like:
+
+```json
+{
+  "data": {
+    "dr": {
+      "cluster_id": "e4bfa800-002e-7b6d-14c2-617855ece02f",
+      "known_secondaries": [
+        "4"
+      ],
+      "last_wal": 455,
+      "merkle_root": "cdcf796619240ce19dd8af30fa700f64c8006e3d",
+      "mode": "primary",
+      "primary_cluster_addr": ""
+    },
+    "performance": {
+      "cluster_id": "1598d434-dfec-1f48-f019-3d22a8075bf9",
+      "known_primary_cluster_addrs": [
+        "https://127.0.0.1:8201"
+      ],
+      "last_remote_wal": 291,
+      "merkle_root": "43f40fc775b40cc76cd5d7e289b2e6eaf4ba138c",
+      "mode": "secondary",
+      "primary_cluster_addr": "https://127.0.0.1:8201",
+      "secondary_id": "2",
+      "state": "stream-wals"
+    }
+  },
 }
 ```

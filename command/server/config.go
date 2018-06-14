@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/hclutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 )
 
@@ -438,7 +439,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"disable_clustering",
 		"disable_sealwrap",
 	}
-	if err := checkHCLKeys(list, valid); err != nil {
+	if err := hclutil.CheckHCLKeys(list, valid); err != nil {
 		return nil, err
 	}
 
@@ -769,7 +770,7 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 		return fmt.Errorf("invalid seal type %q", key)
 	}
 
-	if err := checkHCLKeys(item.Val, valid); err != nil {
+	if err := hclutil.CheckHCLKeys(item.Val, valid); err != nil {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 	}
 
@@ -817,7 +818,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"tls_client_ca_file",
 			"token",
 		}
-		if err := checkHCLKeys(item.Val, valid); err != nil {
+		if err := hclutil.CheckHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
 		}
 
@@ -867,7 +868,7 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		"statsd_address",
 		"statsite_address",
 	}
-	if err := checkHCLKeys(item.Val, valid); err != nil {
+	if err := hclutil.CheckHCLKeys(item.Val, valid); err != nil {
 		return multierror.Prefix(err, "telemetry:")
 	}
 
@@ -884,31 +885,4 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		return multierror.Prefix(err, "telemetry:")
 	}
 	return nil
-}
-
-func checkHCLKeys(node ast.Node, valid []string) error {
-	var list *ast.ObjectList
-	switch n := node.(type) {
-	case *ast.ObjectList:
-		list = n
-	case *ast.ObjectType:
-		list = n.List
-	default:
-		return fmt.Errorf("cannot check HCL keys of type %T", n)
-	}
-
-	validMap := make(map[string]struct{}, len(valid))
-	for _, v := range valid {
-		validMap[v] = struct{}{}
-	}
-
-	var result error
-	for _, item := range list.Items {
-		key := item.Keys[0].Token.Value().(string)
-		if _, ok := validMap[key]; !ok {
-			result = multierror.Append(result, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
-		}
-	}
-
-	return result
 }

@@ -28,18 +28,18 @@ export default Ember.Route.extend({
   },
 
   getModelType(backend, tab) {
+    let backendModel = this.store.peekRecord('secret-engine', backend);
+    let type = backendModel.get('type');
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
       aws: 'role-aws',
       pki: tab === 'certs' ? 'pki-certificate' : 'role-pki',
+      // secret or secret-v2
+      kv: backendModel.get('modelTypeForKV'),
+      generic: backendModel.get('modelTypeForKV'),
     };
-    let backendModel = this.store.peekRecord('secret-engine', backend);
-    let defaultType = 'secret';
-    if (backendModel.get('type') === 'kv' && backendModel.get('options.version') === 2) {
-      defaultType = 'secret-v2';
-    }
-    return types[backendModel.get('type')] || defaultType;
+    return types[type];
   },
 
   model(params) {
