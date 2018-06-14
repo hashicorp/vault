@@ -1751,7 +1751,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 				finalPolicies = sanitizedRolePolicies
 			} else {
 				if !strutil.StrListSubset(sanitizedRolePolicies, finalPolicies) {
-					return logical.ErrorResponse(fmt.Sprintf("token policies (%v) must be subset of the role's allowed policies (%v)", finalPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
+					return logical.ErrorResponse(fmt.Sprintf("token policies (%q) must be subset of the role's allowed policies (%q)", finalPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
 				}
 			}
 		} else {
