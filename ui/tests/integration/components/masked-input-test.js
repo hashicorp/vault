@@ -28,6 +28,22 @@ test('it renders', function(assert) {
   assert.ok(hasClass(component.wrapperClass, 'masked'));
 });
 
+
+test('it renders a textarea', function(assert) {
+
+  this.render(hbs`{{masked-input}}`);
+
+  assert.ok(component.textareaIsPresent);
+});
+
+test('it does not render a textarea when displayOnly is true', function(assert) {
+
+  this.render(hbs`{{masked-input displayOnly=true}}`);
+
+  assert.notOk(component.textareaIsPresent);
+});
+
+
 test('it unmasks text on focus', function(assert) {
 
   this.set('value', 'value');
