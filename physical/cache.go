@@ -119,13 +119,12 @@ func (c *Cache) Put(ctx context.Context, entry *Entry) error {
 
 	lock := locksutil.LockForKey(c.locks, entry.Key)
 	lock.Lock()
+	defer lock.Unlock()
 
 	err := c.backend.Put(ctx, entry)
 	if err == nil {
 		c.lru.Add(entry.Key, entry)
 	}
-
-	lock.Unlock()
 	return err
 }
 
@@ -136,21 +135,19 @@ func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
 
 	lock := locksutil.LockForKey(c.locks, key)
 	lock.RLock()
+	defer lock.RUnlock()
 
 	// Check the LRU first
 	if raw, ok := c.lru.Get(key); ok {
 		if raw == nil {
-			lock.RUnlock()
 			return nil, nil
 		}
-		lock.RUnlock()
 		return raw.(*Entry), nil
 	}
 
 	// Read from the underlying backend
 	ent, err := c.backend.Get(ctx, key)
 	if err != nil {
-		lock.RUnlock()
 		return nil, err
 	}
 
@@ -159,7 +156,6 @@ func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
 		c.lru.Add(key, ent)
 	}
 
-	lock.RUnlock()
 	return ent, nil
 }
 
@@ -170,13 +166,12 @@ func (c *Cache) Delete(ctx context.Context, key string) error {
 
 	lock := locksutil.LockForKey(c.locks, key)
 	lock.Lock()
+	defer lock.Unlock()
 
 	err := c.backend.Delete(ctx, key)
 	if err == nil {
 		c.lru.Remove(key)
 	}
-
-	lock.Unlock()
 	return err
 }
 
@@ -201,16 +196,10 @@ func (c *TransactionalCache) Transaction(ctx context.Context, txns []*TxnEntry) 
 	// Lock the keys
 	for _, l := range locksutil.LocksForKeys(c.locks, keys) {
 		l.Lock()
-	}
-
-	unlockFunc := func() {
-		for _, l := range locksutil.LocksForKeys(c.locks, keys) {
-			l.Unlock()
-		}
+		defer l.Unlock()
 	}
 
 	if err := c.Transactional.Transaction(ctx, txns); err != nil {
-		unlockFunc()
 		return err
 	}
 
@@ -227,6 +216,5 @@ func (c *TransactionalCache) Transaction(ctx context.Context, txns []*TxnEntry) 
 		}
 	}
 
-	unlockFunc()
 	return nil
 }
