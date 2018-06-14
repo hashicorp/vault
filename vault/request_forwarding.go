@@ -156,7 +156,7 @@ func (c *Core) startForwarding(ctx context.Context) error {
 				// that don't successfully auth to be kicked out quickly.
 				// Cluster connections should be reliable so being marginally
 				// aggressive here is fine.
-				err = tlsConn.SetDeadline(time.Now().Add(10 * time.Second))
+				err = tlsConn.SetDeadline(time.Now().Add(30 * time.Second))
 				if err != nil {
 					if c.logger.IsDebug() {
 						c.logger.Debug("error setting deadline for cluster connection", "error", err)
