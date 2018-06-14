@@ -105,7 +105,6 @@ $ curl \
 ```json
 {
   "data": {
-    "secret_key": "vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj",
     "access_key": "VKIAJBRHKH6EVTTNXDHA",
     "endpoint": "",
     "iam_endpoint": "",
