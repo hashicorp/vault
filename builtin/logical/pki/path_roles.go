@@ -109,6 +109,12 @@ CN and SANs. Defaults to true.`,
 Any valid IP is accepted.`,
 			},
 
+			"allowed_uri_sans": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `If set, an array of allowed URIs to put in the URI Subject Alternative Names.
+Any valid URI is accepted, these values support globbing.`,
+			},
+
 			"allowed_other_sans": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed other names to put in SANs. These values support globbing.`,
@@ -452,6 +458,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		AllowAnyName:                  data.Get("allow_any_name").(bool),
 		EnforceHostnames:              data.Get("enforce_hostnames").(bool),
 		AllowIPSANs:                   data.Get("allow_ip_sans").(bool),
+		AllowedURISANs:                data.Get("allowed_uri_sans").([]string),
 		ServerFlag:                    data.Get("server_flag").(bool),
 		ClientFlag:                    data.Get("client_flag").(bool),
 		CodeSigningFlag:               data.Get("code_signing_flag").(bool),
@@ -609,6 +616,7 @@ type roleEntry struct {
 	RequireCN                     bool          `json:"require_cn" mapstructure:"require_cn"`
 	AllowedOtherSANs              []string      `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
 	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers" mapstructure:"allowed_serial_numbers"`
+	AllowedURISANs                []string      `json:"allowed_uri_sans" mapstructure:"allowed_uri_sans"`
 	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
 	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
@@ -650,6 +658,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"no_store":                           r.NoStore,
 		"allowed_other_sans":                 r.AllowedOtherSANs,
 		"allowed_serial_numbers":             r.AllowedSerialNumbers,
+		"allowed_uri_sans":                   r.AllowedURISANs,
 		"require_cn":                         r.RequireCN,
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,

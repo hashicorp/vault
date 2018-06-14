@@ -15,6 +15,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -55,6 +56,7 @@ type creationParameters struct {
 	DNSNames                      []string
 	EmailAddresses                []string
 	IPAddresses                   []net.IP
+	URIs                          []*url.URL
 	OtherSANs                     map[string][]string
 	IsCA                          bool
 	KeyType                       string
@@ -714,8 +716,6 @@ func signCert(b *backend,
 // from the various endpoints and generates a creationParameters with the
 // parameters that can be used to issue or sign
 func generateCreationBundle(b *backend, data *dataBundle) error {
-	var ok bool
-
 	// Read in names -- CN, DNS and email addresses
 	var cn string
 	var ridSerialNumber string
@@ -850,7 +850,6 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 
 	// Get and verify any IP SANs
 	ipAddresses := []net.IP{}
-	var ipAltInt interface{}
 	{
 		if data.csr != nil && data.role.UseCSRSANs {
 			if len(data.csr.IPAddresses) > 0 {
@@ -861,22 +860,87 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 				ipAddresses = data.csr.IPAddresses
 			}
 		} else {
-			ipAltInt, ok = data.apiData.GetOk("ip_sans")
-			if ok {
-				ipAlt := ipAltInt.(string)
-				if len(ipAlt) != 0 {
-					if !data.role.AllowIPSANs {
+			ipAlt := data.apiData.Get("ip_sans").([]string)
+			if len(ipAlt) > 0 {
+				if !data.role.AllowIPSANs {
+					return errutil.UserError{Err: fmt.Sprintf(
+						"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
+				}
+				for _, v := range ipAlt {
+					parsedIP := net.ParseIP(v)
+					if parsedIP == nil {
 						return errutil.UserError{Err: fmt.Sprintf(
-							"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
+							"the value '%s' is not a valid IP address", v)}
 					}
-					for _, v := range strings.Split(ipAlt, ",") {
-						parsedIP := net.ParseIP(v)
-						if parsedIP == nil {
-							return errutil.UserError{Err: fmt.Sprintf(
-								"the value '%s' is not a valid IP address", v)}
+					ipAddresses = append(ipAddresses, parsedIP)
+				}
+			}
+		}
+	}
+
+	URIs := []*url.URL{}
+	{
+		if data.csr != nil && data.role.UseCSRSANs {
+			if len(data.csr.URIs) > 0 {
+				if len(data.role.AllowedURISANs) == 0 {
+					return errutil.UserError{Err: fmt.Sprintf(
+						"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
+					}
+				}
+
+				// validate uri sans
+				for _, uri := range data.csr.URIs {
+					valid := false
+					for _, allowed := range data.role.AllowedURISANs {
+						validURI := glob.Glob(allowed, uri.String())
+						if validURI {
+							valid = true
+							break
 						}
-						ipAddresses = append(ipAddresses, parsedIP)
 					}
+
+					if !valid {
+						return errutil.UserError{Err: fmt.Sprintf(
+							"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+						}
+					}
+
+					URIs = append(URIs, uri)
+				}
+			}
+		} else {
+			uriAlt := data.apiData.Get("uri_sans").([]string)
+			if len(uriAlt) > 0 {
+				if len(data.role.AllowedURISANs) == 0 {
+					return errutil.UserError{Err: fmt.Sprintf(
+						"URI Subject Alternative Names are not allowed in this role, but were provided via the API"),
+					}
+				}
+
+				for _, uri := range uriAlt {
+					valid := false
+					for _, allowed := range data.role.AllowedURISANs {
+						validURI := glob.Glob(allowed, uri)
+						if validURI {
+							valid = true
+							break
+						}
+					}
+
+					if !valid {
+						return errutil.UserError{Err: fmt.Sprintf(
+							"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+						}
+					}
+
+					parsedURI, err := url.Parse(uri)
+					if parsedURI == nil || err != nil {
+						return errutil.UserError{Err: fmt.Sprintf(
+							"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
+						}
+					}
+
+					URIs = append(URIs, parsedURI)
 				}
 			}
 		}
@@ -953,6 +1017,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		DNSNames:                      dnsNames,
 		EmailAddresses:                emailAddresses,
 		IPAddresses:                   ipAddresses,
+		URIs:                          URIs,
 		OtherSANs:                     otherSANs,
 		KeyType:                       data.role.KeyType,
 		KeyBits:                       data.role.KeyBits,
@@ -1073,6 +1138,7 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		DNSNames:       data.params.DNSNames,
 		EmailAddresses: data.params.EmailAddresses,
 		IPAddresses:    data.params.IPAddresses,
+		URIs:           data.params.URIs,
 	}
 
 	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {

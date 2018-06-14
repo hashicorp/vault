@@ -17,6 +17,7 @@ import (
 	"math/big"
 	mathrand "math/rand"
 	"net"
+	"net/url"
 	"os"
 	"reflect"
 	"strconv"
@@ -3344,6 +3345,118 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	t.Logf("certificate 2 to check:\n%s", certStr)
 }
 
+func TestBackend_URI_SANs(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("root", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+		"allowed_domains":    []string{"foobar.com", "zipzap.com"},
+		"allow_bare_domains": true,
+		"allow_subdomains":   true,
+		"allow_ip_sans":      true,
+		"allowed_uri_sans":   []string{"http://someuri/abc", "spiffe://host.com/*"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// First test some bad stuff that shouldn't work
+	_, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		"uri_sans":    "http://www.mydomain.com/zxf",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Test valid single entry
+	_, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		"uri_sans":    "http://someuri/abc",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test globed entry
+	_, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		"uri_sans":    "spiffe://host.com/something",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test multiple entries
+	resp, err := client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		"uri_sans":    "spiffe://host.com/something,http://someuri/abc",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	certStr := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(certStr))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	URI0, _ := url.Parse("spiffe://host.com/something")
+	URI1, _ := url.Parse("http://someuri/abc")
+
+	if len(cert.URIs) != 2 {
+		t.Fatalf("expected 2 valid URIs SANs %v", cert.URIs)
+	}
+
+	if cert.URIs[0].String() != URI0.String() || cert.URIs[1].String() != URI1.String() {
+		t.Fatalf(
+			"expected URIs SANs %v to equal provided values spiffe://host.com/something, http://someuri/abc",
+			cert.URIs)
+	}
+}
 func setCerts() {
 	cak, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
