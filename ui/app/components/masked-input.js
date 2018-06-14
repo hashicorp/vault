@@ -39,13 +39,13 @@ export default Ember.Component.extend({
 	displayOnly: false,
 	onKeyDown(){},
 	onChange(){},
-	updateValue(e){
-		this.set('value', e.target.value);
-		this.onChange();
-	},
 	actions: {
 		toggleMask(){
 			this.toggleProperty('isMasked');
-		}
+		},
+		updateValue(e){
+			this.set('value', e.target.value);
+			this.onChange();
+		},
 	}
 });

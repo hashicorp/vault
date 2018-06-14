@@ -10,7 +10,7 @@
     onfocus={{action (mut isFocused) true}}
     onblur={{action (mut isFocused) false}}
     onkeydown={{action onKeyDown}}
-    onchange={{action updateValue}}
+    onchange={{action "updateValue"}}
     value={{readonly displayValue}}
     data-test-textarea
     />
