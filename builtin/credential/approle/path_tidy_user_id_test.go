@@ -3,6 +3,7 @@ package approle
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -68,6 +69,9 @@ func TestAppRole_TidyDanglingAccessors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// It runs async so we give it a bit of time to run
+	time.Sleep(10 * time.Second)
 
 	accessorHashes, err = storage.List(context.Background(), "accessor/")
 	if err != nil {
