@@ -10,6 +10,8 @@ DEPRECATIONS/CHANGES:
 IMPROVEMENTS:
 
  * core: Report policies in token, identity, and full sets [GH-4747]
+ * secrets/ssh: Allow standard SSH command arguments to be used, without
+   requiring username@hostname syntax [GH-4710]
  * storage/consul: Add context support so that requests are cancelable
    [GH-4739]
 
