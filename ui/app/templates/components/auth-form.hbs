@@ -1,4 +1,4 @@
-<nav class="tabs sub-nav is-marginless">
+<nav class="tabs sub-nav is-marginless has-background-white-bis">
   <ul>
     {{#each (supported-auth-backends) as |backend|}}
       <li class="{{if (eq selectedAuthBackend.type backend.type) 'is-active' ''}}" data-test-auth-method>
@@ -46,7 +46,7 @@
       {{/unless}}
     </div>
   </div>
-  <div class="box is-marginless is-shadowless has-background-white-bis">
+  <div class="box is-marginless is-shadowless">
     <button data-test-auth-submit=true type="submit" disabled={{loading}} class="button is-primary {{if loading 'is-loading'}}" id="auth-submit">
       Sign In
     </button>

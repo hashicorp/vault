@@ -1,30 +1,22 @@
-{{#splash-page as |s|}}
-  {{#s.header}}
-    <div class="has-text-white">
+{{!-- {{i-con glyph="unlocked" size=20}} {{capitalize model.name}} is {{if model.unsealed 'unsealed' 'sealed'}} --}}
+<SplashPage as |Page|>
+  <Page.header>
+    <h1 class="title is-3">
       Sign in to Vault
-    </div>
-  {{/s.header}}
-  {{#s.content}}
-    <div class="message is-highlight is-marginless">
-      <div class="message-body is-shadowless">
-        <div class="columns is-multiline">
-          <div class="column is-narrow" data-test-cluster-status="true">
-            {{i-con glyph="unlocked" size=20}} {{capitalize model.name}} is {{if model.unsealed 'unsealed' 'sealed'}}
-          </div>
-        </div>
-      </div>
-    </div>
-    {{auth-form
-      cluster=model
-      redirectTo=redirectTo
-      selectedAuthType=with
-    }}
-  {{/s.content}}
-  {{#s.footer}}
+    </h1>
+  </Page.header>
+  <Page.content>
+    <AuthForm
+      @cluster={{model}}
+      @redirectTo={{redirectTo}}
+      @selectedAuthType={{with}}
+    />
+  </Page.content>
+  <Page.footer>
     <div class="has-short-padding">
       <p class="help has-text-grey-dark">
         Contact your administrator for login credentials
       </p>
     </div>
-  {{/s.footer}}
-{{/splash-page}}
+  </Page.footer>
+</SplashPage>

@@ -1,5 +1,5 @@
 .radial-progress {
-  transform: rotate(-90deg);
+  transform: rotate(-90deg) translateX(-20%);
 }
 .radial-progress circle {
   stroke: rgba($grey-light, 0.5);

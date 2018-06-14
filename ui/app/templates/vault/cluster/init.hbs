@@ -56,10 +56,10 @@
             @filename={{keyFilename}}
             @mime="application/json"
             @extension="json"
-            @class="link"
+            @class="button is-ghost"
             @stringify={{true}}
             >
-            <ICon @glyph="document" @size=20 /> Download Keys
+            <ICon @glyph="download" @size=20 /> Download Keys
           </DownloadButton>
         </div>
       </div>
@@ -90,7 +90,7 @@
               Key Shares
             </label>
             <div class="control">
-              {{input class="input" name="key-shares" type="number" step="1" min="1" pattern="[0-9]*" value=secret_shares}}
+              {{input class="input" autocomplete="off" name="key-shares" type="number" step="1" min="1" pattern="[0-9]*" value=secret_shares}}
             </div>
             <p class="help has-text-grey">
               The number of key shares to split the master key into
@@ -101,7 +101,7 @@
               Key Threshold
             </label>
             <div class="control">
-              {{input class="input" name="key-threshold" type="number" step="1" min="1" pattern="[0-9]*" value=secret_threshold}}
+              {{input class="input" autocomplete="off" name="key-threshold" type="number" step="1" min="1" pattern="[0-9]*" value=secret_threshold}}
             </div>
             <p class="help has-text-grey">
               The number of key shares required to reconstruct the master key
