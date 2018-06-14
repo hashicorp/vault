@@ -66,6 +66,12 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		return resp, nil
 	}
 
+	// Tests using framework will screw up the storage so make a locally
+	// scoped req to hold a reference
+	req = &logical.Request{
+		Storage: req.Storage,
+	}
+
 	go func() {
 		defer atomic.StoreUint32(b.tidyCASGuard, 0)
 
