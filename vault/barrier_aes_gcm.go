@@ -213,8 +213,9 @@ func (b *AESGCMBarrier) KeyLength() (int, int) {
 // is not expected to be able to perform any CRUD until it is unsealed.
 func (b *AESGCMBarrier) Sealed() (bool, error) {
 	b.l.RLock()
-	defer b.l.RUnlock()
-	return b.sealed, nil
+	sealed := b.sealed
+	b.l.RUnlock()
+	return sealed, nil
 }
 
 // VerifyMaster is used to check if the given key matches the master key
@@ -636,14 +637,16 @@ func (b *AESGCMBarrier) updateMasterKeyCommon(key []byte) (*Keyring, error) {
 func (b *AESGCMBarrier) Put(ctx context.Context, entry *Entry) error {
 	defer metrics.MeasureSince([]string{"barrier", "put"}, time.Now())
 	b.l.RLock()
-	defer b.l.RUnlock()
+
 	if b.sealed {
+		b.l.RUnlock()
 		return ErrBarrierSealed
 	}
 
 	term := b.keyring.ActiveTerm()
 	primary, err := b.aeadForTerm(term)
 	if err != nil {
+		b.l.RUnlock()
 		return err
 	}
 
@@ -652,29 +655,37 @@ func (b *AESGCMBarrier) Put(ctx context.Context, entry *Entry) error {
 		Value:    b.encrypt(entry.Key, term, primary, entry.Value),
 		SealWrap: entry.SealWrap,
 	}
-	return b.backend.Put(ctx, pe)
+
+	err = b.backend.Put(ctx, pe)
+
+	b.l.RUnlock()
+	return err
 }
 
 // Get is used to fetch an entry
 func (b *AESGCMBarrier) Get(ctx context.Context, key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"barrier", "get"}, time.Now())
 	b.l.RLock()
-	defer b.l.RUnlock()
+
 	if b.sealed {
+		b.l.RUnlock()
 		return nil, ErrBarrierSealed
 	}
 
 	// Read the key from the backend
 	pe, err := b.backend.Get(ctx, key)
 	if err != nil {
+		b.l.RUnlock()
 		return nil, err
 	} else if pe == nil {
+		b.l.RUnlock()
 		return nil, nil
 	}
 
 	// Decrypt the ciphertext
 	plain, err := b.decryptKeyring(key, pe.Value)
 	if err != nil {
+		b.l.RUnlock()
 		return nil, errwrap.Wrapf("decryption failed: {{err}}", err)
 	}
 
@@ -684,6 +695,8 @@ func (b *AESGCMBarrier) Get(ctx context.Context, key string) (*Entry, error) {
 		Value:    plain,
 		SealWrap: pe.SealWrap,
 	}
+
+	b.l.RUnlock()
 	return entry, nil
 }
 
@@ -691,12 +704,16 @@ func (b *AESGCMBarrier) Get(ctx context.Context, key string) (*Entry, error) {
 func (b *AESGCMBarrier) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"barrier", "delete"}, time.Now())
 	b.l.RLock()
-	defer b.l.RUnlock()
+
 	if b.sealed {
+		b.l.RUnlock()
 		return ErrBarrierSealed
 	}
 
-	return b.backend.Delete(ctx, key)
+	err := b.backend.Delete(ctx, key)
+
+	b.l.RUnlock()
+	return err
 }
 
 // List is used ot list all the keys under a given
@@ -704,12 +721,16 @@ func (b *AESGCMBarrier) Delete(ctx context.Context, key string) error {
 func (b *AESGCMBarrier) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"barrier", "list"}, time.Now())
 	b.l.RLock()
-	defer b.l.RUnlock()
+
 	if b.sealed {
+		b.l.RUnlock()
 		return nil, ErrBarrierSealed
 	}
 
-	return b.backend.List(ctx, prefix)
+	keys, err := b.backend.List(ctx, prefix)
+
+	b.l.RUnlock()
+	return keys, err
 }
 
 // aeadForTerm returns the AES-GCM AEAD for the given term
@@ -852,34 +873,42 @@ func (b *AESGCMBarrier) decryptKeyring(path string, cipher []byte) ([]byte, erro
 // Encrypt is used to encrypt in-memory for the BarrierEncryptor interface
 func (b *AESGCMBarrier) Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
 	b.l.RLock()
-	defer b.l.RUnlock()
+
 	if b.sealed {
+		b.l.RUnlock()
 		return nil, ErrBarrierSealed
 	}
 
 	term := b.keyring.ActiveTerm()
 	primary, err := b.aeadForTerm(term)
 	if err != nil {
+		b.l.RUnlock()
 		return nil, err
 	}
 
 	ciphertext := b.encrypt(key, term, primary, plaintext)
+
+	b.l.RUnlock()
 	return ciphertext, nil
 }
 
 // Decrypt is used to decrypt in-memory for the BarrierEncryptor interface
 func (b *AESGCMBarrier) Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error) {
 	b.l.RLock()
-	defer b.l.RUnlock()
+
 	if b.sealed {
+		b.l.RUnlock()
 		return nil, ErrBarrierSealed
 	}
 
 	// Decrypt the ciphertext
 	plain, err := b.decryptKeyring(key, ciphertext)
 	if err != nil {
+		b.l.RUnlock()
 		return nil, errwrap.Wrapf("decryption failed: {{err}}", err)
 	}
+
+	b.l.RUnlock()
 	return plain, nil
 }
 
