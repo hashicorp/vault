@@ -254,17 +254,16 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 // HandleRequest is used to handle a new incoming request
 func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
 	c.stateLock.RLock()
-
+	defer c.stateLock.RUnlock()
 	if c.sealed {
-		c.stateLock.RUnlock()
 		return nil, consts.ErrSealed
 	}
 	if c.standby {
-		c.stateLock.RUnlock()
 		return nil, consts.ErrStandby
 	}
 
 	ctx, cancel := context.WithCancel(c.activeContext)
+	defer cancel()
 
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
@@ -275,8 +274,6 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	if strings.HasSuffix(req.Path, "/") &&
 		(req.Operation == logical.UpdateOperation ||
 			req.Operation == logical.CreateOperation) {
-		cancel()
-		c.stateLock.RUnlock()
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
@@ -343,8 +340,6 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 			err := jsonutil.DecodeJSON(resp.Data[logical.HTTPRawBody].([]byte), httpResp)
 			if err != nil {
 				c.logger.Error("failed to unmarshal wrapped HTTP response for audit logging", "error", err)
-				cancel()
-				c.stateLock.RUnlock()
 				return nil, ErrInternalError
 			}
 
@@ -380,13 +375,9 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	}
 	if auditErr := c.auditBroker.LogResponse(ctx, logInput, c.auditedHeaders); auditErr != nil {
 		c.logger.Error("failed to audit response", "request_path", req.Path, "error", auditErr)
-		cancel()
-		c.stateLock.RUnlock()
 		return nil, ErrInternalError
 	}
 
-	cancel()
-	c.stateLock.RUnlock()
 	return
 }
 
