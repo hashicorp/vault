@@ -288,7 +288,13 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 	if policiesRaw != nil {
 		t.Fatalf("expected nil policies, got %#v", policiesRaw)
 	}
-	if !strutil.EquivalentSlices(policies, []string{"default"}) {
+	if !strutil.EquivalentSlices(resp.Auth.TokenPolicies, []string{"default"}) {
+		t.Fatalf("policy mismatch, got token policies: %v", resp.Auth.TokenPolicies)
+	}
+	if len(resp.Auth.IdentityPolicies) > 0 {
+		t.Fatalf("policy mismatch, got identity policies: %v", resp.Auth.IdentityPolicies)
+	}
+	if !strutil.EquivalentSlices(resp.Auth.Policies, []string{"default"}) {
 		t.Fatalf("policy mismatch, got policies: %v", resp.Auth.Policies)
 	}
 
@@ -318,6 +324,12 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 	}
 	if resp.Auth.ClientToken == "" {
 		t.Fatal("expected a client token")
+	}
+	if !strutil.EquivalentSlices(resp.Auth.TokenPolicies, []string{"default"}) {
+		t.Fatalf("policy mismatch, got token policies: %v", resp.Auth.TokenPolicies)
+	}
+	if !strutil.EquivalentSlices(resp.Auth.IdentityPolicies, []string{"foo", "bar"}) {
+		t.Fatalf("policy mismatch, got identity policies: %v", resp.Auth.IdentityPolicies)
 	}
 	if !strutil.EquivalentSlices(resp.Auth.Policies, []string{"default", "foo", "bar"}) {
 		t.Fatalf("policy mismatch, got policies: %v", resp.Auth.Policies)
