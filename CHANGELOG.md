@@ -1,5 +1,12 @@
 ## 0.10.3 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * In the audit log and in client responses, policies are now split into three
+   parameters: policies that came only from tokens, policies that came only
+   from Identity, and the combined set. Any previous location of policies via
+   the API now contains the full, combined set.
+
 IMPROVEMENTS:
 
  * storage/consul: Add context support so that requests are cancelable
