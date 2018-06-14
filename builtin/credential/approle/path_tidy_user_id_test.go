@@ -64,7 +64,7 @@ func TestAppRole_TidyDanglingAccessors(t *testing.T) {
 		t.Fatalf("bad: len(accessorHashes); expect 3, got %d", len(accessorHashes))
 	}
 
-	err = b.tidySecretID(context.Background(), storage)
+	_, err = b.tidySecretID(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
