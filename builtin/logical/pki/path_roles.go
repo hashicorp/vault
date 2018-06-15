@@ -171,6 +171,16 @@ To remove all key usages from being set, set
 this value to an empty list.`,
 			},
 
+			"ext_key_usage": &framework.FieldSchema{
+				Type:    framework.TypeCommaStringSlice,
+				Default: []string{},
+				Description: `A comma-separated string or list of extended key usages. Valid values can be found at
+https://golang.org/pkg/crypto/x509/#ExtKeyUsage
+-- simply drop the "ExtKeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
+			},
+
 			"ext_key_usage_oids": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or list of extended key usage oids.`,
@@ -461,6 +471,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
 		KeyUsage:                      data.Get("key_usage").([]string),
+		ExtKeyUsage:                   data.Get("ext_key_usage").([]string),
 		ExtKeyUsageOIDs:               data.Get("ext_key_usage_oids").([]string),
 		OU:                            data.Get("ou").([]string),
 		Organization:                  data.Get("organization").([]string),
@@ -565,6 +576,41 @@ func parseKeyUsages(input []string) int {
 	return int(parsedKeyUsages)
 }
 
+func parseExtKeyUsages(input []string) certExtKeyUsage {
+	var parsedKeyUsages certExtKeyUsage
+
+	for _, k := range input {
+		switch strings.ToLower(strings.TrimSpace(k)) {
+		case "any":
+			parsedKeyUsages |= anyExtKeyUsage
+		case "serverauth":
+			parsedKeyUsages |= serverAuthExtKeyUsage
+		case "clientauth":
+			parsedKeyUsages |= clientAuthExtKeyUsage
+		case "codesigning":
+			parsedKeyUsages |= codeSigningExtKeyUsage
+		case "emailprotection":
+			parsedKeyUsages |= emailProtectionExtKeyUsage
+		case "ipsecendsystem":
+			parsedKeyUsages |= ipsecEndSystemExtKeyUsage
+		case "ipsectunnel":
+			parsedKeyUsages |= ipsecTunnelExtKeyUsage
+		case "ipsecuser":
+			parsedKeyUsages |= ipsecUserExtKeyUsage
+		case "timestamping":
+			parsedKeyUsages |= timeStampingExtKeyUsage
+		case "ocspsigning":
+			parsedKeyUsages |= ocspSigningExtKeyUsage
+		case "microsoftservergatedcrypto":
+			parsedKeyUsages |= microsoftServerGatedCryptoExtKeyUsage
+		case "netscapeservergatedcrypto":
+			parsedKeyUsages |= netscapeServerGatedCryptoExtKeyUsage
+		}
+	}
+
+	return parsedKeyUsages
+}
+
 type roleEntry struct {
 	LeaseMax                      string        `json:"lease_max"`
 	Lease                         string        `json:"lease"`
@@ -595,6 +641,7 @@ type roleEntry struct {
 	MaxPathLength                 *int          `json:",omitempty" mapstructure:"max_path_length"`
 	KeyUsageOld                   string        `json:"key_usage,omitempty"`
 	KeyUsage                      []string      `json:"key_usage_list" mapstructure:"key_usage"`
+	ExtKeyUsage                   []string      `json:"extended_key_usage_list" mapstructure:"extended_key_usage"`
 	OUOld                         string        `json:"ou,omitempty"`
 	OU                            []string      `json:"ou_list" mapstructure:"ou"`
 	OrganizationOld               string        `json:"organization,omitempty"`
@@ -639,6 +686,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"key_type":                           r.KeyType,
 		"key_bits":                           r.KeyBits,
 		"key_usage":                          r.KeyUsage,
+		"ext_key_usage":                      r.ExtKeyUsage,
 		"ext_key_usage_oids":                 r.ExtKeyUsageOIDs,
 		"ou":                                 r.OU,
 		"organization":                       r.Organization,

@@ -796,6 +796,12 @@ request is denied.
   drop the `KeyUsage` part of the value. Values are not case-sensitive. To 
   specify no key usage constraints, set this to an empty list.
 
+- `ext_key_usage` `(list: [])` –
+  Specifies the allowed extended key usage constraint on issued certificates. Valid 
+  values can be found at https://golang.org/pkg/crypto/x509/#ExtKeyUsage - simply 
+  drop the `ExtKeyUsage` part of the value. Values are not case-sensitive. To 
+  specify no key usage constraints, set this to an empty list.
+
 - `use_csr_common_name` `(bool: true)` – When used with the CSR signing
   endpoint, the common name in the CSR will be used instead of taken from the
   JSON data. This does `not` include any requested SANs in the CSR; use
@@ -1428,6 +1434,18 @@ have access.**
   `no_store`.
 
 - `csr` `(string: <required>)` – Specifies the PEM-encoded CSR.
+
+- `key_usage` `(list: ["DigitalSignature", "KeyAgreement", "KeyEncipherment"])` –
+  Specifies the allowed key usage constraint on issued certificates. Valid 
+  values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage - simply 
+  drop the `KeyUsage` part of the value. Values are not case-sensitive. To 
+  specify no key usage constraints, set this to an empty list.
+
+- `ext_key_usage` `(list: [])` –
+  Specifies the allowed extended key usage constraint on issued certificates. Valid 
+  values can be found at https://golang.org/pkg/crypto/x509/#ExtKeyUsage - simply 
+  drop the `ExtKeyUsage` part of the value. Values are not case-sensitive. To 
+  specify no key usage constraints, set this to an empty list.
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live. Cannot be greater
   than the engine's `max_ttl` value. If not provided, the engine's `ttl` value
