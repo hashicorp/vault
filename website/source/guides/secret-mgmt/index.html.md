@@ -31,8 +31,12 @@ demonstrates the secret versioning capabilities provided by KV Secret Engine v2.
 
 - [Database Root Credential Rotation](/guides/secret-mgmt/db-root-rotation.html)
 guide walks you through the steps to enable the rotation of the database root
-credentials for those managed by Vault. 
+credentials for those managed by Vault.
 
 - [Cubbyhole Response Wrapping](/guides/secret-mgmt/cubbyhole.html) guide
 demonstrates a secure method to distribute secrets by wrapping them where only
 the expecting client can unwrap.
+
+- [Vault PKI Secrets Engine](/guides/secret-mgmt/pki-engine.html) guide walks
+you through the use of the PKI secrets engine to generate dynamic X.509
+certificates.
