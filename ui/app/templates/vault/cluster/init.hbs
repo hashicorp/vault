@@ -17,7 +17,8 @@
             Vault does not store the master key. Without at least <strong class="has-text-danger">{{secret_threshold}}</strong> keys, your Vault will remain permanently sealed.
           </p>
         </div>
-        <div class="message is-list is-highlight">
+        <div class="message is-list is-highlight has-copy-button" tabindex="-1">
+          <HoverCopyButton @alwaysShow=true @copyValue={{keyData.root_token}} />
           <div class="message-body">
             <h4 class="title is-7 is-marginless">
               Initial Root Token
@@ -26,7 +27,8 @@
           </div>
         </div>
         {{#each (if keyData.keys_base64 keyData.keys_base64 keyData.keys) as |key index| }}
-          <div class="message is-list">
+          <div class="message is-list has-copy-button" tabindex="-1">
+            <HoverCopyButton @copyValue={{key}} />
             <div class="message-body">
               <h4 class="title is-7 is-marginless">
                 Key {{add index 1}}

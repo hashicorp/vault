@@ -2,12 +2,16 @@
   position: relative;
   color: $grey;
 }
-.hover-copy-button {
-  opacity: 0;
-  pointer-events: none;
+.hover-copy-button,
+.hover-copy-button-static {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
+}
+
+.hover-copy-button {
+  opacity: 0;
+  pointer-events: none;
   transition: opacity $speed ease-in-out;
   will-change: opacity;
 }

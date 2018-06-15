@@ -5,7 +5,7 @@
     </HomeLink>
   </Nav.home>
   <Nav.items>
-    {{#if version.isEnterprise}}
+    {{#if (and activeCluster.unsealed version.isEnterprise)}}
      <div class="navbar-item">
        <StatusMenu @type="replication-status" @itemTag="p" />
       </div>

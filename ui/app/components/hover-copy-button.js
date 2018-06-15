@@ -1,8 +1,9 @@
 import Ember from 'ember';
 
 export default Ember.Component.extend({
-  classNames: 'hover-copy-button',
+  classNameBindings: 'alwaysShow:hover-copy-button-static:hover-copy-button',
   copyValue: null,
+  alwaysShow: false,
 
   tooltipText: 'Copy',
 });
