@@ -1,6 +1,6 @@
 {{#if (and (eq replicationMode 'dr') (eq model.replicationAttrs.modeForUrl 'secondary'))}}
   <div class="box is-marginless is-shadowless">
-    <p class="has-text-grey">
+    <p>
       This cluster is currently running as a DR Replication Secondary.
       Promote the cluster to a primary by entering DR Operation Token.
     </p>
@@ -19,12 +19,12 @@
       <div class="control">
         {{input class="input" id="primary_cluster_addr" name="primary_cluster_addr" value=primary_cluster_addr}}
       </div>
-      <p class="help has-text-grey">
+      <p class="help">
         Overrides the cluster address that the primary gives to secondary nodes.
       </p>
     </div>
   </div>
-  <div class="box is-marginless is-shadowless has-background-white-bis">
+  <div class="box is-marginless is-shadowless">
    <div class="field">
     <div class="control">
       {{#confirm-action

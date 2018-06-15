@@ -8,7 +8,7 @@
         <code class="is-word-break">{{encoded_token}}</code>
       </div>
     </div>
-    <p class="has-text-grey">
+    <p>
       If you entered a One Time Password, you can use the Vault CLI to decode the Token:
     </p>
     <div class="message is-list">
@@ -30,7 +30,7 @@
       Copy CLI command
     {{/copy-button}}
   </div>
-  <div class="box is-marginless is-shadowless has-background-white-bis">
+  <div class="box is-marginless is-shadowless">
     {{#copy-button
       clipboardText=encoded_token
       class="button is-primary"
@@ -47,7 +47,7 @@
   <form {{action 'startGenerate' (hash otp=otp pgp_key=pgp_key) on="submit"}} id="shamir">
     <div class="box is-marginless is-shadowless">
       {{message-error errors=errors}}
-      <p class="has-text-grey">
+      <p>
       Updating or promoting this cluster requires an operation token. Let's generate one by 
       inputting the master key shares. To get started you'll need to generate a One Time Password
       (OTP) or a PGP Key to encrypt the resultant operation token.
@@ -107,7 +107,7 @@
         </div>
       {{/if}}
     </div>
-    <div class="box is-marginless is-shadowless has-background-white-bis">
+    <div class="box is-marginless is-shadowless">
       <button type="submit" disabled={{and (not pgp_key) (not otp)}} class="button is-primary">
         Generate Operation Token
       </button>

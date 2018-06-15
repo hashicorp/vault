@@ -1,6 +1,6 @@
 {{#if (and (eq replicationMode 'dr') (eq model.replicationAttrs.modeForUrl 'secondary'))}}
   <div class="box is-marginless is-shadowless">
-    <p class="has-text-grey">
+    <p>
       Change a secondary cluster’s assigned primary cluster using a secondary
       activation token. This does not wipe all data in the cluster.
     </p>
@@ -27,7 +27,7 @@
       <div class="control">
         {{input class="input" value=primary_api_addr id="primary_api_addr" name="primary_api_addr"}}
       </div>
-      <p class="help has-text-grey">
+      <p class="help">
        Set this to the API address (normal Vault address) to override the
        value embedded in the token.
       </p>
@@ -39,7 +39,7 @@
       <div class="control">
         {{input value=ca_file id="ca_file" name="ca_file" class="input"}}
       </div>
-      <p class="help has-text-grey">
+      <p class="help">
         Specifies the path to a CA root file (PEM format) that the secondary can use when unwrapping the token from the primary.
       </p>
     </div>
@@ -50,13 +50,13 @@
       <div class="control">
         {{input value=ca_path id="ca_path" name="ca_file" class="input"}}
       </div>
-      <p class="help has-text-grey">
+      <p class="help">
         Specifies the path to a CA root directory containing PEM-format files that the secondary can use when unwrapping the token from the primary.
       </p>
     </div>
   </div>
 
-  <div class="box is-marginless is-shadowless has-background-white-bis">
+  <div class="box is-marginless is-shadowless">
     <div class="field">
       <div class="control">
         {{#confirm-action

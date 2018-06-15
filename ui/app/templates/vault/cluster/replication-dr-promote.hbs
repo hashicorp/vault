@@ -1,11 +1,11 @@
-{{#splash-page as |s|}}
-  {{#s.header}}
-    <div class="box has-short-padding is-shadowless has-text-white has-background-transparent">
-       Disaster Recovery Secondary is enabled
-    </div>
-  {{/s.header}}
-  {{#s.content}}
-    <nav class="tabs sub-nav is-marginless">
+<SplashPage as |Page|>
+  <Page.header>
+    <h1 class="title is-4">
+     Disaster Recovery Secondary is&nbsp;enabled
+    </h1>
+  </Page.header>
+  <Page.content>
+    <nav class="tabs sub-nav is-marginless has-background-white-bis">
       <ul>
         <li class="{{if (eq action '') 'is-active'}}">
           {{#link-to 'vault.cluster.replication-dr-promote' (query-params action='')}}
@@ -25,39 +25,34 @@
       </ul>
     </nav>
     {{#if (eq action 'promote')}}
-      <div class="message is-warning is-shadowless is-marginless">
-        <div class="message-body">
-          <div class="columns is-mobile is-variable is-1">
-            <div class="column is-narrow">
-              {{i-con glyph="alert-circled" size=28 excludeIconClass=true}}
-            </div>
-            <div class="column">
-              <p class="is-size-8">
-              <strong>
-                <em>Caution</em>: Vault replication is not designed for active-active usage and enabling two performance primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected.
-              </strong>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-      {{replication-actions replicationMode="dr" selectedAction="promote" model=model}}
+      <MessageInPage data-test-cluster-status @type="warning" @class="unseal-warning">
+        <em>Caution</em>: Vault replication is not designed for active-active usage and enabling two performance primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected.
+      </MessageInPage>
+      <ReplicationActions
+        @replicationMode="dr"
+        @selectedAction="promote"
+        @model={{model}}
+        />
     {{/if}}
     {{#if (eq action 'update')}}
-      {{replication-actions replicationMode="dr" selectedAction="updatePrimary" model=model}}
+      <ReplicationActions
+        @replicationMode="dr"
+        @selectedAction="updatePrimary"
+        @model={{model}}
+        />
     {{/if}}
     {{#unless action}}
-      {{#shamir-flow
-        action="generate-dr-operation-token"
-        buttonText="Promote cluster"
-        fetchOnInit=true
-        generateAction=true
-      }}
-        <p class="has-text-grey">
+      <ShamirFlow
+        @action="generate-dr-operation-token"
+        @buttonText="Promote cluster"
+        @fetchOnInit=true
+        @generateAction=true
+      >
+        <p>
           Generate an Operation Token by entering a portion of the master key.
           Once all portions are entered, the generated operation token may be used to manage your Seondary Disaster Recovery cluster.
         </p>
-      {{/shamir-flow}}
+      </ShamirFlow>
     {{/unless}}
-  {{/s.content}}
-{{/splash-page}}
+  </Page.content>
+</SplashPage>
