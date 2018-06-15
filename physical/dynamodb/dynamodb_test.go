@@ -6,10 +6,10 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
@@ -106,8 +106,8 @@ func TestDynamoDBBackend(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
-		if !reflect.DeepEqual(inputEntry, entry) {
-			t.Fatalf("exp: %#v, act: %#v", inputEntry, entry)
+		if diff := deep.Equal(inputEntry, entry); diff != nil {
+			t.Fatal(diff)
 		}
 	})
 }
