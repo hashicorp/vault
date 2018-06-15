@@ -50,6 +50,7 @@ test('it can save options', function(assert) {
     cli.enter();
     indexPage.visit({ path });
     andThen(() => {
+      // aws has 4 tabs, the others will have 'Configuration' and 'Method Options' tabs
       let numTabs = type === 'aws' ? 4 : 2;
       assert.equal(page.tabs.length, numTabs, 'shows correct number of tabs');
     });
