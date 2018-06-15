@@ -1,8 +1,8 @@
-<ToolTip @renderInPlace={{true}} @onOpen={{action "wat"}} as |T|>
-  <T.trigger data-test-tool-tip-trigger>
+<ToolTip @renderInPlace={{true}} @onClose={{action (mut tooltipText) "Copy"}} as |T|>
+  <T.trigger data-test-tool-tip-trigger tabindex=false>
     <CopyButton
       @clipboardText={{copyValue}}
-      @class="button is-compact is-transparent"
+      @class="copy-button button is-compact is-transparent"
       @success={{action (mut tooltipText) "Copied!"}}
     >
       <ICon @glyph="copy" aria-hidden="true" @size=16 />

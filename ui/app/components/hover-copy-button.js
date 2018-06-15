@@ -5,9 +5,4 @@ export default Ember.Component.extend({
   copyValue: null,
 
   tooltipText: 'Copy',
-  actions: {
-    wat() {
-      debugger;
-    },
-  },
 });

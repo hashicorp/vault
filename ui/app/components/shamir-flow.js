@@ -10,6 +10,8 @@ const DEFAULTS = {
   threshold: null,
   progress: null,
   otp: null,
+  pgp_key: null,
+  haveSavedPGPKey: false,
   started: false,
   generateWithPGP: false,
   pgpKeyFile: { value: '' },
@@ -77,8 +79,13 @@ export default Component.extend(DEFAULTS, {
     }
   },
 
-  generateStep: computed('generateWithPGP', 'otp', 'pgp_key', function() {
-    let { generateWithPGP, otp, pgp_key } = this.getProperties('generateWithPGP', 'otp', 'pgp_key');
+  generateStep: computed('generateWithPGP', 'haveSavedPGPKey', 'otp', 'pgp_key', function() {
+    let { generateWithPGP, otp, pgp_key, haveSavedPGPKey } = this.getProperties(
+      'generateWithPGP',
+      'otp',
+      'pgp_key',
+      'haveSavedPGPKey'
+    );
     if (!generateWithPGP && !pgp_key && !otp) {
       return 'chooseMethod';
     }
@@ -86,7 +93,7 @@ export default Component.extend(DEFAULTS, {
       return 'beginGenerationWithOTP';
     }
     if (generateWithPGP) {
-      if (pgp_key) {
+      if (pgp_key && haveSavedPGPKey) {
         return 'beginGenerationWithPGP';
       } else {
         return 'providePGPKey';
@@ -159,6 +166,11 @@ export default Component.extend(DEFAULTS, {
 
     clearToken() {
       this.set('encoded_token', null);
+    },
+    savePGPKey() {
+      if (this.get('pgp_key')) {
+        this.set('haveSavedPGPKey', true);
+      }
     },
   },
 });
