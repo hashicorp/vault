@@ -19,7 +19,7 @@ type KVRollbackCommand struct {
 }
 
 func (c *KVRollbackCommand) Synopsis() string {
-	return "Sets or updates data in the KV store without overwriting."
+	return "Rolls back to a previous version of data"
 }
 
 func (c *KVRollbackCommand) Help() string {
