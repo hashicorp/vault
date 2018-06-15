@@ -81,6 +81,7 @@
     "ember-fetch": "^3.4.3",
     "ember-href-to": "^1.13.0",
     "ember-load-initializers": "^1.0.0",
+    "ember-maybe-in-element": "^0.1.3",
     "ember-moment": "7.0.0-beta.5",
     "ember-qunit-assert-helpers": "^0.1.3",
     "ember-radio-button": "^1.1.1",
