@@ -285,7 +285,7 @@ func prepareDynamoDBTestContainer(t *testing.T) (cleanup func(), retAddress stri
 		t.Fatalf("Failed to connect to docker: %s", err)
 	}
 
-	resource, err := pool.Run("deangiberson/aws-dynamodb-local", "latest", []string{})
+	resource, err := pool.Run("cnadiminti/dynamodb-local", "latest", []string{})
 	if err != nil {
 		t.Fatalf("Could not start local DynamoDB: %s", err)
 	}
