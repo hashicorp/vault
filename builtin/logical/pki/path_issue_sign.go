@@ -137,6 +137,7 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		KeyType:              "any",
 		UseCSRCommonName:     true,
 		UseCSRSANs:           true,
+		AllowedURISANs:       []string{"*"},
 		AllowedSerialNumbers: []string{"*"},
 		GenerateLease:        new(bool),
 	}

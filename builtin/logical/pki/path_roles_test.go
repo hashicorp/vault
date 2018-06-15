@@ -426,6 +426,40 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 	}
 }
 
+func TestPki_RoleAllowedURISANs(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"allowed_uri_sans": []string{"http://foobar.com", "spiffe://*"},
+		"ttl":              "5h",
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/testrole",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	allowedURISANs := resp.Data["allowed_uri_sans"].([]string)
+	if len(allowedURISANs) != 2 {
+		t.Fatalf("allowed_uri_sans should have 2 values")
+	}
+}
+
 func TestPki_RolePkixFields(t *testing.T) {
 	var resp *logical.Response
 	var err error
