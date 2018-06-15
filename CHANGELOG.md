@@ -7,9 +7,15 @@ DEPRECATIONS/CHANGES:
    from Identity, and the combined set. Any previous location of policies via
    the API now contains the full, combined set.
 
+FEATURES:
+
+ * URI SANs in PKI: You can now configure URI Subject Alternate Names in the
+   `pki` backend. Roles can limit which SANs are allowed via globbing.
+
 IMPROVEMENTS:
 
  * core: Report policies in token, identity, and full sets [GH-4747]
+ * secrets/pki: Add URI SANs support [GH-4675]
  * secrets/ssh: Allow standard SSH command arguments to be used, without
    requiring username@hostname syntax [GH-4710]
  * storage/consul: Add context support so that requests are cancelable
