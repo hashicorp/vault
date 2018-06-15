@@ -941,23 +941,6 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		}
 	}
 
-	// Build up usages
-	var extUsage certExtKeyUsage
-	{
-		if data.role.ServerFlag {
-			extUsage |= serverAuthExtKeyUsage
-		}
-		if data.role.ClientFlag {
-			extUsage |= clientAuthExtKeyUsage
-		}
-		if data.role.CodeSigningFlag {
-			extUsage |= codeSigningExtKeyUsage
-		}
-		if data.role.EmailProtectionFlag {
-			extUsage |= emailProtectionExtKeyUsage
-		}
-	}
-
 	data.params = &creationParameters{
 		Subject:                       subject,
 		DNSNames:                      dnsNames,
@@ -968,7 +951,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		KeyBits:                       data.role.KeyBits,
 		NotAfter:                      notAfter,
 		KeyUsage:                      x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
-		ExtKeyUsage:                   extUsage | parseExtKeyUsages(data.role.ExtKeyUsage),
+		ExtKeyUsage:                   parseExtKeyUsages(data.role),
 		ExtKeyUsageOIDs:               data.role.ExtKeyUsageOIDs,
 		PolicyIdentifiers:             data.role.PolicyIdentifiers,
 		BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,

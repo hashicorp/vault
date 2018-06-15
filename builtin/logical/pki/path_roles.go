@@ -576,10 +576,26 @@ func parseKeyUsages(input []string) int {
 	return int(parsedKeyUsages)
 }
 
-func parseExtKeyUsages(input []string) certExtKeyUsage {
+func parseExtKeyUsages(role *roleEntry) certExtKeyUsage {
 	var parsedKeyUsages certExtKeyUsage
 
-	for _, k := range input {
+	if role.ServerFlag {
+		parsedKeyUsages |= serverAuthExtKeyUsage
+	}
+
+	if role.ClientFlag {
+		parsedKeyUsages |= clientAuthExtKeyUsage
+	}
+
+	if role.CodeSigningFlag {
+		parsedKeyUsages |= codeSigningExtKeyUsage
+	}
+
+	if role.EmailProtectionFlag {
+		parsedKeyUsages |= emailProtectionExtKeyUsage
+	}
+
+	for _, k := range role.ExtKeyUsage {
 		switch strings.ToLower(strings.TrimSpace(k)) {
 		case "any":
 			parsedKeyUsages |= anyExtKeyUsage
