@@ -34,14 +34,10 @@ moduleForComponent('shamir-flow', 'Integration | Component | shamir flow', {
 });
 
 test('it renders', function(assert) {
-  // Set any properties with this.set('myProperty', 'value');
-  // Handle any actions with this.on('myAction', function(val) { ... });
-
   this.render(hbs`{{shamir-flow formText="like whoa"}}`);
 
   assert.equal(this.$('form p').text().trim(), 'like whoa', 'renders formText inline');
 
-  // Template block usage:
   this.render(hbs`
     {{#shamir-flow formText="like whoa"}}
       <p>whoa again</p>
@@ -55,11 +51,7 @@ test('it renders', function(assert) {
     {{shamir-flow progress=1 threshold=5}}
   `);
 
-  assert.equal(
-    this.$('.shamir-progress .progress').val(),
-    1 / 5 * 100,
-    'renders progress bar with the appropriate value'
-  );
+  assert.ok(this.$('.shamir-progress').text().includes('1/5 keys provided'), 'displays textual progress');
 
   this.set('errors', ['first error', 'this is fine']);
   this.render(hbs`
@@ -74,10 +66,9 @@ test('it sends data to the passed action', function(assert) {
     {{shamir-flow key=key action='foo' thresholdPath='required'}}
   `);
   this.$('[data-test-shamir-submit]').click();
-  assert.equal(
-    this.$('.shamir-progress .progress').val(),
-    percent(),
-    'renders progress bar with correct percent value'
+  assert.ok(
+    this.$('.shamir-progress').text().includes(`${response.progress}/${response.required} keys provided`),
+    'displays the correct progress'
   );
 });
 
@@ -103,9 +94,8 @@ test('it fetches progress on init when fetchOnInit is true', function(assert) {
   this.render(hbs`
     {{shamir-flow action='foo' fetchOnInit=true}}
   `);
-  assert.equal(
-    this.$('.shamir-progress .progress').val(),
-    percent(),
-    'renders progress bar with correct percent value'
+  assert.ok(
+    this.$('.shamir-progress').text().includes(`${response.progress}/${response.required} keys provided`),
+    'displays the correct progress'
   );
 });
