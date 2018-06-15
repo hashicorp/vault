@@ -12,17 +12,28 @@
         {{input class="input" id="dr_operation_token" name="dr_operation_token" value=dr_operation_token}}
       </div>
     </div>
-    <div class="field">
-      <label for="primary_cluster_addr" class="is-label">
-        Primary cluster address <em class="is-optional">(optional)</em>
-      </label>
-      <div class="control">
-        {{input class="input" id="primary_cluster_addr" name="primary_cluster_addr" value=primary_cluster_addr}}
+    <ToggleButton
+      @class="is-block"
+      @toggleAttr="showOptions"
+      @toggleTarget={{this}}
+      @openLabel="Hide Options"
+      @closedLabel="Options"
+      />
+    {{#if showOptions}}
+      <div class="box is-marginless">
+        <div class="field">
+          <label for="primary_cluster_addr" class="is-label">
+            Primary cluster address <em class="is-optional">(optional)</em>
+          </label>
+          <div class="control">
+            {{input class="input" id="primary_cluster_addr" name="primary_cluster_addr" value=primary_cluster_addr}}
+          </div>
+          <p class="help">
+            Overrides the cluster address that the primary gives to secondary nodes.
+          </p>
+        </div>
       </div>
-      <p class="help">
-        Overrides the cluster address that the primary gives to secondary nodes.
-      </p>
-    </div>
+    {{/if}}
   </div>
   <div class="box is-marginless is-shadowless">
    <div class="field">

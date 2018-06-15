@@ -9,17 +9,17 @@
       <ul>
         <li class="{{if (eq action '') 'is-active'}}">
           {{#link-to 'vault.cluster.replication-dr-promote' (query-params action='')}}
-            Operation Token
+            Operation token
+          {{/link-to}}
+        </li>
+        <li class="{{if (eq action 'update') 'is-active'}}">
+          {{#link-to 'vault.cluster.replication-dr-promote' (query-params action='update')}}
+            Update primary
           {{/link-to}}
         </li>
         <li class="{{if (eq action 'promote') 'is-active'}}">
           {{#link-to 'vault.cluster.replication-dr-promote' (query-params action='promote')}}
             Promote
-          {{/link-to}}
-        </li>
-        <li class="{{if (eq action 'update') 'is-active'}}">
-          {{#link-to 'vault.cluster.replication-dr-promote' (query-params action='update')}}
-            Update Primary
           {{/link-to}}
         </li>
       </ul>
