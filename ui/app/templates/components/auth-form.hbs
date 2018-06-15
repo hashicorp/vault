@@ -1,4 +1,4 @@
-<nav class="tabs sub-nav is-marginless has-background-white-bis">
+<nav class="tabs sub-nav is-marginless">
   <ul>
     {{#each (supported-auth-backends) as |backend|}}
       <li class="{{if (eq selectedAuthBackend.type backend.type) 'is-active' ''}}" data-test-auth-method>
