@@ -149,22 +149,6 @@ func (c *KVRollbackCommand) Run(args []string) int {
 			c.UI.Error(fmt.Sprintf("No metadata found at %s; rollback only works on existing data", path))
 			return 2
 		}
-
-		// Verify current data found
-		rawData, ok := secret.Data["data"]
-		if !ok || rawData == nil {
-			c.UI.Error(fmt.Sprintf("No data found at %s; rollback only works on existing data", path))
-			return 2
-		}
-		data, ok := rawData.(map[string]interface{})
-		if !ok {
-			c.UI.Error(fmt.Sprintf("Data found at %s is not the expected type (JSON object)", path))
-			return 2
-		}
-		if data == nil {
-			c.UI.Error(fmt.Sprintf("No data found at %s; rollback only works on existing data", path))
-			return 2
-		}
 	}
 
 	casVersion := meta["version"]
@@ -205,6 +189,17 @@ func (c *KVRollbackCommand) Run(args []string) int {
 			return 2
 		}
 
+		// Verify it hasn't been deleted
+		if meta["deletion_time"] != nil && meta["deletion_time"].(string) != "" {
+			c.UI.Error(fmt.Sprintf("Cannot roll back to a version that has been deleted"))
+			return 2
+		}
+
+		if meta["destroyed"] != nil && meta["destroyed"].(bool) {
+			c.UI.Error(fmt.Sprintf("Cannot roll back to a version that has been destroyed"))
+			return 2
+		}
+
 		// Verify old data found
 		rawData, ok := secret.Data["data"]
 		if !ok || rawData == nil {
@@ -218,16 +213,6 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		}
 		if data == nil {
 			c.UI.Error(fmt.Sprintf("No data found at %s; rollback only works on existing data", path))
-			return 2
-		}
-
-		if meta["deletion_time"] != nil && meta["deletion_time"].(string) != "" {
-			c.UI.Error(fmt.Sprintf("Cannot roll back to a version that has been deleted"))
-			return 2
-		}
-
-		if meta["destroyed"] != nil && meta["destroyed"].(bool) {
-			c.UI.Error(fmt.Sprintf("Cannot roll back to a version that has been destroyed"))
 			return 2
 		}
 	}
