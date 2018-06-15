@@ -31,8 +31,8 @@ A v2 `kv` secrets engine can be enabled by:
 $ vault secrets enable -version=2 kv
 ```
 
-Additionally, the v2 `kv` secrets engine is enabled by default at the
-path `secret/` in case of the "Dev" Server. It can be disabled, moved, or enabled multiple times at
+Additionally, when running a dev-mode server, the v2 `kv` secrets engine is enabled by default at the
+path `secret/` (for non-dev serers, it is currently v1). It can be disabled, moved, or enabled multiple times at
 different paths. Each instance of the KV secrets engine is isolated and unique.
 
 ## Upgrading from Version 1
