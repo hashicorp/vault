@@ -2,6 +2,6 @@
   {{yield}}
 </button>
 
-{{#-in-element modalContainer}}
+{{#maybe-in-element modalContainer true}}
   {{partial "partials/upgrade-overlay"}}
-{{/-in-element}}
+{{/maybe-in-element}}
