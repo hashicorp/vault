@@ -24,11 +24,11 @@
     padding: $size-11 0;
 
     button.link,
-    a {
+    a,
+    p {
       background: transparent;
       box-shadow: none;
       border: none;
-      color: $menu-item-color;
       display: block;
       height: auto;
       font-size: $size-7;
@@ -37,7 +37,11 @@
       text-align: left;
       text-decoration: none;
       width: 100%;
+    }
 
+    button.link,
+    a {
+      color: $menu-item-color;
       &:hover {
         background-color: $menu-item-hover-background-color;
         color: $menu-item-hover-color;

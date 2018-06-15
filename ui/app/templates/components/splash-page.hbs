@@ -5,6 +5,11 @@
     </HomeLink>
   </Nav.home>
   <Nav.items>
+    {{#if version.isEnterprise}}
+     <div class="navbar-item">
+       <StatusMenu @type="replication-status" @itemTag="p" />
+      </div>
+    {{/if}}
   </Nav.items>
 </NavHeader>
 <div class="splash-page-container section is-flex-v-centered-tablet is-flex-1 is-fullwidth">
