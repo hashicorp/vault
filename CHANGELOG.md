@@ -11,10 +11,14 @@ FEATURES:
 
  * URI SANs in PKI: You can now configure URI Subject Alternate Names in the
    `pki` backend. Roles can limit which SANs are allowed via globbing.
+ * `kv rollback` Command: You can now use `vault kv rollback` to roll a KVv2
+   path back to a previous non-deleted/non-destroyed version. The previous
+   version becomes the next/newest version for the path.
 
 IMPROVEMENTS:
 
  * core: Report policies in token, identity, and full sets [GH-4747]
+ * secrets/kv: Add `kv rollback` [GH-4774]
  * secrets/pki: Add URI SANs support [GH-4675]
  * secrets/ssh: Allow standard SSH command arguments to be used, without
    requiring username@hostname syntax [GH-4710]
