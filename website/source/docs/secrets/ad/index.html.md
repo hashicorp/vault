@@ -88,8 +88,10 @@ to generate passwords:
         userdn='dc=example,dc=com'
     ```
 
-    The `$USERNAME` and `$PASSWORD` given must be of a high enough access level that
-    they can be used for modifying passwords. Typically, this will be a domain admin.
+    The `$USERNAME` and `$PASSWORD` given must have access to modify passwords
+    for the given account. It is possible to delegate access to change
+    passwords for these accounts to the one Vault is in control of, and this is
+    usually the highest-security solution.
     
     If you'd like to do a quick, insecure evaluation, also set `insecure_tls` to true. However, this is NOT RECOMMENDED
     in a production environment. In production, we recommend `insecure_tls` is false (its default) and is used with a valid 
@@ -103,7 +105,7 @@ this role.
     $ vault write ad/roles/my-application \
         service_account_name="my-application@example.com"
     ```
-    
+
 4. Grant "my-application" access to its creds at `ad/creds/my-application` using an 
 auth method like [AppRole](https://www.vaultproject.io/api/auth/approle/index.html).
 
