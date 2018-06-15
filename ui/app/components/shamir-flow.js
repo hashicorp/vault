@@ -9,7 +9,6 @@ const DEFAULTS = {
   errors: [],
   threshold: null,
   progress: null,
-  otp: null,
   pgp_key: null,
   haveSavedPGPKey: false,
   started: false,
@@ -140,6 +139,8 @@ export default Component.extend(DEFAULTS, {
   actions: {
     reset() {
       this.reset();
+      this.set('encoded_token', null);
+      this.set('otp', null);
     },
 
     onSubmit(data) {
@@ -164,9 +165,6 @@ export default Component.extend(DEFAULTS, {
       this.set('pgpKeyFile', keyFile);
     },
 
-    clearToken() {
-      this.set('encoded_token', null);
-    },
     savePGPKey() {
       if (this.get('pgp_key')) {
         this.set('haveSavedPGPKey', true);

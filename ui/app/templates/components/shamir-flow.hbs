@@ -1,8 +1,9 @@
 {{#if encoded_token}}
   <div class="box is-marginless is-shadowless">
-    <div class="message is-list">
+    <div class="message is-list has-copy-button" tabindex="-1">
+      <HoverCopyButton @copyValue={{encoded_token}} />
       <div class="message-body">
-        <h4 class="title is-7 is-uppercase is-marginless">
+        <h4 class="title is-7 is-marginless">
           Encoded Operation Token
         </h4>
         <code class="is-word-break">{{encoded_token}}</code>
@@ -11,35 +12,23 @@
     <p>
       If you entered a One Time Password, you can use the Vault CLI to decode the Token:
     </p>
-    <div class="message is-list">
-      <div class="message-body">
-        <h4 class="title is-7 is-uppercase is-marginless">
-          DR Operation Token Command
-        </h4>
-        <code class="is-word-break">
-          vault operator generate-root -otp="[enter your otp here]" -decode="{{encoded_token}}"
-        </code>
-      </div>
+    <div class="message is-list has-copy-button" tabindex="-1">
+      {{#with (if otp
+        (concat 'vault operator generate-root -otp="' otp '" -decode="' encoded_token '"')
+        (concat 'vault operator generate-root -otp="<enter your otp here>" -decode="' encoded_token '"')
+      ) as |cmd|}}
+        <HoverCopyButton @copyValue={{cmd}} />
+        <div class="message-body">
+          <h4 class="title is-7 is-marginless">
+            DR Operation Token Command
+          </h4>
+          <code class="is-word-break">{{cmd}}</code>
+        </div>
+      {{/with}}
     </div>
-    {{#copy-button
-      clipboardText=(concat 'vault operator generate-root -otp="<enter your otp here>" -decode="' encoded_token '"')
-      class="button is-compact"
-      buttonType="button"
-      success=(action (set-flash-message 'CLI command copied!'))
-    }}
-      Copy CLI command
-    {{/copy-button}}
   </div>
   <div class="box is-marginless is-shadowless">
-    {{#copy-button
-      clipboardText=encoded_token
-      class="button is-primary"
-      buttonType="button"
-      success=(action (set-flash-message 'OTP copied!'))
-    }}
-      Copy Encoded Operation Token
-    {{/copy-button}}
-    <button type="button" class="button" {{action 'clearToken'}}>
+    <button type="button" class="button" {{action 'reset'}}>
       Clear Token
     </button>
   </div>
