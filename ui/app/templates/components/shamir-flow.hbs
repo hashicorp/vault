@@ -47,70 +47,93 @@
   <form {{action 'startGenerate' (hash otp=otp pgp_key=pgp_key) on="submit"}} id="shamir">
     <div class="box is-marginless is-shadowless">
       {{message-error errors=errors}}
-      <p>
-      Updating or promoting this cluster requires an operation token. Let's generate one by 
-      inputting the master key shares. To get started you'll need to generate a One Time Password
-      (OTP) or a PGP Key to encrypt the resultant operation token.
-      </p>
-      <div class="field box is-shadowless is-fullwidth is-marginless">
-        <div class="level">
-          <div class="level-left">
-            <div class="b-checkbox">
-              {{input type="checkbox"
-              id="generateWithPGP"
-              class="styled"
-              checked=generateWithPGP
-              }}
-              <label for="generateWithPGP" class="is-label">
-                PGP Encrypt Operation Token
-              </label>
-            </div>
+      {{#if (eq generateStep 'chooseMethod')}}
+        <p>
+        Updating or promoting this cluster requires an operation token. Let's generate one by 
+        inputting the master key shares. To get started you'll need to generate a One Time Password
+        (OTP) or supply a PGP Key to encrypt the resultant operation token.
+        </p>
+        <div class="box is-shadowless field is-grouped is-grouped-centered">
+          <div class="control">
+            <button type="button" class="button is-primary" {{action (mut generateWithPGP) true}}>
+              Supply PGP Key
+            </button>
           </div>
-          {{#unless generateWithPGP}}
-            <div class="level-right">
-              <div class="control">
-                <button type="button" class="button is-compact" {{action "generateOTP"}}>
-                  Generate OTP
-                </button>
-              </div>
-            </div>
-          {{/unless}}
-        </div>
-      </div>
-      {{#if generateWithPGP}}
-        {{pgp-file index='' key=pgpKeyFile onChange=(action 'setKey')}}
-      {{else}}
-        {{#if otp}}
-          <div class="message is-list">
-            <div class="message-body">
-              <h4 class="title is-7 is-uppercase is-marginless">
-                One Time Password
-              </h4>
-              <code class="is-word-break">{{otp}}</code>
-            </div>
+          <div class="control">
+            <span class="button is-white is-static">
+              or
+            </span>
           </div>
-        {{/if}}
-        <div class="field is-grouped">
-          {{#if otp}}
-            <div class="control">
-              {{#copy-button
-                clipboardText=otp
-                class="button is-compact"
-                buttonType="button"
-                success=(action (set-flash-message 'OTP copied!'))
-              }}
-                Copy OTP
-              {{/copy-button}}
-            </div>
-            <p class="has-text-grey help-text is-pulled-right">Make sure to save this value for later.</p>
-          {{/if}}
+          <div class="control">
+            <button type="button" class="button is-primary" {{action "generateOTP"}}>
+              Generate OTP
+            </button>
+          </div>
         </div>
       {{/if}}
-    </div>
-    <div class="box is-marginless is-shadowless">
-      <button type="submit" disabled={{and (not pgp_key) (not otp)}} class="button is-primary">
-        Generate Operation Token
-      </button>
+
+      {{#if (eq generateStep 'providePGPKey')}}
+        {{pgp-file index='' key=pgpKeyFile onChange=(action 'setKey')}}
+        <div class="box is-marginless is-shadowless">
+          <button type="button" class="button" {{action "reset"}}>
+            Back
+          </button>
+        </div>
+      {{/if}}
+      {{#if (eq generateStep 'beginGenerationWithPGP')}}
+        <div class="field is-grouped">
+          <div class="control">
+          <button type="button" class="button" {{action "reset"}}>
+            Back
+          </button>
+          </div>
+          <div class="control">
+          <button type="submit" disabled={{and (not pgp_key) (not otp)}} class="button is-primary">
+            Generate Operation Token
+          </button>
+          </div>
+        </div>
+      {{/if}}
+      {{#if (eq generateStep 'beginGenerationWithOTP')}}
+        <p>
+          Below is the generated OTP. This will be used to encrypt the generated Operation Token.
+          <em class="has-text-danger has-text-weight-semibold">
+            Make sure to save this, as you will need it later to decrypt the Operation Token.
+          </em>
+          Next we'll enter portions of the master key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
+        </p>
+        <div class="message is-list has-copy-button" tabindex="-1">
+          <HoverCopyButton @copyValue=otp />
+          <div class="message-body">
+            <h4 class="title is-7 is-uppercase is-marginless">
+              One Time Password
+            </h4>
+            <code class="is-word-break">{{otp}}</code>
+          </div>
+        </div>
+        <div class="control">
+          {{#copy-button
+            clipboardText=otp
+            class="button is-compact"
+            buttonType="button"
+            success=(action (set-flash-message 'OTP copied!'))
+          }}
+            Copy OTP
+          {{/copy-button}}
+        </div>
+        <div class="field is-grouped">
+          <div class="control">
+          <button type="button" class="button" {{action "reset"}}>
+            Back
+          </button>
+          </div>
+          <div class="control">
+          <button type="submit" disabled={{and (not pgp_key) (not otp)}} class="button is-primary">
+            Generate Operation Token
+          </button>
+          </div>
+        </div>
+      {{/if}}
     </div>
   </form>
 {{else}}

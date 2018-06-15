@@ -1,0 +1,16 @@
+<ToolTip @renderInPlace={{true}} @onOpen={{action "wat"}} as |T|>
+  <T.trigger data-test-tool-tip-trigger>
+    <CopyButton
+      @clipboardText={{copyValue}}
+      @class="button is-compact is-transparent"
+      @success={{action (mut tooltipText) "Copied!"}}
+    >
+      <ICon @glyph="copy" aria-hidden="true" @size=16 />
+    </CopyButton>
+  </T.trigger>
+  <T.content @class="tool-tip">
+    <div class="box">
+      {{tooltipText}}
+    </div>
+  </T.content>
+</ToolTip>

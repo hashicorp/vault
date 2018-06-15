@@ -9,6 +9,7 @@ const DEFAULTS = {
   errors: [],
   threshold: null,
   progress: null,
+  otp: null,
   started: false,
   generateWithPGP: false,
   pgpKeyFile: { value: '' },
@@ -32,7 +33,7 @@ export default Component.extend(DEFAULTS, {
     return this._super(...arguments);
   },
 
-  onShamirSuccess: _ => _,
+  onShamirSuccess() {},
   // can be overridden w/an attr
   isComplete(data) {
     return data.complete === true;
@@ -76,6 +77,23 @@ export default Component.extend(DEFAULTS, {
     }
   },
 
+  generateStep: computed('generateWithPGP', 'otp', 'pgp_key', function() {
+    let { generateWithPGP, otp, pgp_key } = this.getProperties('generateWithPGP', 'otp', 'pgp_key');
+    if (!generateWithPGP && !pgp_key && !otp) {
+      return 'chooseMethod';
+    }
+    if (otp) {
+      return 'beginGenerationWithOTP';
+    }
+    if (generateWithPGP) {
+      if (pgp_key) {
+        return 'beginGenerationWithPGP';
+      } else {
+        return 'providePGPKey';
+      }
+    }
+  }),
+
   extractData(data) {
     const isGenerate = this.get('generateAction');
     const hasStarted = this.get('started');
@@ -113,6 +131,10 @@ export default Component.extend(DEFAULTS, {
   },
 
   actions: {
+    reset() {
+      this.reset();
+    },
+
     onSubmit(data) {
       if (!data.key) {
         return;
