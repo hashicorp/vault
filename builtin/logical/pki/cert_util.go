@@ -1607,11 +1607,13 @@ func handleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
 	return nil
 }
 
+// Note: Taken from the Go source code since it's not public, and used in the
+// modified function below (which also uses these consts upstream)
 const (
 	nameTypeEmail = 1
 	nameTypeDNS   = 2
 	nameTypeURI   = 6
-	nameTypeIP    = 8
+	nameTypeIP    = 7
 )
 
 // Note: Taken from the Go source code since it's not public, plus changed to not marshal
