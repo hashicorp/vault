@@ -508,6 +508,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"kv rollback": func() (cli.Command, error) {
+			return &KVRollbackCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"kv get": func() (cli.Command, error) {
 			return &KVGetCommand{
 				BaseCommand: getBaseCommand(),

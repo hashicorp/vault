@@ -20,7 +20,7 @@ type KVPatchCommand struct {
 }
 
 func (c *KVPatchCommand) Synopsis() string {
-	return "Sets or updates data in the KV store without overwriting."
+	return "Sets or updates data in the KV store without overwriting"
 }
 
 func (c *KVPatchCommand) Help() string {
