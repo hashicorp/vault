@@ -8,11 +8,6 @@ let response = {
   complete: false,
 };
 
-let percent = () => {
-  const percent = response.progress / response.required * 100;
-  return percent.toFixed(4);
-};
-
 let adapter = {
   foo() {
     return Ember.RSVP.resolve(response);
