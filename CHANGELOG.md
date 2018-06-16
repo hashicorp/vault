@@ -17,6 +17,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * core: Add idle and initial header read/TLS handshake timeouts to connections
+   to ensure server resources are cleaned up [GH-4760]
  * core: Report policies in token, identity, and full sets [GH-4747]
  * secrets/kv: Add `kv rollback` [GH-4774]
  * secrets/pki: Add URI SANs support [GH-4675]
