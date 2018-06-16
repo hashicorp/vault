@@ -191,15 +191,17 @@ func (m *ExpirationManager) Tidy() error {
 
 	var tidyErrors *multierror.Error
 
+	logger := m.logger.Named("tidy")
+
 	if !atomic.CompareAndSwapInt32(m.tidyLock, 0, 1) {
-		m.logger.Warn("tidy operation on leases is already in progress")
-		return fmt.Errorf("tidy operation on leases is already in progress")
+		logger.Warn("tidy operation on leases is already in progress")
+		return nil
 	}
 
 	defer atomic.CompareAndSwapInt32(m.tidyLock, 1, 0)
 
-	m.logger.Info("beginning tidy operation on leases")
-	defer m.logger.Info("finished tidy operation on leases")
+	logger.Info("beginning tidy operation on leases")
+	defer logger.Info("finished tidy operation on leases")
 
 	// Create a cache to keep track of looked up tokens
 	tokenCache := make(map[string]bool)
@@ -208,7 +210,7 @@ func (m *ExpirationManager) Tidy() error {
 	tidyFunc := func(leaseID string) {
 		countLease++
 		if countLease%500 == 0 {
-			m.logger.Info("tidying leases", "progress", countLease)
+			logger.Info("tidying leases", "progress", countLease)
 		}
 
 		le, err := m.loadEntry(leaseID)
@@ -225,7 +227,7 @@ func (m *ExpirationManager) Tidy() error {
 		var isValid, ok bool
 		revokeLease := false
 		if le.ClientToken == "" {
-			m.logger.Debug("revoking lease which has an empty token", "lease_id", leaseID)
+			logger.Debug("revoking lease which has an empty token", "lease_id", leaseID)
 			revokeLease = true
 			deletedCountEmptyToken++
 			goto REVOKE_CHECK
@@ -249,7 +251,7 @@ func (m *ExpirationManager) Tidy() error {
 			}
 
 			if te == nil {
-				m.logger.Debug("revoking lease which holds an invalid token", "lease_id", leaseID)
+				logger.Debug("revoking lease which holds an invalid token", "lease_id", leaseID)
 				revokeLease = true
 				deletedCountInvalidToken++
 				tokenCache[le.ClientToken] = false
@@ -262,7 +264,7 @@ func (m *ExpirationManager) Tidy() error {
 				return
 			}
 
-			m.logger.Debug("revoking lease which contains an invalid token", "lease_id", leaseID)
+			logger.Debug("revoking lease which contains an invalid token", "lease_id", leaseID)
 			revokeLease = true
 			deletedCountInvalidToken++
 			goto REVOKE_CHECK
@@ -285,10 +287,10 @@ func (m *ExpirationManager) Tidy() error {
 		return err
 	}
 
-	m.logger.Info("number of leases scanned", "count", countLease)
-	m.logger.Info("number of leases which had empty tokens", "count", deletedCountEmptyToken)
-	m.logger.Info("number of leases which had invalid tokens", "count", deletedCountInvalidToken)
-	m.logger.Info("number of leases successfully revoked", "count", revokedCount)
+	logger.Info("number of leases scanned", "count", countLease)
+	logger.Info("number of leases which had empty tokens", "count", deletedCountEmptyToken)
+	logger.Info("number of leases which had invalid tokens", "count", deletedCountInvalidToken)
+	logger.Info("number of leases successfully revoked", "count", revokedCount)
 
 	return tidyErrors.ErrorOrNil()
 }
