@@ -1,4 +1,3 @@
-{{!-- {{i-con glyph="unlocked" size=20}} {{capitalize model.name}} is {{if model.unsealed 'unsealed' 'sealed'}} --}}
 <SplashPage as |Page|>
   <Page.header>
     <h1 class="title is-3">
@@ -7,7 +6,8 @@
   </Page.header>
   <Page.content>
     <AuthForm
-      @cluster={{model}}
+      @cluster={{model.cluster}}
+      @methods={{model.methods}}
       @redirectTo={{redirectTo}}
       @selectedAuthType={{with}}
     />

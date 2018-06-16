@@ -13,7 +13,22 @@ export default ApplicationAdapter.extend({
     return 'mounts/auth';
   },
 
-  findAll() {
+  findAll(store, type, sinceToken, snapshotRecordArray) {
+    let isUnauthenticated = Ember.get(snapshotRecordArray || {}, 'adapterOptions.unauthenticated');
+    if (isUnauthenticated) {
+      let url = `/${this.urlPrefix()}/internal/ui/mounts`;
+      return this.ajax(url, 'GET', {
+        unauthenticated: true,
+      })
+        .then(result => {
+          return {
+            data: result.data.auth,
+          };
+        })
+        .catch(e => {
+          return [];
+        });
+    }
     return this.ajax(this.url(), 'GET').catch(e => {
       if (e instanceof DS.AdapterError) {
         Ember.set(e, 'policyPath', 'sys/auth');
