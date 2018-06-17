@@ -51,6 +51,7 @@ import (
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
+	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
 	physAzure "github.com/hashicorp/vault/physical/azure"
 	physCassandra "github.com/hashicorp/vault/physical/cassandra"
 	physCockroachDB "github.com/hashicorp/vault/physical/cockroachdb"
@@ -137,6 +138,7 @@ var (
 	}
 
 	physicalBackends = map[string]physical.Factory{
+		"alicloudoss":            physAliCloudOSS.NewAliCloudOSSBackend,
 		"azure":                  physAzure.NewAzureBackend,
 		"cassandra":              physCassandra.NewCassandraBackend,
 		"cockroachdb":            physCockroachDB.NewCockroachDBBackend,
