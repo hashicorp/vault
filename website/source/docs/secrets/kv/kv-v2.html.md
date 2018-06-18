@@ -31,14 +31,17 @@ A v2 `kv` secrets engine can be enabled by:
 $ vault secrets enable -version=2 kv
 ```
 
-Additionally, the v2 `kv` secrets engine is enabled by default at the
-path `secret/`. It can be disabled, moved, or enabled multiple times at
+Additionally, when running a dev-mode server, the v2 `kv` secrets engine is enabled by default at the
+path `secret/` (for non-dev serers, it is currently v1). It can be disabled, moved, or enabled multiple times at
 different paths. Each instance of the KV secrets engine is isolated and unique.
 
 ## Upgrading from Version 1
 
-An existing version 1 kv can be easily upgraded to a version 2 KV store with the
-CLI command:
+An existing version 1 kv store can be upgraded to a version 2 kv store via the CLI or API, as shown below. This will start an upgrade process to upgrade the existing key/value data to a versioned format. The mount will be inaccessible during this process. This process could take a long time, so plan accordingly.  
+
+Once upgraded to version 2, the former paths at which the data was accessible will no longer suffice. You will need to adjust user policies to add access to the version 2 paths as detailed in the [ACL Rules section below](/docs/secrets/kv/kv-v2.html#acl-rules). Similarly, users/applications will need to update the paths at which they interact with the kv data once it has been upgraded to version 2.
+
+An existing version 1 kv can be upgraded to a version 2 KV store with the CLI command:
 
 ```
 $ vault kv enable-versioning secret/
@@ -61,10 +64,6 @@ $ curl \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/mounts/secret/tune
 ```
-
-This will start an upgrade process to upgrade the existing key/value data to
-a versioned format. The mount will be inaccessible during this process. This
-process could take a long time, so plan accordingly.  
 
 ## ACL Rules
 

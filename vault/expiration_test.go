@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"reflect"
@@ -38,6 +39,14 @@ func TestExpiration_Tidy(t *testing.T) {
 	var err error
 
 	exp := mockExpiration(t)
+
+	// We use this later for tidy testing where we need to check the output
+	logOut := new(bytes.Buffer)
+	logger := log.New(&log.LoggerOptions{
+		Output: logOut,
+	})
+	exp.logger = logger
+
 	if err := exp.Restore(nil); err != nil {
 		t.Fatal(err)
 	}
@@ -212,9 +221,11 @@ func TestExpiration_Tidy(t *testing.T) {
 		}
 	}
 
-	if !(err1 != nil && err1.Error() == "tidy operation on leases is already in progress") &&
-		!(err2 != nil && err2.Error() == "tidy operation on leases is already in progress") {
-		t.Fatalf("expected at least one of err1 or err2 to be set; err1: %#v\n err2:%#v\n", err1, err2)
+	if err1 != nil || err2 != nil {
+		t.Fatalf("got an error: err1: %v; err2: %v", err1, err2)
+	}
+	if !strings.Contains(logOut.String(), "tidy operation on leases is already in progress") {
+		t.Fatalf("expected to see a warning saying operation in progress, output is %s", logOut.String())
 	}
 
 	root, err := exp.tokenStore.rootToken(context.Background())
@@ -736,7 +747,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 	}
 
 	// Should nuke all the keys
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		ID: "foobarbaz",
 	}
 	if err := exp.RevokeByToken(te); err != nil {
@@ -823,7 +834,7 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 	}
 
 	// Should nuke all the keys
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		ID: "foobarbaz",
 	}
 	if err := exp.RevokeByToken(te); err != nil {
@@ -899,7 +910,7 @@ func TestExpiration_RenewToken(t *testing.T) {
 
 func TestExpiration_RenewToken_period(t *testing.T) {
 	exp := mockExpiration(t)
-	root := &TokenEntry{
+	root := &logical.TokenEntry{
 		Policies:     []string{"root"},
 		Path:         "auth/token/root",
 		DisplayName:  "root",

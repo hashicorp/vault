@@ -88,8 +88,10 @@ to generate passwords:
         userdn='dc=example,dc=com'
     ```
 
-    The `$USERNAME` and `$PASSWORD` given must be of a high enough access level that
-    they can be used for modifying passwords. Typically, this will be a domain admin.
+    The `$USERNAME` and `$PASSWORD` given must have access to modify passwords
+    for the given account. It is possible to delegate access to change
+    passwords for these accounts to the one Vault is in control of, and this is
+    usually the highest-security solution.
     
     If you'd like to do a quick, insecure evaluation, also set `insecure_tls` to true. However, this is NOT RECOMMENDED
     in a production environment. In production, we recommend `insecure_tls` is false (its default) and is used with a valid 
@@ -103,7 +105,7 @@ this role.
     $ vault write ad/roles/my-application \
         service_account_name="my-application@example.com"
     ```
-    
+
 4. Grant "my-application" access to its creds at `ad/creds/my-application` using an 
 auth method like [AppRole](https://www.vaultproject.io/api/auth/approle/index.html).
 
@@ -111,38 +113,34 @@ auth method like [AppRole](https://www.vaultproject.io/api/auth/approle/index.ht
 
 ### What if someone directly rotates an Active Directory password that Vault is managing?
 
-If an administrator at your company rotates a password that Vault is managing, the next time an application asks _Vault_ 
-for that password, Vault won't know it. 
+If an administrator at your company rotates a password that Vault is managing,
+the next time an application asks _Vault_ for that password, Vault won't know
+it. 
 
-To maintain that application's up-time, Vault will need to return to a state of knowing the password. Vault will generate 
-a new password, update it, and return it to the application(s) asking for it. This all occurs automatically, without human
-intervention.
+To maintain that application's up-time, Vault will need to return to a state of
+knowing the password. Vault will generate a new password, update it, and return
+it to the application(s) asking for it. This all occurs automatically, without
+human intervention.
 
-Thus, we wouldn't recommend that administrators directly rotate the passwords for accounts that Vault is managing. This
-may lead to behavior the administrator wouldn't expect, like finding very quickly afterwards that their new password
-has already been changed. 
+Thus, we wouldn't recommend that administrators directly rotate the passwords
+for accounts that Vault is managing. This may lead to behavior the
+administrator wouldn't expect, like finding very quickly afterwards that their
+new password has already been changed. 
 
-The password `ttl` on a role can be updated at any time to ensure that the responsibility of updating passwords can be 
-left to Vault, rather than requiring manual administrator updates.
-
-### How does this feature work with Managed Service Accounts?
-
-Managed Service Accounts are a feature where, in some situations, Active Directory can be set up to rotate passwords for you.
-Vault can be used alongside Managed Service Accounts, but on separate accounts.
-
-If Vault were set up to rotate a Managed Service Account's password, there would effectively be _two_ entities rotating
-passwords for that account. This would create a strange situation where the password might be rotated by Active Directory,
-and then Vault would also be forced to rotate the password in order to know and return it again.
-
-We're not aware of any use case for this setup and would advise against it. Please use one _or_ the other as best fits
-your needs.
-
-### How does this feature work with Group Managed Service Accounts?
-
-Group Managed Service Accounts are a successor to Managed Service Accounts. Please see their discussion above.
+The password `ttl` on a role can be updated at any time to ensure that the
+responsibility of updating passwords can be left to Vault, rather than
+requiring manual administrator updates.
 
 ### Why does Vault return the last password in addition to the current one?
 
-Active Directory promises _eventual consistency_, which means that new passwords may not be propagated to all instances
-immediately. To deal with this, Vault returns the current password with the last password if it's known. That way, if a new
-password isn't fully operational, the last password can also be used.
+Active Directory promises _eventual consistency_, which means that new
+passwords may not be propagated to all instances immediately. To deal with
+this, Vault returns the current password with the last password if it's known.
+That way, if a new password isn't fully operational, the last password can also
+be used.
+
+## API
+
+The Active Directory secrets engine has a full HTTP API. Please see the
+[Active Directory secrets engine API](/api/secret/ad/index.html) for more
+details.

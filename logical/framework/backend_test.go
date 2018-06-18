@@ -203,9 +203,9 @@ func TestBackendHandleRequest_renewAuth(t *testing.T) {
 }
 
 func TestBackendHandleRequest_renewAuthCallback(t *testing.T) {
-	var called uint32
+	called := new(uint32)
 	callback := func(context.Context, *logical.Request, *FieldData) (*logical.Response, error) {
-		atomic.AddUint32(&called, 1)
+		atomic.AddUint32(called, 1)
 		return nil, nil
 	}
 
@@ -217,14 +217,14 @@ func TestBackendHandleRequest_renewAuthCallback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if v := atomic.LoadUint32(&called); v != 1 {
+	if v := atomic.LoadUint32(called); v != 1 {
 		t.Fatalf("bad: %#v", v)
 	}
 }
 func TestBackendHandleRequest_renew(t *testing.T) {
-	var called uint32
+	called := new(uint32)
 	callback := func(context.Context, *logical.Request, *FieldData) (*logical.Response, error) {
-		atomic.AddUint32(&called, 1)
+		atomic.AddUint32(called, 1)
 		return nil, nil
 	}
 
@@ -240,15 +240,15 @@ func TestBackendHandleRequest_renew(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if v := atomic.LoadUint32(&called); v != 1 {
+	if v := atomic.LoadUint32(called); v != 1 {
 		t.Fatalf("bad: %#v", v)
 	}
 }
 
 func TestBackendHandleRequest_revoke(t *testing.T) {
-	var called uint32
+	called := new(uint32)
 	callback := func(context.Context, *logical.Request, *FieldData) (*logical.Response, error) {
-		atomic.AddUint32(&called, 1)
+		atomic.AddUint32(called, 1)
 		return nil, nil
 	}
 
@@ -264,16 +264,16 @@ func TestBackendHandleRequest_revoke(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if v := atomic.LoadUint32(&called); v != 1 {
+	if v := atomic.LoadUint32(called); v != 1 {
 		t.Fatalf("bad: %#v", v)
 	}
 }
 
 func TestBackendHandleRequest_rollback(t *testing.T) {
-	var called uint32
+	called := new(uint32)
 	callback := func(_ context.Context, req *logical.Request, kind string, data interface{}) error {
 		if data == "foo" {
-			atomic.AddUint32(&called, 1)
+			atomic.AddUint32(called, 1)
 		}
 		return nil
 	}
@@ -298,16 +298,16 @@ func TestBackendHandleRequest_rollback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if v := atomic.LoadUint32(&called); v != 1 {
+	if v := atomic.LoadUint32(called); v != 1 {
 		t.Fatalf("bad: %#v", v)
 	}
 }
 
 func TestBackendHandleRequest_rollbackMinAge(t *testing.T) {
-	var called uint32
+	called := new(uint32)
 	callback := func(_ context.Context, req *logical.Request, kind string, data interface{}) error {
 		if data == "foo" {
-			atomic.AddUint32(&called, 1)
+			atomic.AddUint32(called, 1)
 		}
 		return nil
 	}
@@ -330,7 +330,7 @@ func TestBackendHandleRequest_rollbackMinAge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if v := atomic.LoadUint32(&called); v != 0 {
+	if v := atomic.LoadUint32(called); v != 0 {
 		t.Fatalf("bad: %#v", v)
 	}
 }

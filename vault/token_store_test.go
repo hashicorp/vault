@@ -108,7 +108,7 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 	}
 
 	// Test the default case to ensure there are no regressions
-	ent := &TokenEntry{
+	ent := &logical.TokenEntry{
 		DisplayName:    "test-display-name",
 		Path:           "test",
 		Policies:       []string{"dev", "ops"},
@@ -152,7 +152,7 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 	}
 
 	// Fill in the deprecated fields and read out from proper fields
-	ent = &TokenEntry{
+	ent = &logical.TokenEntry{
 		Path:                     "test",
 		Policies:                 []string{"dev", "ops"},
 		DisplayNameDeprecated:    "test-display-name",
@@ -196,7 +196,7 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 	}
 
 	// Check if NumUses picks up a lower value
-	ent = &TokenEntry{
+	ent = &logical.TokenEntry{
 		Path:              "test",
 		NumUses:           5,
 		NumUsesDeprecated: 10,
@@ -229,7 +229,7 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 
 	// Switch the values from deprecated and proper field and check if the
 	// lower value is still getting picked up
-	ent = &TokenEntry{
+	ent = &logical.TokenEntry{
 		Path:              "test",
 		NumUses:           10,
 		NumUsesDeprecated: 5,
@@ -301,7 +301,7 @@ func testMakeTokenViaRequest(t testing.TB, ts *TokenStore, req *logical.Request)
 	return resp
 }
 
-func testMakeTokenDirectly(t testing.TB, ts *TokenStore, te *TokenEntry) {
+func testMakeTokenDirectly(t testing.TB, ts *TokenStore, te *logical.TokenEntry) {
 	if err := ts.create(context.Background(), te); err != nil {
 		t.Fatal(err)
 	}
@@ -346,7 +346,7 @@ func TestTokenStore_AccessorIndex(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	ent := &TokenEntry{
+	ent := &logical.TokenEntry{
 		Path:     "test",
 		Policies: []string{"dev", "ops"},
 		TTL:      time.Hour,
@@ -603,7 +603,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	ent := &TokenEntry{
+	ent := &logical.TokenEntry{
 		Path:     "test",
 		Policies: []string{"dev", "ops"},
 		TTL:      time.Hour,
@@ -642,7 +642,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	ent := &TokenEntry{
+	ent := &logical.TokenEntry{
 		ID:       "foobarbaz",
 		Path:     "test",
 		Policies: []string{"dev", "ops"},
@@ -685,7 +685,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
+	ent := &logical.TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -733,7 +733,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 
 	// Reset expiration manager to restore mode
 	ts.expiration.restoreModeLock.Lock()
-	atomic.StoreInt32(&ts.expiration.restoreMode, 1)
+	atomic.StoreInt32(ts.expiration.restoreMode, 1)
 	ts.expiration.restoreLocks = locksutil.CreateLocks()
 	ts.expiration.restoreModeLock.Unlock()
 
@@ -778,7 +778,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 	}
 
 	// Create a restricted token
-	ent = &TokenEntry{
+	ent = &logical.TokenEntry{
 		Path:     "test",
 		Policies: []string{"dev", "ops"},
 		NumUses:  2,
@@ -835,7 +835,7 @@ func TestTokenStore_Revoke(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
+	ent := &logical.TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -871,7 +871,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
+	ent := &logical.TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -920,14 +920,14 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	ent := &TokenEntry{
+	ent := &logical.TokenEntry{
 		Path:     "test",
 		Policies: []string{"dev", "ops"},
 		TTL:      time.Hour,
 	}
 	testMakeTokenDirectly(t, ts, ent)
 
-	ent2 := &TokenEntry{
+	ent2 := &logical.TokenEntry{
 		Parent: ent.ID,
 		TTL:    time.Hour,
 	}
@@ -1006,24 +1006,24 @@ func BenchmarkTokenStore_RevokeTree(b *testing.B) {
 
 // Builds a TokenTree of a specified depth, so that
 // we may run revoke tests on it.
-func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *TokenEntry, children []*TokenEntry) {
-	root = &TokenEntry{
+func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *logical.TokenEntry, children []*logical.TokenEntry) {
+	root = &logical.TokenEntry{
 		TTL: time.Hour,
 	}
 	testMakeTokenDirectly(t, ts, root)
 
-	frontier := []*TokenEntry{root}
+	frontier := []*logical.TokenEntry{root}
 	current := uint64(0)
 	for current < depth {
-		next := make([]*TokenEntry, 0, 2*len(frontier))
+		next := make([]*logical.TokenEntry, 0, 2*len(frontier))
 		for _, node := range frontier {
-			left := &TokenEntry{
+			left := &logical.TokenEntry{
 				Parent: node.ID,
 				TTL:    time.Hour,
 			}
 			testMakeTokenDirectly(t, ts, left)
 
-			right := &TokenEntry{
+			right := &logical.TokenEntry{
 				Parent: node.ID,
 				TTL:    time.Hour,
 			}
@@ -1043,24 +1043,24 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
 
-	ent1 := &TokenEntry{
+	ent1 := &logical.TokenEntry{
 		TTL: time.Hour,
 	}
 	testMakeTokenDirectly(t, ts, ent1)
 
-	ent2 := &TokenEntry{
+	ent2 := &logical.TokenEntry{
 		Parent: ent1.ID,
 		TTL:    time.Hour,
 	}
 	testMakeTokenDirectly(t, ts, ent2)
 
-	ent3 := &TokenEntry{
+	ent3 := &logical.TokenEntry{
 		Parent: ent2.ID,
 		TTL:    time.Hour,
 	}
 	testMakeTokenDirectly(t, ts, ent3)
 
-	ent4 := &TokenEntry{
+	ent4 := &logical.TokenEntry{
 		Parent: ent2.ID,
 		TTL:    time.Hour,
 	}
@@ -1075,7 +1075,7 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 	}
 
 	lookup := []string{ent1.ID, ent2.ID, ent3.ID, ent4.ID}
-	var out *TokenEntry
+	var out *logical.TokenEntry
 	for _, id := range lookup {
 		var found bool
 		for i := 0; i < 10; i++ {
@@ -1135,7 +1135,7 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
-	expected := &TokenEntry{
+	expected := &logical.TokenEntry{
 		ID:          resp.Auth.ClientToken,
 		Accessor:    resp.Auth.Accessor,
 		Parent:      root,
@@ -1167,7 +1167,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
-	expected := &TokenEntry{
+	expected := &logical.TokenEntry{
 		ID:          resp.Auth.ClientToken,
 		Accessor:    resp.Auth.Accessor,
 		Parent:      root,
@@ -1234,7 +1234,7 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
-	expected := &TokenEntry{
+	expected := &logical.TokenEntry{
 		ID:          resp.Auth.ClientToken,
 		Accessor:    resp.Auth.Accessor,
 		Parent:      root,
@@ -3777,6 +3777,9 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
 
+	// Tidy runs async so give it time
+	time.Sleep(10 * time.Second)
+
 	// Tidy should have removed all the dangling accessor entries
 	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -3908,6 +3911,9 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
+
+	// Tidy runs async so give it time
+	time.Sleep(10 * time.Second)
 
 	// Tidy should have removed all the dangling accessor entries
 	resp, err = ts.HandleRequest(context.Background(), accessorListReq)

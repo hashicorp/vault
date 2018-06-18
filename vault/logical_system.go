@@ -1182,12 +1182,17 @@ func (b *SystemBackend) handleCORSDelete(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := b.Core.expiration.Tidy()
-	if err != nil {
-		b.Backend.Logger().Error("failed to tidy leases", "error", err)
-		return handleErrorNoReadOnlyForward(err)
-	}
-	return nil, err
+	go func() {
+		err := b.Core.expiration.Tidy()
+		if err != nil {
+			b.Backend.Logger().Error("failed to tidy leases", "error", err)
+			return
+		}
+	}()
+
+	resp := &logical.Response{}
+	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	return resp, nil
 }
 
 func (b *SystemBackend) invalidate(ctx context.Context, key string) {
@@ -3472,7 +3477,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 		var entity *identity.Entity
 		// Load the ACL policies so we can walk the prefix for this mount
-		acl, _, entity, err = b.Core.fetchACLTokenEntryAndEntity(req)
+		acl, _, entity, _, err = b.Core.fetchACLTokenEntryAndEntity(req)
 		if err != nil {
 			return nil, err
 		}
@@ -3553,7 +3558,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	resp.Data["path"] = me.Path
 
 	// Load the ACL policies so we can walk the prefix for this mount
-	acl, _, entity, err := b.Core.fetchACLTokenEntryAndEntity(req)
+	acl, _, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
 		return nil, err
 	}
@@ -3574,7 +3579,7 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		return nil, nil
 	}
 
-	acl, _, entity, err := b.Core.fetchACLTokenEntryAndEntity(req)
+	acl, _, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
 		return nil, err
 	}

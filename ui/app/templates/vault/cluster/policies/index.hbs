@@ -1,24 +1,22 @@
 {{#if (or (eq policyType "acl") (has-feature "Sentinel"))}}
-  <header class="page-header">
-    <div class="level">
-      <div class="level-left">
-        <h1 class="title is-3">
-          {{uppercase policyType}} Policies
-          {{#unless (eq policyType "acl")}}
-            <span class="tag" aria-label="Enforcement level: {{model.enforcementLevel}}">
-              Sentinel
-            </span>
-          {{/unless}}
-        </h1>
-      </div>
-      <div class="level-right">
-        <a href="{{href-to 'vault.cluster.policies.create'}}" class="button has-icon-right is-ghost is-compact" data-test-policy-create-link=true>
-          Create {{uppercase policyType}} policy
-          {{i-con glyph="chevron-right" size=11}}
-        </a>
-      </div>
-    </div>
-  </header>
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3">
+        {{uppercase policyType}} Policies
+        {{#unless (eq policyType "acl")}}
+          <span class="tag" aria-label="Enforcement level: {{model.enforcementLevel}}">
+            Sentinel
+          </span>
+        {{/unless}}
+      </h1>
+    </p.levelLeft>
+    <p.levelRight>
+      <a href="{{href-to 'vault.cluster.policies.create'}}" class="button has-icon-right is-ghost is-compact" data-test-policy-create-link=true>
+        Create {{uppercase policyType}} policy
+        {{i-con glyph="chevron-right" size=11}}
+      </a>
+    </p.levelRight>
+  </PageHeader>
   <div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
     <div class="level">
       <div class="level-left">

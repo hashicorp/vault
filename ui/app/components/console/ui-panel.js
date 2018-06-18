@@ -75,12 +75,12 @@ export default Ember.Component.extend({
     try {
       let resp = yield service[method].call(service, path, data, flags.wrapTTL);
       this.logAndOutput(command, logFromResponse(resp, path, method, flags));
-    } catch(error) {
+    } catch (error) {
       this.logAndOutput(command, logFromError(error, path, method));
     }
   }),
 
-  refreshRoute:task(function*() {
+  refreshRoute: task(function*() {
     let owner = getOwner(this);
     let routeName = this.get('router.currentRouteName');
     let route = owner.lookup(`route:${routeName}`);

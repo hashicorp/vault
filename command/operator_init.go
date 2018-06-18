@@ -408,7 +408,7 @@ func (c *OperatorInitCommand) consulAuto(client *api.Client, req *api.InitReques
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"Discovered %d uninitialized Vault servers with Consul service name "+
 				"%q. To initialize these Vaults, set any one of the following "+
-				"environment variables and run \"vault init\":",
+				"environment variables and run \"vault operator init\":",
 			len(uninitedVaults), c.flagConsulService)))
 		c.UI.Output("")
 
@@ -481,8 +481,8 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 		c.UI.Output("")
 		c.UI.Output(wrapAtLength(
 			"It is possible to generate new unseal keys, provided you have a quorum " +
-				"of existing unseal keys shares. See \"vault rekey\" for more " +
-				"information."))
+				"of existing unseal keys shares. See \"vault operator rekey\" for " +
+				"more information."))
 	} else {
 		c.UI.Output("")
 		c.UI.Output("Success! Vault is initialized")

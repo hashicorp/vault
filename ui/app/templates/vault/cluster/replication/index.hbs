@@ -1,13 +1,11 @@
 {{#if (eq model.mode 'unsupported')}}
-   <header class="page-header">
-    <div class="level">
-      <div class="level-left">
-        <h1 class="title is-3 has-text-grey">
-          Replication unsupported
-        </h1>
-      </div>
-    </div>
-  </header>
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3 has-text-grey">
+        Replication unsupported
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
   <div class="box is-sideless has-background-white-bis has-text-grey has-text-centered">
     <p>
       The current cluster configuration does not support replication.

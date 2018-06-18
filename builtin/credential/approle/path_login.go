@@ -84,7 +84,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		return logical.ErrorResponse("invalid role ID"), nil
 	}
 
-	var metadata map[string]string
+	metadata := make(map[string]string)
 	if role.BindSecretID {
 		secretID := strings.TrimSpace(data.Get("secret_id").(string))
 		if secretID == "" {
@@ -265,6 +265,12 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	tokenBoundCIDRs, err := parseutil.ParseAddrs(role.TokenBoundCIDRs)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	// For some reason, if metadata was set to nil while processing secret ID
+	// binding, ensure that it is initialized again to avoid a panic.
+	if metadata == nil {
+		metadata = make(map[string]string)
 	}
 
 	// Always include the role name, for later filtering

@@ -33,52 +33,72 @@ expiration, before it is removed from the backend storage.`,
 }
 
 // tidyBlacklistRoleTag is used to clean-up the entries in the role tag blacklist.
-func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, safety_buffer int) error {
-	grabbed := atomic.CompareAndSwapUint32(&b.tidyBlacklistCASGuard, 0, 1)
-	if grabbed {
-		defer atomic.StoreUint32(&b.tidyBlacklistCASGuard, 0)
-	} else {
-		return fmt.Errorf("roletag blacklist tidy operation already running")
+func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, safety_buffer int) (*logical.Response, error) {
+	if !atomic.CompareAndSwapUint32(b.tidyBlacklistCASGuard, 0, 1) {
+		resp := &logical.Response{}
+		resp.AddWarning("Tidy operation already in progress.")
+		return resp, nil
 	}
 
-	bufferDuration := time.Duration(safety_buffer) * time.Second
-	tags, err := s.List(ctx, "blacklist/roletag/")
-	if err != nil {
-		return err
-	}
+	go func() {
+		defer atomic.StoreUint32(b.tidyBlacklistCASGuard, 0)
 
-	for _, tag := range tags {
-		tagEntry, err := s.Get(ctx, "blacklist/roletag/"+tag)
-		if err != nil {
-			return errwrap.Wrapf(fmt.Sprintf("error fetching tag %q: {{err}}", tag), err)
-		}
+		// Don't cancel when the original client request goes away
+		ctx = context.Background()
 
-		if tagEntry == nil {
-			return fmt.Errorf("tag entry for tag %q is nil", tag)
-		}
+		logger := b.Logger().Named("bltidy")
 
-		if tagEntry.Value == nil || len(tagEntry.Value) == 0 {
-			return fmt.Errorf("found entry for tag %q but actual tag is empty", tag)
-		}
+		bufferDuration := time.Duration(safety_buffer) * time.Second
 
-		var result roleTagBlacklistEntry
-		if err := tagEntry.DecodeJSON(&result); err != nil {
-			return err
-		}
-
-		if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
-			if err := s.Delete(ctx, "blacklist/roletag"+tag); err != nil {
-				return errwrap.Wrapf(fmt.Sprintf("error deleting tag %q from storage: {{err}}", tag), err)
+		doTidy := func() error {
+			tags, err := s.List(ctx, "blacklist/roletag/")
+			if err != nil {
+				return err
 			}
-		}
-	}
 
-	return nil
+			for _, tag := range tags {
+				tagEntry, err := s.Get(ctx, "blacklist/roletag/"+tag)
+				if err != nil {
+					return errwrap.Wrapf(fmt.Sprintf("error fetching tag %q: {{err}}", tag), err)
+				}
+
+				if tagEntry == nil {
+					return fmt.Errorf("tag entry for tag %q is nil", tag)
+				}
+
+				if tagEntry.Value == nil || len(tagEntry.Value) == 0 {
+					return fmt.Errorf("found entry for tag %q but actual tag is empty", tag)
+				}
+
+				var result roleTagBlacklistEntry
+				if err := tagEntry.DecodeJSON(&result); err != nil {
+					return err
+				}
+
+				if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
+					if err := s.Delete(ctx, "blacklist/roletag"+tag); err != nil {
+						return errwrap.Wrapf(fmt.Sprintf("error deleting tag %q from storage: {{err}}", tag), err)
+					}
+				}
+			}
+
+			return nil
+		}
+
+		if err := doTidy(); err != nil {
+			logger.Error("error running blacklist tidy", "error", err)
+			return
+		}
+	}()
+
+	resp := &logical.Response{}
+	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	return resp, nil
 }
 
 // pathTidyRoletagBlacklistUpdate is used to clean-up the entries in the role tag blacklist.
 func (b *backend) pathTidyRoletagBlacklistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, b.tidyBlacklistRoleTag(ctx, req.Storage, data.Get("safety_buffer").(int))
+	return b.tidyBlacklistRoleTag(ctx, req.Storage, data.Get("safety_buffer").(int))
 }
 
 const pathTidyRoletagBlacklistSyn = `

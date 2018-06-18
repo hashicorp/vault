@@ -443,9 +443,9 @@ autoprefixer@^7.0.0:
     postcss "^6.0.17"
     postcss-value-parser "^3.2.3"
 
-autosize@3.0.17:
-  version "3.0.17"
-  resolved "https://registry.yarnpkg.com/autosize/-/autosize-3.0.17.tgz#f5a2cd35b96d864634cffc600c8c628c658d805b"
+autosize@^4.0.0:
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/autosize/-/autosize-4.0.2.tgz#073cfd07c8bf45da4b9fd153437f5bafbba1e4c9"
 
 aws-sign2@~0.6.0:
   version "0.6.0"
@@ -2722,6 +2722,13 @@ ember-ajax@^3.0.0:
   dependencies:
     ember-cli-babel "^6.0.0"
 
+ember-angle-bracket-invocation-polyfill@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/ember-angle-bracket-invocation-polyfill/-/ember-angle-bracket-invocation-polyfill-1.0.2.tgz#b8e43e91161c0da1b442c995e1f270b64c7d8d00"
+  dependencies:
+    ember-cli-babel "^6.6.0"
+    ember-cli-version-checker "^2.1.2"
+
 ember-api-actions@^0.1.8:
   version "0.1.8"
   resolved "https://registry.yarnpkg.com/ember-api-actions/-/ember-api-actions-0.1.8.tgz#651031b9d61a320c221dd75b20f7e8f783e6393d"
@@ -3167,6 +3174,13 @@ ember-cli-version-checker@^2.0.0:
 ember-cli-version-checker@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/ember-cli-version-checker/-/ember-cli-version-checker-2.1.0.tgz#fc79a56032f3717cf844ada7cbdec1a06fedb604"
+  dependencies:
+    resolve "^1.3.3"
+    semver "^5.3.0"
+
+ember-cli-version-checker@^2.1.2:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/ember-cli-version-checker/-/ember-cli-version-checker-2.1.2.tgz#305ce102390c66e4e0f1432dea9dc5c7c19fed98"
   dependencies:
     resolve "^1.3.3"
     semver "^5.3.0"
@@ -7507,6 +7521,10 @@ sass-graph@^2.2.4:
     lodash "^4.0.0"
     scss-tokenizer "^0.2.3"
     yargs "^7.0.0"
+
+sass-svg-uri@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/sass-svg-uri/-/sass-svg-uri-1.0.0.tgz#01e992e4e3ce8d1ec4eac4c8280c0f2ef45c6be8"
 
 sax@>=0.6.0:
   version "1.2.4"

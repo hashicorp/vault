@@ -10,6 +10,7 @@ import (
 	"github.com/SermoDigital/jose/crypto"
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
+	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -120,7 +121,7 @@ func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
 					"service_account_secret_name": serviceAccount.SecretName,
 					"role": roleName,
 				},
-				DisplayName: serviceAccount.Name,
+				DisplayName: fmt.Sprintf("%s:%s", serviceAccount.Namespace, serviceAccount.Name),
 				LeaseOptions: logical.LeaseOptions{
 					Renewable: true,
 					TTL:       role.TTL,
@@ -249,7 +250,7 @@ func (b *kubeAuthBackend) parseAndValidateJWT(jwtStr string, role *roleStorageEn
 
 		// validates the signature and then runs the claim validation
 		if err := parsedJWT.Validate(cert, signingMethod); err != nil {
-			return err
+			return errwrap.Wrapf("failed to validate JWT: {{err}}", err)
 		}
 
 		return nil

@@ -1,6 +1,6 @@
 import DS from 'ember-data';
 import Ember from 'ember';
-import { queryRecord } from 'ember-computed-query';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 let { attr } = DS;
 let { computed } = Ember;
@@ -12,20 +12,7 @@ export default DS.Model.extend({
     return this.constructor.modelName.split('/')[1];
   }),
 
-  updatePath: queryRecord(
-    'capabilities',
-    context => {
-      const { policyType, id } = context.getProperties('policyType', 'id');
-      if (!policyType && id) {
-        return;
-      }
-      return {
-        id: `sys/policies/${policyType}/${id}`,
-      };
-    },
-    'id',
-    'policyType'
-  ),
+  updatePath: lazyCapabilities(apiPath`sys/policies/${'policyType'}/${'id'}`, 'id', 'policyType'),
   canDelete: computed.alias('updatePath.canDelete'),
   canEdit: computed.alias('updatePath.canUpdate'),
   canRead: computed.alias('updatePath.canRead'),

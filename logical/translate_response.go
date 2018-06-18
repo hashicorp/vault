@@ -27,13 +27,15 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 	// set up the result structure.
 	if input.Auth != nil {
 		httpResp.Auth = &HTTPAuth{
-			ClientToken:   input.Auth.ClientToken,
-			Accessor:      input.Auth.Accessor,
-			Policies:      input.Auth.Policies,
-			Metadata:      input.Auth.Metadata,
-			LeaseDuration: int(input.Auth.TTL.Seconds()),
-			Renewable:     input.Auth.Renewable,
-			EntityID:      input.Auth.EntityID,
+			ClientToken:      input.Auth.ClientToken,
+			Accessor:         input.Auth.Accessor,
+			Policies:         input.Auth.Policies,
+			TokenPolicies:    input.Auth.TokenPolicies,
+			IdentityPolicies: input.Auth.IdentityPolicies,
+			Metadata:         input.Auth.Metadata,
+			LeaseDuration:    int(input.Auth.TTL.Seconds()),
+			Renewable:        input.Auth.Renewable,
+			EntityID:         input.Auth.EntityID,
 		}
 	}
 
@@ -56,11 +58,13 @@ func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
 
 	if input.Auth != nil {
 		logicalResp.Auth = &Auth{
-			ClientToken: input.Auth.ClientToken,
-			Accessor:    input.Auth.Accessor,
-			Policies:    input.Auth.Policies,
-			Metadata:    input.Auth.Metadata,
-			EntityID:    input.Auth.EntityID,
+			ClientToken:      input.Auth.ClientToken,
+			Accessor:         input.Auth.Accessor,
+			Policies:         input.Auth.Policies,
+			TokenPolicies:    input.Auth.TokenPolicies,
+			IdentityPolicies: input.Auth.IdentityPolicies,
+			Metadata:         input.Auth.Metadata,
+			EntityID:         input.Auth.EntityID,
 		}
 		logicalResp.Auth.Renewable = input.Auth.Renewable
 		logicalResp.Auth.TTL = time.Second * time.Duration(input.Auth.LeaseDuration)
@@ -81,13 +85,15 @@ type HTTPResponse struct {
 }
 
 type HTTPAuth struct {
-	ClientToken   string            `json:"client_token"`
-	Accessor      string            `json:"accessor"`
-	Policies      []string          `json:"policies"`
-	Metadata      map[string]string `json:"metadata"`
-	LeaseDuration int               `json:"lease_duration"`
-	Renewable     bool              `json:"renewable"`
-	EntityID      string            `json:"entity_id"`
+	ClientToken      string            `json:"client_token"`
+	Accessor         string            `json:"accessor"`
+	Policies         []string          `json:"policies"`
+	TokenPolicies    []string          `json:"token_policies,omitempty"`
+	IdentityPolicies []string          `json:"identity_policies,omitempty"`
+	Metadata         map[string]string `json:"metadata"`
+	LeaseDuration    int               `json:"lease_duration"`
+	Renewable        bool              `json:"renewable"`
+	EntityID         string            `json:"entity_id"`
 }
 
 type HTTPWrapInfo struct {

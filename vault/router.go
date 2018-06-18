@@ -209,13 +209,14 @@ func (r *Router) MatchingMountByUUID(mountID string) *MountEntry {
 	}
 
 	r.l.RLock()
-	defer r.l.RUnlock()
 
 	_, raw, ok := r.mountUUIDCache.LongestPrefix(mountID)
 	if !ok {
+		r.l.RUnlock()
 		return nil
 	}
 
+	r.l.RUnlock()
 	return raw.(*MountEntry)
 }
 
@@ -226,21 +227,22 @@ func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 	}
 
 	r.l.RLock()
-	defer r.l.RUnlock()
 
 	_, raw, ok := r.mountAccessorCache.LongestPrefix(mountAccessor)
 	if !ok {
+		r.l.RUnlock()
 		return nil
 	}
 
+	r.l.RUnlock()
 	return raw.(*MountEntry)
 }
 
 // MatchingMount returns the mount prefix that would be used for a path
 func (r *Router) MatchingMount(path string) string {
 	r.l.RLock()
-	defer r.l.RUnlock()
-	var mount = r.matchingMountInternal(path)
+	mount := r.matchingMountInternal(path)
+	r.l.RUnlock()
 	return mount
 }
 
@@ -485,6 +487,9 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		}
 	}
 
+	reqTokenEntry := req.TokenEntry()
+	req.SetTokenEntry(nil)
+
 	// Reset the request before returning
 	defer func() {
 		req.Path = originalPath
@@ -506,6 +511,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.MountAccessor = re.mountEntry.Accessor
 
 		req.EntityID = originalEntityID
+
+		req.SetTokenEntry(reqTokenEntry)
 	}()
 
 	// Invoke the backend

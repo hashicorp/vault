@@ -1,3 +1,50 @@
+## 0.10.3 (Unreleased)
+
+DEPRECATIONS/CHANGES:
+
+ * In the audit log and in client responses, policies are now split into three
+   parameters: policies that came only from tokens, policies that came only
+   from Identity, and the combined set. Any previous location of policies via
+   the API now contains the full, combined set.
+
+FEATURES:
+
+ * URI SANs in PKI: You can now configure URI Subject Alternate Names in the
+   `pki` backend. Roles can limit which SANs are allowed via globbing.
+ * `kv rollback` Command: You can now use `vault kv rollback` to roll a KVv2
+   path back to a previous non-deleted/non-destroyed version. The previous
+   version becomes the next/newest version for the path.
+
+IMPROVEMENTS:
+
+ * approle: Return 404 instead of 202 on invalid role names during POST
+   operations [GH-4778]
+ * core: Add idle and initial header read/TLS handshake timeouts to connections
+   to ensure server resources are cleaned up [GH-4760]
+ * core: Report policies in token, identity, and full sets [GH-4747]
+ * secrets/kv: Add `kv rollback` [GH-4774]
+ * secrets/pki: Add URI SANs support [GH-4675]
+ * secrets/ssh: Allow standard SSH command arguments to be used, without
+   requiring username@hostname syntax [GH-4710]
+ * storage/consul: Add context support so that requests are cancelable
+   [GH-4739]
+ * ui: Secret values are obfuscated by default and visibility is toggleable [GH-4422]
+
+BUG FIXES:
+
+ * auth/approle: Fix panic due to metadata being nil [GH-4719]
+ * core: Optimizations to remove some speed regressions due to the
+   security-related changes in 0.10.2
+ * secrets/database: Fix default MySQL root rotation statement [GH-4748]
+ * secrets/gcp: Fix renewal for GCP account keys
+ * secrets/kv: Fix writing to the root of a KVv2 mount from `vault kv` commands
+   incorrectly operating on a root+mount path instead of being an error
+   [GH-4726]
+ * seal/pkcs11: Add `CKK_SHA256_HMAC` to the search list when finding HMAC
+   keys, fixing lookup on some Thales devices
+ * replication: Fix issue enabling replication when a non-auth mount and auth
+   mount have the same name
+
 ## 0.10.2 (June 6th, 2018)
 
 SECURITY:
@@ -89,6 +136,8 @@ IMPROVEMENTS:
  * ui: Identity interface now lists groups by name [GH-4655]
  * ui: Permission denied errors still render the sidebar in the Access section
    [GH-4658]
+ * replication: Improve performance of index page flushes and WAL garbage 
+   collecting
 
 BUG FIXES:
 

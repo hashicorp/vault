@@ -24,8 +24,8 @@ in-memory). It is only made for development or experimentation.
 The properties of the dev server:
 
   * **Initialized and unsealed** - The server will be automatically initialized
-    and unsealed. You don't need to use `vault unseal`. It is ready for use
-    immediately.
+    and unsealed. You don't need to use `vault operator unseal`. It is ready
+    for use immediately.
 
   * **In-memory storage** - All data is stored (encrypted) in-memory. Vault
     server doesn't require any file permissions.

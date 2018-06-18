@@ -9,19 +9,13 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
 func TestTransit_SignVerify_P256(t *testing.T) {
-	var b *backend
-	sysView := logical.TestSystemView()
-	storage := &logical.InmemStorage{}
-
-	b = Backend(&logical.BackendConfig{
-		StorageView: storage,
-		System:      sysView,
-	})
+	b, storage := createBackendWithSysView(t)
 
 	// First create a key
 	req := &logical.Request{
@@ -38,12 +32,13 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	}
 
 	// Now, change the key value to something we control
-	p, lock, err := b.lm.GetPolicyShared(context.Background(), storage, "foo")
+	p, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+		Storage: storage,
+		Name:    "foo",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	// We don't care as we're the only one using this
-	lock.RUnlock()
 
 	// Useful code to output a key for openssl verification
 	/*
@@ -213,14 +208,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 }
 
 func TestTransit_SignVerify_ED25519(t *testing.T) {
-	var b *backend
-	sysView := logical.TestSystemView()
-	storage := &logical.InmemStorage{}
-
-	b = Backend(&logical.BackendConfig{
-		StorageView: storage,
-		System:      sysView,
-	})
+	b, storage := createBackendWithSysView(t)
 
 	// First create a key
 	req := &logical.Request{
@@ -252,18 +240,21 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	}
 
 	// Get the keys for later
-	fooP, lock, err := b.lm.GetPolicyShared(context.Background(), storage, "foo")
+	fooP, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+		Storage: storage,
+		Name:    "foo",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	// We don't care as we're the only one using this
-	lock.RUnlock()
 
-	barP, lock, err := b.lm.GetPolicyShared(context.Background(), storage, "bar")
+	barP, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+		Storage: storage,
+		Name:    "bar",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	lock.RUnlock()
 
 	signRequest := func(req *logical.Request, errExpected bool, postpath string) string {
 		// Delete any key that exists in the request

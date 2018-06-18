@@ -71,3 +71,10 @@ func (c *SecretsClient) UpdatePassword(conf *ldaputil.ConfigEntry, serviceAccoun
 	}
 	return c.adClient.UpdatePassword(conf, filters, newPassword)
 }
+
+func (c *SecretsClient) UpdateRootPassword(conf *ldaputil.ConfigEntry, bindDN string, newPassword string) error {
+	filters := map[*client.Field][]string{
+		client.FieldRegistry.DistinguishedName: {bindDN},
+	}
+	return c.adClient.UpdatePassword(conf, filters, newPassword)
+}

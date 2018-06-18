@@ -109,6 +109,12 @@ CN and SANs. Defaults to true.`,
 Any valid IP is accepted.`,
 			},
 
+			"allowed_uri_sans": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `If set, an array of allowed URIs to put in the URI Subject Alternative Names.
+Any valid URI is accepted, these values support globbing.`,
+			},
+
 			"allowed_other_sans": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed other names to put in SANs. These values support globbing.`,
@@ -167,6 +173,16 @@ the key_type.`,
 key usages). Valid values can be found at
 https://golang.org/pkg/crypto/x509/#KeyUsage
 -- simply drop the "KeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
+			},
+
+			"ext_key_usage": &framework.FieldSchema{
+				Type:    framework.TypeCommaStringSlice,
+				Default: []string{},
+				Description: `A comma-separated string or list of extended key usages. Valid values can be found at
+https://golang.org/pkg/crypto/x509/#ExtKeyUsage
+-- simply drop the "ExtKeyUsage" part of the name.
 To remove all key usages from being set, set
 this value to an empty list.`,
 			},
@@ -452,6 +468,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		AllowAnyName:                  data.Get("allow_any_name").(bool),
 		EnforceHostnames:              data.Get("enforce_hostnames").(bool),
 		AllowIPSANs:                   data.Get("allow_ip_sans").(bool),
+		AllowedURISANs:                data.Get("allowed_uri_sans").([]string),
 		ServerFlag:                    data.Get("server_flag").(bool),
 		ClientFlag:                    data.Get("client_flag").(bool),
 		CodeSigningFlag:               data.Get("code_signing_flag").(bool),
@@ -461,6 +478,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
 		KeyUsage:                      data.Get("key_usage").([]string),
+		ExtKeyUsage:                   data.Get("ext_key_usage").([]string),
 		ExtKeyUsageOIDs:               data.Get("ext_key_usage_oids").([]string),
 		OU:                            data.Get("ou").([]string),
 		Organization:                  data.Get("organization").([]string),
@@ -565,6 +583,57 @@ func parseKeyUsages(input []string) int {
 	return int(parsedKeyUsages)
 }
 
+func parseExtKeyUsages(role *roleEntry) certExtKeyUsage {
+	var parsedKeyUsages certExtKeyUsage
+
+	if role.ServerFlag {
+		parsedKeyUsages |= serverAuthExtKeyUsage
+	}
+
+	if role.ClientFlag {
+		parsedKeyUsages |= clientAuthExtKeyUsage
+	}
+
+	if role.CodeSigningFlag {
+		parsedKeyUsages |= codeSigningExtKeyUsage
+	}
+
+	if role.EmailProtectionFlag {
+		parsedKeyUsages |= emailProtectionExtKeyUsage
+	}
+
+	for _, k := range role.ExtKeyUsage {
+		switch strings.ToLower(strings.TrimSpace(k)) {
+		case "any":
+			parsedKeyUsages |= anyExtKeyUsage
+		case "serverauth":
+			parsedKeyUsages |= serverAuthExtKeyUsage
+		case "clientauth":
+			parsedKeyUsages |= clientAuthExtKeyUsage
+		case "codesigning":
+			parsedKeyUsages |= codeSigningExtKeyUsage
+		case "emailprotection":
+			parsedKeyUsages |= emailProtectionExtKeyUsage
+		case "ipsecendsystem":
+			parsedKeyUsages |= ipsecEndSystemExtKeyUsage
+		case "ipsectunnel":
+			parsedKeyUsages |= ipsecTunnelExtKeyUsage
+		case "ipsecuser":
+			parsedKeyUsages |= ipsecUserExtKeyUsage
+		case "timestamping":
+			parsedKeyUsages |= timeStampingExtKeyUsage
+		case "ocspsigning":
+			parsedKeyUsages |= ocspSigningExtKeyUsage
+		case "microsoftservergatedcrypto":
+			parsedKeyUsages |= microsoftServerGatedCryptoExtKeyUsage
+		case "netscapeservergatedcrypto":
+			parsedKeyUsages |= netscapeServerGatedCryptoExtKeyUsage
+		}
+	}
+
+	return parsedKeyUsages
+}
+
 type roleEntry struct {
 	LeaseMax                      string        `json:"lease_max"`
 	Lease                         string        `json:"lease"`
@@ -595,6 +664,7 @@ type roleEntry struct {
 	MaxPathLength                 *int          `json:",omitempty" mapstructure:"max_path_length"`
 	KeyUsageOld                   string        `json:"key_usage,omitempty"`
 	KeyUsage                      []string      `json:"key_usage_list" mapstructure:"key_usage"`
+	ExtKeyUsage                   []string      `json:"extended_key_usage_list" mapstructure:"extended_key_usage"`
 	OUOld                         string        `json:"ou,omitempty"`
 	OU                            []string      `json:"ou_list" mapstructure:"ou"`
 	OrganizationOld               string        `json:"organization,omitempty"`
@@ -609,6 +679,7 @@ type roleEntry struct {
 	RequireCN                     bool          `json:"require_cn" mapstructure:"require_cn"`
 	AllowedOtherSANs              []string      `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
 	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers" mapstructure:"allowed_serial_numbers"`
+	AllowedURISANs                []string      `json:"allowed_uri_sans" mapstructure:"allowed_uri_sans"`
 	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
 	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
@@ -639,6 +710,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"key_type":                           r.KeyType,
 		"key_bits":                           r.KeyBits,
 		"key_usage":                          r.KeyUsage,
+		"ext_key_usage":                      r.ExtKeyUsage,
 		"ext_key_usage_oids":                 r.ExtKeyUsageOIDs,
 		"ou":                                 r.OU,
 		"organization":                       r.Organization,
@@ -650,6 +722,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"no_store":                           r.NoStore,
 		"allowed_other_sans":                 r.AllowedOtherSANs,
 		"allowed_serial_numbers":             r.AllowedSerialNumbers,
+		"allowed_uri_sans":                   r.AllowedURISANs,
 		"require_cn":                         r.RequireCN,
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,

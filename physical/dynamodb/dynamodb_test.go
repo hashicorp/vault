@@ -1,6 +1,7 @@
 package dynamodb
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
@@ -17,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
 func TestDynamoDBBackend(t *testing.T) {
@@ -69,6 +72,44 @@ func TestDynamoDBBackend(t *testing.T) {
 
 	physical.ExerciseBackend(t, b)
 	physical.ExerciseBackend_ListPrefix(t, b)
+
+	t.Run("Marshalling upgrade", func(t *testing.T) {
+		path := "test_key"
+
+		// Manually write to DynamoDB using the old ConvertTo function
+		// for marshalling data
+		inputEntry := &physical.Entry{
+			Key:   path,
+			Value: []byte{0x0f, 0xcf, 0x4a, 0x0f, 0xba, 0x2b, 0x15, 0xf0, 0xaa, 0x75, 0x09},
+		}
+
+		record := DynamoDBRecord{
+			Path:  recordPathForVaultKey(inputEntry.Key),
+			Key:   recordKeyForVaultKey(inputEntry.Key),
+			Value: inputEntry.Value,
+		}
+
+		item, err := dynamodbattribute.ConvertToMap(record)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+
+		request := &dynamodb.PutItemInput{
+			Item:      item,
+			TableName: &table,
+		}
+		conn.PutItem(request)
+
+		// Read back the data using the normal interface which should
+		// handle the old marshalling format gracefully
+		entry, err := b.Get(context.Background(), path)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if diff := deep.Equal(inputEntry, entry); diff != nil {
+			t.Fatal(diff)
+		}
+	})
 }
 
 func TestDynamoDBHABackend(t *testing.T) {
@@ -244,7 +285,7 @@ func prepareDynamoDBTestContainer(t *testing.T) (cleanup func(), retAddress stri
 		t.Fatalf("Failed to connect to docker: %s", err)
 	}
 
-	resource, err := pool.Run("deangiberson/aws-dynamodb-local", "latest", []string{})
+	resource, err := pool.Run("cnadiminti/dynamodb-local", "latest", []string{})
 	if err != nil {
 		t.Fatalf("Could not start local DynamoDB: %s", err)
 	}

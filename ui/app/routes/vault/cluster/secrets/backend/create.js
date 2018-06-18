@@ -10,12 +10,8 @@ var SecretProxy = Ember.Object.extend(KeyMixin, {
   },
 
   createRecord(backend) {
-    let modelType = 'secret';
     let backendModel = this.store.peekRecord('secret-engine', backend);
-    if (backendModel.get('type') === 'kv' && backendModel.get('options.version') === 2) {
-      modelType = 'secret-v2';
-    }
-    return this.store.createRecord(modelType, this.toModel());
+    return this.store.createRecord(backendModel.get('modelTypeForKV'), this.toModel());
   },
 });
 

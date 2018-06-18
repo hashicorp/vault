@@ -20,13 +20,12 @@
     "precommit": "lint-staged"
   },
   "lint-staged": {
-    "gitDir": "../",
     "linters": {
-      "ui/{app,tests,config,lib,mirage}/**/*.js": [
-        "prettier-eslint --single-quote --trailing-comma es5 --print-width 110 --write",
+      "*.js": [
+        "prettier-eslint --single-quote --no-use-tabs --trailing-comma es5 --print-width 110 --write",
         "git add"
       ],
-      "ui/app/styles/**/*.*": [
+      "*.scss": [
         "prettier --write",
         "git add"
       ]
@@ -34,7 +33,7 @@
   },
   "devDependencies": {
     "Duration.js": "icholy/Duration.js#golang_compatible",
-    "autosize": "3.0.17",
+    "autosize": "^4.0.0",
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
     "base64-js": "1.2.1",
     "broccoli-asset-rev": "^2.4.5",
@@ -45,6 +44,7 @@
     "columnify": "^1.5.4",
     "cool-checkboxes-for-bulma.io": "^1.1.0",
     "ember-ajax": "^3.0.0",
+    "ember-angle-bracket-invocation-polyfill": "^1.0.2",
     "ember-api-actions": "^0.1.8",
     "ember-basic-dropdown": "^0.33.5",
     "ember-basic-dropdown-hover": "^0.2.0",
@@ -96,6 +96,7 @@
     "prettier": "^1.5.3",
     "prettier-eslint-cli": "^4.2.1",
     "qunit-dom": "^0.6.2",
+    "sass-svg-uri": "^1.0.0",
     "string.prototype.startswith": "mathiasbynens/String.prototype.startsWith",
     "text-encoder-lite": "1.0.0",
     "yargs-parser": "^10.0.0"
@@ -106,7 +107,7 @@
   "private": true,
   "ember-addon": {
     "paths": [
-      "lib/bulma"
+      "lib/css"
     ]
   }
 }

@@ -249,7 +249,7 @@ func FindControl(controls []Control, controlType string) Control {
 }
 
 // DecodeControl returns a control read from the given packet, or nil if no recognized control can be made
-func DecodeControl(packet *ber.Packet) Control {
+func DecodeControl(packet *ber.Packet) (Control, error) {
 	var (
 		ControlType = ""
 		Criticality = false
@@ -259,7 +259,7 @@ func DecodeControl(packet *ber.Packet) Control {
 	switch len(packet.Children) {
 	case 0:
 		// at least one child is required for control type
-		return nil
+		return nil, fmt.Errorf("at least one child is required for control type")
 
 	case 1:
 		// just type, no criticality or value
@@ -292,17 +292,20 @@ func DecodeControl(packet *ber.Packet) Control {
 
 	default:
 		// more than 3 children is invalid
-		return nil
+		return nil, fmt.Errorf("more than 3 children is invalid for controls")
 	}
 
 	switch ControlType {
 	case ControlTypeManageDsaIT:
-		return NewControlManageDsaIT(Criticality)
+		return NewControlManageDsaIT(Criticality), nil
 	case ControlTypePaging:
 		value.Description += " (Paging)"
 		c := new(ControlPaging)
 		if value.Value != nil {
-			valueChildren := ber.DecodePacket(value.Data.Bytes())
+			valueChildren, err := ber.DecodePacketErr(value.Data.Bytes())
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode data bytes: %s", err)
+			}
 			value.Data.Truncate(0)
 			value.Value = nil
 			value.AppendChild(valueChildren)
@@ -314,12 +317,15 @@ func DecodeControl(packet *ber.Packet) Control {
 		c.PagingSize = uint32(value.Children[0].Value.(int64))
 		c.Cookie = value.Children[1].Data.Bytes()
 		value.Children[1].Value = c.Cookie
-		return c
+		return c, nil
 	case ControlTypeBeheraPasswordPolicy:
 		value.Description += " (Password Policy - Behera)"
 		c := NewControlBeheraPasswordPolicy()
 		if value.Value != nil {
-			valueChildren := ber.DecodePacket(value.Data.Bytes())
+			valueChildren, err := ber.DecodePacketErr(value.Data.Bytes())
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode data bytes: %s", err)
+			}
 			value.Data.Truncate(0)
 			value.Value = nil
 			value.AppendChild(valueChildren)
@@ -331,7 +337,10 @@ func DecodeControl(packet *ber.Packet) Control {
 			if child.Tag == 0 {
 				//Warning
 				warningPacket := child.Children[0]
-				packet := ber.DecodePacket(warningPacket.Data.Bytes())
+				packet, err := ber.DecodePacketErr(warningPacket.Data.Bytes())
+				if err != nil {
+					return nil, fmt.Errorf("failed to decode data bytes: %s", err)
+				}
 				val, ok := packet.Value.(int64)
 				if ok {
 					if warningPacket.Tag == 0 {
@@ -346,7 +355,10 @@ func DecodeControl(packet *ber.Packet) Control {
 				}
 			} else if child.Tag == 1 {
 				// Error
-				packet := ber.DecodePacket(child.Data.Bytes())
+				packet, err := ber.DecodePacketErr(child.Data.Bytes())
+				if err != nil {
+					return nil, fmt.Errorf("failed to decode data bytes: %s", err)
+				}
 				val, ok := packet.Value.(int8)
 				if !ok {
 					// what to do?
@@ -357,22 +369,22 @@ func DecodeControl(packet *ber.Packet) Control {
 				c.ErrorString = BeheraPasswordPolicyErrorMap[c.Error]
 			}
 		}
-		return c
+		return c, nil
 	case ControlTypeVChuPasswordMustChange:
 		c := &ControlVChuPasswordMustChange{MustChange: true}
-		return c
+		return c, nil
 	case ControlTypeVChuPasswordWarning:
 		c := &ControlVChuPasswordWarning{Expire: -1}
 		expireStr := ber.DecodeString(value.Data.Bytes())
 
 		expire, err := strconv.ParseInt(expireStr, 10, 64)
 		if err != nil {
-			return nil
+			return nil, fmt.Errorf("failed to parse value as int: %s", err)
 		}
 		c.Expire = expire
 		value.Value = c.Expire
 
-		return c
+		return c, nil
 	default:
 		c := new(ControlString)
 		c.ControlType = ControlType
@@ -380,7 +392,7 @@ func DecodeControl(packet *ber.Packet) Control {
 		if value != nil {
 			c.ControlValue = value.Value.(string)
 		}
-		return c
+		return c, nil
 	}
 }
 

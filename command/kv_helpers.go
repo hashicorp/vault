@@ -99,8 +99,13 @@ func isKVv2(path string, client *api.Client) (string, bool, error) {
 }
 
 func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
-	p = strings.TrimPrefix(p, mountPath)
-	return path.Join(mountPath, apiPrefix, p)
+	switch {
+	case p == mountPath, p == strings.TrimSuffix(mountPath, "/"):
+		return path.Join(mountPath, apiPrefix)
+	default:
+		p = strings.TrimPrefix(p, mountPath)
+		return path.Join(mountPath, apiPrefix, p)
+	}
 }
 
 func getHeaderForMap(header string, data map[string]interface{}) string {
