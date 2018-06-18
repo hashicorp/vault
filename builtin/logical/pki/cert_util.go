@@ -36,10 +36,20 @@ import (
 type certExtKeyUsage int
 
 const (
-	serverExtKeyUsage certExtKeyUsage = 1 << iota
-	clientExtKeyUsage
+	anyExtKeyUsage certExtKeyUsage = 1 << iota
+	serverAuthExtKeyUsage
+	clientAuthExtKeyUsage
 	codeSigningExtKeyUsage
 	emailProtectionExtKeyUsage
+	ipsecEndSystemExtKeyUsage
+	ipsecTunnelExtKeyUsage
+	ipsecUserExtKeyUsage
+	timeStampingExtKeyUsage
+	ocspSigningExtKeyUsage
+	microsoftServerGatedCryptoExtKeyUsage
+	netscapeServerGatedCryptoExtKeyUsage
+	microsoftCommercialCodeSigningExtKeyUsage
+	microsoftKernelCodeSigningExtKeyUsage
 )
 
 type dataBundle struct {
@@ -995,23 +1005,6 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		}
 	}
 
-	// Build up usages
-	var extUsage certExtKeyUsage
-	{
-		if data.role.ServerFlag {
-			extUsage = extUsage | serverExtKeyUsage
-		}
-		if data.role.ClientFlag {
-			extUsage = extUsage | clientExtKeyUsage
-		}
-		if data.role.CodeSigningFlag {
-			extUsage = extUsage | codeSigningExtKeyUsage
-		}
-		if data.role.EmailProtectionFlag {
-			extUsage = extUsage | emailProtectionExtKeyUsage
-		}
-	}
-
 	data.params = &creationParameters{
 		Subject:                       subject,
 		DNSNames:                      dnsNames,
@@ -1023,7 +1016,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		KeyBits:                       data.role.KeyBits,
 		NotAfter:                      notAfter,
 		KeyUsage:                      x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
-		ExtKeyUsage:                   extUsage,
+		ExtKeyUsage:                   parseExtKeyUsages(data.role),
 		ExtKeyUsageOIDs:               data.role.ExtKeyUsageOIDs,
 		PolicyIdentifiers:             data.role.PolicyIdentifiers,
 		BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
@@ -1071,17 +1064,60 @@ func addKeyUsages(data *dataBundle, certTemplate *x509.Certificate) {
 
 	certTemplate.KeyUsage = data.params.KeyUsage
 
-	if data.params.ExtKeyUsage&serverExtKeyUsage != 0 {
+	if data.params.ExtKeyUsage&anyExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageAny)
+	}
+
+	if data.params.ExtKeyUsage&serverAuthExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
 	}
-	if data.params.ExtKeyUsage&clientExtKeyUsage != 0 {
+
+	if data.params.ExtKeyUsage&clientAuthExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
 	}
+
 	if data.params.ExtKeyUsage&codeSigningExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
 	}
+
 	if data.params.ExtKeyUsage&emailProtectionExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
+	}
+
+	if data.params.ExtKeyUsage&ipsecEndSystemExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageIPSECEndSystem)
+	}
+
+	if data.params.ExtKeyUsage&ipsecTunnelExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageIPSECTunnel)
+	}
+
+	if data.params.ExtKeyUsage&ipsecUserExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageIPSECUser)
+	}
+
+	if data.params.ExtKeyUsage&timeStampingExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageTimeStamping)
+	}
+
+	if data.params.ExtKeyUsage&ocspSigningExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
+	}
+
+	if data.params.ExtKeyUsage&microsoftServerGatedCryptoExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftServerGatedCrypto)
+	}
+
+	if data.params.ExtKeyUsage&netscapeServerGatedCryptoExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageNetscapeServerGatedCrypto)
+	}
+
+	if data.params.ExtKeyUsage&microsoftCommercialCodeSigningExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftCommercialCodeSigning)
+	}
+
+	if data.params.ExtKeyUsage&microsoftKernelCodeSigningExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftKernelCodeSigning)
 	}
 }
 

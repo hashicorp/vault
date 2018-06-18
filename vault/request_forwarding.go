@@ -76,7 +76,11 @@ func (c *Core) startForwarding(ctx context.Context) error {
 	// duties. Doing it this way instead of listening via the server and gRPC
 	// allows us to re-use the same port via ALPN. We can just tell the server
 	// to serve a given conn and which handler to use.
-	fws := &http2.Server{}
+	fws := &http2.Server{
+		// Our forwarding connections heartbeat regularly so anything else we
+		// want to go away/get cleaned up pretty rapidly
+		IdleTimeout: 5 * HeartbeatInterval,
+	}
 
 	// Shutdown coordination logic
 	shutdown := new(uint32)
@@ -147,10 +151,34 @@ func (c *Core) startForwarding(ctx context.Context) error {
 				// Type assert to TLS connection and handshake to populate the
 				// connection state
 				tlsConn := conn.(*tls.Conn)
+
+				// Set a deadline for the handshake. This will cause clients
+				// that don't successfully auth to be kicked out quickly.
+				// Cluster connections should be reliable so being marginally
+				// aggressive here is fine.
+				err = tlsConn.SetDeadline(time.Now().Add(30 * time.Second))
+				if err != nil {
+					if c.logger.IsDebug() {
+						c.logger.Debug("error setting deadline for cluster connection", "error", err)
+					}
+					tlsConn.Close()
+					continue
+				}
+
 				err = tlsConn.Handshake()
 				if err != nil {
 					if c.logger.IsDebug() {
 						c.logger.Debug("error handshaking cluster connection", "error", err)
+					}
+					tlsConn.Close()
+					continue
+				}
+
+				// Now, set it back to unlimited
+				err = tlsConn.SetDeadline(time.Time{})
+				if err != nil {
+					if c.logger.IsDebug() {
+						c.logger.Debug("error setting deadline for cluster connection", "error", err)
 					}
 					tlsConn.Close()
 					continue

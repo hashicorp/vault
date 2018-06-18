@@ -1182,12 +1182,17 @@ func (b *SystemBackend) handleCORSDelete(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := b.Core.expiration.Tidy()
-	if err != nil {
-		b.Backend.Logger().Error("failed to tidy leases", "error", err)
-		return handleErrorNoReadOnlyForward(err)
-	}
-	return nil, err
+	go func() {
+		err := b.Core.expiration.Tidy()
+		if err != nil {
+			b.Backend.Logger().Error("failed to tidy leases", "error", err)
+			return
+		}
+	}()
+
+	resp := &logical.Response{}
+	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	return resp, nil
 }
 
 func (b *SystemBackend) invalidate(ctx context.Context, key string) {
