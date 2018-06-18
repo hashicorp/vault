@@ -115,7 +115,9 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 			},
 		},
 
+		ExistenceCheck: b.connectionExistenceCheck(),
 		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.CreateOperation: b.connectionWriteHandler(),
 			logical.UpdateOperation: b.connectionWriteHandler(),
 			logical.ReadOperation:   b.connectionReadHandler(),
 			logical.DeleteOperation: b.connectionDeleteHandler(),
@@ -123,6 +125,22 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
 		HelpDescription: pathConfigConnectionHelpDesc,
+	}
+}
+
+func (b *databaseBackend) connectionExistenceCheck() framework.ExistenceFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+		name := data.Get("name").(string)
+		if name == "" {
+			return false, errors.New(`missing "name" parameter`)
+		}
+
+		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
+		if err != nil {
+			return false, errors.New("failed to read connection configuration")
+		}
+
+		return entry != nil, nil
 	}
 }
 
@@ -214,19 +232,46 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 // both builtin and plugin database types.
 func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		pluginName := data.Get("plugin_name").(string)
-		if pluginName == "" {
-			return logical.ErrorResponse(respErrEmptyPluginName), nil
-		}
+		verifyConnection := data.Get("verify_connection").(bool)
 
 		name := data.Get("name").(string)
 		if name == "" {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
-		verifyConnection := data.Get("verify_connection").(bool)
-		allowedRoles := data.Get("allowed_roles").([]string)
-		rootRotationStatements := data.Get("root_rotation_statements").([]string)
+		// Baseline
+		config := &DatabaseConfig{}
+
+		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
+		if err != nil {
+			return nil, errors.New("failed to read connection configuration")
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(config); err != nil {
+				return nil, err
+			}
+		}
+
+		if pluginNameRaw, ok := data.GetOk("plugin_name"); ok {
+			config.PluginName = pluginNameRaw.(string)
+		} else if req.Operation == logical.CreateOperation {
+			config.PluginName = data.Get("plugin_name").(string)
+		}
+		if config.PluginName == "" {
+			return logical.ErrorResponse(respErrEmptyPluginName), nil
+		}
+
+		if allowedRolesRaw, ok := data.GetOk("allowed_roles"); ok {
+			config.AllowedRoles = allowedRolesRaw.([]string)
+		} else if req.Operation == logical.CreateOperation {
+			config.AllowedRoles = data.Get("allowed_roles").([]string)
+		}
+
+		if rootRotationStatementsRaw, ok := data.GetOk("root_rotation_statements"); ok {
+			config.RootCredentialsRotateStatements = rootRotationStatementsRaw.([]string)
+		} else if req.Operation == logical.CreateOperation {
+			config.RootCredentialsRotateStatements = data.Get("root_rotation_statements").([]string)
+		}
 
 		// Remove these entries from the data before we store it keyed under
 		// ConnectionDetails.
@@ -237,11 +282,26 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		delete(data.Raw, "root_rotation_statements")
 
 		// Create a database plugin and initialize it.
-		db, err := dbplugin.PluginFactory(ctx, pluginName, b.System(), b.logger)
+		db, err := dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
-		connDetails, err := db.Init(ctx, data.Raw, verifyConnection)
+
+		// If this is an update, take any new values, overwrite what was there
+		// before, and pass that in as the "new" set of values to the plugin,
+		// then save what results
+		if req.Operation == logical.CreateOperation {
+			config.ConnectionDetails = data.Raw
+		} else {
+			if config.ConnectionDetails == nil {
+				config.ConnectionDetails = make(map[string]interface{})
+			}
+			for k, v := range data.Raw {
+				config.ConnectionDetails[k] = v
+			}
+		}
+
+		config.ConnectionDetails, err = db.Init(ctx, config.ConnectionDetails, verifyConnection)
 		if err != nil {
 			db.Close()
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
@@ -265,13 +325,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		// Store it
-		config := &DatabaseConfig{
-			ConnectionDetails:               connDetails,
-			PluginName:                      pluginName,
-			AllowedRoles:                    allowedRoles,
-			RootCredentialsRotateStatements: rootRotationStatements,
-		}
-		entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
+		entry, err = logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
 		if err != nil {
 			return nil, err
 		}
