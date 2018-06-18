@@ -1321,46 +1321,46 @@
 			"revisionTime": "2018-04-08T01:06:05Z"
 		},
 		{
-			"checksumSHA1": "p5RZZr9+57AbEn0cJWofpxup66Q=",
+			"checksumSHA1": "WnypXIUMGbOz/oAfrA5E2veXQC8=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "8b146812410672dcf7c36b45762f4d3d3a6398b0",
-			"revisionTime": "2018-06-06T02:28:44Z"
+			"revision": "2e612c8cb9cce51bf2c4fbdb1c26ae4a9d06d8cb",
+			"revisionTime": "2018-06-18T15:34:39Z"
 		},
 		{
-			"checksumSHA1": "TXlbc4EPXue+Jz/HXl3NU5kEoUs=",
+			"checksumSHA1": "yb6NN3tJ3pfjrP8O4Y76jNa2SyA=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin",
-			"revision": "28b22929498292a5fe2cc972d77e931f415e0786",
-			"revisionTime": "2018-06-06T02:34:28Z"
+			"revision": "5d57d386f7bbf8fc12e8e7fbfa2b361236cbe2ff",
+			"revisionTime": "2018-06-18T15:50:42Z"
 		},
 		{
 			"checksumSHA1": "w0TXZUy4HvuTrCxm32cVzkF3sEg=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/client",
-			"revision": "28b22929498292a5fe2cc972d77e931f415e0786",
-			"revisionTime": "2018-06-06T02:34:28Z"
+			"revision": "5d57d386f7bbf8fc12e8e7fbfa2b361236cbe2ff",
+			"revisionTime": "2018-06-18T15:50:42Z"
 		},
 		{
-			"checksumSHA1": "f5N0jlhC8c2vq0zez81fezfas/o=",
+			"checksumSHA1": "CRXQJhgMU5iZfRiTLhbwlpRSTLk=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/util",
-			"revision": "28b22929498292a5fe2cc972d77e931f415e0786",
-			"revisionTime": "2018-06-06T02:34:28Z"
+			"revision": "5d57d386f7bbf8fc12e8e7fbfa2b361236cbe2ff",
+			"revisionTime": "2018-06-18T15:50:42Z"
 		},
 		{
-			"checksumSHA1": "X9XW3xqAeOQqDdeJKzeqOYHn4Wo=",
+			"checksumSHA1": "jOsVXVfsxCgGrUCnwmBMid9SM+Q=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin",
-			"revision": "19ce67943d4ba3d0dcda025d832e3a0c4da47d42",
-			"revisionTime": "2018-06-06T02:42:09Z"
+			"revision": "2a8aff9bbb8b3fafdfd64d3dc0f5bf6e747fe2f4",
+			"revisionTime": "2018-06-06T18:14:30Z"
 		},
 		{
 			"checksumSHA1": "Dmpy+AguiGWfVg43Me5HB3+eDsk=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil",
-			"revision": "19ce67943d4ba3d0dcda025d832e3a0c4da47d42",
-			"revisionTime": "2018-06-06T02:42:09Z"
+			"revision": "2a8aff9bbb8b3fafdfd64d3dc0f5bf6e747fe2f4",
+			"revisionTime": "2018-06-06T18:14:30Z"
 		},
 		{
 			"checksumSHA1": "81kYL49zTBoj1NYczxB2Xbr2d6Y=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util",
-			"revision": "19ce67943d4ba3d0dcda025d832e3a0c4da47d42",
-			"revisionTime": "2018-06-06T02:42:09Z"
+			"revision": "2a8aff9bbb8b3fafdfd64d3dc0f5bf6e747fe2f4",
+			"revisionTime": "2018-06-06T18:14:30Z"
 		},
 		{
 			"checksumSHA1": "grTzIH3YAjsrME6m9IBXpS77W14=",
