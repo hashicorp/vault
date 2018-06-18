@@ -811,7 +811,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 			LowerCaseRoleName: true,
 		}
 	case role == nil:
-		return logical.ErrorResponse(fmt.Sprintf("role name %q doesn't exist", roleName)), nil
+		return logical.ErrorResponse(fmt.Sprintf("role name %q doesn't exist", roleName)), logical.ErrUnsupportedPath
 	}
 
 	localSecretIDsRaw, ok := data.GetOk("local_secret_ids")
@@ -1328,7 +1328,7 @@ func (b *backend) pathRoleBoundCIDRListUpdate(ctx context.Context, req *logical.
 		return nil, err
 	}
 	if role == nil {
-		return nil, nil
+		return nil, logical.ErrUnsupportedPath
 	}
 
 	role.BoundCIDRList = data.Get("bound_cidr_list").([]string)
@@ -1411,7 +1411,7 @@ func (b *backend) pathRoleBindSecretIDUpdate(ctx context.Context, req *logical.R
 		return nil, err
 	}
 	if role == nil {
-		return nil, nil
+		return nil, logical.ErrUnsupportedPath
 	}
 
 	if bindSecretIDRaw, ok := data.GetOk("bind_secret_id"); ok {
@@ -1516,7 +1516,7 @@ func (b *backend) pathRolePoliciesUpdate(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 	if role == nil {
-		return nil, nil
+		return nil, logical.ErrUnsupportedPath
 	}
 
 	policiesRaw, ok := data.GetOk("policies")
@@ -1592,7 +1592,7 @@ func (b *backend) pathRoleSecretIDNumUsesUpdate(ctx context.Context, req *logica
 		return nil, err
 	}
 	if role == nil {
-		return nil, nil
+		return nil, logical.ErrUnsupportedPath
 	}
 
 	if numUsesRaw, ok := data.GetOk("secret_id_num_uses"); ok {
@@ -1621,7 +1621,7 @@ func (b *backend) pathRoleRoleIDUpdate(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 	if role == nil {
-		return nil, nil
+		return nil, logical.ErrUnsupportedPath
 	}
 
 	previousRoleID := role.RoleID
@@ -1721,7 +1721,7 @@ func (b *backend) pathRoleSecretIDTTLUpdate(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 	if role == nil {
-		return nil, nil
+		return nil, logical.ErrUnsupportedPath
 	}
 
 	if secretIDTTLRaw, ok := data.GetOk("secret_id_ttl"); ok {
@@ -1795,7 +1795,7 @@ func (b *backend) pathRolePeriodUpdate(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 	if role == nil {
-		return nil, nil
+		return nil, logical.ErrUnsupportedPath
 	}
 
 	if periodRaw, ok := data.GetOk("period"); ok {
@@ -1872,7 +1872,7 @@ func (b *backend) pathRoleTokenNumUsesUpdate(ctx context.Context, req *logical.R
 		return nil, err
 	}
 	if role == nil {
-		return nil, nil
+		return nil, logical.ErrUnsupportedPath
 	}
 
 	if tokenNumUsesRaw, ok := data.GetOk("token_num_uses"); ok {
@@ -1946,7 +1946,7 @@ func (b *backend) pathRoleTokenTTLUpdate(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 	if role == nil {
-		return nil, nil
+		return nil, logical.ErrUnsupportedPath
 	}
 
 	if tokenTTLRaw, ok := data.GetOk("token_ttl"); ok {
@@ -2023,7 +2023,7 @@ func (b *backend) pathRoleTokenMaxTTLUpdate(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 	if role == nil {
-		return nil, nil
+		return nil, logical.ErrUnsupportedPath
 	}
 
 	if tokenMaxTTLRaw, ok := data.GetOk("token_max_ttl"); ok {
@@ -2116,7 +2116,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("role %q does not exist", roleName)), nil
+		return logical.ErrorResponse(fmt.Sprintf("role %q does not exist", roleName)), logical.ErrUnsupportedPath
 	}
 
 	if !role.BindSecretID {
