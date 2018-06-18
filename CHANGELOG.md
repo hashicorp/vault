@@ -17,6 +17,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * approle: Return 404 instead of 202 on invalid role names during POST
+   operations [GH-4778]
  * core: Add idle and initial header read/TLS handshake timeouts to connections
    to ensure server resources are cleaned up [GH-4760]
  * core: Report policies in token, identity, and full sets [GH-4747]
