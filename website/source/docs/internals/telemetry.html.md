@@ -256,11 +256,11 @@ Thes operations take a request and response with an associated lease and registe
 
 **[S]** Summary (Milliseconds): Time taken for register authentication operations which create lease entries without lease ID
 
-### vault_merkle_flushdirty
+### vault.merkle_flushdirty
 
 **[S]** Summary (Milliseconds): Time taken to flush any dirty pages to cold storage
 
-### vault_merkle_savecheckpoint
+### vault.merkle_savecheckpoint
 
 **[S]** Summary (Milliseconds): Time taken to save the checkpoint
 
@@ -312,7 +312,7 @@ Thes operations take a request and response with an associated lease and registe
 
 **[C]** Counter (Number of WAL): Number of Write Ahead Logs (WAL) deleted during each garbage collection run
 
-### vault_wal_gc_total
+### vault.wal_gc_total
 
 **[C]** Counter (Number of WAL): Total Number of Write Ahead Logs (WAL) on disk
 
