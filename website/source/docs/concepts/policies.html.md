@@ -384,6 +384,16 @@ wrapping mandatory for a particular path.
   * `max_wrapping_ttl` - The maximum allowed TTL that clients can specify for a
     wrapped response.
 
+```ruby
+# This effectively makes response wrapping mandatory for this path by setting min_wrapping_ttl to 1 second. 
+# This also sets this path's wrapped response maximum allowed TTL to 90 seconds.
+path "auth/approle/role/my-role/secret-id" {
+    capabilities = ["create", "update"]
+    min_wrapping_ttl = "1s"
+    max_wrapping_ttl = "90s"
+}
+```
+
 If both are specified, the minimum value must be less than the maximum. In
 addition, if paths are merged from different stanzas, the lowest value
 specified for each is the value that will result, in line with the idea of
