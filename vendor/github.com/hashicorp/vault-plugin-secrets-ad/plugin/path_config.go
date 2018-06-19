@@ -3,7 +3,9 @@ package plugin
 import (
 	"context"
 	"errors"
+	"time"
 
+	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/client"
 	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
 	"github.com/hashicorp/vault/helper/ldaputil"
 	"github.com/hashicorp/vault/logical"
@@ -30,7 +32,7 @@ func (b *backend) readConfig(ctx context.Context, storage logical.Storage) (*con
 	if entry == nil {
 		return nil, nil
 	}
-	config := &configuration{&passwordConf{}, &ldaputil.ConfigEntry{}}
+	config := &configuration{&passwordConf{}, &client.ADConf{}}
 	if err := entry.DecodeJSON(config); err != nil {
 		return nil, err
 	}
@@ -115,7 +117,7 @@ func (b *backend) configUpdateOperation(ctx context.Context, req *logical.Reques
 		Formatter: formatter,
 	}
 
-	config := &configuration{passwordConf, activeDirectoryConf}
+	config := &configuration{passwordConf, &client.ADConf{ConfigEntry: activeDirectoryConf}}
 	entry, err := logical.StorageEntryJSON(configStorageKey, config)
 	if err != nil {
 		return nil, err
@@ -151,6 +153,9 @@ func (b *backend) configReadOperation(ctx context.Context, req *logical.Request,
 		"upndomain":       config.ADConf.UPNDomain,
 		"tls_min_version": config.ADConf.TLSMinVersion,
 		"tls_max_version": config.ADConf.TLSMaxVersion,
+	}
+	if !config.ADConf.LastBindPasswordRotation.Equal(time.Time{}) {
+		configMap["last_bind_password_rotation"] = config.ADConf.LastBindPasswordRotation
 	}
 	for k, v := range config.PasswordConf.Map() {
 		configMap[k] = v
