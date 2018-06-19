@@ -163,7 +163,8 @@ and **is not a regular expression**!
 
 When providing `list` capability, it is important to note that since listing
 always operates on a prefix, policies must operate on a prefix because Vault
-will sanitize request paths to be prefixes:
+will sanitize request paths to be prefixes. In other words, policy paths
+targeting `list` capability should end with a trailing slash:
 
 ```ruby
 path "secret/foo" {
