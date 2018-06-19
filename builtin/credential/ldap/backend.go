@@ -190,16 +190,6 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	// Policies from each group may overlap
 	policies = strutil.RemoveDuplicates(policies, true)
 
-	if len(policies) == 0 {
-		errStr := "user is not a member of any authorized group"
-		if len(ldapResponse.Warnings) > 0 {
-			errStr = fmt.Sprintf("%s; additionally, %s", errStr, ldapResponse.Warnings[0])
-		}
-
-		ldapResponse.Data["error"] = errStr
-		return nil, ldapResponse, nil, nil
-	}
-
 	return policies, ldapResponse, allGroups, nil
 }
 
