@@ -22,6 +22,12 @@ IMPROVEMENTS:
  * core: Add idle and initial header read/TLS handshake timeouts to connections
    to ensure server resources are cleaned up [GH-4760]
  * core: Report policies in token, identity, and full sets [GH-4747]
+ * secrets/databases: Add `create`/`update` distinction for connection
+   configurations [GH-3544]
+ * secrets/databases: Add `create`/`update` distinction for role configurations
+   [GH-3544]
+ * secrets/databases: Add best-effort revocation logic for use when a role has
+   been deleted [GH-4782]
  * secrets/kv: Add `kv rollback` [GH-4774]
  * secrets/pki: Add URI SANs support [GH-4675]
  * secrets/ssh: Allow standard SSH command arguments to be used, without
