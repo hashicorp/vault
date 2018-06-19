@@ -192,6 +192,14 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	}
 
 	if entity != nil && entity.Disabled {
+		c.logger.Warn("permission denied as the entity on the token is disabled")
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		c.stateLock.RUnlock()
+		return retErr
+	}
+
+	if te != nil && te.EntityID != "" && entity == nil {
+		c.logger.Warn("permission denied as the entity on the token is invalid")
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		c.stateLock.RUnlock()
 		return retErr
