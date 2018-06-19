@@ -741,8 +741,6 @@ func testAccStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 			copy(expected, users)
 			sort.Strings(expected)
 
-			fmt.Println(resp.Data)
-
 			sortedResponse := make([]string, len(resp.Data["keys"].([]string)))
 			copy(sortedResponse, resp.Data["keys"].([]string))
 			sort.Strings(sortedResponse)
