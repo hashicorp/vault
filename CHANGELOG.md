@@ -6,6 +6,9 @@ DEPRECATIONS/CHANGES:
    parameters: policies that came only from tokens, policies that came only
    from Identity, and the combined set. Any previous location of policies via
    the API now contains the full, combined set.
+ * When a token is tied to an Identity entity and the entity is deleted, the
+   token will no longer be usable, regardless of the validity of the token
+   itself.
 
 FEATURES:
 
