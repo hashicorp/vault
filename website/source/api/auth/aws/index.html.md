@@ -987,9 +987,9 @@ token.
 
 ### Parameters
 
-- `role_tag` `(string: <required>)` - Role tag to be blacklisted. The tag can be
-  supplied as-is. In order to avoid any encoding problems, it can be base64
-  encoded.
+- `role_tag` `(string: <required>)` - Role tag to be blacklisted. This is the `tag_value` returned when the role tag is 
+  created. The tag can be supplied as-is. In order to avoid any encoding problems, it can be base64
+  encoded. 
 
 ### Sample Request
 
