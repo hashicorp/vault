@@ -43,7 +43,6 @@ import (
 	"github.com/hashicorp/vault/physical"
 	"github.com/mitchellh/go-testing-interface"
 
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	physInmem "github.com/hashicorp/vault/physical/inmem"
 )
 
@@ -84,30 +83,6 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 -----END RSA PRIVATE KEY-----
 `
 )
-
-func testCoreWithUserpassAuthRoot(t testing.T) (*Core, string, string) {
-	// Add userpass credential factory to core config
-	err := AddTestCredentialBackend("userpass", credUserpass.Factory)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	c, _, root := TestCoreUnsealed(t)
-
-	meGH := &MountEntry{
-		Table:       credentialTableType,
-		Path:        "userpass/",
-		Type:        "userpass",
-		Description: "userpass auth",
-	}
-
-	err = c.enableCredential(context.Background(), meGH)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return c, meGH.Accessor, root
-}
 
 // TestCore returns a pure in-memory, uninitialized core for testing.
 func TestCore(t testing.T) *Core {
