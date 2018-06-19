@@ -169,12 +169,11 @@ func (b *backend) RadiusLogin(ctx context.Context, req *logical.Request, usernam
 	}
 	if user == nil {
 		// No user found, check if unregistered users are allowed (unregistered_user_policies not empty)
-		if len(policyutil.SanitizePolicies(cfg.UnregisteredUserPolicies, false)) == 0 {
-			return nil, logical.ErrorResponse("authentication succeeded but user has no associated policies"), nil
+		if len(policyutil.SanitizePolicies(cfg.UnregisteredUserPolicies, false)) > 0 {
+			policies = cfg.UnregisteredUserPolicies
 		}
-		policies = policyutil.SanitizePolicies(cfg.UnregisteredUserPolicies, true)
 	} else {
-		policies = policyutil.SanitizePolicies(user.Policies, true)
+		policies = user.Policies
 	}
 
 	return policies, &logical.Response{}, nil
