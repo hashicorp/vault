@@ -20,6 +20,9 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * Root Rotation for Active Directory: You can now command Vault to rotate the
+   configured root credentials used in the AD secrets engine, to ensure that
+   only Vault knows the credentials it's using.
  * URI SANs in PKI: You can now configure URI Subject Alternate Names in the
    `pki` backend. Roles can limit which SANs are allowed via globbing.
  * `kv rollback` Command: You can now use `vault kv rollback` to roll a KVv2
