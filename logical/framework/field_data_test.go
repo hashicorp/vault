@@ -642,3 +642,37 @@ func TestFieldDataGet_Error(t *testing.T) {
 		}
 	}
 }
+
+func TestFieldDataGetFirst(t *testing.T) {
+	data := &FieldData{
+		Raw: map[string]interface{}{
+			"foo":  "bar",
+			"fizz": "buzz",
+		},
+		Schema: map[string]*FieldSchema{
+			"foo":  {Type: TypeNameString},
+			"fizz": {Type: TypeNameString},
+		},
+	}
+
+	result, ok := data.GetFirst("foo", "fizz")
+	if !ok {
+		t.Fatal("should have found value for foo")
+	}
+	if result.(string) != "bar" {
+		t.Fatal("should have gotten bar for foo")
+	}
+
+	result, ok = data.GetFirst("fizz", "foo")
+	if !ok {
+		t.Fatal("should have found value for fizz")
+	}
+	if result.(string) != "buzz" {
+		t.Fatal("should have gotten buzz for fizz")
+	}
+
+	result, ok = data.GetFirst("cats")
+	if ok {
+		t.Fatal("shouldn't have gotten anything for cats")
+	}
+}

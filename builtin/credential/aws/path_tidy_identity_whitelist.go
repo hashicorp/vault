@@ -33,7 +33,7 @@ expiration, before it is removed from the backend storage.`,
 }
 
 // tidyWhitelistIdentity is used to delete entries in the whitelist that are expired.
-func (b *backend) tidyWhitelistIdentity(ctx context.Context, s logical.Storage, safety_buffer int) (*logical.Response, error) {
+func (b *backend) tidyWhitelistIdentity(ctx context.Context, s logical.Storage, safetyBuffer int) (*logical.Response, error) {
 	if !atomic.CompareAndSwapUint32(b.tidyWhitelistCASGuard, 0, 1) {
 		resp := &logical.Response{}
 		resp.AddWarning("Tidy operation already in progress.")
@@ -48,7 +48,7 @@ func (b *backend) tidyWhitelistIdentity(ctx context.Context, s logical.Storage, 
 
 		logger := b.Logger().Named("wltidy")
 
-		bufferDuration := time.Duration(safety_buffer) * time.Second
+		bufferDuration := time.Duration(safetyBuffer) * time.Second
 
 		doTidy := func() error {
 			identities, err := s.List(ctx, "whitelist/identity/")
@@ -76,7 +76,7 @@ func (b *backend) tidyWhitelistIdentity(ctx context.Context, s logical.Storage, 
 				}
 
 				if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
-					if err := s.Delete(ctx, "whitelist/identity"+instanceID); err != nil {
+					if err := s.Delete(ctx, "whitelist/identity/"+instanceID); err != nil {
 						return errwrap.Wrapf(fmt.Sprintf("error deleting identity of instanceID %q from storage: {{err}}", instanceID), err)
 					}
 				}

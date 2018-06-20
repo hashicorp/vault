@@ -33,7 +33,7 @@ expiration, before it is removed from the backend storage.`,
 }
 
 // tidyBlacklistRoleTag is used to clean-up the entries in the role tag blacklist.
-func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, safety_buffer int) (*logical.Response, error) {
+func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, safetyBuffer int) (*logical.Response, error) {
 	if !atomic.CompareAndSwapUint32(b.tidyBlacklistCASGuard, 0, 1) {
 		resp := &logical.Response{}
 		resp.AddWarning("Tidy operation already in progress.")
@@ -48,7 +48,7 @@ func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, s
 
 		logger := b.Logger().Named("bltidy")
 
-		bufferDuration := time.Duration(safety_buffer) * time.Second
+		bufferDuration := time.Duration(safetyBuffer) * time.Second
 
 		doTidy := func() error {
 			tags, err := s.List(ctx, "blacklist/roletag/")
@@ -76,7 +76,7 @@ func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, s
 				}
 
 				if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
-					if err := s.Delete(ctx, "blacklist/roletag"+tag); err != nil {
+					if err := s.Delete(ctx, "blacklist/roletag/"+tag); err != nil {
 						return errwrap.Wrapf(fmt.Sprintf("error deleting tag %q from storage: {{err}}", tag), err)
 					}
 				}
