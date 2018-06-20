@@ -1,2 +1,4 @@
+* text=auto eol=CRLF
+
 vendor/* linguist-vendored
 website/* linguist-documentation
