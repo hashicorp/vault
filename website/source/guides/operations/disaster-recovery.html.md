@@ -3,7 +3,8 @@ layout: "guides"
 page_title: "Vault Disaster Recovery Replication Setup - Guides"
 sidebar_current: "guides-operations-dr"
 description: |-
-  This guide demonstrates step-by-step instruction of setting up a disaster recovery (DR) cluster.
+  This guide demonstrates step-by-step instruction of setting up a disaster
+  recovery (DR) replications.
 ---
 
 # Vault Disaster Recovery Replication
@@ -22,12 +23,12 @@ primary cluster to all **secondary** (follower) clusters.
 
 ![Replication Pattern](/assets/images/vault-ref-arch-8.png)
 
-In DR replication, secondary clusters ***do not forward*** service read or write
-requests until they are promoted and become a new primary - they essentially act
-as a warm standby cluster.
+~> **Important:** In DR replication, secondary clusters ***do not forward***
+service read or write requests until they are promoted and become a new primary
+- they essentially act as a warm standby cluster.
 
 
-> The [Mount Filter](/guides/operations/mount-filter.html) guide provides step-by-step
+The [Mount Filter](/guides/operations/mount-filter.html) guide provides step-by-step
 instructions on setting up performance replication.  This guide focuses on DR
 replication setup.
 
@@ -58,7 +59,7 @@ and another becomes the **secondary**.
 
 ## Steps
 
-You will perform the following:
+This guide walk through the following operations:
 
 1. [Enable DR Primary Replication](#step1)
 1. [Enable DR Secondary Replication](#step2)
@@ -244,9 +245,9 @@ The following operations must be performed on the DR secondary cluster.
 
 #### Web UI
 
-1. Now, launch the Vault UI for the **secondary** cluster (e.g. https://cluster-B.example.com:8200/ui), and then click **Replication**.
+1. Now, launch the Vault UI for the **secondary** cluster (e.g. https://cluster-B.example.com:8200/ui) and click **Replication**.
 
-1. Check the **Disaster Recovery (DR)** radio button, and then select **secondary** under the **Cluster mode**. Paste the token you copied from the primary in the **Secondary activation token** field.
+1. Check the **Disaster Recovery (DR)** radio button and select **secondary** under the **Cluster mode**. Paste the token you copied from the primary in the **Secondary activation token** field.
   ![DR Replication - secondary](/assets/images/vault-dr-5.png)
 
 1. Click **Enable replication**.
@@ -420,7 +421,7 @@ the DR secondary.
     ![DR Replication - secondary](/assets/images/vault-dr-8.png)
 
 1. Execute the CLI command from a terminal to generate a DR operation token
-using the OTP generated earlier.
+using the OTP generated earlier. (Be sure to enter your OTP in the command.)
 
     **Example:**
 
@@ -433,6 +434,8 @@ using the OTP generated earlier.
     ```
 
 1. Now, click **Promote** tab, and then enter the generated DR operation token.
+
+    ![DR Replication - secondary](/assets/images/vault-dr-9-1.png)
 
 1. Click **Promote cluster**.
 
@@ -455,8 +458,8 @@ If the _original_ DR primary cluster becomes operational again, you may want to
 utilize the cluster by making it a DR secondary cluster. This step explains how
 to demote the original DR primary cluster to a secondary.
 
-~> Remember that there is only **one** primary cluster available to clients at
-any one time.
+~> Remember that there is only **one** primary cluster available to the clients
+in DR replication.
 
 #### CLI command
 
@@ -519,11 +522,11 @@ When you prompted, "_Are you sure you want to demote this cluster?_", click
 ### <a name="step5"></a>Step 5: Disable DR Primary
 
 Once the DR secondary cluster was promoted to be the **new primary**, you may
-wish to disable the DR replication on the _original_ primary when it becomes
+want to disable the DR replication on the _original_ primary when it becomes
 operational again.
 
-~> Remember that there is only **one** primary cluster available to clients at
-any one time.
+~> Remember that there is only **one** primary cluster available to the clients
+in DR replication.
 
 
 #### CLI command
@@ -536,7 +539,7 @@ $ vault write -f sys/replication/dr/primary/disable
 WARNING! The following warnings were returned from Vault:
 
   * This cluster is having replication disabled. Vault will be unavailable for
-  a brief period and will resume service shortly.
+    a brief period and will resume service shortly.
 ```
 
 Any secondaries will no longer be able to connect.
