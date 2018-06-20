@@ -161,18 +161,14 @@ func (b *backend) RadiusLogin(ctx context.Context, req *logical.Request, usernam
 		return nil, logical.ErrorResponse("access denied by the authentication server"), nil
 	}
 
-	var policies []string
+	policies := cfg.UnregisteredUserPolicies
+
 	// Retrieve user entry from storage
 	user, err := b.user(ctx, req.Storage, username)
 	if err != nil {
-		return policies, logical.ErrorResponse("could not retrieve user entry from storage"), err
+		return nil, logical.ErrorResponse("could not retrieve user entry from storage"), err
 	}
-	if user == nil {
-		// No user found, check if unregistered users are allowed (unregistered_user_policies not empty)
-		if len(policyutil.SanitizePolicies(cfg.UnregisteredUserPolicies, false)) > 0 {
-			policies = cfg.UnregisteredUserPolicies
-		}
-	} else {
+	if user != nil {
 		policies = user.Policies
 	}
 
