@@ -42,6 +42,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * auth/approle: Fix panic due to metadata being nil [GH-4719]
+ * auth/aws: Fix delete path for tidy operations [GH-4799]
  * core: Optimizations to remove some speed regressions due to the
    security-related changes in 0.10.2
  * secrets/database: Fix default MySQL root rotation statement [GH-4748]
