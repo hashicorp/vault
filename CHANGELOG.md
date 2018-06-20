@@ -68,7 +68,7 @@ BUG FIXES:
    keys, fixing lookup on some Thales devices
  * replication: Fix issue enabling replication when a non-auth mount and auth
    mount have the same name
- * auth/kubernetes: Fix issue verifying ECDSA signed JWTs.
+ * auth/kubernetes: Fix issue verifying ECDSA signed JWTs
 
 ## 0.10.2 (June 6th, 2018)
 
