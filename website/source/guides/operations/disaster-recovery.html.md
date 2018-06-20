@@ -32,7 +32,6 @@ instructions on setting up performance replication.  This guide focuses on DR
 replication setup.
 
 
-
 ## Reference Materials
 
 - [Performance Replication and Disaster Recovery (DR) Replication](/docs/enterprise/replication/index.html#performance-replication-and-disaster-recovery-dr-replication)
@@ -64,6 +63,8 @@ You will perform the following:
 1. [Enable DR Primary Replication](#step1)
 1. [Enable DR Secondary Replication](#step2)
 1. [Promote DR Secondary to Primary](#step3)
+1. [Demote DR Primary to Secondary](#step4)
+1. [Disable DR Primary](#step5)
 
 
 ### <a name="step1"></a>Step 1: Enable DR Primary Replication
@@ -111,7 +112,7 @@ You will perform the following:
     $ curl --header "X-Vault-Token: ..." \
            --request POST \
            --data '{}' \
-           https://primary.example.com:8200/v1/sys/replication/dr/primary/enable
+           https://cluster-A.example.com:8200/v1/sys/replication/dr/primary/enable
      {
        "request_id": "ef38af20-9c1f-138a-2d03-bbb6410fb0fc",
        "lease_id": "",
@@ -135,7 +136,7 @@ You will perform the following:
     $ curl --header "X-Vault-Token: ..." \
            --request POST \
            --data '{ "id": "secondary"}' \
-           https://primary.example.com:8200/v1/sys/replication/dr/primary/secondary-token | jq
+           https://cluster-A.example.com:8200/v1/sys/replication/dr/primary/secondary-token | jq
      {
        "request_id": "",
        "lease_id": "",
@@ -158,6 +159,9 @@ You will perform the following:
     secondary cluster.
 
 #### Web UI
+
+Open a web browser and launch the Vault UI (e.g.
+https://cluster-A.example.com:8200/ui) and then login.
 
 1. Select **Replication** and check the **Disaster Recovery (DR)** radio button.
   ![DR Replication - primary](/assets/images/vault-dr-1.png)
@@ -215,7 +219,7 @@ The following operations must be performed on the DR secondary cluster.
     $ curl --header "X-Vault-Token: ..." \
            --request POST \
            --data @payload.json \
-           https://secondary.example.com:8200/v1/sys/replication/dr/secondary/enable | jq
+           https://cluster-B.example.com:8200/v1/sys/replication/dr/secondary/enable | jq
     {
        "request_id": "7a9730c1-b6fc-6557-5c0a-081e1f89ed2d",
        "lease_id": "",
@@ -240,7 +244,7 @@ The following operations must be performed on the DR secondary cluster.
 
 #### Web UI
 
-1. Now, launch the Vault UI for the **secondary** cluster (e.g. https://secondary.example.com:8200/ui), and then click **Replication**.
+1. Now, launch the Vault UI for the **secondary** cluster (e.g. https://cluster-B.example.com:8200/ui), and then click **Replication**.
 
 1. Check the **Disaster Recovery (DR)** radio button, and then select **secondary** under the **Cluster mode**. Paste the token you copied from the primary in the **Secondary activation token** field.
   ![DR Replication - secondary](/assets/images/vault-dr-5.png)
@@ -286,7 +290,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 
     $ curl --request PUT \
          --data @payload.json \
-         https://secondary.example.com:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt | jq
+         https://cluster-B.example.com:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt | jq
      {
        "nonce": "455bf989-6575-1262-c0d0-a94eaf60bdd0",
        "started": true,
@@ -316,7 +320,7 @@ entered by each key holder via **`/sys/replication/dr/secondary/generate-operati
 
     $ curl --request PUT \
            --data @payload_key1.json \
-           https://secondary.example.com:8200/v1/sys/replication/dr/secondary/generate-operation-token/update | jq
+           https://cluster-B.example.com:8200/v1/sys/replication/dr/secondary/generate-operation-token/update | jq
      {
        "nonce": "455bf989-6575-1262-c0d0-a94eaf60bdd0",
        "started": true,
@@ -329,8 +333,8 @@ entered by each key holder via **`/sys/replication/dr/secondary/generate-operati
      }
     ```
 
-    This operation must be executed by the each unseal key holders. Once the
-    quorum has been reached, the output contains the encoded DR operation token
+    This operation must be executed by each unseal key holder. Once the quorum
+    has been reached, the output contains the encoded DR operation token
     (`encoded_token`).
 
     **Example:**
@@ -338,7 +342,7 @@ entered by each key holder via **`/sys/replication/dr/secondary/generate-operati
     ```plaintext
     $ curl --request PUT \
          --data @payload_key3.json \
-         https://secondary.example.com:8200/v1/sys/replication/dr/secondary/generate-operation-token/update | jq
+         https://cluster-B.example.com:8200/v1/sys/replication/dr/secondary/generate-operation-token/update | jq
     {
       "nonce": "455bf989-6575-1262-c0d0-a94eaf60bdd0",
       "started": true,
@@ -379,7 +383,7 @@ contains the DR operation token.
     $ curl --header "X-Vault-Token: ..." \
              --request POST \
              --data @payload.json \
-             https://secondary.example.com:8200/v1/sys/replication/dr/secondary/promote | jq
+             https://cluster-B.example.com:8200/v1/sys/replication/dr/secondary/promote | jq
     {
       "request_id": "3879546b-1dc7-8490-521b-80104ad761b5",
       "lease_id": "",
@@ -405,9 +409,14 @@ contains the DR operation token.
 
 1. A quorum of unseal keys must be entered to create a new operation token for
 the DR secondary.
+
     ![DR Replication - secondary](/assets/images/vault-dr-7.png)
 
-1. Once the unseal keys have been entered, click **Copy CLI command**.
+    -> This operation must be performed by each unseal-key holder.
+
+
+1. Once the quorum has been reached, the output displays the encoded DR operation token.  Click **Copy CLI command**.
+
     ![DR Replication - secondary](/assets/images/vault-dr-8.png)
 
 1. Execute the CLI command from a terminal to generate a DR operation token
@@ -424,17 +433,159 @@ using the OTP generated earlier.
     ```
 
 1. Now, click **Promote** tab, and then enter the generated DR operation token.
-    ![DR Replication - secondary](/assets/images/vault-dr-9.png)
 
-1. Click **Promote cluster** to complete.
+1. Click **Promote cluster**.
+
+    When you prompted, "_Are you sure you want to promote this cluster?_", click **Promote cluster** again to complete.
+
+    ![DR Replication - secondary](/assets/images/vault-dr-9.png)
 
 <br>
 
-~> Once the secondary cluster was successfully promoted, you should be able to
+> Once the secondary cluster was successfully promoted, you should be able to
 log in using the original primary cluster's root token or via configured
 authentication method.  If desired, generate a [new root
 token](/guides/operations/generate-root.html).
 
+
+
+### <a name="step4"></a>Step 4: Demote DR Primary to Secondary
+
+If the _original_ DR primary cluster becomes operational again, you may want to
+utilize the cluster by making it a DR secondary cluster. This step explains how
+to demote the original DR primary cluster to a secondary.
+
+~> Remember that there is only **one** primary cluster available to clients at
+any one time.
+
+#### CLI command
+
+Execute the following command to demote the original DR primary cluster to a
+secondary.
+
+```plaintext
+$ vault write -f sys/replication/dr/primary/demote
+
+WARNING! The following warnings were returned from Vault:
+
+  * This cluster is being demoted to a replication secondary. Vault will be
+  unavailable for a brief period and will resume service shortly.
+```
+
+This secondary cluster will not attempt to connect to a primary (see the
+update-primary call), but will maintain knowledge of its cluster ID and can be
+reconnected to the same DR replication set without wiping local storage.
+
+
+#### API call using cURL
+
+Invoke the **`sys/replication/dr/secondary/enable`** endpoint to demote the
+original DR primary cluster to a secondary.
+
+```plaintext
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       https://cluster-A.example.com:8200/v1/sys/replication/dr/primary/demote | jq
+{
+   "request_id": "8a40adac-6eb7-c798-48d0-f7cdd25fdd6f",
+   "lease_id": "",
+   "renewable": false,
+   "lease_duration": 0,
+   "data": null,
+   "wrap_info": null,
+   "warnings": [
+     "This cluster is being demoted to a replication secondary. Vault will be unavailable for a brief period and will resume service shortly."
+   ],
+   "auth": null
+}
+```
+
+This secondary cluster will not attempt to connect to a primary (see the
+update-primary call), but will maintain knowledge of its cluster ID and can be
+reconnected to the same DR replication set without wiping local storage.
+
+#### Web UI
+
+Select **Replication** and click **Demote cluster**.
+
+![DR Replication - demotion](/assets/images/vault-dr-10.png)
+
+When you prompted, "_Are you sure you want to demote this cluster?_", click
+**Demote cluster** again to complete.
+
+![DR Replication - demotion](/assets/images/vault-dr-12.png)
+
+
+### <a name="step5"></a>Step 5: Disable DR Primary
+
+Once the DR secondary cluster was promoted to be the **new primary**, you may
+wish to disable the DR replication on the _original_ primary when it becomes
+operational again.
+
+~> Remember that there is only **one** primary cluster available to clients at
+any one time.
+
+
+#### CLI command
+
+Execute the following command to disable DR replication.
+
+```plaintext
+$ vault write -f sys/replication/dr/primary/disable
+
+WARNING! The following warnings were returned from Vault:
+
+  * This cluster is having replication disabled. Vault will be unavailable for
+  a brief period and will resume service shortly.
+```
+
+Any secondaries will no longer be able to connect.
+
+
+#### API call using cURL
+
+Invoke the **`sys/replication/dr/primary/disable`** endpoint to disable DR
+replication.
+
+```plaintext
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       https://cluster-A.example.com:8200/v1/sys/replication/dr/primary/disable | jq
+{
+   "request_id": "92a5f57a-2f7b-11be-b9dd-0f028396fba8",
+   "lease_id": "",
+   "renewable": false,
+   "lease_duration": 0,
+   "data": null,
+   "wrap_info": null,
+   "warnings": [
+     "This cluster is having replication disabled. Vault will be unavailable for a brief period and will resume service shortly."
+   ],
+   "auth": null
+}
+```
+
+Any secondaries will no longer be able to connect.
+
+
+#### Web UI
+
+Select **Replication** and click **Disable replication**.
+
+![DR Replication - demotion](/assets/images/vault-dr-11.png)
+
+When you prompted, "_Are you sure you want to disable replication on this
+cluster?_", click **Disable** again to complete.
+
+![DR Replication - demotion](/assets/images/vault-dr-13.png)
+
+Any secondaries will no longer be able to connect.
+
+!> **Caution:** Once this is done, re-enabling the DR replication as a primary
+will change the cluster's ID.  Its connecting secondaries will require a wipe of
+the underlying storage even if they have connected before. If re-enabling DR
+replication as a secondary, its underlying storage will be wiped when connected
+to a primary.
 
 
 ## <a name="important"></a>Important Note about Automated DR Failover
@@ -450,16 +601,14 @@ have two active clusters whose data sets will immediately start diverging.
 There's no way to understand simply from one perspective or the other which one
 of them is right.
 
-Vault's API does support programmatically performing various replication
-operations which allows the customer to write their own logic about automating
-some of these operations based on experience within their own environments. You
-can review the available replication APIs at the following links:
+Vault's API supports programmatically performing various replication operations
+which allows the customer to write their own logic about automating some of
+these operations based on experience within their own environments. You can
+review the available replication APIs at the following links:
 
 - [Vault Replication API](/api/system/replication.html)
 - [DR Replication API](/api/system/replication-dr.html)
 - [Performance Replication API](/api/system/replication-performance.html)
-
-
 
 
 
