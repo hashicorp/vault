@@ -89,6 +89,10 @@ func (v *BarrierView) Get(ctx context.Context, key string) (*logical.StorageEntr
 
 // logical.Storage impl.
 func (v *BarrierView) Put(ctx context.Context, entry *logical.StorageEntry) error {
+	if entry == nil {
+		return errors.New("cannot write nil entry")
+	}
+
 	if err := v.sanityCheck(entry.Key); err != nil {
 		return err
 	}
