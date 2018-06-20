@@ -27,8 +27,8 @@ requests until they are promoted and become a new primary - they essentially act
 as a warm standby cluster.
 
 
-> [Mount Filter](/guides/operations/mount-filter.html) guide provided step-by-step
-instruction on setting up performance replication.  This guide focuses on DR
+> The [Mount Filter](/guides/operations/mount-filter.html) guide provides step-by-step
+instructions on setting up performance replication.  This guide focuses on DR
 replication setup.
 
 
@@ -70,7 +70,7 @@ You will perform the following:
 
 #### CLI command
 
-1. Enable performance replication on the **primary** cluster.
+1. Enable DR replication on the **primary** cluster.
 
     ```plaintext
     $ vault write -f sys/replication/dr/primary/enable
@@ -103,7 +103,7 @@ You will perform the following:
 
 #### API call using cURL
 
-1. Enable performance replication on the **primary** cluster by invoking **`/sys/replication/dr/primary/enable`** endpoint.
+1. Enable DR replication on the **primary** cluster by invoking **`/sys/replication/dr/primary/enable`** endpoint.
 
     **Eaxmple:**
 
@@ -160,18 +160,18 @@ You will perform the following:
 #### Web UI
 
 1. Select **Replication** and check the **Disaster Recovery (DR)** radio button.
-  ![Performance Replication - primary](/assets/images/vault-dr-1.png)
+  ![DR Replication - primary](/assets/images/vault-dr-1.png)
 
 1. Click **Enable replication**.
 
 1. Select the **Secondaries** tab, and then click **Add**.
-  ![Performance Replication - primary](/assets/images/vault-dr-2.png)
+  ![DR Replication - primary](/assets/images/vault-dr-2.png)
 
 1. Populate the **Secondary ID** field, and click **Generate token**.
-  ![Performance Replication - primary](/assets/images/vault-dr-3.png)
+  ![DR Replication - primary](/assets/images/vault-dr-3.png)
 
 1. Click **Copy** to copy the token which you will need to enable the DR secondary cluster.
-  ![Performance Replication - primary](/assets/images/vault-dr-4.png)
+  ![DR Replication - primary](/assets/images/vault-dr-4.png)
 
 
 <br>
@@ -182,7 +182,7 @@ The following operations must be performed on the DR secondary cluster.
 
 #### CLI command
 
-1. Enable performance replication on the **secondary** cluster.
+1. Enable DR replication on the **secondary** cluster.
 
     ```plaintext
     $ vault write sys/replication/dr/secondary/enable token="..."
@@ -203,7 +203,7 @@ The following operations must be performed on the DR secondary cluster.
 
 #### API call using cURL
 
-1. Enable performance replication on the **secondary** cluster.
+1. Enable DR replication on the **secondary** cluster.
 
     ```plaintext
     $ tee payload.json <<EOF
@@ -243,10 +243,10 @@ The following operations must be performed on the DR secondary cluster.
 1. Now, launch the Vault UI for the **secondary** cluster (e.g. https://secondary.example.com:8200/ui), and then click **Replication**.
 
 1. Check the **Disaster Recovery (DR)** radio button, and then select **secondary** under the **Cluster mode**. Paste the token you copied from the primary in the **Secondary activation token** field.
-  ![Performance Replication - secondary](/assets/images/vault-dr-5.png)
+  ![DR Replication - secondary](/assets/images/vault-dr-5.png)
 
 1. Click **Enable replication**.
-  ![Performance Replication - secondary](/assets/images/vault-dr-5.2.png)
+  ![DR Replication - secondary](/assets/images/vault-dr-5.2.png)
 
   !> **NOTE:** This will immediately clear all data in the secondary cluster.
 
@@ -258,11 +258,11 @@ The following operations must be performed on the DR secondary cluster.
 
 This step walks you through the promotion of the secondary cluster to become the
 new primary when a catastrophic failure causes the primary cluster to be
-inoperable. Refer to the [_Important Note a bout Automated DR
+inoperable. Refer to the [_Important Note about Automated DR
 Failover_](#important) section for more background information.
 
 First, you must generate a **DR operation token** which you need to promote the
-secondary cluster.
+secondary cluster. The process, outlined below using API calls, is the similar to [_Generating a Root Token (via CLI)_](/guides/operations/generate-root.html).
 
 #### From Terminal
 
@@ -399,16 +399,16 @@ contains the DR operation token.
 #### Web UI
 
 1. Click on **Generate OTP** to generate an OTP.  Then click **Copy OTP**.
-    ![Performance Replication - secondary](/assets/images/vault-dr-6.png)
+    ![DR Replication - secondary](/assets/images/vault-dr-6.png)
 
 1. Click **Generate Operation Token**.
 
 1. A quorum of unseal keys must be entered to create a new operation token for
 the DR secondary.
-    ![Performance Replication - secondary](/assets/images/vault-dr-7.png)
+    ![DR Replication - secondary](/assets/images/vault-dr-7.png)
 
 1. Once the unseal keys have been entered, click **Copy CLI command**.
-    ![Performance Replication - secondary](/assets/images/vault-dr-8.png)
+    ![DR Replication - secondary](/assets/images/vault-dr-8.png)
 
 1. Execute the CLI command from a terminal to generate a DR operation token
 using the OTP generated earlier.
@@ -424,7 +424,7 @@ using the OTP generated earlier.
     ```
 
 1. Now, click **Promote** tab, and then enter the generated DR operation token.
-    ![Performance Replication - secondary](/assets/images/vault-dr-9.png)
+    ![DR Replication - secondary](/assets/images/vault-dr-9.png)
 
 1. Click **Promote cluster** to complete.
 
@@ -437,7 +437,7 @@ token](/guides/operations/generate-root.html).
 
 
 
-## <a name="important"></a>Important Note a bout Automated DR Failover
+## <a name="important"></a>Important Note about Automated DR Failover
 
 Vault does not support an automatic failover/promotion of a DR secondary
 cluster, and this is a deliberate choice due to the difficulty in accurately
