@@ -17,6 +17,8 @@ FEATURES:
  * `kv rollback` Command: You can now use `vault kv rollback` to roll a KVv2
    path back to a previous non-deleted/non-destroyed version. The previous
    version becomes the next/newest version for the path.
+ * Token Bound CIDRs in AppRole: You can now add CIDRs to which a token
+   generated from AppRole will be bound.
 
 IMPROVEMENTS:
 
