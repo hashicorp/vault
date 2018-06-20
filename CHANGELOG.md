@@ -9,6 +9,14 @@ DEPRECATIONS/CHANGES:
  * When a token is tied to an Identity entity and the entity is deleted, the
    token will no longer be usable, regardless of the validity of the token
    itself.
+ * When authentication succeeds but no policies were defined for that specific
+   user, most auth methods would allow a token to be generated but a few would
+   reject the authentication, namely `ldap`, `okta`, and `radius`. Since the
+   `default` policy is added by Vault's core, this would incorrectly reject
+   valid authentications before they would in fact be granted policies. This
+   inconsistency has been addressed; valid authentications for these methods
+   now succeed even if no policy was specifically defined in that method for
+   that user.
 
 FEATURES:
 
