@@ -1064,7 +1064,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 	if err := validateRoleConstraints(role); err != nil {
 		resp.AddWarning("Role does not have any constraints set on it. Updates to this role will require a constraint to be set")
 	}
-	resp.AddWarning(`The "bound_cidr_list" parameter is deprecated and will be removed. Please use "secret_id_bound_cidrs" instead.`)
+	resp.AddWarning(`The "bound_cidr_list" parameter is deprecated and will be removed in favor of "secret_id_bound_cidrs".`)
 
 	// For sanity, verify that the index still exists. If the index is missing,
 	// add one and return a warning so it can be reported.
