@@ -499,6 +499,30 @@
 			"revisionTime": "2018-02-03T08:01:48Z"
 		},
 		{
+			"checksumSHA1": "wCaMkrXyTIFhss/mCRnbSTjqKoI=",
+			"path": "github.com/briankassouf/jose",
+			"revision": "d2569464773f2b9de32e57a79d87318bca5b56c0",
+			"revisionTime": "2018-06-19T21:45:49Z"
+		},
+		{
+			"checksumSHA1": "trdC2+st1v9tFgU3/vIYW238fgk=",
+			"path": "github.com/briankassouf/jose/crypto",
+			"revision": "d2569464773f2b9de32e57a79d87318bca5b56c0",
+			"revisionTime": "2018-06-19T21:45:49Z"
+		},
+		{
+			"checksumSHA1": "MS5CbPD4yQKfyN5+8wwoUlNYoRY=",
+			"path": "github.com/briankassouf/jose/jws",
+			"revision": "d2569464773f2b9de32e57a79d87318bca5b56c0",
+			"revisionTime": "2018-06-19T21:45:49Z"
+		},
+		{
+			"checksumSHA1": "xSZ/hDO7yll2NzZlFR7V9XpjZlw=",
+			"path": "github.com/briankassouf/jose/jwt",
+			"revision": "d2569464773f2b9de32e57a79d87318bca5b56c0",
+			"revisionTime": "2018-06-19T21:45:49Z"
+		},
+		{
 			"checksumSHA1": "Zlk5zPiw+3u9pyy4kNThpKDaYmE=",
 			"path": "github.com/cenkalti/backoff",
 			"revision": "2ea60e5f094469f9e65adb9cd103795b73ae743e",
@@ -1321,10 +1345,10 @@
 			"revisionTime": "2018-04-08T01:06:05Z"
 		},
 		{
-			"checksumSHA1": "7YzPANZR2eqdB+XWgN+QtvGR9aI=",
+			"checksumSHA1": "L5pDwOw2/MLLUSykrwxXbXQI7zI=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "dabfb5747165f7226d282959b77c17e3c2c29a2f",
-			"revisionTime": "2018-06-18T16:24:03Z"
+			"revision": "7ca24869a5b9c9e308c475a21c9ce1331734120e",
+			"revisionTime": "2018-06-19T23:09:39Z"
 		},
 		{
 			"checksumSHA1": "kGEaf6lxGWkJibW4Dto2wFDXrfY=",
