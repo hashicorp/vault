@@ -58,7 +58,7 @@ BUG FIXES:
  * auth/aws: Fix delete path for tidy operations [GH-4799]
  * core: Optimizations to remove some speed regressions due to the
    security-related changes in 0.10.2
- * physical/dynamodb: Fix errors seen when reading existing DynamoDB data [GH-4721]
+ * storage/dynamodb: Fix errors seen when reading existing DynamoDB data [GH-4721]
  * secrets/database: Fix default MySQL root rotation statement [GH-4748]
  * secrets/gcp: Fix renewal for GCP account keys
  * secrets/kv: Fix writing to the root of a KVv2 mount from `vault kv` commands
@@ -68,6 +68,7 @@ BUG FIXES:
    keys, fixing lookup on some Thales devices
  * replication: Fix issue enabling replication when a non-auth mount and auth
    mount have the same name
+ * auth/kubernetes: Fix issue verifying ECDSA signed JWTs.
 
 ## 0.10.2 (June 6th, 2018)
 
