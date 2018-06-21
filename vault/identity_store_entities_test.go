@@ -513,23 +513,9 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 		t.Fatalf("entity mismatched entities; expected: %#v\n actual: %#v\n", entity, entityFetched)
 	}
 
-	// Fetch entities using the metadata
-	entitiesFetched, err := is.MemDBEntitiesByMetadata(map[string]string{
-		"someusefulkey": "someusefulvalue",
-	}, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(entitiesFetched) != 1 {
-		t.Fatalf("bad: length of entities; expected: 1, actual: %d", len(entitiesFetched))
-	}
-
-	if !reflect.DeepEqual(entity, entitiesFetched[0]) {
-		t.Fatalf("entity mismatch; entity: %#v\n entitiesFetched[0]: %#v\n", entity, entitiesFetched[0])
-	}
-
-	entitiesFetched, err = is.MemDBEntitiesByBucketEntryKeyHash(entity.BucketKeyHash)
+	txn := is.db.Txn(false)
+	entitiesFetched, err = is.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, entity.BucketKeyHash)
+	txn.Abort()
 	if err != nil {
 		t.Fatal(err)
 	}

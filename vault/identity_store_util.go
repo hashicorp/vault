@@ -600,41 +600,6 @@ func (i *IdentityStore) MemDBEntityByName(entityName string, clone bool) (*ident
 	return entity, nil
 }
 
-func (i *IdentityStore) MemDBEntitiesByMetadata(filters map[string]string, clone bool) ([]*identity.Entity, error) {
-	if filters == nil {
-		return nil, fmt.Errorf("map filter is nil")
-	}
-
-	txn := i.db.Txn(false)
-	defer txn.Abort()
-
-	var args []interface{}
-	for key, value := range filters {
-		args = append(args, key, value)
-		break
-	}
-
-	entitiesIter, err := txn.Get(entitiesTable, "metadata", args...)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to lookup entities using metadata: {{err}}", err)
-	}
-
-	var entities []*identity.Entity
-	for entity := entitiesIter.Next(); entity != nil; entity = entitiesIter.Next() {
-		entry := entity.(*identity.Entity)
-		if clone {
-			entry, err = entry.Clone()
-			if err != nil {
-				return nil, err
-			}
-		}
-		if len(filters) <= 1 || satisfiesMetadataFilters(entry.Metadata, filters) {
-			entities = append(entities, entry)
-		}
-	}
-	return entities, nil
-}
-
 func (i *IdentityStore) MemDBEntitiesByBucketEntryKeyHash(hashValue string) ([]*identity.Entity, error) {
 	if hashValue == "" {
 		return nil, fmt.Errorf("empty hash value")
