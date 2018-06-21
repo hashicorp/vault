@@ -1164,32 +1164,6 @@ func (i *IdentityStore) MemDBDeleteGroupByIDInTxn(txn *memdb.Txn, groupID string
 	return nil
 }
 
-func (i *IdentityStore) MemDBDeleteGroupByNameInTxn(txn *memdb.Txn, groupName string) error {
-	if groupName == "" {
-		return nil
-	}
-
-	if txn == nil {
-		return fmt.Errorf("txn is nil")
-	}
-
-	group, err := i.MemDBGroupByNameInTxn(txn, groupName, false)
-	if err != nil {
-		return err
-	}
-
-	if group == nil {
-		return nil
-	}
-
-	err = txn.Delete(groupsTable, group)
-	if err != nil {
-		return errwrap.Wrapf("failed to delete group from memdb: {{err}}", err)
-	}
-
-	return nil
-}
-
 func (i *IdentityStore) MemDBGroupByIDInTxn(txn *memdb.Txn, groupID string, clone bool) (*identity.Group, error) {
 	if groupID == "" {
 		return nil, fmt.Errorf("missing group ID")
