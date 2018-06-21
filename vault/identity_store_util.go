@@ -881,14 +881,38 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 
 		// Ensure that adding memberGroupID does not lead to cyclic
 		// relationships
-		err = i.validateMemberGroupID(group.ID, memberGroupID)
+		// Detect self loop
+		if group.ID == memberGroupID {
+			return fmt.Errorf("member group ID %q is same as the ID of the group", group.ID)
+		}
+
+		groupByID, err := i.MemDBGroupByID(group.ID, true)
 		if err != nil {
 			return err
 		}
 
+		// If group is nil, that means that a group doesn't already exist and its
+		// okay to add any group as its member group.
+		if groupByID != nil {
+			// If adding the memberGroupID to groupID creates a cycle, then groupID must
+			// be a hop in that loop. Start a DFS traversal from memberGroupID and see if
+			// it reaches back to groupID. If it does, then it's a loop.
+
+			// Created a visited set
+			visited := make(map[string]bool)
+			cycleDetected, err := i.detectCycleDFS(visited, groupByID.ID, memberGroupID)
+			if err != nil {
+				return fmt.Errorf("failed to perform cyclic relationship detection for member group ID %q", memberGroupID)
+			}
+			if cycleDetected {
+				return fmt.Errorf("cyclic relationship detected for member group ID %q", memberGroupID)
+			}
+		}
+
 		memberGroup.ParentGroupIDs = append(memberGroup.ParentGroupIDs, group.ID)
 
-		// This technically is not upsert. It is only update, only the method name is upsert here.
+		// This technically is not upsert. It is only update, only the method
+		// name is upsert here.
 		err = i.upsertGroupInTxn(txn, memberGroup, true)
 		if err != nil {
 			// Ideally we would want to revert the whole operation in case of
@@ -920,40 +944,6 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 	}
 
 	txn.Commit()
-
-	return nil
-}
-
-func (i *IdentityStore) validateMemberGroupID(groupID string, memberGroupID string) error {
-	// Detect self loop
-	if groupID == memberGroupID {
-		return fmt.Errorf("member group ID %q is same as the ID of the group", groupID)
-	}
-
-	group, err := i.MemDBGroupByID(groupID, true)
-	if err != nil {
-		return err
-	}
-
-	// If group is nil, that means that a group doesn't already exist and its
-	// okay to add any group as its member group.
-	if group == nil {
-		return nil
-	}
-
-	// If adding the memberGroupID to groupID creates a cycle, then groupID must
-	// be a hop in that loop. Start a DFS traversal from memberGroupID and see if
-	// it reaches back to groupID. If it does, then it's a loop.
-
-	// Created a visited set
-	visited := make(map[string]bool)
-	cycleDetected, err := i.detectCycleDFS(visited, groupID, memberGroupID)
-	if err != nil {
-		return fmt.Errorf("failed to perform cyclic relationship detection for member group ID %q", memberGroupID)
-	}
-	if cycleDetected {
-		return fmt.Errorf("cyclic relationship detected for member group ID %q", memberGroupID)
-	}
 
 	return nil
 }
