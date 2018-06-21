@@ -305,10 +305,18 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 			resp.AddWarning(fmt.Sprintf("alias is being transferred from entity %q to %q", existingEntity.ID, entity.ID))
 		} else {
 			// Update entity with modified alias
-			err = i.updateAliasInEntity(existingEntity, alias)
-			if err != nil {
-				return nil, err
+			aliasFound := false
+			for aliasIndex, item := range existingEntity.Aliases {
+				if item.ID == alias.ID {
+					aliasFound = true
+					existingEntity.Aliases[aliasIndex] = alias
+				}
 			}
+
+			if !aliasFound {
+				return nil, fmt.Errorf("alias does not exist in entity")
+			}
+
 			entity = existingEntity
 		}
 	}

@@ -995,30 +995,6 @@ func (i *IdentityStore) deleteAliasesInEntityInTxn(txn *memdb.Txn, entity *ident
 	return nil
 }
 
-func (i *IdentityStore) updateAliasInEntity(entity *identity.Entity, alias *identity.Alias) error {
-	if entity == nil {
-		return fmt.Errorf("entity is nil")
-	}
-
-	if alias == nil {
-		return fmt.Errorf("alias is nil")
-	}
-
-	aliasFound := false
-	for aliasIndex, item := range entity.Aliases {
-		if item.ID == alias.ID {
-			aliasFound = true
-			entity.Aliases[aliasIndex] = alias
-		}
-	}
-
-	if !aliasFound {
-		return fmt.Errorf("alias does not exist in entity")
-	}
-
-	return nil
-}
-
 // validateMeta validates a set of key/value pairs from the agent config
 func validateMetadata(meta map[string]string) error {
 	if len(meta) > metaMaxKeyPairs {
