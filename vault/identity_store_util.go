@@ -1110,20 +1110,6 @@ func (i *IdentityStore) upsertGroupInTxn(txn *memdb.Txn, group *identity.Group, 
 	return nil
 }
 
-func (i *IdentityStore) MemDBUpsertGroup(group *identity.Group) error {
-	txn := i.db.Txn(true)
-	defer txn.Abort()
-
-	err := i.MemDBUpsertGroupInTxn(txn, group)
-	if err != nil {
-		return err
-	}
-
-	txn.Commit()
-
-	return nil
-}
-
 func (i *IdentityStore) MemDBUpsertGroupInTxn(txn *memdb.Txn, group *identity.Group) error {
 	if txn == nil {
 		return fmt.Errorf("nil txn")

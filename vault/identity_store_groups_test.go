@@ -118,10 +118,15 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 	}
 
 	// Insert it into memdb
-	err = i.MemDBUpsertGroup(group)
+	txn := i.db.Txn(true)
+
+	err = i.MemDBUpsertGroupInTxn(txn, group)
 	if err != nil {
+		txn.Abort()
 		t.Fatal(err)
 	}
+
+	txn.Commit()
 
 	// Insert another dummy group
 	group = &identity.Group{
@@ -138,10 +143,16 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 	}
 
 	// Insert it into memdb
-	err = i.MemDBUpsertGroup(group)
+
+	txn = i.db.Txn(true)
+
+	err = i.MemDBUpsertGroupInTxn(txn, group)
 	if err != nil {
+		txn.Abort()
 		t.Fatal(err)
 	}
+
+	txn.Commit()
 
 	var fetchedGroup *identity.Group
 
