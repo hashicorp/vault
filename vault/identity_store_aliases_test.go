@@ -198,10 +198,15 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		t.Fatalf("bad: length of aliases; expected: 1, actual: %d", len(aliasesFetched))
 	}
 
-	err = is.MemDBDeleteAliasByID("testaliasid", false)
+	txn = i.db.Txn(true)
+	defer txn.Abort()
+
+	err = i.MemDBDeleteAliasByIDInTxn(txn, "testaliasid", false)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	txn.Commit()
 
 	aliasFetched, err = is.MemDBAliasByID("testaliasid", false, false)
 	if err != nil {

@@ -455,24 +455,6 @@ func (i *IdentityStore) MemDBAliasByFactorsInTxn(txn *memdb.Txn, mountAccessor, 
 	return alias, nil
 }
 
-func (i *IdentityStore) MemDBDeleteAliasByID(aliasID string, groupAlias bool) error {
-	if aliasID == "" {
-		return nil
-	}
-
-	txn := i.db.Txn(true)
-	defer txn.Abort()
-
-	err := i.MemDBDeleteAliasByIDInTxn(txn, aliasID, groupAlias)
-	if err != nil {
-		return err
-	}
-
-	txn.Commit()
-
-	return nil
-}
-
 func (i *IdentityStore) MemDBDeleteAliasByIDInTxn(txn *memdb.Txn, aliasID string, groupAlias bool) error {
 	if aliasID == "" {
 		return nil
