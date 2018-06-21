@@ -26,14 +26,13 @@ The following properties are available in the `request` namespace.
 | `operation`              | `string`                 | Operation type, e.g. "read" or "update"                                                     |
 | `path`                   | `string`                 | Path, with any leading `/` trimmed                                                          |
 | `policy_override`        | `bool`                   | `true` if a `soft-mandatory` policy override was requested                                  |
-| `replication`            | `map (string -> string)` | The replication state for "dr" and "performance" modes                                      |
 | `unauthenticated`        | `bool`                   | `true` if the requested path is an unauthenticated path                                     |
 | `wrapping.ttl`           | `duration`               | The requested response-wrapping TTL in nanoseconds, suitable for use with the `time` import |
 | `wrapping.ttl_seconds`   | `int`                    | The requested response-wrapping TTL in seconds                                              |
 
 ### Replication Properties
 
-The following properties exists at the `request.replication` namespace.
+The following properties exists at the `replication.mode` namespace.
 
 |     Name      |   Type   |                                                  Description                                                   |
 | :------------ | :------- | :------------------------------------------------------------------------------------------------------------- |
