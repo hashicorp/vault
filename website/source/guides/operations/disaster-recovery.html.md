@@ -107,7 +107,7 @@ This guide walk through the following operations:
 
 1. Enable DR replication on the **primary** cluster by invoking **`/sys/replication/dr/primary/enable`** endpoint.
 
-    **Eaxmple:**
+    **Example:**
 
     ```plaintext
     $ curl --header "X-Vault-Token: ..." \
@@ -131,7 +131,7 @@ This guide walk through the following operations:
 
 1. Generate a secondary token by invoking **`/sys/replication/dr/primary/secondary-token`** endpoint.
 
-    **Eaxmple:**
+    **Example:**
 
     ```plaintext
     $ curl --header "X-Vault-Token: ..." \
