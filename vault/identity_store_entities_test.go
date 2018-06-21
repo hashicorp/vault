@@ -513,8 +513,8 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 		t.Fatalf("entity mismatched entities; expected: %#v\n actual: %#v\n", entity, entityFetched)
 	}
 
-	txn := is.db.Txn(false)
-	entitiesFetched, err = is.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, entity.BucketKeyHash)
+	txn = is.db.Txn(false)
+	entitiesFetched, err := is.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, entity.BucketKeyHash)
 	txn.Abort()
 	if err != nil {
 		t.Fatal(err)

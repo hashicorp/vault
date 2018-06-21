@@ -85,7 +85,7 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		},
 	}
 
-	txn := is.db.Txn(true)
+	txn = is.db.Txn(true)
 	defer txn.Abort()
 
 	err = is.MemDBUpsertAliasInTxn(txn, alias, false)
@@ -113,52 +113,6 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		t.Fatalf("bad: mismatched aliases; expected: %#v\n actual: %#v\n", alias, aliasFetched)
 	}
 
-	aliasesFetched, err := is.MemDBAliasesByMetadata(map[string]string{
-		"testkey1": "testmetadatavalue1",
-	}, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(aliasesFetched) != 1 {
-		t.Fatalf("bad: length of aliases; expected: 1, actual: %d", len(aliasesFetched))
-	}
-
-	if !reflect.DeepEqual(alias, aliasesFetched[0]) {
-		t.Fatalf("bad: mismatched aliases; expected: %#v\n actual: %#v\n", alias, aliasFetched)
-	}
-
-	aliasesFetched, err = is.MemDBAliasesByMetadata(map[string]string{
-		"testkey2": "testmetadatavalue2",
-	}, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(aliasesFetched) != 1 {
-		t.Fatalf("bad: length of aliases; expected: 1, actual: %d", len(aliasesFetched))
-	}
-
-	if !reflect.DeepEqual(alias, aliasesFetched[0]) {
-		t.Fatalf("bad: mismatched aliases; expected: %#v\n actual: %#v\n", alias, aliasFetched)
-	}
-
-	aliasesFetched, err = is.MemDBAliasesByMetadata(map[string]string{
-		"testkey1": "testmetadatavalue1",
-		"testkey2": "testmetadatavalue2",
-	}, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(aliasesFetched) != 1 {
-		t.Fatalf("bad: length of aliases; expected: 1, actual: %d", len(aliasesFetched))
-	}
-
-	if !reflect.DeepEqual(alias, aliasesFetched[0]) {
-		t.Fatalf("bad: mismatched aliases; expected: %#v\n actual: %#v\n", alias, aliasFetched)
-	}
-
 	alias2 := &identity.Alias{
 		CanonicalID:   entity.ID,
 		ID:            "testaliasid2",
@@ -180,33 +134,10 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 	}
 
 	txn.Commit()
-
-	aliasesFetched, err = is.MemDBAliasesByMetadata(map[string]string{
-		"testkey1": "testmetadatavalue1",
-	}, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(aliasesFetched) != 2 {
-		t.Fatalf("bad: length of aliases; expected: 2, actual: %d", len(aliasesFetched))
-	}
-
-	aliasesFetched, err = is.MemDBAliasesByMetadata(map[string]string{
-		"testkey3": "testmetadatavalue3",
-	}, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(aliasesFetched) != 1 {
-		t.Fatalf("bad: length of aliases; expected: 1, actual: %d", len(aliasesFetched))
-	}
-
-	txn = i.db.Txn(true)
+	txn = is.db.Txn(true)
 	defer txn.Abort()
 
-	err = i.MemDBDeleteAliasByIDInTxn(txn, "testaliasid", false)
+	err = is.MemDBDeleteAliasByIDInTxn(txn, "testaliasid", false)
 	if err != nil {
 		t.Fatal(err)
 	}

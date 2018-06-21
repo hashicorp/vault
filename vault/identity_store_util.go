@@ -600,17 +600,6 @@ func (i *IdentityStore) MemDBEntityByName(entityName string, clone bool) (*ident
 	return entity, nil
 }
 
-func (i *IdentityStore) MemDBEntitiesByBucketEntryKeyHash(hashValue string) ([]*identity.Entity, error) {
-	if hashValue == "" {
-		return nil, fmt.Errorf("empty hash value")
-	}
-
-	txn := i.db.Txn(false)
-	defer txn.Abort()
-
-	return i.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, hashValue)
-}
-
 func (i *IdentityStore) MemDBEntitiesByBucketEntryKeyHashInTxn(txn *memdb.Txn, hashValue string) ([]*identity.Entity, error) {
 	if txn == nil {
 		return nil, fmt.Errorf("nil txn")
@@ -633,14 +622,12 @@ func (i *IdentityStore) MemDBEntitiesByBucketEntryKeyHashInTxn(txn *memdb.Txn, h
 	return entities, nil
 }
 
-func (i *IdentityStore) MemDBEntityByMergedEntityIDInTxn(txn *memdb.Txn, mergedEntityID string, clone bool) (*identity.Entity, error) {
+func (i *IdentityStore) MemDBEntityByMergedEntityID(mergedEntityID string, clone bool) (*identity.Entity, error) {
 	if mergedEntityID == "" {
 		return nil, fmt.Errorf("missing merged entity id")
 	}
 
-	if txn == nil {
-		return nil, fmt.Errorf("txn is nil")
-	}
+	txn := i.db.Txn(false)
 
 	entityRaw, err := txn.First(entitiesTable, "merged_entity_ids", mergedEntityID)
 	if err != nil {
@@ -661,16 +648,6 @@ func (i *IdentityStore) MemDBEntityByMergedEntityIDInTxn(txn *memdb.Txn, mergedE
 	}
 
 	return entity, nil
-}
-
-func (i *IdentityStore) MemDBEntityByMergedEntityID(mergedEntityID string, clone bool) (*identity.Entity, error) {
-	if mergedEntityID == "" {
-		return nil, fmt.Errorf("missing merged entity id")
-	}
-
-	txn := i.db.Txn(false)
-
-	return i.MemDBEntityByMergedEntityIDInTxn(txn, mergedEntityID, clone)
 }
 
 func (i *IdentityStore) MemDBEntityByAliasIDInTxn(txn *memdb.Txn, aliasID string, clone bool) (*identity.Entity, error) {
