@@ -1164,51 +1164,6 @@ func (i *IdentityStore) MemDBDeleteGroupByIDInTxn(txn *memdb.Txn, groupID string
 	return nil
 }
 
-func (i *IdentityStore) deleteGroupByName(groupName string) error {
-	var err error
-	var group *identity.Group
-
-	if groupName == "" {
-		return fmt.Errorf("missing group name")
-	}
-
-	// Acquire the lock to modify the group storage entry
-	i.groupLock.Lock()
-	defer i.groupLock.Unlock()
-
-	// Create a MemDB transaction to delete group
-	txn := i.db.Txn(true)
-	defer txn.Abort()
-
-	// Fetch the group using its ID
-	group, err = i.MemDBGroupByNameInTxn(txn, groupName, false)
-	if err != nil {
-		return err
-	}
-
-	// If there is no entity for the ID, do nothing
-	if group == nil {
-		return nil
-	}
-
-	// Delete the group using the same transaction
-	err = i.MemDBDeleteGroupByNameInTxn(txn, group.Name)
-	if err != nil {
-		return err
-	}
-
-	// Delete the entity from storage
-	err = i.groupPacker.DeleteItem(group.ID)
-	if err != nil {
-		return err
-	}
-
-	// Committing the transaction *after* successfully deleting group
-	txn.Commit()
-
-	return nil
-}
-
 func (i *IdentityStore) MemDBDeleteGroupByNameInTxn(txn *memdb.Txn, groupName string) error {
 	if groupName == "" {
 		return nil
