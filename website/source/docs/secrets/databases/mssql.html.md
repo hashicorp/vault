@@ -42,7 +42,7 @@ more information about setting up the database secrets engine.
     ```
 
     In this case, we've configured Vault with the user "sa" and password
-    "Password!", connecting to an instance at "localhost" on port 1433. It is
+    "yourStrong(!)Password", connecting to an instance at "localhost" on port 1433. It is
     not necessary that Vault has the sa login, but the user must have privileges
     to create logins and manage processes. The fixed server roles
     `securityadmin` and `processadmin` are examples of built-in roles that grant
