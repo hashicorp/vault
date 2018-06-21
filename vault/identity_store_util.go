@@ -455,46 +455,6 @@ func (i *IdentityStore) MemDBAliasByFactorsInTxn(txn *memdb.Txn, mountAccessor, 
 	return alias, nil
 }
 
-func (i *IdentityStore) MemDBAliasesByMetadata(filters map[string]string, clone bool, groupAlias bool) ([]*identity.Alias, error) {
-	if filters == nil {
-		return nil, fmt.Errorf("map filter is nil")
-	}
-
-	txn := i.db.Txn(false)
-	defer txn.Abort()
-
-	var args []interface{}
-	for key, value := range filters {
-		args = append(args, key, value)
-		break
-	}
-
-	tableName := entityAliasesTable
-	if groupAlias {
-		tableName = groupAliasesTable
-	}
-
-	aliasesIter, err := txn.Get(tableName, "metadata", args...)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to lookup aliases using metadata: {{err}}", err)
-	}
-
-	var aliases []*identity.Alias
-	for alias := aliasesIter.Next(); alias != nil; alias = aliasesIter.Next() {
-		entry := alias.(*identity.Alias)
-		if len(filters) <= 1 || satisfiesMetadataFilters(entry.Metadata, filters) {
-			if clone {
-				entry, err = entry.Clone()
-				if err != nil {
-					return nil, err
-				}
-			}
-			aliases = append(aliases, entry)
-		}
-	}
-	return aliases, nil
-}
-
 func (i *IdentityStore) MemDBDeleteAliasByID(aliasID string, groupAlias bool) error {
 	if aliasID == "" {
 		return nil
