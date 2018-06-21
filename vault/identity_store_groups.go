@@ -318,7 +318,53 @@ func (i *IdentityStore) pathGroupIDDelete() framework.OperationFunc {
 		if groupID == "" {
 			return logical.ErrorResponse("empty group ID"), nil
 		}
-		return nil, i.deleteGroupByID(groupID)
+
+		if groupID == "" {
+			return nil, fmt.Errorf("missing group ID")
+		}
+
+		// Acquire the lock to modify the group storage entry
+		i.groupLock.Lock()
+		defer i.groupLock.Unlock()
+
+		// Create a MemDB transaction to delete group
+		txn := i.db.Txn(true)
+		defer txn.Abort()
+
+		group, err := i.MemDBGroupByIDInTxn(txn, groupID, false)
+		if err != nil {
+			return nil, err
+		}
+
+		// If there is no group for the ID, do nothing
+		if group == nil {
+			return nil, nil
+		}
+
+		// Delete group alias from memdb
+		if group.Type == groupTypeExternal && group.Alias != nil {
+			err = i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// Delete the group using the same transaction
+		err = i.MemDBDeleteGroupByIDInTxn(txn, group.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Delete the group from storage
+		err = i.groupPacker.DeleteItem(group.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Committing the transaction *after* successfully deleting group
+		txn.Commit()
+
+		return nil, nil
 	}
 }
 
