@@ -1030,16 +1030,6 @@ func validateMetaPair(key, value string) error {
 	return nil
 }
 
-// satisfiesMetadataFilters returns true if the metadata map contains the given filters
-func satisfiesMetadataFilters(meta map[string]string, filters map[string]string) bool {
-	for key, value := range filters {
-		if v, ok := meta[key]; !ok || v != value {
-			return false
-		}
-	}
-	return true
-}
-
 func (i *IdentityStore) MemDBGroupByNameInTxn(txn *memdb.Txn, groupName string, clone bool) (*identity.Group, error) {
 	if groupName == "" {
 		return nil, fmt.Errorf("missing group name")
@@ -1078,19 +1068,6 @@ func (i *IdentityStore) MemDBGroupByName(groupName string, clone bool) (*identit
 	txn := i.db.Txn(false)
 
 	return i.MemDBGroupByNameInTxn(txn, groupName, clone)
-}
-
-func (i *IdentityStore) UpsertGroup(group *identity.Group, persist bool) error {
-	txn := i.db.Txn(true)
-	defer txn.Abort()
-
-	err := i.upsertGroupInTxn(txn, group, persist)
-	if err != nil {
-		return err
-	}
-
-	txn.Commit()
-	return nil
 }
 
 func (i *IdentityStore) upsertGroupInTxn(txn *memdb.Txn, group *identity.Group, persist bool) error {
