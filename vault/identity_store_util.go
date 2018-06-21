@@ -357,51 +357,6 @@ func (i *IdentityStore) MemDBUpsertAliasInTxn(txn *memdb.Txn, alias *identity.Al
 	return nil
 }
 
-func (i *IdentityStore) MemDBAliasByCanonicalIDInTxn(txn *memdb.Txn, canonicalID string, clone bool, groupAlias bool) (*identity.Alias, error) {
-	if canonicalID == "" {
-		return nil, fmt.Errorf("missing canonical ID")
-	}
-
-	if txn == nil {
-		return nil, fmt.Errorf("txn is nil")
-	}
-
-	tableName := entityAliasesTable
-	if groupAlias {
-		tableName = groupAliasesTable
-	}
-
-	aliasRaw, err := txn.First(tableName, "canonical_id", canonicalID)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to fetch alias from memdb using canonical ID: {{err}}", err)
-	}
-
-	if aliasRaw == nil {
-		return nil, nil
-	}
-
-	alias, ok := aliasRaw.(*identity.Alias)
-	if !ok {
-		return nil, fmt.Errorf("failed to declare the type of fetched alias")
-	}
-
-	if clone {
-		return alias.Clone()
-	}
-
-	return alias, nil
-}
-
-func (i *IdentityStore) MemDBAliasByCanonicalID(canonicalID string, clone bool, groupAlias bool) (*identity.Alias, error) {
-	if canonicalID == "" {
-		return nil, fmt.Errorf("missing canonical ID")
-	}
-
-	txn := i.db.Txn(false)
-
-	return i.MemDBAliasByCanonicalIDInTxn(txn, canonicalID, clone, groupAlias)
-}
-
 func (i *IdentityStore) MemDBAliasByIDInTxn(txn *memdb.Txn, aliasID string, clone bool, groupAlias bool) (*identity.Alias, error) {
 	if aliasID == "" {
 		return nil, fmt.Errorf("missing alias ID")

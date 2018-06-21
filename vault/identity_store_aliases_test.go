@@ -99,15 +99,6 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		t.Fatalf("bad: mismatched aliases; expected: %#v\n actual: %#v\n", alias, aliasFetched)
 	}
 
-	aliasFetched, err = is.MemDBAliasByCanonicalID(entity.ID, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(alias, aliasFetched) {
-		t.Fatalf("bad: mismatched aliases; expected: %#v\n actual: %#v\n", alias, aliasFetched)
-	}
-
 	aliasFetched, err = is.MemDBAliasByFactors(validateMountResp.MountAccessor, "testaliasname", false, false)
 	if err != nil {
 		t.Fatal(err)
