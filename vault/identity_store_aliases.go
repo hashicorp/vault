@@ -293,10 +293,13 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 
 		if entity != nil && entity.ID != existingEntity.ID {
 			// Alias should be transferred from 'existingEntity' to 'entity'
-			err = i.deleteAliasFromEntity(existingEntity, alias)
-			if err != nil {
-				return nil, err
+			for aliasIndex, item := range existingEntity.Aliases {
+				if item.ID == alias.ID {
+					entity.Aliases = append(existingEntity.Aliases[:aliasIndex], existingEntity.Aliases[aliasIndex+1:]...)
+					break
+				}
 			}
+
 			previousEntity = existingEntity
 			entity.Aliases = append(entity.Aliases, alias)
 			resp.AddWarning(fmt.Sprintf("alias is being transferred from entity %q to %q", existingEntity.ID, entity.ID))

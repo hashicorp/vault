@@ -853,9 +853,12 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 	// Remove duplicate entity IDs and check if all IDs are valid
 	group.MemberEntityIDs = strutil.RemoveDuplicates(group.MemberEntityIDs, false)
 	for _, entityID := range group.MemberEntityIDs {
-		err = i.validateEntityID(entityID)
+		entity, err := i.MemDBEntityByID(entityID, false)
 		if err != nil {
-			return err
+			return errwrap.Wrapf(fmt.Sprintf("failed to validate entity ID %q: {{err}}", entityID), err)
+		}
+		if entity == nil {
+			return fmt.Errorf("invalid entity ID %q", entityID)
 		}
 	}
 
@@ -948,28 +951,6 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 	return nil
 }
 
-func (i *IdentityStore) validateEntityID(entityID string) error {
-	entity, err := i.MemDBEntityByID(entityID, false)
-	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to validate entity ID %q: {{err}}", entityID), err)
-	}
-	if entity == nil {
-		return fmt.Errorf("invalid entity ID %q", entityID)
-	}
-	return nil
-}
-
-func (i *IdentityStore) validateGroupID(groupID string) error {
-	group, err := i.MemDBGroupByID(groupID, false)
-	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to validate group ID %q: {{err}}", groupID), err)
-	}
-	if group == nil {
-		return fmt.Errorf("invalid group ID %q", groupID)
-	}
-	return nil
-}
-
 func (i *IdentityStore) deleteAliasesInEntityInTxn(txn *memdb.Txn, entity *identity.Entity, aliases []*identity.Alias) error {
 	if entity == nil {
 		return fmt.Errorf("entity is nil")
@@ -1010,25 +991,6 @@ func (i *IdentityStore) deleteAliasesInEntityInTxn(txn *memdb.Txn, entity *ident
 
 	// Update the entity with remaining items
 	entity.Aliases = remainList
-
-	return nil
-}
-
-func (i *IdentityStore) deleteAliasFromEntity(entity *identity.Entity, alias *identity.Alias) error {
-	if entity == nil {
-		return fmt.Errorf("entity is nil")
-	}
-
-	if alias == nil {
-		return fmt.Errorf("alias is nil")
-	}
-
-	for aliasIndex, item := range entity.Aliases {
-		if item.ID == alias.ID {
-			entity.Aliases = append(entity.Aliases[:aliasIndex], entity.Aliases[aliasIndex+1:]...)
-			break
-		}
-	}
 
 	return nil
 }
