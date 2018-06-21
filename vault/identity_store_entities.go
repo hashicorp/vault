@@ -573,10 +573,15 @@ func (i *IdentityStore) pathEntityIDDelete() framework.OperationFunc {
 func (i *IdentityStore) pathEntityIDList() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		ws := memdb.NewWatchSet()
-		iter, err := i.MemDBEntities(ws)
+
+		txn := i.db.Txn(false)
+
+		iter, err := txn.Get(entitiesTable, "id")
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to fetch iterator for entities in memdb: {{err}}", err)
 		}
+
+		ws.Add(iter.WatchCh())
 
 		var entityIDs []string
 		entityInfo := map[string]interface{}{}

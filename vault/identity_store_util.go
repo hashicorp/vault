@@ -725,19 +725,6 @@ func (i *IdentityStore) MemDBDeleteEntityByIDInTxn(txn *memdb.Txn, entityID stri
 	return nil
 }
 
-func (i *IdentityStore) MemDBEntities(ws memdb.WatchSet) (memdb.ResultIterator, error) {
-	txn := i.db.Txn(false)
-
-	iter, err := txn.Get(entitiesTable, "id")
-	if err != nil {
-		return nil, err
-	}
-
-	ws.Add(iter.WatchCh())
-
-	return iter, nil
-}
-
 func (i *IdentityStore) sanitizeAlias(alias *identity.Alias) error {
 	var err error
 
