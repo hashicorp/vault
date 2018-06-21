@@ -163,10 +163,15 @@ func TestIdentityStore_GroupAliases_MemDBIndexes(t *testing.T) {
 		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid"),
 	}
 
-	err = i.MemDBUpsertAlias(group.Alias, true)
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+
+	err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	txn.Commit()
 
 	err = i.MemDBUpsertGroup(group)
 	if err != nil {

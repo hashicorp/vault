@@ -80,10 +80,15 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		},
 	}
 
-	err = is.MemDBUpsertAlias(alias, false)
+	txn := is.db.Txn(true)
+	defer txn.Abort()
+
+	err = is.MemDBUpsertAliasInTxn(txn, alias, false)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	txn.Commit()
 
 	aliasFetched, err := is.MemDBAliasByID("testaliasid", false, false)
 	if err != nil {
@@ -170,10 +175,15 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		},
 	}
 
-	err = is.MemDBUpsertAlias(alias2, false)
+	txn = is.db.Txn(true)
+	defer txn.Abort()
+
+	err = is.MemDBUpsertAliasInTxn(txn, alias2, false)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	txn.Commit()
 
 	aliasesFetched, err = is.MemDBAliasesByMetadata(map[string]string{
 		"testkey1": "testmetadatavalue1",
