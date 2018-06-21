@@ -163,7 +163,8 @@ and **is not a regular expression**!
 
 When providing `list` capability, it is important to note that since listing
 always operates on a prefix, policies must operate on a prefix because Vault
-will sanitize request paths to be prefixes:
+will sanitize request paths to be prefixes. In other words, policy paths
+targeting `list` capability should end with a trailing slash:
 
 ```ruby
 path "secret/foo" {
@@ -383,6 +384,16 @@ wrapping mandatory for a particular path.
 
   * `max_wrapping_ttl` - The maximum allowed TTL that clients can specify for a
     wrapped response.
+
+```ruby
+# This effectively makes response wrapping mandatory for this path by setting min_wrapping_ttl to 1 second. 
+# This also sets this path's wrapped response maximum allowed TTL to 90 seconds.
+path "auth/approle/role/my-role/secret-id" {
+    capabilities = ["create", "update"]
+    min_wrapping_ttl = "1s"
+    max_wrapping_ttl = "90s"
+}
+```
 
 If both are specified, the minimum value must be less than the maximum. In
 addition, if paths are merged from different stanzas, the lowest value

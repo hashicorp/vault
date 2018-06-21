@@ -36,6 +36,7 @@ func (b *backend) getGenerationParams(
 		AllowAnyName:         true,
 		AllowIPSANs:          true,
 		EnforceHostnames:     false,
+		AllowedURISANs:       []string{"*"},
 		AllowedSerialNumbers: []string{"*"},
 		OU:                   data.Get("ou").([]string),
 		Organization:         data.Get("organization").([]string),

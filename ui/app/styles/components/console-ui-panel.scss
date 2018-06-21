@@ -1,5 +1,5 @@
 .console-ui-panel-scroller {
-  background: linear-gradient(to right, #191A1C, #1B212D);
+  background: linear-gradient(to right, #191a1c, #1b212d);
   height: 0;
   left: 0;
   overflow: auto;
@@ -24,8 +24,8 @@
   font-weight: $font-weight-semibold;
   transition: justify-content $speed ease-in;
 
-
-  pre, p {
+  pre,
+  p {
     background: none;
     color: inherit;
     font-size: $body-size;
@@ -42,8 +42,7 @@
     padding: $size-8 $size-4;
   }
 
-  .button,
-  {
+  .button {
     background: transparent;
     border: none;
     color: $grey-dark;
@@ -116,13 +115,13 @@
   }
 }
 
-.panel-open .console-ui-panel-scroller  {
+.panel-open .console-ui-panel-scroller {
   box-shadow: $box-shadow-highest;
   transform: translate3d(0, 0, 0);
   min-height: 400px;
 }
 
-.panel-open .console-ui-panel-scroller.fullscreen  {
+.panel-open .console-ui-panel-scroller.fullscreen {
   bottom: 0;
   top: 0;
   position: fixed;
@@ -130,19 +129,21 @@
 }
 
 .panel-open {
-  .navbar, .navbar-sections{
+  .navbar,
+  .navbar-sections {
     transition: transform $speed ease-in;
   }
 }
 
 .panel-open.panel-fullscreen {
-  .navbar, .navbar-sections{
+  .navbar,
+  .navbar-sections {
     transform: translate3d(0, -100px, 0);
   }
 }
 
 .page-container > header {
-  background: linear-gradient(to right, #191A1C, #1B212D);
+  background: linear-gradient(to right, #191a1c, #1b212d);
 }
 
 header .navbar,

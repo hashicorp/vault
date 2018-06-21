@@ -74,6 +74,32 @@ taken verbatim from the CSR, except for
 basic constraints.`,
 	}
 
+	ret.Fields["key_usage"] = &framework.FieldSchema{
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+		Description: `A comma-separated string or list of key usages (not extended
+key usages). Valid values can be found at
+https://golang.org/pkg/crypto/x509/#KeyUsage
+-- simply drop the "KeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
+	}
+
+	ret.Fields["ext_key_usage"] = &framework.FieldSchema{
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{},
+		Description: `A comma-separated string or list of extended key usages. Valid values can be found at
+https://golang.org/pkg/crypto/x509/#ExtKeyUsage
+-- simply drop the "ExtKeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
+	}
+
+	ret.Fields["ext_key_usage_oids"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `A comma-separated string or list of extended key usage oids.`,
+	}
+
 	return ret
 }
 
@@ -137,8 +163,12 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		KeyType:              "any",
 		UseCSRCommonName:     true,
 		UseCSRSANs:           true,
+		AllowedURISANs:       []string{"*"},
 		AllowedSerialNumbers: []string{"*"},
 		GenerateLease:        new(bool),
+		KeyUsage:             data.Get("key_usage").([]string),
+		ExtKeyUsage:          data.Get("ext_key_usage").([]string),
+		ExtKeyUsageOIDs:      data.Get("ext_key_usage_oids").([]string),
 	}
 
 	*entry.GenerateLease = false

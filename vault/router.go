@@ -209,13 +209,14 @@ func (r *Router) MatchingMountByUUID(mountID string) *MountEntry {
 	}
 
 	r.l.RLock()
-	defer r.l.RUnlock()
 
 	_, raw, ok := r.mountUUIDCache.LongestPrefix(mountID)
 	if !ok {
+		r.l.RUnlock()
 		return nil
 	}
 
+	r.l.RUnlock()
 	return raw.(*MountEntry)
 }
 
@@ -226,21 +227,22 @@ func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 	}
 
 	r.l.RLock()
-	defer r.l.RUnlock()
 
 	_, raw, ok := r.mountAccessorCache.LongestPrefix(mountAccessor)
 	if !ok {
+		r.l.RUnlock()
 		return nil
 	}
 
+	r.l.RUnlock()
 	return raw.(*MountEntry)
 }
 
 // MatchingMount returns the mount prefix that would be used for a path
 func (r *Router) MatchingMount(path string) string {
 	r.l.RLock()
-	defer r.l.RUnlock()
-	var mount = r.matchingMountInternal(path)
+	mount := r.matchingMountInternal(path)
+	r.l.RUnlock()
 	return mount
 }
 

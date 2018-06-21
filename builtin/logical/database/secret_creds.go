@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -91,16 +92,31 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			return nil, fmt.Errorf("no role name was provided")
 		}
 
+		var dbName string
+		var statements dbplugin.Statements
+
 		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
 		if err != nil {
 			return nil, err
 		}
-		if role == nil {
-			return nil, fmt.Errorf("error during revoke: could not find role with name %q", req.Secret.InternalData["role"])
+		if role != nil {
+			dbName = role.DBName
+			statements = role.Statements
+		} else {
+			if dbNameRaw, ok := req.Secret.InternalData["db_name"]; !ok {
+				return nil, fmt.Errorf("error during revoke: could not find role with name %q or embedded revocation db name data", req.Secret.InternalData["role"])
+			} else {
+				dbName = dbNameRaw.(string)
+			}
+			if statementsRaw, ok := req.Secret.InternalData["revocation_statements"]; !ok {
+				return nil, fmt.Errorf("error during revoke: could not find role with name %q or embedded revocation statement data", req.Secret.InternalData["role"])
+			} else {
+				statements.Revocation = statementsRaw.([]string)
+			}
 		}
 
 		// Get our connection
-		db, err := b.GetConnection(ctx, req.Storage, role.DBName)
+		db, err := b.GetConnection(ctx, req.Storage, dbName)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +124,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 		db.RLock()
 		defer db.RUnlock()
 
-		if err := db.RevokeUser(ctx, role.Statements, username); err != nil {
+		if err := db.RevokeUser(ctx, statements, username); err != nil {
 			b.CloseIfShutdown(db, err)
 			return nil, err
 		}

@@ -12,7 +12,7 @@ export default Ember.Controller.extend(PolicyEditController, {
       let model = this.get('model');
       model.set('policy', value);
       if (!model.get('name')) {
-        let trimmedFileName = trimRight(fileName, ['.json','.txt', '.hcl', '.policy']);
+        let trimmedFileName = trimRight(fileName, ['.json', '.txt', '.hcl', '.policy']);
         model.set('name', trimmedFileName);
       }
       this.set('showFileUpload', false);

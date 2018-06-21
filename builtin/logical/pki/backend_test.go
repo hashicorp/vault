@@ -17,6 +17,7 @@ import (
 	"math/big"
 	mathrand "math/rand"
 	"net"
+	"net/url"
 	"os"
 	"reflect"
 	"strconv"
@@ -132,64 +133,6 @@ func TestPKI_RequireCN(t *testing.T) {
 	if resp.Data["certificate"] == "" {
 		t.Fatalf("expected a cert to be generated")
 	}
-}
-
-// Performs basic tests on CA functionality
-// Uses the RSA CA key
-func TestBackend_RSAKey(t *testing.T) {
-	initTest.Do(setCerts)
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
-	}
-
-	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
-	}
-
-	intdata := map[string]interface{}{}
-	reqdata := map[string]interface{}{}
-	testCase.Steps = append(testCase.Steps, generateCATestingSteps(t, rsaCACert, rsaCAKey, ecCACert, intdata, reqdata)...)
-
-	logicaltest.Test(t, testCase)
-}
-
-// Performs basic tests on CA functionality
-// Uses the EC CA key
-func TestBackend_ECKey(t *testing.T) {
-	initTest.Do(setCerts)
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
-	}
-
-	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
-	}
-
-	intdata := map[string]interface{}{}
-	reqdata := map[string]interface{}{}
-	testCase.Steps = append(testCase.Steps, generateCATestingSteps(t, ecCACert, ecCAKey, rsaCACert, intdata, reqdata)...)
-
-	logicaltest.Test(t, testCase)
 }
 
 func TestBackend_CSRValues(t *testing.T) {
@@ -802,685 +745,6 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 	}
-	return ret
-}
-
-// Generates steps to test out CA configuration -- certificates + CRL expiry,
-// and ensure that the certificates are readable after storing them
-func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
-	setSerialUnderTest := func(req *logical.Request) error {
-		req.Path = serialUnderTest
-		return nil
-	}
-
-	ret := []logicaltest.TestStep{
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/ca",
-			Data: map[string]interface{}{
-				"pem_bundle": strings.Join([]string{caKey, caCert}, "\n"),
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/crl",
-			Data: map[string]interface{}{
-				"expiry": "16h",
-			},
-		},
-
-		// Ensure we can fetch it back via unauthenticated means, in various formats
-		logicaltest.TestStep{
-			Operation:       logical.ReadOperation,
-			Path:            "cert/ca",
-			Unauthenticated: true,
-			Check: func(resp *logical.Response) error {
-				if resp.Data["certificate"].(string) != caCert {
-					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", resp.Data["certificate"].(string), caCert)
-				}
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation:       logical.ReadOperation,
-			Path:            "ca/pem",
-			Unauthenticated: true,
-			Check: func(resp *logical.Response) error {
-				rawBytes := resp.Data["http_raw_body"].([]byte)
-				if !reflect.DeepEqual(rawBytes, []byte(caCert)) {
-					return fmt.Errorf("CA certificate:\n%#v\ndoes not match original:\n%#v\n", rawBytes, []byte(caCert))
-				}
-				if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
-					return fmt.Errorf("expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
-				}
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation:       logical.ReadOperation,
-			Path:            "ca",
-			Unauthenticated: true,
-			Check: func(resp *logical.Response) error {
-				rawBytes := resp.Data["http_raw_body"].([]byte)
-				pemBytes := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-					Type:  "CERTIFICATE",
-					Bytes: rawBytes,
-				})))
-				if pemBytes != caCert {
-					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", pemBytes, caCert)
-				}
-				if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
-					return fmt.Errorf("expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
-				}
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			Path:      "config/crl",
-			Check: func(resp *logical.Response) error {
-				if resp.Data["expiry"].(string) != "16h" {
-					return fmt.Errorf("CRL lifetimes do not match (got %s)", resp.Data["expiry"].(string))
-				}
-				return nil
-			},
-		},
-
-		// Ensure that both parts of the PEM bundle are required
-		// Here, just the cert
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/ca",
-			Data: map[string]interface{}{
-				"pem_bundle": caCert,
-			},
-			ErrorOk: true,
-		},
-
-		// Here, just the key
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/ca",
-			Data: map[string]interface{}{
-				"pem_bundle": caKey,
-			},
-			ErrorOk: true,
-		},
-
-		// Ensure we can fetch it back via unauthenticated means, in various formats
-		logicaltest.TestStep{
-			Operation:       logical.ReadOperation,
-			Path:            "cert/ca",
-			Unauthenticated: true,
-			Check: func(resp *logical.Response) error {
-				if resp.Data["certificate"].(string) != caCert {
-					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", resp.Data["certificate"].(string), caCert)
-				}
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation:       logical.ReadOperation,
-			Path:            "ca/pem",
-			Unauthenticated: true,
-			Check: func(resp *logical.Response) error {
-				rawBytes := resp.Data["http_raw_body"].([]byte)
-				if string(rawBytes) != caCert {
-					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", string(rawBytes), caCert)
-				}
-				if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
-					return fmt.Errorf("expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
-				}
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation:       logical.ReadOperation,
-			Path:            "ca",
-			Unauthenticated: true,
-			Check: func(resp *logical.Response) error {
-				rawBytes := resp.Data["http_raw_body"].([]byte)
-				pemBytes := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-					Type:  "CERTIFICATE",
-					Bytes: rawBytes,
-				})))
-				if pemBytes != caCert {
-					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", pemBytes, caCert)
-				}
-				if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
-					return fmt.Errorf("expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
-				}
-				return nil
-			},
-		},
-
-		// Test a bunch of generation stuff
-		logicaltest.TestStep{
-			Operation: logical.DeleteOperation,
-			Path:      "root",
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "root/generate/exported",
-			Data: map[string]interface{}{
-				"common_name": "Root Cert",
-				"ttl":         "180h",
-			},
-			Check: func(resp *logical.Response) error {
-				intdata["root"] = resp.Data["certificate"].(string)
-				intdata["rootkey"] = resp.Data["private_key"].(string)
-				reqdata["pem_bundle"] = strings.Join([]string{intdata["root"].(string), intdata["rootkey"].(string)}, "\n")
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "intermediate/generate/exported",
-			Data: map[string]interface{}{
-				"common_name": "intermediate.cert.com",
-			},
-			Check: func(resp *logical.Response) error {
-				intdata["intermediatecsr"] = resp.Data["csr"].(string)
-				intdata["intermediatekey"] = resp.Data["private_key"].(string)
-				return nil
-			},
-		},
-
-		// Re-load the root key in so we can sign it
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/ca",
-			Data:      reqdata,
-			Check: func(resp *logical.Response) error {
-				delete(reqdata, "pem_bundle")
-				delete(reqdata, "ttl")
-				reqdata["csr"] = intdata["intermediatecsr"].(string)
-				reqdata["common_name"] = "intermediate.cert.com"
-				reqdata["ttl"] = "10s"
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "root/sign-intermediate",
-			Data:      reqdata,
-			Check: func(resp *logical.Response) error {
-				delete(reqdata, "csr")
-				delete(reqdata, "common_name")
-				delete(reqdata, "ttl")
-				intdata["intermediatecert"] = resp.Data["certificate"].(string)
-				reqdata["serial_number"] = resp.Data["serial_number"].(string)
-				reqdata["rsa_int_serial_number"] = resp.Data["serial_number"].(string)
-				reqdata["certificate"] = resp.Data["certificate"].(string)
-				reqdata["pem_bundle"] = strings.Join([]string{intdata["intermediatekey"].(string), resp.Data["certificate"].(string)}, "\n")
-				return nil
-			},
-		},
-
-		// First load in this way to populate the private key
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/ca",
-			Data:      reqdata,
-			Check: func(resp *logical.Response) error {
-				delete(reqdata, "pem_bundle")
-				return nil
-			},
-		},
-
-		// Now test setting the intermediate, signed CA cert
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "intermediate/set-signed",
-			Data:      reqdata,
-			Check: func(resp *logical.Response) error {
-				delete(reqdata, "certificate")
-
-				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
-
-				return nil
-			},
-		},
-
-		// We expect to find a zero revocation time
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			PreFlight: setSerialUnderTest,
-			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
-					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
-				}
-
-				if resp.Data["revocation_time"].(int64) != 0 {
-					return fmt.Errorf("expected a zero revocation time")
-				}
-
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "revoke",
-			Data:      reqdata,
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			Path:      "crl",
-			Data:      reqdata,
-			Check: func(resp *logical.Response) error {
-				crlBytes := resp.Data["http_raw_body"].([]byte)
-				certList, err := x509.ParseCRL(crlBytes)
-				if err != nil {
-					t.Fatalf("err: %s", err)
-				}
-				revokedList := certList.TBSCertList.RevokedCertificates
-				if len(revokedList) != 1 {
-					t.Fatalf("length of revoked list not 1; %d", len(revokedList))
-				}
-				revokedString := certutil.GetHexFormatted(revokedList[0].SerialNumber.Bytes(), ":")
-				if revokedString != reqdata["serial_number"].(string) {
-					t.Fatalf("got serial %s, expecting %s", revokedString, reqdata["serial_number"].(string))
-				}
-				delete(reqdata, "serial_number")
-				return nil
-			},
-		},
-
-		// Do it all again, with EC keys and DER format
-		logicaltest.TestStep{
-			Operation: logical.DeleteOperation,
-			Path:      "root",
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "root/generate/exported",
-			Data: map[string]interface{}{
-				"common_name": "Root Cert",
-				"ttl":         "180h",
-				"key_type":    "ec",
-				"key_bits":    384,
-				"format":      "der",
-			},
-			Check: func(resp *logical.Response) error {
-				certBytes, _ := base64.StdEncoding.DecodeString(resp.Data["certificate"].(string))
-				certPem := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-					Type:  "CERTIFICATE",
-					Bytes: certBytes,
-				})))
-				keyBytes, _ := base64.StdEncoding.DecodeString(resp.Data["private_key"].(string))
-				keyPem := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-					Type:  "EC PRIVATE KEY",
-					Bytes: keyBytes,
-				})))
-				intdata["root"] = certPem
-				intdata["rootkey"] = keyPem
-				reqdata["pem_bundle"] = strings.Join([]string{certPem, keyPem}, "\n")
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "intermediate/generate/exported",
-			Data: map[string]interface{}{
-				"format":      "der",
-				"key_type":    "ec",
-				"key_bits":    384,
-				"common_name": "intermediate.cert.com",
-			},
-			Check: func(resp *logical.Response) error {
-				csrBytes, _ := base64.StdEncoding.DecodeString(resp.Data["csr"].(string))
-				csrPem := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-					Type:  "CERTIFICATE REQUEST",
-					Bytes: csrBytes,
-				})))
-				keyBytes, _ := base64.StdEncoding.DecodeString(resp.Data["private_key"].(string))
-				keyPem := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-					Type:  "EC PRIVATE KEY",
-					Bytes: keyBytes,
-				})))
-				intdata["intermediatecsr"] = csrPem
-				intdata["intermediatekey"] = keyPem
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/ca",
-			Data:      reqdata,
-			Check: func(resp *logical.Response) error {
-				delete(reqdata, "pem_bundle")
-				delete(reqdata, "ttl")
-				reqdata["csr"] = intdata["intermediatecsr"].(string)
-				reqdata["common_name"] = "intermediate.cert.com"
-				reqdata["ttl"] = "10s"
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "root/sign-intermediate",
-			Data:      reqdata,
-			Check: func(resp *logical.Response) error {
-				delete(reqdata, "csr")
-				delete(reqdata, "common_name")
-				delete(reqdata, "ttl")
-				intdata["intermediatecert"] = resp.Data["certificate"].(string)
-				reqdata["serial_number"] = resp.Data["serial_number"].(string)
-				reqdata["ec_int_serial_number"] = resp.Data["serial_number"].(string)
-				reqdata["certificate"] = resp.Data["certificate"].(string)
-				reqdata["pem_bundle"] = strings.Join([]string{intdata["intermediatekey"].(string), resp.Data["certificate"].(string)}, "\n")
-				return nil
-			},
-		},
-
-		// First load in this way to populate the private key
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/ca",
-			Data:      reqdata,
-			Check: func(resp *logical.Response) error {
-				delete(reqdata, "pem_bundle")
-				return nil
-			},
-		},
-
-		// Now test setting the intermediate, signed CA cert
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "intermediate/set-signed",
-			Data:      reqdata,
-			Check: func(resp *logical.Response) error {
-				delete(reqdata, "certificate")
-
-				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
-
-				return nil
-			},
-		},
-
-		// We expect to find a zero revocation time
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			PreFlight: setSerialUnderTest,
-			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
-					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
-				}
-
-				if resp.Data["revocation_time"].(int64) != 0 {
-					return fmt.Errorf("expected a zero revocation time")
-				}
-
-				return nil
-			},
-		},
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "revoke",
-			Data:      reqdata,
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			Path:      "crl",
-			Data:      reqdata,
-			Check: func(resp *logical.Response) error {
-				crlBytes := resp.Data["http_raw_body"].([]byte)
-				certList, err := x509.ParseCRL(crlBytes)
-				if err != nil {
-					t.Fatalf("err: %s", err)
-				}
-				revokedList := certList.TBSCertList.RevokedCertificates
-				if len(revokedList) != 2 {
-					t.Fatalf("length of revoked list not 2; %d", len(revokedList))
-				}
-				found := false
-				for _, revEntry := range revokedList {
-					revokedString := certutil.GetHexFormatted(revEntry.SerialNumber.Bytes(), ":")
-					if revokedString == reqdata["serial_number"].(string) {
-						found = true
-					}
-				}
-				if !found {
-					t.Fatalf("did not find %s in CRL", reqdata["serial_number"].(string))
-				}
-				delete(reqdata, "serial_number")
-
-				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
-
-				return nil
-			},
-		},
-
-		// Make sure both serial numbers we expect to find are found
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			PreFlight: setSerialUnderTest,
-			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
-					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
-				}
-
-				if resp.Data["revocation_time"].(int64) == 0 {
-					return fmt.Errorf("expected a non-zero revocation time")
-				}
-
-				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
-
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			PreFlight: setSerialUnderTest,
-			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
-					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
-				}
-
-				if resp.Data["revocation_time"].(int64) == 0 {
-					return fmt.Errorf("expected a non-zero revocation time")
-				}
-
-				// Give time for the certificates to pass the safety buffer
-				t.Logf("Sleeping for 15 seconds to allow safety buffer time to pass before testing tidying")
-				time.Sleep(15 * time.Second)
-
-				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
-
-				return nil
-			},
-		},
-
-		// This shouldn't do anything since the safety buffer is too long
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "tidy",
-			Data: map[string]interface{}{
-				"safety_buffer":        "3h",
-				"tidy_cert_store":      true,
-				"tidy_revocation_list": true,
-			},
-		},
-
-		// We still expect to find these
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			PreFlight: setSerialUnderTest,
-			Check: func(resp *logical.Response) error {
-				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
-					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
-				}
-
-				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
-
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			PreFlight: setSerialUnderTest,
-			Check: func(resp *logical.Response) error {
-				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
-					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
-				}
-
-				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
-
-				return nil
-			},
-		},
-
-		// Both should appear in the CRL
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			Path:      "crl",
-			Data:      reqdata,
-			Check: func(resp *logical.Response) error {
-				crlBytes := resp.Data["http_raw_body"].([]byte)
-				certList, err := x509.ParseCRL(crlBytes)
-				if err != nil {
-					t.Fatalf("err: %s", err)
-				}
-				revokedList := certList.TBSCertList.RevokedCertificates
-				if len(revokedList) != 2 {
-					t.Fatalf("length of revoked list not 2; %d", len(revokedList))
-				}
-				foundRsa := false
-				foundEc := false
-				for _, revEntry := range revokedList {
-					revokedString := certutil.GetHexFormatted(revEntry.SerialNumber.Bytes(), ":")
-					if revokedString == reqdata["rsa_int_serial_number"].(string) {
-						foundRsa = true
-					}
-					if revokedString == reqdata["ec_int_serial_number"].(string) {
-						foundEc = true
-					}
-				}
-				if !foundRsa || !foundEc {
-					t.Fatalf("did not find an expected entry in CRL")
-				}
-
-				return nil
-			},
-		},
-
-		// This shouldn't do anything since the boolean values default to false
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "tidy",
-			Data: map[string]interface{}{
-				"safety_buffer": "1s",
-			},
-		},
-
-		// We still expect to find these
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			PreFlight: setSerialUnderTest,
-			Check: func(resp *logical.Response) error {
-				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
-					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
-				}
-
-				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
-
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			PreFlight: setSerialUnderTest,
-			Check: func(resp *logical.Response) error {
-				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
-					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
-				}
-
-				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
-
-				return nil
-			},
-		},
-
-		// This should remove the values since the safety buffer is short
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "tidy",
-			Data: map[string]interface{}{
-				"safety_buffer":        "1s",
-				"tidy_cert_store":      true,
-				"tidy_revocation_list": true,
-			},
-		},
-
-		// We do *not* expect to find these
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			PreFlight: setSerialUnderTest,
-			Check: func(resp *logical.Response) error {
-				if resp != nil {
-					return fmt.Errorf("expected no response")
-				}
-
-				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
-
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			PreFlight: setSerialUnderTest,
-			Check: func(resp *logical.Response) error {
-				if resp != nil {
-					return fmt.Errorf("expected no response")
-				}
-
-				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
-
-				return nil
-			},
-		},
-
-		// Both should be gone from the CRL
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			Path:      "crl",
-			Data:      reqdata,
-			Check: func(resp *logical.Response) error {
-				crlBytes := resp.Data["http_raw_body"].([]byte)
-				certList, err := x509.ParseCRL(crlBytes)
-				if err != nil {
-					t.Fatalf("err: %s", err)
-				}
-				revokedList := certList.TBSCertList.RevokedCertificates
-				if len(revokedList) != 0 {
-					t.Fatalf("length of revoked list not 0; %d", len(revokedList))
-				}
-
-				return nil
-			},
-		},
-	}
-
 	return ret
 }
 
@@ -2140,7 +1404,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b := Backend()
+	b := Backend(config)
 	err := b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -2267,7 +1531,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b := Backend()
+	b := Backend(config)
 	err := b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -2823,7 +2087,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b := Backend()
+	b := Backend(config)
 	err := b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -3344,6 +2608,118 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	t.Logf("certificate 2 to check:\n%s", certStr)
 }
 
+func TestBackend_URI_SANs(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("root", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+		"allowed_domains":    []string{"foobar.com", "zipzap.com"},
+		"allow_bare_domains": true,
+		"allow_subdomains":   true,
+		"allow_ip_sans":      true,
+		"allowed_uri_sans":   []string{"http://someuri/abc", "spiffe://host.com/*"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// First test some bad stuff that shouldn't work
+	_, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		"uri_sans":    "http://www.mydomain.com/zxf",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Test valid single entry
+	_, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		"uri_sans":    "http://someuri/abc",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test globed entry
+	_, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		"uri_sans":    "spiffe://host.com/something",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test multiple entries
+	resp, err := client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		"uri_sans":    "spiffe://host.com/something,http://someuri/abc",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	certStr := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(certStr))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	URI0, _ := url.Parse("spiffe://host.com/something")
+	URI1, _ := url.Parse("http://someuri/abc")
+
+	if len(cert.URIs) != 2 {
+		t.Fatalf("expected 2 valid URIs SANs %v", cert.URIs)
+	}
+
+	if cert.URIs[0].String() != URI0.String() || cert.URIs[1].String() != URI1.String() {
+		t.Fatalf(
+			"expected URIs SANs %v to equal provided values spiffe://host.com/something, http://someuri/abc",
+			cert.URIs)
+	}
+}
 func setCerts() {
 	cak, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {

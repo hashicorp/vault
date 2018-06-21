@@ -28,32 +28,41 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/dr/status
 ```
 
-### Sample Response
+### Sample Response from Primary
 
 The printed status of the replication environment. As an example, for a
 primary, it will look something like:
 
 ```json
 {
-  "mode": "primary",
-  "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
-  "known_secondaries": [],
-  "last_wal": 0,
-  "merkle_root": "c3260c4c682ff2d6eb3c8bfd877134b3cec022d1",
-  "request_id": "009ea98c-06cd-6dc3-74f2-c4904b22e535",
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
   "data": {
     "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
     "known_secondaries": [],
-    "last_wal": 0,
-    "merkle_root": "c3260c4c682ff2d6eb3c8bfd877134b3cec022d1",
+    "last_wal": 241,
+    "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
     "mode": "primary"
   },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
+}
+```
+### Sample Response from Secondary
+
+The printed status of the replication environment. As an example, for a
+secondary, it will look something like:
+
+```json
+{
+  "data": {
+    "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
+    "known_primary_cluster_addrs": [
+      "https://127.0.0.1:8201"
+    ],
+    "last_remote_wal": 241,
+    "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
+    "mode": "secondary",
+    "primary_cluster_addr": "https://127.0.0.1:8201",
+    "secondary_id": "3",
+    "state": "stream-wals"
+  },
 }
 ```
 

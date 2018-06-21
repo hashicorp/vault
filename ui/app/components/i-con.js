@@ -5,8 +5,10 @@ const { computed } = Ember;
 const GLYPHS_WITH_SVG_TAG = [
   'folder',
   'file',
+  'hidden',
   'perf-replication',
   'role',
+  'visible',
   'information-reversed',
   'true',
   'false',

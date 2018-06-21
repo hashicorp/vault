@@ -213,8 +213,9 @@ func (b *AESGCMBarrier) KeyLength() (int, int) {
 // is not expected to be able to perform any CRUD until it is unsealed.
 func (b *AESGCMBarrier) Sealed() (bool, error) {
 	b.l.RLock()
-	defer b.l.RUnlock()
-	return b.sealed, nil
+	sealed := b.sealed
+	b.l.RUnlock()
+	return sealed, nil
 }
 
 // VerifyMaster is used to check if the given key matches the master key
@@ -852,34 +853,39 @@ func (b *AESGCMBarrier) decryptKeyring(path string, cipher []byte) ([]byte, erro
 // Encrypt is used to encrypt in-memory for the BarrierEncryptor interface
 func (b *AESGCMBarrier) Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
 	b.l.RLock()
-	defer b.l.RUnlock()
 	if b.sealed {
+		b.l.RUnlock()
 		return nil, ErrBarrierSealed
 	}
 
 	term := b.keyring.ActiveTerm()
 	primary, err := b.aeadForTerm(term)
 	if err != nil {
+		b.l.RUnlock()
 		return nil, err
 	}
 
 	ciphertext := b.encrypt(key, term, primary, plaintext)
+	b.l.RUnlock()
 	return ciphertext, nil
 }
 
 // Decrypt is used to decrypt in-memory for the BarrierEncryptor interface
 func (b *AESGCMBarrier) Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error) {
 	b.l.RLock()
-	defer b.l.RUnlock()
 	if b.sealed {
+		b.l.RUnlock()
 		return nil, ErrBarrierSealed
 	}
 
 	// Decrypt the ciphertext
 	plain, err := b.decryptKeyring(key, ciphertext)
 	if err != nil {
+		b.l.RUnlock()
 		return nil, errwrap.Wrapf("decryption failed: {{err}}", err)
 	}
+
+	b.l.RUnlock()
 	return plain, nil
 }
 

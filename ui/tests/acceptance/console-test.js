@@ -8,7 +8,6 @@ moduleForAcceptance('Acceptance | console', {
   },
 });
 
-
 test('refresh reloads the current route\'s data', function(assert) {
   let numEngines;
   enginesPage.visit();
@@ -17,7 +16,7 @@ test('refresh reloads the current route\'s data', function(assert) {
     enginesPage.consoleToggle();
     let now = Date.now();
     [1, 2, 3].forEach(num => {
-      let inputString = `write sys/mounts/${now+num} type=kv`;
+      let inputString = `write sys/mounts/${now + num} type=kv`;
       enginesPage.console.consoleInput(inputString);
       enginesPage.console.enter();
     });
