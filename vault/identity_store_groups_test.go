@@ -192,23 +192,6 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		t.Fatalf("failed to fetch a indexed groups")
 	}
 
-	// Fetch groups based on policy name
-	fetchedGroups, err = i.MemDBGroupsByPolicy("testpolicy1", false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(fetchedGroups) != 1 || fetchedGroups[0].Name != "testgroupname" {
-		t.Fatalf("failed to fetch an indexed group")
-	}
-
-	fetchedGroups, err = i.MemDBGroupsByPolicy("testpolicy2", false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(fetchedGroups) != 2 {
-		t.Fatalf("failed to fetch indexed groups")
-	}
-
 	// Fetch groups based on member entity ID
 	fetchedGroups, err = i.MemDBGroupsByMemberEntityID("testentityid1", false, false)
 	if err != nil {

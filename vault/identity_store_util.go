@@ -1204,41 +1204,6 @@ func (i *IdentityStore) MemDBGroupByID(groupID string, clone bool) (*identity.Gr
 	return i.MemDBGroupByIDInTxn(txn, groupID, clone)
 }
 
-func (i *IdentityStore) MemDBGroupsByPolicyInTxn(txn *memdb.Txn, policyName string, clone bool) ([]*identity.Group, error) {
-	if policyName == "" {
-		return nil, fmt.Errorf("missing policy name")
-	}
-
-	groupsIter, err := txn.Get(groupsTable, "policies", policyName)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to lookup groups using policy name: {{err}}", err)
-	}
-
-	var groups []*identity.Group
-	for group := groupsIter.Next(); group != nil; group = groupsIter.Next() {
-		entry := group.(*identity.Group)
-		if clone {
-			entry, err = entry.Clone()
-			if err != nil {
-				return nil, err
-			}
-		}
-		groups = append(groups, entry)
-	}
-
-	return groups, nil
-}
-
-func (i *IdentityStore) MemDBGroupsByPolicy(policyName string, clone bool) ([]*identity.Group, error) {
-	if policyName == "" {
-		return nil, fmt.Errorf("missing policy name")
-	}
-
-	txn := i.db.Txn(false)
-
-	return i.MemDBGroupsByPolicyInTxn(txn, policyName, clone)
-}
-
 func (i *IdentityStore) MemDBGroupsByParentGroupIDInTxn(txn *memdb.Txn, memberGroupID string, clone bool) ([]*identity.Group, error) {
 	if memberGroupID == "" {
 		return nil, fmt.Errorf("missing member group ID")
