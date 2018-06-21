@@ -63,10 +63,15 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 
 	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
 
-	err = is.MemDBUpsertEntity(entity)
+	txn := is.db.Txn(true)
+	defer txn.Abort()
+
+	err = is.MemDBUpsertEntityInTxn(txn, entity)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	txn.Commit()
 
 	alias := &identity.Alias{
 		CanonicalID:   entity.ID,

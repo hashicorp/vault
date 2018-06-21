@@ -222,10 +222,15 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 
 	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
 
-	err = is.MemDBUpsertEntity(entity)
+	txn := is.db.Txn(true)
+	defer txn.Abort()
+
+	err = is.MemDBUpsertEntityInTxn(txn, entity)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	txn.Commit()
 
 	entityFetched, err := is.MemDBEntityByID(entity.ID, true)
 	if err != nil {
@@ -478,10 +483,15 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 
 	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
 
-	err = is.MemDBUpsertEntity(entity)
+	txn := is.db.Txn(true)
+	defer txn.Abort()
+
+	err = is.MemDBUpsertEntityInTxn(txn, entity)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	txn.Commit()
 
 	// Fetch the entity using its ID
 	entityFetched, err := is.MemDBEntityByID(entity.ID, false)

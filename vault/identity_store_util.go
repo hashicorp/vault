@@ -532,24 +532,6 @@ func (i *IdentityStore) MemDBUpsertEntityInTxn(txn *memdb.Txn, entity *identity.
 	return nil
 }
 
-func (i *IdentityStore) MemDBUpsertEntity(entity *identity.Entity) error {
-	if entity == nil {
-		return fmt.Errorf("entity to upsert is nil")
-	}
-
-	txn := i.db.Txn(true)
-	defer txn.Abort()
-
-	err := i.MemDBUpsertEntityInTxn(txn, entity)
-	if err != nil {
-		return err
-	}
-
-	txn.Commit()
-
-	return nil
-}
-
 func (i *IdentityStore) MemDBEntityByIDInTxn(txn *memdb.Txn, entityID string, clone bool) (*identity.Entity, error) {
 	if entityID == "" {
 		return nil, fmt.Errorf("missing entity id")
@@ -590,14 +572,12 @@ func (i *IdentityStore) MemDBEntityByID(entityID string, clone bool) (*identity.
 	return i.MemDBEntityByIDInTxn(txn, entityID, clone)
 }
 
-func (i *IdentityStore) MemDBEntityByNameInTxn(txn *memdb.Txn, entityName string, clone bool) (*identity.Entity, error) {
+func (i *IdentityStore) MemDBEntityByName(entityName string, clone bool) (*identity.Entity, error) {
 	if entityName == "" {
 		return nil, fmt.Errorf("missing entity name")
 	}
 
-	if txn == nil {
-		return nil, fmt.Errorf("txn is nil")
-	}
+	txn := i.db.Txn(false)
 
 	entityRaw, err := txn.First(entitiesTable, "name", entityName)
 	if err != nil {
@@ -618,16 +598,6 @@ func (i *IdentityStore) MemDBEntityByNameInTxn(txn *memdb.Txn, entityName string
 	}
 
 	return entity, nil
-}
-
-func (i *IdentityStore) MemDBEntityByName(entityName string, clone bool) (*identity.Entity, error) {
-	if entityName == "" {
-		return nil, fmt.Errorf("missing entity name")
-	}
-
-	txn := i.db.Txn(false)
-
-	return i.MemDBEntityByNameInTxn(txn, entityName, clone)
 }
 
 func (i *IdentityStore) MemDBEntitiesByMetadata(filters map[string]string, clone bool) ([]*identity.Entity, error) {
