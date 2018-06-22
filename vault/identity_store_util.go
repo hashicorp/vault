@@ -74,7 +74,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 
 			txn := i.db.Txn(true)
 
-			err = i.upsertGroupInTxn(txn, group, false)
+			err = i.UpsertGroupInTxn(txn, group, false)
 			if err != nil {
 				txn.Abort()
 				return errwrap.Wrapf("failed to update group in memdb: {{err}}", err)
@@ -916,7 +916,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 
 		// This technically is not upsert. It is only update, only the method
 		// name is upsert here.
-		err = i.upsertGroupInTxn(txn, memberGroup, true)
+		err = i.UpsertGroupInTxn(txn, memberGroup, true)
 		if err != nil {
 			// Ideally we would want to revert the whole operation in case of
 			// errors while persisting in member groups. But there is no
@@ -941,7 +941,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 		}
 	}
 
-	err = i.upsertGroupInTxn(txn, group, true)
+	err = i.UpsertGroupInTxn(txn, group, true)
 	if err != nil {
 		return err
 	}
@@ -1070,7 +1070,7 @@ func (i *IdentityStore) MemDBGroupByName(groupName string, clone bool) (*identit
 	return i.MemDBGroupByNameInTxn(txn, groupName, clone)
 }
 
-func (i *IdentityStore) upsertGroupInTxn(txn *memdb.Txn, group *identity.Group, persist bool) error {
+func (i *IdentityStore) UpsertGroupInTxn(txn *memdb.Txn, group *identity.Group, persist bool) error {
 	var err error
 
 	if txn == nil {
@@ -1590,7 +1590,7 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID strin
 
 		group.MemberEntityIDs = append(group.MemberEntityIDs, entityID)
 
-		err = i.upsertGroupInTxn(txn, group, true)
+		err = i.UpsertGroupInTxn(txn, group, true)
 		if err != nil {
 			return err
 		}
@@ -1612,7 +1612,7 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID strin
 
 		group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, entityID)
 
-		err = i.upsertGroupInTxn(txn, group, true)
+		err = i.UpsertGroupInTxn(txn, group, true)
 		if err != nil {
 			return err
 		}

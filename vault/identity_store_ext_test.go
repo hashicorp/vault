@@ -1,4 +1,4 @@
-package command
+package vault_test
 
 import (
 	"testing"
@@ -235,11 +235,11 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Remove its member entities
 	group.MemberEntityIDs = nil
 
-	txn := identitystore.db.txn(true)
+	txn := identityStore.DB().Txn(true)
 
-	err = identitystore.upsertgroupintxn(txn, group, true)
+	err = identityStore.UpsertGroupInTxn(txn, group, true)
 	if err != nil {
-		txn.abort()
+		txn.Abort()
 		t.Fatal(err)
 	}
 
@@ -261,11 +261,11 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Remove its member entities
 	group.MemberEntityIDs = nil
 
-	txn = identitystore.db.txn(true)
+	txn = identityStore.DB().Txn(true)
 
-	err = identitystore.upsertgroupintxn(txn, group, true)
+	err = identityStore.UpsertGroupInTxn(txn, group, true)
 	if err != nil {
-		txn.abort()
+		txn.Abort()
 		t.Fatal(err)
 	}
 
@@ -287,11 +287,11 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Remove its member entities
 	group.MemberEntityIDs = nil
 
-	txn = identitystore.db.txn(true)
+	txn = identityStore.DB().Txn(true)
 
-	err = identitystore.upsertgroupintxn(txn, group, true)
+	err = identityStore.UpsertGroupInTxn(txn, group, true)
 	if err != nil {
-		txn.abort()
+		txn.Abort()
 		t.Fatal(err)
 	}
 
