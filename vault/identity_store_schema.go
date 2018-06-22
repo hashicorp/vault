@@ -47,13 +47,6 @@ func aliasesTableSchema() *memdb.TableSchema {
 					Field: "ID",
 				},
 			},
-			"canonical_id": &memdb.IndexSchema{
-				Name:   "canonical_id",
-				Unique: false,
-				Indexer: &memdb.StringFieldIndex{
-					Field: "CanonicalID",
-				},
-			},
 			"factors": &memdb.IndexSchema{
 				Name:   "factors",
 				Unique: true,
@@ -66,14 +59,6 @@ func aliasesTableSchema() *memdb.TableSchema {
 							Field: "Name",
 						},
 					},
-				},
-			},
-			"metadata": &memdb.IndexSchema{
-				Name:         "metadata",
-				Unique:       false,
-				AllowMissing: true,
-				Indexer: &memdb.StringMapFieldIndex{
-					Field: "Metadata",
 				},
 			},
 		},
@@ -181,13 +166,6 @@ func groupAliasesTableSchema() *memdb.TableSchema {
 				Unique: true,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "ID",
-				},
-			},
-			"canonical_id": &memdb.IndexSchema{
-				Name:   "canonical_id",
-				Unique: false,
-				Indexer: &memdb.StringFieldIndex{
-					Field: "CanonicalID",
 				},
 			},
 			"factors": &memdb.IndexSchema{
