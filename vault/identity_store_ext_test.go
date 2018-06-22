@@ -235,15 +235,10 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Remove its member entities
 	group.MemberEntityIDs = nil
 
-	txn := identityStore.DB().Txn(true)
-
-	err = identityStore.UpsertGroupInTxn(txn, group, true)
+	err = identityStore.UpsertGroup(group, true)
 	if err != nil {
-		txn.Abort()
 		t.Fatal(err)
 	}
-
-	txn.Commit()
 
 	group, err = identityStore.MemDBGroupByID(italiansGroupID, true)
 	if err != nil {
@@ -261,15 +256,10 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Remove its member entities
 	group.MemberEntityIDs = nil
 
-	txn = identityStore.DB().Txn(true)
-
-	err = identityStore.UpsertGroupInTxn(txn, group, true)
+	err = identityStore.UpsertGroup(group, true)
 	if err != nil {
-		txn.Abort()
 		t.Fatal(err)
 	}
-
-	txn.Commit()
 
 	group, err = identityStore.MemDBGroupByID(scientistsGroupID, true)
 	if err != nil {
@@ -287,15 +277,10 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Remove its member entities
 	group.MemberEntityIDs = nil
 
-	txn = identityStore.DB().Txn(true)
-
-	err = identityStore.UpsertGroupInTxn(txn, group, true)
+	err = identityStore.UpsertGroup(group, true)
 	if err != nil {
-		txn.Abort()
 		t.Fatal(err)
 	}
-
-	txn.Commit()
 
 	group, err = identityStore.MemDBGroupByID(devopsGroupID, true)
 	if err != nil {

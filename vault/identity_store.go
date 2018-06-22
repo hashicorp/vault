@@ -239,10 +239,6 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	}
 }
 
-func (i *IdentityStore) DB() *memdb.MemDB {
-	return i.db
-}
-
 func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *storagepacker.Item) (*identity.Entity, error) {
 	if item == nil {
 		return nil, fmt.Errorf("nil item")

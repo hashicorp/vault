@@ -1070,6 +1070,20 @@ func (i *IdentityStore) MemDBGroupByName(groupName string, clone bool) (*identit
 	return i.MemDBGroupByNameInTxn(txn, groupName, clone)
 }
 
+func (i *IdentityStore) UpsertGroup(group *identity.Group, persist bool) error {
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+
+	err := i.UpsertGroupInTxn(txn, group, true)
+	if err != nil {
+		return err
+	}
+
+	txn.Commit()
+
+	return nil
+}
+
 func (i *IdentityStore) UpsertGroupInTxn(txn *memdb.Txn, group *identity.Group, persist bool) error {
 	var err error
 
