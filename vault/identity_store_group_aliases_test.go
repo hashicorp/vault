@@ -164,19 +164,15 @@ func TestIdentityStore_GroupAliases_MemDBIndexes(t *testing.T) {
 	}
 
 	txn := i.db.Txn(true)
-
+	defer txn.Abort()
 	err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
 	if err != nil {
-		txn.Abort()
 		t.Fatal(err)
 	}
-
 	err = i.MemDBUpsertGroupInTxn(txn, group)
 	if err != nil {
-		txn.Abort()
 		t.Fatal(err)
 	}
-
 	txn.Commit()
 
 	alias, err := i.MemDBAliasByID("testgroupaliasid", false, true)
