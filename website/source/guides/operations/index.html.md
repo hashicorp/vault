@@ -28,24 +28,6 @@ guidance on best practices for a production hardened deployment of Vault.
 The recommendations are based on the [security model](/docs/internals/security.html)
 and focus on defense in depth.
 
-- **[Enterprise Only]** [Replication Setup & Guidance](/guides/operations/replication.html)
-walks you through the commands to activate the Vault servers in replication mode.
-Please note that [Vault Replication](/docs/vault-enterprise/replication/index.html)
-is a Vault Enterprise feature.
-
-- **[Enterprise Only]** [Mount Filter](/guides/operations/mount-filter.html)
-guide demonstrates how to selectively filter out secret engines from being
-replicated across clusters. This feature can help organizations to comply with
-***General Data Protection Regulation (GDPR)***.
-
-- **[Enterprise Only]** [Vault Auto-unseal using AWS Key Management Service (KMS)](/guides/operations/autounseal-aws-kms.html) guide demonstrates an example of
-how to use Terraform to provision an instance that utilizes an encryption key
-from AWS Key Management Service (KMS).
-
-- **[Enterprise Only]** [Seal Wrap / FIPS 140-2](/guides/operations/seal-wrap.html)
-guide demonstrates how Vault's seal wrap feature works to encrypt your secrets
-leveraging FIPS 140-2 certified HSM.
-
 - [Root Token Generation](/guides/operations/generate-root.html) guide
 demonstrates the workflow of regenerating root tokens. It is considered to be a
 best practice not to persist the initial **root** token. If a root token needs
@@ -58,3 +40,29 @@ perform _rekey_ and _rotate_ operations in Vault.
 - [Building Plugin Backends](/guides/operations/plugin-backends.html) guide
 provides steps to build, register, and mount non-database external plugin
 backends.
+
+
+
+## Vault Enterprise
+
+- [Replication Setup & Guidance](/guides/operations/replication.html)
+walks you through the commands to activate the Vault servers in replication mode.
+Please note that [Vault Replication](/docs/vault-enterprise/replication/index.html)
+is a Vault Enterprise feature.
+
+- [Disaster Recovery Replication Setup](/guides/operations/disaster-recovery.html)
+guide provides step-by-step instruction of setting up a disaster recovery (DR)
+cluster.
+
+- [Mount Filter](/guides/operations/mount-filter.html)
+guide demonstrates how to selectively filter out secret engines from being
+replicated across clusters. This feature can help organizations to comply with
+***General Data Protection Regulation (GDPR)***.
+
+- [Vault Auto-unseal using AWS Key Management Service (KMS)](/guides/operations/autounseal-aws-kms.html) guide demonstrates an example of
+how to use Terraform to provision an instance that utilizes an encryption key
+from AWS Key Management Service (KMS).
+
+- [Seal Wrap / FIPS 140-2](/guides/operations/seal-wrap.html)
+guide demonstrates how Vault's seal wrap feature works to encrypt your secrets
+leveraging FIPS 140-2 certified HSM.
