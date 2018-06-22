@@ -301,10 +301,15 @@ func (i *IdentityStore) handleGroupReadCommon(group *identity.Group) (*logical.R
 
 	respData["alias"] = aliasMap
 
-	memberGroupIDs, err := i.memberGroupIDsByID(group.ID)
+	var memberGroupIDs []string
+	memberGroups, err := i.MemDBGroupsByParentGroupID(group.ID, false)
 	if err != nil {
 		return nil, err
 	}
+	for _, memberGroup := range memberGroups {
+		memberGroupIDs = append(memberGroupIDs, memberGroup.ID)
+	}
+
 	respData["member_group_ids"] = memberGroupIDs
 
 	return &logical.Response{
@@ -372,10 +377,15 @@ func (i *IdentityStore) pathGroupIDDelete() framework.OperationFunc {
 func (i *IdentityStore) pathGroupIDList() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		ws := memdb.NewWatchSet()
-		iter, err := i.MemDBGroupIterator(ws)
+
+		txn := i.db.Txn(false)
+
+		iter, err := txn.Get(groupsTable, "id")
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to fetch iterator for group in memdb: {{err}}", err)
 		}
+
+		ws.Add(iter.WatchCh())
 
 		var groupIDs []string
 		groupInfo := map[string]interface{}{}

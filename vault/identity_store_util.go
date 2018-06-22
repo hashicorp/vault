@@ -1450,19 +1450,6 @@ func (i *IdentityStore) memberGroupIDsByID(groupID string) ([]string, error) {
 	return memberGroupIDs, nil
 }
 
-func (i *IdentityStore) MemDBGroupIterator(ws memdb.WatchSet) (memdb.ResultIterator, error) {
-	txn := i.db.Txn(false)
-
-	iter, err := txn.Get(groupsTable, "id")
-	if err != nil {
-		return nil, err
-	}
-
-	ws.Add(iter.WatchCh())
-
-	return iter, nil
-}
-
 func (i *IdentityStore) generateName(entryType string) (string, error) {
 	var name string
 OUTER:
