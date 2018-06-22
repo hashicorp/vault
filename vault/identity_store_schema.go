@@ -98,14 +98,6 @@ func entitiesTableSchema() *memdb.TableSchema {
 					Field: "Name",
 				},
 			},
-			"metadata": &memdb.IndexSchema{
-				Name:         "metadata",
-				Unique:       false,
-				AllowMissing: true,
-				Indexer: &memdb.StringMapFieldIndex{
-					Field: "Metadata",
-				},
-			},
 			"merged_entity_ids": &memdb.IndexSchema{
 				Name:         "merged_entity_ids",
 				Unique:       true,
