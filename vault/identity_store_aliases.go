@@ -310,6 +310,7 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 				if item.ID == alias.ID {
 					aliasFound = true
 					existingEntity.Aliases[aliasIndex] = alias
+					break
 				}
 			}
 

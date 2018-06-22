@@ -64,13 +64,11 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
 
 	txn := is.db.Txn(true)
-	defer txn.Abort()
-
 	err = is.MemDBUpsertEntityInTxn(txn, entity)
 	if err != nil {
+		txn.Abort()
 		t.Fatal(err)
 	}
-
 	txn.Commit()
 
 	alias := &identity.Alias{
@@ -86,13 +84,11 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 	}
 
 	txn = is.db.Txn(true)
-	defer txn.Abort()
-
 	err = is.MemDBUpsertAliasInTxn(txn, alias, false)
 	if err != nil {
+		txn.Abort()
 		t.Fatal(err)
 	}
-
 	txn.Commit()
 
 	aliasFetched, err := is.MemDBAliasByID("testaliasid", false, false)
@@ -126,22 +122,16 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 	}
 
 	txn = is.db.Txn(true)
-	defer txn.Abort()
-
 	err = is.MemDBUpsertAliasInTxn(txn, alias2, false)
 	if err != nil {
+		txn.Abort()
 		t.Fatal(err)
 	}
-
-	txn.Commit()
-	txn = is.db.Txn(true)
-	defer txn.Abort()
-
 	err = is.MemDBDeleteAliasByIDInTxn(txn, "testaliasid", false)
 	if err != nil {
+		txn.Abort()
 		t.Fatal(err)
 	}
-
 	txn.Commit()
 
 	aliasFetched, err = is.MemDBAliasByID("testaliasid", false, false)

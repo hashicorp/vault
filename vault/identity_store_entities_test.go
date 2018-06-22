@@ -484,13 +484,11 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
 
 	txn := is.db.Txn(true)
-	defer txn.Abort()
-
 	err = is.MemDBUpsertEntityInTxn(txn, entity)
 	if err != nil {
+		txn.Abort()
 		t.Fatal(err)
 	}
-
 	txn.Commit()
 
 	// Fetch the entity using its ID
@@ -515,7 +513,6 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 
 	txn = is.db.Txn(false)
 	entitiesFetched, err := is.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, entity.BucketKeyHash)
-	txn.Abort()
 	if err != nil {
 		t.Fatal(err)
 	}
