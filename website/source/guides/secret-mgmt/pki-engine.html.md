@@ -47,10 +47,36 @@ Revocation List (CRL) Profile](https://tools.ietf.org/html/rfc5280)
 
 ## Challenge
 
+Traditional PKI process workflow looks like:
 
+1. Create Certificates Signing Request (CSR)
+    - Generate public and private keys
+    - Sign CSR with your private key
+1. Submit your CSR to Certificate Authority (CA)
+1. CA usually signs the CSR and returns the public key which is your certificate
+
+If revocation is needed, you have to update your locate Certificate Revocation
+List (CRL) or Online Certificate Status Protocol (OCSP).
+
+
+Typical SSH login methods:
+
+- Host-based
+- Username and Password
+- SSH keys
+
+The host must be well secured.
 
 ## Solution
 
+Vault PKI secrets engine makes this a lot simpler.  The PKI secrets engine can
+be an Intermediate-Only certificate authority which potentially allows for
+higher levels of security.
+
+1. Store CA outside the Vault (air gapped)
+1. Create CSRs for the intermediates
+1. Sign CSR outside Vault and import intermediate
+1. Issue leaf certificates from the Intermediate CA
 
 
 ## Prerequisites
@@ -204,7 +230,7 @@ $ sudo ./demo1_bootstrap_environment.sh
 
 This demo script bootstraps a Vault development server to create an initial set
 of certificates that will later be used for securing Vault and Consul
-communicates with TLS.
+communicates over TLS.
 
 -> A short description of each task gets displayed along with the vault command.
 Review the command and then press **Return** or **Enter** key on your keyboard
