@@ -137,14 +137,6 @@ func groupsTableSchema() *memdb.TableSchema {
 					Field: "ParentGroupIDs",
 				},
 			},
-			"policies": {
-				Name:         "policies",
-				Unique:       false,
-				AllowMissing: true,
-				Indexer: &memdb.StringSliceFieldIndex{
-					Field: "Policies",
-				},
-			},
 			"bucket_key_hash": &memdb.IndexSchema{
 				Name:         "bucket_key_hash",
 				Unique:       false,
