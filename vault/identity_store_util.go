@@ -1538,55 +1538,6 @@ func (i *IdentityStore) MemDBGroupByAliasID(aliasID string, clone bool) (*identi
 	return i.MemDBGroupByAliasIDInTxn(txn, aliasID, clone)
 }
 
-func (i *IdentityStore) deleteGroupAlias(aliasID string) error {
-	if aliasID == "" {
-		return fmt.Errorf("missing alias ID")
-	}
-
-	i.groupLock.Lock()
-	defer i.groupLock.Unlock()
-
-	txn := i.db.Txn(true)
-	defer txn.Abort()
-
-	alias, err := i.MemDBAliasByIDInTxn(txn, aliasID, false, true)
-	if err != nil {
-		return err
-	}
-
-	if alias == nil {
-		return nil
-	}
-
-	group, err := i.MemDBGroupByAliasIDInTxn(txn, alias.ID, true)
-	if err != nil {
-		return err
-	}
-
-	// If there is no group tied to a valid alias, something is wrong
-	if group == nil {
-		return fmt.Errorf("alias not associated to a group")
-	}
-
-	// Delete group alias in memdb
-	err = i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
-	if err != nil {
-		return err
-	}
-
-	// Delete the alias
-	group.Alias = nil
-
-	err = i.upsertGroupInTxn(txn, group, true)
-	if err != nil {
-		return err
-	}
-
-	txn.Commit()
-
-	return nil
-}
-
 func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID string, groupAliases []*logical.Alias) error {
 	if entityID == "" {
 		return fmt.Errorf("empty entity ID")
