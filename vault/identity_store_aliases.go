@@ -476,7 +476,7 @@ func (i *IdentityStore) pathAliasIDDelete() framework.OperationFunc {
 
 		// Lock switching should not end up in this code pointing to different
 		// entities
-		if entity.ID != entity.ID {
+		if lockEntity.ID != entity.ID {
 			return nil, fmt.Errorf("operating on an entity to which the lock doesn't belong to")
 		}
 
