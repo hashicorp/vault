@@ -14,6 +14,14 @@ It currently does not support a configurable syslog destination, and always
 sends to the local agent. This device is only supported on Unix systems,
 and should not be enabled if any standby Vault instances do not support it.
 
+~> **Warning**: Audit messages generated for some operations can be quite
+large, and can be larger than a [maximum-size single UDP
+packet](https://tools.ietf.org/html/rfc5426#section-3.1). If possible with your
+syslog daemon, configure a TCP listener. Otherwise, consider using a `file`
+backend and having syslog configured to read entries from the file; or, enable
+both `file` and `syslog` so that a failure for a particular message to log
+directly to `syslog` will not result in Vault being blocked.
+
 ## Examples
 
 Audit `syslog` device can be enabled by the following command:
