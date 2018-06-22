@@ -1485,17 +1485,6 @@ OUTER:
 	return name, nil
 }
 
-func (i *IdentityStore) MemDBGroupsByBucketEntryKeyHash(hashValue string) ([]*identity.Group, error) {
-	if hashValue == "" {
-		return nil, fmt.Errorf("empty hash value")
-	}
-
-	txn := i.db.Txn(false)
-	defer txn.Abort()
-
-	return i.MemDBGroupsByBucketEntryKeyHashInTxn(txn, hashValue)
-}
-
 func (i *IdentityStore) MemDBGroupsByBucketEntryKeyHashInTxn(txn *memdb.Txn, hashValue string) ([]*identity.Group, error) {
 	if txn == nil {
 		return nil, fmt.Errorf("nil txn")
