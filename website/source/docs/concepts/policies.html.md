@@ -196,7 +196,7 @@ similarly matched.
 
   * `read` (`GET`) - Allows reading the data at the given path.
 
-  * `update` (`POST/PUT`) - Allows change the data at the given path. In most
+  * `update` (`POST/PUT`) - Allows changing the data at the given path. In most
     parts of Vault, this implicitly includes the ability to create the initial
     value at the path.
 
