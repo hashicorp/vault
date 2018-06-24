@@ -724,7 +724,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			props["cluster address"] = addr
 		}
 
-		var maxRequestSize int64 = 32 * 1024 * 1024
+		var maxRequestSize int64 = vaulthttp.DefaultMaxRequestSize
 		if valRaw, ok := lnConfig.Config["max_request_size"]; ok {
 			val, err := parseutil.ParseInt(valRaw)
 			if err != nil {

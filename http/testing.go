@@ -31,7 +31,8 @@ func TestServerWithListener(tb testing.TB, ln net.Listener, addr string, core *v
 	mux := http.NewServeMux()
 	mux.Handle("/_test/auth", http.HandlerFunc(testHandleAuth))
 	mux.Handle("/", Handler(&vault.HandlerProperties{
-		Core: core,
+		Core:           core,
+		MaxRequestSize: DefaultMaxRequestSize,
 	}))
 
 	server := &http.Server{

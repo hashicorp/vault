@@ -54,10 +54,11 @@ const (
 	// soft-mandatory Sentinel policies.
 	PolicyOverrideHeaderName = "X-Vault-Policy-Override"
 
-	// MaxRequestSize is the maximum accepted request size. This is to prevent
-	// a denial of service attack where no Content-Length is provided and the server
-	// is fed ever more data until it exhausts memory.
-	MaxRequestSize = 32 * 1024 * 1024
+	// DefaultMaxRequestSize is the default maximum accepted request size. This
+	// is to prevent a denial of service attack where no Content-Length is
+	// provided and the server is fed ever more data until it exhausts memory.
+	// Can be overridden per listener.
+	DefaultMaxRequestSize = 32 * 1024 * 1024
 )
 
 var (
