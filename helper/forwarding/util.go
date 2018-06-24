@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -71,8 +72,7 @@ func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 		}
 	}
 
-	buf := bytes.NewBuffer(nil)
-	_, err := buf.ReadFrom(reader)
+	body, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 		HeaderEntries: make(map[string]*HeaderEntry, len(req.Header)),
 		Host:          req.Host,
 		RemoteAddr:    req.RemoteAddr,
-		Body:          buf.Bytes(),
+		Body:          body,
 	}
 
 	reqURL := req.URL
