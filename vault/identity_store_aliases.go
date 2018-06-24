@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/locksutil"
+	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -291,19 +293,31 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 
 		if entity != nil && entity.ID != existingEntity.ID {
 			// Alias should be transferred from 'existingEntity' to 'entity'
-			err = i.deleteAliasFromEntity(existingEntity, alias)
-			if err != nil {
-				return nil, err
+			for aliasIndex, item := range existingEntity.Aliases {
+				if item.ID == alias.ID {
+					entity.Aliases = append(existingEntity.Aliases[:aliasIndex], existingEntity.Aliases[aliasIndex+1:]...)
+					break
+				}
 			}
+
 			previousEntity = existingEntity
 			entity.Aliases = append(entity.Aliases, alias)
 			resp.AddWarning(fmt.Sprintf("alias is being transferred from entity %q to %q", existingEntity.ID, entity.ID))
 		} else {
 			// Update entity with modified alias
-			err = i.updateAliasInEntity(existingEntity, alias)
-			if err != nil {
-				return nil, err
+			aliasFound := false
+			for aliasIndex, item := range existingEntity.Aliases {
+				if item.ID == alias.ID {
+					aliasFound = true
+					existingEntity.Aliases[aliasIndex] = alias
+					break
+				}
 			}
+
+			if !aliasFound {
+				return nil, fmt.Errorf("alias does not exist in entity")
+			}
+
 			entity = existingEntity
 		}
 	}
@@ -406,7 +420,103 @@ func (i *IdentityStore) pathAliasIDDelete() framework.OperationFunc {
 			return logical.ErrorResponse("missing alias ID"), nil
 		}
 
-		return nil, i.deleteAlias(aliasID)
+		// Fetch the alias using its ID
+		alias, err := i.MemDBAliasByID(aliasID, false, false)
+		if err != nil {
+			return nil, err
+		}
+
+		// If there is no alias for the ID, do nothing
+		if alias == nil {
+			return nil, nil
+		}
+
+		// Find the entity to which the alias is tied to
+		lockEntity, err := i.MemDBEntityByAliasID(alias.ID, false)
+		if err != nil {
+			return nil, err
+		}
+
+		// If there is no entity tied to a valid alias, something is wrong
+		if lockEntity == nil {
+			return nil, fmt.Errorf("alias not associated to an entity")
+		}
+
+		// Acquire the lock to modify the entity storage entry
+		lock := locksutil.LockForKey(i.entityLocks, lockEntity.ID)
+		lock.Lock()
+		defer lock.Unlock()
+
+		// Create a MemDB transaction to delete entity
+		txn := i.db.Txn(true)
+		defer txn.Abort()
+
+		// Fetch the alias again after acquiring the lock using the transaction
+		// created above
+		alias, err = i.MemDBAliasByIDInTxn(txn, aliasID, false, false)
+		if err != nil {
+			return nil, err
+		}
+
+		// If there is no alias for the ID, do nothing
+		if alias == nil {
+			return nil, nil
+		}
+
+		// Fetch the entity again after acquiring the lock using the transaction
+		// created above
+		entity, err := i.MemDBEntityByAliasIDInTxn(txn, alias.ID, true)
+		if err != nil {
+			return nil, err
+		}
+
+		// If there is no entity tied to a valid alias, something is wrong
+		if entity == nil {
+			return nil, fmt.Errorf("alias not associated to an entity")
+		}
+
+		// Lock switching should not end up in this code pointing to different
+		// entities
+		if lockEntity.ID != entity.ID {
+			return nil, fmt.Errorf("operating on an entity to which the lock doesn't belong to")
+		}
+
+		aliases := []*identity.Alias{
+			alias,
+		}
+
+		// Delete alias from the entity object
+		err = i.deleteAliasesInEntityInTxn(txn, entity, aliases)
+		if err != nil {
+			return nil, err
+		}
+
+		// Update the entity index in the entities table
+		err = i.MemDBUpsertEntityInTxn(txn, entity)
+		if err != nil {
+			return nil, err
+		}
+
+		// Persist the entity object
+		entityAsAny, err := ptypes.MarshalAny(entity)
+		if err != nil {
+			return nil, err
+		}
+		item := &storagepacker.Item{
+			ID:      entity.ID,
+			Message: entityAsAny,
+		}
+
+		err = i.entityPacker.PutItem(item)
+		if err != nil {
+			return nil, err
+		}
+
+		// Committing the transaction *after* successfully updating entity in
+		// storage
+		txn.Commit()
+
+		return nil, nil
 	}
 }
 
