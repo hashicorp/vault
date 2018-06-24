@@ -26,6 +26,13 @@ const (
 	replTimeout = 10 * time.Second
 )
 
+// HanlderProperties is used to seed configuration into a vaulthttp.Handler.
+// It's in this package to avoid a circular dependency
+type HandlerProperties struct {
+	Core           *Core
+	MaxRequestSize int64
+}
+
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity
 // ID. If the entity is merged into a different entity object, the entity into
 // which the given entity ID is merged into will be returned. This function

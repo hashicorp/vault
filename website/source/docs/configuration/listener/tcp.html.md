@@ -29,6 +29,10 @@ listener "tcp" {
   they need to hop through a TCP load balancer or some other scheme in order to
   talk.
 
+- `max_request_size` `(int: 33554432)` – Specifies a hard maximum allowed
+  request size, in bytes. Defaults to 32 MB. Specifying a number less than or
+  equal to `0` turns off limiting altogether.
+
 - `proxy_protocol_behavior` `(string: "") – When specified, turns on the PROXY
   protocol for the listener.  
   Accepted Values:
