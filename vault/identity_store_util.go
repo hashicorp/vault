@@ -324,6 +324,23 @@ func (i *IdentityStore) upsertEntity(entity *identity.Entity, previousEntity *id
 	return nil
 }
 
+// upsertEntityNonLocked creates or updates an entity. The lock to modify the
+// entity should be held before calling this function.
+func (i *IdentityStore) upsertEntityNonLocked(entity *identity.Entity, previousEntity *identity.Entity, persist bool) error {
+	// Create a MemDB transaction to update both alias and entity
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+
+	err := i.upsertEntityInTxn(txn, entity, previousEntity, persist, true)
+	if err != nil {
+		return err
+	}
+
+	txn.Commit()
+
+	return nil
+}
+
 func (i *IdentityStore) MemDBUpsertAliasInTxn(txn *memdb.Txn, alias *identity.Alias, groupAlias bool) error {
 	if txn == nil {
 		return fmt.Errorf("nil txn")
