@@ -20,7 +20,7 @@ export default Ember.Route.extend({
 
   beforeModel() {
     let { backend } = this.paramsFor('vault.cluster.secrets.backend');
-      let { secret } = this.paramsFor(this.routeName);
+    let { secret } = this.paramsFor(this.routeName);
     let backendModel = this.store.peekRecord('secret-engine', backend);
     let type = backendModel && backendModel.get('type');
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
