@@ -2,6 +2,7 @@ import Ember from 'ember';
 const { computed } = Ember;
 
 export default Ember.Component.extend({
+  'data-test-radial-progress': true,
   tagName: 'svg',
   classNames: 'radial-progress',
   attributeBindings: ['size:width', 'size:height', 'viewBox'],
