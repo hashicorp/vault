@@ -98,7 +98,8 @@ This endpoint enables a new secrets engine at the given path.
      that will not be HMAC'd by audit devices in the response data object.
 
   - `listing_visibility` `(string: "")` - Speficies whether to show this mount
-     in the UI-specific listing endpoint.
+    in the UI-specific listing endpoint. Valid values are `"unauth"` or
+    `"hidden"`.  If not set, behaves like `"hidden"`.
 
   - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
      to whitelist and pass from the request to the backend.
@@ -229,8 +230,9 @@ This endpoint tunes configuration parameters for a given mount point.
   list of keys that will not be HMAC'd by audit devices in the response data
   object.
 
-- `listing_visibility` `(string: "")` - Speficies whether to show this mount
-    in the UI-specific listing endpoint. Valid values are `"unauth"` or `""`.
+- `listing_visibility` `(string: "")` - Speficies whether to show this mount in
+  the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
+  If not set, behaves like `"hidden"`.
 
 - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
     to whitelist and pass from the request to the backend.

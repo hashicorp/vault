@@ -45,8 +45,10 @@ const (
 type ListingVisibilityType string
 
 const (
+	// ListingVisibilityDefault is the default value for listing visibility
+	ListingVisibilityDefault ListingVisibilityType = ""
 	// ListingVisibilityHidden is the hidden type for listing visibility
-	ListingVisibilityHidden ListingVisibilityType = ""
+	ListingVisibilityHidden ListingVisibilityType = "hidden"
 	// ListingVisibilityUnauth is the unauth type for listing visibility
 	ListingVisibilityUnauth ListingVisibilityType = "unauth"
 )
