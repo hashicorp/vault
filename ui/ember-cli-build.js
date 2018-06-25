@@ -20,29 +20,25 @@ module.exports = function(defaults) {
           opengraph: false,
           twitter: false,
           windows: false,
-          yandex: false
-        }
-      }
+          yandex: false,
+        },
+      },
     },
     codemirror: {
-      modes: ['javascript','ruby'],
-      keyMaps: ['sublime']
+      modes: ['javascript', 'ruby'],
+      keyMaps: ['sublime'],
     },
     babel: {
-      plugins: [
-        'transform-object-rest-spread'
-      ]
+      plugins: ['transform-object-rest-spread'],
     },
     autoprefixer: {
       grid: true,
-      browsers: [
-        "defaults",
-        "ie 11"
-      ]
-    }
+      browsers: ['defaults', 'ie 11'],
+    },
   });
 
   app.import('vendor/string-includes.js');
+  app.import('node_modules/string.prototype.endswith/endswith.js');
   app.import('node_modules/string.prototype.startswith/startswith.js');
   app.import('node_modules/autosize/dist/autosize.js');
   app.import('vendor/shims/autosize.js');
@@ -56,15 +52,11 @@ module.exports = function(defaults) {
   app.import('node_modules/Duration.js/duration.js');
 
   app.import('node_modules/columnify/columnify.js', {
-    using: [
-      { transformation: 'cjs', as: 'columnify' }
-    ]
+    using: [{ transformation: 'cjs', as: 'columnify' }],
   });
 
   app.import('node_modules/yargs-parser/lib/tokenize-arg-string.js', {
-    using: [
-      { transformation: 'cjs', as: 'yargs-parser-tokenizer' }
-    ]
+    using: [{ transformation: 'cjs', as: 'yargs-parser-tokenizer' }],
   });
 
   // Use `app.import` to add additional libraries to the generated
