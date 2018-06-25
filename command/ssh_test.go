@@ -133,6 +133,31 @@ func TestParseSSHCommand(t *testing.T) {
 			"",
 			nil,
 		},
+		{
+			"Allow single args which don't have a value",
+			[]string{
+				"-v",
+				"hostname",
+			},
+			"hostname",
+			"",
+			"",
+			nil,
+		},
+		{
+			"Allow single args before and after the hostname and command",
+			[]string{
+				"-v",
+				"hostname",
+				"-v",
+				"command",
+				"-v",
+			},
+			"hostname",
+			"",
+			"",
+			nil,
+		},
 	}
 
 	for _, test := range tests {
@@ -150,6 +175,42 @@ func TestParseSSHCommand(t *testing.T) {
 			}
 			if port != test.port {
 				t.Errorf("got port: %q want %q", port, test.port)
+			}
+		})
+	}
+}
+
+func TestIsSingleSSHArg(t *testing.T) {
+	t.Parallel()
+
+	_, cmd := testSSHCommand(t)
+	var tests = []struct {
+		name string
+		arg  string
+		want bool
+	}{
+		{
+			"-v is a single ssh arg",
+			"-v",
+			true,
+		},
+		{
+			"-o is NOT a single ssh arg",
+			"-o",
+			false,
+		},
+		{
+			"Repeated args like -vvv is still a single ssh arg",
+			"-vvv",
+			true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := cmd.isSingleSSHArg(test.arg)
+			if got != test.want {
+				t.Errorf("arg %q got %v want %v", test.arg, got, test.want)
 			}
 		})
 	}
