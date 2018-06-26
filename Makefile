@@ -91,6 +91,9 @@ prep: fmtcheck
 
 # bootstrap the build by downloading additional tools
 bootstrap:
+	echo "Installing FoundationDB Go bindings"
+	scripts/fdb-go-install.sh install
+
 	@for tool in  $(EXTERNAL_TOOLS) ; do \
 		echo "Installing/Updating $$tool" ; \
 		go get -u $$tool; \
