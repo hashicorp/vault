@@ -183,20 +183,12 @@ listen vault
 
 #### Client IP Address Handling
 
-Vault does not support X-Forwarded-For at this time due to security concerns, as
-an attacker can perform a header injection to impersonate another client.  Vault
-does have PROXY v1 protocol support. This is well supported by
-[HAProxy](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) and [AWS
-ELB’s](http://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-proxy-protocol.html).
-Another [HAProxy blog post](http://www.haproxy.com/blog/haproxy/proxy-protocol/)
-with some good info on PROXY protocol. It is worth pointing out that [F5 load
-balancers do support it as
-well](https://devcentral.f5.com/codeshare/proxy-protocol-initiator).
+Vault supports both X-Forwarded-For and PROXY v1 protocols. PROXY is the recommended implementation, since X-Forwarded-For can be exploited by an attacker performing a header injection to impersonate another client. PROXY protocol is well supported by [HAProxy](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt), [AWS
+ELB’s](http://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-proxy-protocol.html) and [F5 load balancers](https://devcentral.f5.com/codeshare/proxy-protocol-initiator). This [HAProxy blog post](http://www.haproxy.com/blog/haproxy/proxy-protocol/) has some good info on PROXY protocol. 
 
 Note that the Vault listener must be [properly
 configured](/docs/configuration/listener/tcp.html#proxy_protocol_behavior)
 to support this functionality.
-
 
 ### High Availability
 
