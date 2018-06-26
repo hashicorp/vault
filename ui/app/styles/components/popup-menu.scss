@@ -24,8 +24,7 @@
     padding: $size-11 0;
 
     button.link,
-    a,
-    p {
+    a {
       background: transparent;
       box-shadow: none;
       border: none;
@@ -83,6 +82,15 @@
   }
 }
 
+.popup-menu-content p {
+  box-shadow: none;
+  padding-top: $size-10;
+  font-weight: $font-weight-semibold;
+}
+
+.popup-menu-content .level-left {
+  flex-shrink: 1;
+}
 .popup-menu-trigger {
   height: 2rem;
   min-width: 0;
