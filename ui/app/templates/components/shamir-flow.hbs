@@ -34,14 +34,15 @@
   </div>
 {{else if (and generateAction (not started))}}
   <form {{action 'startGenerate' (hash otp=otp pgp_key=pgp_key) on="submit"}} id="shamir">
-    <div class="box is-marginless is-shadowless">
       {{message-error errors=errors}}
       {{#if (eq generateStep 'chooseMethod')}}
-        <p>
-        Updating or promoting this cluster requires an operation token. Let's generate one by 
-        inputting the master key shares. To get started you'll need to generate a One Time Password
-        (OTP) or provide a PGP Key to encrypt the resultant operation token.
-        </p>
+        <div class="box is-marginless is-shadowless">
+          <p>
+          Updating or promoting this cluster requires an operation token. Let's generate one by 
+          inputting the master key shares. To get started you'll need to generate a One Time Password
+          (OTP) or provide a PGP Key to encrypt the resultant operation token.
+          </p>
+        </div>
         <div class="box is-shadowless field is-grouped is-grouped-centered">
           <div class="control">
             <button type="button" class="button is-primary" {{action (mut generateWithPGP) true}}>
@@ -62,13 +63,16 @@
       {{/if}}
 
       {{#if (eq generateStep 'providePGPKey')}}
+
+        <div class="box is-marginless is-shadowless">
         <p>
           Choose a PGP Key from your computer or paste the contents of one in the form below.
           This key will be used to Encrypt the generated Operation Token.
         </p>
         {{pgp-file index='' key=pgpKeyFile onChange=(action 'setKey')}}
+        </div>
 
-        <div class="field is-grouped">
+        <div class="field is-grouped box is-marginless is-shadowless">
           <div class="control">
             <button type="button" class="button" {{action "reset"}}>
               Back
@@ -82,20 +86,22 @@
         </div>
       {{/if}}
       {{#if (eq generateStep 'beginGenerationWithPGP')}}
-        <p>
-          Below is the base-64 encoded PGP Key that will be used to encrypt the generated Operation Token.
-          Next we'll enter portions of the master key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
-        </p>
-        <div class="message is-list has-copy-button" tabindex="-1">
-          <HoverCopyButton @copyValue={{pgp_key}} />
-          <div class="message-body">
-            <h4 class="title is-7 is-marginless">
-              PGP Key {{pgpKeyFile.fileName}}
-            </h4>
-            <code class="is-word-break">{{pgp_key}}</code>
+        <div class="box is-marginless is-shadowless">
+          <p>
+            Below is the base-64 encoded PGP Key that will be used to encrypt the generated Operation Token.
+            Next we'll enter portions of the master key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
+          </p>
+          <div class="message is-list has-copy-button" tabindex="-1">
+            <HoverCopyButton @copyValue={{pgp_key}} />
+            <div class="message-body">
+              <h4 class="title is-7 is-marginless">
+                PGP Key {{pgpKeyFile.fileName}}
+              </h4>
+              <code class="is-word-break">{{pgp_key}}</code>
+            </div>
           </div>
         </div>
-        <div class="field is-grouped">
+        <div class="field is-grouped box is-marginless is-shadowless">
           <div class="control">
             <button type="button" class="button" {{action "reset"}}>
               Back
@@ -109,23 +115,25 @@
         </div>
       {{/if}}
       {{#if (eq generateStep 'beginGenerationWithOTP')}}
-        <p>
-          Below is the generated OTP. This will be used to encrypt the generated Operation Token.
-          <em class="has-text-danger has-text-weight-semibold">
-            Make sure to save this, as you will need it later to decrypt the Operation Token.
-          </em>
-          Next we'll enter portions of the master key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
-        </p>
-        <div class="message is-list has-copy-button" tabindex="-1">
-          <HoverCopyButton @copyValue={{otp}} />
-          <div class="message-body">
-            <h4 class="title is-7 is-marginless">
-              One Time Password
-            </h4>
-            <code class="is-word-break">{{otp}}</code>
+        <div class="box is-marginless is-shadowless">
+          <p>
+            Below is the generated OTP. This will be used to encrypt the generated Operation Token.
+            <em class="has-text-danger has-text-weight-semibold">
+              Make sure to save this, as you will need it later to decrypt the Operation Token.
+            </em>
+            Next we'll enter portions of the master key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
+          </p>
+          <div class="message is-list has-copy-button" tabindex="-1">
+            <HoverCopyButton @copyValue={{otp}} />
+            <div class="message-body">
+              <h4 class="title is-7 is-marginless">
+                One Time Password
+              </h4>
+              <code class="is-word-break">{{otp}}</code>
+            </div>
           </div>
         </div>
-        <div class="field is-grouped">
+        <div class="field is-grouped box is-marginless is-shadowless">
           <div class="control">
             <button type="button" class="button" {{action "reset"}}>
               Back
@@ -138,7 +146,6 @@
           </div>
         </div>
       {{/if}}
-    </div>
   </form>
 {{else}}
   <form {{action 'onSubmit' (hash key=key) on="submit"}} id="shamir">
