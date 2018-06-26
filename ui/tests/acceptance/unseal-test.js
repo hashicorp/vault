@@ -36,10 +36,7 @@ test('seal then unseal', function(assert) {
     pollCluster();
   });
   andThen(() => {
-    assert.ok(
-      find('[data-test-cluster-status]').text().includes('is unsealed'),
-      'ui indicates the vault is unsealed'
-    );
+    assert.equal(find('[data-test-cluster-status]').length, 0, 'ui does not show sealed warning');
     assert.ok(currentURL().match(/\/vault\/auth/), 'vault is ready to authenticate');
   });
 });
