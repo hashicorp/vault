@@ -1,8 +1,9 @@
-import { text, isPresent } from 'ember-cli-page-object';
+import { attribute, isVisible, triggerable, focusable, text } from 'ember-cli-page-object';
 
 export default {
-  ele: isPresent('[data-test-navheader]'),
-  homeText: text('[data-test-navheader-home]'),
-  itemsText: text('[data-test-navheader-items]'),
-  mainText: text('[data-test-navheader-main]'),
+  focusContainer: focusable('.has-copy-button'),
+  mouseEnter: triggerable('mouseenter', '[data-test-tooltip-trigger]'),
+  tooltipText: text('[data-test-hover-copy-tooltip-text]'),
+  wrapperClass: attribute('class', '[data-test-hover-copy]'),
+  buttonIsVisible: isVisible('[data-test-hover-copy-button]'),
 };
