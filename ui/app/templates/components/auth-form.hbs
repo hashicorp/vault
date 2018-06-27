@@ -1,9 +1,9 @@
 <nav class="tabs sub-nav is-marginless">
   <ul>
-    {{#each (supported-auth-backends) as |backend|}}
-      <li class="{{if (eq selectedAuthBackend.type backend.type) 'is-active' ''}}" data-test-auth-method>
-        <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with=backend.type)}}" data-test-auth-method-link={{backend.type}}>
-          {{capitalize backend.type}}
+    {{#each methodsToShow as |method|}}
+      <li class="{{if (eq selectedAuthBackend.type method.type) 'is-active' ''}}" data-test-auth-method>
+        <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with=method.type)}}" data-test-auth-method-link={{method.type}}>
+          {{capitalize method.type}}
         </a>
       </li>
     {{/each}}

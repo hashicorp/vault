@@ -5,7 +5,8 @@
     </h1>
   </Page.header>
   <Page.content>
-    <AuthForm
+  <AuthForm
+      @wrappedToken={{wrappedToken}}
       @cluster={{model.cluster}}
       @methods={{model.methods}}
       @redirectTo={{redirectTo}}

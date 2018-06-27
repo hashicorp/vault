@@ -19,4 +19,7 @@ export default ClusterRouteBase.extend({
         });
       });
   },
+  resetController(controller) {
+    controller.set('wrappedToken', '');
+  },
 });
