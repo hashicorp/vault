@@ -25,7 +25,7 @@ export default ApplicationAdapter.extend({
             data: result.data.auth,
           };
         })
-        .catch(e => {
+        .catch(() => {
           return [];
         });
     }
