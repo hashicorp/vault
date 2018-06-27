@@ -17,6 +17,7 @@ export default Ember.Component.extend({
   isFullscreen: false,
   console: inject.service(),
   router: inject.service(),
+  store: inject.service(),
   inputValue: null,
   log: computed.alias('console.log'),
 
@@ -86,6 +87,7 @@ export default Ember.Component.extend({
     let route = owner.lookup(`route:${routeName}`);
 
     try {
+      this.get('store').clearAllDatasets();
       yield route.refresh();
       this.logAndOutput(null, { type: 'success', content: 'The current screen has been refreshed!' });
     } catch (error) {
