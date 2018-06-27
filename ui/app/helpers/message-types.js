@@ -23,7 +23,7 @@ const MESSAGE_TYPES = {
     class: 'is-highlight',
     glyphClass: 'has-text-highlight',
     glyph: 'alert-circled',
-    text: 'Attention',
+    text: 'Warning',
   },
 };
 

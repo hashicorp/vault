@@ -20,8 +20,8 @@
       {{message-error errorMessage=error data-test-auth-error=true}}
     {{/if}}
     {{partial providerPartialName}}
-    <div class="box has-slim-padding is-shadowless">
-      {{#unless (eq selectedAuthBackend.type "token")}}
+    {{#unless (eq selectedAuthBackend.type "token")}}
+      <div class="box has-slim-padding is-shadowless">
         {{toggle-button toggleTarget=this toggleAttr="useCustomPath"}}
         <div class="field">
           {{#if useCustomPath}}
@@ -43,10 +43,10 @@
               </p>
           {{/if}}
         </div>
-      {{/unless}}
-    </div>
+      </div>
+    {{/unless}}
   </div>
-  <div class="box is-marginless is-shadowless has-background-white-bis">
+  <div class="box is-marginless is-shadowless">
     <button data-test-auth-submit=true type="submit" disabled={{loading}} class="button is-primary {{if loading 'is-loading'}}" id="auth-submit">
       Sign In
     </button>
