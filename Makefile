@@ -39,7 +39,7 @@ testracetravis: testrace
 
 # test runs the unit tests and vets the code
 test: prep
-	@CGO_ENABLED=0 \
+	@CGO_ENABLED=1 \
 	VAULT_ADDR= \
 	VAULT_TOKEN= \
 	VAULT_DEV_ROOT_TOKEN_ID= \
