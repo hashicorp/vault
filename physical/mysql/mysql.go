@@ -152,10 +152,11 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	statements := map[string]string{
 		"put": "INSERT INTO " + dbTable +
 			" VALUES( ?, ? ) ON DUPLICATE KEY UPDATE vault_value=VALUES(vault_value)",
-		"get":      "SELECT vault_value FROM " + dbTable + " WHERE vault_key = ?",
-		"delete":   "DELETE FROM " + dbTable + " WHERE vault_key = ?",
-		"list":     "SELECT vault_key FROM " + dbTable + " WHERE vault_key LIKE ?",
-		"get_lock": "SELECT current_leader FROM " + dbLockTable + " WHERE node_job = ?",
+		"get":       "SELECT vault_value FROM " + dbTable + " WHERE vault_key = ?",
+		"delete":    "DELETE FROM " + dbTable + " WHERE vault_key = ?",
+		"list":      "SELECT vault_key FROM " + dbTable + " WHERE vault_key LIKE ?",
+		"get_lock":  "SELECT current_leader FROM " + dbLockTable + " WHERE node_job = ?",
+		"used_lock": "SELECT IS_USED_LOCK(?)",
 	}
 	for name, query := range statements {
 		if err := m.prepare(name, query); err != nil {
@@ -473,20 +474,21 @@ func (i *MySQLHALock) Unlock() error {
 
 // hasLock will check if a lock is held this is done by trying to get the lock.
 func (i *MySQLHALock) hasLock(key string) error {
-	lockRows, err := i.in.client.Query("SELECT IS_USED_LOCK(?)", key)
+	var result int
+	err := i.in.statements["used_lock"].QueryRow(key).Scan(&result)
+	if err == sql.ErrNoRows {
+		// This is not an error to us since it just means the lock isn't held
+		return nil
+	}
+
 	if err != nil {
 		return err
 	}
 
-	defer lockRows.Close()
-	lockRows.Next()
-	var locknum int
-	lockRows.Scan(&locknum)
-
 	// IS_USED_LOCK will return the ID of the connection that created the lock.
 	// it will return NULL otherwise which converts to a zero above when scanning
 	// it into locknum.
-	if locknum == 0 {
+	if result == 0 {
 		return ErrLockHeld
 	}
 
@@ -620,6 +622,8 @@ func (i *MySQLLock) clearLeader() error {
 // Lock will try to get a lock for an indefinite amount of time
 // based on the given key that has been requested.
 func (i *MySQLLock) Lock() error {
+	defer metrics.MeasureSince([]string{"mysql", "get_lock"}, time.Now())
+
 	rows, err := i.in.Query("SELECT GET_LOCK(?, -1)", i.key)
 	if err != nil {
 		return err
