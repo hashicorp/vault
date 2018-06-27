@@ -63,6 +63,8 @@ func (c *Core) startForwarding(ctx context.Context) error {
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Time: 2 * HeartbeatInterval,
 		}),
+		grpc.MaxRecvMsgSize(math.MaxInt32),
+		grpc.MaxSendMsgSize(math.MaxInt32),
 	)
 
 	if ha && c.clusterHandler != nil {
