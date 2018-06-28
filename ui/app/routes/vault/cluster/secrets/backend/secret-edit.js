@@ -51,6 +51,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
       ssh: 'role-ssh',
       aws: 'role-aws',
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
+      cubbyhole: 'secret',
       kv: backendModel.get('modelTypeForKV'),
       generic: backendModel.get('modelTypeForKV'),
     };
