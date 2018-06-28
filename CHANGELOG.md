@@ -1,3 +1,9 @@
+## Next
+
+BUG FIXES:
+
+ * secrets/database: Fix panic during DB creds revocation [GH-4846]
+
 ## 0.10.3 (June 20th, 2018)
 
 DEPRECATIONS/CHANGES:
