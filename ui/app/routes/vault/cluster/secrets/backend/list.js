@@ -40,6 +40,7 @@ export default Ember.Route.extend({
       aws: 'role-aws',
       pki: tab === 'certs' ? 'pki-certificate' : 'role-pki',
       // secret or secret-v2
+      cubbyhole: 'secret',
       kv: backendModel.get('modelTypeForKV'),
       generic: backendModel.get('modelTypeForKV'),
     };
