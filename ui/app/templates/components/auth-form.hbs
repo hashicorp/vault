@@ -1,12 +1,21 @@
 <nav class="tabs sub-nav is-marginless">
   <ul>
     {{#each methodsToShow as |method|}}
-      <li class="{{if (eq selectedAuthBackend.type method.type) 'is-active' ''}}" data-test-auth-method>
-        <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with=method.type)}}" data-test-auth-method-link={{method.type}}>
-          {{capitalize method.type}}
+    {{#with (or method.path method.type) as |methodKey|}}
+      <li class="{{if (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey) 'is-active' ''}}" data-test-auth-method>
+        <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with=methodKey)}}" data-test-auth-method-link={{method.type}}>
+          {{or method.id (capitalize method.type)}}
         </a>
       </li>
+      {{/with}}
     {{/each}}
+    {{#if hasMethodsWithPath}}
+      <li class="{{if (not selectedAuthIsPath) 'is-active' ''}}" data-test-auth-method>
+        <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with='token')}}" data-test-auth-method-link=other>
+          Other
+        </a>
+      </li>
+    {{/if}}
   </ul>
 </nav>
 <form
@@ -19,8 +28,31 @@
     {{else}}
       {{message-error errorMessage=error data-test-auth-error=true}}
     {{/if}}
+    {{#if (and hasMethodsWithPath (not selectedAuthIsPath))}}
+      <div class="field">
+        <label for="selectedMethod" class="is-label">
+          Method
+        </label>
+        <div class="control is-expanded" >
+          <div class="select is-fullwidth">
+            <select
+              name="selectedMethod"
+              id="selectedMethod"
+              onchange={{action (mut selectedAuth) value="target.value"}}
+              data-test-method-select
+            >
+              {{#each (supported-auth-backends) as |method|}}
+                <option selected={{eq selectedAuthBackend.type method.type}} value={{method.type}}>
+                  {{capitalize method.type}}
+                </option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+      </div>
+    {{/if}}
     {{partial providerPartialName}}
-    {{#unless (eq selectedAuthBackend.type "token")}}
+    {{#unless (or selectedAuthIsPath (eq selectedAuthBackend.type "token"))}}
       <div class="box has-slim-padding is-shadowless">
         {{toggle-button toggleTarget=this toggleAttr="useCustomPath"}}
         <div class="field">

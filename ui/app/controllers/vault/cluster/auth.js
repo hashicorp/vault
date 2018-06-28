@@ -9,9 +9,6 @@ export default Ember.Controller.extend({
     },
   ],
   wrappedToken: '',
-  with: Ember.computed(function() {
-    return supportedAuthBackends()[0].type;
-  }),
-
+  with: '',
   redirectTo: null,
 });

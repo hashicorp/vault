@@ -21,6 +21,13 @@ export default Ember.Component.extend(DEFAULTS, {
   //
   methods: null,
 
+  init() {
+    this._super(...arguments);
+    if (!this.get('selectedAuth')) {
+      let firstMethod = this.get('methodsToShow.firstObject');
+      this.set('selectedAuth', firstMethod.get('path') || firstMethod.get('type'));
+    }
+  },
   didRender() {
     // on very narrow viewports the active tab may be overflowed, so we scroll it into view here
     let activeEle = this.element.querySelector('li.is-active');
@@ -33,8 +40,8 @@ export default Ember.Component.extend(DEFAULTS, {
   didReceiveAttrs() {
     let token = this.get('wrappedToken');
     this._super(...arguments);
-    let newMethod = this.get('selectedAuthType');
-    let oldMethod = this.get('oldSelectedAuthType');
+    let newMethod = this.get('selectedAuth');
+    let oldMethod = this.get('oldSelectedAuth');
 
     if (oldMethod && oldMethod !== newMethod) {
       this.resetDefaults();
@@ -53,33 +60,49 @@ export default Ember.Component.extend(DEFAULTS, {
   cluster: null,
   redirectTo: null,
 
-  selectedAuthType: 'token',
-  selectedAuthBackend: Ember.computed('selectedAuthType', function() {
-    return BACKENDS.findBy('type', this.get('selectedAuthType'));
-  }),
+  // set during init and potentially passed in via a query param
+  selectedAuth: null,
+  selectedAuthIsPath: computed.match('selectedAuth', /\/$/),
+  selectedAuthBackend: Ember.computed(
+    'allSupportedMethods',
+    'selectedAuth',
+    'selectedAuthIsPath',
+    function() {
+      let methods = this.get('allSupportedMethods');
+      let keyIsPath = this.get('selectedAuthIsPath');
+      let findKey = keyIsPath ? 'path' : 'type';
+      return methods.findBy(findKey, this.get('selectedAuth'));
+    }
+  ),
 
-  providerPartialName: Ember.computed('selectedAuthType', function() {
-    const type = Ember.String.dasherize(this.get('selectedAuthType'));
-    return `partials/auth-form/${type}`;
+  providerPartialName: computed('selectedAuthBackend', function() {
+    let type = this.get('selectedAuthBackend.type');
+    let templateName = Ember.String.dasherize(type);
+    return `partials/auth-form/${templateName}`;
   }),
 
   hasCSPError: computed.alias('csp.connectionViolations.firstObject'),
 
   cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`,
 
+  allSupportedMethods: computed('methodsToShow', 'hasMethodsWithPath', function() {
+    let hasMethodsWithPath = this.get('hasMethodsWithPath');
+    let methodsToShow = this.get('methodsToShow');
+    return hasMethodsWithPath ? methodsToShow.concat(BACKENDS) : methodsToShow;
+  }),
+
+  hasMethodsWithPath: computed('methodsToShow', function() {
+    return this.get('methodsToShow').isAny('path');
+  }),
   methodsToShow: computed('methods', 'methods.[]', function() {
-    let methods = this.get('methods');
-    let shownMethods;
-    if (methods && methods.length) {
-      shownMethods = methods.filter(m => BACKENDS.findBy('type', m.get('type')));
-      shownMethods.push({ type: 'other' });
-    }
-    return shownMethods.length > 1 ? shownMethods : BACKENDS;
+    let methods = this.get('methods') || [];
+    let shownMethods = methods.filter(m => BACKENDS.findBy('type', m.get('type')));
+    return shownMethods.length ? shownMethods : BACKENDS;
   }),
 
   unwrapToken: task(function*(token) {
     // will be using the token auth method, so set it here
-    this.set('selectedAuthType', 'token');
+    this.set('selectedAuth', 'token');
     let adapter = this.get('store').adapterFor('tools');
     try {
       let response = yield adapter.toolAction('unwrap', null, { clientToken: token });
@@ -112,11 +135,11 @@ export default Ember.Component.extend(DEFAULTS, {
       });
       let targetRoute = this.get('redirectTo') || 'vault.cluster';
       let backend = this.get('selectedAuthBackend');
-      let path = this.get('customPath');
+      let path = get(backend, 'path') || this.get('customPath');
       let attributes = get(backend, 'formAttributes');
 
       data = Ember.assign(data, this.getProperties(...attributes));
-      if (this.get('useCustomPath') && path) {
+      if (get(backend, 'path') || (this.get('useCustomPath') && path)) {
         data.path = path;
       }
       const clusterId = this.get('cluster.id');
