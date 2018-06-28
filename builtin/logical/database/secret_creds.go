@@ -111,7 +111,9 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			if statementsRaw, ok := req.Secret.InternalData["revocation_statements"]; !ok {
 				return nil, fmt.Errorf("error during revoke: could not find role with name %q or embedded revocation statement data", req.Secret.InternalData["role"])
 			} else {
-				statements.Revocation = statementsRaw.([]string)
+				for _, v := range statementsRaw.([]interface{}) {
+					statements.Revocation = append(statements.Revocation, v.(string))
+				}
 			}
 		}
 

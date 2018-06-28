@@ -603,7 +603,7 @@ func TestBackend_basic(t *testing.T) {
 					"username":              credsResp.Data["username"],
 					"role":                  "plugin-role-test",
 					"db_name":               "plugin-test",
-					"revocation_statements": []string(nil),
+					"revocation_statements": []interface{}(nil),
 				},
 			},
 		})
