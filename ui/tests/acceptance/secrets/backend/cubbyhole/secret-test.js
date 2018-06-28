@@ -3,9 +3,6 @@ import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
-
-import { create } from 'ember-cli-page-object';
-
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
 moduleForAcceptance('Acceptance | secrets/cubbyhole/create', {
