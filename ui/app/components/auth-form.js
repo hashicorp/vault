@@ -18,8 +18,11 @@ export default Ember.Component.extend(DEFAULTS, {
   store: inject.service(),
   csp: inject.service('csp-event'),
 
-  //
+  // set during init and potentially passed in via a query param
+  selectedAuth: null,
   methods: null,
+  cluster: null,
+  redirectTo: null,
 
   init() {
     this._super(...arguments);
@@ -46,7 +49,7 @@ export default Ember.Component.extend(DEFAULTS, {
     if (oldMethod && oldMethod !== newMethod) {
       this.resetDefaults();
     }
-    this.set('oldSelectedAuthType', newMethod);
+    this.set('oldSelectedAuth', newMethod);
 
     if (token) {
       this.get('unwrapToken').perform(token);
@@ -57,11 +60,6 @@ export default Ember.Component.extend(DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
-  cluster: null,
-  redirectTo: null,
-
-  // set during init and potentially passed in via a query param
-  selectedAuth: null,
   selectedAuthIsPath: computed.match('selectedAuth', /\/$/),
   selectedAuthBackend: Ember.computed(
     'allSupportedMethods',
@@ -76,7 +74,8 @@ export default Ember.Component.extend(DEFAULTS, {
   ),
 
   providerPartialName: computed('selectedAuthBackend', function() {
-    let type = this.get('selectedAuthBackend.type').toLowerCase();
+    let type = this.get('selectedAuthBackend.type') || 'token';
+    type = type.toLowerCase();
     let templateName = Ember.String.dasherize(type);
     return `partials/auth-form/${templateName}`;
   }),
@@ -117,14 +116,12 @@ export default Ember.Component.extend(DEFAULTS, {
 
   handleError(e) {
     this.set('loading', false);
-
     let errors = e.errors.map(error => {
       if (error.detail) {
         return error.detail;
       }
       return error;
     });
-
     this.set('error', `Authentication failed: ${errors.join('.')}`);
   },
 
