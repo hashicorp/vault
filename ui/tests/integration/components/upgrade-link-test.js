@@ -7,10 +7,10 @@ moduleForComponent('upgrade-link', 'Integration | Component | upgrade link', {
 
 test('it renders with overlay', function(assert) {
   this.render(hbs`
-    <div class="upgrade-link-container">
-      {{#upgrade-link data-test-link}}upgrade{{/upgrade-link}}
-    </div>
-    <div id="modal-wormhole"></div>
+     <div id="modal-wormhole"></div>
+     <div class="upgrade-link-container">
+       {{#upgrade-link data-test-link}}upgrade{{/upgrade-link}}
+     </div>
   `);
 
   assert.equal(this.$('.upgrade-link-container button').text().trim(), 'upgrade', 'renders link content');
@@ -28,10 +28,10 @@ test('it renders with overlay', function(assert) {
 
 test('it adds custom classes', function(assert) {
   this.render(hbs`
+    <div id="modal-wormhole"></div>
     <div class="upgrade-link-container">
       {{#upgrade-link linkClass="button upgrade-button"}}upgrade{{/upgrade-link}}
     </div>
-    <div id="modal-wormhole"></div>
   `);
 
   assert.equal(

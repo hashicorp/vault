@@ -10,11 +10,74 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
+
+func TestTokenStore_TokenInvalidEntityID(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+	client := cluster.Cores[0].Client
+
+	// Enable userpass auth
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add a user to userpass backend
+	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	clientToken := secret.Auth.ClientToken
+
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": clientToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entityID := secret.Data["entity_id"].(string)
+
+	_, err = client.Logical().Delete("identity/entity/id/" + entityID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client.SetToken(clientToken)
+
+	secret, err = client.Logical().Write("auth/token/lookup-self", nil)
+	if err == nil {
+		t.Fatalf("expected error due to token being invalid when its entity is invalid")
+	}
+}
 
 func TestTokenStore_IdentityPolicies(t *testing.T) {
 	coreConfig := &vault.CoreConfig{

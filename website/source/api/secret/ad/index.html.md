@@ -178,3 +178,34 @@ $ curl \
   "username": "my-application"
 }
 ```
+## Rotate Root Credentials
+
+Rotate the `bindpass` to a new one known only to Vault.
+
+### Risks
+
+1. When the `bindpass` is rotated, it successfully gets rotated in Active Directory but Vault can't store it so it becomes unknown.
+2. If the `binddn` in use applies to more than one entity in Active Directory, root credential rotation will fail because it's unclear which entity to perform the operation for.
+
+### Mitigating Risks
+
+1. Always have another account that can provision a new `binddn` and `bindpass` to replace one whose password becomes unknown.
+2. Ensure the `binddn` in use only applies to one entity by including all distinguished name parameters possible. For example, use `"CN=vault-ad-test,CN=Users,DC=example,DC=com"` instead of `"CN=vault-ad-test"`.
+
+### Endpoints
+
+| Method   | Path                   | Produces                                   |
+| :------- | :--------------------- | :----------------------------------------- |
+| `GET`    | `/ad/rotate-root`      | `204 (empty body) or 200 with warning`     |
+
+Generally, `rotate-root` returns a 204. However, if `rotate-root` is already in progress, it may return a 200 with a warning that root credential rotation is already in progress.
+
+### Sample Get Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/ad/rotate-root
+```

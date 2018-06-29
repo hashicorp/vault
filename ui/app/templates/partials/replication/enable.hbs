@@ -1,20 +1,18 @@
-<header class="page-header">
-  <div class="level">
-    <div class="level-left">
-      <h1 class="title is-3">
-        {{#if initialReplicationMode}}
-          {{#if (eq initialReplicationMode 'dr')}}
-            Enable Disaster Recovery Replication
-          {{else if (eq initialReplicationMode 'performance')}}
-            Enable Performance Replication
-          {{/if}}
-        {{else}}
-          Enable Replication
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{#if initialReplicationMode}}
+        {{#if (eq initialReplicationMode 'dr')}}
+          Enable Disaster Recovery Replication
+        {{else if (eq initialReplicationMode 'performance')}}
+          Enable Performance Replication
         {{/if}}
-      </h1>
-    </div>
-  </div>
-</header>
+      {{else}}
+        Enable Replication
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
 
 <form
   onsubmit={{

@@ -499,6 +499,30 @@
 			"revisionTime": "2018-02-03T08:01:48Z"
 		},
 		{
+			"checksumSHA1": "wCaMkrXyTIFhss/mCRnbSTjqKoI=",
+			"path": "github.com/briankassouf/jose",
+			"revision": "d2569464773f2b9de32e57a79d87318bca5b56c0",
+			"revisionTime": "2018-06-19T21:45:49Z"
+		},
+		{
+			"checksumSHA1": "trdC2+st1v9tFgU3/vIYW238fgk=",
+			"path": "github.com/briankassouf/jose/crypto",
+			"revision": "d2569464773f2b9de32e57a79d87318bca5b56c0",
+			"revisionTime": "2018-06-19T21:45:49Z"
+		},
+		{
+			"checksumSHA1": "MS5CbPD4yQKfyN5+8wwoUlNYoRY=",
+			"path": "github.com/briankassouf/jose/jws",
+			"revision": "d2569464773f2b9de32e57a79d87318bca5b56c0",
+			"revisionTime": "2018-06-19T21:45:49Z"
+		},
+		{
+			"checksumSHA1": "xSZ/hDO7yll2NzZlFR7V9XpjZlw=",
+			"path": "github.com/briankassouf/jose/jwt",
+			"revision": "d2569464773f2b9de32e57a79d87318bca5b56c0",
+			"revisionTime": "2018-06-19T21:45:49Z"
+		},
+		{
 			"checksumSHA1": "Zlk5zPiw+3u9pyy4kNThpKDaYmE=",
 			"path": "github.com/cenkalti/backoff",
 			"revision": "2ea60e5f094469f9e65adb9cd103795b73ae743e",
@@ -919,10 +943,10 @@
 			"revisionTime": "2017-11-19T05:34:21Z"
 		},
 		{
-			"checksumSHA1": "3qxR+iktZ/aLpuq9by7pel2YM7w=",
+			"checksumSHA1": "LNa/QGlcDDDflNa3srgRR8QLwcc=",
 			"path": "github.com/go-ldap/ldap",
-			"revision": "23c4ee25d1434f2231f92afaeebfbfa7900ebbb0",
-			"revisionTime": "2017-12-09T13:38:01Z"
+			"revision": "ef52f0f48a85a3a669e1f6bdcf90a62b97762952",
+			"revisionTime": "2018-06-07T15:29:25Z"
 		},
 		{
 			"checksumSHA1": "ZbU8qGzETzJZ2t30LmHxla5PLMY=",
@@ -1321,46 +1345,46 @@
 			"revisionTime": "2018-04-08T01:06:05Z"
 		},
 		{
-			"checksumSHA1": "p5RZZr9+57AbEn0cJWofpxup66Q=",
+			"checksumSHA1": "L5pDwOw2/MLLUSykrwxXbXQI7zI=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "8b146812410672dcf7c36b45762f4d3d3a6398b0",
-			"revisionTime": "2018-06-06T02:28:44Z"
+			"revision": "7ca24869a5b9c9e308c475a21c9ce1331734120e",
+			"revisionTime": "2018-06-19T23:09:39Z"
 		},
 		{
-			"checksumSHA1": "TXlbc4EPXue+Jz/HXl3NU5kEoUs=",
+			"checksumSHA1": "kGEaf6lxGWkJibW4Dto2wFDXrfY=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin",
-			"revision": "28b22929498292a5fe2cc972d77e931f415e0786",
-			"revisionTime": "2018-06-06T02:34:28Z"
+			"revision": "6afcfbb25eb6f5adec1b9bba1cf8601f95e89d06",
+			"revisionTime": "2018-06-19T16:09:38Z"
 		},
 		{
-			"checksumSHA1": "w0TXZUy4HvuTrCxm32cVzkF3sEg=",
+			"checksumSHA1": "GOxdFElG31lXWgKFG9aqpDcG47M=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/client",
-			"revision": "28b22929498292a5fe2cc972d77e931f415e0786",
-			"revisionTime": "2018-06-06T02:34:28Z"
+			"revision": "6afcfbb25eb6f5adec1b9bba1cf8601f95e89d06",
+			"revisionTime": "2018-06-19T16:09:38Z"
 		},
 		{
-			"checksumSHA1": "f5N0jlhC8c2vq0zez81fezfas/o=",
+			"checksumSHA1": "RaH2xTkjaToCk+RoPhap7I66ibo=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/util",
-			"revision": "28b22929498292a5fe2cc972d77e931f415e0786",
-			"revisionTime": "2018-06-06T02:34:28Z"
+			"revision": "6afcfbb25eb6f5adec1b9bba1cf8601f95e89d06",
+			"revisionTime": "2018-06-19T16:09:38Z"
 		},
 		{
-			"checksumSHA1": "X9XW3xqAeOQqDdeJKzeqOYHn4Wo=",
+			"checksumSHA1": "jOsVXVfsxCgGrUCnwmBMid9SM+Q=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin",
-			"revision": "19ce67943d4ba3d0dcda025d832e3a0c4da47d42",
-			"revisionTime": "2018-06-06T02:42:09Z"
+			"revision": "2a8aff9bbb8b3fafdfd64d3dc0f5bf6e747fe2f4",
+			"revisionTime": "2018-06-06T18:14:30Z"
 		},
 		{
 			"checksumSHA1": "Dmpy+AguiGWfVg43Me5HB3+eDsk=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil",
-			"revision": "19ce67943d4ba3d0dcda025d832e3a0c4da47d42",
-			"revisionTime": "2018-06-06T02:42:09Z"
+			"revision": "2a8aff9bbb8b3fafdfd64d3dc0f5bf6e747fe2f4",
+			"revisionTime": "2018-06-06T18:14:30Z"
 		},
 		{
 			"checksumSHA1": "81kYL49zTBoj1NYczxB2Xbr2d6Y=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util",
-			"revision": "19ce67943d4ba3d0dcda025d832e3a0c4da47d42",
-			"revisionTime": "2018-06-06T02:42:09Z"
+			"revision": "2a8aff9bbb8b3fafdfd64d3dc0f5bf6e747fe2f4",
+			"revisionTime": "2018-06-06T18:14:30Z"
 		},
 		{
 			"checksumSHA1": "grTzIH3YAjsrME6m9IBXpS77W14=",
@@ -2045,6 +2069,18 @@
 			"path": "golang.org/x/sys/windows",
 			"revision": "37707fdb30a5b38865cfb95e5aab41707daec7fd",
 			"revisionTime": "2018-02-02T13:35:31Z"
+		},
+		{
+			"checksumSHA1": "Mr4ur60bgQJnQFfJY0dGtwWwMPE=",
+			"path": "golang.org/x/text/encoding",
+			"revision": "5cec4b58c438bd98288aeb248bab2c1840713d21",
+			"revisionTime": "2018-05-20T16:02:21Z"
+		},
+		{
+			"checksumSHA1": "IV4MN7KGBSocu/5NR3le3sxup4Y=",
+			"path": "golang.org/x/text/runes",
+			"revision": "5cec4b58c438bd98288aeb248bab2c1840713d21",
+			"revisionTime": "2018-05-20T16:02:21Z"
 		},
 		{
 			"checksumSHA1": "CbpjEkkOeh0fdM/V8xKDdI0AA88=",

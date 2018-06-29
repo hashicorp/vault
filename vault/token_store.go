@@ -130,7 +130,7 @@ type TokenStore struct {
 	saltLock sync.RWMutex
 	salt     *salt.Salt
 
-	tidyLock *int32
+	tidyLock *uint32
 
 	identityPoliciesDeriverFunc func(string) (*identity.Entity, []string, error)
 }
@@ -150,7 +150,7 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 		tokensPendingDeletion:       &sync.Map{},
 		saltLock:                    sync.RWMutex{},
 		identityPoliciesDeriverFunc: c.fetchEntityAndDerivedPolicies,
-		tidyLock:                    new(int32),
+		tidyLock:                    new(uint32),
 	}
 
 	if c.policyStore != nil {
@@ -1290,204 +1290,224 @@ func (ts *TokenStore) lookupBySaltedAccessor(ctx context.Context, saltedAccessor
 // handleTidy handles the cleaning up of leaked accessor storage entries and
 // cleaning up of leases that are associated to tokens that are expired.
 func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var tidyErrors *multierror.Error
-
-	if !atomic.CompareAndSwapInt32(ts.tidyLock, 0, 1) {
-		ts.logger.Warn("tidy operation on tokens is already in progress")
-		return nil, fmt.Errorf("tidy operation on tokens is already in progress")
+	if !atomic.CompareAndSwapUint32(ts.tidyLock, 0, 1) {
+		resp := &logical.Response{}
+		resp.AddWarning("Tidy operation already in progress.")
+		return resp, nil
 	}
 
-	defer atomic.CompareAndSwapInt32(ts.tidyLock, 1, 0)
+	go func() {
+		defer atomic.StoreUint32(ts.tidyLock, 0)
 
-	ts.logger.Info("beginning tidy operation on tokens")
-	defer ts.logger.Info("finished tidy operation on tokens")
+		// Don't cancel when the original client request goes away
+		ctx = context.Background()
 
-	// List out all the accessors
-	saltedAccessorList, err := ts.view.List(ctx, accessorPrefix)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to fetch accessor index entries: {{err}}", err)
-	}
+		logger := ts.logger.Named("tidy")
 
-	// First, clean up secondary index entries that are no longer valid
-	parentList, err := ts.view.List(ctx, parentPrefix)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to fetch secondary index entries: {{err}}", err)
-	}
+		var tidyErrors *multierror.Error
 
-	var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
+		doTidy := func() error {
 
-	// Scan through the secondary index entries; if there is an entry
-	// with the token's salt ID at the end, remove it
-	for _, parent := range parentList {
-		countParentEntries++
+			ts.logger.Info("beginning tidy operation on tokens")
+			defer ts.logger.Info("finished tidy operation on tokens")
 
-		// Get the children
-		children, err := ts.view.List(ctx, parentPrefix+parent)
-		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to read secondary index: {{err}}", err))
-			continue
-		}
-
-		// First check if the salt ID of the parent exists, and if not mark this so
-		// that deletion of children later with this loop below applies to all
-		// children
-		originalChildrenCount := int64(len(children))
-		exists, _ := ts.lookupSalted(ctx, strings.TrimSuffix(parent, "/"), true)
-		if exists == nil {
-			ts.logger.Debug("deleting invalid parent prefix entry", "index", parentPrefix+parent)
-		}
-
-		var deletedChildrenCount int64
-		for _, child := range children {
-			countParentList++
-			if countParentList%500 == 0 {
-				ts.logger.Info("checking validity of tokens in secondary index list", "progress", countParentList)
+			// List out all the accessors
+			saltedAccessorList, err := ts.view.List(ctx, accessorPrefix)
+			if err != nil {
+				return errwrap.Wrapf("failed to fetch accessor index entries: {{err}}", err)
 			}
 
-			// Look up tainted entries so we can be sure that if this isn't
-			// found, it doesn't exist. Doing the following without locking
-			// since appropriate locks cannot be held with salted token IDs.
-			// Also perform deletion if the parent doesn't exist any more.
-			te, _ := ts.lookupSalted(ctx, child, true)
-			// If the child entry is not nil, but the parent doesn't exist, then turn
-			// that child token into an orphan token. Theres no deletion in this case.
-			if te != nil && exists == nil {
-				lock := locksutil.LockForKey(ts.tokenLocks, te.ID)
-				lock.Lock()
-
-				te.Parent = ""
-				err = ts.store(ctx, te)
-				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to convert child token into an orphan token: {{err}}", err))
-				}
-				lock.Unlock()
-				continue
+			// First, clean up secondary index entries that are no longer valid
+			parentList, err := ts.view.List(ctx, parentPrefix)
+			if err != nil {
+				return errwrap.Wrapf("failed to fetch secondary index entries: {{err}}", err)
 			}
-			// Otherwise, if the entry doesn't exist, or if the parent doesn't exist go
-			// on with the delete on the secondary index
-			if te == nil || exists == nil {
-				index := parentPrefix + parent + child
-				ts.logger.Debug("deleting invalid secondary index", "index", index)
-				err = ts.view.Delete(ctx, index)
+
+			var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
+
+			// Scan through the secondary index entries; if there is an entry
+			// with the token's salt ID at the end, remove it
+			for _, parent := range parentList {
+				countParentEntries++
+
+				// Get the children
+				children, err := ts.view.List(ctx, parentPrefix+parent)
 				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to delete secondary index: {{err}}", err))
+					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to read secondary index: {{err}}", err))
 					continue
 				}
-				deletedChildrenCount++
-			}
-		}
-		// Add current children deleted count to the total count
-		deletedCountParentList += deletedChildrenCount
-		// N.B.: We don't call delete on the parent prefix since physical.Backend.Delete
-		// implementations should be in charge of deleting empty prefixes.
-		// If we deleted all the children, then add that to our deleted parent entries count.
-		if originalChildrenCount == deletedChildrenCount {
-			deletedCountParentEntries++
-		}
-	}
 
-	var countAccessorList,
-		deletedCountAccessorEmptyToken,
-		deletedCountAccessorInvalidToken,
-		deletedCountInvalidTokenInAccessor int64
+				// First check if the salt ID of the parent exists, and if not mark this so
+				// that deletion of children later with this loop below applies to all
+				// children
+				originalChildrenCount := int64(len(children))
+				exists, _ := ts.lookupSalted(ctx, strings.TrimSuffix(parent, "/"), true)
+				if exists == nil {
+					ts.logger.Debug("deleting invalid parent prefix entry", "index", parentPrefix+parent)
+				}
 
-	// For each of the accessor, see if the token ID associated with it is
-	// a valid one. If not, delete the leases associated with that token
-	// and delete the accessor as well.
-	for _, saltedAccessor := range saltedAccessorList {
-		countAccessorList++
-		if countAccessorList%500 == 0 {
-			ts.logger.Info("checking if accessors contain valid tokens", "progress", countAccessorList)
-		}
+				var deletedChildrenCount int64
+				for _, child := range children {
+					countParentList++
+					if countParentList%500 == 0 {
+						ts.logger.Info("checking validity of tokens in secondary index list", "progress", countParentList)
+					}
 
-		accessorEntry, err := ts.lookupBySaltedAccessor(ctx, saltedAccessor, true)
-		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to read the accessor index: {{err}}", err))
-			continue
-		}
+					// Look up tainted entries so we can be sure that if this isn't
+					// found, it doesn't exist. Doing the following without locking
+					// since appropriate locks cannot be held with salted token IDs.
+					// Also perform deletion if the parent doesn't exist any more.
+					te, _ := ts.lookupSalted(ctx, child, true)
+					// If the child entry is not nil, but the parent doesn't exist, then turn
+					// that child token into an orphan token. Theres no deletion in this case.
+					if te != nil && exists == nil {
+						lock := locksutil.LockForKey(ts.tokenLocks, te.ID)
+						lock.Lock()
 
-		// A valid accessor storage entry should always have a token ID
-		// in it. If not, it is an invalid accessor entry and needs to
-		// be deleted.
-		if accessorEntry.TokenID == "" {
-			index := accessorPrefix + saltedAccessor
-			// If deletion of accessor fails, move on to the next
-			// item since this is just a best-effort operation
-			err = ts.view.Delete(ctx, index)
-			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to delete the accessor index: {{err}}", err))
-				continue
-			}
-			deletedCountAccessorEmptyToken++
-		}
-
-		lock := locksutil.LockForKey(ts.tokenLocks, accessorEntry.TokenID)
-		lock.RLock()
-
-		// Look up tainted variants so we only find entries that truly don't
-		// exist
-		saltedID, err := ts.SaltID(ctx, accessorEntry.TokenID)
-		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to read salt id: {{err}}", err))
-			lock.RUnlock()
-			continue
-		}
-		te, err := ts.lookupSalted(ctx, saltedID, true)
-		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup tainted ID: {{err}}", err))
-			lock.RUnlock()
-			continue
-		}
-
-		lock.RUnlock()
-
-		// If token entry is not found assume that the token is not valid any
-		// more and conclude that accessor, leases, and secondary index entries
-		// for this token should not exist as well.
-		if te == nil {
-			ts.logger.Info("deleting token with nil entry", "salted_token", saltedID)
-
-			// RevokeByToken expects a '*logical.TokenEntry'. For the
-			// purposes of tidying, it is sufficient if the token
-			// entry only has ID set.
-			tokenEntry := &logical.TokenEntry{
-				ID: accessorEntry.TokenID,
+						te.Parent = ""
+						err = ts.store(ctx, te)
+						if err != nil {
+							tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to convert child token into an orphan token: {{err}}", err))
+						}
+						lock.Unlock()
+						continue
+					}
+					// Otherwise, if the entry doesn't exist, or if the parent doesn't exist go
+					// on with the delete on the secondary index
+					if te == nil || exists == nil {
+						index := parentPrefix + parent + child
+						ts.logger.Debug("deleting invalid secondary index", "index", index)
+						err = ts.view.Delete(ctx, index)
+						if err != nil {
+							tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to delete secondary index: {{err}}", err))
+							continue
+						}
+						deletedChildrenCount++
+					}
+				}
+				// Add current children deleted count to the total count
+				deletedCountParentList += deletedChildrenCount
+				// N.B.: We don't call delete on the parent prefix since physical.Backend.Delete
+				// implementations should be in charge of deleting empty prefixes.
+				// If we deleted all the children, then add that to our deleted parent entries count.
+				if originalChildrenCount == deletedChildrenCount {
+					deletedCountParentEntries++
+				}
 			}
 
-			// Attempt to revoke the token. This will also revoke
-			// the leases associated with the token.
-			err := ts.expiration.RevokeByToken(tokenEntry)
-			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to revoke leases of expired token: {{err}}", err))
-				continue
-			}
-			deletedCountInvalidTokenInAccessor++
+			var countAccessorList,
+				deletedCountAccessorEmptyToken,
+				deletedCountAccessorInvalidToken,
+				deletedCountInvalidTokenInAccessor int64
 
-			index := accessorPrefix + saltedAccessor
+			// For each of the accessor, see if the token ID associated with it is
+			// a valid one. If not, delete the leases associated with that token
+			// and delete the accessor as well.
+			for _, saltedAccessor := range saltedAccessorList {
+				countAccessorList++
+				if countAccessorList%500 == 0 {
+					ts.logger.Info("checking if accessors contain valid tokens", "progress", countAccessorList)
+				}
 
-			// If deletion of accessor fails, move on to the next item since
-			// this is just a best-effort operation. We do this last so that on
-			// next run if something above failed we still have the accessor
-			// entry to try again.
-			err = ts.view.Delete(ctx, index)
-			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to delete accessor entry: {{err}}", err))
-				continue
+				accessorEntry, err := ts.lookupBySaltedAccessor(ctx, saltedAccessor, true)
+				if err != nil {
+					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to read the accessor index: {{err}}", err))
+					continue
+				}
+
+				// A valid accessor storage entry should always have a token ID
+				// in it. If not, it is an invalid accessor entry and needs to
+				// be deleted.
+				if accessorEntry.TokenID == "" {
+					index := accessorPrefix + saltedAccessor
+					// If deletion of accessor fails, move on to the next
+					// item since this is just a best-effort operation
+					err = ts.view.Delete(ctx, index)
+					if err != nil {
+						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to delete the accessor index: {{err}}", err))
+						continue
+					}
+					deletedCountAccessorEmptyToken++
+				}
+
+				lock := locksutil.LockForKey(ts.tokenLocks, accessorEntry.TokenID)
+				lock.RLock()
+
+				// Look up tainted variants so we only find entries that truly don't
+				// exist
+				saltedID, err := ts.SaltID(ctx, accessorEntry.TokenID)
+				if err != nil {
+					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to read salt id: {{err}}", err))
+					lock.RUnlock()
+					continue
+				}
+				te, err := ts.lookupSalted(ctx, saltedID, true)
+				if err != nil {
+					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup tainted ID: {{err}}", err))
+					lock.RUnlock()
+					continue
+				}
+
+				lock.RUnlock()
+
+				// If token entry is not found assume that the token is not valid any
+				// more and conclude that accessor, leases, and secondary index entries
+				// for this token should not exist as well.
+				if te == nil {
+					ts.logger.Info("deleting token with nil entry", "salted_token", saltedID)
+
+					// RevokeByToken expects a '*logical.TokenEntry'. For the
+					// purposes of tidying, it is sufficient if the token
+					// entry only has ID set.
+					tokenEntry := &logical.TokenEntry{
+						ID: accessorEntry.TokenID,
+					}
+
+					// Attempt to revoke the token. This will also revoke
+					// the leases associated with the token.
+					err := ts.expiration.RevokeByToken(tokenEntry)
+					if err != nil {
+						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to revoke leases of expired token: {{err}}", err))
+						continue
+					}
+					deletedCountInvalidTokenInAccessor++
+
+					index := accessorPrefix + saltedAccessor
+
+					// If deletion of accessor fails, move on to the next item since
+					// this is just a best-effort operation. We do this last so that on
+					// next run if something above failed we still have the accessor
+					// entry to try again.
+					err = ts.view.Delete(ctx, index)
+					if err != nil {
+						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to delete accessor entry: {{err}}", err))
+						continue
+					}
+					deletedCountAccessorInvalidToken++
+				}
 			}
-			deletedCountAccessorInvalidToken++
+
+			ts.logger.Info("number of entries scanned in parent prefix", "count", countParentEntries)
+			ts.logger.Info("number of entries deleted in parent prefix", "count", deletedCountParentEntries)
+			ts.logger.Info("number of tokens scanned in parent index list", "count", countParentList)
+			ts.logger.Info("number of tokens revoked in parent index list", "count", deletedCountParentList)
+			ts.logger.Info("number of accessors scanned", "count", countAccessorList)
+			ts.logger.Info("number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
+			ts.logger.Info("number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
+			ts.logger.Info("number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
+
+			return tidyErrors.ErrorOrNil()
 		}
-	}
 
-	ts.logger.Info("number of entries scanned in parent prefix", "count", countParentEntries)
-	ts.logger.Info("number of entries deleted in parent prefix", "count", deletedCountParentEntries)
-	ts.logger.Info("number of tokens scanned in parent index list", "count", countParentList)
-	ts.logger.Info("number of tokens revoked in parent index list", "count", deletedCountParentList)
-	ts.logger.Info("number of accessors scanned", "count", countAccessorList)
-	ts.logger.Info("number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
-	ts.logger.Info("number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
-	ts.logger.Info("number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
+		if err := doTidy(); err != nil {
+			logger.Error("error running tidy", "error", err)
+			return
+		}
+	}()
 
-	return nil, tidyErrors.ErrorOrNil()
+	resp := &logical.Response{}
+	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	return resp, nil
 }
 
 // handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
@@ -1751,7 +1771,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 				finalPolicies = sanitizedRolePolicies
 			} else {
 				if !strutil.StrListSubset(sanitizedRolePolicies, finalPolicies) {
-					return logical.ErrorResponse(fmt.Sprintf("token policies (%v) must be subset of the role's allowed policies (%v)", finalPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
+					return logical.ErrorResponse(fmt.Sprintf("token policies (%q) must be subset of the role's allowed policies (%q)", finalPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
 				}
 			}
 		} else {

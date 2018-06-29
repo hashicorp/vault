@@ -511,7 +511,60 @@ func (i *IdentityStore) pathEntityIDDelete() framework.OperationFunc {
 			return logical.ErrorResponse("missing entity id"), nil
 		}
 
-		return nil, i.deleteEntity(entityID)
+		// Since an entity ID is required to acquire the lock to modify the
+		// storage, fetch the entity without acquiring the lock
+		lockEntity, err := i.MemDBEntityByID(entityID, false)
+		if err != nil {
+			return nil, err
+		}
+
+		if lockEntity == nil {
+			return nil, nil
+		}
+
+		// Acquire the lock to modify the entity storage entry
+		lock := locksutil.LockForKey(i.entityLocks, lockEntity.ID)
+		lock.Lock()
+		defer lock.Unlock()
+
+		// Create a MemDB transaction to delete entity
+		txn := i.db.Txn(true)
+		defer txn.Abort()
+
+		// Fetch the entity using its ID
+		entity, err := i.MemDBEntityByIDInTxn(txn, entityID, true)
+		if err != nil {
+			return nil, err
+		}
+
+		// If there is no entity for the ID, do nothing
+		if entity == nil {
+			return nil, nil
+		}
+
+		// Delete all the aliases in the entity. This function will also remove
+		// the corresponding alias indexes too.
+		err = i.deleteAliasesInEntityInTxn(txn, entity, entity.Aliases)
+		if err != nil {
+			return nil, err
+		}
+
+		// Delete the entity using the same transaction
+		err = i.MemDBDeleteEntityByIDInTxn(txn, entity.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Delete the entity from storage
+		err = i.entityPacker.DeleteItem(entity.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Committing the transaction *after* successfully deleting entity
+		txn.Commit()
+
+		return nil, nil
 	}
 }
 
@@ -520,10 +573,15 @@ func (i *IdentityStore) pathEntityIDDelete() framework.OperationFunc {
 func (i *IdentityStore) pathEntityIDList() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		ws := memdb.NewWatchSet()
-		iter, err := i.MemDBEntities(ws)
+
+		txn := i.db.Txn(false)
+
+		iter, err := txn.Get(entitiesTable, "id")
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to fetch iterator for entities in memdb: {{err}}", err)
 		}
+
+		ws.Add(iter.WatchCh())
 
 		var entityIDs []string
 		entityInfo := map[string]interface{}{}

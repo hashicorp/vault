@@ -1,7 +1,9 @@
 <div class="level is-mobile">
   <div class="level-left is-flex-1">
     <div>
-      {{#if (or replicationUnsupported (and (eq mode 'performance') (not version.hasPerfReplication)))}}
+      {{#if replicationUnsupported}}
+       Unsupported
+      {{else if (and (eq mode 'performance') (not version.hasPerfReplication))}}
         <p>
            Upgrade to Vault Enterprise Premium to use Performance Replication.
         </p>
@@ -22,7 +24,11 @@
           </code>
         </span>
       {{else}}
-        Enable
+        {{#if (eq tagName 'a')}}
+          Enable
+        {{else}}
+          Disabled
+        {{/if}}
       {{/if}}
     </div>
   </div>

@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/client"
 	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
-	"github.com/hashicorp/vault/helper/ldaputil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/patrickmn/go-cache"
@@ -21,9 +20,10 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 func newBackend(client secretsClient) *backend {
 	adBackend := &backend{
-		client:    client,
-		roleCache: cache.New(roleCacheExpiration, roleCacheCleanup),
-		credCache: cache.New(credCacheExpiration, credCacheCleanup),
+		client:         client,
+		roleCache:      cache.New(roleCacheExpiration, roleCacheCleanup),
+		credCache:      cache.New(credCacheExpiration, credCacheCleanup),
+		rotateRootLock: new(int32),
 	}
 	adBackend.Backend = &framework.Backend{
 		Help: backendHelp,
@@ -32,6 +32,7 @@ func newBackend(client secretsClient) *backend {
 			adBackend.pathRoles(),
 			adBackend.pathListRoles(),
 			adBackend.pathCreds(),
+			adBackend.pathRotateCredentials(),
 		},
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{
@@ -50,9 +51,10 @@ type backend struct {
 
 	client secretsClient
 
-	roleCache *cache.Cache
-	credCache *cache.Cache
-	credLock  sync.Mutex
+	roleCache      *cache.Cache
+	credCache      *cache.Cache
+	credLock       sync.Mutex
+	rotateRootLock *int32
 }
 
 func (b *backend) Invalidate(ctx context.Context, key string) {
@@ -62,9 +64,10 @@ func (b *backend) Invalidate(ctx context.Context, key string) {
 
 // Wraps the *util.SecretsClient in an interface to support testing.
 type secretsClient interface {
-	Get(conf *ldaputil.ConfigEntry, serviceAccountName string) (*client.Entry, error)
-	GetPasswordLastSet(conf *ldaputil.ConfigEntry, serviceAccountName string) (time.Time, error)
-	UpdatePassword(conf *ldaputil.ConfigEntry, serviceAccountName string, newPassword string) error
+	Get(conf *client.ADConf, serviceAccountName string) (*client.Entry, error)
+	GetPasswordLastSet(conf *client.ADConf, serviceAccountName string) (time.Time, error)
+	UpdatePassword(conf *client.ADConf, serviceAccountName string, newPassword string) error
+	UpdateRootPassword(conf *client.ADConf, bindDN string, newPassword string) error
 }
 
 const backendHelp = `

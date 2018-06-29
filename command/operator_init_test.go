@@ -36,6 +36,12 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
+			"too_many_args",
+			[]string{"foo"},
+			"Too many arguments",
+			1,
+		},
+		{
 			"pgp_keys_multi",
 			[]string{
 				"-pgp-keys", "keybase:hashicorp",
@@ -341,7 +347,8 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			"secret/foo",
+			"-key-shares=1",
+			"-key-threshold=1",
 		})
 		if exp := 2; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)

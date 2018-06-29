@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/go-errors/errors"
 	"github.com/go-ldap/ldap"
@@ -25,7 +26,7 @@ type Client struct {
 	ldap *ldaputil.Client
 }
 
-func (c *Client) Search(cfg *ldaputil.ConfigEntry, filters map[*Field][]string) ([]*Entry, error) {
+func (c *Client) Search(cfg *ADConf, filters map[*Field][]string) ([]*Entry, error) {
 	req := &ldap.SearchRequest{
 		BaseDN:    cfg.UserDN,
 		Scope:     ldap.ScopeWholeSubtree,
@@ -33,7 +34,7 @@ func (c *Client) Search(cfg *ldaputil.ConfigEntry, filters map[*Field][]string) 
 		SizeLimit: math.MaxInt32,
 	}
 
-	conn, err := c.ldap.DialLDAP(cfg)
+	conn, err := c.ldap.DialLDAP(cfg.ConfigEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +56,7 @@ func (c *Client) Search(cfg *ldaputil.ConfigEntry, filters map[*Field][]string) 
 	return entries, nil
 }
 
-func (c *Client) UpdateEntry(cfg *ldaputil.ConfigEntry, filters map[*Field][]string, newValues map[*Field][]string) error {
+func (c *Client) UpdateEntry(cfg *ADConf, filters map[*Field][]string, newValues map[*Field][]string) error {
 	entries, err := c.Search(cfg, filters)
 	if err != nil {
 		return err
@@ -72,7 +73,7 @@ func (c *Client) UpdateEntry(cfg *ldaputil.ConfigEntry, filters map[*Field][]str
 		modifyReq.Replace(field.String(), vals)
 	}
 
-	conn, err := c.ldap.DialLDAP(cfg)
+	conn, err := c.ldap.DialLDAP(cfg.ConfigEntry)
 	if err != nil {
 		return err
 	}
@@ -88,7 +89,7 @@ func (c *Client) UpdateEntry(cfg *ldaputil.ConfigEntry, filters map[*Field][]str
 // Active Directory doesn't recognize the passwordModify method.
 // See https://github.com/go-ldap/ldap/issues/106
 // for more.
-func (c *Client) UpdatePassword(cfg *ldaputil.ConfigEntry, filters map[*Field][]string, newPassword string) error {
+func (c *Client) UpdatePassword(cfg *ADConf, filters map[*Field][]string, newPassword string) error {
 	pwdEncoded, err := formatPassword(newPassword)
 	if err != nil {
 		return err
@@ -119,15 +120,53 @@ func toString(filters map[*Field][]string) string {
 	return "(" + result + ")"
 }
 
-func bind(cfg *ldaputil.ConfigEntry, conn ldaputil.Connection) error {
+func bind(cfg *ADConf, conn ldaputil.Connection) error {
 	if cfg.BindPassword == "" {
 		return errors.New("unable to bind due to lack of configured password")
 	}
+
 	if cfg.UPNDomain != "" {
-		return conn.Bind(fmt.Sprintf("%s@%s", ldaputil.EscapeLDAPValue(cfg.BindDN), cfg.UPNDomain), cfg.BindPassword)
+		origErr := conn.Bind(fmt.Sprintf("%s@%s", ldaputil.EscapeLDAPValue(cfg.BindDN), cfg.UPNDomain), cfg.BindPassword)
+		if origErr == nil {
+			return nil
+		}
+		if !shouldTryLastPwd(cfg.LastBindPassword, cfg.LastBindPasswordRotation) {
+			return origErr
+		}
+		if err := conn.Bind(fmt.Sprintf("%s@%s", ldaputil.EscapeLDAPValue(cfg.BindDN), cfg.UPNDomain), cfg.LastBindPassword); err != nil {
+			// Return the original error because it'll be more helpful for debugging.
+			return origErr
+		}
+		return nil
 	}
+
 	if cfg.BindDN != "" {
-		return conn.Bind(cfg.BindDN, cfg.BindPassword)
+		origErr := conn.Bind(cfg.BindDN, cfg.BindPassword)
+		if origErr == nil {
+			return nil
+		}
+		if !shouldTryLastPwd(cfg.LastBindPassword, cfg.LastBindPasswordRotation) {
+			return origErr
+		}
+		if err := conn.Bind(cfg.BindDN, cfg.LastBindPassword); err != nil {
+			// Return the original error because it'll be more helpful for debugging.
+			return origErr
+		}
 	}
 	return errors.New("must provide binddn or upndomain")
+}
+
+// shouldTryLastPwd determines if we should try a previous password.
+// Active Directory can return a variety of errors when a password is invalid.
+// Rather than attempting to catalogue these errors across multiple versions of
+// AD, we simply try the last password if it's been less than a set amount of
+// time since a rotation occurred.
+func shouldTryLastPwd(lastPwd string, lastBindPasswordRotation time.Time) bool {
+	if lastPwd == "" {
+		return false
+	}
+	if lastBindPasswordRotation.Equal(time.Time{}) {
+		return false
+	}
+	return lastBindPasswordRotation.Add(10 * time.Minute).After(time.Now())
 }

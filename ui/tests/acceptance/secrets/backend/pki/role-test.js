@@ -49,7 +49,7 @@ test('it creates a role and redirects', function(assert) {
 
   listPage.visitRoot({ backend: path });
   andThen(() => {
-    assert.equal(listPage.secrets().count, 1, 'shows role in the list');
+    assert.equal(listPage.secrets.length, 1, 'shows role in the list');
   });
 });
 

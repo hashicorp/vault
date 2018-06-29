@@ -24,8 +24,9 @@ import (
 // Standby checks if the Vault is in standby mode
 func (c *Core) Standby() (bool, error) {
 	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	return c.standby, nil
+	standby := c.standby
+	c.stateLock.RUnlock()
+	return standby, nil
 }
 
 // Leader is used to get the current active leader
@@ -37,30 +38,34 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	}
 
 	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 
 	// Check if sealed
 	if c.sealed {
+		c.stateLock.RUnlock()
 		return false, "", "", consts.ErrSealed
 	}
 
 	// Check if we are the leader
 	if !c.standby {
+		c.stateLock.RUnlock()
 		return true, c.redirectAddr, c.clusterAddr, nil
 	}
 
 	// Initialize a lock
 	lock, err := c.ha.LockWith(coreLockPath, "read")
 	if err != nil {
+		c.stateLock.RUnlock()
 		return false, "", "", err
 	}
 
 	// Read the value
 	held, leaderUUID, err := lock.Value()
 	if err != nil {
+		c.stateLock.RUnlock()
 		return false, "", "", err
 	}
 	if !held {
+		c.stateLock.RUnlock()
 		return false, "", "", nil
 	}
 
@@ -73,11 +78,13 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
 	if leaderUUID == localLeaderUUID && localRedirAddr != "" {
+		c.stateLock.RUnlock()
 		return false, localRedirAddr, localClusterAddr, nil
 	}
 
 	c.logger.Trace("found new active node information, refreshing")
 
+	defer c.stateLock.RUnlock()
 	c.clusterLeaderParamsLock.Lock()
 	defer c.clusterLeaderParamsLock.Unlock()
 
@@ -155,7 +162,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 
 	ctx := c.activeContext
 
-	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req)
+	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
 		return retErr
@@ -163,10 +170,13 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
-		ClientToken: req.ClientToken,
+		ClientToken:      req.ClientToken,
+		Policies:         identityPolicies,
+		IdentityPolicies: identityPolicies,
 	}
 	if te != nil {
-		auth.Policies = te.Policies
+		auth.TokenPolicies = te.Policies
+		auth.Policies = append(te.Policies, identityPolicies...)
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
@@ -183,6 +193,14 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	}
 
 	if entity != nil && entity.Disabled {
+		c.logger.Warn("permission denied as the entity on the token is disabled")
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		c.stateLock.RUnlock()
+		return retErr
+	}
+
+	if te != nil && te.EntityID != "" && entity == nil {
+		c.logger.Warn("permission denied as the entity on the token is invalid")
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		c.stateLock.RUnlock()
 		return retErr

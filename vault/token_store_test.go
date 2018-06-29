@@ -3777,6 +3777,9 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
 
+	// Tidy runs async so give it time
+	time.Sleep(10 * time.Second)
+
 	// Tidy should have removed all the dangling accessor entries
 	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -3908,6 +3911,9 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
+
+	// Tidy runs async so give it time
+	time.Sleep(10 * time.Second)
 
 	// Tidy should have removed all the dangling accessor entries
 	resp, err = ts.HandleRequest(context.Background(), accessorListReq)

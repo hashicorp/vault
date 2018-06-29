@@ -15,7 +15,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	config.StorageView = &logical.InmemStorage{}
 
 	var err error
-	b := Backend()
+	b := Backend(config)
 	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -423,6 +423,40 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 	}
 	if len(result.AllowedDomains) != 2 {
 		t.Fatal("allowed_domains should have 2 values")
+	}
+}
+
+func TestPki_RoleAllowedURISANs(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"allowed_uri_sans": []string{"http://foobar.com", "spiffe://*"},
+		"ttl":              "5h",
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/testrole",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	allowedURISANs := resp.Data["allowed_uri_sans"].([]string)
+	if len(allowedURISANs) != 2 {
+		t.Fatalf("allowed_uri_sans should have 2 values")
 	}
 }
 

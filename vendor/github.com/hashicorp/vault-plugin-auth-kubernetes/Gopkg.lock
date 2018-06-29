@@ -19,6 +19,17 @@
   revision = "1fca145dffbcaa8fe914309b1ec0cfc67500fe61"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/briankassouf/jose"
+  packages = [
+    ".",
+    "crypto",
+    "jws",
+    "jwt"
+  ]
+  revision = "d2569464773f2b9de32e57a79d87318bca5b56c0"
+
+[[projects]]
   name = "github.com/gogo/protobuf"
   packages = [
     "proto",
@@ -345,6 +356,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a4f5c4784a693e2d63df96593815f130a8511739b284e67037efc44321d48a36"
+  inputs-digest = "1150b789dee30cbbfadac50cfc7d783841ea49e18043d0046bcc8de22f150e44"
   solver-name = "gps-cdcl"
   solver-version = 1

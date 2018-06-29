@@ -6,10 +6,10 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
@@ -106,8 +106,8 @@ func TestDynamoDBBackend(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
-		if !reflect.DeepEqual(inputEntry, entry) {
-			t.Fatalf("exp: %#v, act: %#v", inputEntry, entry)
+		if diff := deep.Equal(inputEntry, entry); diff != nil {
+			t.Fatal(diff)
 		}
 	})
 }
@@ -285,7 +285,7 @@ func prepareDynamoDBTestContainer(t *testing.T) (cleanup func(), retAddress stri
 		t.Fatalf("Failed to connect to docker: %s", err)
 	}
 
-	resource, err := pool.Run("deangiberson/aws-dynamodb-local", "latest", []string{})
+	resource, err := pool.Run("cnadiminti/dynamodb-local", "latest", []string{})
 	if err != nil {
 		t.Fatalf("Could not start local DynamoDB: %s", err)
 	}

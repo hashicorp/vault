@@ -85,7 +85,9 @@ export function parseCommand(command, shouldThrow) {
 }
 
 export function logFromResponse(response, path, method, flags) {
-  if (!response) {
+  let { format, field } = flags;
+  let secret = response && (response.auth || response.data || response.wrap_info);
+  if (!secret) {
     let message =
       method === 'write'
         ? `Success! Data written to: ${path}`
@@ -93,8 +95,6 @@ export function logFromResponse(response, path, method, flags) {
 
     return { type: 'success', content: message };
   }
-  let { format, field } = flags;
-  let secret = response.auth || response.data || response.wrap_info;
 
   if (field) {
     let fieldValue = secret[field];

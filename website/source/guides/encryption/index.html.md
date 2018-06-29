@@ -10,7 +10,7 @@ description: |-
 
 # Encryption as a Service
 
-Vault provides Encryption as a Service (EaaS) to enables security teams to
+Vault provides Encryption as a Service (EaaS) to enable security teams to
 fortify data during transit and at rest. So even if an intrusion occurs, your
 data is encrypted and the attacker would never get a hold of the raw data.
 
