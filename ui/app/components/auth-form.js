@@ -25,7 +25,7 @@ export default Ember.Component.extend(DEFAULTS, {
     this._super(...arguments);
     if (!this.get('selectedAuth')) {
       let firstMethod = this.get('methodsToShow.firstObject');
-      this.set('selectedAuth', firstMethod.get('path') || firstMethod.get('type'));
+      this.set('selectedAuth', get(firstMethod, 'path') || get(firstMethod, 'type'));
     }
   },
   didRender() {
@@ -76,7 +76,7 @@ export default Ember.Component.extend(DEFAULTS, {
   ),
 
   providerPartialName: computed('selectedAuthBackend', function() {
-    let type = this.get('selectedAuthBackend.type');
+    let type = this.get('selectedAuthBackend.type').toLowerCase();
     let templateName = Ember.String.dasherize(type);
     return `partials/auth-form/${templateName}`;
   }),
@@ -96,7 +96,9 @@ export default Ember.Component.extend(DEFAULTS, {
   }),
   methodsToShow: computed('methods', 'methods.[]', function() {
     let methods = this.get('methods') || [];
-    let shownMethods = methods.filter(m => BACKENDS.findBy('type', m.get('type')));
+    let shownMethods = methods.filter(m =>
+      BACKENDS.find(b => get(b, 'type').toLowerCase() === get(m, 'type').toLowerCase())
+    );
     return shownMethods.length ? shownMethods : BACKENDS;
   }),
 
@@ -136,7 +138,10 @@ export default Ember.Component.extend(DEFAULTS, {
       let targetRoute = this.get('redirectTo') || 'vault.cluster';
       let backend = this.get('selectedAuthBackend');
       let path = get(backend, 'path') || this.get('customPath');
-      let attributes = get(backend, 'formAttributes');
+      let backendMeta = BACKENDS.find(
+        b => get(b, 'type').toLowerCase() === get(backend, 'type').toLowerCase()
+      );
+      let attributes = get(backendMeta, 'formAttributes');
 
       data = Ember.assign(data, this.getProperties(...attributes));
       if (get(backend, 'path') || (this.get('useCustomPath') && path)) {

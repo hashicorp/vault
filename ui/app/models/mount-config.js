@@ -27,7 +27,7 @@ export default Fragment.extend({
     falseValue: '',
   }),
   passthroughRequestHeaders: attr({
-    label: 'Allowed Passthrough Request headers',
+    label: 'Allowed passthrough request headers',
     helpText: 'Headers to whitelist and pass from the request to the backend',
     editType: 'stringArray',
   }),
