@@ -1,12 +1,20 @@
 <nav class="tabs sub-nav is-marginless">
   <ul>
     {{#each methodsToShow as |method|}}
-    {{#with (or method.path method.type) as |methodKey|}}
-      <li class="{{if (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey) 'is-active' ''}}" data-test-auth-method>
-        <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with=methodKey)}}" data-test-auth-method-link={{method.type}}>
-          {{or method.id (capitalize method.type)}}
-        </a>
-      </li>
+      {{#with (or method.path method.type) as |methodKey|}}
+        {{#if hasMethodsWithPath}}
+          <li class="{{if (and selectedAuthIsPath (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey)) 'is-active' ''}}" data-test-auth-method>
+            <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with=methodKey)}}" data-test-auth-method-link={{method.type}}>
+              {{or method.id (capitalize method.type)}}
+            </a>
+          </li>
+        {{else}}
+          <li class="{{if (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey) 'is-active' ''}}" data-test-auth-method>
+            <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with=methodKey)}}" data-test-auth-method-link={{method.type}}>
+              {{or method.id (capitalize method.type)}}
+            </a>
+          </li>
+        {{/if}}
       {{/with}}
     {{/each}}
     {{#if hasMethodsWithPath}}
