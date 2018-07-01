@@ -136,7 +136,7 @@ storage "zookeeper" {
 
 ### zNode connection over TLS.
 
-This example instructs Vault to connect to Zookeeper using the provided TLS configuration. The host verification will happen with the presented certificate using the servers IP.
+This example instructs Vault to connect to Zookeeper using the provided TLS configuration. The host verification will happen with the presented certificate using the servers IP because 'tls_verify_ip' is set to true.
 
 ```hcl
 storage "zookeeper" {
