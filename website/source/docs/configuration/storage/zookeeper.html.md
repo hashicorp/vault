@@ -71,7 +71,7 @@ znodes and, potentially, take Vault out of service.
   authenticate as user `UserName` using password `Password` with the `digest`
   mechanism.
 
-- 'tls_enabled' `(bool: false)` – Specifies if TLS communication with the Zookeeper
+- `tls_enabled` `(bool: false)` – Specifies if TLS communication with the Zookeeper
    backend has to be enabled.
 
 - `tls_ca_file` `(string: "")` – Specifies the path to the CA certificate used
