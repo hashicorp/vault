@@ -13,6 +13,10 @@ The MySQL storage backend is used to persist Vault's data in a [MySQL][mysql]
 server or cluster.
 
 - **High Availability** – the MySQL storage backend supports high availability.
+  Note that due to the way mysql locking functions work they are lost if a connection
+  dies. If you would like to not have frequent changes in your elected leader you
+  can increase interactive_timeout and wait_timeout MySQL config to much higher than
+  default which is set at 8 hours.
 
 - **Community Supported** – the MySQL storage backend is supported by the
   community. While it has undergone review by HashiCorp employees, they may not
