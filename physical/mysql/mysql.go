@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/url"
 	"sort"
 	"strconv"
@@ -36,12 +37,14 @@ const mysqlTLSKey = "default"
 // MySQLBackend is a physical backend that stores data
 // within MySQL database.
 type MySQLBackend struct {
-	dbTable    string
-	client     *sql.DB
-	statements map[string]*sql.Stmt
-	logger     log.Logger
-	permitPool *physical.PermitPool
-	conf       map[string]string
+	dbTable      string
+	client       *sql.DB
+	statements   map[string]*sql.Stmt
+	logger       log.Logger
+	permitPool   *physical.PermitPool
+	conf         map[string]string
+	redirectHost string
+	redirectPort int64
 }
 
 // NewMySQLBackend constructs a MySQL backend using the given API client and
@@ -415,6 +418,10 @@ func (i *MySQLHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 func (i *MySQLHALock) attemptLock(key, value string, didLock chan struct{}, failLock chan error, releaseCh chan bool) {
 	lock, err := NewMySQLLock(i.in, i.logger, key, value)
+
+	// Set node value
+	i.lock = lock
+
 	if err != nil {
 		failLock <- err
 	}
@@ -424,8 +431,6 @@ func (i *MySQLHALock) attemptLock(key, value string, didLock chan struct{}, fail
 		failLock <- err
 		return
 	}
-	// Set node value
-	i.lock = lock
 
 	// Signal that lock is held
 	close(didLock)
@@ -444,9 +449,8 @@ func (i *MySQLHALock) monitorLock(leaderCh chan struct{}) {
 		// which case you will lose the lock anyway.
 		err := i.hasLock(i.key)
 		if err != nil {
-			// Somehow we lost the lock.... this should never happen
-			// unless someone is messing around in the DB doing malicious things.
-			i.logger.Info("mysql: distributed lock released")
+			// Somehow we lost the lock.... likely because the connection holding
+			// the lock was closed or someone was playing around with the locks in the DB.
 			close(leaderCh)
 			return
 		}
@@ -472,11 +476,11 @@ func (i *MySQLHALock) Unlock() error {
 	return err
 }
 
-// hasLock will check if a lock is held this is done by trying to get the lock.
+// hasLock will check if a lock is held by checking the current lock id against our known ID.
 func (i *MySQLHALock) hasLock(key string) error {
-	var result int
+	var result sql.NullInt64
 	err := i.in.statements["used_lock"].QueryRow(key).Scan(&result)
-	if err == sql.ErrNoRows {
+	if err == sql.ErrNoRows || !result.Valid {
 		// This is not an error to us since it just means the lock isn't held
 		return nil
 	}
@@ -486,9 +490,7 @@ func (i *MySQLHALock) hasLock(key string) error {
 	}
 
 	// IS_USED_LOCK will return the ID of the connection that created the lock.
-	// it will return NULL otherwise which converts to a zero above when scanning
-	// it into locknum.
-	if result == 0 {
+	if result.Int64 != GlobalLockID {
 		return ErrLockHeld
 	}
 
@@ -497,7 +499,6 @@ func (i *MySQLHALock) hasLock(key string) error {
 
 func (i *MySQLHALock) GetLeader() (string, error) {
 	defer metrics.MeasureSince([]string{"mysql", "lock_get"}, time.Now())
-
 	var result string
 	err := i.in.statements["get_lock"].QueryRow("leader").Scan(&result)
 	if err == sql.ErrNoRows {
@@ -513,11 +514,6 @@ func (i *MySQLHALock) Value() (bool, string, error) {
 		return false, "", err
 	}
 
-	err = i.hasLock(i.key)
-	if err != nil {
-		return false, leaderkey, err
-	}
-
 	return true, leaderkey, err
 }
 
@@ -525,6 +521,7 @@ func (i *MySQLHALock) Value() (bool, string, error) {
 // locks using the built in GET_LOCK function. Note that these
 // locks are released when you lose connection to the server.
 type MySQLLock struct {
+	parentConn *MySQLBackend
 	in         *sql.DB
 	logger     log.Logger
 	statements map[string]*sql.Stmt
@@ -534,15 +531,16 @@ type MySQLLock struct {
 
 // Errors specific to trying to grab a lock in MySQL
 var (
+	// This is the GlobalLockID for checking if the lock we got is still the current lock
+	GlobalLockID int64
 	// ErrLockHeld is returned when another vault instance already has a lock held for the given key.
 	ErrLockHeld = errors.New("mysql: lock already held")
 	// ErrUnlockFailed
 	ErrUnlockFailed = errors.New("mysql: unable to release lock, already released or not held by this session")
 	// You were unable to update that you are the new leader in the DB
 	ErrClaimFailed = errors.New("mysql: unable to update DB with new leader infromation")
-	// We were not able to remove outself as the active leader. This is more a warning as it will be fixed as soon
-	// as the new leader has come online.
-	ErrClearLeaderFailed = errors.New("mysql: unable to clear outselves as the current leader")
+	// Error to thow if inbetween getting the lock and checking the ID of it we lost it.
+	ErrSettingGlobalID = errors.New("mysql: getting global lock id failed")
 )
 
 // NewMySQLLock helper function
@@ -564,6 +562,7 @@ func NewMySQLLock(in *MySQLBackend, l log.Logger, key, value string) (*MySQLLock
 	dbTable := database + "." + table
 
 	m := &MySQLLock{
+		parentConn: in,
 		in:         conn,
 		logger:     l,
 		statements: make(map[string]*sql.Stmt),
@@ -598,24 +597,11 @@ func (m *MySQLLock) prepare(name, query string) error {
 // update the current cluster leader in the DB. This is used so
 // we can tell the servers in standby who the active leader is.
 func (i *MySQLLock) becomeLeader() error {
-	defer metrics.MeasureSince([]string{"mysql", "lock_put"}, time.Now())
-
 	_, err := i.statements["put"].Exec("leader", i.value)
 	if err != nil {
 		return err
 	}
-	return nil
-}
 
-// clear the leader for cases when we are stepping down. This will greatly reduce the chance
-// of a standby node redirecting to a broken leader.
-func (i *MySQLLock) clearLeader() error {
-	defer metrics.MeasureSince([]string{"mysql", "lock_put"}, time.Now())
-
-	_, err := i.statements["put"].Exec("leader", "")
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -624,25 +610,42 @@ func (i *MySQLLock) clearLeader() error {
 func (i *MySQLLock) Lock() error {
 	defer metrics.MeasureSince([]string{"mysql", "get_lock"}, time.Now())
 
-	rows, err := i.in.Query("SELECT GET_LOCK(?, -1)", i.key)
+	rows, err := i.in.Query("SELECT GET_LOCK(?, -1), IS_USED_LOCK(?)", i.key, i.key)
 	if err != nil {
 		return err
 	}
 
 	defer rows.Close()
 	rows.Next()
-	var num int
-	rows.Scan(&num)
+	var lock sql.NullInt64
+	var connectionID sql.NullInt64
+	rows.Scan(&lock, &connectionID)
+
+	if rows.Err() != nil {
+		return rows.Err()
+	}
 
 	// 1 is returned from GET_LOCK if it was able to get the lock
-	if num != 1 {
+	// 0 if it failed and NULL if some stange error happened.
+	// https://dev.mysql.com/doc/refman/8.0/en/miscellaneous-functions.html#function_get-lock
+	if !lock.Valid || lock.Int64 != 1 {
 		return ErrLockHeld
 	}
 
+	// Since we have the lock alert the rest of the cluster
+	// that we are now the active leader.
 	err = i.becomeLeader()
 	if err != nil {
 		return ErrLockHeld
 	}
+
+	// This will return the connection ID of NULL if an error happens
+	// https://dev.mysql.com/doc/refman/8.0/en/miscellaneous-functions.html#function_is-used-lock
+	if !connectionID.Valid {
+		return ErrSettingGlobalID
+	}
+
+	GlobalLockID = connectionID.Int64
 
 	return nil
 }
@@ -654,14 +657,41 @@ func (i *MySQLLock) Lock() error {
 // likely does exist. Closing the connection however ensures we don't ever get into a
 // state where we try to release the lock and it hangs it is also much less code.
 func (i *MySQLLock) Unlock() error {
-	err := i.clearLeader()
-	if err != nil {
-		return ErrClearLeaderFailed
-	}
-
-	err = i.in.Close()
+	err := i.in.Close()
 	if err != nil {
 		return ErrUnlockFailed
+	}
+
+	return nil
+}
+
+func (m *MySQLBackend) setRedirectAddr(addr string) (err error) {
+	if addr == "" {
+		return fmt.Errorf("redirect address must not be empty")
+	}
+
+	url, err := url.Parse(addr)
+	if err != nil {
+		return errwrap.Wrapf(fmt.Sprintf("failed to parse redirect URL %q: {{err}}", addr), err)
+	}
+
+	var portStr string
+	m.redirectHost, portStr, err = net.SplitHostPort(url.Host)
+	if err != nil {
+		if url.Scheme == "http" {
+			portStr = "80"
+		} else if url.Scheme == "https" {
+			portStr = "443"
+		} else if url.Scheme == "unix" {
+			portStr = "-1"
+			m.redirectHost = url.Path
+		} else {
+			return errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in redirect address "%v": {{err}}`, url.Host), err)
+		}
+	}
+	m.redirectPort, err = strconv.ParseInt(portStr, 10, 0)
+	if err != nil || m.redirectPort < -1 || m.redirectPort > 65535 {
+		return errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
 	}
 
 	return nil
