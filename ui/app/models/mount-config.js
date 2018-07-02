@@ -24,7 +24,7 @@ export default Fragment.extend({
     editType: 'boolean',
     label: 'List method when unauthenticated',
     trueValue: 'unauth',
-    falseValue: '',
+    falseValue: 'hidden',
   }),
   passthroughRequestHeaders: attr({
     label: 'Allowed passthrough request headers',
