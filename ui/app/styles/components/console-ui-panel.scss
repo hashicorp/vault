@@ -142,7 +142,7 @@
   }
 }
 
-.page-container > header {
+.page-container > header:not(.page-header) {
   background: linear-gradient(to right, #191a1c, #1b212d);
 }
 
