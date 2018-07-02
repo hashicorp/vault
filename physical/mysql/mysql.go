@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/url"
 	"sort"
 	"strconv"
@@ -660,38 +659,6 @@ func (i *MySQLLock) Unlock() error {
 	err := i.in.Close()
 	if err != nil {
 		return ErrUnlockFailed
-	}
-
-	return nil
-}
-
-func (m *MySQLBackend) setRedirectAddr(addr string) (err error) {
-	if addr == "" {
-		return fmt.Errorf("redirect address must not be empty")
-	}
-
-	url, err := url.Parse(addr)
-	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to parse redirect URL %q: {{err}}", addr), err)
-	}
-
-	var portStr string
-	m.redirectHost, portStr, err = net.SplitHostPort(url.Host)
-	if err != nil {
-		if url.Scheme == "http" {
-			portStr = "80"
-		} else if url.Scheme == "https" {
-			portStr = "443"
-		} else if url.Scheme == "unix" {
-			portStr = "-1"
-			m.redirectHost = url.Path
-		} else {
-			return errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in redirect address "%v": {{err}}`, url.Host), err)
-		}
-	}
-	m.redirectPort, err = strconv.ParseInt(portStr, 10, 0)
-	if err != nil || m.redirectPort < -1 || m.redirectPort > 65535 {
-		return errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
 	}
 
 	return nil
