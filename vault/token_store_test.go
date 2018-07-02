@@ -154,12 +154,9 @@ func TestTokenStore_TokenEntryVersionUpgrade(t *testing.T) {
 		Path:         "test",
 		Policies:     []string{"testpolicy"},
 		CreationTime: time.Now().Unix(),
+		TTL:          time.Hour,
 	}
-
-	err := ts.storeCommon(context.Background(), te, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testStoreTokenDirectly(t, ts, te)
 
 	// Check that its readable
 	out, err := ts.Lookup(context.Background(), te.ID)
@@ -176,12 +173,10 @@ func TestTokenStore_TokenEntryVersionUpgrade(t *testing.T) {
 		teChild := &logical.TokenEntry{
 			Parent: te.ID,
 			ID:     childID,
+			TTL:    time.Hour,
 		}
 
-		err = ts.storeCommon(context.Background(), teChild, true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testStoreTokenDirectly(t, ts, teChild)
 
 		// Check that its readable
 		out, err := ts.Lookup(context.Background(), teChild.ID)
@@ -219,12 +214,10 @@ func TestTokenStore_TokenEntryVersionUpgrade(t *testing.T) {
 			Parent:  te.ID,
 			ID:      childID,
 			Version: 2,
+			TTL:     time.Hour,
 		}
 
-		err = ts.storeCommon(context.Background(), teChild, true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testStoreTokenDirectly(t, ts, teChild)
 
 		// Check that its readable
 		out, err := ts.Lookup(context.Background(), teChild.ID)
@@ -307,23 +300,18 @@ func TestTokenStore_TokenEntryVersionUpgrade(t *testing.T) {
 		teChild := &logical.TokenEntry{
 			Parent: te.ID,
 			ID:     "oldchildid" + strconv.Itoa(i),
+			TTL:    time.Hour,
 		}
-
-		err = ts.storeCommon(context.Background(), teChild, true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testStoreTokenDirectly(t, ts, teChild)
 
 		teChild = &logical.TokenEntry{
 			Parent:  te.ID,
 			ID:      "newchildid" + strconv.Itoa(i),
 			Version: 2,
+			TTL:     time.Hour,
 		}
 
-		err = ts.storeCommon(context.Background(), teChild, true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testStoreTokenDirectly(t, ts, teChild)
 	}
 
 	// Now revoke the parent token and all its children
@@ -614,6 +602,31 @@ func testMakeTokenViaRequest(t testing.TB, ts *TokenStore, req *logical.Request)
 	}
 
 	return resp
+}
+
+func testStoreTokenDirectly(t testing.TB, ts *TokenStore, te *logical.TokenEntry) {
+	if err := ts.storeCommon(context.Background(), te, true); err != nil {
+		t.Fatal(err)
+	}
+	auth := &logical.Auth{
+		NumUses:     te.NumUses,
+		DisplayName: te.DisplayName,
+		Policies:    te.Policies,
+		Metadata:    te.Meta,
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       te.TTL,
+			Renewable: te.TTL > 0,
+		},
+		ClientToken:    te.ID,
+		Accessor:       te.Accessor,
+		EntityID:       te.EntityID,
+		Period:         te.Period,
+		ExplicitMaxTTL: te.ExplicitMaxTTL,
+		CreationPath:   te.Path,
+	}
+	if err := ts.expiration.RegisterAuth(te.Path, auth); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func testMakeTokenDirectly(t testing.TB, ts *TokenStore, te *logical.TokenEntry) {
