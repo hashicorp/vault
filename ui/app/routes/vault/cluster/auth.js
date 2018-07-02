@@ -24,6 +24,6 @@ export default ClusterRouteBase.extend({
   },
   resetController(controller) {
     controller.set('wrappedToken', '');
-    controller.set('with', '');
+    controller.set('authMethod', '');
   },
 });

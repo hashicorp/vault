@@ -1,13 +1,9 @@
 import Ember from 'ember';
 
 export default Ember.Controller.extend({
-  queryParams: [
-    'with',
-    {
-      wrappedToken: 'wrapped_token',
-    },
-  ],
-  wrappedToken: '',
-  with: '',
+  vaultController: Ember.inject.controller('vault'),
+  queryParams: [{ authMethod: 'with' }],
+  wrappedToken: Ember.computed.alias('vaultController.wrappedToken'),
+  authMethod: '',
   redirectTo: null,
 });

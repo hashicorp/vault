@@ -2,7 +2,7 @@ import Ember from 'ember';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
-const { computed, inject, get } = Ember;
+const { computed, inject, get, run } = Ember;
 
 const DEFAULTS = {
   token: null,
@@ -24,25 +24,35 @@ export default Ember.Component.extend(DEFAULTS, {
   cluster: null,
   redirectTo: null,
 
-  init() {
-    this._super(...arguments);
-    if (!this.get('selectedAuth')) {
-      let firstMethod = this.get('methodsToShow.firstObject');
-      this.set('selectedAuth', get(firstMethod, 'path') || get(firstMethod, 'type'));
-    }
-  },
   didRender() {
+    this._super(...arguments);
     // on very narrow viewports the active tab may be overflowed, so we scroll it into view here
     let activeEle = this.element.querySelector('li.is-active');
     if (activeEle) {
       activeEle.scrollIntoView();
     }
     activeEle = null;
+    // this is here because we're changing the `with` attr and there's no way to short-circuit rendering,
+    // so we'll just nav -> get new attrs -> re-render
+    if (!this.get('selectedAuth') || (this.get('selectedAuth') && !this.get('selectedAuthBackend'))) {
+      this.get('router').replaceWith('vault.cluster.auth', this.get('cluster.name'), {
+        queryParams: {
+          with: this.firstMethod(),
+          wrappedToken: this.get('wrappedToken'),
+        },
+      });
+    }
+  },
+
+  firstMethod() {
+    let firstMethod = this.get('methodsToShow.firstObject');
+    // prefer backends with a path over those with a type
+    return get(firstMethod, 'path') || get(firstMethod, 'type');
   },
 
   didReceiveAttrs() {
-    let token = this.get('wrappedToken');
     this._super(...arguments);
+    let token = this.get('wrappedToken');
     let newMethod = this.get('selectedAuth');
     let oldMethod = this.get('oldSelectedAuth');
 
