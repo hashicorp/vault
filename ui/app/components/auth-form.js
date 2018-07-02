@@ -2,7 +2,7 @@ import Ember from 'ember';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
-const { computed, inject, get, run } = Ember;
+const { computed, inject, get } = Ember;
 
 const DEFAULTS = {
   token: null,
