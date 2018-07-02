@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/physical"
 
@@ -166,7 +167,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 }
 
 // Put is used to insert or update an entry
-func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
+func (b *Backend) Put(ctx context.Context, entry *physical.Entry) (retErr error) {
 	defer metrics.MeasureSince(metricPut, time.Now())
 
 	// Pooling
@@ -176,7 +177,12 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	// Insert
 	w := b.client.Bucket(b.bucket).Object(entry.Key).NewWriter(ctx)
 	w.ChunkSize = b.chunkSize
-	defer w.Close()
+	defer func() {
+		closeErr := w.Close()
+		if closeErr != nil {
+			retErr = multierror.Append(retErr, errwrap.Wrapf("error closing connection: {{err}}", closeErr))
+		}
+	}()
 
 	if _, err := w.Write(entry.Value); err != nil {
 		return errwrap.Wrapf("failed to put data: {{err}}", err)
@@ -185,7 +191,7 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 }
 
 // Get fetches an entry. If no entry exists, this function returns nil.
-func (b *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) {
+func (b *Backend) Get(ctx context.Context, key string) (retEntry *physical.Entry, retErr error) {
 	defer metrics.MeasureSince(metricGet, time.Now())
 
 	// Pooling
@@ -200,7 +206,13 @@ func (b *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 	if err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read value for %q: {{err}}", key), err)
 	}
-	defer r.Close()
+
+	defer func() {
+		closeErr := r.Close()
+		if closeErr != nil {
+			retErr = multierror.Append(retErr, errwrap.Wrapf("error closing connection: {{err}}", closeErr))
+		}
+	}()
 
 	value, err := ioutil.ReadAll(r)
 	if err != nil {

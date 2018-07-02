@@ -1,7 +1,10 @@
 syntax = "proto3";
 package pb;
 
+option go_package = "github.com/hashicorp/vault/logical/plugin/pb";
+
 import "google/protobuf/timestamp.proto";
+import "logical/identity.proto";
 
 message Empty {}
 
@@ -132,18 +135,6 @@ message Request {
 	Connection connection = 20;
 }
 
-message Alias {
-	// MountType is the backend mount's type to which this identity belongs
-	string mount_type = 1;
-
-	// MountAccessor is the identifier of the mount entry to which this
-	// identity belongs
-	string mount_accessor = 2;
-
-	// Name is the identifier of this identity in its authentication source
-	string name = 3;
-}
-
 message Auth {
 	LeaseOptions lease_options = 1;
 
@@ -195,13 +186,13 @@ message Auth {
 
 	// Alias is the information about the authenticated client returned by
 	// the auth backend
-	Alias alias = 11;
+	logical.Alias alias = 11;
 
 	// GroupAliases are the informational mappings of external groups which an
 	// authenticated user belongs to. This is used to check if there are
 	// mappings groups for the group aliases in identity store. For all the
 	// matching groups, the entity ID of the user will be added.
-	repeated Alias group_aliases = 12;
+	repeated logical.Alias group_aliases = 12;
 
 	// If set, restricts usage of the certificates to client IPs falling within
 	// the range of the specified CIDR(s).
@@ -498,6 +489,15 @@ message LocalMountReply {
 	bool local = 1;
 }
 
+message EntityInfoArgs {
+	string entity_id = 1;
+}
+
+message EntityInfoReply {
+	logical.Entity entity = 1;
+	string err = 2;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -541,6 +541,9 @@ service SystemView {
 	// LocalMount, when run from a system view attached to a request, indicates
 	// whether the request is affecting a local mount or not
 	rpc LocalMount(Empty) returns (LocalMountReply);
+
+	// EntityInfo returns the basic entity information for the given entity id
+	rpc EntityInfo(EntityInfoArgs) returns (EntityInfoReply);
 }
 
 message Connection {

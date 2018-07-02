@@ -1,8 +1,9 @@
 import Ember from 'ember';
 import DS from 'ember-data';
-import { queryRecord } from 'ember-computed-query';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-const { computed, get } = Ember;
+const { computed } = Ember;
 const { attr } = DS;
 
 export default DS.Model.extend({
@@ -74,20 +75,7 @@ export default DS.Model.extend({
   serialNumber: attr('string'),
 
   fieldsToAttrs(fieldGroups) {
-    const attrMap = get(this.constructor, 'attributes');
-    return fieldGroups.map(group => {
-      const groupKey = Object.keys(group)[0];
-      const groupMembers = group[groupKey];
-      const fields = groupMembers.map(field => {
-        var meta = attrMap.get(field);
-        return {
-          type: meta.type,
-          name: meta.name,
-          options: meta.options,
-        };
-      });
-      return { [groupKey]: fields };
-    });
+    return fieldToAttrs(this, fieldGroups);
   },
 
   fieldDefinition: computed(function() {
@@ -104,16 +92,7 @@ export default DS.Model.extend({
 
   attrs: computed('certificate', 'csr', function() {
     let keys = this.get('certificate') || this.get('csr') ? this.DISPLAY_FIELDS.slice(0) : [];
-    const attrMap = get(this.constructor, 'attributes');
-    keys = keys.map(key => {
-      let meta = attrMap.get(key);
-      return {
-        type: meta.type,
-        name: meta.name,
-        options: meta.options,
-      };
-    });
-    return keys;
+    return expandAttributeMeta(this, keys);
   }),
 
   toCreds: computed(
@@ -145,15 +124,6 @@ export default DS.Model.extend({
     }
   ),
 
-  revokePath: queryRecord(
-    'capabilities',
-    context => {
-      const { backend } = context.getProperties('backend');
-      return {
-        id: `${backend}/revoke`,
-      };
-    },
-    'backend'
-  ),
+  revokePath: lazyCapabilities(apiPath`${'backend'}/revoke`, 'backend'),
   canRevoke: computed.alias('revokePath.canUpdate'),
 });

@@ -55,3 +55,15 @@ test('version 1 performs the correct capabilities lookup', function(assert) {
     );
   });
 });
+
+test('it redirects to the path ending in / for list pages', function(assert) {
+  const path = `foo/bar/kv-path-${new Date().getTime()}`;
+  listPage.visitRoot({ backend: 'secret' });
+  listPage.create();
+  editPage.createSecret(path, 'foo', 'bar');
+  listPage.visit({ backend: 'secret', id: 'foo/bar' });
+  andThen(() => {
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
+    assert.ok(currentURL().endsWith('/'), 'redirects to the path ending in a slash');
+  });
+});

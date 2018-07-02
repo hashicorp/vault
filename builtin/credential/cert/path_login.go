@@ -159,10 +159,6 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
-	if err := b.checkCIDR(cert, req); err != nil {
-		return nil, err
-	}
-
 	if !policyutil.EquivalentPolicies(cert.Policies, req.Auth.Policies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
@@ -171,7 +167,6 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	resp.Auth.TTL = cert.TTL
 	resp.Auth.MaxTTL = cert.MaxTTL
 	resp.Auth.Period = cert.Period
-	resp.Auth.BoundCIDRs = cert.BoundCIDRs
 	return resp, nil
 }
 

@@ -1,9 +1,10 @@
 import Ember from 'ember';
 import DS from 'ember-data';
-import { queryRecord } from 'ember-computed-query';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
-const { computed, get } = Ember;
+const { computed } = Ember;
 
 const CREATE_FIELDS = ['name', 'policy', 'arn'];
 export default DS.Model.extend({
@@ -24,58 +25,17 @@ export default DS.Model.extend({
   }),
   attrs: computed(function() {
     let keys = CREATE_FIELDS.slice(0);
-    get(this.constructor, 'attributes').forEach((meta, name) => {
-      const index = keys.indexOf(name);
-      if (index === -1) {
-        return;
-      }
-      keys.replace(index, 1, {
-        type: meta.type,
-        name,
-        options: meta.options,
-      });
-    });
-    return keys;
+    return expandAttributeMeta(this, keys);
   }),
 
-  updatePath: queryRecord(
-    'capabilities',
-    context => {
-      const { backend, id } = context.getProperties('backend', 'id');
-      return {
-        id: `${backend}/roles/${id}`,
-      };
-    },
-    'id',
-    'backend'
-  ),
+  updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),
   canDelete: computed.alias('updatePath.canDelete'),
   canEdit: computed.alias('updatePath.canUpdate'),
   canRead: computed.alias('updatePath.canRead'),
 
-  generatePath: queryRecord(
-    'capabilities',
-    context => {
-      const { backend, id } = context.getProperties('backend', 'id');
-      return {
-        id: `${backend}/creds/${id}`,
-      };
-    },
-    'id',
-    'backend'
-  ),
+  generatePath: lazyCapabilities(apiPath`${'backend'}/creds/${'id'}`, 'backend', 'id'),
   canGenerate: computed.alias('generatePath.canUpdate'),
 
-  stsPath: queryRecord(
-    'capabilities',
-    context => {
-      const { backend, id } = context.getProperties('backend', 'id');
-      return {
-        id: `${backend}/sts/${id}`,
-      };
-    },
-    'id',
-    'backend'
-  ),
+  stsPath: lazyCapabilities(apiPath`${'backend'}/sts/${'id'}`, 'backend', 'id'),
   canGenerateSTS: computed.alias('stsPath.canUpdate'),
 });

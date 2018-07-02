@@ -18,47 +18,54 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
+	"github.com/oklog/run"
 )
 
 // Standby checks if the Vault is in standby mode
 func (c *Core) Standby() (bool, error) {
 	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	return c.standby, nil
+	standby := c.standby
+	c.stateLock.RUnlock()
+	return standby, nil
 }
 
 // Leader is used to get the current active leader
 func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err error) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-
-	// Check if sealed
-	if c.sealed {
-		return false, "", "", consts.ErrSealed
-	}
-
-	// Check if HA enabled
+	// Check if HA enabled. We don't need the lock for this check as it's set
+	// on startup and never modified
 	if c.ha == nil {
 		return false, "", "", ErrHANotEnabled
 	}
 
+	c.stateLock.RLock()
+
+	// Check if sealed
+	if c.sealed {
+		c.stateLock.RUnlock()
+		return false, "", "", consts.ErrSealed
+	}
+
 	// Check if we are the leader
 	if !c.standby {
+		c.stateLock.RUnlock()
 		return true, c.redirectAddr, c.clusterAddr, nil
 	}
 
 	// Initialize a lock
 	lock, err := c.ha.LockWith(coreLockPath, "read")
 	if err != nil {
+		c.stateLock.RUnlock()
 		return false, "", "", err
 	}
 
 	// Read the value
 	held, leaderUUID, err := lock.Value()
 	if err != nil {
+		c.stateLock.RUnlock()
 		return false, "", "", err
 	}
 	if !held {
+		c.stateLock.RUnlock()
 		return false, "", "", nil
 	}
 
@@ -71,11 +78,13 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
 	if leaderUUID == localLeaderUUID && localRedirAddr != "" {
+		c.stateLock.RUnlock()
 		return false, localRedirAddr, localClusterAddr, nil
 	}
 
 	c.logger.Trace("found new active node information, refreshing")
 
+	defer c.stateLock.RUnlock()
 	c.clusterLeaderParamsLock.Lock()
 	defer c.clusterLeaderParamsLock.Unlock()
 
@@ -153,7 +162,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 
 	ctx := c.activeContext
 
-	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req)
+	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
 		return retErr
@@ -161,10 +170,13 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
-		ClientToken: req.ClientToken,
+		ClientToken:      req.ClientToken,
+		Policies:         identityPolicies,
+		IdentityPolicies: identityPolicies,
 	}
 	if te != nil {
-		auth.Policies = te.Policies
+		auth.TokenPolicies = te.Policies
+		auth.Policies = append(te.Policies, identityPolicies...)
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
@@ -181,6 +193,14 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	}
 
 	if entity != nil && entity.Disabled {
+		c.logger.Warn("permission denied as the entity on the token is disabled")
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		c.stateLock.RUnlock()
+		return retErr
+	}
+
+	if te != nil && te.EntityID != "" && entity == nil {
+		c.logger.Warn("permission denied as the entity on the token is invalid")
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		c.stateLock.RUnlock()
 		return retErr
@@ -236,31 +256,76 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	return retErr
 }
 
-// runStandby is a long running routine that is used when an HA backend
-// is enabled. It waits until we are leader and switches this Vault to
-// active.
+// runStandby is a long running process that manages a number of the HA
+// subsystems.
 func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
 	c.logger.Info("entering standby mode")
 
-	// Monitor for key rotation
-	keyRotateDone := make(chan struct{})
-	keyRotateStop := make(chan struct{})
-	go c.periodicCheckKeyUpgrade(context.Background(), keyRotateDone, keyRotateStop)
-	// Monitor for new leadership
-	checkLeaderDone := make(chan struct{})
-	checkLeaderStop := make(chan struct{})
-	go c.periodicLeaderRefresh(checkLeaderDone, checkLeaderStop)
-	defer func() {
-		c.logger.Debug("closed periodic key rotation checker stop channel")
-		close(keyRotateStop)
-		<-keyRotateDone
-		close(checkLeaderStop)
-		c.logger.Debug("closed periodic leader refresh stop channel")
-		<-checkLeaderDone
-		c.logger.Debug("periodic leader refresh returned")
-	}()
+	var g run.Group
+	{
+		// This will cause all the other actors to close when the stop channel
+		// is closed.
+		g.Add(func() error {
+			<-stopCh
+			return nil
+		}, func(error) {})
+	}
+	{
+		// Monitor for key rotation
+		keyRotateDone := make(chan struct{})
+		keyRotateStop := make(chan struct{})
+
+		g.Add(func() error {
+			c.periodicCheckKeyUpgrade(context.Background(), keyRotateDone, keyRotateStop)
+			return nil
+		}, func(error) {
+			close(keyRotateStop)
+			c.logger.Debug("shutting down periodic key rotation checker")
+			<-keyRotateDone
+		})
+	}
+	{
+		// Monitor for new leadership
+		checkLeaderDone := make(chan struct{})
+		checkLeaderStop := make(chan struct{})
+
+		g.Add(func() error {
+			c.periodicLeaderRefresh(checkLeaderDone, checkLeaderStop)
+			return nil
+		}, func(error) {
+			close(checkLeaderStop)
+			c.logger.Debug("shutting down periodic leader refresh")
+			<-checkLeaderDone
+		})
+	}
+	{
+		// Wait for leadership
+		leaderDoneCh := make(chan struct{})
+		leaderStopCh := make(chan struct{})
+
+		g.Add(func() error {
+			c.waitForLeadership(leaderDoneCh, manualStepDownCh, leaderStopCh)
+			return nil
+		}, func(error) {
+			close(leaderStopCh)
+			c.logger.Debug("shutting down leader elections")
+			<-leaderDoneCh
+		})
+	}
+
+	// Start all the actors
+	g.Run()
+}
+
+// waitForLeadership is a long running routine that is used when an HA backend
+// is enabled. It waits until we are leader and switches this Vault to
+// active.
+func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{}) {
+	defer close(doneCh)
+
+	c.logger.Info("entering standby mode")
 
 	var manualStepDown bool
 	for {
@@ -419,7 +484,7 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 		case <-stopCh:
 			// This case comes from sealInternal; we will already be having the
 			// state lock held so we do toggle grabStateLock to false
-			if atomic.LoadUint32(&c.keepHALockOnStepDown) == 1 {
+			if atomic.LoadUint32(c.keepHALockOnStepDown) == 1 {
 				releaseHALock = false
 			}
 			grabStateLock = false
@@ -466,13 +531,13 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 // the result.
 func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
-	var opCount int32
+	opCount := new(int32)
 	for {
 		select {
 		case <-time.After(leaderCheckInterval):
-			count := atomic.AddInt32(&opCount, 1)
+			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
-				atomic.AddInt32(&opCount, -1)
+				atomic.AddInt32(opCount, -1)
 				continue
 			}
 			// We do this in a goroutine because otherwise if this refresh is
@@ -480,7 +545,7 @@ func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 			// deadlock, which then means stopCh can never been seen and we can
 			// block shutdown
 			go func() {
-				defer atomic.AddInt32(&opCount, -1)
+				defer atomic.AddInt32(opCount, -1)
 				c.Leader()
 			}()
 		case <-stopCh:
@@ -492,18 +557,18 @@ func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
 func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
-	var opCount int32
+	opCount := new(int32)
 	for {
 		select {
 		case <-time.After(keyRotateCheckInterval):
-			count := atomic.AddInt32(&opCount, 1)
+			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
-				atomic.AddInt32(&opCount, -1)
+				atomic.AddInt32(opCount, -1)
 				continue
 			}
 
 			go func() {
-				defer atomic.AddInt32(&opCount, -1)
+				defer atomic.AddInt32(opCount, -1)
 				// Only check if we are a standby
 				c.stateLock.RLock()
 				standby := c.standby

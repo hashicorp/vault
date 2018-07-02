@@ -1,8 +1,9 @@
 import Ember from 'ember';
 import DS from 'ember-data';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
-const { computed, get } = Ember;
+const { computed } = Ember;
 
 export default DS.Model.extend({
   backend: attr('string'),
@@ -10,16 +11,7 @@ export default DS.Model.extend({
   pem: attr('string'),
   caChain: attr('string'),
   attrList(keys) {
-    const attrMap = get(this.constructor, 'attributes');
-    keys = keys.map(key => {
-      let meta = attrMap.get(key);
-      return {
-        type: meta.type,
-        name: meta.name,
-        options: meta.options,
-      };
-    });
-    return keys;
+    return expandAttributeMeta(this, keys);
   },
 
   //urls

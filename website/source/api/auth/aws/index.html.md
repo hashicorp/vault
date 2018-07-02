@@ -105,7 +105,6 @@ $ curl \
 ```json
 {
   "data": {
-    "secret_key": "vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj",
     "access_key": "VKIAJBRHKH6EVTTNXDHA",
     "endpoint": "",
     "iam_endpoint": "",
@@ -988,9 +987,9 @@ token.
 
 ### Parameters
 
-- `role_tag` `(string: <required>)` - Role tag to be blacklisted. The tag can be
-  supplied as-is. In order to avoid any encoding problems, it can be base64
-  encoded.
+- `role_tag` `(string: <required>)` - Role tag to be blacklisted. This is the `tag_value` returned when the role tag is 
+  created. The tag can be supplied as-is. In order to avoid any encoding problems, it can be base64
+  encoded. 
 
 ### Sample Request
 

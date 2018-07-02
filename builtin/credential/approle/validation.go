@@ -24,36 +24,36 @@ type secretIDStorageEntry struct {
 	// the SecretID it belongs to, and hence can be used for listing
 	// and deleting SecretIDs. Accessors cannot be used as valid
 	// SecretIDs during login.
-	SecretIDAccessor string `json:"secret_id_accessor" structs:"secret_id_accessor" mapstructure:"secret_id_accessor"`
+	SecretIDAccessor string `json:"secret_id_accessor" mapstructure:"secret_id_accessor"`
 
 	// Number of times this SecretID can be used to perform the login
 	// operation
-	SecretIDNumUses int `json:"secret_id_num_uses" structs:"secret_id_num_uses" mapstructure:"secret_id_num_uses"`
+	SecretIDNumUses int `json:"secret_id_num_uses" mapstructure:"secret_id_num_uses"`
 
 	// Duration after which this SecretID should expire. This is capped by
 	// the backend mount's max TTL value.
-	SecretIDTTL time.Duration `json:"secret_id_ttl" structs:"secret_id_ttl" mapstructure:"secret_id_ttl"`
+	SecretIDTTL time.Duration `json:"secret_id_ttl" mapstructure:"secret_id_ttl"`
 
 	// The time when the SecretID was created
-	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
+	CreationTime time.Time `json:"creation_time" mapstructure:"creation_time"`
 
 	// The time when the SecretID becomes eligible for tidy operation.
 	// Tidying is performed by the PeriodicFunc of the backend which is 1
 	// minute apart.
-	ExpirationTime time.Time `json:"expiration_time" structs:"expiration_time" mapstructure:"expiration_time"`
+	ExpirationTime time.Time `json:"expiration_time" mapstructure:"expiration_time"`
 
 	// The time representing the last time this storage entry was modified
-	LastUpdatedTime time.Time `json:"last_updated_time" structs:"last_updated_time" mapstructure:"last_updated_time"`
+	LastUpdatedTime time.Time `json:"last_updated_time" mapstructure:"last_updated_time"`
 
 	// Metadata that belongs to the SecretID
-	Metadata map[string]string `json:"metadata" structs:"metadata" mapstructure:"metadata"`
+	Metadata map[string]string `json:"metadata" mapstructure:"metadata"`
 
 	// CIDRList is a set of CIDR blocks that impose source address
 	// restrictions on the usage of SecretID
-	CIDRList []string `json:"cidr_list" structs:"cidr_list" mapstructure:"cidr_list"`
+	CIDRList []string `json:"cidr_list" mapstructure:"cidr_list"`
 
 	// This is a deprecated field
-	SecretIDNumUsesDeprecated int `json:"SecretIDNumUses" structs:"SecretIDNumUses" mapstructure:"SecretIDNumUses"`
+	SecretIDNumUsesDeprecated int `json:"SecretIDNumUses" mapstructure:"SecretIDNumUses"`
 }
 
 // Represents the payload of the storage entry of the accessor that maps to a
@@ -63,7 +63,7 @@ type secretIDStorageEntry struct {
 type secretIDAccessorStorageEntry struct {
 	// Hash of the SecretID which can be used to find the storage index at which
 	// properties of SecretID is stored.
-	SecretIDHMAC string `json:"secret_id_hmac" structs:"secret_id_hmac" mapstructure:"secret_id_hmac"`
+	SecretIDHMAC string `json:"secret_id_hmac" mapstructure:"secret_id_hmac"`
 }
 
 // verifyCIDRRoleSecretIDSubset checks if the CIDR blocks set on the secret ID

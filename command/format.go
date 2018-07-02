@@ -218,7 +218,9 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 			out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, humanDurationInt(secret.Auth.LeaseDuration)))
 		}
 		out = append(out, fmt.Sprintf("token_renewable %s %t", hopeDelim, secret.Auth.Renewable))
-		out = append(out, fmt.Sprintf("token_policies %s %v", hopeDelim, secret.Auth.Policies))
+		out = append(out, fmt.Sprintf("token_policies %s %q", hopeDelim, secret.Auth.TokenPolicies))
+		out = append(out, fmt.Sprintf("identity_policies %s %q", hopeDelim, secret.Auth.IdentityPolicies))
+		out = append(out, fmt.Sprintf("policies %s %q", hopeDelim, secret.Auth.Policies))
 		for k, v := range secret.Auth.Metadata {
 			out = append(out, fmt.Sprintf("token_meta_%s %s %v", k, hopeDelim, v))
 		}

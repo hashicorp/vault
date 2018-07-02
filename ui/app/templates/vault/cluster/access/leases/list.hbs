@@ -1,64 +1,64 @@
-<header class="page-header">
-  {{key-value-header
-    baseKey=baseKey
-    path="vault.cluster.access.leases.list"
-    model=clusterController.model.name
-    root=backendCrumb
-    showCurrent=true
-  }}
-  <div class="level">
-    <div class="level-left">
-      <h1 class="title is-3">
-        {{#link-to "vault.cluster.access.leases.list-root"}}
-          Leases
-        {{/link-to}}
-      </h1>
-    </div>
-    <div class="level-right">
-      <div class="field is-grouped">
-        {{#if (not-eq baseKey.id '')}}
-          <div class="control">
-            {{#if (and capabilities.forceRevokePrefix.canUpdate (not confirmingRevoke))}}
-              {{#confirm-action
-                buttonClasses="button is-ghost is-compact"
-                onConfirmAction=(action "revokePrefix" baseKey.id true)
-                confirmMessage= (concat
-                  "Confirming removes all leases under "
-                  baseKey.id
-                  " and disregards any errors encountered."
-                )
-                confirmButtonText=(concat "Revoke " baseKey.id)
-                confirmButtonClasses="button is-danger is-outlined is-compact"
-                cancelButtonText="Cancel"
-                cancelButtonClasses="button is-outlined is-compact"
-                showConfirm=confirmingForceRevoke
+<PageHeader as |p|>
+  <p.top>
+    {{key-value-header
+      baseKey=baseKey
+      path="vault.cluster.access.leases.list"
+      model=clusterController.model.name
+      root=backendCrumb
+      showCurrent=true
+    }}
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{#link-to "vault.cluster.access.leases.list-root"}}
+        Leases
+      {{/link-to}}
+    </h1>
+  </p.levelLeft>
+  <p.levelRight>
+    <div class="field is-grouped">
+      {{#if (not-eq baseKey.id '')}}
+        <div class="control">
+          {{#if (and capabilities.forceRevokePrefix.canUpdate (not confirmingRevoke))}}
+            {{#confirm-action
+              buttonClasses="button is-ghost is-compact"
+              onConfirmAction=(action "revokePrefix" baseKey.id true)
+              confirmMessage= (concat
+              "Confirming removes all leases under "
+              baseKey.id
+              " and disregards any errors encountered."
+              )
+              confirmButtonText=(concat "Revoke " baseKey.id)
+              confirmButtonClasses="button is-danger is-outlined is-compact"
+              cancelButtonText="Cancel"
+              cancelButtonClasses="button is-outlined is-compact"
+              showConfirm=confirmingForceRevoke
               }}
-                Force revoke prefix
-              {{/confirm-action}}
-            {{/if}}
-          </div>
-          <div class="control">
-            {{#if (and capabilities.revokePrefix.canUpdate (not confirmingForceRevoke))}}
-              {{#confirm-action
-                buttonClasses="button is-ghost is-compact"
-                onConfirmAction=(action "revokePrefix" baseKey.id)
-                confirmMessage= (concat "Confirming will remove all leases under " baseKey.id)
-                confirmButtonText=(concat "Revoke " baseKey.id)
-                confirmButtonClasses="button is-danger is-outlined is-compact"
-                cancelButtonText="Cancel"
-                cancelButtonClasses="button is-outlined is-compact"
-                showConfirm=confirmingRevoke
-                data-test-lease-revoke-prefix=true
+              Force revoke prefix
+            {{/confirm-action}}
+          {{/if}}
+        </div>
+        <div class="control">
+          {{#if (and capabilities.revokePrefix.canUpdate (not confirmingForceRevoke))}}
+            {{#confirm-action
+              buttonClasses="button is-ghost is-compact"
+              onConfirmAction=(action "revokePrefix" baseKey.id)
+              confirmMessage= (concat "Confirming will remove all leases under " baseKey.id)
+              confirmButtonText=(concat "Revoke " baseKey.id)
+              confirmButtonClasses="button is-danger is-outlined is-compact"
+              cancelButtonText="Cancel"
+              cancelButtonClasses="button is-outlined is-compact"
+              showConfirm=confirmingRevoke
+              data-test-lease-revoke-prefix=true
               }}
-                Revoke prefix
-              {{/confirm-action}}
-            {{/if}}
-          </div>
-        {{/if}}
-      </div>
+              Revoke prefix
+            {{/confirm-action}}
+          {{/if}}
+        </div>
+      {{/if}}
     </div>
-  </div>
-</header>
+  </p.levelRight>
+</PageHeader>
 <div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
   <div class="level">
     <div class="level-left">

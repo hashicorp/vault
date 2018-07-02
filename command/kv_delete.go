@@ -101,14 +101,18 @@ func (c *KVDeleteCommand) Run(args []string) int {
 		return 2
 	}
 
+	var secret *api.Secret
 	if v2 {
-		err = c.deleteV2(path, mountPath, client)
+		secret, err = c.deleteV2(path, mountPath, client)
 	} else {
-		_, err = client.Logical().Delete(path)
+		secret, err = client.Logical().Delete(path)
 	}
 
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
+		if secret != nil {
+			OutputSecret(c.UI, secret)
+		}
 		return 2
 	}
 
@@ -116,29 +120,30 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) error {
+func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (*api.Secret, error) {
 	var err error
+	var secret *api.Secret
 	switch {
 	case len(c.flagVersions) > 0:
 		path = addPrefixToVKVPath(path, mountPath, "delete")
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		data := map[string]interface{}{
 			"versions": kvParseVersionsFlags(c.flagVersions),
 		}
 
-		_, err = client.Logical().Write(path, data)
+		secret, err = client.Logical().Write(path, data)
 	default:
 
 		path = addPrefixToVKVPath(path, mountPath, "data")
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		_, err = client.Logical().Delete(path)
+		secret, err = client.Logical().Delete(path)
 	}
 
-	return err
+	return secret, err
 }

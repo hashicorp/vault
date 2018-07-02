@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -68,15 +69,14 @@ path "secret/sample" {
 	entityID := resp.Data["id"].(string)
 
 	// Create a token for the entity and assign policy2 on the token
-	ent := &TokenEntry{
+	ent := &logical.TokenEntry{
 		ID:       "capabilitiestoken",
 		Path:     "secret/sample",
 		Policies: []string{"policy2"},
 		EntityID: entityID,
+		TTL:      time.Hour,
 	}
-	if err := c.tokenStore.create(context.Background(), ent); err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	testMakeTokenDirectly(t, c.tokenStore, ent)
 
 	actual, err := c.Capabilities(context.Background(), "capabilitiestoken", "secret/sample")
 	if err != nil {
@@ -135,14 +135,13 @@ func TestCapabilities(t *testing.T) {
 	}
 
 	// Create a token for the policy
-	ent := &TokenEntry{
+	ent := &logical.TokenEntry{
 		ID:       "capabilitiestoken",
 		Path:     "testpath",
 		Policies: []string{"dev"},
+		TTL:      time.Hour,
 	}
-	if err := c.tokenStore.create(context.Background(), ent); err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	testMakeTokenDirectly(t, c.tokenStore, ent)
 
 	actual, err = c.Capabilities(context.Background(), "capabilitiestoken", "foo/bar")
 	if err != nil {

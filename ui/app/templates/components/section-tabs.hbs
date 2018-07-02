@@ -4,7 +4,7 @@
       <nav class="tabs sub-nav">
         <ul>
         {{#each tabs as |tab|}}
-          {{#link-to params=tab.routeParams tagName="li"}}
+          {{#link-to params=tab.routeParams tagName="li" data-test-auth-section-tab=true}}
             <a href={{href-to params=tab.routeParams}}>
               {{tab.label}}
             </a>

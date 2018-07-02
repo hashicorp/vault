@@ -34,9 +34,15 @@ pkcs8 instead. Defaults to "der".`,
 	}
 
 	fields["ip_sans"] = &framework.FieldSchema{
-		Type: framework.TypeString,
+		Type: framework.TypeCommaStringSlice,
 		Description: `The requested IP SANs, if any, in a
 comma-delimited list`,
+	}
+
+	fields["uri_sans"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `The requested URI SANs, if any, in a
+comma-delimited list.`,
 	}
 
 	fields["other_sans"] = &framework.FieldSchema{
@@ -73,6 +79,13 @@ in the role, this may be an email address.`,
 in a comma-delimited list. If email protection
 is enabled for the role, this may contain
 email addresses.`,
+	}
+
+	fields["serial_number"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested serial number, if any. If you want
+more than one, specify alternative names in
+the alt_names map using OID 2.5.4.5.`,
 	}
 
 	fields["ttl"] = &framework.FieldSchema{
@@ -160,6 +173,13 @@ this value.`,
 		Type: framework.TypeCommaStringSlice,
 		Description: `If set, Postal Code will be set to
 this value.`,
+	}
+
+	fields["serial_number"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The requested serial number, if any. If you want
+more than one, specify alternative names in
+the alt_names map using OID 2.5.4.5.`,
 	}
 
 	return fields

@@ -128,7 +128,7 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 	testHTTP_Forwarding_Stress_Common(t, true, 50)
 }
 
-func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint64) {
+func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) {
 	testPlaintext := "the quick brown fox"
 	testPlaintextB64 := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
@@ -186,29 +186,33 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint64) 
 	}
 	//core.Logger().Printf("[TRACE] done mounting transit")
 
-	var totalOps uint64
-	var successfulOps uint64
-	var key1ver int64 = 1
-	var key2ver int64 = 1
-	var key3ver int64 = 1
-	var numWorkers uint64 = 50
-	var numWorkersStarted uint64
+	var totalOps *uint32 = new(uint32)
+	var successfulOps *uint32 = new(uint32)
+	var key1ver *int32 = new(int32)
+	*key1ver = 1
+	var key2ver *int32 = new(int32)
+	*key2ver = 1
+	var key3ver *int32 = new(int32)
+	*key3ver = 1
+	var numWorkers *uint32 = new(uint32)
+	*numWorkers = 50
+	var numWorkersStarted *uint32 = new(uint32)
 	var waitLock sync.Mutex
 	waitCond := sync.NewCond(&waitLock)
 
 	// This is the goroutine loop
 	doFuzzy := func(id int, parallel bool) {
-		var myTotalOps uint64
-		var mySuccessfulOps uint64
-		var keyVer int64 = 1
+		var myTotalOps uint32
+		var mySuccessfulOps uint32
+		var keyVer int32 = 1
 		// Check for panics, otherwise notify we're done
 		defer func() {
 			if err := recover(); err != nil {
 				core.Logger().Error("got a panic: %v", err)
 				t.Fail()
 			}
-			atomic.AddUint64(&totalOps, myTotalOps)
-			atomic.AddUint64(&successfulOps, mySuccessfulOps)
+			atomic.AddUint32(totalOps, myTotalOps)
+			atomic.AddUint32(successfulOps, mySuccessfulOps)
 			wg.Done()
 		}()
 
@@ -281,10 +285,10 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint64) 
 			}
 		}
 
-		atomic.AddUint64(&numWorkersStarted, 1)
+		atomic.AddUint32(numWorkersStarted, 1)
 
 		waitCond.L.Lock()
-		for atomic.LoadUint64(&numWorkersStarted) != numWorkers {
+		for atomic.LoadUint32(numWorkersStarted) != atomic.LoadUint32(numWorkers) {
 			waitCond.Wait()
 		}
 		waitCond.L.Unlock()
@@ -375,11 +379,11 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint64) 
 				if parallel {
 					switch chosenKey {
 					case "test1":
-						atomic.AddInt64(&key1ver, 1)
+						atomic.AddInt32(key1ver, 1)
 					case "test2":
-						atomic.AddInt64(&key2ver, 1)
+						atomic.AddInt32(key2ver, 1)
 					case "test3":
-						atomic.AddInt64(&key3ver, 1)
+						atomic.AddInt32(key3ver, 1)
 					}
 				} else {
 					keyVer++
@@ -389,19 +393,19 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint64) 
 
 			// Change the min version, which also tests the archive functionality
 			case "change_min_version":
-				var latestVersion int64 = keyVer
+				var latestVersion int32 = keyVer
 				if parallel {
 					switch chosenKey {
 					case "test1":
-						latestVersion = atomic.LoadInt64(&key1ver)
+						latestVersion = atomic.LoadInt32(key1ver)
 					case "test2":
-						latestVersion = atomic.LoadInt64(&key2ver)
+						latestVersion = atomic.LoadInt32(key2ver)
 					case "test3":
-						latestVersion = atomic.LoadInt64(&key3ver)
+						latestVersion = atomic.LoadInt32(key3ver)
 					}
 				}
 
-				setVersion := (myRand.Int63() % latestVersion) + 1
+				setVersion := (myRand.Int31() % latestVersion) + 1
 
 				//core.Logger().Printf("[TRACE] %s, %s, %d, new min version %d", chosenFunc, chosenKey, id, setVersion)
 
@@ -415,10 +419,10 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint64) 
 		}
 	}
 
-	atomic.StoreUint64(&numWorkers, num)
+	atomic.StoreUint32(numWorkers, num)
 
 	// Spawn some of these workers for 10 seconds
-	for i := 0; i < int(atomic.LoadUint64(&numWorkers)); i++ {
+	for i := 0; i < int(atomic.LoadUint32(numWorkers)); i++ {
 		wg.Add(1)
 		//core.Logger().Printf("[TRACE] spawning %d", i)
 		go doFuzzy(i+1, parallel)
@@ -427,10 +431,10 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint64) 
 	// Wait for them all to finish
 	wg.Wait()
 
-	if totalOps == 0 || totalOps != successfulOps {
-		t.Fatalf("total/successful ops zero or mismatch: %d/%d; parallel: %t, num %d", totalOps, successfulOps, parallel, num)
+	if *totalOps == 0 || *totalOps != *successfulOps {
+		t.Fatalf("total/successful ops zero or mismatch: %d/%d; parallel: %t, num %d", *totalOps, *successfulOps, parallel, num)
 	}
-	t.Logf("total operations tried: %d, total successful: %d; parallel: %t, num %d", totalOps, successfulOps, parallel, num)
+	t.Logf("total operations tried: %d, total successful: %d; parallel: %t, num %d", *totalOps, *successfulOps, parallel, num)
 }
 
 // This tests TLS connection state forwarding by ensuring that we can use a

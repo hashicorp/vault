@@ -63,8 +63,9 @@ type ServerCommand struct {
 
 	WaitGroup *sync.WaitGroup
 
-	logGate *gatedwriter.Writer
-	logger  log.Logger
+	logWriter io.Writer
+	logGate   *gatedwriter.Writer
+	logger    log.Logger
 
 	cleanupGuard sync.Once
 
@@ -91,6 +92,7 @@ type ServerCommand struct {
 	flagDevFourCluster   bool
 	flagDevTransactional bool
 	flagTestVerifyOnly   bool
+	flagCombineLogs      bool
 }
 
 type ServerListener struct {
@@ -108,9 +110,9 @@ Usage: vault server [options]
 
   This command starts a Vault server that responds to API requests. By default,
   Vault will start in a "sealed" state. The Vault cluster must be initialized
-  before use, usually by the "vault init" command. Each Vault server must also
-  be unsealed using the "vault unseal" command or the API before the server can
-  respond to requests.
+  before use, usually by the "vault operator init" command. Each Vault server must
+  also be unsealed using the "vault operator unseal" command or the API before the
+  server can respond to requests.
 
   Start a server with a configuration file:
 
@@ -259,7 +261,14 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Hidden:  true,
 	})
 
-	// TODO: should this be a public flag?
+	// TODO: should the below flags be public?
+	f.BoolVar(&BoolVar{
+		Name:    "combine-logs",
+		Target:  &c.flagCombineLogs,
+		Default: false,
+		Hidden:  true,
+	})
+
 	f.BoolVar(&BoolVar{
 		Name:    "test-verify-only",
 		Target:  &c.flagTestVerifyOnly,
@@ -291,6 +300,10 @@ func (c *ServerCommand) Run(args []string) int {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logGate = &gatedwriter.Writer{Writer: os.Stderr}
+	c.logWriter = c.logGate
+	if c.flagCombineLogs {
+		c.logWriter = os.Stdout
+	}
 	var level log.Level
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
@@ -309,23 +322,14 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	logFormat := os.Getenv("VAULT_LOG_FORMAT")
-	if logFormat == "" {
-		logFormat = os.Getenv("LOGXI_FORMAT")
-	}
-	switch strings.ToLower(logFormat) {
-	case "vault", "vault_json", "vault-json", "vaultjson", "json", "":
-		if c.flagDevThreeNode || c.flagDevFourCluster {
-			c.logger = log.New(&log.LoggerOptions{
-				Mutex:  &sync.Mutex{},
-				Output: c.logGate,
-				Level:  log.Trace,
-			})
-		} else {
-			c.logger = logging.NewVaultLoggerWithWriter(c.logGate, level)
-		}
-	default:
-		c.logger = logging.NewVaultLoggerWithWriter(c.logGate, level)
+	if c.flagDevThreeNode || c.flagDevFourCluster {
+		c.logger = log.New(&log.LoggerOptions{
+			Mutex:  &sync.Mutex{},
+			Output: c.logWriter,
+			Level:  log.Trace,
+		})
+	} else {
+		c.logger = logging.NewVaultLoggerWithWriter(c.logWriter, level)
 	}
 
 	grpclog.SetLogger(&grpclogFaker{
@@ -679,7 +683,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	lns := make([]ServerListener, 0, len(config.Listeners))
 	c.reloadFuncsLock.Lock()
 	for i, lnConfig := range config.Listeners {
-		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logGate, c.UI)
+		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logWriter, c.UI)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
 			return 1
@@ -935,7 +939,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		server := &http.Server{
-			Handler: handler,
+			Handler:           handler,
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			IdleTimeout:       5 * time.Minute,
 		}
 		go server.Serve(ln.Listener)
 	}
@@ -948,7 +955,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	// Output the header that the server has started
-	c.UI.Output("==> Vault server started! Log data will stream in below:\n")
+	if !c.flagCombineLogs {
+		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
+	}
 
 	// Inform any tests that the server is ready
 	select {

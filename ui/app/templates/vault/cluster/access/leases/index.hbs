@@ -1,12 +1,10 @@
-<header class="page-header">
-  <div class="level">
-    <div class="level-left">
-      <h1 class="title is-3">
-        Lookup a Lease
-      </h1>
-    </div>
-  </div>
-</header>
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Lookup a Lease
+    </h1>
+  </p.levelLeft>
+</PageHeader>
 
 <form {{action "lookupLease" leaseId on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">

@@ -29,6 +29,11 @@ type Auth struct {
 	// is associated with.
 	Policies []string `json:"policies" mapstructure:"policies" structs:"policies"`
 
+	// TokenPolicies and IdentityPolicies break down the list in Policies to
+	// help determine where a policy was sourced
+	TokenPolicies    []string `json:"token_policies" mapstructure:"token_policies" structs:"token_policies"`
+	IdentityPolicies []string `json:"identity_policies" mapstructure:"identity_policies" structs:"identity_policies"`
+
 	// Metadata is used to attach arbitrary string-type metadata to
 	// an authenticated user. This metadata will be outputted into the
 	// audit log.
@@ -74,6 +79,12 @@ type Auth struct {
 
 	// The set of CIDRs that this token can be used with
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
+
+	// CreationPath is a path that the backend can return to use in the lease.
+	// This is currently only supported for the token store where roles may
+	// change the perceived path of the lease, even though they don't change
+	// the request path itself.
+	CreationPath string `json:"creation_path"`
 }
 
 func (a *Auth) GoString() string {

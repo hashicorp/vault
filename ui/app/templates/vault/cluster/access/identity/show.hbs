@@ -1,34 +1,34 @@
-<header class="page-header">
-  <nav class="breadcrumb">
-    <ul>
-      <li>
-        <span class="sep">&#x0002f;</span>
-        <a href={{href-to "vault.cluster.access.identity.index"}}>
-          {{capitalize (pluralize model.identityType)}}
-        </a>
-      </li>
-    </ul>
-  </nav>
-  <div class="level">
-    <div class="level-left">
-      <h1 class="title is-3">
-        {{model.name}}
-      </h1>
-    </div>
-    <div class="level-right">
-      {{#unless (or (and (eq model.identityType "group") (eq model.type "internal")) model.alias)}}
-        <a href="{{href-to 'vault.cluster.access.identity.aliases.add' (pluralize model.identityType) model.id}}" class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true>
-          Add alias
-          {{i-con glyph="chevron-right" size=11}}
-        </a>
-      {{/unless}}
-      <a href="{{href-to 'vault.cluster.access.identity.edit' (pluralize model.identityType) model.id}}" class="button has-icon-right is-ghost is-compact" data-test-entity-edit-link=true>
-        Edit {{model.identityType}}
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          <a href={{href-to "vault.cluster.access.identity.index"}}>
+            {{capitalize (pluralize model.identityType)}}
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{model.name}}
+    </h1>
+  </p.levelLeft>
+  <p.levelRight>
+    {{#unless (or (and (eq model.identityType "group") (eq model.type "internal")) model.alias)}}
+      <a href="{{href-to 'vault.cluster.access.identity.aliases.add' (pluralize model.identityType) model.id}}" class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true>
+        Add alias
         {{i-con glyph="chevron-right" size=11}}
       </a>
-    </div>
-  </div>
-</header>
+    {{/unless}}
+    <a href="{{href-to 'vault.cluster.access.identity.edit' (pluralize model.identityType) model.id}}" class="button has-icon-right is-ghost is-compact" data-test-entity-edit-link=true>
+      Edit {{model.identityType}}
+      {{i-con glyph="chevron-right" size=11}}
+    </a>
+  </p.levelRight>
+</PageHeader>
 <div class="box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs sub-nav">
     <ul>

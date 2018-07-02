@@ -1,4 +1,4 @@
-package command
+package vault_test
 
 import (
 	"testing"

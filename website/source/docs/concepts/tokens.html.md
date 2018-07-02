@@ -13,7 +13,7 @@ can be used directly or [auth methods](/docs/concepts/auth.html)
 can be used to dynamically generate tokens based on external identities.
 
 If you've gone through the getting started guide, you probably noticed that
-`vault server -dev` (or `vault init` for a non-dev server) outputs an
+`vault server -dev` (or `vault operator init` for a non-dev server) outputs an
 initial "root token." This is the first method of authentication for Vault.
 It is also the only auth method that cannot be disabled.
 
@@ -50,7 +50,7 @@ type of token within Vault that can be set to never expire without any renewal
 needed. As a result, it is purposefully hard to create root tokens; in fact, as
 of version 0.6.1, there are only three ways to create root tokens:
 
-1. The initial root token generated at `vault init` time -- this token has no
+1. The initial root token generated at `vault operator init` time -- this token has no
    expiration
 2. By using another root token; a root token with an expiration cannot create a
    root token that never expires

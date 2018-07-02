@@ -2,7 +2,7 @@ import keys from 'vault/lib/keycodes';
 import argTokenizer from 'yargs-parser-tokenizer';
 
 const supportedCommands = ['read', 'write', 'list', 'delete'];
-const uiCommands = ['clearall', 'clear', 'fullscreen'];
+const uiCommands = ['clearall', 'clear', 'fullscreen', 'refresh'];
 
 export function extractDataAndFlags(data, flags) {
   return data.concat(flags).reduce((accumulator, val) => {
@@ -29,7 +29,7 @@ export function extractDataAndFlags(data, flags) {
   }, { data: {}, flags: {} });
 }
 
-export function executeUICommand(command, logAndOutput, clearLog, toggleFullscreen) {
+export function executeUICommand(command, logAndOutput, clearLog, toggleFullscreen, refreshFn) {
   const isUICommand = uiCommands.includes(command);
   if (isUICommand) {
     logAndOutput(command);
@@ -43,6 +43,9 @@ export function executeUICommand(command, logAndOutput, clearLog, toggleFullscre
       break;
     case 'fullscreen':
       toggleFullscreen();
+      break;
+    case 'refresh':
+      refreshFn();
       break;
   }
 
@@ -82,7 +85,9 @@ export function parseCommand(command, shouldThrow) {
 }
 
 export function logFromResponse(response, path, method, flags) {
-  if (!response) {
+  let { format, field } = flags;
+  let secret = response && (response.auth || response.data || response.wrap_info);
+  if (!secret) {
     let message =
       method === 'write'
         ? `Success! Data written to: ${path}`
@@ -90,8 +95,6 @@ export function logFromResponse(response, path, method, flags) {
 
     return { type: 'success', content: message };
   }
-  let { format, field } = flags;
-  let secret = response.auth || response.data || response.wrap_info;
 
   if (field) {
     let fieldValue = secret[field];

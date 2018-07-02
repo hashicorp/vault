@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import trimRight from 'vault/utils/trim-right';
 import PolicyEditController from 'vault/mixins/policy-edit-controller';
 
 export default Ember.Controller.extend(PolicyEditController, {
@@ -11,7 +12,8 @@ export default Ember.Controller.extend(PolicyEditController, {
       let model = this.get('model');
       model.set('policy', value);
       if (!model.get('name')) {
-        model.set('name', fileName);
+        let trimmedFileName = trimRight(fileName, ['.json', '.txt', '.hcl', '.policy']);
+        model.set('name', trimmedFileName);
       }
       this.set('showFileUpload', false);
     },

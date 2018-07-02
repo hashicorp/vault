@@ -4,6 +4,7 @@
   text-align: left;
   transition: opacity $speed-slow;
   will-change: opacity;
+  z-index: 300;
 
   &.is-animated {
     opacity: 1;

@@ -118,13 +118,15 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		Error: errString,
 
 		Auth: AuditAuth{
-			ClientToken:   auth.ClientToken,
-			Accessor:      auth.Accessor,
-			DisplayName:   auth.DisplayName,
-			Policies:      auth.Policies,
-			Metadata:      auth.Metadata,
-			EntityID:      auth.EntityID,
-			RemainingUses: req.ClientTokenRemainingUses,
+			ClientToken:      auth.ClientToken,
+			Accessor:         auth.Accessor,
+			DisplayName:      auth.DisplayName,
+			Policies:         auth.Policies,
+			TokenPolicies:    auth.TokenPolicies,
+			IdentityPolicies: auth.IdentityPolicies,
+			Metadata:         auth.Metadata,
+			EntityID:         auth.EntityID,
+			RemainingUses:    req.ClientTokenRemainingUses,
 		},
 
 		Request: AuditRequest{
@@ -277,12 +279,14 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 	var respAuth *AuditAuth
 	if resp.Auth != nil {
 		respAuth = &AuditAuth{
-			ClientToken: resp.Auth.ClientToken,
-			Accessor:    resp.Auth.Accessor,
-			DisplayName: resp.Auth.DisplayName,
-			Policies:    resp.Auth.Policies,
-			Metadata:    resp.Auth.Metadata,
-			NumUses:     resp.Auth.NumUses,
+			ClientToken:      resp.Auth.ClientToken,
+			Accessor:         resp.Auth.Accessor,
+			DisplayName:      resp.Auth.DisplayName,
+			Policies:         resp.Auth.Policies,
+			TokenPolicies:    resp.Auth.TokenPolicies,
+			IdentityPolicies: resp.Auth.IdentityPolicies,
+			Metadata:         resp.Auth.Metadata,
+			NumUses:          resp.Auth.NumUses,
 		}
 	}
 
@@ -313,13 +317,15 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		Type:  "response",
 		Error: errString,
 		Auth: AuditAuth{
-			DisplayName:   auth.DisplayName,
-			Policies:      auth.Policies,
-			Metadata:      auth.Metadata,
-			ClientToken:   auth.ClientToken,
-			Accessor:      auth.Accessor,
-			RemainingUses: req.ClientTokenRemainingUses,
-			EntityID:      auth.EntityID,
+			DisplayName:      auth.DisplayName,
+			Policies:         auth.Policies,
+			TokenPolicies:    auth.TokenPolicies,
+			IdentityPolicies: auth.IdentityPolicies,
+			Metadata:         auth.Metadata,
+			ClientToken:      auth.ClientToken,
+			Accessor:         auth.Accessor,
+			RemainingUses:    req.ClientTokenRemainingUses,
+			EntityID:         auth.EntityID,
 		},
 
 		Request: AuditRequest{
@@ -397,14 +403,16 @@ type AuditResponse struct {
 }
 
 type AuditAuth struct {
-	ClientToken   string            `json:"client_token"`
-	Accessor      string            `json:"accessor"`
-	DisplayName   string            `json:"display_name"`
-	Policies      []string          `json:"policies"`
-	Metadata      map[string]string `json:"metadata"`
-	NumUses       int               `json:"num_uses,omitempty"`
-	RemainingUses int               `json:"remaining_uses,omitempty"`
-	EntityID      string            `json:"entity_id"`
+	ClientToken      string            `json:"client_token"`
+	Accessor         string            `json:"accessor"`
+	DisplayName      string            `json:"display_name"`
+	Policies         []string          `json:"policies"`
+	TokenPolicies    []string          `json:"token_policies,omitempty"`
+	IdentityPolicies []string          `json:"identity_policies,omitempty"`
+	Metadata         map[string]string `json:"metadata"`
+	NumUses          int               `json:"num_uses,omitempty"`
+	RemainingUses    int               `json:"remaining_uses,omitempty"`
+	EntityID         string            `json:"entity_id"`
 }
 
 type AuditSecret struct {

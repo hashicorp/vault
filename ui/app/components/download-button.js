@@ -4,7 +4,7 @@ import hbs from 'htmlbars-inline-precompile';
 const { computed } = Ember;
 
 export default Ember.Component.extend({
-  layout: hbs`{{actionText}}`,
+  layout: hbs`{{#if hasBlock}} {{yield}} {{else}} {{actionText}} {{/if}}`,
   tagName: 'a',
   role: 'button',
   attributeBindings: ['role', 'download', 'href'],

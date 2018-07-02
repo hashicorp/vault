@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/client"
-	"github.com/hashicorp/vault/helper/ldaputil"
 )
 
 func NewSecretsClient(logger hclog.Logger) *SecretsClient {
@@ -18,7 +17,7 @@ type SecretsClient struct {
 	adClient *client.Client
 }
 
-func (c *SecretsClient) Get(conf *ldaputil.ConfigEntry, serviceAccountName string) (*client.Entry, error) {
+func (c *SecretsClient) Get(conf *client.ADConf, serviceAccountName string) (*client.Entry, error) {
 	filters := map[*client.Field][]string{
 		client.FieldRegistry.UserPrincipalName: {serviceAccountName},
 	}
@@ -37,7 +36,7 @@ func (c *SecretsClient) Get(conf *ldaputil.ConfigEntry, serviceAccountName strin
 	return entries[0], nil
 }
 
-func (c *SecretsClient) GetPasswordLastSet(conf *ldaputil.ConfigEntry, serviceAccountName string) (time.Time, error) {
+func (c *SecretsClient) GetPasswordLastSet(conf *client.ADConf, serviceAccountName string) (time.Time, error) {
 	entry, err := c.Get(conf, serviceAccountName)
 	if err != nil {
 		return time.Time{}, err
@@ -65,9 +64,16 @@ func (c *SecretsClient) GetPasswordLastSet(conf *ldaputil.ConfigEntry, serviceAc
 	return t, nil
 }
 
-func (c *SecretsClient) UpdatePassword(conf *ldaputil.ConfigEntry, serviceAccountName string, newPassword string) error {
+func (c *SecretsClient) UpdatePassword(conf *client.ADConf, serviceAccountName string, newPassword string) error {
 	filters := map[*client.Field][]string{
 		client.FieldRegistry.UserPrincipalName: {serviceAccountName},
+	}
+	return c.adClient.UpdatePassword(conf, filters, newPassword)
+}
+
+func (c *SecretsClient) UpdateRootPassword(conf *client.ADConf, bindDN string, newPassword string) error {
+	filters := map[*client.Field][]string{
+		client.FieldRegistry.DistinguishedName: {bindDN},
 	}
 	return c.adClient.UpdatePassword(conf, filters, newPassword)
 }

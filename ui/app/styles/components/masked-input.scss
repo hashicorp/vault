@@ -1,0 +1,72 @@
+.masked-input {
+  position: relative;
+}
+
+.masked-input .masked-value {
+  padding-left: 2.50rem;
+}
+
+// we want to style the boxes the same everywhere so they
+// need to be the same font and small
+.masked-input.masked .masked-value {
+  font-size: 9px;
+  font-family: $family-primary;
+}
+
+.masked-input.masked .masked-value {
+  line-height: 2.5;
+}
+// aligns the boxes on the input page
+.masked-input.masked:not(.display-only) .masked-value {
+  line-height: 3;
+}
+
+//override bulma's pre styling
+.masked-input .display-only {
+  line-height: 1.5;
+  font-size: 1rem;
+}
+
+.masked-input-toggle {
+  background: transparent;
+  position: absolute;
+  height: auto;
+  top: $size-6/4;
+  bottom: $size-6/4;
+  left: 1px;
+  line-height: 1rem;
+  min-width: 0;
+  max-height: 2rem;
+  padding: 0 $size-8;
+  z-index: 100;
+  border: 0;
+  box-shadow: none;
+  color: $blue;
+
+  &:active,
+  &.is-active,
+  &:focus,
+  &.is-focused,
+  &:hover,
+  &:focus:not(:active) {
+    color: $blue;
+    border: 0;
+    box-shadow: none;
+  }
+}
+
+.masked-input.display-only .masked-input-toggle {
+  top: 0;
+  font-size: 0.5rem;
+  height: 1rem;
+  padding-left: 0;
+}
+
+.masked-input .input:focus + .masked-input-toggle {
+  background: rgba($white, 0.95);
+}
+
+.masked-input.masked .masked-value,
+.masked-input.masked .masked-input-toggle {
+  color: $grey-light;
+}
