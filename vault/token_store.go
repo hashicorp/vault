@@ -1559,28 +1559,10 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				lock := locksutil.LockForKey(ts.tokenLocks, accessorEntry.TokenID)
 				lock.RLock()
 
-				obfuscatedID, err := ts.SaltID(ctx, accessorEntry.TokenID)
+				te, err := ts.lookupTokenNonLocked(ctx, accessorEntry.TokenID, true)
 				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to HMAC token ID: {{err}}", err))
-					lock.RUnlock()
+					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup token: {{err}}", err))
 					continue
-				}
-				te, err := ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
-				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup token ID HMAC: {{err}}", err))
-					lock.RUnlock()
-					continue
-				}
-
-				if te == nil {
-					// This is only here for backwards compatibility
-					obfuscatedID, err = ts.SaltID(ctx, accessorEntry.TokenID)
-					if err != nil {
-						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup token ID hash: {{err}}", err))
-						lock.RUnlock()
-						continue
-					}
-					te, err = ts.lookupObfuscatedToken(ctx, obfuscatedID, true)
 				}
 
 				lock.RUnlock()
@@ -1589,7 +1571,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				// more and conclude that accessor, leases, and secondary index entries
 				// for this token should not exist as well.
 				if te == nil {
-					ts.logger.Info("deleting token with nil entry", "obfuscated_id", obfuscatedID)
+					ts.logger.Info("deleting token with nil entry", "obfuscated_accessor", obfuscatedAccessor)
 
 					// RevokeByToken expects a '*logical.TokenEntry'. For the
 					// purposes of tidying, it is sufficient if the token
