@@ -72,6 +72,10 @@ type TokenEntry struct {
 
 	// ParentVersion is the token entry version of the parent token
 	ParentVersion int `json:"parent_version" mapstructure:"parent_version" structs:"parent_version" sentinel:""`
+
+	// CubbyholeID is the identifier of the cubbyhole storage belonging to this
+	// token
+	CubbyholeID string `json:"cubbyhole_id" mapstructure:"cubbyhole_id" structs:"cubbyhole_id" sentinel:""`
 }
 
 func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {

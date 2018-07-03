@@ -822,6 +822,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			NumUses:      auth.NumUses,
 			EntityID:     auth.EntityID,
 			BoundCIDRs:   auth.BoundCIDRs,
+			Version:      2,
 		}
 
 		te.Policies = policyutil.SanitizePolicies(auth.Policies, policyutil.AddDefaultPolicy)

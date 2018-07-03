@@ -464,7 +464,15 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 			// salted ID, so we double-salt what's going to the cubbyhole backend
 			req.ClientToken = re.SaltIDSHA1(salt.SaltID(req.ClientToken))
 		default:
-			req.ClientToken = re.SaltIDSHA256("h" + salt.GetHMAC(req.ClientToken))
+			if req.TokenEntry() == nil {
+				return nil, false, false, fmt.Errorf("missing token entry in request")
+			}
+
+			if req.TokenEntry().CubbyholeID == "" {
+				return nil, false, false, fmt.Errorf("missing cubbyhole ID in token entry")
+			}
+
+			req.ClientToken = req.TokenEntry().CubbyholeID
 		}
 	default:
 		// There are no use cases yet that would require client token to be

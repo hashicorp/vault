@@ -72,6 +72,10 @@ var (
 			return nil
 		}
 
+		if te == nil {
+			return fmt.Errorf("nil token entry")
+		}
+
 		switch {
 		case te.Version < 2:
 			// This is only here for backwards compatibility
@@ -81,11 +85,10 @@ var (
 			}
 			return ts.cubbyholeBackend.revoke(ctx, salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
 		default:
-			idHMAC, err := ts.hmac(ctx, te.ID)
-			if err != nil {
-				return err
+			if te.CubbyholeID == "" {
+				return fmt.Errorf("missing cubbyhole ID while destroying")
 			}
-			return ts.cubbyholeBackend.revoke(ctx, salt.SaltID(ts.cubbyholeBackend.saltUUID, idHMAC, salt.SHA256Hash))
+			return ts.cubbyholeBackend.revoke(ctx, te.CubbyholeID)
 		}
 	}
 )
@@ -723,6 +726,14 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 	}
 
 	entry.Version = 2
+
+	if entry.CubbyholeID == "" {
+		cubbyholeID, err := uuid.GenerateUUID()
+		if err != nil {
+			return err
+		}
+		entry.CubbyholeID = cubbyholeID
+	}
 
 	te, err := ts.lookupTokenNonLocked(ctx, entry.ID, true)
 	if err != nil {
@@ -1577,16 +1588,26 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 					// purposes of tidying, it is sufficient if the token
 					// entry only has ID set.
 					tokenEntry := &logical.TokenEntry{
-						ID: accessorEntry.TokenID,
+						ID:      accessorEntry.TokenID,
+						Version: 2,
 					}
 
 					// Attempt to revoke the token. This will also revoke
 					// the leases associated with the token.
-					err := ts.expiration.RevokeByToken(tokenEntry)
+					err = ts.expiration.RevokeByToken(tokenEntry)
 					if err != nil {
 						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to revoke leases of expired token: {{err}}", err))
 						continue
 					}
+
+					// This is only here for backwards compatibility
+					tokenEntry.Version = 0
+					err = ts.expiration.RevokeByToken(tokenEntry)
+					if err != nil {
+						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to revoke leases of expired token: {{err}}", err))
+						continue
+					}
+
 					deletedCountInvalidTokenInAccessor++
 
 					index := accessorPrefix + obfuscatedAccessor
