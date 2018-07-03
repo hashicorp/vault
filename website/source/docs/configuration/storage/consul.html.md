@@ -50,6 +50,9 @@ vault.service.consul
 Sealed Vault instances will mark themselves as unhealthy to avoid being returned
 at Consul's service discovery layer.
 
+Note that if you have configured multiple listeners for Vault, you must specify
+which one Consul should advertise to the cluster using [`api_addr`][api-addr]
+and [`cluster_addr`][cluster-addr] ([example][listener-example]).
 
 ## `consul` Parameters
 
@@ -236,3 +239,6 @@ storage "consul" {
 [consul-encryption]: https://www.consul.io/docs/agent/encryption.html "Consul Encryption"
 [consul-translate-wan-addrs]: https://www.consul.io/docs/agent/options.html#translate_wan_addrs "Consul Configuration"
 [consul-session-ttl]: https://www.consul.io/docs/agent/options.html#session_ttl_min "Consul Configuration"
+[api-addr]: /docs/configuration/index.html#api_addr
+[cluster-addr]: /docs/configuration/index.html#cluster_addr
+[listener-example]: /docs/configuration/listener/tcp.html#listening-on-multiple-interfaces
