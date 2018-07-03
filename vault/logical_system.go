@@ -3197,6 +3197,8 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 
 	cubbyReq.TokenEntryVersion = te.Version
 
+	cubbyReq.SetTokenEntry(te)
+
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
@@ -3277,6 +3279,8 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 
 	cubbyReq.TokenEntryVersion = te.Version
 
+	cubbyReq.SetTokenEntry(te)
+
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
@@ -3315,6 +3319,8 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		ClientToken:       token,
 		TokenEntryVersion: te.Version,
 	}
+
+	cubbyReq.SetTokenEntry(te)
 
 	cubbyResp, err = b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {

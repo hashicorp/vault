@@ -175,7 +175,9 @@ DONELISTHANDLING:
 		ClientToken:       te.ID,
 		TokenEntryVersion: te.Version,
 	}
+
 	cubbyReq.SetTokenEntry(&te)
+
 	if sealWrap {
 		cubbyReq.WrapInfo = &logical.RequestWrapInfo{
 			SealWrap: true,
