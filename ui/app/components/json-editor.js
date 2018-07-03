@@ -12,6 +12,7 @@ const JSON_EDITOR_DEFAULTS = {
   lint: { lintOnChange: false },
   theme: 'hashi',
   readOnly: false,
+  showCursorWhenSelecting: true,
 };
 
 export default IvyCodemirrorComponent.extend({
