@@ -28,12 +28,17 @@ const routerService = Ember.Service.extend({
   transitionTo() {
     return Ember.RSVP.resolve();
   },
+  replaceWith() {
+    return Ember.RSVP.resolve();
+  },
 });
 moduleForComponent('auth-form', 'Integration | Component | auth form', {
   integration: true,
   beforeEach() {
     Ember.getOwner(this).lookup('service:csp-event').attach();
     component.setContext(this);
+    this.register('service:router', routerService);
+    this.inject.service('router');
   },
 
   afterEach() {
@@ -47,7 +52,8 @@ test('it renders error on CSP violation', function(assert) {
   this.register('service:auth', authService);
   this.inject.service('auth');
   this.set('cluster', Ember.Object.create({ standby: true }));
-  this.render(hbs`{{auth-form cluster=cluster}}`);
+  this.set('selectedAuth', 'token');
+  this.render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
   assert.equal(component.errorText, '');
   component.login();
   // because this is an ember-concurrency backed service,
@@ -72,7 +78,8 @@ test('it renders with vault style errors', function(assert) {
   });
 
   this.set('cluster', Ember.Object.create({}));
-  this.render(hbs`{{auth-form cluster=cluster}}`);
+  this.set('selectedAuth', 'token');
+  this.render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
   return component.login().then(() => {
     assert.equal(component.errorText, 'Error Authentication failed: Not allowed');
     server.shutdown();
@@ -87,7 +94,8 @@ test('it renders AdapterError style errors', function(assert) {
   });
 
   this.set('cluster', Ember.Object.create({}));
-  this.render(hbs`{{auth-form cluster=cluster}}`);
+  this.set('selectedAuth', 'token');
+  this.render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
   return component.login().then(() => {
     assert.equal(component.errorText, 'Error Authentication failed: Bad Request');
     server.shutdown();
@@ -137,9 +145,7 @@ test('it renders all the supported methods when no supported methods are present
 
 test('it makes a request to unwrap if passed a wrappedToken and logs in', function(assert) {
   this.register('service:auth', workingAuthService);
-  this.register('service:router', routerService);
   this.inject.service('auth');
-  this.inject.service('router');
   let authSpy = sinon.spy(this.get('auth'), 'authenticate');
   let server = new Pretender(function() {
     this.post('/v1/sys/wrapping/unwrap', () => {

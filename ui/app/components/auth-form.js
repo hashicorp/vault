@@ -143,7 +143,7 @@ export default Ember.Component.extend(DEFAULTS, {
         error: null,
       });
       let targetRoute = this.get('redirectTo') || 'vault.cluster';
-      let backend = this.get('selectedAuthBackend');
+      let backend = this.get('selectedAuthBackend') || {};
       let path = get(backend, 'path') || this.get('customPath');
       let backendMeta = BACKENDS.find(
         b => get(b, 'type').toLowerCase() === get(backend, 'type').toLowerCase()
