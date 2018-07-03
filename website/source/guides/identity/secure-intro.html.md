@@ -1,14 +1,53 @@
 ---
 layout: "guides"
-page_title: "Vault Secure Introduction - Guides"
+page_title: "Secure Introduction of Vault Clients - Guides"
 sidebar_current: "guides-identity-secure-intro"
 description: |-
-  Tokens are the core method for authentication within Vault. The natural
-  question be, "how do I securely distribute the initial token to a machine or
-  application?"  This guide aims to discuss the secure introduction methods.
+  This introductory guide walk through the mechanism of Vault clients to
+  authenticate with Vault. There are two approaches at a high-level: platform
+  integration, and trusted orchestrator.
 ---
 
-# Authentication
+# Secure Introduction of Vault Clients
+
+A _secret_ is something that will elevate the risk if  exposed to unauthorized
+entities and results in undesired consequences. For example:
+
+- Unauthorized data access
+- Identity spoofing
+- Private data egress
+- Regulatory fines
+
+This means that only the ***trusted entities*** should have an access to your secrets. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

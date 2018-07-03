@@ -12,6 +12,9 @@ description: |-
 
 This guide walks you through Identity and Access Management topics.
 
+- [Secure Introduction of Vault Clients](/guides/identity/secure-intro.html)
+explains the  mechanism of the client authentication against a Vault server. 
+
 - [Policies](/guides/identity/policies.html) are used to instrument
 Role-Based Access Control (RBAC) by specifying access privileges. Authoring of
 policies is probably the first step the Vault administrator performs. This guide
