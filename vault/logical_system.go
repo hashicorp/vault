@@ -3141,6 +3141,9 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 		ClientToken:       te.ID,
 		TokenEntryVersion: te.Version,
 	}
+
+	cubbyReq.SetTokenEntry(te)
+
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return "", errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
