@@ -89,6 +89,51 @@ func NewIPAddr(a net.IP) (Attribute, error) {
 	return b, nil
 }
 
+// IPv6Addr returns the given Attribute as an IPv6 IP address. An error is
+// returned if the attribute is not 16 bytes long.
+func IPv6Addr(a Attribute) (net.IP, error) {
+	if len(a) != net.IPv6len {
+		return nil, errors.New("invalid length")
+	}
+	b := make([]byte, net.IPv6len)
+	copy(b, []byte(a))
+	return b, nil
+}
+
+// NewIPv6Addr returns a new Attribute from the given IP address. An error is
+// returned if the given address is not an IPv6 address.
+func NewIPv6Addr(a net.IP) (Attribute, error) {
+	a = a.To16()
+	if a == nil {
+		return nil, errors.New("invalid IPv6 address")
+	}
+	b := make(Attribute, len(a))
+	copy(b, Attribute(a))
+	return b, nil
+}
+
+// IFID returns the given attribute as a 8-byte hardware address. An error is
+// return if the attribute is not 8 bytes long.
+func IFID(a Attribute) (net.HardwareAddr, error) {
+	if len(a) != 8 {
+		return nil, errors.New("invalid length")
+	}
+	ifid := make(net.HardwareAddr, len(a))
+	copy(ifid, a)
+	return ifid, nil
+}
+
+// NewIFID returns a new Attribute from the given hardware address. An error
+// is returned if the address is not 8 bytes long.
+func NewIFID(addr net.HardwareAddr) (Attribute, error) {
+	if len(addr) != 8 {
+		return nil, errors.New("invalid length")
+	}
+	attr := make(Attribute, len(addr))
+	copy(attr, addr)
+	return attr, nil
+}
+
 // UserPassword decrypts the given  "User-Password"-encrypted (as defined in RFC
 // 2865) Attribute, and returns the plaintext. An error is returned if the
 // attribute length is invalid, the secret is empty, or the requestAuthenticator
@@ -223,7 +268,70 @@ func NewVendorSpecific(vendorID uint32, value Attribute) (Attribute, error) {
 	return a, nil
 }
 
-// TODO: ipv6addr
+// Integer64 returns the given attribute as an integer. An error is returned if
+// the attribute is not 8 bytes long.
+func Integer64(a Attribute) (uint64, error) {
+	if len(a) != 8 {
+		return 0, errors.New("invalid length")
+	}
+	return binary.BigEndian.Uint64(a), nil
+}
+
+// NewInteger64 creates a new Attribute from the given integer value.
+func NewInteger64(i uint64) Attribute {
+	v := make([]byte, 8)
+	binary.BigEndian.PutUint64(v, i)
+	return Attribute(v)
+}
+
+// Tag returns the components of a tagged attribute.
+func Tag(a Attribute) (tag byte, value Attribute, err error) {
+	switch len(a) {
+	case 0:
+		err = errors.New("invalid length")
+	case 1:
+		tag = a[0]
+	default:
+		tag = a[0]
+		value = make(Attribute, len(a)-1)
+		copy(value, a[1:])
+	}
+	return
+}
+
+// NewTag returns a new tagged attribute.
+func NewTag(tag byte, value Attribute) (Attribute, error) {
+	if len(value) > 252 {
+		return nil, errors.New("invalid value length")
+	}
+	a := make(Attribute, 1+len(value))
+	a[0] = tag
+	copy(a[1:], value)
+	return a, nil
+}
+
+// TLV returns a components of a Type-Length-Value (TLV) attribute.
+func TLV(a Attribute) (tlvType byte, typValue Attribute, err error) {
+	if len(a) < 3 || len(a) > 255 || int(a[1]) != len(a) {
+		err = errors.New("invalid length")
+		return
+	}
+	tlvType = a[0]
+	typValue = make(Attribute, len(a)-2)
+	copy(typValue, a[2:])
+	return
+}
+
+// NewTLV returns a new TLV attribute.
+func NewTLV(tlvType byte, tlvValue Attribute) (Attribute, error) {
+	if len(tlvValue) < 1 || len(tlvValue) > 253 {
+		return nil, errors.New("invalid value length")
+	}
+	a := make(Attribute, 1+1+len(tlvValue))
+	a[0] = tlvType
+	a[1] = byte(1 + 1 + len(tlvValue))
+	copy(a, tlvValue)
+	return a, nil
+}
+
 // TODO: ipv6prefix
-// TODO: ifid
-// TODO: integer64

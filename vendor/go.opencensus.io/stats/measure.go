@@ -16,69 +16,93 @@
 package stats
 
 import (
-	"errors"
-	"fmt"
 	"sync"
-
-	"go.opencensus.io/stats/internal"
+	"sync/atomic"
 )
 
-// Measure represents a type of metric to be tracked and recorded.
-// For example, latency, request Mb/s, and response Mb/s are measures
+// Measure represents a single numeric value to be tracked and recorded.
+// For example, latency, request bytes, and response bytes could be measures
 // to collect from a server.
 //
-// Each measure needs to be registered before being used.
-// Measure constructors such as Int64 and
-// Float64 automatically registers the measure
-// by the given name.
-// Each registered measure needs to be unique by name.
-// Measures also have a description and a unit.
+// Measures by themselves have no outside effects. In order to be exported,
+// the measure needs to be used in a View. If no Views are defined over a
+// measure, there is very little cost in recording it.
 type Measure interface {
+	// Name returns the name of this measure.
+	//
+	// Measure names are globally unique (among all libraries linked into your program).
+	// We recommend prefixing the measure name with a domain name relevant to your
+	// project or application.
+	//
+	// Measure names are never sent over the wire or exported to backends.
+	// They are only used to create Views.
 	Name() string
+
+	// Description returns the human-readable description of this measure.
 	Description() string
+
+	// Unit returns the units for the values this measure takes on.
+	//
+	// Units are encoded according to the case-sensitive abbreviations from the
+	// Unified Code for Units of Measure: http://unitsofmeasure.org/ucum.html
 	Unit() string
 }
 
-var (
-	mu           sync.RWMutex
-	measures     = make(map[string]Measure)
-	errDuplicate = errors.New("duplicate measure name")
-)
+// measureDescriptor is the untyped descriptor associated with each measure.
+// Int64Measure and Float64Measure wrap measureDescriptor to provide typed
+// recording APIs.
+// Two Measures with the same name will have the same measureDescriptor.
+type measureDescriptor struct {
+	subs int32 // access atomically
 
-func FindMeasure(name string) Measure {
-	mu.RLock()
-	defer mu.RUnlock()
-	if m, ok := measures[name]; ok {
-		return m
-	}
-	return nil
+	name        string
+	description string
+	unit        string
 }
 
-func register(m Measure) (Measure, error) {
-	key := m.Name()
+func (m *measureDescriptor) subscribe() {
+	atomic.StoreInt32(&m.subs, 1)
+}
+
+func (m *measureDescriptor) subscribed() bool {
+	return atomic.LoadInt32(&m.subs) == 1
+}
+
+var (
+	mu       sync.RWMutex
+	measures = make(map[string]*measureDescriptor)
+)
+
+func registerMeasureHandle(name, desc, unit string) *measureDescriptor {
 	mu.Lock()
 	defer mu.Unlock()
-	if stored, ok := measures[key]; ok {
-		return stored, errDuplicate
+
+	if stored, ok := measures[name]; ok {
+		return stored
 	}
-	measures[key] = m
-	return m, nil
+	m := &measureDescriptor{
+		name:        name,
+		description: desc,
+		unit:        unit,
+	}
+	measures[name] = m
+	return m
 }
 
 // Measurement is the numeric value measured when recording stats. Each measure
 // provides methods to create measurements of their kind. For example, Int64Measure
 // provides M to convert an int64 into a measurement.
 type Measurement struct {
-	Value   interface{} // int64 or float64
-	Measure Measure
+	v float64
+	m Measure
 }
 
-func checkName(name string) error {
-	if len(name) > internal.MaxNameLength {
-		return fmt.Errorf("measure name cannot be larger than %v", internal.MaxNameLength)
-	}
-	if !internal.IsPrintable(name) {
-		return fmt.Errorf("measure name needs to be an ASCII string")
-	}
-	return nil
+// Value returns the value of the Measurement as a float64.
+func (m Measurement) Value() float64 {
+	return m.v
+}
+
+// Measure returns the Measure from which this Measurement was created.
+func (m Measurement) Measure() Measure {
+	return m.m
 }

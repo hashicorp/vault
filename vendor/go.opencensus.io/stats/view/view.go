@@ -28,107 +28,111 @@ import (
 	"go.opencensus.io/tag"
 )
 
-// View allows users to filter and aggregate the recorded events.
-// Each view has to be registered to enable data retrieval. Use New to
-// initiate new views. Unregister views once you don't want to collect any more
-// events.
+// View allows users to aggregate the recorded stats.Measurements.
+// Views need to be passed to the Register function to be before data will be
+// collected and sent to Exporters.
 type View struct {
-	name        string // name of View. Must be unique.
-	description string
+	Name        string // Name of View. Must be unique. If unset, will default to the name of the Measure.
+	Description string // Description is a human-readable description for this view.
 
-	// tagKeys to perform the aggregation on.
-	tagKeys []tag.Key
+	// TagKeys are the tag keys describing the grouping of this view.
+	// A single Row will be produced for each combination of associated tag values.
+	TagKeys []tag.Key
 
-	// Examples of measures are cpu:tickCount, diskio:time...
-	m stats.Measure
+	// Measure is a stats.Measure to aggregate in this view.
+	Measure stats.Measure
 
-	subscribed uint32 // 1 if someone is subscribed and data need to be exported, use atomic to access
-
-	collector *collector
+	// Aggregation is the aggregation function tp apply to the set of Measurements.
+	Aggregation *Aggregation
 }
 
-// New creates a new view with the given name and description.
-// View names need to be unique globally in the entire system.
-//
-// Data collection will only filter measurements recorded by the given keys.
-// Collected data will be processed by the given aggregation algorithm.
-//
-// Views need to be subscribed toin order to retrieve collection data.
-//
-// Once the view is no longer required, the view can be unregistered.
-func New(name, description string, keys []tag.Key, measure stats.Measure, agg Aggregation) (*View, error) {
-	if err := checkViewName(name); err != nil {
-		return nil, err
+// WithName returns a copy of the View with a new name. This is useful for
+// renaming views to cope with limitations placed on metric names by various
+// backends.
+func (v *View) WithName(name string) *View {
+	vNew := *v
+	vNew.Name = name
+	return &vNew
+}
+
+// same compares two views and returns true if they represent the same aggregation.
+func (v *View) same(other *View) bool {
+	if v == other {
+		return true
 	}
-	var ks []tag.Key
-	if len(keys) > 0 {
-		ks = make([]tag.Key, len(keys))
-		copy(ks, keys)
-		sort.Slice(ks, func(i, j int) bool { return ks[i].Name() < ks[j].Name() })
+	if v == nil {
+		return false
 	}
-	return &View{
-		name:        name,
-		description: description,
-		tagKeys:     ks,
-		m:           measure,
-		collector:   &collector{make(map[string]AggregationData), agg},
+	return reflect.DeepEqual(v.Aggregation, other.Aggregation) &&
+		v.Measure.Name() == other.Measure.Name()
+}
+
+// canonicalize canonicalizes v by setting explicit
+// defaults for Name and Description and sorting the TagKeys
+func (v *View) canonicalize() error {
+	if v.Measure == nil {
+		return fmt.Errorf("cannot register view %q: measure not set", v.Name)
+	}
+	if v.Aggregation == nil {
+		return fmt.Errorf("cannot register view %q: aggregation not set", v.Name)
+	}
+	if v.Name == "" {
+		v.Name = v.Measure.Name()
+	}
+	if v.Description == "" {
+		v.Description = v.Measure.Description()
+	}
+	if err := checkViewName(v.Name); err != nil {
+		return err
+	}
+	sort.Slice(v.TagKeys, func(i, j int) bool {
+		return v.TagKeys[i].Name() < v.TagKeys[j].Name()
+	})
+	return nil
+}
+
+// viewInternal is the internal representation of a View.
+type viewInternal struct {
+	view       *View  // view is the canonicalized View definition associated with this view.
+	subscribed uint32 // 1 if someone is subscribed and data need to be exported, use atomic to access
+	collector  *collector
+}
+
+func newViewInternal(v *View) (*viewInternal, error) {
+	return &viewInternal{
+		view:      v,
+		collector: &collector{make(map[string]AggregationData), v.Aggregation},
 	}, nil
 }
 
-// Name returns the name of the view.
-func (v *View) Name() string {
-	return v.name
-}
-
-// Description returns the name of the view.
-func (v *View) Description() string {
-	return v.description
-}
-
-func (v *View) subscribe() {
+func (v *viewInternal) subscribe() {
 	atomic.StoreUint32(&v.subscribed, 1)
 }
 
-func (v *View) unsubscribe() {
+func (v *viewInternal) unsubscribe() {
 	atomic.StoreUint32(&v.subscribed, 0)
 }
 
 // isSubscribed returns true if the view is exporting
 // data by subscription.
-func (v *View) isSubscribed() bool {
+func (v *viewInternal) isSubscribed() bool {
 	return atomic.LoadUint32(&v.subscribed) == 1
 }
 
-func (v *View) clearRows() {
+func (v *viewInternal) clearRows() {
 	v.collector.clearRows()
 }
 
-// TagKeys returns the list of tag keys associated with this view.
-func (v *View) TagKeys() []tag.Key {
-	return v.tagKeys
+func (v *viewInternal) collectedRows() []*Row {
+	return v.collector.collectedRows(v.view.TagKeys)
 }
 
-// Aggregation returns the data aggregation method used to aggregate
-// the measurements collected by this view.
-func (v *View) Aggregation() Aggregation {
-	return v.collector.a
-}
-
-// Measure returns the measure the view is collecting measurements for.
-func (v *View) Measure() stats.Measure {
-	return v.m
-}
-
-func (v *View) collectedRows(now time.Time) []*Row {
-	return v.collector.collectedRows(v.tagKeys, now)
-}
-
-func (v *View) addSample(m *tag.Map, val interface{}, now time.Time) {
+func (v *viewInternal) addSample(m *tag.Map, val float64) {
 	if !v.isSubscribed() {
 		return
 	}
-	sig := string(encodeWithKeys(m, v.tagKeys))
-	v.collector.addSample(sig, val, now)
+	sig := string(encodeWithKeys(m, v.view.TagKeys))
+	v.collector.addSample(sig, val)
 }
 
 // A Data is a set of rows about usage of the single measure associated
@@ -158,7 +162,7 @@ func (r *Row) String() string {
 	return buffer.String()
 }
 
-// Equal returns true if both Rows are equal. Tags are expected to be ordered
+// Equal returns true if both rows are equal. Tags are expected to be ordered
 // by the key name. Even both rows have the same tags but the tags appear in
 // different orders it will return false.
 func (r *Row) Equal(other *Row) bool {

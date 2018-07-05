@@ -14,9 +14,7 @@ const (
 )
 
 var (
-	_messageType_index_0 = [...]uint8{0, 5}
 	_messageType_index_1 = [...]uint8{0, 15, 24, 36, 45, 53}
-	_messageType_index_2 = [...]uint8{0, 9}
 	_messageType_index_3 = [...]uint8{0, 10, 19, 28}
 	_messageType_index_4 = [...]uint8{0, 14, 23, 31, 41, 57, 74, 85, 100, 115, 127, 138}
 	_messageType_index_5 = [...]uint8{0, 12, 25, 40, 56}

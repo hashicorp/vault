@@ -75,11 +75,13 @@ type SecretSource interface {
 
 // StaticSecretSource returns a SecretSource that uses secret for all requests.
 func StaticSecretSource(secret []byte) SecretSource {
-	return staticSecretSource(secret)
+	return &staticSecretSource{secret}
 }
 
-type staticSecretSource []byte
+type staticSecretSource struct {
+	secret []byte
+}
 
-func (secret staticSecretSource) RADIUSSecret(ctx context.Context, remoteAddr net.Addr) ([]byte, error) {
-	return []byte(secret), nil
+func (s *staticSecretSource) RADIUSSecret(ctx context.Context, remoteAddr net.Addr) ([]byte, error) {
+	return s.secret, nil
 }

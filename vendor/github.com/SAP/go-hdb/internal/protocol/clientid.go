@@ -34,7 +34,7 @@ func newClientID() clientID {
 }
 
 func (id clientID) kind() partKind {
-	return partKind(35) //TODO: extend part kind
+	return partKind(pkClientID)
 }
 
 func (id clientID) size() (int, error) {
@@ -46,9 +46,8 @@ func (id clientID) numArg() int {
 }
 
 func (id clientID) write(wr *bufio.Writer) error {
-	if _, err := wr.Write(id); err != nil {
-		return err
-	}
+	wr.Write(id)
+
 	if trace {
 		outLogger.Printf("client id: %s", id)
 	}

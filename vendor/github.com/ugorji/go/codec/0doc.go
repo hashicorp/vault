@@ -225,7 +225,7 @@ with some caveats. See Encode documentation.
 package codec
 
 // TODO:
-//   - In Go 1.10, when mid-stack inlining is enabled,
+//   - For Go 1.11, when mid-stack inlining is enabled,
 //     we should use committed functions for writeXXX and readXXX calls.
 //     This involves uncommenting the methods for decReaderSwitch and encWriterSwitch
 //     and using those (decReaderSwitch and encWriterSwitch) in all handles

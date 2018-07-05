@@ -28,11 +28,7 @@ func main() {
 		panic(err)
 	}
 
-	if response.Code == radius.CodeAccessAccept {
-		fmt.Println("Accepted")
-	} else {
-		fmt.Println("Denied")
-	}
+	fmt.Println("Code:", response.Code)
 }
 ```
 
@@ -49,3 +45,7 @@ Included in this repository are sub-packages of generated helpers for commonly u
 ## License
 
 MPL 2.0
+
+## Author
+
+Tim Cooper (<tim.cooper@layeh.com>)

@@ -75,8 +75,11 @@ func (p Plan) String() string {
 // OrganizationsService.ListAll method.
 type OrganizationsListOptions struct {
 	// Since filters Organizations by ID.
-	Since int `url:"since,omitempty"`
+	Since int64 `url:"since,omitempty"`
 
+	// Note: Pagination is powered exclusively by the Since parameter,
+	// ListOptions.Page has no effect.
+	// ListOptions.PerPage controls an undocumented GitHub API parameter.
 	ListOptions
 }
 

@@ -27,10 +27,14 @@ import (
 	"github.com/SAP/go-hdb/internal/unicode/cesu8"
 )
 
+var test uint32
+
 const (
 	realNullValue   uint32 = ^uint32(0)
 	doubleNullValue uint64 = ^uint64(0)
 )
+
+const noFieldName uint32 = 0xFFFFFFFF
 
 type uint32Slice []uint32
 
@@ -39,180 +43,56 @@ func (p uint32Slice) Less(i, j int) bool { return p[i] < p[j] }
 func (p uint32Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 func (p uint32Slice) sort()              { sort.Sort(p) }
 
-type field interface {
-	typeCode() typeCode
-	typeLength() (int64, bool)
-	typePrecisionScale() (int64, int64, bool)
-	nullable() bool
-	in() bool
-	out() bool
-	name(map[uint32]string) string
-	nameOffsets() []uint32
-	String() string
+type fieldNames map[uint32]string
+
+func newFieldNames() fieldNames {
+	return make(map[uint32]string)
 }
 
-// FieldSet contains database field metadata.
-type FieldSet struct {
-	fields []field
-	names  map[uint32]string
-}
-
-func newFieldSet(size int) *FieldSet {
-	return &FieldSet{
-		fields: make([]field, size),
-		names:  make(map[uint32]string),
+func (f fieldNames) addOffset(offset uint32) {
+	if offset != noFieldName {
+		f[offset] = ""
 	}
 }
 
-// String implements the Stringer interface.
-func (f *FieldSet) String() string {
-	a := make([]string, len(f.fields))
-	for i, f := range f.fields {
-		a[i] = f.String()
+func (f fieldNames) name(offset uint32) string {
+	if name, ok := f[offset]; ok {
+		return name
 	}
-	return fmt.Sprintf("%v", a)
+	return ""
 }
 
-func (f *FieldSet) nameOffsets() []uint32 {
-	for _, field := range f.fields {
-		for _, offset := range field.nameOffsets() {
-			if offset != 0xFFFFFFFF {
-				f.names[offset] = ""
-			}
-		}
-	}
-	// sort offsets (not sure if offsets are monotonically increasing in any case)
-	offsets := make([]uint32, len(f.names))
-	i := 0
-	for offset := range f.names {
-		offsets[i] = offset
-		i++
+func (f fieldNames) setName(offset uint32, name string) {
+	f[offset] = name
+}
+
+func (f fieldNames) sortOffsets() []uint32 {
+	offsets := make([]uint32, 0, len(f))
+	for k := range f {
+		offsets = append(offsets, k)
 	}
 	uint32Slice(offsets).sort()
 	return offsets
 }
 
-// NumInputField returns the number of input fields in a database statement.
-func (f *FieldSet) NumInputField() int {
-	cnt := 0
-	for _, field := range f.fields {
-		if field.in() {
-			cnt++
-		}
-	}
-	return cnt
-}
-
-// NumOutputField returns the number of output fields of a query or stored procedure.
-func (f *FieldSet) NumOutputField() int {
-	cnt := 0
-	for _, field := range f.fields {
-		if field.out() {
-			cnt++
-		}
-	}
-	return cnt
-}
-
-// DataType returns the datatype of the field at index idx.
-func (f *FieldSet) DataType(idx int) DataType {
-	return f.fields[idx].typeCode().dataType()
-}
-
-// DatabaseTypeName returns the type name of the field at index idx.
-// see https://golang.org/pkg/database/sql/driver/#RowsColumnTypeDatabaseTypeName
-func (f *FieldSet) DatabaseTypeName(idx int) string {
-	return f.fields[idx].typeCode().typeName()
-}
-
-// TypeLength returns the type length of the field at index idx.
-// see https://golang.org/pkg/database/sql/driver/#RowsColumnTypeLength
-func (f *FieldSet) TypeLength(idx int) (int64, bool) {
-	return f.fields[idx].typeLength()
-}
-
-// TypePrecisionScale returns the type precision and scale (decimal types) of the field at index idx.
-// see https://golang.org/pkg/database/sql/driver/#RowsColumnTypePrecisionScale
-func (f *FieldSet) TypePrecisionScale(idx int) (int64, int64, bool) {
-	return f.fields[idx].typePrecisionScale()
-}
-
-// TypeNullable returns true if the column at index idx may be null, false otherwise.
-// see https://golang.org/pkg/database/sql/driver/#RowsColumnTypeNullable
-func (f *FieldSet) TypeNullable(idx int) bool {
-	return f.fields[idx].nullable()
-}
-
-// OutputNames fills the names parameter with field names of all output fields. The size of the names slice must be at least
-// NumOutputField big.
-func (f *FieldSet) OutputNames(names []string) error {
-	i := 0
-	for _, field := range f.fields {
-		if field.out() {
-			if i >= len(names) { // assert names size
-				return fmt.Errorf("names size too short %d - expected min %d", len(names), i)
-			}
-			names[i] = field.name(f.names)
-			i++
-		}
-	}
-	return nil
-}
-
 // FieldValues contains rows read from database.
 type FieldValues struct {
-	s *Session
-
-	rows    int
-	cols    int
-	lobCols int
-	values  []driver.Value
-
-	descrs  []*LobReadDescr // Caution: store descriptor to guarantee valid addresses
-	writers []lobWriter
+	rows   int
+	cols   int
+	values []driver.Value
 }
 
-func newFieldValues(s *Session) *FieldValues {
-	return &FieldValues{s: s}
+func newFieldValues() *FieldValues {
+	return &FieldValues{}
 }
 
 func (f *FieldValues) String() string {
-	return fmt.Sprintf("rows %d columns %d lob columns %d", f.rows, f.cols, f.lobCols)
+	return fmt.Sprintf("rows %d columns %d", f.rows, f.cols)
 }
 
-func (f *FieldValues) read(rows int, fieldSet *FieldSet, rd *bufio.Reader) error {
-	f.rows = rows
-	f.descrs = make([]*LobReadDescr, 0)
-
-	f.cols, f.lobCols = 0, 0
-	for _, field := range fieldSet.fields {
-		if field.out() {
-			if field.typeCode().isLob() {
-				f.descrs = append(f.descrs, &LobReadDescr{col: f.cols})
-				f.lobCols++
-			}
-			f.cols++
-		}
-	}
-	f.values = make([]driver.Value, f.rows*f.cols)
-	f.writers = make([]lobWriter, f.lobCols)
-
-	for i := 0; i < f.rows; i++ {
-		j := 0
-		for _, field := range fieldSet.fields {
-
-			if !field.out() {
-				continue
-			}
-
-			var err error
-			if f.values[i*f.cols+j], err = readField(rd, field.typeCode()); err != nil {
-				return err
-			}
-			j++
-		}
-	}
-	return nil
+func (f *FieldValues) resize(rows, cols int) {
+	f.rows, f.cols = rows, cols
+	f.values = make([]driver.Value, rows*cols)
 }
 
 // NumRow returns the number of rows available in FieldValues.
@@ -223,23 +103,6 @@ func (f *FieldValues) NumRow() int {
 // Row fills the dest value slice with row data at index idx.
 func (f *FieldValues) Row(idx int, dest []driver.Value) {
 	copy(dest, f.values[idx*f.cols:(idx+1)*f.cols])
-
-	if f.lobCols == 0 {
-		return
-	}
-
-	for i, descr := range f.descrs {
-		col := descr.col
-		writer := dest[col].(lobWriter)
-		f.writers[i] = writer
-		descr.w = writer
-		dest[col] = lobReadDescrToPointer(descr)
-	}
-
-	// last descriptor triggers lob read
-	f.descrs[f.lobCols-1].fn = func() error {
-		return f.s.readLobStream(f.writers)
-	}
 }
 
 const (
@@ -260,7 +123,8 @@ const (
 	lobInputDescriptorSize = 9
 )
 
-func fieldSize(tc typeCode, v driver.Value) (int, error) {
+func fieldSize(tc TypeCode, arg driver.NamedValue) (int, error) {
+	v := arg.Value
 
 	if v == nil { //HDB bug: secondtime null value --> see writeField
 		return 0, nil
@@ -319,224 +183,141 @@ func fieldSize(tc typeCode, v driver.Value) (int, error) {
 			outLogger.Fatalf("data type %s mismatch %T", tc, v)
 		}
 		return bytesSize(len(v))
-	case tcNlocator, tcBlob, tcClob, tcNclob:
+	case tcBlob, tcClob, tcNclob:
 		return lobInputDescriptorSize, nil
 	}
 	outLogger.Fatalf("data type %s not implemented", tc)
 	return 0, nil
 }
 
-func readField(rd *bufio.Reader, tc typeCode) (interface{}, error) {
+func readField(session *Session, rd *bufio.Reader, tc TypeCode) (interface{}, error) {
 
 	switch tc {
 
 	case tcTinyint, tcSmallint, tcInteger, tcBigint:
 
-		valid, err := rd.ReadBool()
-		if err != nil {
-			return nil, err
-		}
-		if !valid { //null value
+		if !rd.ReadBool() { //null value
 			return nil, nil
 		}
 
 		switch tc {
-
 		case tcTinyint:
-			if v, err := rd.ReadByte(); err == nil {
-				return int64(v), nil
-			}
-			return nil, err
-
+			return int64(rd.ReadB()), nil
 		case tcSmallint:
-			if v, err := rd.ReadInt16(); err == nil {
-				return int64(v), nil
-			}
-			return nil, err
-
+			return int64(rd.ReadInt16()), nil
 		case tcInteger:
-			if v, err := rd.ReadInt32(); err == nil {
-				return int64(v), nil
-			}
-			return nil, err
-
+			return int64(rd.ReadInt32()), nil
 		case tcBigint:
-			if v, err := rd.ReadInt64(); err == nil {
-				return v, nil
-			}
-			return nil, err
+			return rd.ReadInt64(), nil
 		}
 
 	case tcReal:
-		v, err := rd.ReadUint32()
-		if err != nil {
-			return nil, err
-		}
+		v := rd.ReadUint32()
 		if v == realNullValue {
 			return nil, nil
 		}
 		return float64(math.Float32frombits(v)), nil
 
 	case tcDouble:
-		v, err := rd.ReadUint64()
-		if err != nil {
-			return nil, err
-		}
+		v := rd.ReadUint64()
 		if v == doubleNullValue {
 			return nil, nil
 		}
 		return math.Float64frombits(v), nil
 
 	case tcDate:
-
-		year, month, day, null, err := readDate(rd)
-		if err != nil {
-			return nil, err
-		}
+		year, month, day, null := readDate(rd)
 		if null {
 			return nil, nil
 		}
-
 		return time.Date(year, month, day, 0, 0, 0, 0, time.UTC), nil
 
 	// time read gives only seconds (cut), no milliseconds
 	case tcTime:
-
-		hour, minute, nanosecs, null, err := readTime(rd)
-		if err != nil {
-			return nil, err
-		}
+		hour, minute, nanosecs, null := readTime(rd)
 		if null {
 			return nil, nil
 		}
-
 		return time.Date(1, 1, 1, hour, minute, 0, nanosecs, time.UTC), nil
 
 	case tcTimestamp:
-
-		year, month, day, dateNull, err := readDate(rd)
-		if err != nil {
-			return nil, err
-		}
-
-		hour, minute, nanosecs, timeNull, err := readTime(rd)
-		if err != nil {
-			return nil, err
-		}
-
+		year, month, day, dateNull := readDate(rd)
+		hour, minute, nanosecs, timeNull := readTime(rd)
 		if dateNull || timeNull {
 			return nil, nil
 		}
-
 		return time.Date(year, month, day, hour, minute, 0, nanosecs, time.UTC), nil
 
 	case tcLongdate:
-
-		time, null, err := readLongdate(rd)
-		if err != nil {
-			return nil, err
-		}
+		time, null := readLongdate(rd)
 		if null {
 			return nil, nil
 		}
-
 		return time, nil
 
 	case tcSeconddate:
-
-		time, null, err := readSeconddate(rd)
-		if err != nil {
-			return nil, err
-		}
+		time, null := readSeconddate(rd)
 		if null {
 			return nil, nil
 		}
-
 		return time, nil
 
 	case tcDaydate:
-
-		time, null, err := readDaydate(rd)
-		if err != nil {
-			return nil, err
-		}
+		time, null := readDaydate(rd)
 		if null {
 			return nil, nil
 		}
-
 		return time, nil
 
 	case tcSecondtime:
-
-		time, null, err := readSecondtime(rd)
-		if err != nil {
-			return nil, err
-		}
+		time, null := readSecondtime(rd)
 		if null {
 			return nil, nil
 		}
-
 		return time, nil
 
 	case tcDecimal:
-
-		b, null, err := readDecimal(rd)
-		switch {
-		case err != nil:
-			return nil, err
-		case null:
+		b, null := readDecimal(rd)
+		if null {
 			return nil, nil
-		default:
-			return b, nil
 		}
+		return b, nil
 
 	case tcChar, tcVarchar:
-		value, null, err := readBytes(rd)
-		if err != nil {
-			return nil, err
-		}
+		value, null := readBytes(rd)
 		if null {
 			return nil, nil
 		}
 		return value, nil
 
 	case tcNchar, tcNvarchar:
-		value, null, err := readUtf8(rd)
-		if err != nil {
-			return nil, err
-		}
+		value, null := readUtf8(rd)
 		if null {
 			return nil, nil
 		}
 		return value, nil
 
 	case tcBinary, tcVarbinary:
-		value, null, err := readBytes(rd)
-		if err != nil {
-			return nil, err
-		}
+		value, null := readBytes(rd)
 		if null {
 			return nil, nil
 		}
 		return value, nil
 
 	case tcBlob, tcClob, tcNclob:
-		null, writer, err := readLob(rd, tc)
-		if err != nil {
-			return nil, err
-		}
+		null, writer, err := readLob(session, rd, tc)
 		if null {
 			return nil, nil
 		}
-		return writer, nil
+		return writer, err
 	}
 
 	outLogger.Fatalf("read field: type code %s not implemented", tc)
 	return nil, nil
 }
 
-func writeField(wr *bufio.Writer, tc typeCode, v driver.Value) error {
-
+func writeField(wr *bufio.Writer, tc TypeCode, arg driver.NamedValue) error {
+	v := arg.Value
 	//HDB bug: secondtime null value cannot be set by setting high byte
 	//         trying so, gives
 	//         SQL HdbError 1033 - error while parsing protocol: no such data type: type_code=192, index=2
@@ -544,18 +325,17 @@ func writeField(wr *bufio.Writer, tc typeCode, v driver.Value) error {
 	// null value
 	//if v == nil && tc != tcSecondtime
 	if v == nil {
-		if err := wr.WriteByte(byte(tc) | 0x80); err != nil { //set high bit
-			return err
-		}
+		wr.WriteB(byte(tc) | 0x80) //set high bit
 		return nil
 	}
 
 	// type code
-	if err := wr.WriteByte(byte(tc)); err != nil {
-		return err
-	}
+	wr.WriteB(byte(tc))
 
 	switch tc {
+
+	default:
+		outLogger.Fatalf("write field: type code %s not implemented", tc)
 
 	case tcTinyint, tcSmallint, tcInteger, tcBigint:
 		var i64 int64
@@ -576,13 +356,13 @@ func writeField(wr *bufio.Writer, tc typeCode, v driver.Value) error {
 
 		switch tc {
 		case tcTinyint:
-			return wr.WriteByte(byte(i64))
+			wr.WriteB(byte(i64))
 		case tcSmallint:
-			return wr.WriteInt16(int16(i64))
+			wr.WriteInt16(int16(i64))
 		case tcInteger:
-			return wr.WriteInt32(int32(i64))
+			wr.WriteInt32(int32(i64))
 		case tcBigint:
-			return wr.WriteInt64(i64)
+			wr.WriteInt64(i64)
 		}
 
 	case tcReal:
@@ -591,7 +371,7 @@ func writeField(wr *bufio.Writer, tc typeCode, v driver.Value) error {
 		if !ok {
 			return fmt.Errorf("invalid argument type %T", v)
 		}
-		return wr.WriteFloat32(float32(f64))
+		wr.WriteFloat32(float32(f64))
 
 	case tcDouble:
 
@@ -599,63 +379,62 @@ func writeField(wr *bufio.Writer, tc typeCode, v driver.Value) error {
 		if !ok {
 			return fmt.Errorf("invalid argument type %T", v)
 		}
-		return wr.WriteFloat64(f64)
+		wr.WriteFloat64(f64)
 
 	case tcDate:
 		t, ok := v.(time.Time)
 		if !ok {
 			return fmt.Errorf("invalid argument type %T", v)
 		}
-		return writeDate(wr, t)
+		writeDate(wr, t)
 
 	case tcTime:
 		t, ok := v.(time.Time)
 		if !ok {
 			return fmt.Errorf("invalid argument type %T", v)
 		}
-		return writeTime(wr, t)
+		writeTime(wr, t)
 
 	case tcTimestamp:
 		t, ok := v.(time.Time)
 		if !ok {
 			return fmt.Errorf("invalid argument type %T", v)
 		}
-		if err := writeDate(wr, t); err != nil {
-			return err
-		}
-		return writeTime(wr, t)
+		writeDate(wr, t)
+		writeTime(wr, t)
 
 	case tcLongdate:
 		t, ok := v.(time.Time)
 		if !ok {
 			return fmt.Errorf("invalid argument type %T", v)
 		}
-		return writeLongdate(wr, t)
+		writeLongdate(wr, t)
 
 	case tcSeconddate:
 		t, ok := v.(time.Time)
 		if !ok {
 			return fmt.Errorf("invalid argument type %T", v)
 		}
-		return writeSeconddate(wr, t)
+		writeSeconddate(wr, t)
 
 	case tcDaydate:
 		t, ok := v.(time.Time)
 		if !ok {
 			return fmt.Errorf("invalid argument type %T", v)
 		}
-		return writeDaydate(wr, t)
+		writeDaydate(wr, t)
 
 	case tcSecondtime:
 		// HDB bug: write null value explicite
 		if v == nil {
-			return wr.WriteInt32(86401)
+			wr.WriteInt32(86401)
+			return nil
 		}
 		t, ok := v.(time.Time)
 		if !ok {
 			return fmt.Errorf("invalid argument type %T", v)
 		}
-		return writeSecondtime(wr, t)
+		writeSecondtime(wr, t)
 
 	case tcDecimal:
 		b, ok := v.([]byte)
@@ -665,15 +444,14 @@ func writeField(wr *bufio.Writer, tc typeCode, v driver.Value) error {
 		if len(b) != 16 {
 			return fmt.Errorf("invalid argument length %d of type %T - expected %d", len(b), v, 16)
 		}
-		_, err := wr.Write(b)
-		return err
+		wr.Write(b)
 
 	case tcChar, tcVarchar, tcString:
 		switch v := v.(type) {
 		case []byte:
-			return writeBytes(wr, v)
+			writeBytes(wr, v)
 		case string:
-			return writeString(wr, v)
+			writeString(wr, v)
 		default:
 			return fmt.Errorf("invalid argument type %T", v)
 		}
@@ -681,9 +459,9 @@ func writeField(wr *bufio.Writer, tc typeCode, v driver.Value) error {
 	case tcNchar, tcNvarchar, tcNstring:
 		switch v := v.(type) {
 		case []byte:
-			return writeUtf8Bytes(wr, v)
+			writeUtf8Bytes(wr, v)
 		case string:
-			return writeUtf8String(wr, v)
+			writeUtf8String(wr, v)
 		default:
 			return fmt.Errorf("invalid argument type %T", v)
 		}
@@ -693,13 +471,12 @@ func writeField(wr *bufio.Writer, tc typeCode, v driver.Value) error {
 		if !ok {
 			return fmt.Errorf("invalid argument type %T", v)
 		}
-		return writeBytes(wr, v)
+		writeBytes(wr, v)
 
-	case tcNlocator, tcBlob, tcClob, tcNclob:
-		return writeLob(wr)
+	case tcBlob, tcClob, tcNclob:
+		writeLob(wr)
 	}
 
-	outLogger.Fatalf("write field: type code %s not implemented", tc)
 	return nil
 }
 
@@ -708,191 +485,97 @@ func writeField(wr *bufio.Writer, tc typeCode, v driver.Value) error {
 // --> read year as unsigned
 // month is 0-based
 // day is 1 byte
-func readDate(rd *bufio.Reader) (int, time.Month, int, bool, error) {
-
-	year, err := rd.ReadUint16()
-	if err != nil {
-		return 0, 0, 0, false, err
-	}
-	if (year & 0x8000) == 0 { //null value
-		if err := rd.Skip(2); err != nil {
-			return 0, 0, 0, false, err
-		}
-		return 0, 0, 0, true, nil
-	}
+func readDate(rd *bufio.Reader) (int, time.Month, int, bool) {
+	year := rd.ReadUint16()
+	null := ((year & 0x8000) == 0) //null value
 	year &= 0x3fff
-	month, err := rd.ReadInt8()
-	if err != nil {
-		return 0, 0, 0, false, err
-	}
+	month := rd.ReadInt8()
 	month++
-	day, err := rd.ReadInt8()
-	if err != nil {
-		return 0, 0, 0, false, err
-	}
-	return int(year), time.Month(month), int(day), false, nil
+	day := rd.ReadInt8()
+	return int(year), time.Month(month), int(day), null
 }
 
 // year: set most sig bit
 // month 0 based
-func writeDate(wr *bufio.Writer, t time.Time) error {
-
+func writeDate(wr *bufio.Writer, t time.Time) {
 	//store in utc
 	utc := t.In(time.UTC)
 
 	year, month, day := utc.Date()
 
-	if err := wr.WriteUint16(uint16(year) | 0x8000); err != nil {
-		return err
-	}
-	if err := wr.WriteInt8(int8(month) - 1); err != nil {
-		return err
-	}
-	if err := wr.WriteInt8(int8(day)); err != nil {
-		return err
-	}
-	return nil
+	wr.WriteUint16(uint16(year) | 0x8000)
+	wr.WriteInt8(int8(month) - 1)
+	wr.WriteInt8(int8(day))
 }
 
-func readTime(rd *bufio.Reader) (int, int, int, bool, error) {
-
-	hour, err := rd.ReadByte()
-	if err != nil {
-		return 0, 0, 0, false, err
-	}
-	if (hour & 0x80) == 0 { //null value
-		if err := rd.Skip(3); err != nil {
-			return 0, 0, 0, false, err
-		}
-		return 0, 0, 0, true, nil
-	}
+func readTime(rd *bufio.Reader) (int, int, int, bool) {
+	hour := rd.ReadB()
+	null := (hour & 0x80) == 0 //null value
 	hour &= 0x7f
-	minute, err := rd.ReadInt8()
-	if err != nil {
-		return 0, 0, 0, false, err
-	}
-	millisecs, err := rd.ReadUint16()
-	if err != nil {
-		return 0, 0, 0, false, err
-	}
-
+	minute := rd.ReadInt8()
+	millisecs := rd.ReadUint16()
 	nanosecs := int(millisecs) * 1000000
-
-	return int(hour), int(minute), nanosecs, false, nil
+	return int(hour), int(minute), nanosecs, null
 }
 
-func writeTime(wr *bufio.Writer, t time.Time) error {
-
+func writeTime(wr *bufio.Writer, t time.Time) {
 	//store in utc
 	utc := t.UTC()
 
-	if err := wr.WriteByte(byte(utc.Hour()) | 0x80); err != nil {
-		return err
-	}
-	if err := wr.WriteInt8(int8(utc.Minute())); err != nil {
-		return err
-	}
-
+	wr.WriteB(byte(utc.Hour()) | 0x80)
+	wr.WriteInt8(int8(utc.Minute()))
 	millisecs := utc.Second()*1000 + utc.Round(time.Millisecond).Nanosecond()/1000000
-
-	if err := wr.WriteUint16(uint16(millisecs)); err != nil {
-		return err
-	}
-
-	return nil
+	wr.WriteUint16(uint16(millisecs))
 }
 
 var zeroTime = time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
 
-func readLongdate(rd *bufio.Reader) (time.Time, bool, error) {
-
-	longdate, err := rd.ReadInt64()
-	if err != nil {
-		return zeroTime, false, err
-	}
-
+func readLongdate(rd *bufio.Reader) (time.Time, bool) {
+	longdate := rd.ReadInt64()
 	if longdate == 3155380704000000001 { // null value
-		return zeroTime, true, nil
+		return zeroTime, true
 	}
-
-	return convertLongdateToTime(longdate), false, nil
+	return convertLongdateToTime(longdate), false
 }
 
-func writeLongdate(wr *bufio.Writer, t time.Time) error {
-
-	if err := wr.WriteInt64(convertTimeToLongdate(t)); err != nil {
-		return err
-	}
-
-	return nil
+func writeLongdate(wr *bufio.Writer, t time.Time) {
+	wr.WriteInt64(convertTimeToLongdate(t))
 }
 
-func readSeconddate(rd *bufio.Reader) (time.Time, bool, error) {
-
-	seconddate, err := rd.ReadInt64()
-	if err != nil {
-		return zeroTime, false, err
-	}
-
+func readSeconddate(rd *bufio.Reader) (time.Time, bool) {
+	seconddate := rd.ReadInt64()
 	if seconddate == 315538070401 { // null value
-		return zeroTime, true, nil
+		return zeroTime, true
 	}
-
-	return convertSeconddateToTime(seconddate), false, nil
+	return convertSeconddateToTime(seconddate), false
 }
 
-func writeSeconddate(wr *bufio.Writer, t time.Time) error {
-
-	if err := wr.WriteInt64(convertTimeToSeconddate(t)); err != nil {
-		return err
-	}
-
-	return nil
+func writeSeconddate(wr *bufio.Writer, t time.Time) {
+	wr.WriteInt64(convertTimeToSeconddate(t))
 }
 
-func readDaydate(rd *bufio.Reader) (time.Time, bool, error) {
-
-	daydate, err := rd.ReadInt32()
-	if err != nil {
-		return zeroTime, false, err
-	}
-
+func readDaydate(rd *bufio.Reader) (time.Time, bool) {
+	daydate := rd.ReadInt32()
 	if daydate == 3652062 { // null value
-		return zeroTime, true, nil
+		return zeroTime, true
 	}
-
-	return convertDaydateToTime(int64(daydate)), false, nil
+	return convertDaydateToTime(int64(daydate)), false
 }
 
-func writeDaydate(wr *bufio.Writer, t time.Time) error {
-
-	if err := wr.WriteInt32(int32(convertTimeToDayDate(t))); err != nil {
-		return err
-	}
-
-	return nil
+func writeDaydate(wr *bufio.Writer, t time.Time) {
+	wr.WriteInt32(int32(convertTimeToDayDate(t)))
 }
 
-func readSecondtime(rd *bufio.Reader) (time.Time, bool, error) {
-	secondtime, err := rd.ReadInt32()
-	if err != nil {
-		return zeroTime, false, err
-	}
-
+func readSecondtime(rd *bufio.Reader) (time.Time, bool) {
+	secondtime := rd.ReadInt32()
 	if secondtime == 86401 { // null value
-		return zeroTime, true, nil
+		return zeroTime, true
 	}
-
-	return convertSecondtimeToTime(int(secondtime)), false, nil
+	return convertSecondtimeToTime(int(secondtime)), false
 }
 
-func writeSecondtime(wr *bufio.Writer, t time.Time) error {
-
-	if err := wr.WriteInt32(int32(convertTimeToSecondtime(t))); err != nil {
-		return err
-	}
-
-	return nil
+func writeSecondtime(wr *bufio.Writer, t time.Time) {
+	wr.WriteInt32(int32(convertTimeToSecondtime(t)))
 }
 
 // nanosecond: HDB - 7 digits precision (not 9 digits)
@@ -941,15 +624,13 @@ func convertSecondtimeToTime(secondtime int) time.Time {
 	return time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(int64(secondtime-1) * 1000000000))
 }
 
-func readDecimal(rd *bufio.Reader) ([]byte, bool, error) {
+func readDecimal(rd *bufio.Reader) ([]byte, bool) {
 	b := make([]byte, 16)
-	if err := rd.ReadFull(b); err != nil {
-		return nil, false, err
-	}
+	rd.ReadFull(b)
 	if (b[15] & 0x70) == 0x70 { //null value (bit 4,5,6 set)
-		return nil, true, nil
+		return nil, true
 	}
-	return b, false, nil
+	return b, false
 }
 
 // string / binary length indicators
@@ -973,35 +654,27 @@ func bytesSize(size int) (int, error) { //size + length indicator
 	}
 }
 
-func readBytesSize(rd *bufio.Reader) (int, bool, error) {
+func readBytesSize(rd *bufio.Reader) (int, bool) {
 
-	ind, err := rd.ReadByte() //length indicator
-	if err != nil {
-		return 0, false, err
-	}
+	ind := rd.ReadB() //length indicator
 
 	switch {
 
 	default:
-		return 0, false, fmt.Errorf("invalid length indicator %d", ind)
+		return 0, false
 
 	case ind == bytesLenIndNullValue:
-		return 0, true, nil
+		return 0, true
 
 	case ind <= bytesLenIndSmall:
-		return int(ind), false, nil
+		return int(ind), false
 
 	case ind == bytesLenIndMedium:
-		if size, err := rd.ReadInt16(); err == nil {
-			return int(size), false, nil
-		}
-		return 0, false, err
+		return int(rd.ReadInt16()), false
 
 	case ind == bytesLenIndBig:
-		if size, err := rd.ReadInt32(); err == nil {
-			return int(size), false, nil
-		}
-		return 0, false, err
+		return int(rd.ReadInt32()), false
+
 	}
 }
 
@@ -1012,169 +685,90 @@ func writeBytesSize(wr *bufio.Writer, size int) error {
 		return fmt.Errorf("max argument length %d of string exceeded", size)
 
 	case size <= int(bytesLenIndSmall):
-		if err := wr.WriteByte(byte(size)); err != nil {
-			return err
-		}
+		wr.WriteB(byte(size))
 	case size <= math.MaxInt16:
-		if err := wr.WriteByte(bytesLenIndMedium); err != nil {
-			return err
-		}
-		if err := wr.WriteInt16(int16(size)); err != nil {
-			return err
-		}
+		wr.WriteB(bytesLenIndMedium)
+		wr.WriteInt16(int16(size))
 	case size <= math.MaxInt32:
-		if err := wr.WriteByte(bytesLenIndBig); err != nil {
-			return err
-		}
-		if err := wr.WriteInt32(int32(size)); err != nil {
-			return err
-		}
+		wr.WriteB(bytesLenIndBig)
+		wr.WriteInt32(int32(size))
 	}
 	return nil
 }
 
-func readBytes(rd *bufio.Reader) ([]byte, bool, error) {
-	size, null, err := readBytesSize(rd)
-	if err != nil {
-		return nil, false, err
-	}
-
+func readBytes(rd *bufio.Reader) ([]byte, bool) {
+	size, null := readBytesSize(rd)
 	if null {
-		return nil, true, nil
+		return nil, true
 	}
-
 	b := make([]byte, size)
-	if err := rd.ReadFull(b); err != nil {
-		return nil, false, err
-	}
-	return b, false, nil
+	rd.ReadFull(b)
+	return b, false
 }
 
-func readUtf8(rd *bufio.Reader) ([]byte, bool, error) {
-	size, null, err := readBytesSize(rd)
-	if err != nil {
-		return nil, false, err
-	}
-
+func readUtf8(rd *bufio.Reader) ([]byte, bool) {
+	size, null := readBytesSize(rd)
 	if null {
-		return nil, true, nil
+		return nil, true
 	}
-
-	b, err := rd.ReadCesu8(size)
-	if err != nil {
-		return nil, false, err
-	}
-
-	return b, false, nil
+	b := rd.ReadCesu8(size)
+	return b, false
 }
 
 // strings with one byte length
-func readShortUtf8(rd *bufio.Reader) ([]byte, int, error) {
-	size, err := rd.ReadByte()
-	if err != nil {
-		return nil, 0, err
-	}
-
-	b, err := rd.ReadCesu8(int(size))
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return b, int(size), nil
+func readShortUtf8(rd *bufio.Reader) ([]byte, int) {
+	size := rd.ReadB()
+	b := rd.ReadCesu8(int(size))
+	return b, int(size)
 }
 
-func writeBytes(wr *bufio.Writer, b []byte) error {
-	if err := writeBytesSize(wr, len(b)); err != nil {
-		return err
-	}
-	_, err := wr.Write(b)
-	return err
+func writeBytes(wr *bufio.Writer, b []byte) {
+	writeBytesSize(wr, len(b))
+	wr.Write(b)
 }
 
-func writeString(wr *bufio.Writer, s string) error {
-	if err := writeBytesSize(wr, len(s)); err != nil {
-		return err
-	}
-	_, err := wr.WriteString(s)
-	return err
+func writeString(wr *bufio.Writer, s string) {
+	writeBytesSize(wr, len(s))
+	wr.WriteString(s)
 }
 
-func writeUtf8Bytes(wr *bufio.Writer, b []byte) error {
+func writeUtf8Bytes(wr *bufio.Writer, b []byte) {
 	size := cesu8.Size(b)
-	if err := writeBytesSize(wr, size); err != nil {
-		return err
-	}
-	_, err := wr.WriteCesu8(b)
-	return err
+	writeBytesSize(wr, size)
+	wr.WriteCesu8(b)
 }
 
-func writeUtf8String(wr *bufio.Writer, s string) error {
+func writeUtf8String(wr *bufio.Writer, s string) {
 	size := cesu8.StringSize(s)
-	if err := writeBytesSize(wr, size); err != nil {
-		return err
-	}
-	_, err := wr.WriteStringCesu8(s)
-	return err
+	writeBytesSize(wr, size)
+	wr.WriteStringCesu8(s)
 }
 
-func readLob(rd *bufio.Reader, tc typeCode) (bool, lobWriter, error) {
-
-	if _, err := rd.ReadInt8(); err != nil { // type code (is int here)
-		return false, nil, err
-	}
-
-	opt, err := rd.ReadInt8()
-	if err != nil {
-		return false, nil, err
-	}
-
-	if err := rd.Skip(2); err != nil {
-		return false, nil, err
-	}
-
-	charLen, err := rd.ReadInt64()
-	if err != nil {
-		return false, nil, err
-	}
-	byteLen, err := rd.ReadInt64()
-	if err != nil {
-		return false, nil, err
-	}
-	id, err := rd.ReadUint64()
-	if err != nil {
-		return false, nil, err
-	}
-	chunkLen, err := rd.ReadInt32()
-	if err != nil {
-		return false, nil, err
-	}
-
+func readLob(s *Session, rd *bufio.Reader, tc TypeCode) (bool, lobChunkWriter, error) {
+	rd.ReadInt8() // type code (is int here)
+	opt := rd.ReadInt8()
 	null := (lobOptions(opt) & loNullindicator) != 0
+	if null {
+		return true, nil, nil
+	}
 	eof := (lobOptions(opt) & loLastdata) != 0
+	rd.Skip(2)
 
-	var writer lobWriter
-	if tc.isCharBased() {
-		writer = newCharLobWriter(locatorID(id), charLen, byteLen)
-	} else {
-		writer = newBinaryLobWriter(locatorID(id), charLen, byteLen)
+	charLen := rd.ReadInt64()
+	byteLen := rd.ReadInt64()
+	id := rd.ReadUint64()
+	chunkLen := rd.ReadInt32()
+
+	lobChunkWriter := newLobChunkWriter(tc.isCharBased(), s, locatorID(id), charLen, byteLen)
+	if err := lobChunkWriter.write(rd, int(chunkLen), eof); err != nil {
+		return null, lobChunkWriter, err
 	}
-	if err := writer.write(rd, int(chunkLen), eof); err != nil {
-		return null, writer, err
-	}
-	return null, writer, nil
+	return null, lobChunkWriter, nil
 }
 
 // TODO: first write: add content? - actually no data transferred
-func writeLob(wr *bufio.Writer) error {
-
-	if err := wr.WriteByte(0); err != nil {
-		return err
-	}
-	if err := wr.WriteInt32(0); err != nil {
-		return err
-	}
-	if err := wr.WriteInt32(0); err != nil {
-		return err
-	}
-	return nil
+func writeLob(wr *bufio.Writer) {
+	wr.WriteB(0)
+	wr.WriteInt32(0)
+	wr.WriteInt32(0)
 }
