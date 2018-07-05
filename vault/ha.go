@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
+	"github.com/oklog/run"
 )
 
 // Standby checks if the Vault is in standby mode
@@ -255,31 +256,76 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	return retErr
 }
 
-// runStandby is a long running routine that is used when an HA backend
-// is enabled. It waits until we are leader and switches this Vault to
-// active.
+// runStandby is a long running process that manages a number of the HA
+// subsystems.
 func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
 	c.logger.Info("entering standby mode")
 
-	// Monitor for key rotation
-	keyRotateDone := make(chan struct{})
-	keyRotateStop := make(chan struct{})
-	go c.periodicCheckKeyUpgrade(context.Background(), keyRotateDone, keyRotateStop)
-	// Monitor for new leadership
-	checkLeaderDone := make(chan struct{})
-	checkLeaderStop := make(chan struct{})
-	go c.periodicLeaderRefresh(checkLeaderDone, checkLeaderStop)
-	defer func() {
-		c.logger.Debug("closed periodic key rotation checker stop channel")
-		close(keyRotateStop)
-		<-keyRotateDone
-		close(checkLeaderStop)
-		c.logger.Debug("closed periodic leader refresh stop channel")
-		<-checkLeaderDone
-		c.logger.Debug("periodic leader refresh returned")
-	}()
+	var g run.Group
+	{
+		// This will cause all the other actors to close when the stop channel
+		// is closed.
+		g.Add(func() error {
+			<-stopCh
+			return nil
+		}, func(error) {})
+	}
+	{
+		// Monitor for key rotation
+		keyRotateDone := make(chan struct{})
+		keyRotateStop := make(chan struct{})
+
+		g.Add(func() error {
+			c.periodicCheckKeyUpgrade(context.Background(), keyRotateDone, keyRotateStop)
+			return nil
+		}, func(error) {
+			close(keyRotateStop)
+			c.logger.Debug("shutting down periodic key rotation checker")
+			<-keyRotateDone
+		})
+	}
+	{
+		// Monitor for new leadership
+		checkLeaderDone := make(chan struct{})
+		checkLeaderStop := make(chan struct{})
+
+		g.Add(func() error {
+			c.periodicLeaderRefresh(checkLeaderDone, checkLeaderStop)
+			return nil
+		}, func(error) {
+			close(checkLeaderStop)
+			c.logger.Debug("shutting down periodic leader refresh")
+			<-checkLeaderDone
+		})
+	}
+	{
+		// Wait for leadership
+		leaderDoneCh := make(chan struct{})
+		leaderStopCh := make(chan struct{})
+
+		g.Add(func() error {
+			c.waitForLeadership(leaderDoneCh, manualStepDownCh, leaderStopCh)
+			return nil
+		}, func(error) {
+			close(leaderStopCh)
+			c.logger.Debug("shutting down leader elections")
+			<-leaderDoneCh
+		})
+	}
+
+	// Start all the actors
+	g.Run()
+}
+
+// waitForLeadership is a long running routine that is used when an HA backend
+// is enabled. It waits until we are leader and switches this Vault to
+// active.
+func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{}) {
+	defer close(doneCh)
+
+	c.logger.Info("entering standby mode")
 
 	var manualStepDown bool
 	for {

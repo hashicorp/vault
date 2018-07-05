@@ -1,3 +1,9 @@
+## Next
+
+BUG FIXES:
+
+ * secrets/database: Fix panic during DB creds revocation [GH-4846]
+
 ## 0.10.3 (June 20th, 2018)
 
 DEPRECATIONS/CHANGES:
@@ -50,6 +56,8 @@ IMPROVEMENTS:
    requiring username@hostname syntax [GH-4710]
  * storage/consul: Add context support so that requests are cancelable
    [GH-4739]
+ * sys: Added `hidden` option to `listing_visibility` field on `sys/mounts`
+   API [GH-4827]
  * ui: Secret values are obfuscated by default and visibility is toggleable [GH-4422]
 
 BUG FIXES:

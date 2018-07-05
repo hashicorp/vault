@@ -1,73 +1,73 @@
 <div class="page-container">
   {{#if showNav}}
-  <header data-test-header-with-nav class="{{if consoleOpen 'panel-open'}} {{if consoleFullscreen ' panel-fullscreen'}}">
-      <nav class="navbar has-dark-grey-gradient is-grouped-split">
-        <div class="navbar-brand">
-          {{#home-link class="navbar-item has-text-white has-current-color-fill"}}
-            {{partial 'svg/vault-logo'}}
-          {{/home-link}}
+    <NavHeader data-test-header-with-nav @class="{{if consoleOpen 'panel-open'}} {{if consoleFullscreen ' panel-fullscreen'}}" as |Nav|>
+      <Nav.home>
+        <HomeLink @class="navbar-item has-text-white has-current-color-fill">
+          {{partial 'svg/vault-logo'}}
+        </HomeLink>
+      </Nav.home>
+      <Nav.items>
+        <div class="navbar-item">
+          <button type="button" class="button is-transparent" {{action 'toggleConsole'}} data-test-console-toggle>
+            {{#if consoleOpen}}
+              {{i-con glyph="console-active" size=24}}
+              {{i-con glyph="chevron-up" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
+            {{else}}
+              {{i-con glyph="console" size=24}}
+              {{i-con glyph="chevron-down" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
+            {{/if}}
+          </button>
         </div>
-        <div class="navbar-end is-divider-list is-flex">
-          <div class="navbar-item">
-            <button type="button" class="button is-transparent" {{action 'toggleConsole'}} data-test-console-toggle>
-              {{#if consoleOpen}}
-                {{i-con glyph="console-active" size=24}}
-                {{i-con glyph="chevron-up" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
-              {{else}}
-                {{i-con glyph="console" size=24}}
-                {{i-con glyph="chevron-down" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
-              {{/if}}
-            </button>
-          </div>
-          <div class="navbar-item">
-            {{status-menu}}
-          </div>
-          <div class="navbar-item">
-            {{status-menu type="user"}}
-          </div>
+        <div class="navbar-item">
+          {{status-menu}}
         </div>
-      </nav>
-      <ul class="navbar-sections tabs tabs-subnav">
-        <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
-          <a href="{{href-to "vault.cluster.secrets" activeClusterName}}">
-            Secrets
-          </a>
-        </li>
-        <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
-          <a href="{{href-to "vault.cluster.access" activeClusterName}}">
-            Access
-          </a>
-        </li>
-        <li class="{{if (is-active-route 'vault.cluster.replication') 'is-active'}}">
-          {{#if activeCluster.anyReplicationEnabled}}
-            {{status-menu type="replication"}}
-          {{else}}
-            <a href="{{href-to "vault.cluster.replication" activeClusterName}}">
-              Replication
-              {{#if (is-version "OSS")}}
-                {{edition-badge edition="Enterprise"}}
-              {{/if}}
+        <div class="navbar-item">
+          {{status-menu type="user"}}
+        </div>
+      </Nav.items>
+      <Nav.main>
+        <ul class="navbar-sections tabs tabs-subnav">
+          <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
+            <a href="{{href-to "vault.cluster.secrets" activeClusterName}}">
+              Secrets
             </a>
-          {{/if}}
-        </li>
-        <li class="{{if (is-active-route (array 'vault.cluster.policies' 'vault.cluster.policy')) 'is-active'}}">
-          <a href="{{href-to "vault.cluster.policies" "acl" current-when='vault.cluster.policies vault.cluster.policy'}}">
-            Policies
-          </a>
-        </li>
-        <li class="{{if (is-active-route 'vault.cluster.tools') 'is-active'}}">
-          <a href="{{href-to "vault.cluster.tools" activeClusterName}}">
-            Tools
-          </a>
-        </li>
-        <li class="{{if (is-active-route 'vault.cluster.settings') 'is-active'}}">
-          <a href="{{href-to "vault.cluster.settings" activeClusterName}}">
-            Settings
-          </a>
-        </li>
-      </ul>
-      {{console/ui-panel isFullscreen=consoleFullscreen}}
-    </header>
+          </li>
+          <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
+            <a href="{{href-to "vault.cluster.access" activeClusterName}}">
+              Access
+            </a>
+          </li>
+          <li class="{{if (is-active-route 'vault.cluster.replication') 'is-active'}}">
+            {{#if activeCluster.anyReplicationEnabled}}
+              {{status-menu type="replication"}}
+            {{else}}
+              <a href="{{href-to "vault.cluster.replication" activeClusterName}}">
+                Replication
+                {{#if (is-version "OSS")}}
+                  {{edition-badge edition="Enterprise"}}
+                {{/if}}
+              </a>
+            {{/if}}
+          </li>
+          <li class="{{if (is-active-route (array 'vault.cluster.policies' 'vault.cluster.policy')) 'is-active'}}">
+            <a href="{{href-to "vault.cluster.policies" "acl" current-when='vault.cluster.policies vault.cluster.policy'}}">
+              Policies
+            </a>
+          </li>
+          <li class="{{if (is-active-route 'vault.cluster.tools') 'is-active'}}">
+            <a href="{{href-to "vault.cluster.tools" activeClusterName}}">
+              Tools
+            </a>
+          </li>
+          <li class="{{if (is-active-route 'vault.cluster.settings') 'is-active'}}">
+            <a href="{{href-to "vault.cluster.settings" activeClusterName}}">
+              Settings
+            </a>
+          </li>
+        </ul>
+        {{console/ui-panel isFullscreen=consoleFullscreen}}
+      </Nav.main>
+    </NavHeader>
   {{/if}}
   <div class="global-flash">
     {{#each flashMessages.queue as |flash|}}

@@ -1389,6 +1389,9 @@ func (i *IdentityStore) collectGroupsReverseDFS(group *identity.Group, visited m
 		if err != nil {
 			return nil, err
 		}
+		if parentGroup == nil {
+			continue
+		}
 		pGroups, err := i.collectGroupsReverseDFS(parentGroup, visited, groups)
 		if err != nil {
 			return nil, fmt.Errorf("failed to collect group at parent group ID %q", parentGroup.ID)
@@ -1417,6 +1420,9 @@ func (i *IdentityStore) collectPoliciesReverseDFS(group *identity.Group, visited
 		parentGroup, err := i.MemDBGroupByID(parentGroupID, false)
 		if err != nil {
 			return nil, err
+		}
+		if parentGroup == nil {
+			continue
 		}
 		parentPolicies, err := i.collectPoliciesReverseDFS(parentGroup, visited, policies)
 		if err != nil {
