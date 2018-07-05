@@ -3709,6 +3709,7 @@ func sanitizeMountPath(path string) string {
 
 func checkListingVisibility(visibility ListingVisibilityType) error {
 	switch visibility {
+	case ListingVisibilityDefault:
 	case ListingVisibilityHidden:
 	case ListingVisibilityUnauth:
 	default:

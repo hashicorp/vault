@@ -121,7 +121,15 @@ ember-dist:
 	@cd ui && yarn run build
 	@rm -rf ui/if-you-need-to-delete-this-open-an-issue-async-disk-cache
 
+ember-dist-dev:
+	@echo "--> Installing JavaScript assets"
+	@cd ui && yarn
+	@cd ui && npm rebuild node-sass
+	@echo "--> Building Ember application"
+	@cd ui && yarn run build-dev
+
 static-dist: ember-dist static-assets
+static-dist-dev: ember-dist-dev static-assets
 
 proto:
 	protoc vault/*.proto --go_out=plugins=grpc:../../..
@@ -166,4 +174,4 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist static-dist
+.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev

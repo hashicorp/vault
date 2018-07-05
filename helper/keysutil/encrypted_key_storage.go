@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math/big"
 	paths "path"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/golang-lru"
@@ -205,6 +206,7 @@ func (s *encryptedKeyStorage) List(ctx context.Context, prefix string) ([]string
 		decryptedKeys[i] = plaintext
 	}
 
+	sort.Strings(decryptedKeys)
 	return decryptedKeys, nil
 }
 

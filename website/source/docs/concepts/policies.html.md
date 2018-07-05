@@ -158,8 +158,7 @@ capabilities, which controls a token's access to credentials in Vault.
 an exact match or the longest-prefix match of a glob. This means if you define a
 policy for `"secret/foo*"`, the policy would also match `"secret/foobar"`.
 
-!> The glob character is only supported as the **last character of the path**,
-and **is not a regular expression**!
+!> The glob character referred to in this documentation is the asterisk (`*`). It *is not a regular expression* and is only supported **as the last character of the path**!
 
 When providing `list` capability, it is important to note that since listing
 always operates on a prefix, policies must operate on a prefix because Vault
@@ -196,7 +195,7 @@ similarly matched.
 
   * `read` (`GET`) - Allows reading the data at the given path.
 
-  * `update` (`POST/PUT`) - Allows change the data at the given path. In most
+  * `update` (`POST/PUT`) - Allows changing the data at the given path. In most
     parts of Vault, this implicitly includes the ability to create the initial
     value at the path.
 

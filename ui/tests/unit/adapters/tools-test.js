@@ -14,27 +14,28 @@ test('wrapping api urls', function(assert) {
     },
   });
 
+  let clientToken;
   let data = { foo: 'bar' };
   adapter.toolAction('wrap', data, { wrapTTL: '30m' });
   assert.equal('/v1/sys/wrapping/wrap', url, 'wrapping:wrap url OK');
   assert.equal('POST', method, 'wrapping:wrap method OK');
-  assert.deepEqual({ data: data, wrapTTL: '30m' }, options, 'wrapping:wrap options OK');
+  assert.deepEqual({ data: data, wrapTTL: '30m', clientToken }, options, 'wrapping:wrap options OK');
 
   data = { token: 'token' };
   adapter.toolAction('lookup', data);
   assert.equal('/v1/sys/wrapping/lookup', url, 'wrapping:lookup url OK');
   assert.equal('POST', method, 'wrapping:lookup method OK');
-  assert.deepEqual({ data }, options, 'wrapping:lookup options OK');
+  assert.deepEqual({ data, clientToken }, options, 'wrapping:lookup options OK');
 
   adapter.toolAction('unwrap', data);
   assert.equal('/v1/sys/wrapping/unwrap', url, 'wrapping:unwrap url OK');
   assert.equal('POST', method, 'wrapping:unwrap method OK');
-  assert.deepEqual({ data }, options, 'wrapping:unwrap options OK');
+  assert.deepEqual({ data, clientToken }, options, 'wrapping:unwrap options OK');
 
   adapter.toolAction('rewrap', data);
   assert.equal('/v1/sys/wrapping/rewrap', url, 'wrapping:rewrap url OK');
   assert.equal('POST', method, 'wrapping:rewrap method OK');
-  assert.deepEqual({ data }, options, 'wrapping:rewrap options OK');
+  assert.deepEqual({ data, clientToken }, options, 'wrapping:rewrap options OK');
 });
 
 test('tools api urls', function(assert) {

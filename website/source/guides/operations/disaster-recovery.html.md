@@ -36,7 +36,7 @@ replication setup.
 ## Reference Materials
 
 - [Performance Replication and Disaster Recovery (DR) Replication](/docs/enterprise/replication/index.html#performance-replication-and-disaster-recovery-dr-replication)
-- [DR Repolication API](/api/system/replication-dr.html)
+- [DR Replication API](/api/system/replication-dr.html)
 - [Replication Setup & Guidance](/guides/operations/replication.html)
 - [Vault HA guide](/guides/operations/vault-ha-consul.html)
 
@@ -107,7 +107,7 @@ This guide walk through the following operations:
 
 1. Enable DR replication on the **primary** cluster by invoking **`/sys/replication/dr/primary/enable`** endpoint.
 
-    **Eaxmple:**
+    **Example:**
 
     ```plaintext
     $ curl --header "X-Vault-Token: ..." \
@@ -131,7 +131,7 @@ This guide walk through the following operations:
 
 1. Generate a secondary token by invoking **`/sys/replication/dr/primary/secondary-token`** endpoint.
 
-    **Eaxmple:**
+    **Example:**
 
     ```plaintext
     $ curl --header "X-Vault-Token: ..." \
@@ -199,7 +199,7 @@ The following operations must be performed on the DR secondary cluster.
     ```plaintext
     WARNING! The following warnings were returned from Vault:
 
-    * Vault has succesfully found secondary information; it may take a while to
+    * Vault has successfully found secondary information; it may take a while to
     perform setup tasks. Vault will be unavailable until these tasks and initial
     sync complete.
     ```
@@ -229,7 +229,7 @@ The following operations must be performed on the DR secondary cluster.
        "data": null,
        "wrap_info": null,
        "warnings": [
-         "Vault has succesfully found secondary information; it may take a while
+         "Vault has successfully found secondary information; it may take a while
          to perform setup tasks. Vault will be unavailable until these tasks and
          initial sync complete."
        ],
@@ -280,7 +280,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 
 1. Start the DR operation token generation process by invoking **`/sys/replication/dr/secondary/generate-operation-token/attempt`** endpoint.
 
-    **Eaxmple:**
+    **Example:**
 
     ```plaintext
     $ tee payload.json <<EOF

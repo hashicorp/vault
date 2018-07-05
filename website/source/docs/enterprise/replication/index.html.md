@@ -69,7 +69,7 @@ They do not forward service read or write requests until they are elected and be
 |--------------------------------------------------------------------------------------------------------------------------	|-------------------	|--------------------------------------------------------------------------	|
 | Mirrors the configuration of a primary cluster                                                                  	| Yes               	| Yes                                                                      	|
 | Mirrors the configuration of a primary cluster’s backends (i.e.: auth methods, secrets engines, audit devices, etc.) 	| Yes               	| Yes                                                                      	|
-| Mirrors the tokens and leases for applications and users interacting with the primary cluster                     	| Yes               	| No. Secondaries use the primary as the source of truth and pass token requests to the primary. When the secondary is promoted, applications must re-auth tokens and obtain new leases from the newly-promoted primary. 	|
+| Mirrors the tokens and leases for applications and users interacting with the primary cluster                     	| Yes               	| No. Secondaries keep track of their own tokens and leases. When the secondary is promoted, applications must reauthenticate and obtain new leases from the newly-promoted primary. 	|
 | Allows the secondary cluster to handle client requests                          	| No                	| Yes                                                                      	|
 
 For more information on the capabilities of performance and disaster recovery replication, see the Vault Replication [API Documentation](/api/system/replication.html).

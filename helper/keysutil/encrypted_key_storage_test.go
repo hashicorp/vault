@@ -203,7 +203,7 @@ func TestEncryptedKeysStorage_List(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(keys) != 2 || !strutil.StrListContains(keys, "foo1/") || !strutil.StrListContains(keys, "foo") {
+	if len(keys) != 2 || keys[1] != "foo1/" || keys[0] != "foo" {
 		t.Fatalf("bad keys: %#v", keys)
 	}
 
@@ -211,7 +211,7 @@ func TestEncryptedKeysStorage_List(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(keys) != 2 || !strutil.StrListContains(keys, "test") || !strutil.StrListContains(keys, "test/") {
+	if len(keys) != 2 || keys[0] != "test" || keys[1] != "test/" {
 		t.Fatalf("bad keys: %#v", keys)
 	}
 

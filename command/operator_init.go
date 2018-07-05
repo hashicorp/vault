@@ -259,6 +259,12 @@ func (c *OperatorInitCommand) Run(args []string) int {
 		c.flagStatus = true
 	}
 
+	args = f.Args()
+	if len(args) > 0 {
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", len(args)))
+		return 1
+	}
+
 	// Build the initial init request
 	initReq := &api.InitRequest{
 		SecretShares:    c.flagKeyShares,

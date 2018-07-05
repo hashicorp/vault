@@ -13,11 +13,10 @@
 </PageHeader>
 
 {{#each (sort-by "path" model) as |method|}}
-  {{#linked-block
-    "vault.cluster.access.methods"
-    class="box is-sideless is-marginless has-pointer "
-    data-test-auth-backend-link=method.id
-  }}
+  <div
+    class="box is-sideless is-marginless"
+    data-test-auth-backend-link={{method.id}}
+    >
     <div class="level is-mobile">
       <div class="level-left">
         <div>
@@ -76,5 +75,5 @@
         </div>
       </div>
     </div>
-  {{/linked-block}}
+  </div>
 {{/each}}
