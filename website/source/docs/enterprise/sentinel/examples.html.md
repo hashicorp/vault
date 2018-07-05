@@ -23,6 +23,7 @@ authenticate using LDAP.
 ```python
 import "sockaddr"
 import "mfa"
+import "strings"
 
 # We expect logins to come only from our private IP range
 cidrcheck = rule {
