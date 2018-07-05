@@ -230,6 +230,15 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 	}
 
 	Commands = map[string]cli.CommandFactory{
+		"agent": func() (cli.Command, error) {
+			return &AgentCommand{
+				BaseCommand: &BaseCommand{
+					UI: serverCmdUi,
+				},
+				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
+			}, nil
+		},
 		"audit": func() (cli.Command, error) {
 			return &AuditCommand{
 				BaseCommand: getBaseCommand(),
