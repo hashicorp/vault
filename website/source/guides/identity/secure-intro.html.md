@@ -53,12 +53,12 @@ orchestrator](#trusted-orchestrator).
 
 ### Platform Integration
 
-In the **Platform Integration** model, you have a 3-legged trust model. Vault
-trusts the underlying platform (e.g. AWS, Azure, GCP) which provides an
-identifier to the client (e.g. an IAM token, JWT). The client authenticates with
-Vault using its platform specific identifier data. Once its identity was
-successfully validated against the platform, Vault returns an initial token to
-the client with a set of configured policies attached.
+In the **Platform Integration** model, Vault trusts the underlying platform
+(e.g. AWS, Azure, GCP) which assigns an identifier to its cloud resources (e.g.
+an IAM token, instance ID, JWT). The Vault client (secret consumer)
+authenticates with Vault using its platform provided identifier. Once its
+identity was successfully validated against the platform, Vault returns an
+initial token to the client with a set of configured policies attached.
 
 ![Platform Integration](/assets/images/vault-secure-intro-2.png)
 
