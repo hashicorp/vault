@@ -31,7 +31,6 @@ export default Ember.Component.extend(DEFAULTS, {
     if (activeEle) {
       activeEle.scrollIntoView();
     }
-    activeEle = null;
     // this is here because we're changing the `with` attr and there's no way to short-circuit rendering,
     // so we'll just nav -> get new attrs -> re-render
     if (!this.get('selectedAuth') || (this.get('selectedAuth') && !this.get('selectedAuthBackend'))) {
