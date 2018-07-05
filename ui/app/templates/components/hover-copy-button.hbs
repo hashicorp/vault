@@ -1,4 +1,4 @@
-<ToolTip @renderInPlace={{true}} @onClose={{action (mut tooltipText) "Copy"}} as |T|>
+<ToolTip @onClose={{action (mut tooltipText) "Copy"}} as |T|>
   <T.trigger data-test-tooltip-trigger tabindex=false>
     <CopyButton
       data-test-hover-copy-button

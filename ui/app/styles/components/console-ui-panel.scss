@@ -29,6 +29,7 @@
     background: none;
     color: inherit;
     font-size: $body-size;
+    min-height: 2rem;
 
     &:not(.console-ui-command):not(.CodeMirror-line) {
       padding-left: $console-spacing;
@@ -57,6 +58,13 @@
   }
 }
 
+.console-ui-panel .hover-copy-button,
+.console-ui-panel .hover-copy-button-static {
+  top: auto;
+  bottom: 0;
+  right: 0;
+}
+
 .console-ui-input {
   align-items: center;
   display: flex;
@@ -82,25 +90,13 @@
 }
 
 .console-ui-output {
-  transition: background-color $speed;
+  transition: background-color $speed ease-in-out;
+  will-change: background-color;
   padding-right: $size-2;
   position: relative;
-
-  .console-ui-output-actions {
-    opacity: 0;
-    position: absolute;
-    right: 0;
-    top: 0;
-    transition: opacity $speed;
-    will-change: opacity;
-  }
-
+  background-color: rgba(#000, 0);
   &:hover {
-    background: rgba($black, 0.25);
-
-    .console-ui-output-actions {
-      opacity: 1;
-    }
+    background-color: rgba(#000, 0.5);
   }
 }
 
