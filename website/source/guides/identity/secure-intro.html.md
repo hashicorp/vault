@@ -49,8 +49,6 @@ There are two basic patterns to securely authenticate a secret consumer:
 orchestrator](#trusted-orchestrator).  
 
 
-
-
 ### Platform Integration
 
 In the **Platform Integration** model, Vault trusts the underlying platform
