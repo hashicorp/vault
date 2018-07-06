@@ -13,6 +13,7 @@ const GLYPHS_WITH_SVG_TAG = [
   'information-reversed',
   'true',
   'false',
+  'control-lock',
 ];
 
 export default Ember.Component.extend({
