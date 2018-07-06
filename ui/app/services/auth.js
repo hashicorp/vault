@@ -118,13 +118,14 @@ export default Ember.Service.extend({
       displayName = get(resp, currentBackend.displayNamePath);
     }
 
-    const { policies, renewable } = resp;
+    const { entity_id, policies, renewable } = resp;
     let data = {
       displayName,
       backend: currentBackend,
       token: resp.client_token || get(resp, currentBackend.tokenPath),
       policies,
       renewable,
+      entity_id,
     };
 
     tokenName = this.generateTokenName(
