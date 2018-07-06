@@ -8,6 +8,7 @@ label.box-label {
   @extend .is-gapless;
   border-color: $grey-light;
   border-radius: 3px;
+  box-shadow: $box-link-shadow, $box-shadow-middle;
   text-decoration: none;
   transition: box-shadow $speed;
   width: 100%;
@@ -50,5 +51,13 @@ label.box-label {
     background: $blue;
     border: 1px solid $blue;
     box-shadow: inset 0 0 0 0.15rem $white;
+  }
+}
+
+.box-label-header {
+  color: $grey;
+
+  .is-selected & {
+    color: $text;
   }
 }

@@ -260,18 +260,32 @@ label {
   }
 }
 
-.file-icon,
 .file-label {
-  color: $grey-dark;
+  overflow: visible;
 }
+
+.file-input {
+  visibility: hidden;
+}
+
 .file-cta {
-  background: $white-bis;
-  position: relative;
+  min-width: auto;
+
+  .icon:first-child:last-child {
+    display: inline-block;
+    margin-right: 0.1rem;
+    vertical-align: middle;
+  }
 }
+
+.file-name {
+  @extend .input;
+}
+
 .file-delete-button {
   @extend .button;
   @extend .is-transparent;
   color: $grey;
   position: absolute;
-  right: 5px;
+  right: 8px;
 }
