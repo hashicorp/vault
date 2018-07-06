@@ -24,7 +24,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 	// First: test reject not present
 	t.Run("reject_not_present", func(t *testing.T) {
 		t.Parallel()
-		testHandler := func(c *vault.Core) http.Handler {
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
 			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(r.RemoteAddr))
@@ -69,7 +69,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 	// Next: test allow unauth
 	t.Run("allow_unauth", func(t *testing.T) {
 		t.Parallel()
-		testHandler := func(c *vault.Core) http.Handler {
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
 			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(r.RemoteAddr))
@@ -106,7 +106,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 	// Next: test fail unauth
 	t.Run("fail_unauth", func(t *testing.T) {
 		t.Parallel()
-		testHandler := func(c *vault.Core) http.Handler {
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
 			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(r.RemoteAddr))
@@ -140,7 +140,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 	// Next: test bad hops (too many)
 	t.Run("too_many_hops", func(t *testing.T) {
 		t.Parallel()
-		testHandler := func(c *vault.Core) http.Handler {
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
 			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(r.RemoteAddr))
@@ -174,7 +174,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 	// Next: test picking correct value
 	t.Run("correct_hop_skipping", func(t *testing.T) {
 		t.Parallel()
-		testHandler := func(c *vault.Core) http.Handler {
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
 			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(r.RemoteAddr))
@@ -211,7 +211,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 	// Next: multi-header approach
 	t.Run("correct_hop_skipping_multi_header", func(t *testing.T) {
 		t.Parallel()
-		testHandler := func(c *vault.Core) http.Handler {
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
 			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(r.RemoteAddr))
