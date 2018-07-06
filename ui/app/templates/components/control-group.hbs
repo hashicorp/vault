@@ -1,0 +1,53 @@
+<div class="box is-fullwidth is-bottomless is-sideless">
+  <MessageError @model={{model}} />
+  <div class="control-group-header {{if model.approved 'is-success'}}">
+    <p>
+      <ICon @glyph={{if model.approved "checkmark-circled" "control-lock"}} @size={{16}} />
+      <strong>{{#if model.approved}}Approved{{else}}Locked{{/if}}</strong>
+      The path you requested is locked by a control group.
+    </p>
+  </div>
+  <div class="control-group">
+    {{#if model.requestEntity.canRead}}
+      <a href="{{href-to 'vault.cluster.access.identity.show' 'entity' model.requestEntity.id 'details'}}">
+        {{requestorName}}
+      </a>
+    {{else}}
+      {{requestorName}}
+    {{/if}}
+    {{#if currentUserIsRequesting}}are{{else}}is{{/if}}
+    requesting access to <code>{{model.requestPath}}</code>
+
+    <div class="authorizations">
+      {{#if (gt model.authorizations.length 0)}}
+      <span class="has-text-success">
+        <ICon @glyph="checkmark-circled-outline" @size={{16}} />
+      </span>
+        Already approved by
+        {{#each model.authorizations as |a|}}
+          {{#if a.canRead}}
+            <a href="{{href-to 'vault.cluster.access.identity.show' 'entity' a.id 'details'}}">
+              {{a.name}}
+            </a>
+          {{else}}
+            {{a.name}}
+          {{/if}}
+        {{/each}}
+      {{else}}
+        Awaiting authorization.
+      {{/if}}
+    </div>
+  </div>
+
+  {{#if (and model.canAuthorize (not model.approved))}}
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <button
+        type="button"
+        class="button is-primary {{if authorize.isRunning 'is-loading'}}"
+        {{action (perform authorize)}}
+        >
+        Authorize
+      </button>
+    </div>
+  {{/if}}
+</div>
