@@ -1,5 +1,10 @@
 ## Next
 
+IMPROVEMENTS:
+
+ * core: A `max_request_size` parameter can now be set per-listener to adjust
+   the maximum allowed size per request [GH-4824]
+
 BUG FIXES:
 
  * secrets/database: Fix panic during DB creds revocation [GH-4846]
