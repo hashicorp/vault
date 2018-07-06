@@ -50,13 +50,11 @@ func (c *statementContext) setNumArg(numArg int) {
 }
 
 func (c *statementContext) read(rd *bufio.Reader) error {
-	if err := c.options.read(rd, c._numArg); err != nil {
-		return err
-	}
+	c.options.read(rd, c._numArg)
 
 	if trace {
 		outLogger.Printf("statement context: %v", c)
 	}
 
-	return nil
+	return rd.GetError()
 }

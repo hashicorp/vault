@@ -24,7 +24,7 @@ func ParseAttributes(b []byte) (Attributes, error) {
 			return nil, errors.New("short buffer")
 		}
 		length := int(b[1])
-		if length > len(b) || length > 253 {
+		if length > len(b) || length < 2 || length > 253 {
 			return nil, errors.New("invalid attribute length")
 		}
 
@@ -71,7 +71,7 @@ func (a Attributes) Lookup(key Type) (Attribute, bool) {
 
 // Set removes all Attributes of Type key and appends value.
 func (a Attributes) Set(key Type, value Attribute) {
-	a[key] = []Attribute{value}
+	a[key] = append(a[key][:0], value)
 }
 
 // Len returns the total number of Attributes in a.
@@ -89,7 +89,7 @@ func (a Attributes) encodeTo(b []byte) {
 			continue
 		}
 		for _, attr := range attrs {
-			size := 2 + len(attr)
+			size := 1 + 1 + len(attr)
 			b[0] = byte(typ)
 			b[1] = byte(size)
 			copy(b[2:], attr)

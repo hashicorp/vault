@@ -89,6 +89,13 @@ func NewECDSAPrivateKey(currentTime time.Time, priv *ecdsa.PrivateKey) *PrivateK
 	return pk
 }
 
+func NewECDHPrivateKey(currentTime time.Time, priv *ecdh.PrivateKey) *PrivateKey {
+	pk := new(PrivateKey)
+	pk.PublicKey = *NewECDHPublicKey(currentTime, &priv.PublicKey)
+	pk.PrivateKey = priv
+	return pk
+}
+
 func (pk *PrivateKey) parse(r io.Reader) (err error) {
 	err = (&pk.PublicKey).parse(r)
 	if err != nil {

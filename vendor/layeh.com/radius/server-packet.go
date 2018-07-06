@@ -15,11 +15,11 @@ type packetResponseWriter struct {
 }
 
 func (r *packetResponseWriter) Write(packet *Packet) error {
-	raw, err := packet.Encode()
+	encoded, err := packet.Encode()
 	if err != nil {
 		return err
 	}
-	if _, err := r.conn.WriteTo(raw, r.addr); err != nil {
+	if _, err := r.conn.WriteTo(encoded, r.addr); err != nil {
 		return err
 	}
 	return nil
@@ -30,10 +30,16 @@ func (r *packetResponseWriter) Write(packet *Packet) error {
 type PacketServer struct {
 	// The address on which the server listens. Defaults to :1812.
 	Addr string
+
 	// The network on which the server listens. Defaults to udp.
-	Network      string
+	Network string
+
+	// The source from which the secret is obtained for parsing and validating
+	// the request.
 	SecretSource SecretSource
-	Handler      Handler
+
+	// Handler which is called to process the request.
+	Handler Handler
 
 	// Skip incoming packet authenticity validation.
 	// This should only be set to true for debugging purposes.
@@ -107,8 +113,8 @@ func (s *PacketServer) Serve(conn net.PacketConn) error {
 		}
 	}()
 
+	var buff [MaxPacketLength]byte
 	for {
-		var buff [MaxPacketLength]byte
 		n, remoteAddr, err := conn.ReadFrom(buff[:])
 		if err != nil {
 			s.mu.Lock()
@@ -125,8 +131,7 @@ func (s *PacketServer) Serve(conn net.PacketConn) error {
 			continue
 		}
 
-		buffCopy := make([]byte, n)
-		copy(buffCopy, buff[:n])
+		buffCopy := append([]byte(nil), buff[:n]...)
 
 		atomic.AddInt32(&s.activeCount, 1)
 		go func(buff []byte, remoteAddr net.Addr) {

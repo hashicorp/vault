@@ -16,14 +16,25 @@ limitations under the License.
 
 package protocol
 
-//go:generate stringer -type=ErrorLevel
-
 // ErrorLevel send from database server.
-type ErrorLevel int8
+type errorLevel int8
+
+func (e errorLevel) String() string {
+	switch e {
+	case 0:
+		return "Warning"
+	case 1:
+		return "Error"
+	case 2:
+		return "Fatal Error"
+	default:
+		return ""
+	}
+}
 
 // HDB error level constants.
 const (
-	HdbWarning    ErrorLevel = 0
-	HdbError      ErrorLevel = 1
-	HdbFatalError ErrorLevel = 2
+	errorLevelWarning    errorLevel = 0
+	errorLevelError      errorLevel = 1
+	errorLevelFatalError errorLevel = 2
 )

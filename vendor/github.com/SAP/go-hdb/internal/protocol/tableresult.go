@@ -18,16 +18,16 @@ package protocol
 
 // TableResult is the package internal representation of a table like output parameter of a stored procedure.
 type TableResult struct {
-	id          uint64
-	fieldSet    *FieldSet
-	fieldValues *FieldValues
-	attrs       partAttributes
+	id             uint64
+	resultFieldSet *ResultFieldSet
+	fieldValues    *FieldValues
+	attrs          partAttributes
 }
 
 func newTableResult(s *Session, size int) *TableResult {
 	return &TableResult{
-		fieldSet:    newFieldSet(size),
-		fieldValues: newFieldValues(s),
+		resultFieldSet: newResultFieldSet(size),
+		fieldValues:    newFieldValues(),
 	}
 }
 
@@ -37,8 +37,8 @@ func (r *TableResult) ID() uint64 {
 }
 
 // FieldSet returns the field metadata of the table.
-func (r *TableResult) FieldSet() *FieldSet {
-	return r.fieldSet
+func (r *TableResult) FieldSet() *ResultFieldSet {
+	return r.resultFieldSet
 }
 
 // FieldValues returns the field values (fetched resultset part) of the table.

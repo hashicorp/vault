@@ -972,7 +972,7 @@ type BincHandle struct {
 	// - n: none
 	// - a: all: same as m, s, ...
 
-	_ [1]uint64 // padding
+	// _ [1]uint64 // padding
 }
 
 // Name returns the name of the handle: binc

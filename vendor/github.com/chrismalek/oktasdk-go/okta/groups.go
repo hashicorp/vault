@@ -265,13 +265,67 @@ func (g *GroupsService) Add(groupName string, groupDescription string) (*Group, 
 	return group, resp, err
 }
 
-// Delete - Delets an OKTA Mastered Group with ID
+// Delete - Deletes an OKTA Mastered Group with ID
 func (g *GroupsService) Delete(groupID string) (*Response, error) {
 
 	if groupID == "" {
 		return nil, errors.New("groupID parameter is required for Delete")
 	}
 	u := fmt.Sprintf("groups/%v", groupID)
+
+	req, err := g.client.NewRequest("DELETE", u, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := g.client.Do(req, nil)
+
+	if err != nil {
+		return resp, err
+	}
+
+	return resp, err
+}
+
+// AddUserToGroup - Adds a user to a group.
+func (g *GroupsService) AddUserToGroup(groupID string, userID string) (*Response, error) {
+
+	if groupID == "" {
+		return nil, errors.New("groupID parameter is required for Delete")
+	}
+	if userID == "" {
+		return nil, errors.New("groupID parameter is required for Delete")
+	}
+
+	u := fmt.Sprintf("groups/%v/users/%v", groupID, userID)
+
+	req, err := g.client.NewRequest("PUT", u, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := g.client.Do(req, nil)
+
+	if err != nil {
+		return resp, err
+	}
+
+	return resp, err
+}
+
+// RemoveUserFromGroup - Removes a user to a group.
+func (g *GroupsService) RemoveUserFromGroup(groupID string, userID string) (*Response, error) {
+
+	if groupID == "" {
+		return nil, errors.New("groupID parameter is required for Delete")
+	}
+	if userID == "" {
+		return nil, errors.New("groupID parameter is required for Delete")
+	}
+
+	u := fmt.Sprintf("groups/%v/users/%v", groupID, userID)
 
 	req, err := g.client.NewRequest("DELETE", u, nil)
 

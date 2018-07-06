@@ -53,9 +53,11 @@ type Invitation struct {
 	Login *string `json:"login,omitempty"`
 	Email *string `json:"email,omitempty"`
 	// Role can be one of the values - 'direct_member', 'admin', 'billing_manager', 'hiring_manager', or 'reinstate'.
-	Role      *string    `json:"role,omitempty"`
-	CreatedAt *time.Time `json:"created_at,omitempty"`
-	Inviter   *User      `json:"inviter,omitempty"`
+	Role              *string    `json:"role,omitempty"`
+	CreatedAt         *time.Time `json:"created_at,omitempty"`
+	Inviter           *User      `json:"inviter,omitempty"`
+	TeamCount         *int       `json:"team_count,omitempty"`
+	InvitationTeamURL *string    `json:"invitation_team_url,omitempty"`
 }
 
 func (i Invitation) String() string {

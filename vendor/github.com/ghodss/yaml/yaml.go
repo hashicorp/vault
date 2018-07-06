@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 
@@ -26,19 +27,38 @@ func Marshal(o interface{}) ([]byte, error) {
 	return y, nil
 }
 
-// Converts YAML to JSON then uses JSON to unmarshal into an object.
-func Unmarshal(y []byte, o interface{}) error {
+// JSONOpt is a decoding option for decoding from JSON format.
+type JSONOpt func(*json.Decoder) *json.Decoder
+
+// Unmarshal converts YAML to JSON then uses JSON to unmarshal into an object,
+// optionally configuring the behavior of the JSON unmarshal.
+func Unmarshal(y []byte, o interface{}, opts ...JSONOpt) error {
 	vo := reflect.ValueOf(o)
 	j, err := yamlToJSON(y, &vo)
 	if err != nil {
 		return fmt.Errorf("error converting YAML to JSON: %v", err)
 	}
 
-	err = json.Unmarshal(j, o)
+	err = jsonUnmarshal(bytes.NewReader(j), o, opts...)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling JSON: %v", err)
 	}
 
+	return nil
+}
+
+// jsonUnmarshal unmarshals the JSON byte stream from the given reader into the
+// object, optionally applying decoder options prior to decoding.  We are not
+// using json.Unmarshal directly as we want the chance to pass in non-default
+// options.
+func jsonUnmarshal(r io.Reader, o interface{}, opts ...JSONOpt) error {
+	d := json.NewDecoder(r)
+	for _, opt := range opts {
+		d = opt(d)
+	}
+	if err := d.Decode(&o); err != nil {
+		return fmt.Errorf("while decoding JSON: %v", err)
+	}
 	return nil
 }
 

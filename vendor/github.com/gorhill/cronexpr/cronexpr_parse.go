@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 )
 
 /******************************************************************************/
@@ -194,6 +195,7 @@ var (
 	fieldFinder               = regexp.MustCompile(`\S+`)
 	entryFinder               = regexp.MustCompile(`[^,]+`)
 	layoutRegexp              = make(map[string]*regexp.Regexp)
+	layoutRegexpLock          sync.Mutex
 )
 
 /******************************************************************************/
@@ -488,6 +490,9 @@ func genericFieldParse(s string, desc fieldDescriptor) ([]*cronDirective, error)
 /******************************************************************************/
 
 func makeLayoutRegexp(layout, value string) *regexp.Regexp {
+	layoutRegexpLock.Lock()
+	defer layoutRegexpLock.Unlock()
+
 	layout = strings.Replace(layout, `%value%`, value, -1)
 	re := layoutRegexp[layout]
 	if re == nil {
