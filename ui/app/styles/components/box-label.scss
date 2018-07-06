@@ -1,12 +1,15 @@
 label.box-label {
   cursor: pointer;
 }
+
 .box-label {
   @extend .box;
   @extend .is-centered;
   @extend .is-gapless;
+  border-color: $grey-light;
   border-radius: 3px;
   text-decoration: none;
+  transition: box-shadow $speed;
   width: 100%;
 
   > div:first-child {
@@ -16,8 +19,17 @@ label.box-label {
   &.is-column {
     @extend .is-flex-column;
   }
+
   &.is-selected {
-    box-shadow: 0 0 0 1px $blue;
+    box-shadow: $box-link-hover-shadow, $box-shadow-middle;
+
+    .icon {
+      color: $grey;
+    }
+  }
+
+  .icon {
+    color: $grey-light;
   }
 
   input[type=radio] {
@@ -25,7 +37,7 @@ label.box-label {
   }
 
   input[type=radio] + label {
-    border: 1px solid $grey;
+    border: 1px solid $grey-light;
     border-radius: 50%;
     cursor: pointer;
     display: block;

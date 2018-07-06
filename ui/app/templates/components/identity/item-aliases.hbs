@@ -1,5 +1,5 @@
 {{#each (if model.alias.id (array model.alias) model.aliases) as |item|}}
-  {{#linked-block
+    {{#linked-block
     "vault.cluster.access.identity.aliases.show"
     item.id
     "details"

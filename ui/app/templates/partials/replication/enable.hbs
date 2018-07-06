@@ -35,7 +35,7 @@
     {{#if initialReplicationMode}}
       {{#if (eq initialReplicationMode 'dr')}}
         <h3 class="title is-flex-center is-5 is-marginless">
-          {{i-con class="has-text-grey is-medium" glyph="replication" size=24}}
+          {{i-con class="is-medium" glyph="replication" size=24}}
           Disaster Recovery (DR) Replication
         </h3>
         <p class="help has-text-grey-dark">
@@ -43,7 +43,7 @@
         </p>
       {{else if (eq initialReplicationMode 'performance')}}
         <h3 class="title is-flex-center is-5 is-marginless">
-          {{i-con class="has-text-grey is-medium" glyph="perf-replication" size=20}}
+          {{i-con class="is-medium" glyph="perf-replication" size=20}}
           Performance Replication
         </h3>
           {{#if (not version.hasPerfReplication)}}
@@ -68,7 +68,7 @@
           <label for="dr" class="box-label is-column {{if (eq replicationMode 'dr') 'is-selected'}}">
             <div>
               <h3 class="box-label-header title is-6">
-                {{i-con class="has-text-grey is-medium" glyph="replication" size=24}}
+                {{i-con class="is-medium" glyph="replication" size=24}}
                 Disaster Recovery (DR)
               </h3>
               <p class="help has-text-grey-dark">
@@ -90,18 +90,18 @@
           <label for="performance" class="box-label is-column {{if (eq replicationMode 'performance') 'is-selected'}}">
             <div>
               <h3 class="box-label-header title is-6">
-                {{i-con class="has-text-grey is-medium" glyph="perf-replication" size=20}}
+                {{i-con class="is-medium" glyph="perf-replication" size=20}}
                  Performance
                  {{#if (not version.hasPerfReplication)}}
                    {{edition-badge edition="Premium"}}
                  {{/if}}
               </h3>
               {{#if (not version.hasPerfReplication)}}
-                <p class="help has-text-grey-dark">
+                <p class="help is-mediu-dark">
                   Performance Replication is a feature of {{#upgrade-link pageName="Performance Replication"}}Vault Enterprise Premium{{/upgrade-link}}
                 </p>
               {{else}}
-                <p class="help has-text-grey-dark">
+                <p class="help -dark">
                   Performance replication scales workloads horizontally across clusters to make requests faster. Local secondaries handle read requests but forward writes to the primary to be handled.
                 </p>
               {{/if}}

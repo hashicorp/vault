@@ -35,10 +35,10 @@
   &.is-warning {
     .title,
     .delete {
-      color: $dark-yellow;
+      color: $yellow-darkest;
     }
     border-color: $orange;
-    color: $dark-yellow;
+    color: $yellow-darkest;
   }
 
   & > .delete {

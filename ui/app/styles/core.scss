@@ -1,4 +1,5 @@
-// Start with Bulma variables as a foundation
+// Start with Structure & Bulma variables as a foundation
+@import "./utils/colors";
 @import "bulma/sass/utilities/initial-variables";
 
 // Override variables where appropriate
@@ -7,7 +8,6 @@
 // Utils
 @import "./utils/mixins";
 @import "./utils/animations";
-@import "./utils/colors";
 
 // Bring in the rest of Bulma
 @import "bulma/bulma";
