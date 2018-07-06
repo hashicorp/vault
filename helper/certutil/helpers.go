@@ -10,6 +10,7 @@ import (
 	"crypto/sha1"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -272,4 +273,29 @@ func ComparePublicKeys(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
 	default:
 		return false, fmt.Errorf("cannot compare key with type %T", key1Iface)
 	}
+}
+
+// PasrsePublicKeyPEM is used to parse RSA and ECDSA public keys from PEMs
+func ParsePublicKeyPEM(data []byte) (interface{}, error) {
+	block, data := pem.Decode(data)
+	if block != nil {
+		var rawKey interface{}
+		var err error
+		if rawKey, err = x509.ParsePKIXPublicKey(block.Bytes); err != nil {
+			if cert, err := x509.ParseCertificate(block.Bytes); err == nil {
+				rawKey = cert.PublicKey
+			} else {
+				return nil, err
+			}
+		}
+
+		if rsaPublicKey, ok := rawKey.(*rsa.PublicKey); ok {
+			return rsaPublicKey, nil
+		}
+		if ecPublicKey, ok := rawKey.(*ecdsa.PublicKey); ok {
+			return ecPublicKey, nil
+		}
+	}
+
+	return nil, errors.New("data does not contain any valid RSA or ECDSA public keys")
 }
