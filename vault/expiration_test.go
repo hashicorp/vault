@@ -38,14 +38,17 @@ func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *Expi
 func TestExpiration_Tidy(t *testing.T) {
 	var err error
 
-	exp := mockExpiration(t)
-
 	// We use this later for tidy testing where we need to check the output
 	logOut := new(bytes.Buffer)
 	logger := log.New(&log.LoggerOptions{
 		Output: logOut,
 	})
-	exp.logger = logger
+
+	testCore := TestCore(t)
+	testCore.logger = logger
+	testCoreUnsealed(t, testCore)
+
+	exp := testCore.expiration
 
 	if err := exp.Restore(nil); err != nil {
 		t.Fatal(err)

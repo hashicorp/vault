@@ -261,7 +261,7 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 
 	// Write a very large object, should fail
 	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
-		"data": make([]byte, MaxRequestSize),
+		"data": make([]byte, DefaultMaxRequestSize),
 	})
 	testResponseStatus(t, resp, 413)
 }

@@ -880,7 +880,7 @@ type TestClusterCore struct {
 type TestClusterOptions struct {
 	KeepStandbysSealed bool
 	SkipInit           bool
-	HandlerFunc        func(*Core) http.Handler
+	HandlerFunc        func(*HandlerProperties) http.Handler
 	BaseListenAddress  string
 	NumCores           int
 	SealFunc           func() Seal
@@ -1249,7 +1249,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		cores = append(cores, c)
 		if opts != nil && opts.HandlerFunc != nil {
-			handlers[i] = opts.HandlerFunc(c)
+			handlers[i] = opts.HandlerFunc(&HandlerProperties{
+				Core: c,
+			})
 			servers[i].Handler = handlers[i]
 		}
 	}
