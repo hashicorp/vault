@@ -446,13 +446,20 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	// Request the leader address
 	_, redirectAddr, _, err := core.Leader()
 	if err != nil {
+		if err == vault.ErrHANotEnabled {
+			// Standalone node, serve 503
+			err = errors.New("node is not active")
+			respondError(w, http.StatusServiceUnavailable, err)
+			return
+		}
+
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	// If there is no leader, generate a 503 error
 	if redirectAddr == "" {
-		err = fmt.Errorf("no active Vault instance found")
+		err = errors.New("no active Vault instance found")
 		respondError(w, http.StatusServiceUnavailable, err)
 		return
 	}
