@@ -1,15 +1,15 @@
 <div class="box is-fullwidth is-bottomless is-sideless">
   <MessageError @model={{model}} />
-  <div class="control-group-header {{if model.approved 'is-success'}}">
+  <div class="control-group-header {{if isSuccess 'is-success'}}">
     <p>
-      <ICon @glyph={{if model.approved "checkmark-circled" "control-lock"}} @size={{16}} />
-      <strong>{{#if model.approved}}Approved{{else}}Locked{{/if}}</strong>
-      The path you requested is locked by a control group.
+      <ICon @glyph={{if isSuccess "checkmark-circled" "control-lock"}} @size={{16}} />
+      <strong data-test-banner-prefix>{{bannerPrefix}}</strong>
+      {{bannerText}}
     </p>
   </div>
   <div class="control-group">
     {{#if model.requestEntity.canRead}}
-      <a href="{{href-to 'vault.cluster.access.identity.show' 'entity' model.requestEntity.id 'details'}}">
+      <a href={{href-to 'vault.cluster.access.identity.show' 'entities' model.requestEntity.id 'details'}}>
         {{requestorName}}
       </a>
     {{else}}
@@ -24,13 +24,13 @@
         <ICon @glyph="checkmark-circled-outline" @size={{16}} />
       </span>
         Already approved by
-        {{#each model.authorizations as |a|}}
-          {{#if a.canRead}}
-            <a href="{{href-to 'vault.cluster.access.identity.show' 'entity' a.id 'details'}}">
-              {{a.name}}
+        {{#each model.authorizations as |authorization|}}
+          {{#if authorization.canRead}}
+            <a href={{href-to 'vault.cluster.access.identity.show' 'entities' authorization.id 'details'}}>
+              {{authorization.name}}
             </a>
           {{else}}
-            {{a.name}}
+            {{authorization.name}}
           {{/if}}
         {{/each}}
       {{else}}
@@ -39,15 +39,31 @@
     </div>
   </div>
 
-  {{#if (and model.canAuthorize (not model.approved))}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      <button
-        type="button"
-        class="button is-primary {{if authorize.isRunning 'is-loading'}}"
-        {{action (perform authorize)}}
-        >
-        Authorize
-      </button>
-    </div>
+  {{#if model.canAuthorize}}
+      {{#if (or model.approved currentUserHasAuthorized)}}
+
+      <a href={{href-to 'vault.cluster.access.control-groups'}} class="button" >
+        <ICon @glyph="chevron-left" @size=10 /> Back
+        </a>
+      {{else}}
+        <button
+          type="button"
+          class="button is-primary {{if authorize.isRunning 'is-loading'}}"
+          {{action (perform authorize)}}
+          >
+          Authorize
+        </button>
+      {{/if}}
+    {{else}}
+
+        <button
+          type="button"
+          class="button is-primary {{if refresh.isRunning 'is-loading'}}"
+          {{action (perform refresh)}}
+          >
+          Refresh
+        </button>
   {{/if}}
+    </div>
 </div>

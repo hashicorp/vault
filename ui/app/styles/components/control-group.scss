@@ -3,15 +3,22 @@
   box-shadow: $box-shadow-middle, 0 0 1px $grey-dark;
 }
 
+.control-group a {
+  color: currentColor;
+}
 .control-group-header {
   box-shadow: 0 0 1px currentColor;
   padding: $size-9 $size-6;
   background: $grey-lighter;
   color: $grey-dark;
+  position: relative;
+  strong {
+    color: currentColor;
+  }
 }
 
 .control-group-header.is-success {
-  color: $dark-green;
+  color: $green-darker;
   background: $light-green;
 }
 
