@@ -505,6 +505,28 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 		return nil
 	}
 
+	// If not in force mode, where we want to ignore errors, and not in
+	// skiptoken mode where we're already in the middle of a revocation
+	// operation, if the expiration time has not already been hit, set
+	// expiration to now, persist, and call updatePending to hand off
+	// revocation to the expiration manager's pending timer map. We still
+	// attempt to continue revocation here.
+	if !force && !skipToken && le.ExpireTime.After(time.Now()) {
+		le.ExpireTime = time.Now()
+		{
+			m.pendingLock.Lock()
+			if err := m.persistEntry(le); err != nil {
+				m.pendingLock.Unlock()
+				return err
+			}
+
+			m.updatePendingInternal(le, 0)
+			m.pendingLock.Unlock()
+
+			return nil
+		}
+	}
+
 	// Revoke the entry
 	if !skipToken || le.Auth == nil {
 		if err := m.revokeEntry(le); err != nil {
