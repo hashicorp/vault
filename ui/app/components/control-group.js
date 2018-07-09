@@ -6,8 +6,19 @@ const { computed, inject } = Ember;
 export default Ember.Component.extend({
   tagName: '',
   auth: inject.service(),
+  controlGroup: inject.service(),
+
   // public API
   model: null,
+
+  init() {
+    this._super(...arguments);
+    let accessor = this.get('model.id');
+    let data = this.get('controlGroup').wrapInfoForAccessor(accessor);
+    if (data) {
+      this.set('controlGroupResponse', data);
+    }
+  },
 
   currentUserEntityId: computed.alias('auth.authData.entity_id'),
 
@@ -42,7 +53,7 @@ export default Ember.Component.extend({
     if (currentUserHasAuthorized) {
       return 'Thanks!';
     }
-    if (currentUserIsRequesting && isApproved) {
+    if (isApproved) {
       return 'Success!';
     }
     return 'Locked';
@@ -59,6 +70,9 @@ export default Ember.Component.extend({
     }
     if (currentUserIsRequesting && isApproved) {
       return 'You have been given authorization';
+    }
+    if (isApproved) {
+      return 'This control group has been authorized';
     }
     if (currentUserIsRequesting) {
       return 'The path you requested is locked by a control group';

@@ -47,6 +47,8 @@ export default DS.RESTAdapter.extend({
   },
 
   ajax(url, type, options = {}) {
+    let hasToken = this.get('controlGroup').hasTokenForUrl(url);
+    console.table({ url, hasToken });
     let opts = this._preRequest(url, options);
 
     return this._super(url, type, opts).then((...args) => {
@@ -57,8 +59,7 @@ export default DS.RESTAdapter.extend({
           flash.info(message);
         });
       }
-      return this.get('controlGroup')
-        .checkForControlGroup(args, resp, options.wrapTTL);
+      return this.get('controlGroup').checkForControlGroup(args, resp, options.wrapTTL);
     });
   },
 

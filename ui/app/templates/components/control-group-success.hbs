@@ -1,0 +1,11 @@
+{{#if (and controlGroupResponse.token controlGroupResponse.uiParams)}}
+  You have been granted access to <code>{{model.requestPath}}</code>. Be careful, you can only access this data once. 
+  If you need access again in the future you will need to get authorized again.
+  <div class="box is-shadowless is-fullwidth is-marginless has-slim-padding">
+    <a href={{linkURL}} class="button is-primary">Visit</a>
+  </div>
+{{else}}
+  <p>
+    If you have the token, you can now can access <code>{{model.requestPath}}</code>
+  </p>
+{{/if}}
