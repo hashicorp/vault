@@ -1,4 +1,4 @@
-package agent
+package config
 
 import (
 	"fmt"
