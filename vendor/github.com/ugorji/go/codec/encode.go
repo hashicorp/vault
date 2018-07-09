@@ -103,7 +103,15 @@ type EncodeOptions struct {
 	// if > 0, we use a smart buffer internally for performance purposes.
 	WriterBufferSize int
 
-	// Encode a struct as an array, and not as a map
+	// ChanRecvTimeout is the timeout used when selecting from a chan.
+	//
+	// Configuring this controls how we receive from a chan during the encoding process.
+	//   - If ==0, we only consume the elements currently available in the chan.
+	//   - if  <0, we consume until the chan is closed.
+	//   - If  >0, we consume until this timeout.
+	ChanRecvTimeout time.Duration
+
+	// StructToArray specifies to encode a struct as an array, and not as a map
 	StructToArray bool
 
 	// Canonical representation means that encoding a value will always result in the same
@@ -314,18 +322,19 @@ func (e *Encoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 		}
 	}
 	if f.seq == seqTypeChan && ti.chandir&uint8(reflect.RecvDir) == 0 {
-		e.errorf("send-only channel cannot be used for receiving byte(s)")
+		e.errorf("send-only channel cannot be encoded")
 	}
 	elemsep := e.esep
-	l := rv.Len()
 	rtelem := ti.elem
 	rtelemIsByte := uint8TypId == rt2id(rtelem) // NOT rtelem.Kind() == reflect.Uint8
+	var l int
 	// if a slice, array or chan of bytes, treat specially
 	if rtelemIsByte {
 		switch f.seq {
 		case seqTypeSlice:
 			ee.EncodeStringBytes(cRAW, rv.Bytes())
 		case seqTypeArray:
+			l = rv.Len()
 			if rv.CanAddr() {
 				ee.EncodeStringBytes(cRAW, rv.Slice(0, l).Bytes())
 			} else {
@@ -339,24 +348,89 @@ func (e *Encoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 				ee.EncodeStringBytes(cRAW, bs)
 			}
 		case seqTypeChan:
-			bs := e.b[:0]
 			// do not use range, so that the number of elements encoded
 			// does not change, and encoding does not hang waiting on someone to close chan.
 			// for b := range rv2i(rv).(<-chan byte) { bs = append(bs, b) }
 			// ch := rv2i(rv).(<-chan byte) // fix error - that this is a chan byte, not a <-chan byte.
+
+			if rv.IsNil() {
+				ee.EncodeNil()
+				break
+			}
+			bs := e.b[:0]
 			irv := rv2i(rv)
 			ch, ok := irv.(<-chan byte)
 			if !ok {
 				ch = irv.(chan byte)
 			}
-			for i := 0; i < l; i++ {
-				bs = append(bs, <-ch)
+
+		L1:
+			switch timeout := e.h.ChanRecvTimeout; {
+			case timeout == 0: // only consume available
+				for {
+					select {
+					case b := <-ch:
+						bs = append(bs, b)
+					default:
+						break L1
+					}
+				}
+			case timeout > 0: // consume until timeout
+				tt := time.NewTimer(timeout)
+				for {
+					select {
+					case b := <-ch:
+						bs = append(bs, b)
+					case <-tt.C:
+						// close(tt.C)
+						break L1
+					}
+				}
+			default: // consume until close
+				for b := range ch {
+					bs = append(bs, b)
+				}
 			}
+
 			ee.EncodeStringBytes(cRAW, bs)
 		}
 		return
 	}
 
+	// if chan, consume chan into a slice, and work off that slice.
+	var rvcs reflect.Value
+	if f.seq == seqTypeChan {
+		rvcs = reflect.Zero(reflect.SliceOf(rtelem))
+		timeout := e.h.ChanRecvTimeout
+		if timeout < 0 { // consume until close
+			for {
+				recv, recvOk := rv.Recv()
+				if !recvOk {
+					break
+				}
+				rvcs = reflect.Append(rvcs, recv)
+			}
+		} else {
+			cases := make([]reflect.SelectCase, 2)
+			cases[0] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: rv}
+			if timeout == 0 {
+				cases[1] = reflect.SelectCase{Dir: reflect.SelectDefault}
+			} else {
+				tt := time.NewTimer(timeout)
+				cases[1] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(tt.C)}
+			}
+			for {
+				chosen, recv, recvOk := reflect.Select(cases)
+				if chosen == 1 || !recvOk {
+					break
+				}
+				rvcs = reflect.Append(rvcs, recv)
+			}
+		}
+		rv = rvcs // TODO: ensure this doesn't mess up anywhere that rv of kind chan is expected
+	}
+
+	l = rv.Len()
 	if ti.mbs {
 		if l%2 == 1 {
 			e.errorf("mapBySlice requires even slice length, but got %v", l)
@@ -390,15 +464,7 @@ func (e *Encoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 					ee.WriteArrayElem()
 				}
 			}
-			if f.seq == seqTypeChan {
-				if rv2, ok2 := rv.Recv(); ok2 {
-					e.encodeValue(rv2, fn, true)
-				} else {
-					ee.EncodeNil() // WE HAVE TO DO SOMETHING, so nil if nothing received.
-				}
-			} else {
-				e.encodeValue(rv.Index(j), fn, true)
-			}
+			e.encodeValue(rv.Index(j), fn, true)
 		}
 	}
 
@@ -837,7 +903,7 @@ type encWriterSwitch struct {
 	isas bool // whether e.as != nil
 }
 
-// // TODO: Uncomment after mid-stack inlining enabled in go 1.10
+// // TODO: Uncomment after mid-stack inlining enabled in go 1.11
 
 // func (z *encWriterSwitch) writeb(s []byte) {
 // 	if z.wx {
@@ -997,9 +1063,12 @@ func (e *Encoder) ResetBytes(out *[]byte) {
 // Encode writes an object into a stream.
 //
 // Encoding can be configured via the struct tag for the fields.
-// The "codec" key in struct field's tag value is the key name,
+// The key (in the struct tags) that we look at is configurable.
+//
+// By default, we look up the "codec" key in the struct field's tags,
+// and fall bak to the "json" key if "codec" is absent.
+// That key in struct field's tag value is the key name,
 // followed by an optional comma and options.
-// Note that the "json" key is used in the absence of the "codec" key.
 //
 // To set an option on all fields (e.g. omitempty on all fields), you
 // can create a field called _struct, and set flags on it. The options
@@ -1075,8 +1144,7 @@ func (e *Encoder) ResetBytes(out *[]byte) {
 // Some formats support symbols (e.g. binc) and will properly encode the string
 // only once in the stream, and use a tag to refer to it thereafter.
 func (e *Encoder) Encode(v interface{}) (err error) {
-	defer panicToErrs2(e, &e.err, &err)
-	defer e.alwaysAtEnd()
+	defer e.deferred(&err)
 	e.MustEncode(v)
 	return
 }
@@ -1091,6 +1159,16 @@ func (e *Encoder) MustEncode(v interface{}) {
 	e.e.atEndOfEncode()
 	e.w.atEndOfEncode()
 	e.alwaysAtEnd()
+}
+
+func (e *Encoder) deferred(err1 *error) {
+	e.alwaysAtEnd()
+	if recoverPanicToErr {
+		if x := recover(); x != nil {
+			panicValToErr(e, x, err1)
+			panicValToErr(e, x, &e.err)
+		}
+	}
 }
 
 // func (e *Encoder) alwaysAtEnd() {

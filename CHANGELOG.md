@@ -1,7 +1,14 @@
 ## Next
 
+IMPROVEMENTS:
+
+ * core: A `max_request_size` parameter can now be set per-listener to adjust
+   the maximum allowed size per request [GH-4824]
+
 BUG FIXES:
 
+ * core: Fix returning 500 instead of 503 if a rekey is attempted when Vault is
+   sealed [GH-4874]
  * secrets/database: Fix panic during DB creds revocation [GH-4846]
 
 ## 0.10.3 (June 20th, 2018)

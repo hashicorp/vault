@@ -150,10 +150,7 @@ func (s *Sniffer) stream(d dir, from *bufio.Reader, to *bufio.Writer) error {
 			}
 		}
 	}
-
-	to.Flush()
-
-	return nil
+	return to.Flush()
 }
 
 func (s *Sniffer) streamPart(d dir, from *bufio.Reader, to *bufio.Writer, ph *partHeader, padding bool) error {
@@ -176,7 +173,9 @@ func (s *Sniffer) streamBinary(d dir, from *bufio.Reader, to *bufio.Writer, size
 		b = s.getBuffer(size)
 	}
 
-	if err := from.ReadFull(b); err != nil {
+	from.ReadFull(b)
+	err := from.GetError()
+	if err != nil {
 		log.Print(err)
 		return err
 	}
@@ -186,10 +185,7 @@ func (s *Sniffer) streamBinary(d dir, from *bufio.Reader, to *bufio.Writer, size
 	} else {
 		log.Printf("%s %v", d, b[:size])
 	}
-	if _, err := to.Write(b); err != nil {
-		log.Print(err)
-		return err
-	}
+	to.Write(b)
 	return nil
 }
 

@@ -80,8 +80,6 @@ func (e *eventDebouncer) debounce(frame frame) {
 }
 
 func (s *Session) handleEvent(framer *framer) {
-	defer framerPool.Put(framer)
-
 	frame, err := framer.parseFrame()
 	if err != nil {
 		// TODO: logger

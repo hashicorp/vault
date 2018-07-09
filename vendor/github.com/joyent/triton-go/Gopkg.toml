@@ -36,3 +36,39 @@
 [[constraint]]
   branch = "master"
   name = "github.com/pkg/errors"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/olekukonko/tablewriter"
+
+[[constraint]]
+  name = "github.com/rs/zerolog"
+  version = "1.4.0"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  branch = "master"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/spf13/viper"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/mattn/go-isatty"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/sean-/conswriter"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/sean-/pager"
+
+[[constraint]]
+  name = "github.com/imdario/mergo"
+  version = "0.3.2"
+
+[[constraint]]
+  name = "github.com/dustin/go-humanize"
+  branch = "master"

@@ -157,7 +157,8 @@ func isEmptyValue(v reflect.Value, tinfos *TypeInfos, deref, checkStruct bool) b
 		}
 		return isnil
 	case reflect.Ptr:
-		isnil := urv.ptr == nil
+		// isnil := urv.ptr == nil (not sufficient, as a pointer value encodes the type)
+		isnil := urv.ptr == nil || *(*unsafe.Pointer)(urv.ptr) == nil
 		if deref {
 			if isnil {
 				return true
@@ -175,23 +176,31 @@ func isEmptyValue(v reflect.Value, tinfos *TypeInfos, deref, checkStruct bool) b
 
 // --------------------------
 
+// atomicTypeInfoSlice contains length and pointer to the array for a slice.
+// It is expected to be 2 words.
+//
+// Previously, we atomically loaded and stored the length and array pointer separately,
+// which could lead to some races.
+// We now just atomically store and load the pointer to the value directly.
+
 type atomicTypeInfoSlice struct { // expected to be 2 words
+	l int            // length of the data array (must be first in struct, for 64-bit alignment necessary for 386)
 	v unsafe.Pointer // data array - Pointer (not uintptr) to maintain GC reference
-	l int64          // length of the data array
 }
 
 func (x *atomicTypeInfoSlice) load() []rtid2ti {
-	l := int(atomic.LoadInt64(&x.l))
-	if l == 0 {
+	xp := unsafe.Pointer(x)
+	x2 := *(*atomicTypeInfoSlice)(atomic.LoadPointer(&xp))
+	if x2.l == 0 {
 		return nil
 	}
-	return *(*[]rtid2ti)(unsafe.Pointer(&unsafeSlice{Data: atomic.LoadPointer(&x.v), Len: l, Cap: l}))
+	return *(*[]rtid2ti)(unsafe.Pointer(&unsafeSlice{Data: x2.v, Len: x2.l, Cap: x2.l}))
 }
 
 func (x *atomicTypeInfoSlice) store(p []rtid2ti) {
 	s := (*unsafeSlice)(unsafe.Pointer(&p))
-	atomic.StorePointer(&x.v, s.Data)
-	atomic.StoreInt64(&x.l, int64(s.Len))
+	xp := unsafe.Pointer(x)
+	atomic.StorePointer(&xp, unsafe.Pointer(&atomicTypeInfoSlice{l: s.Len, v: s.Data}))
 }
 
 // --------------------------

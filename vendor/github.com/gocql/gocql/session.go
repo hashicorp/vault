@@ -39,6 +39,8 @@ type Session struct {
 	trace               Tracer
 	queryObserver       QueryObserver
 	batchObserver       BatchObserver
+	connectObserver     ConnectObserver
+	frameObserver       FrameHeaderObserver
 	hostSource          *ringDescriber
 	stmtsLRU            *preparedLRU
 
@@ -106,12 +108,13 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 	}
 
 	s := &Session{
-		cons:     cfg.Consistency,
-		prefetch: 0.25,
-		cfg:      cfg,
-		pageSize: cfg.PageSize,
-		stmtsLRU: &preparedLRU{lru: lru.New(cfg.MaxPreparedStmts)},
-		quit:     make(chan struct{}),
+		cons:            cfg.Consistency,
+		prefetch:        0.25,
+		cfg:             cfg,
+		pageSize:        cfg.PageSize,
+		stmtsLRU:        &preparedLRU{lru: lru.New(cfg.MaxPreparedStmts)},
+		quit:            make(chan struct{}),
+		connectObserver: cfg.ConnectObserver,
 	}
 
 	s.schemaDescriber = newSchemaDescriber(s)
@@ -138,6 +141,8 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 
 	s.queryObserver = cfg.QueryObserver
 	s.batchObserver = cfg.BatchObserver
+	s.connectObserver = cfg.ConnectObserver
+	s.frameObserver = cfg.FrameHeaderObserver
 
 	//Check the TLS Config before trying to connect to anything external
 	connCfg, err := connConfig(&s.cfg)
@@ -311,20 +316,11 @@ func (s *Session) SetTrace(trace Tracer) {
 // value before the query is executed. Query is automatically prepared
 // if it has not previously been executed.
 func (s *Session) Query(stmt string, values ...interface{}) *Query {
-	s.mu.RLock()
 	qry := queryPool.Get().(*Query)
+	qry.session = s
 	qry.stmt = stmt
 	qry.values = values
-	qry.cons = s.cons
-	qry.session = s
-	qry.pageSize = s.pageSize
-	qry.trace = s.trace
-	qry.observer = s.queryObserver
-	qry.prefetch = s.prefetch
-	qry.rt = s.cfg.RetryPolicy
-	qry.serialCons = s.cfg.SerialConsistency
-	qry.defaultTimestamp = s.cfg.DefaultTimestamp
-	s.mu.RUnlock()
+	qry.defaultsFromSession()
 	return qry
 }
 
@@ -342,11 +338,11 @@ type QueryInfo struct {
 // During execution, the meta data of the prepared query will be routed to the
 // binding callback, which is responsible for producing the query argument values.
 func (s *Session) Bind(stmt string, b func(q *QueryInfo) ([]interface{}, error)) *Query {
-	s.mu.RLock()
-	qry := &Query{stmt: stmt, binding: b, cons: s.cons,
-		session: s, pageSize: s.pageSize, trace: s.trace, observer: s.queryObserver,
-		prefetch: s.prefetch, rt: s.cfg.RetryPolicy}
-	s.mu.RUnlock()
+	qry := queryPool.Get().(*Query)
+	qry.session = s
+	qry.stmt = stmt
+	qry.binding = b
+	qry.defaultsFromSession()
 	return qry
 }
 
@@ -648,7 +644,18 @@ func (s *Session) MapExecuteBatchCAS(batch *Batch, dest map[string]interface{}) 
 }
 
 func (s *Session) connect(host *HostInfo, errorHandler ConnErrorHandler) (*Conn, error) {
-	return s.dial(host.ConnectAddress(), host.Port(), s.connCfg, errorHandler)
+	if s.connectObserver != nil {
+		obs := ObservedConnect{
+			Host:  host,
+			Start: time.Now(),
+		}
+		conn, err := s.dial(host, s.connCfg, errorHandler)
+		obs.End = time.Now()
+		obs.Err = err
+		s.connectObserver.ObserveConnect(obs)
+		return conn, err
+	}
+	return s.dial(host, s.connCfg, errorHandler)
 }
 
 // Query represents a CQL statement that can be executed.
@@ -673,8 +680,30 @@ type Query struct {
 	defaultTimestampValue int64
 	disableSkipMetadata   bool
 	context               context.Context
+	idempotent            bool
 
 	disableAutoPage bool
+}
+
+func (q *Query) defaultsFromSession() {
+	s := q.session
+
+	s.mu.RLock()
+	q.cons = s.cons
+	q.pageSize = s.pageSize
+	q.trace = s.trace
+	q.observer = s.queryObserver
+	q.prefetch = s.prefetch
+	q.rt = s.cfg.RetryPolicy
+	q.serialCons = s.cfg.SerialConsistency
+	q.defaultTimestamp = s.cfg.DefaultTimestamp
+	q.idempotent = s.cfg.DefaultIdempotence
+	s.mu.RUnlock()
+}
+
+// Statement returns the statement that was used to generate this query.
+func (q Query) Statement() string {
+	return q.stmt
 }
 
 // String implements the stringer interface.
@@ -707,6 +736,11 @@ func (q *Query) Consistency(c Consistency) *Query {
 // the query.
 func (q *Query) GetConsistency() Consistency {
 	return q.cons
+}
+
+// Same as Consistency but without a return value
+func (q *Query) SetConsistency(c Consistency) {
+	q.cons = c
 }
 
 // Trace enables tracing of this query. Look at the documentation of the
@@ -773,7 +807,7 @@ func (q *Query) execute(conn *Conn) *Iter {
 	return conn.executeQuery(q)
 }
 
-func (q *Query) attempt(keyspace string, end, start time.Time, iter *Iter) {
+func (q *Query) attempt(keyspace string, end, start time.Time, iter *Iter, host *HostInfo) {
 	q.attempts++
 	q.totalLatency += end.Sub(start).Nanoseconds()
 	// TODO: track latencies per host and things as well instead of just total
@@ -785,6 +819,7 @@ func (q *Query) attempt(keyspace string, end, start time.Time, iter *Iter) {
 			Start:     start,
 			End:       end,
 			Rows:      iter.numRows,
+			Host:      host,
 			Err:       iter.err,
 		})
 	}
@@ -904,6 +939,17 @@ func (q *Query) RetryPolicy(r RetryPolicy) *Query {
 	return q
 }
 
+func (q *Query) IsIdempotent() bool {
+	return q.idempotent
+}
+
+// Idempontent marks the query as being idempontent or not depending on
+// the value.
+func (q *Query) Idempontent(value bool) *Query {
+	q.idempotent = value
+	return q
+}
+
 // Bind sets query arguments of query. This can also be used to rebind new query arguments
 // to an existing query instance.
 func (q *Query) Bind(v ...interface{}) *Query {
@@ -953,7 +999,7 @@ func isUseStatement(stmt string) bool {
 		return false
 	}
 
-	return strings.ToLower(stmt[0:3]) == "use"
+	return strings.EqualFold(stmt[0:3], "use")
 }
 
 // Iter executes the query and returns an iterator capable of iterating
@@ -1043,25 +1089,7 @@ func (q *Query) Release() {
 
 // reset zeroes out all fields of a query so that it can be safely pooled.
 func (q *Query) reset() {
-	q.stmt = ""
-	q.values = nil
-	q.cons = 0
-	q.pageSize = 0
-	q.routingKey = nil
-	q.routingKeyBuffer = nil
-	q.pageState = nil
-	q.prefetch = 0
-	q.trace = nil
-	q.session = nil
-	q.rt = nil
-	q.binding = nil
-	q.attempts = 0
-	q.totalLatency = 0
-	q.serialCons = 0
-	q.defaultTimestamp = false
-	q.disableSkipMetadata = false
-	q.disableAutoPage = false
-	q.context = nil
+	*q = Query{}
 }
 
 // Iter represents an iterator that can be used to iterate over all rows that
@@ -1109,8 +1137,9 @@ type Scanner interface {
 }
 
 type iterScanner struct {
-	iter *Iter
-	cols [][]byte
+	iter  *Iter
+	cols  [][]byte
+	valid bool
 }
 
 func (is *iterScanner) Next() bool {
@@ -1127,17 +1156,16 @@ func (is *iterScanner) Next() bool {
 		return false
 	}
 
-	cols := make([][]byte, len(iter.meta.columns))
-	for i := 0; i < len(cols); i++ {
+	for i := 0; i < len(is.cols); i++ {
 		col, err := iter.readColumn()
 		if err != nil {
 			iter.err = err
 			return false
 		}
-		cols[i] = col
+		is.cols[i] = col
 	}
-	is.cols = cols
 	iter.pos++
+	is.valid = true
 
 	return true
 }
@@ -1167,7 +1195,7 @@ func scanColumn(p []byte, col ColumnInfo, dest []interface{}) (int, error) {
 }
 
 func (is *iterScanner) Scan(dest ...interface{}) error {
-	if is.cols == nil {
+	if !is.valid {
 		return errors.New("gocql: Scan called without calling Next")
 	}
 
@@ -1191,8 +1219,7 @@ func (is *iterScanner) Scan(dest ...interface{}) error {
 		i += n
 	}
 
-	is.cols = nil
-
+	is.valid = false
 	return err
 }
 
@@ -1200,6 +1227,7 @@ func (is *iterScanner) Err() error {
 	iter := is.iter
 	is.iter = nil
 	is.cols = nil
+	is.valid = false
 	return iter.Close()
 }
 
@@ -1210,7 +1238,7 @@ func (iter *Iter) Scanner() Scanner {
 		return nil
 	}
 
-	return &iterScanner{iter: iter}
+	return &iterScanner{iter: iter, cols: make([][]byte, len(iter.meta.columns))}
 }
 
 func (iter *Iter) readColumn() ([]byte, error) {
@@ -1297,7 +1325,6 @@ func (iter *Iter) Warnings() []string {
 func (iter *Iter) Close() error {
 	if atomic.CompareAndSwapInt32(&iter.closed, 0, 1) {
 		if iter.framer != nil {
-			framerPool.Put(iter.framer)
 			iter.framer = nil
 		}
 	}
@@ -1383,7 +1410,7 @@ func (s *Session) NewBatch(typ BatchType) *Batch {
 		Type:             typ,
 		rt:               s.cfg.RetryPolicy,
 		serialCons:       s.cfg.SerialConsistency,
-		observer: s.batchObserver,
+		observer:         s.batchObserver,
 		Cons:             s.cons,
 		defaultTimestamp: s.cfg.DefaultTimestamp,
 		keyspace:         s.cfg.Keyspace,
@@ -1420,6 +1447,12 @@ func (b *Batch) Latency() int64 {
 // operation.
 func (b *Batch) GetConsistency() Consistency {
 	return b.Cons
+}
+
+// SetConsistency sets the currently configured consistency level for the batch
+// operation.
+func (b *Batch) SetConsistency(c Consistency) {
+	b.Cons = c
 }
 
 // Query adds the query to the batch operation
@@ -1491,7 +1524,7 @@ func (b *Batch) WithTimestamp(timestamp int64) *Batch {
 	return b
 }
 
-func (b *Batch) attempt(keyspace string, end, start time.Time, iter *Iter) {
+func (b *Batch) attempt(keyspace string, end, start time.Time, iter *Iter, host *HostInfo) {
 	b.attempts++
 	b.totalLatency += end.Sub(start).Nanoseconds()
 	// TODO: track latencies per host and things as well instead of just total
@@ -1511,7 +1544,8 @@ func (b *Batch) attempt(keyspace string, end, start time.Time, iter *Iter) {
 		Start:      start,
 		End:        end,
 		// Rows not used in batch observations // TODO - might be able to support it when using BatchCAS
-		Err: iter.err,
+		Host: host,
+		Err:  iter.err,
 	})
 }
 
@@ -1628,11 +1662,11 @@ func (t *traceWriter) Trace(traceId []byte) {
 		elapsed   int
 	)
 
-	fmt.Fprintf(t.w, "Tracing session %016x (coordinator: %s, duration: %v):\n",
-		traceId, coordinator, time.Duration(duration)*time.Microsecond)
-
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	fmt.Fprintf(t.w, "Tracing session %016x (coordinator: %s, duration: %v):\n",
+		traceId, coordinator, time.Duration(duration)*time.Microsecond)
 
 	iter = t.session.control.query(`SELECT event_id, activity, source, source_elapsed
 			FROM system_traces.events
@@ -1660,6 +1694,9 @@ type ObservedQuery struct {
 	// Rows is not used in batch queries and remains at the default value
 	Rows int
 
+	// Host is the informations about the host that performed the query
+	Host *HostInfo
+
 	// Err is the error in the query.
 	// It only tracks network errors or errors of bad cassandra syntax, in particular selects with no match return nil error
 	Err error
@@ -1682,6 +1719,9 @@ type ObservedBatch struct {
 	Start time.Time // time immediately before the batch query was called
 	End   time.Time // time immediately after the batch query returned
 
+	// Host is the informations about the host that performed the batch
+	Host *HostInfo
+
 	// Err is the error in the batch query.
 	// It only tracks network errors or errors of bad cassandra syntax, in particular selects with no match return nil error
 	Err error
@@ -1695,6 +1735,23 @@ type BatchObserver interface {
 	// The error reported only shows query errors, i.e. if a SELECT is valid but finds no matches it will be nil.
 	// Unlike QueryObserver.ObserveQuery it does no reporting on rows read.
 	ObserveBatch(context.Context, ObservedBatch)
+}
+
+type ObservedConnect struct {
+	// Host is the information about the host about to connect
+	Host *HostInfo
+
+	Start time.Time // time immediately before the dial is called
+	End   time.Time // time immediately after the dial returned
+
+	// Err is the connection error (if any)
+	Err error
+}
+
+// ConnectObserver is the interface implemented by connect observers / stat collectors.
+type ConnectObserver interface {
+	// ObserveConnect gets called when a new connection to cassandra is made.
+	ObserveConnect(ObservedConnect)
 }
 
 type Error struct {

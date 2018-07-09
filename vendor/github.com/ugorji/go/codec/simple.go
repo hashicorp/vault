@@ -616,7 +616,7 @@ type SimpleHandle struct {
 	// EncZeroValuesAsNil says to encode zero values for numbers, bool, string, etc as nil
 	EncZeroValuesAsNil bool
 
-	_ [1]uint64 // padding
+	// _ [1]uint64 // padding
 }
 
 // Name returns the name of the handle: simple

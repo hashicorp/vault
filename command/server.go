@@ -97,7 +97,8 @@ type ServerCommand struct {
 
 type ServerListener struct {
 	net.Listener
-	config map[string]interface{}
+	config         map[string]interface{}
+	maxRequestSize int64
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -689,11 +690,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			return 1
 		}
 
-		lns = append(lns, ServerListener{
-			Listener: ln,
-			config:   lnConfig.Config,
-		})
-
 		if reloadFunc != nil {
 			relSlice := (*c.reloadFuncs)["listener|"+lnConfig.Type]
 			relSlice = append(relSlice, reloadFunc)
@@ -727,6 +723,26 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 			props["cluster address"] = addr
 		}
+
+		var maxRequestSize int64 = vaulthttp.DefaultMaxRequestSize
+		if valRaw, ok := lnConfig.Config["max_request_size"]; ok {
+			val, err := parseutil.ParseInt(valRaw)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse max_request_size value %v", valRaw))
+				return 1
+			}
+
+			if val >= 0 {
+				maxRequestSize = val
+			}
+		}
+		props["max_request_size"] = fmt.Sprintf("%d", maxRequestSize)
+
+		lns = append(lns, ServerListener{
+			Listener:       ln,
+			config:         lnConfig.Config,
+			maxRequestSize: maxRequestSize,
+		})
 
 		// Store the listener props for output later
 		key := fmt.Sprintf("listener %d", i+1)
@@ -792,7 +808,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set
 	core.SetClusterListenerAddrs(clusterAddrs)
-	core.SetClusterHandler(vaulthttp.Handler(core))
+	core.SetClusterHandler(vaulthttp.Handler(&vault.HandlerProperties{
+		Core: core,
+	}))
 
 	err = core.UnsealWithStoredKeys(context.Background())
 	if err != nil {
@@ -925,7 +943,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Initialize the HTTP servers
 	for _, ln := range lns {
-		handler := vaulthttp.Handler(core)
+		handler := vaulthttp.Handler(&vault.HandlerProperties{
+			Core:           core,
+			MaxRequestSize: ln.maxRequestSize,
+		})
 
 		// We perform validation on the config earlier, we can just cast here
 		if _, ok := ln.config["x_forwarded_for_authorized_addrs"]; ok {
@@ -1195,7 +1216,9 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	c.UI.Output("")
 
 	for _, core := range testCluster.Cores {
-		core.Server.Handler = vaulthttp.Handler(core.Core)
+		core.Server.Handler = vaulthttp.Handler(&vault.HandlerProperties{
+			Core: core.Core,
+		})
 		core.SetClusterHandler(core.Server.Handler)
 	}
 

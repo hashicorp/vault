@@ -108,57 +108,28 @@ func (h *segmentHeader) String() string {
 
 //  request
 func (h *segmentHeader) write(wr *bufio.Writer) error {
-	if err := wr.WriteInt32(h.segmentLength); err != nil {
-		return err
-	}
-	if err := wr.WriteInt32(h.segmentOfs); err != nil {
-		return err
-	}
-	if err := wr.WriteInt16(h.noOfParts); err != nil {
-		return err
-	}
-	if err := wr.WriteInt16(h.segmentNo); err != nil {
-		return err
-	}
-	if err := wr.WriteInt8(int8(h.segmentKind)); err != nil {
-		return err
-	}
+	wr.WriteInt32(h.segmentLength)
+	wr.WriteInt32(h.segmentOfs)
+	wr.WriteInt16(h.noOfParts)
+	wr.WriteInt16(h.segmentNo)
+	wr.WriteInt8(int8(h.segmentKind))
 
 	switch h.segmentKind {
 
 	default: //error
-		if err := wr.WriteZeroes(11); err != nil { //segmentHeaderLength
-			return err
-		}
+		wr.WriteZeroes(11) //segmentHeaderLength
 
 	case skRequest:
-
-		if err := wr.WriteInt8(int8(h.messageType)); err != nil {
-			return err
-		}
-		if err := wr.WriteBool(h.commit); err != nil {
-			return err
-		}
-		if err := wr.WriteInt8(int8(h.commandOptions)); err != nil {
-			return err
-		}
-
-		if err := wr.WriteZeroes(8); err != nil { //segmentHeaderSize
-			return err
-		}
+		wr.WriteInt8(int8(h.messageType))
+		wr.WriteBool(h.commit)
+		wr.WriteInt8(int8(h.commandOptions))
+		wr.WriteZeroes(8) //segmentHeaderSize
 
 	case skReply:
 
-		if err := wr.WriteZeroes(1); err != nil { //reerved
-			return err
-		}
-		if err := wr.WriteInt16(int16(h.functionCode)); err != nil {
-			return err
-		}
-
-		if err := wr.WriteZeroes(8); err != nil { //segmentHeaderSize
-			return err
-		}
+		wr.WriteZeroes(1) //reserved
+		wr.WriteInt16(int16(h.functionCode))
+		wr.WriteZeroes(8) //segmentHeaderSize
 
 	}
 
@@ -171,68 +142,33 @@ func (h *segmentHeader) write(wr *bufio.Writer) error {
 
 //  reply || error
 func (h *segmentHeader) read(rd *bufio.Reader) error {
-	var err error
-
-	if h.segmentLength, err = rd.ReadInt32(); err != nil {
-		return err
-	}
-	if h.segmentOfs, err = rd.ReadInt32(); err != nil {
-		return err
-	}
-	if h.noOfParts, err = rd.ReadInt16(); err != nil {
-		return err
-	}
-	if h.segmentNo, err = rd.ReadInt16(); err != nil {
-		return err
-	}
-	if sk, err := rd.ReadInt8(); err == nil {
-		h.segmentKind = segmentKind(sk)
-	} else {
-		return err
-	}
+	h.segmentLength = rd.ReadInt32()
+	h.segmentOfs = rd.ReadInt32()
+	h.noOfParts = rd.ReadInt16()
+	h.segmentNo = rd.ReadInt16()
+	h.segmentKind = segmentKind(rd.ReadInt8())
 
 	switch h.segmentKind {
 
 	default: //error
-		if err := rd.Skip(11); err != nil { //segmentHeaderLength
-			return err
-		}
+		rd.Skip(11) //segmentHeaderLength
 
 	case skRequest:
-		if mt, err := rd.ReadInt8(); err == nil {
-			h.messageType = messageType(mt)
-		} else {
-			return err
-		}
-		if h.commit, err = rd.ReadBool(); err != nil {
-			return err
-		}
-		if co, err := rd.ReadInt8(); err == nil {
-			h.commandOptions = commandOptions(co)
-		} else {
-			return err
-		}
-		if err := rd.Skip(8); err != nil { //segmentHeaderLength
-			return err
-		}
+		h.messageType = messageType(rd.ReadInt8())
+		h.commit = rd.ReadBool()
+		h.commandOptions = commandOptions(rd.ReadInt8())
+		rd.Skip(8) //segmentHeaderLength
 
 	case skReply:
-		if err := rd.Skip(1); err != nil { //reserved
-			return err
-		}
-		if fc, err := rd.ReadInt16(); err == nil {
-			h.functionCode = functionCode(fc)
-		} else {
-			return err
-		}
-		if err := rd.Skip(8); err != nil { //segmentHeaderLength
-			return err
-		}
+		rd.Skip(1) //reserved
+		h.functionCode = functionCode(rd.ReadInt16())
+		rd.Skip(8) //segmentHeaderLength
+
 	}
 
 	if trace {
 		outLogger.Printf("read segment header: %s", h)
 	}
 
-	return nil
+	return rd.GetError()
 }

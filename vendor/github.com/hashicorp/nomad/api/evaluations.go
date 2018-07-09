@@ -67,6 +67,7 @@ type Evaluation struct {
 	Status               string
 	StatusDescription    string
 	Wait                 time.Duration
+	WaitUntil            time.Time
 	NextEval             string
 	PreviousEval         string
 	BlockedEval          string

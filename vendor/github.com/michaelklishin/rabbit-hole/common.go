@@ -61,4 +61,6 @@ type MessageStats struct {
 	GetDetails          RateDetails `json:"get_details"`
 	GetNoAck            int64       `json:"get_no_ack"`
 	GetNoAckDetails     RateDetails `json:"get_no_ack_details"`
+	Ack                 int64       `json:"ack"`
+	AckDetails          RateDetails `json:"ack_details"`
 }

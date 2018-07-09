@@ -195,6 +195,7 @@ The following community maintained tools are known to integrate with gocql:
 * [gocqltable](https://github.com/kristoiv/gocqltable) is a wrapper around gocql that aims to simplify common operations.
 * [gockle](https://github.com/willfaught/gockle) provides simple, mockable interfaces that wrap gocql types
 * [scylladb](https://github.com/scylladb/scylla) is a fast Apache Cassandra-compatible NoSQL database
+* [go-cql-driver](https://github.com/MichaelS11/go-cql-driver) is an CQL driver conforming to the built-in database/sql interface. It is good for simple use cases where the database/sql interface is wanted. The CQL driver is a wrapper around this project.
 
 Other Projects
 --------------

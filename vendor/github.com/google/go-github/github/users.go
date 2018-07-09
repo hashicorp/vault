@@ -140,6 +140,9 @@ type UserListOptions struct {
 	// ID of the last user seen
 	Since int64 `url:"since,omitempty"`
 
+	// Note: Pagination is powered exclusively by the Since parameter,
+	// ListOptions.Page has no effect.
+	// ListOptions.PerPage controls an undocumented GitHub API parameter.
 	ListOptions
 }
 

@@ -804,6 +804,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"x_forwarded_for_reject_not_authorized",
 			"x_forwarded_for_reject_not_present",
 			"infrastructure",
+			"max_request_size",
 			"node_id",
 			"proxy_protocol_behavior",
 			"proxy_protocol_authorized_addrs",

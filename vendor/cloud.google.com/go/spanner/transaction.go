@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc. All Rights Reserved.
+Copyright 2017 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -268,7 +268,7 @@ func errUnexpectedTxState(ts txState) error {
 // applications do not need to worry about this in practice. See the
 // documentation of TimestampBound for more details.
 //
-// A ReadOnlyTransaction consumes resources on the server until Close() is
+// A ReadOnlyTransaction consumes resources on the server until Close is
 // called.
 type ReadOnlyTransaction struct {
 	// txReadOnly contains methods for performing transactional reads.
@@ -329,7 +329,7 @@ func (t *ReadOnlyTransaction) begin(ctx context.Context) error {
 		}
 		t.mu.Unlock()
 		if err != nil && sh != nil {
-			// Got a valid session handle, but failed to initalize transaction on Cloud Spanner.
+			// Got a valid session handle, but failed to initialize transaction on Cloud Spanner.
 			if shouldDropSession(err) {
 				sh.destroy()
 			}
@@ -623,7 +623,7 @@ type ReadWriteTransaction struct {
 	mu sync.Mutex
 	// state is the current transaction status of the read-write transaction.
 	state txState
-	// wb is the set of buffered mutations waiting to be commited.
+	// wb is the set of buffered mutations waiting to be committed.
 	wb []*Mutation
 }
 
@@ -720,7 +720,7 @@ func (t *ReadWriteTransaction) begin(ctx context.Context) error {
 func (t *ReadWriteTransaction) commit(ctx context.Context) (time.Time, error) {
 	var ts time.Time
 	t.mu.Lock()
-	t.state = txClosed // No futher operations after commit.
+	t.state = txClosed // No further operations after commit.
 	mPb, err := mutationsProto(t.wb)
 	t.mu.Unlock()
 	if err != nil {
@@ -809,9 +809,9 @@ type writeOnlyTransaction struct {
 	sp *sessionPool
 }
 
-// applyAtLeastOnce commits a list of mutations to Cloud Spanner for at least once, unless one of the following happends:
-//     1) Context is timeout.
-//     2) An unretryable error(e.g. database not found) occurs.
+// applyAtLeastOnce commits a list of mutations to Cloud Spanner at least once, unless one of the following happens:
+//     1) Context times out.
+//     2) An unretryable error (e.g. database not found) occurs.
 //     3) There is a malformed Mutation object.
 func (t *writeOnlyTransaction) applyAtLeastOnce(ctx context.Context, ms ...*Mutation) (time.Time, error) {
 	var (
