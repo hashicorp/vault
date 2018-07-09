@@ -12,6 +12,8 @@ func CodedError(status int, msg string) HTTPCodedError {
 	}
 }
 
+var _ HTTPCodedError = (*codedError)(nil)
+
 type codedError struct {
 	Status  int
 	Message string
