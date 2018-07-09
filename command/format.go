@@ -182,8 +182,8 @@ func (t TableFormatter) printWarnings(ui cli.Ui, secret *api.Secret) {
 		ui.Warn("WARNING! The following warnings were returned from Vault:\n")
 		for _, warning := range secret.Warnings {
 			ui.Warn(wrapAtLengthWithPadding(fmt.Sprintf("* %s", warning), 2))
+			ui.Warn("")
 		}
-		ui.Warn("")
 	}
 }
 
