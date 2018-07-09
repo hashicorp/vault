@@ -44,7 +44,7 @@ type BoolVar struct {
 func (f *FlagSet) BoolVar(i *BoolVar) {
 	def := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
-		if b, err := strconv.ParseBool(v); err != nil {
+		if b, err := strconv.ParseBool(v); err == nil {
 			def = b
 		}
 	}
