@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/command/agent"
+	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/reload"
@@ -176,7 +176,7 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	// Load the configuration
-	config, err := agent.LoadConfig(c.flagConfigs[0], c.logger)
+	config, err := config.LoadConfig(c.flagConfigs[0], c.logger)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", c.flagConfigs[0], err))
 		return 1
