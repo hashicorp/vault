@@ -192,7 +192,7 @@ func NewUserPassword(plaintext, secret, requestAuthenticator []byte) (Attribute,
 		return nil, errors.New("requestAuthenticator not 16-bytes")
 	}
 
-	chunks := len(plaintext) >> 4
+	chunks := (len(plaintext) + 16 - 1) / 16
 	if chunks == 0 {
 		chunks = 1
 	}
@@ -332,6 +332,111 @@ func NewTLV(tlvType byte, tlvValue Attribute) (Attribute, error) {
 	a[1] = byte(1 + 1 + len(tlvValue))
 	copy(a, tlvValue)
 	return a, nil
+}
+
+// NewTunnelPassword returns an RFC 2868 encrypted Tunnel-Password.
+// A tag must be added on to the returned Attribute.
+func NewTunnelPassword(password, salt, secret, requestAuthenticator []byte) (Attribute, error) {
+	if len(password) > 249 {
+		return nil, errors.New("invalid password length")
+	}
+	if len(salt) != 2 {
+		return nil, errors.New("invalid salt length")
+	}
+	if salt[0]&0x80 != 0x80 { // MSB must be 1
+		return nil, errors.New("invalid salt")
+	}
+	if len(secret) == 0 {
+		return nil, errors.New("empty secret")
+	}
+	if len(requestAuthenticator) != 16 {
+		return nil, errors.New("invalid requestAuthenticator length")
+	}
+
+	chunks := (1 + len(password) + 16 - 1) / 16
+	if chunks == 0 {
+		chunks = 1
+	}
+
+	attr := make([]byte, 2+chunks*16)
+	copy(attr[:2], salt)
+	attr[2] = byte(len(password))
+	copy(attr[3:], password)
+
+	hash := md5.New()
+	var b [md5.Size]byte
+
+	for chunk := 0; chunk < chunks; chunk++ {
+		hash.Reset()
+
+		hash.Write(secret)
+		if chunk == 0 {
+			hash.Write(requestAuthenticator)
+			hash.Write(salt)
+		} else {
+			hash.Write(attr[2+(chunk-1)*16 : 2+chunk*16])
+		}
+		hash.Sum(b[:0])
+
+		for i := 0; i < 16; i++ {
+			attr[2+chunk*16+i] ^= b[i]
+		}
+	}
+
+	return attr, nil
+}
+
+// TunnelPassword decrypts an RFC 2868 encrypted Tunnel-Password.
+// The Attribute must not be prefixed with a tag.
+func TunnelPassword(a Attribute, secret, requestAuthenticator []byte) (password, salt []byte, err error) {
+	if len(a) > 252 || len(a) < 18 || (len(a)-2)%16 != 0 {
+		err = errors.New("invalid length")
+		return
+	}
+	if len(secret) == 0 {
+		err = errors.New("empty secret")
+		return
+	}
+	if len(requestAuthenticator) != 16 {
+		err = errors.New("invalid requestAuthenticator length")
+		return
+	}
+	if a[0]&0x80 != 0x80 { // salt MSB must be 1
+		err = errors.New("invalid salt")
+		return
+	}
+
+	chunks := (len(a) - 2) / 16
+	plaintext := make([]byte, chunks*16)
+
+	hash := md5.New()
+	var b [md5.Size]byte
+
+	for chunk := 0; chunk < chunks; chunk++ {
+		hash.Reset()
+
+		hash.Write(secret)
+		if chunk == 0 {
+			hash.Write(requestAuthenticator)
+			hash.Write(a[:2]) // salt
+		} else {
+			hash.Write(a[2+(chunk-1)*16 : 2+chunk*16])
+		}
+		hash.Sum(b[:0])
+
+		for i := 0; i < 16; i++ {
+			plaintext[chunk*16+i] = a[2+chunk*16+i] ^ b[i]
+		}
+	}
+
+	passwordLength := plaintext[0]
+	if int(passwordLength) > (len(plaintext) - 1) {
+		err = errors.New("invalid password length")
+		return
+	}
+	password = plaintext[1 : 1+passwordLength]
+	salt = append([]byte(nil), a[:2]...)
+	return
 }
 
 // TODO: ipv6prefix

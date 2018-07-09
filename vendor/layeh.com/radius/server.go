@@ -8,7 +8,7 @@ import (
 
 // ErrServerShutdown is returned from server Serve methods when Shutdown
 // has been called and handlers are still completing.
-var ErrServerShutdown = errors.New("radius: server is shutting down")
+var ErrServerShutdown = errors.New("radius: server shutdown")
 
 // Handler provides a handler to RADIUS server requests. When a RADIUS request
 // is received, ServeRADIUS is called.

@@ -15,7 +15,6 @@ package prometheus
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -68,7 +67,8 @@ func NewRegistry() *Registry {
 
 // NewPedanticRegistry returns a registry that checks during collection if each
 // collected Metric is consistent with its reported Desc, and if the Desc has
-// actually been registered with the registry.
+// actually been registered with the registry. Unchecked Collectors (those whose
+// Describe methed does not yield any descriptors) are excluded from the check.
 //
 // Usually, a Registry will be happy as long as the union of all collected
 // Metrics is consistent and valid even if some metrics are not consistent with
@@ -98,6 +98,14 @@ type Registerer interface {
 	// returned error is an instance of AlreadyRegisteredError, which
 	// contains the previously registered Collector.
 	//
+	// A Collector whose Describe method does not yield any Desc is treated
+	// as unchecked. Registration will always succeed. No check for
+	// re-registering (see previous paragraph) is performed. Thus, the
+	// caller is responsible for not double-registering the same unchecked
+	// Collector, and for providing a Collector that will not cause
+	// inconsistent metrics on collection. (This would lead to scrape
+	// errors.)
+	//
 	// It is in general not safe to register the same Collector multiple
 	// times concurrently.
 	Register(Collector) error
@@ -108,7 +116,9 @@ type Registerer interface {
 	// Unregister unregisters the Collector that equals the Collector passed
 	// in as an argument.  (Two Collectors are considered equal if their
 	// Describe method yields the same set of descriptors.) The function
-	// returns whether a Collector was unregistered.
+	// returns whether a Collector was unregistered. Note that an unchecked
+	// Collector cannot be unregistered (as its Describe method does not
+	// yield any descriptor).
 	//
 	// Note that even after unregistering, it will not be possible to
 	// register a new Collector that is inconsistent with the unregistered
@@ -243,6 +253,7 @@ type Registry struct {
 	collectorsByID        map[uint64]Collector // ID is a hash of the descIDs.
 	descIDs               map[uint64]struct{}
 	dimHashesByName       map[string]uint64
+	uncheckedCollectors   []Collector
 	pedanticChecksEnabled bool
 }
 
@@ -300,9 +311,10 @@ func (r *Registry) Register(c Collector) error {
 			}
 		}
 	}
-	// Did anything happen at all?
+	// A Collector yielding no Desc at all is considered unchecked.
 	if len(newDescIDs) == 0 {
-		return errors.New("collector has no descriptors")
+		r.uncheckedCollectors = append(r.uncheckedCollectors, c)
+		return nil
 	}
 	if existing, exists := r.collectorsByID[collectorID]; exists {
 		return AlreadyRegisteredError{
@@ -376,19 +388,24 @@ func (r *Registry) MustRegister(cs ...Collector) {
 // Gather implements Gatherer.
 func (r *Registry) Gather() ([]*dto.MetricFamily, error) {
 	var (
-		metricChan        = make(chan Metric, capMetricChan)
-		metricHashes      = map[uint64]struct{}{}
-		wg                sync.WaitGroup
-		errs              MultiError          // The collected errors to return in the end.
-		registeredDescIDs map[uint64]struct{} // Only used for pedantic checks
+		checkedMetricChan   = make(chan Metric, capMetricChan)
+		uncheckedMetricChan = make(chan Metric, capMetricChan)
+		metricHashes        = map[uint64]struct{}{}
+		wg                  sync.WaitGroup
+		errs                MultiError          // The collected errors to return in the end.
+		registeredDescIDs   map[uint64]struct{} // Only used for pedantic checks
 	)
 
 	r.mtx.RLock()
-	goroutineBudget := len(r.collectorsByID)
+	goroutineBudget := len(r.collectorsByID) + len(r.uncheckedCollectors)
 	metricFamiliesByName := make(map[string]*dto.MetricFamily, len(r.dimHashesByName))
-	collectors := make(chan Collector, len(r.collectorsByID))
+	checkedCollectors := make(chan Collector, len(r.collectorsByID))
+	uncheckedCollectors := make(chan Collector, len(r.uncheckedCollectors))
 	for _, collector := range r.collectorsByID {
-		collectors <- collector
+		checkedCollectors <- collector
+	}
+	for _, collector := range r.uncheckedCollectors {
+		uncheckedCollectors <- collector
 	}
 	// In case pedantic checks are enabled, we have to copy the map before
 	// giving up the RLock.
@@ -405,12 +422,14 @@ func (r *Registry) Gather() ([]*dto.MetricFamily, error) {
 	collectWorker := func() {
 		for {
 			select {
-			case collector := <-collectors:
-				collector.Collect(metricChan)
-				wg.Done()
+			case collector := <-checkedCollectors:
+				collector.Collect(checkedMetricChan)
+			case collector := <-uncheckedCollectors:
+				collector.Collect(uncheckedMetricChan)
 			default:
 				return
 			}
+			wg.Done()
 		}
 	}
 
@@ -418,50 +437,93 @@ func (r *Registry) Gather() ([]*dto.MetricFamily, error) {
 	go collectWorker()
 	goroutineBudget--
 
-	// Close the metricChan once all collectors are collected.
+	// Close checkedMetricChan and uncheckedMetricChan once all collectors
+	// are collected.
 	go func() {
 		wg.Wait()
-		close(metricChan)
+		close(checkedMetricChan)
+		close(uncheckedMetricChan)
 	}()
 
-	// Drain metricChan in case of premature return.
+	// Drain checkedMetricChan and uncheckedMetricChan in case of premature return.
 	defer func() {
-		for range metricChan {
+		if checkedMetricChan != nil {
+			for range checkedMetricChan {
+			}
+		}
+		if uncheckedMetricChan != nil {
+			for range uncheckedMetricChan {
+			}
 		}
 	}()
 
-collectLoop:
+	// Copy the channel references so we can nil them out later to remove
+	// them from the select statements below.
+	cmc := checkedMetricChan
+	umc := uncheckedMetricChan
+
 	for {
 		select {
-		case metric, ok := <-metricChan:
+		case metric, ok := <-cmc:
 			if !ok {
-				// metricChan is closed, we are done.
-				break collectLoop
+				cmc = nil
+				break
 			}
 			errs.Append(processMetric(
 				metric, metricFamiliesByName,
 				metricHashes,
 				registeredDescIDs,
 			))
+		case metric, ok := <-umc:
+			if !ok {
+				umc = nil
+				break
+			}
+			errs.Append(processMetric(
+				metric, metricFamiliesByName,
+				metricHashes,
+				nil,
+			))
 		default:
-			if goroutineBudget <= 0 || len(collectors) == 0 {
+			if goroutineBudget <= 0 || len(checkedCollectors)+len(uncheckedCollectors) == 0 {
 				// All collectors are already being worked on or
 				// we have already as many goroutines started as
-				// there are collectors. Just process metrics
-				// from now on.
-				for metric := range metricChan {
+				// there are collectors. Do the same as above,
+				// just without the default.
+				select {
+				case metric, ok := <-cmc:
+					if !ok {
+						cmc = nil
+						break
+					}
 					errs.Append(processMetric(
 						metric, metricFamiliesByName,
 						metricHashes,
 						registeredDescIDs,
 					))
+				case metric, ok := <-umc:
+					if !ok {
+						umc = nil
+						break
+					}
+					errs.Append(processMetric(
+						metric, metricFamiliesByName,
+						metricHashes,
+						nil,
+					))
 				}
-				break collectLoop
+				break
 			}
 			// Start more workers.
 			go collectWorker()
 			goroutineBudget--
 			runtime.Gosched()
+		}
+		// Once both checkedMetricChan and uncheckdMetricChan are closed
+		// and drained, the contraption above will nil out cmc and umc,
+		// and then we can leave the collect loop here.
+		if cmc == nil && umc == nil {
+			break
 		}
 	}
 	return normalizeMetricFamilies(metricFamiliesByName), errs.MaybeUnwrap()

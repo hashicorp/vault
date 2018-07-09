@@ -2278,6 +2278,25 @@ func makeMapMarshaler(f *reflect.StructField) (sizer, marshaler) {
 	// value.
 	// Key cannot be pointer-typed.
 	valIsPtr := valType.Kind() == reflect.Ptr
+
+	// If value is a message with nested maps, calling
+	// valSizer in marshal may be quadratic. We should use
+	// cached version in marshal (but not in size).
+	// If value is not message type, we don't have size cache,
+	// but it cannot be nested either. Just use valSizer.
+	valCachedSizer := valSizer
+	if valIsPtr && valType.Elem().Kind() == reflect.Struct {
+		u := getMarshalInfo(valType.Elem())
+		valCachedSizer = func(ptr pointer, tagsize int) int {
+			// Same as message sizer, but use cache.
+			p := ptr.getPointer()
+			if p.isNil() {
+				return 0
+			}
+			siz := u.cachedsize(p)
+			return siz + SizeVarint(uint64(siz)) + tagsize
+		}
+	}
 	return func(ptr pointer, tagsize int) int {
 			m := ptr.asPointerTo(t).Elem() // the map
 			n := 0
@@ -2304,7 +2323,7 @@ func makeMapMarshaler(f *reflect.StructField) (sizer, marshaler) {
 				kaddr := toAddrPointer(&ki, false)    // pointer to key
 				vaddr := toAddrPointer(&vi, valIsPtr) // pointer to value
 				b = appendVarint(b, tag)
-				siz := keySizer(kaddr, 1) + valSizer(vaddr, 1) // tag of key = 1 (size=1), tag of val = 2 (size=1)
+				siz := keySizer(kaddr, 1) + valCachedSizer(vaddr, 1) // tag of key = 1 (size=1), tag of val = 2 (size=1)
 				b = appendVarint(b, uint64(siz))
 				b, err = keyMarshaler(b, kaddr, keyWireTag, deterministic)
 				if err != nil {

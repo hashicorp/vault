@@ -190,7 +190,7 @@ func UserPassword_Gets(p *radius.Packet) (values [][]byte, err error) {
 func UserPassword_GetStrings(p *radius.Packet) (values []string, err error) {
 	var i string
 	for _, attr := range p.Attributes[UserPassword_Type] {
-		var up radius.Attribute
+		var up []byte
 		up, err = radius.UserPassword(attr, p.Secret, p.Authenticator[:])
 		if err == nil {
 			i = string(up)
