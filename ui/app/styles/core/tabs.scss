@@ -6,7 +6,7 @@
 
   @include until($tablet) {
     position: relative;
-    background-color: $grey;
+    background-color: $vault-gray-800;
     flex: 0 0 100%;
     height: 3rem;
   }
@@ -42,8 +42,5 @@
     color: $white;
     background: rgba($black, 0.25);
     border-radius: 4px;
-    @include until($tablet) {
-      background: rgba($grey-dark, 0.75);
-    }
   }
 }

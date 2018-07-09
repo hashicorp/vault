@@ -7,7 +7,7 @@
   &:focus,
   &:active {
     position: relative;
-    box-shadow: $box-link-hover-shadow, $box-shadow-middle;
+    box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light, $box-link-hover-shadow, $box-shadow-middle;
   }
 }
 

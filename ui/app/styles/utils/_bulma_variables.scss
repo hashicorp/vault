@@ -1,37 +1,20 @@
-$vault-grey: #6a7786;
-// ui colors
-$grey-light: #bbc4d1;
-$grey-lighter: #f9f9f9;
-$grey: #929dab;
-$grey-dark: $vault-grey;
-$blue: #1563ff;
-
-//
-$orange: #f9bb2d;
-$light-orange: rgb(255, 254, 218);
-$light-yellow: #fffbee;
-$dark-yellow: #614903;
-$light-red: #fff5f8;
-$dark-red: #c84034;
-$light-blue: #e2eafa;
-$dark-blue: #1563ff;
-$light-blue: rgb(218, 234, 247);
-$dark-green: #36ae40;
-$light-green: rgb(244, 250, 236);
-$light-white: #f9f8fe;
-$dark-white: #f9f9f9;
-$white-ter: rgba($white, .5);
-$white-bis: $dark-white;
-
-// Primary colors
-$success: $dark-green;
-$danger: $dark-red;
-$warning: $light-yellow;
+// Color overrides
+$light: $grey-lightest;
 $primary: $grey-dark;
+$link: $blue;
+$text: $grey-darkest;
+$info: $blue;
+$success: $green;
+$warning: $yellow;
+$danger: $red;
+$black-bis: $ui-gray-900;
+$black-ter: $ui-gray-700;
+$grey-darker: $ui-gray-900;
+$grey-lighter: $ui-gray-050;
+$white-ter: rgba($white, .5);
+$white-bis: $ui-gray-050;
 $code: $grey-dark;
 $code-background: transparent;
-$info: $dark-blue;
-$light: $grey-lighter;
 $border: $grey-light;
 
 $hr-margin: 1rem 0;
@@ -55,7 +38,7 @@ $font-weight-semibold: 600;
 $font-weight-bold: 700;
 
 //input
-$input-background-color: $dark-white;
+$input-background-color: $white;
 $input-focus-background-color: $white;
 $input-border-color: $grey;
 
@@ -73,9 +56,6 @@ $box-shadow-high: 0 12px 5px -7px rgba($black, 0.08),
 $box-shadow-highest: 0 16px 6px -10px rgba($black, 0.06),
   0 16px 16px -4px rgba($black, 0.20);
 
-$link: $blue;
-$text: $black;
-
 $breadcrumb-item-color: $blue;
 $breadcrumb-item-separator-color: rgba($blue, 0.5);
 $breadcrumb-item-active-color: $black;
@@ -88,12 +68,17 @@ $menu-item-hover-color: $white;
 $progress-bar-background-color: lighten($grey-light, 15%);
 
 $base-border: 1px solid $grey-light;
+$component-border: 1px solid $grey;
+$layout-border: $base-border;
 
 //menu
 $menu-item-hover-color: $text;
-$menu-item-hover-background-color: $grey-lighter;
+$menu-item-hover-background-color: $grey-lightest;
 $menu-item-active-color: $link;
 $menu-item-active-background-color: transparent;
+
+$box-link-shadow: 0 0 0 1px $grey-light;
+$box-link-hover-shadow: 0 0 0 1px $grey-light;
 
 // animations
 $speed: 150ms;
