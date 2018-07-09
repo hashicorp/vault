@@ -1269,6 +1269,12 @@
 			"revisionTime": "2018-06-06T02:26:37Z"
 		},
 		{
+			"checksumSHA1": "W0xV5xs8CYxSSGp619gG2RemfMY=",
+			"path": "github.com/hashicorp/vault-plugin-auth-jwt",
+			"revision": "e579104468327c5aad46cbc92ae6a9ca3a692147",
+			"revisionTime": "2018-07-09T20:20:09Z"
+		},
+		{
 			"checksumSHA1": "L5pDwOw2/MLLUSykrwxXbXQI7zI=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
 			"revision": "7ca24869a5b9c9e308c475a21c9ce1331734120e",
