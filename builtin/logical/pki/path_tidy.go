@@ -93,12 +93,12 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 				}
 			}
 
-			cert, err := x509.ParseCertificate(certEntry.Value)
+			_, err = x509.ParseCertificate(certEntry.Value)
 			if err != nil {
 				return nil, errwrap.Wrapf(fmt.Sprintf("unable to parse stored certificate with serial %q: {{err}}", serial), err)
 			}
 
-			if time.Now().After(cert.NotAfter.Add(bufferDuration)) {
+			if true {
 				if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from storage: {{err}}", serial), err)
 				}
