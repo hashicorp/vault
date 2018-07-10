@@ -1,12 +1,15 @@
 ![Gabs](gabs_logo.png "Gabs")
 
-Gabs is a small utility for dealing with dynamic or unknown JSON structures in golang. It's pretty much just a helpful wrapper around the golang json.Marshal/json.Unmarshal behaviour and map[string]interface{} objects. It does nothing spectacular except for being fabulous.
+Gabs is a small utility for dealing with dynamic or unknown JSON structures in
+golang. It's pretty much just a helpful wrapper around the golang
+`json.Marshal/json.Unmarshal` behaviour and `map[string]interface{}` objects.
+It does nothing spectacular except for being fabulous.
 
 https://godoc.org/github.com/Jeffail/gabs
 
 ## How to install:
 
-```bash
+``` bash
 go get github.com/Jeffail/gabs
 ```
 
@@ -14,7 +17,7 @@ go get github.com/Jeffail/gabs
 
 ### Parsing and searching JSON
 
-```go
+``` go
 ...
 
 import "github.com/Jeffail/gabs"
@@ -57,7 +60,7 @@ exists := jsonParsed.ExistsP("does.not.exist")
 
 ### Iterating objects
 
-```go
+``` go
 ...
 
 jsonParsed, _ := gabs.ParseJSON([]byte(`{"object":{ "first": 1, "second": 2, "third": 3 }}`))
@@ -73,7 +76,7 @@ for key, child := range children {
 
 ### Iterating arrays
 
-```go
+``` go
 ...
 
 jsonParsed, _ := gabs.ParseJSON([]byte(`{"array":[ "first", "second", "third" ]}`))
@@ -95,13 +98,16 @@ second
 third
 ```
 
-Children() will return all children of an array in order. This also works on objects, however, the children will be returned in a random order.
+Children() will return all children of an array in order. This also works on
+objects, however, the children will be returned in a random order.
 
 ### Searching through arrays
 
-If your JSON structure contains arrays you can still search the fields of the objects within the array, this returns a JSON array containing the results for each element.
+If your JSON structure contains arrays you can still search the fields of the
+objects within the array, this returns a JSON array containing the results for
+each element.
 
-```go
+``` go
 ...
 
 jsonParsed, _ := gabs.ParseJSON([]byte(`{"array":[ {"value":1}, {"value":2}, {"value":3} ]}`))
@@ -118,7 +124,7 @@ Will print:
 
 ### Generating JSON
 
-```go
+``` go
 ...
 
 jsonObj := gabs.New()
@@ -141,7 +147,7 @@ Will print:
 
 To pretty-print:
 
-```go
+``` go
 ...
 
 fmt.Println(jsonObj.StringIndent("", "  "))
@@ -167,7 +173,7 @@ Will print:
 
 ### Generating Arrays
 
-```go
+``` go
 ...
 
 jsonObj := gabs.New()
@@ -192,7 +198,7 @@ Will print:
 
 Working with arrays by index:
 
-```go
+``` go
 ...
 
 jsonObj := gabs.New()
@@ -225,7 +231,7 @@ Will print:
 
 This is the easiest part:
 
-```go
+``` go
 ...
 
 jsonParsedObj, _ := gabs.ParseJSON([]byte(`{
@@ -246,7 +252,7 @@ jsonOutput := jsonParsedObj.String()
 
 And to serialize a specific segment is as simple as:
 
-```go
+``` go
 ...
 
 jsonParsedObj := gabs.ParseJSON([]byte(`{
@@ -270,7 +276,7 @@ jsonOutput := jsonParsedObj.Search("outter").String()
 You can merge a JSON structure into an existing one, where collisions will be
 converted into a JSON array.
 
-```go
+``` go
 jsonParsed1, _ := ParseJSON([]byte(`{"outter": {"value1": "one"}}`))
 jsonParsed2, _ := ParseJSON([]byte(`{"outter": {"inner": {"value3": "three"}}, "outter2": {"value2": "two"}}`))
 
@@ -280,7 +286,7 @@ jsonParsed1.Merge(jsonParsed2)
 
 Arrays are merged:
 
-```go
+``` go
 jsonParsed1, _ := ParseJSON([]byte(`{"array": ["one"]}`))
 jsonParsed2, _ := ParseJSON([]byte(`{"array": ["two"]}`))
 
@@ -290,9 +296,11 @@ jsonParsed1.Merge(jsonParsed2)
 
 ### Parsing Numbers
 
-Gabs uses the `json` package under the bonnet, which by default will parse all number values into `float64`. If you need to parse `Int` values then you should use a `json.Decoder` (https://golang.org/pkg/encoding/json/#Decoder):
+Gabs uses the `json` package under the bonnet, which by default will parse all
+number values into `float64`. If you need to parse `Int` values then you should
+use a `json.Decoder` (https://golang.org/pkg/encoding/json/#Decoder):
 
-```go
+``` go
 sample := []byte(`{"test":{"int":10, "float":6.66}}`)
 dec := json.NewDecoder(bytes.NewReader(sample))
 dec.UseNumber()

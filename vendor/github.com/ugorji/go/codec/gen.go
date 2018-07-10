@@ -542,7 +542,6 @@ func (x *genRunner) selfer(encode bool) {
 	if encode {
 		x.line(") CodecEncodeSelf(e *" + x.cpfx + "Encoder) {")
 		x.genRequiredMethodVars(true)
-		// x.enc(genTopLevelVarName, t)
 		x.encVar(genTopLevelVarName, t)
 	} else {
 		x.line(") CodecDecodeSelf(d *" + x.cpfx + "Decoder) {")
@@ -649,7 +648,7 @@ func (x *genRunner) encVar(varname string, t reflect.Type) {
 	case reflect.Ptr:
 		telem := t.Elem()
 		tek := telem.Kind()
-		if tek == reflect.Array || (tek == reflect.Struct && t != timeTyp) {
+		if tek == reflect.Array || (tek == reflect.Struct && telem != timeTyp) {
 			x.enc(varname, genNonPtr(t))
 			break
 		}
@@ -1083,28 +1082,49 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 }
 
 func (x *genRunner) encListFallback(varname string, t reflect.Type) {
+	elemBytes := t.Elem().Kind() == reflect.Uint8
 	if t.AssignableTo(uint8SliceTyp) {
 		x.linef("r.EncodeStringBytes(codecSelferCcRAW%s, []byte(%s))", x.xs, varname)
 		return
 	}
-	if t.Kind() == reflect.Array && t.Elem().Kind() == reflect.Uint8 {
+	if t.Kind() == reflect.Array && elemBytes {
 		x.linef("r.EncodeStringBytes(codecSelferCcRAW%s, ((*[%d]byte)(%s))[:])", x.xs, t.Len(), varname)
 		return
 	}
 	i := x.varsfx()
-	g := genTempVarPfx
-	x.line("r.WriteArrayStart(len(" + varname + "))")
 	if t.Kind() == reflect.Chan {
-		x.linef("for %si%s, %si2%s := 0, len(%s); %si%s < %si2%s; %si%s++ {", g, i, g, i, varname, g, i, g, i, g, i)
-		x.line("r.WriteArrayElem()")
-		x.linef("%sv%s := <-%s", g, i, varname)
-	} else {
-		x.linef("for _, %sv%s := range %s {", genTempVarPfx, i, varname)
-		x.line("r.WriteArrayElem()")
+		type ts struct {
+			Label, Chan, Slice, Sfx string
+		}
+		tm, err := template.New("").Parse(genEncChanTmpl)
+		if err != nil {
+			panic(err)
+		}
+		x.linef("if %s == nil { r.EncodeNil() } else { ", varname)
+		x.linef("var sch%s []%s", i, x.genTypeName(t.Elem()))
+		err = tm.Execute(x.w, &ts{"Lsch" + i, varname, "sch" + i, i})
+		if err != nil {
+			panic(err)
+		}
+		// x.linef("%s = sch%s", varname, i)
+		if elemBytes {
+			x.linef("r.EncodeStringBytes(codecSelferCcRAW%s, []byte(%s))", x.xs, "sch"+i)
+			x.line("}")
+			return
+		}
+		varname = "sch" + i
 	}
+
+	x.line("r.WriteArrayStart(len(" + varname + "))")
+	x.linef("for _, %sv%s := range %s {", genTempVarPfx, i, varname)
+	x.line("r.WriteArrayElem()")
+
 	x.encVar(genTempVarPfx+"v"+i, t.Elem())
 	x.line("}")
 	x.line("r.WriteArrayEnd()")
+	if t.Kind() == reflect.Chan {
+		x.line("}")
+	}
 }
 
 func (x *genRunner) encMapFallback(varname string, t reflect.Type) {

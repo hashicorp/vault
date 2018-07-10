@@ -243,7 +243,15 @@ func compileMetadata(
 			}
 		}
 
-		table := keyspace.Tables[col.Table]
+		table, ok := keyspace.Tables[col.Table]
+		if !ok {
+			// if the schema is being updated we will race between seeing
+			// the metadata be complete. Potentially we should check for
+			// schema versions before and after reading the metadata and
+			// if they dont match try again.
+			continue
+		}
+
 		table.Columns[col.Name] = col
 		table.OrderedColumns = append(table.OrderedColumns, col.Name)
 	}

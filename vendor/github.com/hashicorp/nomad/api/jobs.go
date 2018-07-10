@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorhill/cronexpr"
 	"github.com/hashicorp/nomad/helper"
+	"github.com/hashicorp/nomad/nomad/structs"
 )
 
 const (
@@ -36,9 +37,31 @@ type Jobs struct {
 	client *Client
 }
 
+// JobsParseRequest is used for arguments of the /vi/jobs/parse endpoint
+type JobsParseRequest struct {
+	// JobHCL is an hcl jobspec
+	JobHCL string
+
+	// Canonicalize is a flag as to if the server should return default values
+	// for unset fields
+	Canonicalize bool
+}
+
 // Jobs returns a handle on the jobs endpoints.
 func (c *Client) Jobs() *Jobs {
 	return &Jobs{client: c}
+}
+
+// Parse is used to convert the HCL repesentation of a Job to JSON server side.
+// To parse the HCL client side see package github.com/hashicorp/nomad/jobspec
+func (j *Jobs) ParseHCL(jobHCL string, canonicalize bool) (*Job, error) {
+	var job Job
+	req := &JobsParseRequest{
+		JobHCL:       jobHCL,
+		Canonicalize: canonicalize,
+	}
+	_, err := j.client.write("/v1/jobs/parse", req, &job, nil)
+	return &job, err
 }
 
 func (j *Jobs) Validate(job *Job, q *WriteOptions) (*JobValidateResponse, *WriteMeta, error) {
@@ -210,6 +233,22 @@ func (j *Jobs) ForceEvaluate(jobID string, q *WriteOptions) (string, *WriteMeta,
 	return resp.EvalID, wm, nil
 }
 
+// EvaluateWithOpts is used to force-evaluate an existing job and takes additional options
+// for whether to force reschedule failed allocations
+func (j *Jobs) EvaluateWithOpts(jobID string, opts EvalOptions, q *WriteOptions) (string, *WriteMeta, error) {
+	req := &JobEvaluateRequest{
+		JobID:       jobID,
+		EvalOptions: opts,
+	}
+
+	var resp JobRegisterResponse
+	wm, err := j.client.write("/v1/job/"+jobID+"/evaluate", req, &resp, q)
+	if err != nil {
+		return "", nil, err
+	}
+	return resp.EvalID, wm, nil
+}
+
 // PeriodicForce spawns a new instance of the periodic job and returns the eval ID
 func (j *Jobs) PeriodicForce(jobID string, q *WriteOptions) (string, *WriteMeta, error) {
 	var resp periodicForceResponse
@@ -320,26 +359,28 @@ type periodicForceResponse struct {
 
 // UpdateStrategy defines a task groups update strategy.
 type UpdateStrategy struct {
-	Stagger         *time.Duration `mapstructure:"stagger"`
-	MaxParallel     *int           `mapstructure:"max_parallel"`
-	HealthCheck     *string        `mapstructure:"health_check"`
-	MinHealthyTime  *time.Duration `mapstructure:"min_healthy_time"`
-	HealthyDeadline *time.Duration `mapstructure:"healthy_deadline"`
-	AutoRevert      *bool          `mapstructure:"auto_revert"`
-	Canary          *int           `mapstructure:"canary"`
+	Stagger          *time.Duration `mapstructure:"stagger"`
+	MaxParallel      *int           `mapstructure:"max_parallel"`
+	HealthCheck      *string        `mapstructure:"health_check"`
+	MinHealthyTime   *time.Duration `mapstructure:"min_healthy_time"`
+	HealthyDeadline  *time.Duration `mapstructure:"healthy_deadline"`
+	ProgressDeadline *time.Duration `mapstructure:"progress_deadline"`
+	AutoRevert       *bool          `mapstructure:"auto_revert"`
+	Canary           *int           `mapstructure:"canary"`
 }
 
 // DefaultUpdateStrategy provides a baseline that can be used to upgrade
 // jobs with the old policy or for populating field defaults.
 func DefaultUpdateStrategy() *UpdateStrategy {
 	return &UpdateStrategy{
-		Stagger:         helper.TimeToPtr(30 * time.Second),
-		MaxParallel:     helper.IntToPtr(1),
-		HealthCheck:     helper.StringToPtr("checks"),
-		MinHealthyTime:  helper.TimeToPtr(10 * time.Second),
-		HealthyDeadline: helper.TimeToPtr(5 * time.Minute),
-		AutoRevert:      helper.BoolToPtr(false),
-		Canary:          helper.IntToPtr(0),
+		Stagger:          helper.TimeToPtr(30 * time.Second),
+		MaxParallel:      helper.IntToPtr(1),
+		HealthCheck:      helper.StringToPtr("checks"),
+		MinHealthyTime:   helper.TimeToPtr(10 * time.Second),
+		HealthyDeadline:  helper.TimeToPtr(5 * time.Minute),
+		ProgressDeadline: helper.TimeToPtr(10 * time.Minute),
+		AutoRevert:       helper.BoolToPtr(false),
+		Canary:           helper.IntToPtr(0),
 	}
 }
 
@@ -368,6 +409,10 @@ func (u *UpdateStrategy) Copy() *UpdateStrategy {
 
 	if u.HealthyDeadline != nil {
 		copy.HealthyDeadline = helper.TimeToPtr(*u.HealthyDeadline)
+	}
+
+	if u.ProgressDeadline != nil {
+		copy.ProgressDeadline = helper.TimeToPtr(*u.ProgressDeadline)
 	}
 
 	if u.AutoRevert != nil {
@@ -406,6 +451,10 @@ func (u *UpdateStrategy) Merge(o *UpdateStrategy) {
 		u.HealthyDeadline = helper.TimeToPtr(*o.HealthyDeadline)
 	}
 
+	if o.ProgressDeadline != nil {
+		u.ProgressDeadline = helper.TimeToPtr(*o.ProgressDeadline)
+	}
+
 	if o.AutoRevert != nil {
 		u.AutoRevert = helper.BoolToPtr(*o.AutoRevert)
 	}
@@ -432,6 +481,10 @@ func (u *UpdateStrategy) Canonicalize() {
 
 	if u.HealthyDeadline == nil {
 		u.HealthyDeadline = d.HealthyDeadline
+	}
+
+	if u.ProgressDeadline == nil {
+		u.ProgressDeadline = d.ProgressDeadline
 	}
 
 	if u.MinHealthyTime == nil {
@@ -470,6 +523,10 @@ func (u *UpdateStrategy) Empty() bool {
 	}
 
 	if u.HealthyDeadline != nil && *u.HealthyDeadline != 0 {
+		return false
+	}
+
+	if u.ProgressDeadline != nil && *u.ProgressDeadline != 0 {
 		return false
 	}
 
@@ -515,14 +572,14 @@ func (p *PeriodicConfig) Canonicalize() {
 // passed time. If no matching instance exists, the zero value of time.Time is
 // returned. The `time.Location` of the returned value matches that of the
 // passed time.
-func (p *PeriodicConfig) Next(fromTime time.Time) time.Time {
+func (p *PeriodicConfig) Next(fromTime time.Time) (time.Time, error) {
 	if *p.SpecType == PeriodicSpecCron {
 		if e, err := cronexpr.Parse(*p.Spec); err == nil {
-			return e.Next(fromTime)
+			return structs.CronParseNext(e, fromTime, *p.Spec)
 		}
 	}
 
-	return time.Time{}
+	return time.Time{}, nil
 }
 
 func (p *PeriodicConfig) GetLocation() (*time.Location, error) {
@@ -557,7 +614,10 @@ type Job struct {
 	Update            *UpdateStrategy
 	Periodic          *PeriodicConfig
 	ParameterizedJob  *ParameterizedJobConfig
+	Dispatched        bool
 	Payload           []byte
+	Reschedule        *ReschedulePolicy
+	Migrate           *MigrateStrategy
 	Meta              map[string]string
 	VaultToken        *string `mapstructure:"vault_token"`
 	Status            *string
@@ -577,7 +637,7 @@ func (j *Job) IsPeriodic() bool {
 
 // IsParameterized returns whether a job is parameterized job.
 func (j *Job) IsParameterized() bool {
-	return j.ParameterizedJob != nil
+	return j.ParameterizedJob != nil && !j.Dispatched
 }
 
 func (j *Job) Canonicalize() {
@@ -645,6 +705,16 @@ func (j *Job) Canonicalize() {
 	for _, tg := range j.TaskGroups {
 		tg.Canonicalize(j)
 	}
+}
+
+// LookupTaskGroup finds a task group by name
+func (j *Job) LookupTaskGroup(name string) *TaskGroup {
+	for _, tg := range j.TaskGroups {
+		if *tg.Name == name {
+			return tg
+		}
+	}
+	return nil
 }
 
 // JobSummary summarizes the state of the allocations of a job
@@ -978,4 +1048,16 @@ type JobStabilityRequest struct {
 type JobStabilityResponse struct {
 	JobModifyIndex uint64
 	WriteMeta
+}
+
+// JobEvaluateRequest is used when we just need to re-evaluate a target job
+type JobEvaluateRequest struct {
+	JobID       string
+	EvalOptions EvalOptions
+	WriteRequest
+}
+
+// EvalOptions is used to encapsulate options when forcing a job evaluation
+type EvalOptions struct {
+	ForceReschedule bool
 }

@@ -105,7 +105,7 @@ func (s *IDGenerator) String() string {
 		buf = append(buf, bitfmt(bits)...)
 		buf = append(buf, ' ')
 	}
-	return string(buf[:size-1 : size-1])
+	return string(buf[: size-1 : size-1])
 }
 
 func (s *IDGenerator) Clear(stream int) (inuse bool) {

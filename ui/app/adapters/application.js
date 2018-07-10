@@ -24,7 +24,7 @@ export default DS.RESTAdapter.extend({
   },
 
   _preRequest(url, options) {
-    const token = this.get('auth.currentToken');
+    const token = options.clientToken || this.get('auth.currentToken');
     if (token && !options.unauthenticated) {
       options.headers = Ember.assign(options.headers || {}, {
         'X-Vault-Token': token,

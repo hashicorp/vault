@@ -45,25 +45,18 @@ func (id statementID) setNumArg(int) {
 }
 
 func (id *statementID) read(rd *bufio.Reader) error {
-
-	_id, err := rd.ReadUint64()
-	if err != nil {
-		return err
-	}
+	_id := rd.ReadUint64()
 	*id.id = _id
 
 	if trace {
 		outLogger.Printf("statement id: %d", *id.id)
 	}
 
-	return nil
+	return rd.GetError()
 }
 
 func (id statementID) write(wr *bufio.Writer) error {
-
-	if err := wr.WriteUint64(*id.id); err != nil {
-		return err
-	}
+	wr.WriteUint64(*id.id)
 
 	if trace {
 		outLogger.Printf("statement id: %d", *id.id)

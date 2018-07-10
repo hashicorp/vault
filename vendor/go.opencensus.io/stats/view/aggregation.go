@@ -15,73 +15,106 @@
 
 package view
 
-// Aggregation represents a data aggregation method. There are several
-// aggregation methods made available in the package such as
-// CountAggregation, SumAggregation, MeanAggregation and
-// DistributionAggregation.
-type Aggregation interface {
-	isAggregation() bool
-	newData() AggregationData
+// AggType represents the type of aggregation function used on a View.
+type AggType int
+
+// All available aggregation types.
+const (
+	AggTypeNone         AggType = iota // no aggregation; reserved for future use.
+	AggTypeCount                       // the count aggregation, see Count.
+	AggTypeSum                         // the sum aggregation, see Sum.
+	AggTypeDistribution                // the distribution aggregation, see Distribution.
+	AggTypeLastValue                   // the last value aggregation, see LastValue.
+)
+
+func (t AggType) String() string {
+	return aggTypeName[t]
 }
 
-// CountAggregation indicates that data collected and aggregated
+var aggTypeName = map[AggType]string{
+	AggTypeNone:         "None",
+	AggTypeCount:        "Count",
+	AggTypeSum:          "Sum",
+	AggTypeDistribution: "Distribution",
+	AggTypeLastValue:    "LastValue",
+}
+
+// Aggregation represents a data aggregation method. Use one of the functions:
+// Count, Sum, or Distribution to construct an Aggregation.
+type Aggregation struct {
+	Type    AggType   // Type is the AggType of this Aggregation.
+	Buckets []float64 // Buckets are the bucket endpoints if this Aggregation represents a distribution, see Distribution.
+
+	newData func() AggregationData
+}
+
+var (
+	aggCount = &Aggregation{
+		Type: AggTypeCount,
+		newData: func() AggregationData {
+			return &CountData{}
+		},
+	}
+	aggSum = &Aggregation{
+		Type: AggTypeSum,
+		newData: func() AggregationData {
+			return &SumData{}
+		},
+	}
+)
+
+// Count indicates that data collected and aggregated
 // with this method will be turned into a count value.
 // For example, total number of accepted requests can be
-// aggregated by using CountAggregation.
-type CountAggregation struct{}
-
-func (a CountAggregation) isAggregation() bool { return true }
-
-func (a CountAggregation) newData() AggregationData {
-	return newCountData(0)
+// aggregated by using Count.
+func Count() *Aggregation {
+	return aggCount
 }
 
-// SumAggregation indicates that data collected and aggregated
+// Sum indicates that data collected and aggregated
 // with this method will be summed up.
 // For example, accumulated request bytes can be aggregated by using
-// SumAggregation.
-type SumAggregation struct{}
-
-func (a SumAggregation) isAggregation() bool { return true }
-
-func (a SumAggregation) newData() AggregationData {
-	return newSumData(0)
+// Sum.
+func Sum() *Aggregation {
+	return aggSum
 }
 
-// MeanAggregation indicates that collect and aggregate data and maintain
-// the mean value.
-// For example, average latency in milliseconds can be aggregated by using
-// MeanAggregation.
-type MeanAggregation struct{}
-
-func (a MeanAggregation) isAggregation() bool { return true }
-
-func (a MeanAggregation) newData() AggregationData {
-	return newMeanData(0, 0)
-}
-
-// DistributionAggregation indicates that the desired aggregation is
+// Distribution indicates that the desired aggregation is
 // a histogram distribution.
+//
 // An distribution aggregation may contain a histogram of the values in the
 // population. The bucket boundaries for that histogram are described
-// by DistributionAggregation slice. This defines length+1 buckets.
+// by the bounds. This defines len(bounds)+1 buckets.
 //
-// If length >= 2 then the boundaries for bucket index i are:
+// If len(bounds) >= 2 then the boundaries for bucket index i are:
 //
 //     [-infinity, bounds[i]) for i = 0
 //     [bounds[i-1], bounds[i]) for 0 < i < length
 //     [bounds[i-1], +infinity) for i = length
 //
-// If length is 0 then there is no histogram associated with the
+// If len(bounds) is 0 then there is no histogram associated with the
 // distribution. There will be a single bucket with boundaries
 // (-infinity, +infinity).
 //
-// If length is 1 then there is no finite buckets, and that single
+// If len(bounds) is 1 then there is no finite buckets, and that single
 // element is the common boundary of the overflow and underflow buckets.
-type DistributionAggregation []float64
+func Distribution(bounds ...float64) *Aggregation {
+	return &Aggregation{
+		Type:    AggTypeDistribution,
+		Buckets: bounds,
+		newData: func() AggregationData {
+			return newDistributionData(bounds)
+		},
+	}
+}
 
-func (a DistributionAggregation) isAggregation() bool { return true }
-
-func (a DistributionAggregation) newData() AggregationData {
-	return newDistributionData([]float64(a))
+// LastValue only reports the last value recorded using this
+// aggregation. All other measurements will be dropped.
+func LastValue() *Aggregation {
+	return &Aggregation{
+		Type: AggTypeLastValue,
+		newData: func() AggregationData {
+			return &LastValueData{}
+		},
+	}
 }
