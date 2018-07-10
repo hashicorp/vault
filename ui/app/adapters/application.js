@@ -53,7 +53,7 @@ export default DS.RESTAdapter.extend({
     let controlGroup = this.get('controlGroup');
     let controlGroupToken = controlGroup.tokenForUrl(url);
     // if we have a control group token that matches the intendedUrl,
-    // then we want to unwrap it and return the response as normal
+    // then we want to unwrap it and return the unwrapped response as if it were the initial request
     if (controlGroupToken) {
       url = '/v1/sys/wrapping/unwrap';
       type = 'POST';
@@ -66,12 +66,18 @@ export default DS.RESTAdapter.extend({
     let opts = this._preRequest(url, options);
 
     return this._super(url, type, opts).then((...args) => {
+      let flash = this.get('flashMessages');
       if (controlGroupToken) {
         controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
+        let creation = moment(controlGroupToken.creationTime);
+        flash.info(
+          `You are viewing data from a control group retrieved on ${creation.format(
+            'MMMM Do YYYY'
+          )} at ${creation.format('h:mm:ss a')}.`
+        );
       }
       const [resp] = args;
       if (resp && resp.warnings) {
-        const flash = this.get('flashMessages');
         resp.warnings.forEach(message => {
           flash.info(message);
         });

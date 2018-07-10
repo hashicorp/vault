@@ -41,9 +41,14 @@ export default Service.extend({
   },
 
   deleteControlGroupToken(accessor) {
-    this.set('tokenToUnwrap', null);
+    this.unmarkTokenForUnwrap();
     let key = this.keyFromAccessor(accessor);
     return key ? this.storage().removeItem(key) : null;
+  },
+
+  deleteTokens() {
+    let keys = this.storage().keys() || [];
+    keys.filter(k => k.startsWith(CONTROL_GROUP_PREFIX)).forEach(key => this.storage().removeItem(key));
   },
 
   wrapInfoForAccessor(accessor) {
@@ -55,6 +60,11 @@ export default Service.extend({
   markTokenForUnwrap(accessor) {
     this.set('tokenToUnwrap', this.wrapInfoForAccessor(accessor));
   },
+
+  unmarkTokenForUnwrap(accessor) {
+    this.set('tokenToUnwrap', null);
+  },
+
   tokenForUrl(url) {
     if (this.get('version.isOSS')) {
       return null;
@@ -62,8 +72,8 @@ export default Service.extend({
     let pathForUrl = url.replace('/v1/', '');
     let tokenInfo = this.get('tokenToUnwrap');
     if (tokenInfo && tokenInfo.creation_path === pathForUrl) {
-      let { token, accessor } = tokenInfo;
-      return { token, accessor };
+      let { token, accessor, creation_time } = tokenInfo;
+      return { token, accessor, creationTime: creation_time };
     }
     return null;
   },
@@ -83,11 +93,25 @@ export default Service.extend({
     return RSVP.reject(error);
   },
 
+  urlFromTransition(transition) {
+    let routes = Object.keys(transition.params);
+    let params = [];
+    for (let route of routes) {
+      let param = transition.params[route];
+      if (Object.keys(param).length) {
+        params.push(param);
+      }
+    }
+    let url = this.get('router').urlFor(transition.targetName, ...params, {
+      queryParams: transition.queryParams,
+    });
+    return url.replace('/ui', '');
+  },
   handleError(error, transition) {
     let { accessor, token, creation_path, creation_time, ttl } = error;
-    let { url, name, contexts, queryParams } = transition.intent;
+    let url = this.urlFromTransition(transition);
     let data = { accessor, token, creation_path, creation_time, ttl };
-    data.uiParams = { url, name, contexts, queryParams };
+    data.uiParams = { url };
     this.storeControlGroupToken(data);
     return this.get('router').transitionTo('vault.cluster.access.control-group-accessor', accessor);
   },

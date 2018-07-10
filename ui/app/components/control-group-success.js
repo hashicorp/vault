@@ -29,9 +29,7 @@ export default Ember.Component.extend({
 
   markAndNavigate: task(function*() {
     this.get('controlGroup').markTokenForUnwrap(this.get('model.id'));
-    let { url, name, contexts, queryParams } = this.get('controlGroupResponse.uiParams');
-    let router = this.get('router');
-
-    return url ? router.transitionTo(url) : router.transitionTo(name, ...(contexts || []), { queryParams });
+    let { url } = this.get('controlGroupResponse.uiParams');
+    return this.get('router').transitionTo(url);
   }).drop(),
 });

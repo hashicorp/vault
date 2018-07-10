@@ -7,7 +7,7 @@
       {{bannerText}}
     </p>
   </div>
-  {{#if model.approved}}
+  {{#if (and currentUserIsRequesting model.approved)}}
     <ControlGroupSuccess @model={{model}} @controlGroupResponse={{controlGroupResponse}} />
   {{else}}
     <div class="control-group">
@@ -19,7 +19,11 @@
         {{requestorName}}
       {{/if}}
       {{#if currentUserIsRequesting}}are{{else}}is{{/if}}
-      requesting access to <code>{{model.requestPath}}</code>
+      {{#if model.approved}}
+        authorized to access <code>{{model.requestPath}}</code>
+      {{else}}
+        requesting access to <code>{{model.requestPath}}</code>
+      {{/if}}
 
       {{#if currentUserIsRequesting}}
         <div class="message is-list is-highlight has-copy-button" tabindex="-1">
@@ -47,6 +51,9 @@
             {{~/if~}}{{#if (lt (inc index) model.authorizations.length)}},{{/if}}
           {{/each}}
         {{else}}
+          <span class="has-text-grey">
+            <ICon @glyph="checkmark-circled-outline" @size={{16}} />
+          </span>
           Awaiting authorization.
         {{/if}}
       </div>
@@ -60,7 +67,7 @@
       </p>
     {{/if}}
 
-  {{#unless model.approved}}
+  {{#unless (and model.approved currentUserIsRequesting)}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       {{#if model.canAuthorize}}
         {{#if (or model.approved currentUserHasAuthorized)}}
