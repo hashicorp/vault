@@ -1,14 +1,14 @@
 ---
 layout: "api"
-page_title: "GCP - Secrets Engines - HTTP API"
+page_title: "Google Cloud - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-gcp"
 description: |-
-  This is the API documentation for the Vault GCP secrets engine.
+  This is the API documentation for the Vault Google Cloud secrets engine.
 ---
 
-# GCP Secrets Engine (API)
+# Google Cloud Secrets Engine (API)
 
-This is the API documentation for the Vault GCP (Google Cloud Platform)
+This is the API documentation for the Vault Google Cloud Platform (GCP)
 secrets engine. For general information about the usage and operation of
 the GCP secrets engine, please see [these docs](/docs/secrets/gcp/index.html).
 

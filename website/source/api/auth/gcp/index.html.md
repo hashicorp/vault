@@ -1,17 +1,17 @@
 ---
 layout: "api"
-page_title: "Google Cloud Platform - Auth Methods - HTTP API"
+page_title: "Google Cloud - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-gcp"
 description: |-
-  This is the API documentation for the Vault GCP authentication
-  method plugin.
+  This is the API documentation for the Vault Google Cloud authentication
+  method.
 ---
 
-# GCP Auth Method (API)
+# Google Cloud Auth Method (API)
 
-This is the API documentation for the Vault GCP auth method
-plugin. To learn more about the usage and operation, see the
-[Vault GCP method documentation](/docs/auth/gcp.html).
+This is the API documentation for the Vault Google Cloud auth method. To learn
+more about the usage and operation, see the
+[Vault Google Cloud method documentation](/docs/auth/gcp.html).
 
 This documentation assumes the plugin method is mounted at the
 `/auth/gcp` path in Vault. Since it is possible to enable auth methods
@@ -169,7 +169,7 @@ entities attempting to login.
    **If bound_zone is provided, region will be ignored.**
 - `bound_instance_group` `(string: "")`: If set, determines the instance group that an authorized instance must belong to.
    bound_zone or bound_region must also be set if bound_instance_group is set.
-- `bound_labels` `(array: [])`: A comma-separated list of Google Cloud Platform labels formatted as "$key:$value" strings that
+- `bound_labels` `(array: [])`: A comma-separated list of GCP labels formatted as "$key:$value" strings that
    must be set on authorized GCE instances. Because GCP labels are not currently ACL'd, we recommend that this be used in
    conjunction with other restrictions.
 

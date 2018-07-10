@@ -1,18 +1,19 @@
 ---
 layout: "docs"
-page_title: "GCP - Auth Methods"
+page_title: "Google Cloud - Auth Methods"
 sidebar_current: "docs-auth-gcp"
 description: |-
-  The gcp auth method plugin allows automated authentication of AWS entities.
+  The "gcp" auth method allows users and machines to authenticate to Vault using
+  Google Cloud service accounts.
 ---
 
-# GCP Auth Method
+# Google Cloud Auth Method
 
-The `gcp` auth method allows authentication against Vault using
-Google credentials. It treats GCP as a Trusted Third Party and expects a
-[JSON Web Token (JWT)](https://tools.ietf.org/html/rfc7519) signed by Google
-credentials from the authenticating entity. This token can be generated through
-different GCP APIs depending on the type of entity.
+The `gcp` auth method allows authentication against Vault using Google
+credentials. It treats Google Cloud Platform (GCP) as a Trusted Third Party and
+expects a [JSON Web Token (JWT)](https://tools.ietf.org/html/rfc7519) signed by
+Google credentials from the authenticating entity. This token can be generated
+through different GCP APIs depending on the type of entity.
 
 Currently supports authentication for:
 
@@ -155,7 +156,7 @@ Optional Parameters:
         from the credentials JSON. Only provide if the credentials are for a different account, acting as a "signer".
 * `project`: Project of service account. If not provided, attempts to use `project_id` from the credentials JSON.
         Fails if not found and not provided by Application Default Credentials. Only provide if the credentials are for a
-        different account, acting as a "signer". 
+        different account, acting as a "signer".
 
 ## Authentication Workflow
 
