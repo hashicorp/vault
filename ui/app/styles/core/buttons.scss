@@ -7,7 +7,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   color: $ui-gray-800;
   display: inline-block;
   font-size: $size-small;
-  font-weight: $font-weight-bold;
+  font-weight: $font-weight-semibold;
   height: 2.5rem;
   line-height: 1.6;
   min-width: 6rem;
@@ -51,7 +51,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     $color-invert: nth($pair, 2);
 
     &.is-#{$name} {
-      border-color: $color;
+      border-color: darken($color, 2%);
       background-color: $color;
       color: $color-invert;
 
@@ -123,6 +123,11 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
         }
       }
     }
+  }
+
+  &.is-primary {
+    font-weight: $font-weight-bold;
+    text-shadow: 0 1px 1px rgba($black, 0.25);
   }
 
   &.is-ghost {
