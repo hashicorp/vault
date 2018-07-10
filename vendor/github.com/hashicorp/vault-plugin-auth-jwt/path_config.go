@@ -21,17 +21,17 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: `config`,
 		Fields: map[string]*framework.FieldSchema{
-			"oidc_issuer_url": &framework.FieldSchema{
+			"oidc_discovery_url": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: `OIDC issuer URL, without any .well-known component (base path). Cannot be used with "jwt_validation_pubkeys".`,
+				Description: `OIDC Discovery URL, without any .well-known component (base path). Cannot be used with "jwt_validation_pubkeys".`,
 			},
-			"oidc_issuer_ca_pem": &framework.FieldSchema{
+			"oidc_discovery_ca_pem": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate conections to the OIDC issuer URL. If not set, system certificates are used.",
+				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate conections to the OIDC Discovery URL. If not set, system certificates are used.",
 			},
 			"jwt_validation_pubkeys": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: `When performing local validation on a JWT, a list of PEM-encoded public keys to use to authenticate the JWT's signature. Cannot be used with "oidc_issuer_url".`,
+				Description: `A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with "oidc_discovery_url".`,
 			},
 			"bound_issuer": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -96,8 +96,8 @@ func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"oidc_issuer_url":        config.OIDCIssuerURL,
-			"oidc_issuer_ca_pem":     config.OIDCIssuerCAPEM,
+			"oidc_discovery_url":     config.OIDCDiscoveryURL,
+			"oidc_discovery_ca_pem":  config.OIDCDiscoveryCAPEM,
 			"jwt_validation_pubkeys": config.JWTValidationPubKeys,
 			"bound_issuer":           config.BoundIssuer,
 		},
@@ -108,22 +108,22 @@ func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 
 func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	config := &jwtConfig{
-		OIDCIssuerURL:        d.Get("oidc_issuer_url").(string),
-		OIDCIssuerCAPEM:      d.Get("oidc_issuer_ca_pem").(string),
+		OIDCDiscoveryURL:     d.Get("oidc_discovery_url").(string),
+		OIDCDiscoveryCAPEM:   d.Get("oidc_discovery_ca_pem").(string),
 		JWTValidationPubKeys: d.Get("jwt_validation_pubkeys").([]string),
 		BoundIssuer:          d.Get("bound_issuer").(string),
 	}
 
 	// Run checks on values
 	switch {
-	case config.OIDCIssuerURL == "" && len(config.JWTValidationPubKeys) == 0,
-		config.OIDCIssuerURL != "" && len(config.JWTValidationPubKeys) != 0:
-		return logical.ErrorResponse("exactly one of 'oidc_issuer_url' and 'jwt_validation_pubkeys' must be set"), nil
+	case config.OIDCDiscoveryURL == "" && len(config.JWTValidationPubKeys) == 0,
+		config.OIDCDiscoveryURL != "" && len(config.JWTValidationPubKeys) != 0:
+		return logical.ErrorResponse("exactly one of 'oidc_discovery_url' and 'jwt_validation_pubkeys' must be set"), nil
 
-	case config.OIDCIssuerURL != "":
+	case config.OIDCDiscoveryURL != "":
 		_, err := b.createProvider(ctx, config)
 		if err != nil {
-			return logical.ErrorResponse(errwrap.Wrapf("error checking issuer URL: {{err}}", err).Error()), nil
+			return logical.ErrorResponse(errwrap.Wrapf("error checking discovery URL: {{err}}", err).Error()), nil
 		}
 
 	case len(config.JWTValidationPubKeys) != 0:
@@ -152,10 +152,10 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 
 func (b *jwtAuthBackend) createProvider(ctx context.Context, config *jwtConfig) (*oidc.Provider, error) {
 	var certPool *x509.CertPool
-	if config.OIDCIssuerCAPEM != "" {
+	if config.OIDCDiscoveryCAPEM != "" {
 		certPool = x509.NewCertPool()
-		if ok := certPool.AppendCertsFromPEM([]byte(config.OIDCIssuerCAPEM)); !ok {
-			return nil, errors.New("could not parse 'oidc_issuer_ca_pem' value successfully")
+		if ok := certPool.AppendCertsFromPEM([]byte(config.OIDCDiscoveryCAPEM)); !ok {
+			return nil, errors.New("could not parse 'oidc_discovery_ca_pem' value successfully")
 		}
 	}
 
@@ -170,7 +170,7 @@ func (b *jwtAuthBackend) createProvider(ctx context.Context, config *jwtConfig) 
 	}
 	oidcCtx := context.WithValue(ctx, oauth2.HTTPClient, tc)
 
-	provider, err := oidc.NewProvider(oidcCtx, config.OIDCIssuerURL)
+	provider, err := oidc.NewProvider(oidcCtx, config.OIDCDiscoveryURL)
 	if err != nil {
 		return nil, errwrap.Wrapf("error creating provider with given values: {{err}}", err)
 	}
@@ -179,8 +179,8 @@ func (b *jwtAuthBackend) createProvider(ctx context.Context, config *jwtConfig) 
 }
 
 type jwtConfig struct {
-	OIDCIssuerURL        string   `json:"oidc_issuer_url"`
-	OIDCIssuerCAPEM      string   `json:"oidc_issuer_ca_pem"`
+	OIDCDiscoveryURL     string   `json:"oidc_discovery_url"`
+	OIDCDiscoveryCAPEM   string   `json:"oidc_discovery_ca_pem"`
 	JWTValidationPubKeys []string `json:"jwt_validation_pubkeys"`
 	BoundIssuer          string   `json:"bound_issuer"`
 
@@ -193,7 +193,7 @@ Configures the JWT authentication backend.
 `
 	confHelpDesc = `
 The JWT authentication backend validates JWTs (or OIDC) using the configured
-credentials. If using OIDC issuer discovery, the URL must be provided, along
+credentials. If using OIDC Discovery, the URL must be provided, along
 with (optionally) the CA cert to use for the connection. If performing JWT
 validation locally, a set of public keys must be provided.
 `
