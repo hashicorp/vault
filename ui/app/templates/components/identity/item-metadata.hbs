@@ -1,17 +1,15 @@
 {{#each-in model.metadata as |key value|}}
-  <div class="box is-sideless is-marginless">
-    <div class="columns is-mobile">
-      <div class="column is-5 has-text-weight-semibold">
-        {{key}}
-      </div>
-      <div class="column is-5">
-        {{value}}
-      </div>
-      <div class="column has-text-right">
-        {{#if model.canEdit}}
-          {{identity/popup-metadata params=(array model key)}}
-        {{/if}}
-      </div>
+  <div class="info-table-row">
+    <div class="column is-5 has-text-weight-semibold">
+      {{key}}
+    </div>
+    <div class="column is-5">
+      {{value}}
+    </div>
+    <div class="column has-text-right">
+      {{#if model.canEdit}}
+        {{identity/popup-metadata params=(array model key)}}
+      {{/if}}
     </div>
   </div>
 {{else}}
