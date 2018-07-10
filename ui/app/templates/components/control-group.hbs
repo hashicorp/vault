@@ -7,10 +7,10 @@
       {{bannerText}}
     </p>
   </div>
-  <div class="control-group">
-    {{#if model.approved}}
-      <ControlGroupSuccess @model={{model}} @controlGroupResponse={{controlGroupResponse}} />
-    {{else}}
+  {{#if model.approved}}
+    <ControlGroupSuccess @model={{model}} @controlGroupResponse={{controlGroupResponse}} />
+  {{else}}
+    <div class="control-group">
       {{#if model.requestEntity.canRead}}
         <a href={{href-to 'vault.cluster.access.identity.show' 'entities' model.requestEntity.id 'details'}}>
           {{requestorName}}
@@ -50,15 +50,15 @@
           Awaiting authorization.
         {{/if}}
       </div>
-    {{/if}}
-  </div>
-  {{#if controlGroupResponse.token}}
-    <p class="control-group-token-text">
-      We’ve saved your request token, but you may want to copy it just in case:
-      <span class="tag has-font-monospaced">{{controlGroupResponse.token}}</span>
-      <HoverCopyButton @alwaysShow=true @copyValue={{controlGroupResponse.token}} />
-    </p>
+    </div>
   {{/if}}
+    {{#if controlGroupResponse.token}}
+      <p class="control-group-token-text">
+        We’ve saved your request token, but you may want to copy it just in case:
+        <span class="tag has-font-monospaced">{{controlGroupResponse.token}}</span>
+        <HoverCopyButton @alwaysShow=true @copyValue={{controlGroupResponse.token}} />
+      </p>
+    {{/if}}
 
   {{#unless model.approved}}
     <div class="field is-grouped box is-fullwidth is-bottomless">

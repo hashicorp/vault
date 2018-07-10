@@ -1,6 +1,10 @@
-.control-group {
+.control-group,
+.control-group-success {
   @extend .box;
   box-shadow: $box-shadow-middle, 0 0 1px $grey-dark;
+}
+.control-group-success.is-editor {
+  background: $grey-lighter;
 }
 
 .control-group a {
@@ -33,8 +37,7 @@
 .control-group-token-text {
   color: $grey;
   position: relative;
-  padding-bottom: $size-6;
-  top: -1rem;
+  padding: $size-8 0;
 
   .hover-copy-button-static {
     position: relative;

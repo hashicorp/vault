@@ -29,6 +29,25 @@ $gutter-grey: #2a2f36;
   padding: 7px 8px 9px;
 }
 
+.cm-s-hashi-read-only {
+  &.CodeMirror {
+    background-color: $grey-lighter;
+    border: none;
+    color: #626873;
+    font-family: $family-monospace;
+    -webkit-font-smoothing: auto;
+    line-height: 1.4;
+  }
+
+  span.cm-string,
+  span.cm-string-2 {
+    color: $packer;
+  }
+  span.cm-property {
+    color: lighten($consul, 20%);
+  }
+}
+
 .cm-s-hashi {
   &.CodeMirror {
     background-color: $black !important;
