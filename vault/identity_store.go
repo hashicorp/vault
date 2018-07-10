@@ -42,12 +42,12 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		core:        core,
 	}
 
-	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, iStore.logger, "")
+	iStore.entityPacker, err = storagepacker.NewStoragePackerV1(iStore.view, iStore.logger, "")
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create entity packer: {{err}}", err)
 	}
 
-	iStore.groupPacker, err = storagepacker.NewStoragePacker(iStore.view, iStore.logger, groupBucketsPrefix)
+	iStore.groupPacker, err = storagepacker.NewStoragePackerV1(iStore.view, iStore.logger, groupBucketsPrefix)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create group packer: {{err}}", err)
 	}
@@ -82,7 +82,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 
 	switch {
 	// Check if the key is a storage entry key for an entity bucket
-	case strings.HasPrefix(key, storagepacker.StoragePackerBucketsPrefix):
+	case strings.HasPrefix(key, storagepacker.DefaultStoragePackerBucketsPrefix):
 		// Get the hash value of the storage bucket entry key
 		bucketKeyHash := i.entityPacker.BucketKeyHashByKey(key)
 		if len(bucketKeyHash) == 0 {
