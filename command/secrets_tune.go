@@ -80,7 +80,7 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:   "description",
+		Name:   flagNameDescription,
 		Target: &c.flagDescription,
 		Usage: "Human-friendly description of this secret engine. This overrides the" +
 			"current stored value, if any.",

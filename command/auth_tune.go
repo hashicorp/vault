@@ -80,7 +80,7 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:   "description",
+		Name:   flagNameDescription,
 		Target: &c.flagDescription,
 		Usage: "Human-friendly description of the this auth method. This overrides" +
 			"the current stored value, if any.",
