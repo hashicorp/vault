@@ -88,12 +88,6 @@ func (re *routeEntry) SaltIDSHA1(id string) string {
 	return salt.SaltID(re.mountEntry.UUID, id, salt.SHA1Hash)
 }
 
-// SaltIDSHA256 is used to salt the given value by the mount entry's identifier
-// and hash the combination using SHA2-256
-func (re *routeEntry) SaltIDSHA256(id string) string {
-	return salt.SaltID(re.mountEntry.UUID, id, salt.SHA256Hash)
-}
-
 // Mount is used to expose a logical backend at a given prefix, using a unique salt,
 // and the barrier view for that path.
 func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *MountEntry, storageView *BarrierView) error {
