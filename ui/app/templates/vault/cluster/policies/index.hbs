@@ -65,11 +65,11 @@
           </div>
         </div>
       {{else}}
-        {{#list-item-row
+        {{#linked-block
           "vault.cluster.policy.show"
           policyType
           item.id
-          class="is-selectable"
+          class="list-item-row"
           data-test-policy-link=item.id
         }}
           <div class="columns is-mobile">
@@ -138,7 +138,7 @@
               {{/popup-menu}}
             </div>
           </div>
-        {{/list-item-row}}
+        {{/linked-block}}
       {{/if}}
     {{else}}
       <div class="box is-sideless">

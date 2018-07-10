@@ -1,7 +1,7 @@
 {{#if model.groupIds}}
   {{#each model.directGroupIds as |gid|}}
     <a href={{href-to "vault.cluster.access.identity.show" "groups" gid "details" }}
-      class="list-item-row is-selectable"
+      class="list-item-row"
       >{{i-con
         glyph='folder'
         size=14
@@ -9,9 +9,9 @@
         }}{{gid}}</a>
   {{/each}}
   {{#each model.inheritedGroupIds as |gid|}}
-    {{#list-item-row
+    {{#linked-block
        "vault.cluster.access.identity.show" "groups" gid "details"
-        class="list-item-row is-selectable"
+        class="list-item-row"
     }}
       <a href={{href-to "vault.cluster.access.identity.show" "groups" gid "details" }}
          class="has-text-black"
@@ -22,7 +22,7 @@
           }}{{gid}}
       </a>
       <span class="tag has-text-grey is-size-8">inherited</span>
-    {{/list-item-row}}
+    {{/linked-block}}
   {{/each}}
 {{else}}
   <div class="box is-bottomless has-background-white-bis">

@@ -1,11 +1,11 @@
 {{#if model.hasMembers}}
   {{#each model.memberGroupIds as |gid|}}
-    {{#list-item-row
+    {{#linked-block
       "vault.cluster.access.identity.show"
       "groups"
       gid
       details
-      class="is-selectable"
+      class="list-item-row"
     }}
       <div class="columns is-mobile">
         <div class="column is-10">
@@ -23,15 +23,15 @@
           {{/if}}
         </div>
       </div>
-    {{/list-item-row}}
+    {{/linked-block}}
   {{/each}}
   {{#each model.memberEntityIds as |gid|}}
-    {{#list-item-row
+    {{#linked-block
       "vault.cluster.access.identity.show"
       "groups"
       gid
       details
-      class="is-selectable"
+      class="list-item-row"
     }}
       <div class="columns">
         <div class="column is-10">
@@ -49,7 +49,7 @@
           {{/if}}
         </div>
       </div>
-    {{/list-item-row}}
+    {{/linked-block}}
   {{/each}}
 {{else}}
   <div class="box is-bottomless has-background-white-bis">

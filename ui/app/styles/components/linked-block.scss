@@ -1,0 +1,7 @@
+.linked-block {
+  cursor: pointer;
+}
+
+.linked-block .columns {
+  @extend .is-flex-center;
+}

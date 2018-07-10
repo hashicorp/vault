@@ -178,6 +178,10 @@ label {
 .select select {
   background-color: $ui-gray-050;
   box-shadow: 0 3px 1px rgba($black, 0.12);
+
+  .has-background-grey-lighter & {
+    background-color: $white;
+  }
 }
 
 .select:not(.is-multiple)::after {
@@ -190,6 +194,7 @@ label {
 .select:not(.is-multiple)::before {
   @extend .select:not(.is-multiple)::after;
   transform: translateY(-75%) rotate(135deg);
+  z-index: 5;
 }
 
 .field:not(:last-child) {

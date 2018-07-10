@@ -1,11 +1,11 @@
 {{identity/entity-nav identityType=identityType}}
 {{#if model.meta.total}}
   {{#each model as |item|}}
-    {{#list-item-row
+    {{#linked-block
       "vault.cluster.access.identity.aliases.show"
       item.id
       "details"
-      class="is-selectable"
+      class="list-item-row"
       data-test-identity-row=true
       }}
       <div class="columns is-mobile">
@@ -34,7 +34,7 @@
           {{identity/popup-alias params=(array item) onSuccess=(action "onDelete")}}
         </div>
       </div>
-    {{/list-item-row}}
+    {{/linked-block}}
   {{/each}}
 {{else}}
   <div class="box is-bottomless has-background-white-bis">

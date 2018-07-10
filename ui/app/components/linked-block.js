@@ -1,10 +1,10 @@
 import Ember from 'ember';
 import hbs from 'htmlbars-inline-precompile';
 
-let ListItemRowComponent = Ember.Component.extend({
+let LinkedBlockComponent = Ember.Component.extend({
   layout: hbs`{{yield}}`,
 
-  classNames: 'list-item-row',
+  classNames: 'linked-block',
 
   routing: Ember.inject.service('-routing'),
   queryParams: null,
@@ -28,8 +28,8 @@ let ListItemRowComponent = Ember.Component.extend({
   },
 });
 
-ListItemRowComponent.reopenClass({
+LinkedBlockComponent.reopenClass({
   positionalParams: 'params',
 });
 
-export default ListItemRowComponent;
+export default LinkedBlockComponent;

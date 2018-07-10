@@ -1,11 +1,11 @@
-{{#list-item-row
+{{#linked-block
   (concat
     "vault.cluster.secrets.backend."
     (if item.isFolder "list" "show")
     (if (not item.id) "-root")
   )
   item.id
-  class="is-selectable"
+  class="list-item-row"
   data-test-secret-link=item.id
 }}
   <div class="columns is-mobile">
@@ -25,4 +25,4 @@
     <div class="column has-text-right">
     </div>
   </div>
-{{/list-item-row}}
+{{/linked-block}}

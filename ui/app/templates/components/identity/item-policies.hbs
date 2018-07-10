@@ -1,9 +1,9 @@
 {{#each model.policies as |policyName|}}
-  {{#list-item-row
+  {{#linked-block
     "vault.cluster.policy.show"
     "acl"
     item
-    class="is-selectable"
+    class="list-item-row"
   }}
     <div class="columns is-mobile">
       <div class="column is-10">
@@ -18,7 +18,7 @@
         {{/if}}
       </div>
     </div>
-  {{/list-item-row}}
+  {{/linked-block}}
 {{else}}
   <div class="box is-bottomless has-background-white-bis">
     <div class="columns is-centered">
