@@ -166,7 +166,6 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 	mountConfigInput := api.MountConfigInput{
 		DefaultLeaseTTL: ttlToAPI(c.flagDefaultLeaseTTL),
-		Description:     c.flagDescription,
 		MaxLeaseTTL:     ttlToAPI(c.flagMaxLeaseTTL),
 		Options:         c.flagOptions,
 	}
@@ -179,6 +178,10 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameAuditNonHMACResponseKeys {
 			mountConfigInput.AuditNonHMACResponseKeys = c.flagAuditNonHMACResponseKeys
+		}
+
+		if fl.Name == flagNameDescription {
+			mountConfigInput.Description = &c.flagDescription
 		}
 
 		if fl.Name == flagNameListingVisibility {

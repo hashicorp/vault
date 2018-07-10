@@ -81,6 +81,8 @@ const (
 	flagNameAuditNonHMACRequestKeys = "audit-non-hmac-request-keys"
 	// flagNameAuditNonHMACResponseKeys is the flag name used for auth/secrets enable
 	flagNameAuditNonHMACResponseKeys = "audit-non-hmac-response-keys"
+	// flagNameDescription is the flag name used for tuning the secret and auth mount description parameter
+	flagNameDescription = "description"
 	// flagListingVisibility is the flag to toggle whether to show the mount in the UI-specific listing endpoint
 	flagNameListingVisibility = "listing-visibility"
 	// flagNamePassthroughRequestHeaders is the flag name used to set passthrough request headers to the backend

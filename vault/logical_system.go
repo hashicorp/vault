@@ -2024,8 +2024,9 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	description := data.Get("description").(string)
-	if description != "" {
+	if rawVal, ok := data.GetOk("description"); ok {
+		description := rawVal.(string)
+
 		oldDesc := mountEntry.Description
 		mountEntry.Description = description
 
