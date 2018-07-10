@@ -87,6 +87,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 		}
 
 		code := cmd.Run([]string{
+			"-description", "new description",
 			"-default-lease-ttl", "30m",
 			"-max-lease-ttl", "1h",
 			"-audit-non-hmac-request-keys", "foo,bar",

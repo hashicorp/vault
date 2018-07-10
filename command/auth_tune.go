@@ -18,12 +18,13 @@ var _ cli.CommandAutocomplete = (*AuthTuneCommand)(nil)
 type AuthTuneCommand struct {
 	*BaseCommand
 
-	flagOptions                  map[string]string
-	flagDefaultLeaseTTL          time.Duration
-	flagMaxLeaseTTL              time.Duration
 	flagAuditNonHMACRequestKeys  []string
 	flagAuditNonHMACResponseKeys []string
+	flagDefaultLeaseTTL          time.Duration
+	flagDescription              string
 	flagListingVisibility        string
+	flagMaxLeaseTTL              time.Duration
+	flagOptions                  map[string]string
 	flagVersion                  int
 }
 
@@ -53,36 +54,6 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 
 	f := set.NewFlagSet("Command Options")
 
-	f.StringMapVar(&StringMapVar{
-		Name:       "options",
-		Target:     &c.flagOptions,
-		Completion: complete.PredictAnything,
-		Usage: "Key-value pair provided as key=value for the mount options. " +
-			"This can be specified multiple times.",
-	})
-
-	f.DurationVar(&DurationVar{
-		Name:       "default-lease-ttl",
-		Target:     &c.flagDefaultLeaseTTL,
-		Default:    0,
-		EnvVar:     "",
-		Completion: complete.PredictAnything,
-		Usage: "The default lease TTL for this auth method. If unspecified, this " +
-			"defaults to the Vault server's globally configured default lease TTL, " +
-			"or a previously configured value for the auth method.",
-	})
-
-	f.DurationVar(&DurationVar{
-		Name:       "max-lease-ttl",
-		Target:     &c.flagMaxLeaseTTL,
-		Default:    0,
-		EnvVar:     "",
-		Completion: complete.PredictAnything,
-		Usage: "The maximum lease TTL for this auth method. If unspecified, this " +
-			"defaults to the Vault server's globally configured maximum lease TTL, " +
-			"or a previously configured value for the auth method.",
-	})
-
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
@@ -97,10 +68,48 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 			"devices in the response data object.",
 	})
 
+	f.DurationVar(&DurationVar{
+		Name:       "default-lease-ttl",
+		Target:     &c.flagDefaultLeaseTTL,
+		Default:    0,
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: "The default lease TTL for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured default lease TTL, " +
+			"or a previously configured value for the auth method.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:   "description",
+		Target: &c.flagDescription,
+		Usage: "Human-friendly description of the this auth method. This overrides" +
+			"the current stored value, if any.",
+	})
+
 	f.StringVar(&StringVar{
 		Name:   flagNameListingVisibility,
 		Target: &c.flagListingVisibility,
-		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
+		Usage: "Determines the visibility of the mount in the UI-specific listing" +
+			"endpoint.",
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       "max-lease-ttl",
+		Target:     &c.flagMaxLeaseTTL,
+		Default:    0,
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: "The maximum lease TTL for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured maximum lease TTL, " +
+			"or a previously configured value for the auth method.",
+	})
+
+	f.StringMapVar(&StringMapVar{
+		Name:       "options",
+		Target:     &c.flagOptions,
+		Completion: complete.PredictAnything,
+		Usage: "Key-value pair provided as key=value for the mount options. " +
+			"This can be specified multiple times.",
 	})
 
 	f.IntVar(&IntVar{
@@ -153,9 +162,10 @@ func (c *AuthTuneCommand) Run(args []string) int {
 	}
 
 	mountConfigInput := api.MountConfigInput{
-		Options:         c.flagOptions,
 		DefaultLeaseTTL: ttlToAPI(c.flagDefaultLeaseTTL),
+		Description:     c.flagDescription,
 		MaxLeaseTTL:     ttlToAPI(c.flagMaxLeaseTTL),
+		Options:         c.flagOptions,
 	}
 
 	// Set these values only if they are provided in the CLI
