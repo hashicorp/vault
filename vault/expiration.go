@@ -62,7 +62,7 @@ type ExpirationMetadata struct {
 	// SHA1HashedLeasesCleared indicates whether or not all the active leases
 	// are of version 2 (uses SHA2-256 HMAC and not SHA1 hash for obfuscation
 	// of lease IDs and indexes).
-	SHA1HashedLeasesCleared bool `json:"sha1_hashed_leases_cleared"`
+	SHA1HashedLeasesCleared uint32 `json:"sha1_hashed_leases_cleared"`
 }
 
 type pendingInfo struct {
@@ -106,7 +106,7 @@ type ExpirationManager struct {
 
 	// SHA1HashedLeasesCleared is set when there are no active leases that use
 	// SHA1 hash for the obfuscation of lease ID or lease's secondary index
-	SHA1HashedLeasesCleared bool
+	SHA1HashedLeasesCleared uint32
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -166,7 +166,7 @@ func (c *Core) setupExpiration(ctx context.Context) error {
 		if err != nil {
 			return errwrap.Wrapf("failed to decode expiration metadata: {{err}}", err)
 		}
-		mgr.SHA1HashedLeasesCleared = expMetadata.SHA1HashedLeasesCleared
+		atomic.StoreUint32(&mgr.SHA1HashedLeasesCleared, expMetadata.SHA1HashedLeasesCleared)
 	}
 
 	c.expiration = mgr
@@ -455,15 +455,19 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 
 	m.logger.Info("lease restore complete")
 
-	if !m.SHA1HashedLeasesCleared {
-		// At this time all the leases are loaded. The restoration of leases would
-		// have also computed if were any leases that had either its ID or
-		// secondary index obfuscated using SHA1 hash instead of SHA2-256 HMAC.
-		// Persist the result of that computation across reboots.
+	if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 0 {
+		// At this time all the leases are loaded. The restoration of leases
+		// would have also computed if there were any leases that had either
+		// its ID or secondary index obfuscated using SHA1 hash instead of
+		// SHA2-256 HMAC. Persist the result of that computation across
+		// reboots.
 		expMetadata := &ExpirationMetadata{}
 
 		if atomic.LoadUint32(&m.SHA1HashedLeasesPresent) == 0 {
-			expMetadata.SHA1HashedLeasesCleared = true
+			expMetadata.SHA1HashedLeasesCleared = 1
+
+			// Store the result in the running expiration manager as well
+			atomic.StoreUint32(&m.SHA1HashedLeasesCleared, 1)
 		}
 
 		m.logger.Debug("persisting expiration manager metadata", "sha1_hashed_leases_cleared", expMetadata.SHA1HashedLeasesCleared)
@@ -1489,7 +1493,7 @@ func (m *ExpirationManager) lookupLeasesByToken(tokenID string) ([]string, error
 
 	// Avoid putting SHA1 hash of the tokenID on the wire when there are no
 	// active leases that use SHA1 hash anymore
-	if m.SHA1HashedLeasesCleared {
+	if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 1 {
 		return leaseIDs, nil
 	}
 
