@@ -1,6 +1,7 @@
 import Ember from 'ember';
 import DS from 'ember-data';
 import fetch from 'fetch';
+import moment from 'moment';
 
 const POLLING_URL_PATTERNS = ['sys/seal-status', 'sys/health', 'sys/replication/status'];
 const { inject, assign, set, RSVP } = Ember;

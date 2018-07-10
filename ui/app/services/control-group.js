@@ -61,7 +61,7 @@ export default Service.extend({
     this.set('tokenToUnwrap', this.wrapInfoForAccessor(accessor));
   },
 
-  unmarkTokenForUnwrap(accessor) {
+  unmarkTokenForUnwrap() {
     this.set('tokenToUnwrap', null);
   },
 
