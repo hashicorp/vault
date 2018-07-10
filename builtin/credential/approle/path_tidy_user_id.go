@@ -3,6 +3,7 @@ package approle
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -165,9 +166,7 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) (*logical
 		}
 	}()
 
-	resp := &logical.Response{}
-	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
-	return resp, nil
+	return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
 }
 
 // pathTidySecretIDUpdate is used to delete the expired SecretID entries

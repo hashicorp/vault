@@ -3,6 +3,7 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -91,9 +92,7 @@ func (b *backend) tidyWhitelistIdentity(ctx context.Context, s logical.Storage, 
 		}
 	}()
 
-	resp := &logical.Response{}
-	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
-	return resp, nil
+	return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
 }
 
 // pathTidyIdentityWhitelistUpdate is used to delete entries in the whitelist that are expired.

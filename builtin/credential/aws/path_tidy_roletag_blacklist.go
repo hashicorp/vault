@@ -3,6 +3,7 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -91,9 +92,7 @@ func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, s
 		}
 	}()
 
-	resp := &logical.Response{}
-	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
-	return resp, nil
+	return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
 }
 
 // pathTidyRoletagBlacklistUpdate is used to clean-up the entries in the role tag blacklist.
