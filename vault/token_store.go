@@ -924,7 +924,7 @@ func (ts *TokenStore) lookupTokenNonLocked(ctx context.Context, id string, taint
 		return nil, err
 	}
 
-	if te == nil {
+	if te == nil && atomic.LoadUint32(&ts.expiration.SHA1HashedLeasesCleared) == 0 {
 		// This is only here for backwards compatibility
 		saltedID, err := ts.SaltID(ctx, id)
 		if err != nil {
@@ -1091,7 +1091,7 @@ func (ts *TokenStore) revokeOrphan(ctx context.Context, tokenID string) error {
 		return err
 	}
 
-	if te == nil {
+	if te == nil && atomic.LoadUint32(&ts.expiration.SHA1HashedLeasesCleared) == 0 {
 		// This is only here for backwards compatibility
 		saltedID, err := ts.SaltID(ctx, tokenID)
 		if err != nil {
@@ -1297,7 +1297,7 @@ func (ts *TokenStore) revokeTree(ctx context.Context, tokenID string) error {
 		return err
 	}
 
-	if te == nil {
+	if te == nil && atomic.LoadUint32(&ts.expiration.SHA1HashedLeasesCleared) == 0 {
 		// This is only here for backwards compatibility
 		saltedID, err := ts.SaltID(ctx, tokenID)
 		if err != nil {
@@ -1305,9 +1305,9 @@ func (ts *TokenStore) revokeTree(ctx context.Context, tokenID string) error {
 		}
 		obfuscatedID = saltedID
 		te, err = ts.lookupObfuscatedToken(ctx, saltedID, true)
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	if te == nil {
@@ -1381,7 +1381,7 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, accessor string, tai
 		return accessorEntry{}, err
 	}
 
-	if entry.TokenID == "" {
+	if entry.TokenID == "" && atomic.LoadUint32(&ts.expiration.SHA1HashedLeasesCleared) == 0 {
 		// This is only here for backwards compatibility
 		saltedAccessor, err := ts.SaltID(ctx, accessor)
 		if err != nil {

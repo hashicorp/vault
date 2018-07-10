@@ -100,6 +100,8 @@ type ExpirationManager struct {
 
 	logLeaseExpirations bool
 
+	obfuscatedTokens map[string]bool
+
 	// SHA1HashedLeasesPresent tracks the presence of active leases that use
 	// SHA1 hash for the obfuscation of lease ID or lease's secondary index
 	SHA1HashedLeasesPresent uint32
@@ -133,6 +135,7 @@ func NewExpirationManager(c *Core, view *BarrierView, logger log.Logger) *Expira
 		leaseCheckCounter: new(uint32),
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
+		obfuscatedTokens:    make(map[string]bool),
 	}
 	*exp.restoreMode = 1
 
@@ -351,6 +354,19 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 		}
 	}()
 
+	if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 0 {
+		// Accumulate obfuscated tokens
+		existingTokens, err := logical.CollectKeys(m.quitContext, m.tokenStore.view.SubView(lookupPrefix))
+		if err != nil {
+			return errwrap.Wrapf("failed to scan for obfuscated tokens: {{err}}", err)
+		}
+
+		// Insert all the obfuscated tokens in a map
+		for _, obfuscatedToken := range existingTokens {
+			m.obfuscatedTokens[obfuscatedToken] = true
+		}
+	}
+
 	// Accumulate existing leases
 	m.logger.Debug("collecting leases")
 	existing, err := logical.CollectKeys(m.quitContext, m.idView)
@@ -456,6 +472,44 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	m.logger.Info("lease restore complete")
 
 	if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 0 {
+		// The obfuscated tokens remaining in the map after lease restoration
+		// would only be those of root tokens without leases and of tokens that
+		// have lost leases. Revoke all the tokens that have lost the leases
+		// and upgrade the root tokens to use SHA2-256 HMAC instead of SHA1
+		// hash.
+		for obfuscatedToken, _ := range m.obfuscatedTokens {
+			// lookupObfuscatedToken will take care of revoking tokens that do
+			// not have an associated lease. The token entries that get
+			// returned should only be of root tokens.
+			te, err := m.tokenStore.lookupObfuscatedToken(m.quitContext, obfuscatedToken, false)
+			if err != nil {
+				return err
+			}
+
+			// If the token entry is of an older version, perform the upgrade
+			if te.Version < 2 {
+				// Calling token store's revoke function instead of removing
+				// the storage entries manually has the advantage of not
+				// missing out on removal of related artifacts such as the
+				// accessor, cubbyhole and parent index. The disadvantage
+				// however is that the lookup is performed again. Since this
+				// upgrade happens only once, it should be okay.
+				err = m.tokenStore.revokeObfuscatedToken(m.quitContext, obfuscatedToken, false, te)
+				if err != nil {
+					return err
+				}
+
+				// Upgrade the token entry
+				te.Version = 2
+
+				// Create the token again
+				err = m.tokenStore.create(m.quitContext, te)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
 		// At this time all the leases are loaded. The restoration of leases
 		// would have also computed if there were any leases that had either
 		// its ID or secondary index obfuscated using SHA1 hash instead of
@@ -1277,6 +1331,22 @@ func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreMode bool, 
 
 		if le.Version < 2 {
 			atomic.StoreUint32(&m.SHA1HashedLeasesPresent, 1)
+		}
+
+		// If the lease is of a token, then remove the obfuscated token from
+		// the tracker map
+		if le.ClientToken != "" && atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 0 {
+			var obfuscatedToken string
+			switch {
+			case le.Version < 2:
+				obfuscatedToken, err = m.tokenStore.SaltID(m.quitContext, le.ClientToken)
+			default:
+				obfuscatedToken, err = m.tokenStore.hmac(m.quitContext, le.ClientToken)
+			}
+			if err != nil {
+				return nil, err
+			}
+			delete(m.obfuscatedTokens, obfuscatedToken)
 		}
 
 		// Update the cache of restored leases, either synchronously or through

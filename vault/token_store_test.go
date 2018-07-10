@@ -90,6 +90,8 @@ func TestTokenStore_TokenEntryVersionCubbyholeDestroy(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	atomic.StoreUint32(&core.expiration.SHA1HashedLeasesCleared, 0)
+
 	// Write some data in the new token's cubbyhole
 	resp, err = core.HandleRequest(&logical.Request{
 		ClientToken: tokenID,
@@ -165,6 +167,8 @@ func TestTokenStore_TokenEntryVersionUpgrade(t *testing.T) {
 		TTL:          time.Hour,
 	}
 	testStoreTokenDirectly(t, ts, te)
+
+	atomic.StoreUint32(&core.expiration.SHA1HashedLeasesCleared, 0)
 
 	// Check that its readable
 	out, err := ts.Lookup(context.Background(), te.ID)
@@ -400,6 +404,8 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 	if err := ts.expiration.RegisterAuth(entry.Path, auth); err != nil {
 		t.Fatal(err)
 	}
+
+	atomic.StoreUint32(&c.expiration.SHA1HashedLeasesCleared, 0)
 
 	out, err := ts.Lookup(context.Background(), entry.ID)
 	if err != nil {
