@@ -43,16 +43,24 @@ func TestTokenStore_TokenEntryVersionCubbyholeDestroy(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
-	// Root token will be having a token entry of version 2. Write some data in
-	// its cubbyhole.
-	resp, err = core.HandleRequest(&logical.Request{
+	rootTokenEntry, err := ts.Lookup(context.Background(), rootToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cubbyReq := &logical.Request{
 		ClientToken: rootToken,
 		Path:        "cubbyhole/foo",
 		Operation:   logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"bar": "baz",
 		},
-	})
+	}
+	cubbyReq.SetTokenEntry(rootTokenEntry)
+
+	// Root token will be having a token entry of version 2. Write some data in
+	// its cubbyhole.
+	resp, err = core.HandleRequest(cubbyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -605,6 +613,12 @@ func testMakeTokenViaRequest(t testing.TB, ts *TokenStore, req *logical.Request)
 }
 
 func testStoreTokenDirectly(t testing.TB, ts *TokenStore, te *logical.TokenEntry) {
+	cubbyholeID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	te.CubbyholeID = cubbyholeID
+
 	if err := ts.storeCommon(context.Background(), te, true); err != nil {
 		t.Fatal(err)
 	}
@@ -1496,6 +1510,7 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expected.CreationTime = out.CreationTime
+	expected.CubbyholeID = out.CubbyholeID
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
 	}
@@ -1531,6 +1546,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expected.CreationTime = out.CreationTime
+	expected.CubbyholeID = out.CubbyholeID
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
 	}
@@ -1599,6 +1615,7 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expected.CreationTime = out.CreationTime
+	expected.CubbyholeID = out.CubbyholeID
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
 	}

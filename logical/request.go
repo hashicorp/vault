@@ -220,6 +220,9 @@ func (r *Request) TokenEntry() *TokenEntry {
 
 func (r *Request) SetTokenEntry(te *TokenEntry) {
 	r.tokenEntry = te
+	if te != nil {
+		r.TokenEntryVersion = te.Version
+	}
 }
 
 // RenewRequest creates the structure of the renew request.

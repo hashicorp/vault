@@ -170,10 +170,9 @@ DONELISTHANDLING:
 	}
 
 	cubbyReq := &logical.Request{
-		Operation:         logical.CreateOperation,
-		Path:              "cubbyhole/response",
-		ClientToken:       te.ID,
-		TokenEntryVersion: te.Version,
+		Operation:   logical.CreateOperation,
+		Path:        "cubbyhole/response",
+		ClientToken: te.ID,
 	}
 
 	cubbyReq.SetTokenEntry(&te)

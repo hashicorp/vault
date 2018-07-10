@@ -3136,10 +3136,9 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 	}
 
 	cubbyReq := &logical.Request{
-		Operation:         logical.ReadOperation,
-		Path:              "cubbyhole/response",
-		ClientToken:       te.ID,
-		TokenEntryVersion: te.Version,
+		Operation:   logical.ReadOperation,
+		Path:        "cubbyhole/response",
+		ClientToken: te.ID,
 	}
 
 	cubbyReq.SetTokenEntry(te)
@@ -3194,8 +3193,6 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 	if te == nil {
 		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 	}
-
-	cubbyReq.TokenEntryVersion = te.Version
 
 	cubbyReq.SetTokenEntry(te)
 
@@ -3277,8 +3274,6 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 	}
 
-	cubbyReq.TokenEntryVersion = te.Version
-
 	cubbyReq.SetTokenEntry(te)
 
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
@@ -3314,10 +3309,9 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 
 	// Fetch the original response and return it as the data for the new response
 	cubbyReq = &logical.Request{
-		Operation:         logical.ReadOperation,
-		Path:              "cubbyhole/response",
-		ClientToken:       token,
-		TokenEntryVersion: te.Version,
+		Operation:   logical.ReadOperation,
+		Path:        "cubbyhole/response",
+		ClientToken: token,
 	}
 
 	cubbyReq.SetTokenEntry(te)
