@@ -1,11 +1,11 @@
-{{#linked-block
+{{#list-item-row
   (concat
     "vault.cluster.secrets.backend."
     "show"
     (if (not item.id) "-root")
   )
   item.idForNav
-  class="box is-sideless is-marginless linked-block"
+  class="is-selectable"
   data-test-secret-link=item.id
   tagName="div"
 }}
@@ -34,4 +34,4 @@
       {{pki-cert-popup item=item}}
     </div>
   </div>
-{{/linked-block}}
+{{/list-item-row}}

@@ -1,11 +1,11 @@
-{{#linked-block
+{{#list-item-row
   (concat
     "vault.cluster.secrets.backend."
     "credentials"
     (if (not item.id) "-root")
   )
   item.id
-  class="box is-sideless is-marginless"
+  class="is-selectable"
   data-test-secret-link=item.id
 }}
   <div class="columns is-mobile">
@@ -33,5 +33,4 @@
       {{partial 'partials/role-aws/popup-menu'}}
     </div>
   </div>
-{{/linked-block}}
-
+{{/list-item-row}}

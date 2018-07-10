@@ -1,4 +1,4 @@
-{{#linked-block
+{{#list-item-row
   (concat
     "vault.cluster.secrets.backend."
     "credentials"
@@ -7,7 +7,7 @@
   item.backend
   item.id
   queryParams=(hash action="issue")
-  class="box is-sideless is-marginless"
+  class="is-selectable"
   data-test-secret-link=item.id
   tagName="div"
 }}
@@ -37,4 +37,4 @@
       {{partial "partials/role-pki/popup-menu"}}
     </div>
   </div>
-{{/linked-block}}
+{{/list-item-row}}

@@ -1,11 +1,11 @@
 {{identity/entity-nav identityType=identityType}}
 {{#if model.meta.total}}
   {{#each model as |item|}}
-    {{#linked-block
+    {{#list-item-row
       "vault.cluster.access.identity.show"
       item.id
       "details"
-      class="box is-sideless is-marginless"
+      class="is-selectable"
       data-test-identity-row=true
       }}
       <div class="columns is-mobile">
@@ -105,7 +105,7 @@
           {{/popup-menu}}
         </div>
       </div>
-    {{/linked-block}}
+    {{/list-item-row}}
   {{/each}}
 {{else}}
   <div class="box is-bottomless has-background-white-bis">

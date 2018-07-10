@@ -8,7 +8,7 @@ label.box-label {
   @extend .is-gapless;
   border-color: $grey-light;
   border-radius: 3px;
-  box-shadow: $box-link-shadow, $box-shadow-middle;
+  box-shadow: $box-link-shadow;
   text-decoration: none;
   transition: box-shadow $speed;
   width: 100%;

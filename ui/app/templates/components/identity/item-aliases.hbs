@@ -1,9 +1,9 @@
 {{#each (if model.alias.id (array model.alias) model.aliases) as |item|}}
-  {{#linked-block
+  {{#list-item-row
     "vault.cluster.access.identity.aliases.show"
     item.id
     "details"
-    class="box is-sideless is-marginless"
+    class="is-selectable"
   }}
     <div class="columns is-mobile">
       <div class="column is-10">
@@ -26,7 +26,7 @@
         {{identity/popup-alias params=(array item)}}
       </div>
     </div>
-  {{/linked-block}}
+  {{/list-item-row}}
 {{else}}
   <div class="box is-bottomless has-background-white-bis">
     <div class="columns is-centered">

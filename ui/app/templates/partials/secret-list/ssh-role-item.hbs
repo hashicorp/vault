@@ -1,11 +1,11 @@
-{{#linked-block
+{{#list-item-row
   (concat
     "vault.cluster.secrets.backend."
     (if (eq item.keyType "ca") "sign" "credentials")
     (if (not item.id) "-root")
   )
   item.id
-  class="box is-sideless is-marginless"
+  class="is-selectable"
   data-test-secret-link=item.id
 }}
   <div class="columns is-mobile">
@@ -40,5 +40,4 @@
       {{/if}}
     </div>
   </div>
-{{/linked-block}}
-
+{{/list-item-row}}
