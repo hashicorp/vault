@@ -14,11 +14,15 @@
 
 package internal
 
-import "time"
+import (
+	"time"
+)
 
 // Trace allows internal access to some trace functionality.
 // TODO(#412): remove this
 var Trace interface{}
+
+var LocalSpanStoreEnabled bool
 
 // BucketConfiguration stores the number of samples to store for span buckets
 // for successful and failed spans for a particular span name.

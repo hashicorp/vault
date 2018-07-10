@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc. All Rights Reserved.
+Copyright 2017 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -310,6 +310,8 @@ type SessionPoolConfig struct {
 	HealthCheckInterval time.Duration
 	// healthCheckSampleInterval is how often the health checker samples live session (for use in maintaining session pool size). Defaults to 1 min.
 	healthCheckSampleInterval time.Duration
+	// sessionLabels for the sessions created in the session pool.
+	sessionLabels map[string]string
 }
 
 // errNoRPCGetter returns error for SessionPoolConfig missing getRPCClient method.
@@ -318,9 +320,9 @@ func errNoRPCGetter() error {
 }
 
 // errMinOpenedGTMapOpened returns error for SessionPoolConfig.MaxOpened < SessionPoolConfig.MinOpened when SessionPoolConfig.MaxOpened is set.
-func errMinOpenedGTMaxOpened(spc *SessionPoolConfig) error {
+func errMinOpenedGTMaxOpened(maxOpened, minOpened uint64) error {
 	return spannerErrorf(codes.InvalidArgument,
-		"require SessionPoolConfig.MaxOpened >= SessionPoolConfig.MinOpened, got %v and %v", spc.MaxOpened, spc.MinOpened)
+		"require SessionPoolConfig.MaxOpened >= SessionPoolConfig.MinOpened, got %v and %v", maxOpened, minOpened)
 }
 
 // validate verifies that the SessionPoolConfig is good for use.
@@ -329,7 +331,7 @@ func (spc *SessionPoolConfig) validate() error {
 		return errNoRPCGetter()
 	}
 	if spc.MinOpened > spc.MaxOpened && spc.MaxOpened > 0 {
-		return errMinOpenedGTMaxOpened(spc)
+		return errMinOpenedGTMaxOpened(spc.MaxOpened, spc.MinOpened)
 	}
 	return nil
 }
@@ -463,7 +465,10 @@ func (p *sessionPool) createSession(ctx context.Context) (*session, error) {
 	}
 	var s *session
 	err = runRetryable(ctx, func(ctx context.Context) error {
-		sid, e := sc.CreateSession(ctx, &sppb.CreateSessionRequest{Database: p.db})
+		sid, e := sc.CreateSession(ctx, &sppb.CreateSessionRequest{
+			Database: p.db,
+			Session:  &sppb.Session{Labels: p.sessionLabels},
+		})
 		if e != nil {
 			return e
 		}
@@ -1067,7 +1072,7 @@ func shouldDropSession(err error) bool {
 	}
 	// If a Cloud Spanner can no longer locate the session (for example, if session is garbage collected), then caller
 	// should not try to return the session back into the session pool.
-	// TODO: once gRPC can return auxilary error information, stop parsing the error message.
+	// TODO: once gRPC can return auxiliary error information, stop parsing the error message.
 	if ErrCode(err) == codes.NotFound && strings.Contains(ErrDesc(err), "Session not found:") {
 		return true
 	}

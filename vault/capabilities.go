@@ -44,6 +44,11 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 	}
 
 	if entity != nil && entity.Disabled {
+		c.logger.Warn("permission denied as the entity on the token is disabled")
+		return nil, logical.ErrPermissionDenied
+	}
+	if te != nil && te.EntityID != "" && entity == nil {
+		c.logger.Warn("permission denied as the entity on the token is invalid")
 		return nil, logical.ErrPermissionDenied
 	}
 

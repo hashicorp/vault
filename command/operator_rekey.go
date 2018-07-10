@@ -29,6 +29,7 @@ type OperatorRekeyCommand struct {
 	flagPGPKeys      []string
 	flagStatus       bool
 	flagTarget       string
+	flagVerify       bool
 
 	// Backup options
 	flagBackup         bool
@@ -51,7 +52,7 @@ func (c *OperatorRekeyCommand) Synopsis() string {
 
 func (c *OperatorRekeyCommand) Help() string {
 	helpText := `
-Usage: vault rekey [options] [KEY]
+Usage: vault operator rekey [options] [KEY]
 
   Generates a new set of unseal keys. This can optionally change the total
   number of key shares or the required threshold of those key shares to
@@ -167,6 +168,15 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 			"is enabled.",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "verify",
+		Target:  &c.flagVerify,
+		Default: false,
+		Usage: "Indicates that the action (-status, -cancel, or providing a key " +
+			"share) will be affecting verification for the current rekey " +
+			"attempt.",
+	})
+
 	f.VarFlag(&VarFlag{
 		Name:       "pgp-keys",
 		Value:      (*pgpkeys.PubKeyFilesFlag)(&c.flagPGPKeys),
@@ -269,21 +279,27 @@ func (c *OperatorRekeyCommand) Run(args []string) int {
 	// Deprecations
 	// TODO: remove in 0.9.0
 	if c.flagDelete {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! The -delete flag is deprecated. Please use -backup-delete " +
-				"instead. This flag will be removed in Vault 0.11 (or later)."))
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! The -delete flag is deprecated. Please use -backup-delete " +
+					"instead. This flag will be removed in Vault 0.11 (or later)."))
+		}
 		c.flagBackupDelete = true
 	}
 	if c.flagRetrieve {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! The -retrieve flag is deprecated. Please use -backup-retrieve " +
-				"instead. This flag will be removed in Vault 0.11 (or later)."))
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! The -retrieve flag is deprecated. Please use -backup-retrieve " +
+					"instead. This flag will be removed in Vault 0.11 (or later)."))
+		}
 		c.flagBackupRetrieve = true
 	}
 	if c.flagRecoveryKey {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! The -recovery-key flag is deprecated. Please use -target=recovery " +
-				"instead. This flag will be removed in Vault 0.11 (or later)."))
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! The -recovery-key flag is deprecated. Please use -target=recovery " +
+					"instead. This flag will be removed in Vault 0.11 (or later)."))
+		}
 		c.flagTarget = "recovery"
 	}
 
@@ -331,11 +347,12 @@ func (c *OperatorRekeyCommand) init(client *api.Client) int {
 
 	// Make the request
 	status, err := fn(&api.RekeyInitRequest{
-		SecretShares:    c.flagKeyShares,
-		SecretThreshold: c.flagKeyThreshold,
-		StoredShares:    c.flagStoredShares,
-		PGPKeys:         c.flagPGPKeys,
-		Backup:          c.flagBackup,
+		SecretShares:        c.flagKeyShares,
+		SecretThreshold:     c.flagKeyThreshold,
+		StoredShares:        c.flagStoredShares,
+		PGPKeys:             c.flagPGPKeys,
+		Backup:              c.flagBackup,
+		RequireVerification: c.flagVerify,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing rekey: %s", err))
@@ -344,25 +361,29 @@ func (c *OperatorRekeyCommand) init(client *api.Client) int {
 
 	// Print warnings about recovery, etc.
 	if len(c.flagPGPKeys) == 0 {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! If you lose the keys after they are returned, there is no " +
-				"recovery. Consider canceling this operation and re-initializing " +
-				"with the -pgp-keys flag to protect the returned unseal keys along " +
-				"with -backup to allow recovery of the encrypted keys in case of " +
-				"emergency. You can delete the stored keys later using the -delete " +
-				"flag."))
-		c.UI.Output("")
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! If you lose the keys after they are returned, there is no " +
+					"recovery. Consider canceling this operation and re-initializing " +
+					"with the -pgp-keys flag to protect the returned unseal keys along " +
+					"with -backup to allow recovery of the encrypted keys in case of " +
+					"emergency. You can delete the stored keys later using the -delete " +
+					"flag."))
+			c.UI.Output("")
+		}
 	}
 	if len(c.flagPGPKeys) > 0 && !c.flagBackup {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! You are using PGP keys for encrypted the resulting unseal " +
-				"keys, but you did not enable the option to backup the keys to " +
-				"Vault's core. If you lose the encrypted keys after they are " +
-				"returned, you will not be able to recover them. Consider canceling " +
-				"this operation and re-running with -backup to allow recovery of the " +
-				"encrypted unseal keys in case of emergency. You can delete the " +
-				"stored keys later using the -delete flag."))
-		c.UI.Output("")
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! You are using PGP keys for encrypted the resulting unseal " +
+					"keys, but you did not enable the option to backup the keys to " +
+					"Vault's core. If you lose the encrypted keys after they are " +
+					"returned, you will not be able to recover them. Consider canceling " +
+					"this operation and re-running with -backup to allow recovery of the " +
+					"encrypted unseal keys in case of emergency. You can delete the " +
+					"stored keys later using the -delete flag."))
+			c.UI.Output("")
+		}
 	}
 
 	// Provide the current status
@@ -376,8 +397,15 @@ func (c *OperatorRekeyCommand) cancel(client *api.Client) int {
 	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
 	case "barrier":
 		fn = client.Sys().RekeyCancel
+		if c.flagVerify {
+			fn = client.Sys().RekeyVerificationCancel
+		}
 	case "recovery", "hsm":
 		fn = client.Sys().RekeyRecoveryKeyCancel
+		if c.flagVerify {
+			fn = client.Sys().RekeyRecoveryKeyVerificationCancel
+		}
+
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown target: %s", c.flagTarget))
 		return 1
@@ -396,16 +424,40 @@ func (c *OperatorRekeyCommand) cancel(client *api.Client) int {
 // provide prompts the user for the seal key and posts it to the update root
 // endpoint. If this is the last unseal, this function outputs it.
 func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
-	var statusFn func() (*api.RekeyStatusResponse, error)
-	var updateFn func(string, string) (*api.RekeyUpdateResponse, error)
+	var statusFn func() (interface{}, error)
+	var updateFn func(string, string) (interface{}, error)
 
 	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
 	case "barrier":
-		statusFn = client.Sys().RekeyStatus
-		updateFn = client.Sys().RekeyUpdate
+		statusFn = func() (interface{}, error) {
+			return client.Sys().RekeyStatus()
+		}
+		updateFn = func(s1 string, s2 string) (interface{}, error) {
+			return client.Sys().RekeyUpdate(s1, s2)
+		}
+		if c.flagVerify {
+			statusFn = func() (interface{}, error) {
+				return client.Sys().RekeyVerificationStatus()
+			}
+			updateFn = func(s1 string, s2 string) (interface{}, error) {
+				return client.Sys().RekeyVerificationUpdate(s1, s2)
+			}
+		}
 	case "recovery", "hsm":
-		statusFn = client.Sys().RekeyRecoveryKeyStatus
-		updateFn = client.Sys().RekeyRecoveryKeyUpdate
+		statusFn = func() (interface{}, error) {
+			return client.Sys().RekeyRecoveryKeyStatus()
+		}
+		updateFn = func(s1 string, s2 string) (interface{}, error) {
+			return client.Sys().RekeyRecoveryKeyUpdate(s1, s2)
+		}
+		if c.flagVerify {
+			statusFn = func() (interface{}, error) {
+				return client.Sys().RekeyRecoveryKeyVerificationStatus()
+			}
+			updateFn = func(s1 string, s2 string) (interface{}, error) {
+				return client.Sys().RekeyRecoveryKeyVerificationUpdate(s1, s2)
+			}
+		}
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown target: %s", c.flagTarget))
 		return 1
@@ -417,16 +469,31 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 		return 2
 	}
 
-	// Verify a root token generation is in progress. If there is not one in
-	// progress, return an error instructing the user to start one.
-	if !status.Started {
-		c.UI.Error(wrapAtLength(
-			"No rekey is in progress. Start a rekey process by running " +
-				"\"vault rekey -init\"."))
+	var started bool
+	var nonce string
+
+	switch status.(type) {
+	case *api.RekeyStatusResponse:
+		stat := status.(*api.RekeyStatusResponse)
+		started = stat.Started
+		nonce = stat.Nonce
+	case *api.RekeyVerificationStatusResponse:
+		stat := status.(*api.RekeyVerificationStatusResponse)
+		started = stat.Started
+		nonce = stat.Nonce
+	default:
+		c.UI.Error("Unknown status type")
 		return 1
 	}
 
-	var nonce string
+	// Verify a root token generation is in progress. If there is not one in
+	// progress, return an error instructing the user to start one.
+	if !started {
+		c.UI.Error(wrapAtLength(
+			"No rekey is in progress. Start a rekey process by running " +
+				"\"vault operator rekey -init\"."))
+		return 1
+	}
 
 	switch key {
 	case "-": // Read from stdin
@@ -447,8 +514,6 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 		key = buf.String()
 	case "": // Prompt using the tty
 		// Nonce value is not required if we are prompting via the terminal
-		nonce = status.Nonce
-
 		w := getWriterFromUI(c.UI)
 		fmt.Fprintf(w, "Rekey operation nonce: %s\n", nonce)
 		fmt.Fprintf(w, "Unseal Key (will be hidden): ")
@@ -489,22 +554,56 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 		return 2
 	}
 
-	if !resp.Complete {
+	var complete bool
+	var mightContainUnsealKeys bool
+
+	switch resp.(type) {
+	case *api.RekeyUpdateResponse:
+		complete = resp.(*api.RekeyUpdateResponse).Complete
+		mightContainUnsealKeys = true
+	case *api.RekeyVerificationUpdateResponse:
+		complete = resp.(*api.RekeyVerificationUpdateResponse).Complete
+	default:
+		c.UI.Error("Unknown update response type")
+		return 1
+	}
+
+	if !complete {
 		return c.status(client)
 	}
 
-	return c.printUnsealKeys(status, resp)
+	if mightContainUnsealKeys {
+		return c.printUnsealKeys(client, status.(*api.RekeyStatusResponse),
+			resp.(*api.RekeyUpdateResponse))
+	}
+
+	c.UI.Output(wrapAtLength("Rekey verification successful. The rekey operation is complete and the new keys are now active."))
+	return 0
 }
 
 // status is used just to fetch and dump the status.
 func (c *OperatorRekeyCommand) status(client *api.Client) int {
 	// Handle the different API requests
-	var fn func() (*api.RekeyStatusResponse, error)
+	var fn func() (interface{}, error)
 	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
 	case "barrier":
-		fn = client.Sys().RekeyStatus
+		fn = func() (interface{}, error) {
+			return client.Sys().RekeyStatus()
+		}
+		if c.flagVerify {
+			fn = func() (interface{}, error) {
+				return client.Sys().RekeyVerificationStatus()
+			}
+		}
 	case "recovery", "hsm":
-		fn = client.Sys().RekeyRecoveryKeyStatus
+		fn = func() (interface{}, error) {
+			return client.Sys().RekeyRecoveryKeyStatus()
+		}
+		if c.flagVerify {
+			fn = func() (interface{}, error) {
+				return client.Sys().RekeyRecoveryKeyVerificationStatus()
+			}
+		}
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown target: %s", c.flagTarget))
 		return 1
@@ -573,21 +672,42 @@ func (c *OperatorRekeyCommand) backupDelete(client *api.Client) int {
 }
 
 // printStatus dumps the status to output
-func (c *OperatorRekeyCommand) printStatus(status *api.RekeyStatusResponse) int {
+func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 	out := []string{}
 	out = append(out, "Key | Value")
-	out = append(out, fmt.Sprintf("Nonce | %s", status.Nonce))
-	out = append(out, fmt.Sprintf("Started | %t", status.Started))
 
-	if status.Started {
-		out = append(out, fmt.Sprintf("Rekey Progress | %d/%d", status.Progress, status.Required))
+	switch in.(type) {
+	case *api.RekeyStatusResponse:
+		status := in.(*api.RekeyStatusResponse)
+		out = append(out, fmt.Sprintf("Nonce | %s", status.Nonce))
+		out = append(out, fmt.Sprintf("Started | %t", status.Started))
+		if status.Started {
+			if status.Progress == status.Required {
+				out = append(out, fmt.Sprintf("Rekey Progress | %d/%d (verification in progress)", status.Progress, status.Required))
+			} else {
+				out = append(out, fmt.Sprintf("Rekey Progress | %d/%d", status.Progress, status.Required))
+			}
+			out = append(out, fmt.Sprintf("New Shares | %d", status.N))
+			out = append(out, fmt.Sprintf("New Threshold | %d", status.T))
+			out = append(out, fmt.Sprintf("Verification Required | %t", status.VerificationRequired))
+			if status.VerificationNonce != "" {
+				out = append(out, fmt.Sprintf("Verification Nonce | %s", status.VerificationNonce))
+			}
+		}
+		if len(status.PGPFingerprints) > 0 {
+			out = append(out, fmt.Sprintf("PGP Fingerprints | %s", status.PGPFingerprints))
+			out = append(out, fmt.Sprintf("Backup | %t", status.Backup))
+		}
+	case *api.RekeyVerificationStatusResponse:
+		status := in.(*api.RekeyVerificationStatusResponse)
+		out = append(out, fmt.Sprintf("Started | %t", status.Started))
 		out = append(out, fmt.Sprintf("New Shares | %d", status.N))
 		out = append(out, fmt.Sprintf("New Threshold | %d", status.T))
-	}
-
-	if len(status.PGPFingerprints) > 0 {
-		out = append(out, fmt.Sprintf("PGP Fingerprints | %s", status.PGPFingerprints))
-		out = append(out, fmt.Sprintf("Backup | %t", status.Backup))
+		out = append(out, fmt.Sprintf("Verification Nonce | %s", status.Nonce))
+		out = append(out, fmt.Sprintf("Verification Progress | %d/%d", status.Progress, status.T))
+	default:
+		c.UI.Error("Unknown status type")
+		return 1
 	}
 
 	switch Format(c.UI) {
@@ -595,11 +715,11 @@ func (c *OperatorRekeyCommand) printStatus(status *api.RekeyStatusResponse) int 
 		c.UI.Output(tableOutput(out, nil))
 		return 0
 	default:
-		return OutputData(c.UI, status)
+		return OutputData(c.UI, in)
 	}
 }
 
-func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, resp *api.RekeyUpdateResponse) int {
+func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, status *api.RekeyStatusResponse, resp *api.RekeyUpdateResponse) int {
 	switch Format(c.UI) {
 	case "table":
 	default:
@@ -638,20 +758,50 @@ func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, 
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"The encrypted unseal keys are backed up to \"core/unseal-keys-backup\"" +
 				"in the storage backend. Remove these keys at any time using " +
-				"\"vault rekey -delete-backup\". Vault does not automatically remove " +
-				"these keys.",
+				"\"vault operator rekey -delete-backup\". Vault does not automatically " +
+				"remove these keys.",
 		)))
 	}
 
-	c.UI.Output("")
-	c.UI.Output(wrapAtLength(fmt.Sprintf(
-		"Vault rekeyed with %d key shares an a key threshold of %d. Please "+
-			"securely distributed the key shares printed above. When the Vault is "+
-			"re-sealed, restarted, or stopped, you must supply at least %d of "+
-			"these keys to unseal it before it can start servicing requests.",
-		status.N,
-		status.T,
-		status.T)))
+	switch status.VerificationRequired {
+	case false:
+		c.UI.Output("")
+		c.UI.Output(wrapAtLength(fmt.Sprintf(
+			"Vault rekeyed with %d key shares and a key threshold of %d. Please "+
+				"securely distributed the key shares printed above. When Vault is "+
+				"re-sealed, restarted, or stopped, you must supply at least %d of "+
+				"these keys to unseal it before it can start servicing requests.",
+			status.N,
+			status.T,
+			status.T)))
+	default:
+		c.UI.Output("")
+		c.UI.Output(wrapAtLength(fmt.Sprintf(
+			"Vault has created a new key, split into %d key shares and a key threshold "+
+				"of %d. These will not be active until after verification is complete. "+
+				"Please securely distributed the key shares printed above. When Vault "+
+				"is re-sealed, restarted, or stopped, you must supply at least %d of "+
+				"these keys to unseal it before it can start servicing requests.",
+			status.N,
+			status.T,
+			status.T)))
+		c.UI.Output("")
+		c.UI.Warn(wrapAtLength(
+			"Again, these key shares are _not_ valid until verification is performed. " +
+				"Do not lose or discard your current key shares until after verification " +
+				"is complete or you will be unable to unseal Vault. If you cancel the " +
+				"rekey process or seal Vault before verification is complete the new " +
+				"shares will be discarded and the current shares will remain valid.",
+		))
+		c.UI.Output("")
+		c.UI.Warn(wrapAtLength(
+			"The current verification status, including initial nonce, is shown below.",
+		))
+		c.UI.Output("")
+
+		c.flagVerify = true
+		return c.status(client)
+	}
 
 	return 0
 }

@@ -46,7 +46,7 @@ func (se *statusError) Error() string {
 	return fmt.Sprintf("rpc error: code = %s desc = %s", codes.Code(p.GetCode()), p.GetMessage())
 }
 
-func (se *statusError) status() *Status {
+func (se *statusError) GRPCStatus() *Status {
 	return &Status{s: (*spb.Status)(se)}
 }
 
@@ -120,14 +120,14 @@ func FromProto(s *spb.Status) *Status {
 }
 
 // FromError returns a Status representing err if it was produced from this
-// package. Otherwise, ok is false and a Status is returned with codes.Unknown
-// and the original error message.
+// package or has a method `GRPCStatus() *Status`. Otherwise, ok is false and a
+// Status is returned with codes.Unknown and the original error message.
 func FromError(err error) (s *Status, ok bool) {
 	if err == nil {
 		return &Status{s: &spb.Status{Code: int32(codes.OK)}}, true
 	}
-	if se, ok := err.(*statusError); ok {
-		return se.status(), true
+	if se, ok := err.(interface{ GRPCStatus() *Status }); ok {
+		return se.GRPCStatus(), true
 	}
 	return New(codes.Unknown, err.Error()), false
 }
@@ -182,8 +182,8 @@ func Code(err error) codes.Code {
 	if err == nil {
 		return codes.OK
 	}
-	if se, ok := err.(*statusError); ok {
-		return se.status().Code()
+	if se, ok := err.(interface{ GRPCStatus() *Status }); ok {
+		return se.GRPCStatus().Code()
 	}
 	return codes.Unknown
 }

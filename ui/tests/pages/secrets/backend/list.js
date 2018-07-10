@@ -9,15 +9,10 @@ export default create({
   configure: clickable('[data-test-secret-backend-configure]'),
   configureIsPresent: isPresent('[data-test-secret-backend-configure]'),
 
-  tabs: collection({
-    itemScope: '[data-test-tab]',
-  }),
-
-  secrets: collection({
-    itemScope: '[data-test-secret-link]',
-  }),
+  tabs: collection('[data-test-tab]'),
+  secrets: collection('[data-test-secret-link]'),
 
   backendIsEmpty: getter(function() {
-    return this.secrets().count === 0;
+    return this.secrets.length === 0;
   }),
 });

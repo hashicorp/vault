@@ -1,0 +1,11 @@
+<nav class="navbar has-dark-vault-gradient is-grouped-split">
+  <div class="navbar-brand" data-test-navheader-home>
+    {{yield (hash home=(component 'nav-header/home'))}}
+  </div>
+  <div class="navbar-end is-divider-list is-flex" data-test-navheader-items>
+    {{yield (hash items=(component 'nav-header/items'))}}
+  </div>
+</nav>
+<div data-test-navheader-main>
+  {{yield (hash main=(component 'nav-header/main'))}}
+</div>

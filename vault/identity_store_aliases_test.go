@@ -9,62 +9,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestIdentityStore_ListAlias(t *testing.T) {
-	var err error
-	var resp *logical.Response
-
-	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(t)
-
-	entityReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "entity",
-	}
-	resp, err = is.HandleRequest(context.Background(), entityReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-	if resp == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityID := resp.Data["id"].(string)
-
-	// Create an alias
-	aliasData := map[string]interface{}{
-		"name":           "testaliasname",
-		"mount_accessor": githubAccessor,
-	}
-	aliasReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "entity-alias",
-		Data:      aliasData,
-	}
-	resp, err = is.HandleRequest(context.Background(), aliasReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	aliasData["name"] = "entityalias"
-	aliasData["entity_id"] = entityID
-	resp, err = is.HandleRequest(context.Background(), aliasReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	listReq := &logical.Request{
-		Operation: logical.ListOperation,
-		Path:      "entity-alias/id",
-	}
-	resp, err = is.HandleRequest(context.Background(), listReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	keys := resp.Data["keys"].([]string)
-	if len(keys) != 2 {
-		t.Fatalf("bad: length of alias IDs listed; expected: 2, actual: %d", len(keys))
-	}
-}
-
 // This test is required because MemDB does not take care of ensuring
 // uniqueness of indexes that are marked unique.
 func TestIdentityStore_AliasSameAliasNames(t *testing.T) {
@@ -119,10 +63,13 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 
 	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
 
-	err = is.MemDBUpsertEntity(entity)
+	txn := is.db.Txn(true)
+	defer txn.Abort()
+	err = is.MemDBUpsertEntityInTxn(txn, entity)
 	if err != nil {
 		t.Fatal(err)
 	}
+	txn.Commit()
 
 	alias := &identity.Alias{
 		CanonicalID:   entity.ID,
@@ -136,21 +83,15 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		},
 	}
 
-	err = is.MemDBUpsertAlias(alias, false)
+	txn = is.db.Txn(true)
+	defer txn.Abort()
+	err = is.MemDBUpsertAliasInTxn(txn, alias, false)
 	if err != nil {
 		t.Fatal(err)
 	}
+	txn.Commit()
 
 	aliasFetched, err := is.MemDBAliasByID("testaliasid", false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(alias, aliasFetched) {
-		t.Fatalf("bad: mismatched aliases; expected: %#v\n actual: %#v\n", alias, aliasFetched)
-	}
-
-	aliasFetched, err = is.MemDBAliasByCanonicalID(entity.ID, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,52 +109,6 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		t.Fatalf("bad: mismatched aliases; expected: %#v\n actual: %#v\n", alias, aliasFetched)
 	}
 
-	aliasesFetched, err := is.MemDBAliasesByMetadata(map[string]string{
-		"testkey1": "testmetadatavalue1",
-	}, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(aliasesFetched) != 1 {
-		t.Fatalf("bad: length of aliases; expected: 1, actual: %d", len(aliasesFetched))
-	}
-
-	if !reflect.DeepEqual(alias, aliasesFetched[0]) {
-		t.Fatalf("bad: mismatched aliases; expected: %#v\n actual: %#v\n", alias, aliasFetched)
-	}
-
-	aliasesFetched, err = is.MemDBAliasesByMetadata(map[string]string{
-		"testkey2": "testmetadatavalue2",
-	}, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(aliasesFetched) != 1 {
-		t.Fatalf("bad: length of aliases; expected: 1, actual: %d", len(aliasesFetched))
-	}
-
-	if !reflect.DeepEqual(alias, aliasesFetched[0]) {
-		t.Fatalf("bad: mismatched aliases; expected: %#v\n actual: %#v\n", alias, aliasFetched)
-	}
-
-	aliasesFetched, err = is.MemDBAliasesByMetadata(map[string]string{
-		"testkey1": "testmetadatavalue1",
-		"testkey2": "testmetadatavalue2",
-	}, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(aliasesFetched) != 1 {
-		t.Fatalf("bad: length of aliases; expected: 1, actual: %d", len(aliasesFetched))
-	}
-
-	if !reflect.DeepEqual(alias, aliasesFetched[0]) {
-		t.Fatalf("bad: mismatched aliases; expected: %#v\n actual: %#v\n", alias, aliasFetched)
-	}
-
 	alias2 := &identity.Alias{
 		CanonicalID:   entity.ID,
 		ID:            "testaliasid2",
@@ -226,37 +121,17 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		},
 	}
 
-	err = is.MemDBUpsertAlias(alias2, false)
+	txn = is.db.Txn(true)
+	defer txn.Abort()
+	err = is.MemDBUpsertAliasInTxn(txn, alias2, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	aliasesFetched, err = is.MemDBAliasesByMetadata(map[string]string{
-		"testkey1": "testmetadatavalue1",
-	}, false, false)
+	err = is.MemDBDeleteAliasByIDInTxn(txn, "testaliasid", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if len(aliasesFetched) != 2 {
-		t.Fatalf("bad: length of aliases; expected: 2, actual: %d", len(aliasesFetched))
-	}
-
-	aliasesFetched, err = is.MemDBAliasesByMetadata(map[string]string{
-		"testkey3": "testmetadatavalue3",
-	}, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(aliasesFetched) != 1 {
-		t.Fatalf("bad: length of aliases; expected: 1, actual: %d", len(aliasesFetched))
-	}
-
-	err = is.MemDBDeleteAliasByID("testaliasid", false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	txn.Commit()
 
 	aliasFetched, err = is.MemDBAliasByID("testaliasid", false, false)
 	if err != nil {

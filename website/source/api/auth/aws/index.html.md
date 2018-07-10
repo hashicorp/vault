@@ -105,7 +105,6 @@ $ curl \
 ```json
 {
   "data": {
-    "secret_key": "vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj",
     "access_key": "VKIAJBRHKH6EVTTNXDHA",
     "endpoint": "",
     "iam_endpoint": "",
@@ -620,7 +619,7 @@ list in order to satisfy that constraint.
 - `inferred_aws_region` `(string: "")` - When role inferencing is activated, the
   region to search for the inferred entities (e.g., EC2 instances). Required if
   role inferencing is activated. This only applies to the iam auth method.
-- `resolve_aws_unique_ids` `(bool: false)` - When set, resolves the
+- `resolve_aws_unique_ids` `(bool: true)` - When set, resolves the
   `bound_iam_principal_arn` to the
   [AWS Unique ID](http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids)
   for the bound principal ARN. This field is ignored when
@@ -988,9 +987,9 @@ token.
 
 ### Parameters
 
-- `role_tag` `(string: <required>)` - Role tag to be blacklisted. The tag can be
-  supplied as-is. In order to avoid any encoding problems, it can be base64
-  encoded.
+- `role_tag` `(string: <required>)` - Role tag to be blacklisted. This is the `tag_value` returned when the role tag is 
+  created. The tag can be supplied as-is. In order to avoid any encoding problems, it can be base64
+  encoded. 
 
 ### Sample Request
 

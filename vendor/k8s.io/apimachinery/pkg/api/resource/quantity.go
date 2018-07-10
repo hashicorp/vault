@@ -25,8 +25,6 @@ import (
 	"strconv"
 	"strings"
 
-	flag "github.com/spf13/pflag"
-
 	inf "gopkg.in/inf.v0"
 )
 
@@ -70,11 +68,6 @@ import (
 // Examples:
 //   1.5 will be serialized as "1500m"
 //   1.5Gi will be serialized as "1536Mi"
-//
-// NOTE: We reserve the right to amend this canonical format, perhaps to
-//   allow 1.5 to be canonical.
-// TODO: Remove above disclaimer after all bikeshedding about format is over,
-//   or after March 2015.
 //
 // Note that the quantity will NEVER be internally represented by a
 // floating point number. That is the whole point of this exercise.
@@ -508,7 +501,7 @@ func (q *Quantity) Sign() int {
 	return q.i.Sign()
 }
 
-// AsScaled returns the current value, rounded up to the provided scale, and returns
+// AsScale returns the current value, rounded up to the provided scale, and returns
 // false if the scale resulted in a loss of precision.
 func (q *Quantity) AsScale(scale Scale) (CanonicalValue, bool) {
 	if q.d.Dec != nil {
@@ -746,44 +739,4 @@ func (q *Quantity) Copy() *Quantity {
 		d:      infDecAmount{tmp.Set(q.d.Dec)},
 		Format: q.Format,
 	}
-}
-
-// qFlag is a helper type for the Flag function
-type qFlag struct {
-	dest *Quantity
-}
-
-// Sets the value of the internal Quantity. (used by flag & pflag)
-func (qf qFlag) Set(val string) error {
-	q, err := ParseQuantity(val)
-	if err != nil {
-		return err
-	}
-	// This copy is OK because q will not be referenced again.
-	*qf.dest = q
-	return nil
-}
-
-// Converts the value of the internal Quantity to a string. (used by flag & pflag)
-func (qf qFlag) String() string {
-	return qf.dest.String()
-}
-
-// States the type of flag this is (Quantity). (used by pflag)
-func (qf qFlag) Type() string {
-	return "quantity"
-}
-
-// QuantityFlag is a helper that makes a quantity flag (using standard flag package).
-// Will panic if defaultValue is not a valid quantity.
-func QuantityFlag(flagName, defaultValue, description string) *Quantity {
-	q := MustParse(defaultValue)
-	flag.Var(NewQuantityFlagValue(&q), flagName, description)
-	return &q
-}
-
-// NewQuantityFlagValue returns an object that can be used to back a flag,
-// pointing at the given Quantity variable.
-func NewQuantityFlagValue(q *Quantity) flag.Value {
-	return qFlag{q}
 }

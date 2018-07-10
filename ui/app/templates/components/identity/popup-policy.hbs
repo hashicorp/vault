@@ -1,0 +1,31 @@
+{{#popup-menu name="policy-menu"}}
+  <nav class="menu">
+    <ul class="menu-list">
+      <li class="action">
+        <a href={{href-to "vault.cluster.policy.show" "acl" policyName }}>
+          View Policy
+        </a>
+      </li>
+      <li class="action">
+        <a href={{href-to "vault.cluster.policy.edit" "acl" policyName }}>
+          Edit Policy
+        </a>
+      </li>
+      <li class="action">
+        {{#confirm-action
+          confirmButtonClasses="button is-primary"
+          confirmButtonText="Remove"
+          buttonClasses="link is-destroy"
+          onConfirmAction=(action "performTransaction" model policyName)
+          confirmMessage=(concat "Are you sure you want to remove " policyName "?")
+          showConfirm=(get this (concat "shouldDelete-" policyName))
+          class=(if (get this (concat "shouldDelete-" policyName)) "message is-block is-warning is-outline")
+          containerClasses="message-body is-block"
+          messageClasses="is-block"
+        }}
+          Remove from {{model.identityType}}
+        {{/confirm-action}}
+      </li>
+    </ul>
+  </nav>
+{{/popup-menu}}

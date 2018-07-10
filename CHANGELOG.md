@@ -1,25 +1,219 @@
-## 0.10.2 (Unreleased)
+## Next
+
+IMPROVEMENTS:
+
+ * core: A `max_request_size` parameter can now be set per-listener to adjust
+   the maximum allowed size per request [GH-4824]
+
+BUG FIXES:
+
+ * core: Fix returning 500 instead of 503 if a rekey is attempted when Vault is
+   sealed [GH-4874]
+ * secrets/database: Fix panic during DB creds revocation [GH-4846]
+
+## 0.10.3 (June 20th, 2018)
+
+DEPRECATIONS/CHANGES:
+
+ * In the audit log and in client responses, policies are now split into three
+   parameters: policies that came only from tokens, policies that came only
+   from Identity, and the combined set. Any previous location of policies via
+   the API now contains the full, combined set.
+ * When a token is tied to an Identity entity and the entity is deleted, the
+   token will no longer be usable, regardless of the validity of the token
+   itself.
+ * When authentication succeeds but no policies were defined for that specific
+   user, most auth methods would allow a token to be generated but a few would
+   reject the authentication, namely `ldap`, `okta`, and `radius`. Since the
+   `default` policy is added by Vault's core, this would incorrectly reject
+   valid authentications before they would in fact be granted policies. This
+   inconsistency has been addressed; valid authentications for these methods
+   now succeed even if no policy was specifically defined in that method for
+   that user.
+
+FEATURES:
+
+ * Root Rotation for Active Directory: You can now command Vault to rotate the
+   configured root credentials used in the AD secrets engine, to ensure that
+   only Vault knows the credentials it's using.
+ * URI SANs in PKI: You can now configure URI Subject Alternate Names in the
+   `pki` backend. Roles can limit which SANs are allowed via globbing.
+ * `kv rollback` Command: You can now use `vault kv rollback` to roll a KVv2
+   path back to a previous non-deleted/non-destroyed version. The previous
+   version becomes the next/newest version for the path.
+ * Token Bound CIDRs in AppRole: You can now add CIDRs to which a token
+   generated from AppRole will be bound.
+
+IMPROVEMENTS:
+
+ * approle: Return 404 instead of 202 on invalid role names during POST
+   operations [GH-4778]
+ * core: Add idle and initial header read/TLS handshake timeouts to connections
+   to ensure server resources are cleaned up [GH-4760]
+ * core: Report policies in token, identity, and full sets [GH-4747]
+ * secrets/databases: Add `create`/`update` distinction for connection
+   configurations [GH-3544]
+ * secrets/databases: Add `create`/`update` distinction for role configurations
+   [GH-3544]
+ * secrets/databases: Add best-effort revocation logic for use when a role has
+   been deleted [GH-4782]
+ * secrets/kv: Add `kv rollback` [GH-4774]
+ * secrets/pki: Add URI SANs support [GH-4675]
+ * secrets/ssh: Allow standard SSH command arguments to be used, without
+   requiring username@hostname syntax [GH-4710]
+ * storage/consul: Add context support so that requests are cancelable
+   [GH-4739]
+ * sys: Added `hidden` option to `listing_visibility` field on `sys/mounts`
+   API [GH-4827]
+ * ui: Secret values are obfuscated by default and visibility is toggleable [GH-4422]
+
+BUG FIXES:
+
+ * auth/approle: Fix panic due to metadata being nil [GH-4719]
+ * auth/aws: Fix delete path for tidy operations [GH-4799]
+ * core: Optimizations to remove some speed regressions due to the
+   security-related changes in 0.10.2
+ * storage/dynamodb: Fix errors seen when reading existing DynamoDB data [GH-4721]
+ * secrets/database: Fix default MySQL root rotation statement [GH-4748]
+ * secrets/gcp: Fix renewal for GCP account keys
+ * secrets/kv: Fix writing to the root of a KVv2 mount from `vault kv` commands
+   incorrectly operating on a root+mount path instead of being an error
+   [GH-4726]
+ * seal/pkcs11: Add `CKK_SHA256_HMAC` to the search list when finding HMAC
+   keys, fixing lookup on some Thales devices
+ * replication: Fix issue enabling replication when a non-auth mount and auth
+   mount have the same name
+ * auth/kubernetes: Fix issue verifying ECDSA signed JWTs
+
+## 0.10.2 (June 6th, 2018)
+
+SECURITY:
+
+ * Tokens: A race condition was identified that could occur if a token's
+   lease expired while Vault was not running. In this case, when Vault came
+   back online, sometimes it would properly revoke the lease but other times it
+   would not, leading to a Vault token that no longer had an expiration and had
+   essentially unlimited lifetime. This race was per-token, not all-or-nothing
+   for all tokens that may have expired during Vault's downtime. We have fixed
+   the behavior and put extra checks in place to help prevent any similar
+   future issues. In addition, the logic we have put in place ensures that such
+   lease-less tokens can no longer be used (unless they are root tokens that
+   never had an expiration to begin with).
+ * Convergent Encryption: The version 2 algorithm used in `transit`'s
+   convergent encryption feature is susceptible to offline
+   plaintext-confirmation attacks. As a result, we are introducing a version 3
+   algorithm that mitigates this. If you are currently using convergent
+   encryption, we recommend upgrading, rotating your encryption key (the new
+   key version will use the new algorithm), and rewrapping your data (the
+   `rewrap` endpoint can be used to allow a relatively non-privileged user to
+   perform the rewrapping while never divulging the plaintext).
+ * AppRole case-sensitive role name secret-id leaking: When using a mixed-case
+   role name via AppRole, deleting a secret-id via accessor or other operations
+   could end up leaving the secret-id behind and valid but without an accessor.
+   This has now been fixed, and we have put checks in place to prevent these
+   secret-ids from being used.
+
+DEPRECATIONS/CHANGES:
+
+ * PKI duration return types: The PKI backend now returns durations (e.g. when
+   reading a role) as an integer number of seconds instead of a Go-style
+   string, in line with how the rest of Vault's API returns durations.
+
+FEATURES:
+
+ * Active Directory Secrets Engine: A new `ad` secrets engine has been created
+   which allows Vault to rotate and provide credentials for configured AD
+   accounts.
+ * Rekey Verification: Rekey operations can now require verification. This
+   turns on a two-phase process where the existing key shares authorize
+   generating a new master key, and a threshold of the new, returned key shares
+   must be provided to verify that they have been successfully received in
+   order for the actual master key to be rotated.
+ * CIDR restrictions for `cert`, `userpass`, and `kubernetes` auth methods:
+   You can now limit authentication to specific CIDRs; these will also be
+   encoded in resultant tokens to limit their use.
+ * Vault UI Browser CLI: The UI now supports usage of read/write/list/delete
+   commands in a CLI that can be accessed from the nav bar. Complex inputs such
+   as JSON files are not currently supported. This surfaces features otherwise
+   unsupported in Vault's UI.
+ * Azure Key Vault Auto Unseal/Seal Wrap Support (Enterprise): Azure Key Vault
+   can now be used a support seal for Auto Unseal and Seal Wrapping.
 
 IMPROVEMENTS:
 
  * api: Close renewer's doneCh when the renewer is stopped, so that programs
    expecting a final value through doneCh behave correctly [GH-4472]
+ * auth/cert: Break out `allowed_names` into component parts and add
+   `allowed_uri_sans` [GH-4231]
+ * auth/ldap: Obfuscate error messages pre-bind for greater security [GH-4700]
  * cli: `vault login` now supports a `-no-print` flag to suppress printing
    token information but still allow storing into the token helper [GH-4454]
- * core/pkcs11 (enterprise): Add support for CKM_AES_CBS_PAD, CKM_RSA_PKCS, and 
+ * core/pkcs11 (enterprise): Add support for CKM_AES_CBC_PAD, CKM_RSA_PKCS, and 
    CKM_RSA_PKCS_OAEP mechanisms
- * core/pkcs11 (enterprise): HSM slots can now be selected by token label instead
-   of just slot number
+ * core/pkcs11 (enterprise): HSM slots can now be selected by token label
+   instead of just slot number
+ * core/token: Optimize token revocation by removing unnecessary list call
+   against the storage backend when calling revoke-orphan on tokens [GH-4465]
+ * core/token: Refactor token revocation logic to not block on the call when
+   underlying leases are pending revocation by moving the expiration logic to
+   the expiration manager [GH-4512]
  * expiration: Allow revoke-prefix and revoke-force to work on single leases as
    well as prefixes [GH-4450]
+ * identity: Return parent group info when reading a group [GH-4648]
+ * identity: Provide more contextual key information when listing entities,
+   groups, and aliases
+ * identity: Passthrough EntityID to backends [GH-4663]
+ * identity: Adds ability to request entity information through system view
+   [GH_4681]
+ * secret/pki: Add custom extended key usages [GH-4667]
+ * secret/pki: Add custom PKIX serial numbers [GH-4694]
+ * secret/ssh: Use hostname instead of IP in OTP mode, similar to CA mode
+   [GH-4673]
+ * storage/file: Attempt in some error conditions to do more cleanup [GH-4684]
+ * ui: wrapping lookup now distplays the path [GH-4644]
+ * ui: Identity interface now has more inline actions to make editing and adding
+   aliases to an entity or group easier [GH-4502]
+ * ui: Identity interface now lists groups by name [GH-4655]
+ * ui: Permission denied errors still render the sidebar in the Access section
+   [GH-4658]
+ * replication: Improve performance of index page flushes and WAL garbage 
+   collecting
 
 BUG FIXES:
 
  * auth/approle: Make invalid role_id a 400 error instead of 500 [GH-4470]
  * auth/cert: Fix Identity alias using serial number instead of common name
    [GH-4475]
+ * cli: Fix panic running `vault token capabilities` with multiple paths
+   [GH-4552]
+ * core: When using the `use_always` option with PROXY protocol support, do not
+   require `authorized_addrs` to be set [GH-4065]
+ * core: Fix panic when certain combinations of policy paths and allowed/denied
+   parameters were used [GH-4582]
+ * secret/gcp: Make `bound_region` able to use short names
+ * secret/kv: Fix response wrapping for KV v2 [GH-4511]
+ * secret/kv: Fix address flag not being honored correctly [GH-4617]
+ * secret/pki: Fix `safety_buffer` for tidy being allowed to be negative,
+   clearing all certs [GH-4641]
+ * secret/pki: Fix `key_type` not being allowed to be set to `any` [GH-4595]
  * secret/pki: Fix path length parameter being ignored when using
    `use_csr_values` and signing an intermediate CA cert [GH-4459]
+ * secret/ssh: Only append UserKnownHostsFile to args when configured with a
+   value [GH-4674]
+ * storage/dynamodb: Fix listing when one child is left within a nested path
+   [GH-4570]
+ * storage/gcs: Fix swallowing an error on connection close [GH-4691]
+ * ui: Fix HMAC algorithm in transit [GH-4604]
+ * ui: Fix unwrap of auth responses via the UI's unwrap tool [GH-4611]
+ * ui (enterprise): Fix parsing of version string that blocked some users from seeing
+   enterprise-specific pages in the UI [GH-4547]
+ * ui: Fix incorrect capabilities path check when viewing policies [GH-4566]
+ * replication: Fix error while running plugins on a newly created replication
+   secondary
+ * replication: Fix issue with token store lookups after a secondary's mount table
+   is invalidated.
+ * replication: Improve startup time when a large merkle index is in use.
+ * replication: Fix panic when storage becomes unreachable during unseal.
 
 ## 0.10.1/0.9.7 (April 25th, 2018)
 
@@ -692,7 +886,7 @@ DEPRECATIONS/CHANGES:
  * SSH role list changes: When listing roles from the `ssh` backend via the API,
    the response data will additionally return a `key_info` map that will contain
    a map of each key with a corresponding object containing the `key_type`.
- * More granularity in audit logs: Audit request and response entires are still
+ * More granularity in audit logs: Audit request and response entries are still
    in RFC3339 format but now have a granularity of nanoseconds.
  * High availability related values have been moved out of the `storage` and
    `ha_storage` stanzas, and into the top-level configuration. `redirect_addr`

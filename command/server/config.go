@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/hclutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 )
 
@@ -56,12 +57,14 @@ type Config struct {
 	ClusterAddr          string      `hcl:"cluster_addr"`
 	DisableClustering    bool        `hcl:"-"`
 	DisableClusteringRaw interface{} `hcl:"disable_clustering"`
+
+	DisableSealWrap    bool        `hcl:"-"`
+	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
 func DevConfig(ha, transactional bool) *Config {
 	ret := &Config{
-		DisableCache:      false,
 		DisableMlock:      true,
 		EnableRawEndpoint: true,
 
@@ -314,6 +317,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PidFile = c2.PidFile
 	}
 
+	result.DisableSealWrap = c.DisableSealWrap
+	if c2.DisableSealWrap {
+		result.DisableSealWrap = c2.DisableSealWrap
+	}
+
 	return result
 }
 
@@ -395,6 +403,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
+	if result.DisableSealWrapRaw != nil {
+		if result.DisableSealWrap, err = parseutil.ParseBool(result.DisableSealWrapRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
@@ -423,8 +437,9 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"api_addr",
 		"cluster_addr",
 		"disable_clustering",
+		"disable_sealwrap",
 	}
-	if err := checkHCLKeys(list, valid); err != nil {
+	if err := hclutil.CheckHCLKeys(list, valid); err != nil {
 		return nil, err
 	}
 
@@ -711,14 +726,20 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 		valid = []string{
 			"lib",
 			"slot",
+			"token_label",
 			"pin",
 			"mechanism",
 			"hmac_mechanism",
 			"key_label",
+			"default_key_label",
 			"hmac_key_label",
+			"hmac_default_key_label",
 			"generate_key",
 			"regenerate_key",
 			"max_parallel",
+			"disable_auto_reinit_on_error",
+			"rsa_encrypt_local",
+			"rsa_oaep_hash",
 		}
 	case "awskms":
 		valid = []string{
@@ -728,11 +749,28 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 			"kms_key_id",
 			"max_parallel",
 		}
+	case "gcpckms":
+		valid = []string{
+			"credentials",
+			"project",
+			"region",
+			"key_ring",
+			"crypto_key",
+		}
+	case "azurekeyvault":
+		valid = []string{
+			"tenant_id",
+			"client_id",
+			"client_secret",
+			"environment",
+			"vault_name",
+			"key_name",
+		}
 	default:
 		return fmt.Errorf("invalid seal type %q", key)
 	}
 
-	if err := checkHCLKeys(item.Val, valid); err != nil {
+	if err := hclutil.CheckHCLKeys(item.Val, valid); err != nil {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 	}
 
@@ -766,6 +804,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"x_forwarded_for_reject_not_authorized",
 			"x_forwarded_for_reject_not_present",
 			"infrastructure",
+			"max_request_size",
 			"node_id",
 			"proxy_protocol_behavior",
 			"proxy_protocol_authorized_addrs",
@@ -780,7 +819,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"tls_client_ca_file",
 			"token",
 		}
-		if err := checkHCLKeys(item.Val, valid); err != nil {
+		if err := hclutil.CheckHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
 		}
 
@@ -830,7 +869,7 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		"statsd_address",
 		"statsite_address",
 	}
-	if err := checkHCLKeys(item.Val, valid); err != nil {
+	if err := hclutil.CheckHCLKeys(item.Val, valid); err != nil {
 		return multierror.Prefix(err, "telemetry:")
 	}
 
@@ -847,31 +886,4 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		return multierror.Prefix(err, "telemetry:")
 	}
 	return nil
-}
-
-func checkHCLKeys(node ast.Node, valid []string) error {
-	var list *ast.ObjectList
-	switch n := node.(type) {
-	case *ast.ObjectList:
-		list = n
-	case *ast.ObjectType:
-		list = n.List
-	default:
-		return fmt.Errorf("cannot check HCL keys of type %T", n)
-	}
-
-	validMap := make(map[string]struct{}, len(valid))
-	for _, v := range valid {
-		validMap[v] = struct{}{}
-	}
-
-	var result error
-	for _, item := range list.Items {
-		key := item.Keys[0].Token.Value().(string)
-		if _, ok := validMap[key]; !ok {
-			result = multierror.Append(result, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
-		}
-	}
-
-	return result
 }

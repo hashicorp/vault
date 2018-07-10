@@ -20,40 +20,44 @@ module.exports = function(defaults) {
           opengraph: false,
           twitter: false,
           windows: false,
-          yandex: false
-        }
-      }
+          yandex: false,
+        },
+      },
     },
     codemirror: {
-      modes: ['javascript','ruby'],
-      keyMaps: ['sublime']
+      modes: ['javascript', 'ruby'],
+      keyMaps: ['sublime'],
     },
     babel: {
-      plugins: [
-        'transform-object-rest-spread'
-      ]
+      plugins: ['transform-object-rest-spread'],
     },
     autoprefixer: {
       grid: true,
-      browsers: [
-        "defaults",
-        "ie 11"
-      ]
-    }
+      browsers: ['defaults', 'ie 11'],
+    },
   });
 
   app.import('vendor/string-includes.js');
-  app.import(app.bowerDirectory + '/string.prototype.startswith/startswith.js');
-  app.import(app.bowerDirectory + '/autosize/dist/autosize.js');
+  app.import('node_modules/string.prototype.endswith/endswith.js');
+  app.import('node_modules/string.prototype.startswith/startswith.js');
+  app.import('node_modules/autosize/dist/autosize.js');
   app.import('vendor/shims/autosize.js');
 
-  app.import(app.bowerDirectory + '/jsonlint/lib/jsonlint.js');
-  app.import(app.bowerDirectory + '/codemirror/addon/lint/lint.css');
-  app.import(app.bowerDirectory + '/codemirror/addon/lint/lint.js');
-  app.import(app.bowerDirectory + '/codemirror/addon/lint/json-lint.js');
-  app.import(app.bowerDirectory + '/base64-js/base64js.min.js');
-  app.import(app.bowerDirectory + '/text-encoder-lite/index.js');
-  app.import(app.bowerDirectory + '/Duration.js/duration.js');
+  app.import('node_modules/jsonlint/lib/jsonlint.js');
+  app.import('node_modules/codemirror/addon/lint/lint.css');
+  app.import('node_modules/codemirror/addon/lint/lint.js');
+  app.import('node_modules/codemirror/addon/lint/json-lint.js');
+  app.import('node_modules/base64-js/base64js.min.js');
+  app.import('node_modules/text-encoder-lite/index.js');
+  app.import('node_modules/Duration.js/duration.js');
+
+  app.import('node_modules/columnify/columnify.js', {
+    using: [{ transformation: 'cjs', as: 'columnify' }],
+  });
+
+  app.import('node_modules/yargs-parser/lib/tokenize-arg-string.js', {
+    using: [{ transformation: 'cjs', as: 'yargs-parser-tokenizer' }],
+  });
 
   // Use `app.import` to add additional libraries to the generated
   // output files.

@@ -3,7 +3,7 @@
     {{#message-in-page type="danger"}}
       <div class="content">
         <p>
-        Your auth token expired at {{moment-format auth.tokenExpirationDate 'YYYY-MM-DD HH:mm:ss'}}.
+        Your auth token expired on {{moment-format auth.tokenExpirationDate 'MMMM Do YYYY, h:mm:ss a'}}. You will need to re-authenticate.
         </p>
       </div>
       <button type="button" class="button" {{action "reauthenticate"}}>
@@ -14,9 +14,9 @@
     {{#message-in-page type="warning"}}
       <div class="content">
         <p>
-          We've determined you are inactive, and have stopped auto-renewing your current auth token.
-          Your token will expire in {{moment-from-now auth.tokenExpirationDate interval=1000 hideSuffix=true}} at
-          {{moment-format auth.tokenExpirationDate 'YYYY-MM-DD HH:mm:ss'}}
+          We've stopped auto-renewing your current auth token due to inactivity.
+          Your token will expire in {{moment-from-now auth.tokenExpirationDate interval=1000 hideSuffix=true}} on
+          {{moment-format auth.tokenExpirationDate 'MMMM Do YYYY, h:mm:ss a'}}
         </p>
         <button type="button" class="button" {{action "renewToken"}}>Resume auto-renewal</button>
       </div>

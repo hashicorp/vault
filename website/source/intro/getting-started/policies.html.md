@@ -27,11 +27,21 @@ Policies are authored in [HCL][hcl], but it is JSON compatible. Here is an
 example policy:
 
 ```hcl
+# Normal servers have version 1 of KV mounted by default, so will need these
+# paths:
 path "secret/*" {
   capabilities = ["create"]
 }
-
 path "secret/foo" {
+  capabilities = ["read"]
+}
+
+# Dev servers have version 2 of KV mounted by default, so will need these
+# paths:
+path "secret/data/*" {
+  capabilities = ["create"]
+}
+path "secret/data/foo" {
   capabilities = ["read"]
 }
 ```
@@ -61,7 +71,7 @@ To write a policy using the command line, specify the path to a policy file to
 upload.
 
 ```text
-$ vault policy write my-policy acl.hcl
+$ vault policy write my-policy my-policy.hcl
 Success! Uploaded policy: my-policy
 ```
 
@@ -69,11 +79,21 @@ Here is an example you can copy-paste in the terminal:
 
 ```text
 $ vault policy write my-policy -<<EOF
+# Normal servers have version 1 of KV mounted by default, so will need these
+# paths:
 path "secret/*" {
   capabilities = ["create"]
 }
-
 path "secret/foo" {
+  capabilities = ["read"]
+}
+
+# Dev servers have version 2 of KV mounted by default, so will need these
+# paths:
+path "secret/data/*" {
+  capabilities = ["create"]
+}
+path "secret/data/foo" {
   capabilities = ["read"]
 }
 EOF
@@ -92,11 +112,12 @@ To view the contents of a policy, run:
 
 ```text
 $ vault policy read my-policy
+# Normal servers have version 1 of KV mounted by default, so will need these
+# paths:
 path "secret/*" {
   capabilities = ["create"]
 }
-
-# ...
+...
 ```
 
 ## Testing the Policy
@@ -130,11 +151,33 @@ token_policies     [default my-policy]
 Verify that you can write any data to `secret/`, but only read from
 `secret/foo`:
 
+### Dev servers
+
 ```text
-$ vault write secret/bar value=yes
+$ vault kv put secret/bar robot=beepboop
+Key              Value
+---              -----
+created_time     2018-05-22T18:05:42.537496856Z
+deletion_time    n/a
+destroyed        false
+version          1
+
+$ vault kv put secret/foo robot=beepboop
+Error writing data to secret/data/foo: Error making API request.
+
+URL: PUT http://127.0.0.1:8200/v1/secret/data/foo
+Code: 403. Errors:
+
+* permission denied
+```
+
+### Non-dev servers
+
+```text
+$ vault kv put secret/bar robot=beepboop
 Success! Data written to: secret/bar
 
-$ vault write secret/foo value=yes
+$ vault kv put secret/foo robot=beepboop
 Error writing data to secret/foo: Error making API request.
 
 URL: PUT http://127.0.0.1:8200/v1/secret/foo

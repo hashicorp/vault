@@ -8,35 +8,46 @@ import (
 	"strings"
 )
 
-// Indexer is an interface used for defining indexes
+// Indexer is an interface used for defining indexes. Indexes are used
+// for efficient lookup of objects in a MemDB table. An Indexer must also
+// implement one of SingleIndexer or MultiIndexer.
+//
+// Indexers are primarily responsible for returning the lookup key as
+// a byte slice. The byte slice is the key data in the underlying data storage.
 type Indexer interface {
-	// ExactFromArgs is used to build an exact index lookup
-	// based on arguments
+	// FromArgs is called to build the exact index key from a list of arguments.
 	FromArgs(args ...interface{}) ([]byte, error)
 }
 
-// SingleIndexer is an interface used for defining indexes
-// generating a single entry per object
+// SingleIndexer is an interface used for defining indexes that generate a
+// single value per object
 type SingleIndexer interface {
-	// FromObject is used to extract an index value from an
-	// object or to indicate that the index value is missing.
+	// FromObject extracts the index value from an object. The return values
+	// are whether the index value was found, the index value, and any error
+	// while extracting the index value, respectively.
 	FromObject(raw interface{}) (bool, []byte, error)
 }
 
-// MultiIndexer is an interface used for defining indexes
-// generating multiple entries per object
+// MultiIndexer is an interface used for defining indexes that generate
+// multiple values per object. Each value is stored as a seperate index
+// pointing to the same object.
+//
+// For example, an index that extracts the first and last name of a person
+// and allows lookup based on eitherd would be a MultiIndexer. The FromObject
+// of this example would split the first and last name and return both as
+// values.
 type MultiIndexer interface {
-	// FromObject is used to extract index values from an
-	// object or to indicate that the index value is missing.
+	// FromObject extracts index values from an object. The return values
+	// are the same as a SingleIndexer except there can be multiple index
+	// values.
 	FromObject(raw interface{}) (bool, [][]byte, error)
 }
 
-// PrefixIndexer can optionally be implemented for any
-// indexes that support prefix based iteration. This may
-// not apply to all indexes.
+// PrefixIndexer is an optional interface on top of an Indexer that allows
+// indexes to support prefix-based iteration.
 type PrefixIndexer interface {
-	// PrefixFromArgs returns a prefix that should be used
-	// for scanning based on the arguments
+	// PrefixFromArgs is the same as FromArgs for an Indexer except that
+	// the index value returned should return all prefix-matched values.
 	PrefixFromArgs(args ...interface{}) ([]byte, error)
 }
 
@@ -101,8 +112,9 @@ func (s *StringFieldIndex) PrefixFromArgs(args ...interface{}) ([]byte, error) {
 	return val, nil
 }
 
-// StringSliceFieldIndex is used to extract a field from an object
-// using reflection and builds an index on that field.
+// StringSliceFieldIndex builds an index from a field on an object that is a
+// string slice ([]string). Each value within the string slice can be used for
+// lookup.
 type StringSliceFieldIndex struct {
 	Field     string
 	Lowercase bool

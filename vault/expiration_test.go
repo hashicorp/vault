@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"reflect"
@@ -25,19 +26,30 @@ var (
 
 // mockExpiration returns a mock expiration manager
 func mockExpiration(t testing.TB) *ExpirationManager {
-	_, ts, _, _ := TestCoreWithTokenStore(t)
-	return ts.expiration
+	c, _, _ := TestCoreUnsealed(t)
+	return c.expiration
 }
 
 func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
-	c, ts, _, _ := TestCoreWithBackendTokenStore(t, backend)
-	return c, ts.expiration
+	c, _, _ := TestCoreUnsealedBackend(t, backend)
+	return c, c.expiration
 }
 
 func TestExpiration_Tidy(t *testing.T) {
 	var err error
 
-	exp := mockExpiration(t)
+	// We use this later for tidy testing where we need to check the output
+	logOut := new(bytes.Buffer)
+	logger := log.New(&log.LoggerOptions{
+		Output: logOut,
+	})
+
+	testCore := TestCore(t)
+	testCore.logger = logger
+	testCoreUnsealed(t, testCore)
+
+	exp := testCore.expiration
+
 	if err := exp.Restore(nil); err != nil {
 		t.Fatal(err)
 	}
@@ -212,9 +224,11 @@ func TestExpiration_Tidy(t *testing.T) {
 		}
 	}
 
-	if !(err1 != nil && err1.Error() == "tidy operation on leases is already in progress") &&
-		!(err2 != nil && err2.Error() == "tidy operation on leases is already in progress") {
-		t.Fatalf("expected at least one of err1 or err2 to be set; err1: %#v\n err2:%#v\n", err1, err2)
+	if err1 != nil || err2 != nil {
+		t.Fatalf("got an error: err1: %v; err2: %v", err1, err2)
+	}
+	if !strings.Contains(logOut.String(), "tidy operation on leases is already in progress") {
+		t.Fatalf("expected to see a warning saying operation in progress, output is %s", logOut.String())
 	}
 
 	root, err := exp.tokenStore.rootToken(context.Background())
@@ -293,7 +307,8 @@ func BenchmarkExpiration_Restore_InMem(b *testing.B) {
 }
 
 func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, numLeases int) {
-	c, exp := mockBackendExpiration(b, physicalBackend)
+	c, _, _ := TestCoreUnsealedBackend(b, physicalBackend)
+	exp := c.expiration
 	noop := &NoopBackend{}
 	view := NewBarrierView(c.barrier, "logical/")
 	meUUID, err := uuid.GenerateUUID()
@@ -735,13 +750,115 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 	}
 
 	// Should nuke all the keys
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		ID: "foobarbaz",
 	}
 	if err := exp.RevokeByToken(te); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
+	time.Sleep(300 * time.Millisecond)
+
+	noop.Lock()
+	defer noop.Unlock()
+
+	if len(noop.Requests) != 3 {
+		t.Fatalf("Bad: %v", noop.Requests)
+	}
+	for _, req := range noop.Requests {
+		if req.Operation != logical.RevokeOperation {
+			t.Fatalf("Bad: %v", req)
+		}
+	}
+
+	expect := []string{
+		"foo",
+		"sub/bar",
+		"zip",
+	}
+	sort.Strings(noop.Paths)
+	sort.Strings(expect)
+	if !reflect.DeepEqual(noop.Paths, expect) {
+		t.Fatalf("bad: %v", noop.Paths)
+	}
+}
+
+func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
+	exp := mockExpiration(t)
+	noop := &NoopBackend{}
+	// Request handle with a timeout context that simulates blocking lease revocation.
+	noop.RequestHandler = func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+		ctx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
+		defer cancel()
+
+		select {
+		case <-ctx.Done():
+			return noop.Response, nil
+		}
+	}
+
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	paths := []string{
+		"prod/aws/foo",
+		"prod/aws/sub/bar",
+		"prod/aws/zip",
+	}
+	for _, path := range paths {
+		req := &logical.Request{
+			Operation:   logical.ReadOperation,
+			Path:        path,
+			ClientToken: "foobarbaz",
+		}
+		resp := &logical.Response{
+			Secret: &logical.Secret{
+				LeaseOptions: logical.LeaseOptions{
+					TTL: 1 * time.Minute,
+				},
+			},
+			Data: map[string]interface{}{
+				"access_key": "xyz",
+				"secret_key": "abcd",
+			},
+		}
+		_, err := exp.Register(req, resp)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	// Should nuke all the keys
+	te := &logical.TokenEntry{
+		ID: "foobarbaz",
+	}
+	if err := exp.RevokeByToken(te); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Lock and check that no requests has gone through yet
+	noop.Lock()
+	if len(noop.Requests) != 0 {
+		t.Fatalf("Bad: %v", noop.Requests)
+	}
+	noop.Unlock()
+
+	// Wait for a bit for timeouts to trigger and pending revocations to go
+	// through and then we relock
+	time.Sleep(300 * time.Millisecond)
+
+	noop.Lock()
+	defer noop.Unlock()
+
+	// Now make sure that all requests have gone through
 	if len(noop.Requests) != 3 {
 		t.Fatalf("Bad: %v", noop.Requests)
 	}
@@ -796,7 +913,7 @@ func TestExpiration_RenewToken(t *testing.T) {
 
 func TestExpiration_RenewToken_period(t *testing.T) {
 	exp := mockExpiration(t)
-	root := &TokenEntry{
+	root := &logical.TokenEntry{
 		Policies:     []string{"root"},
 		Path:         "auth/token/root",
 		DisplayName:  "root",
@@ -1239,6 +1356,8 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	time.Sleep(300 * time.Millisecond)
+
 	out, err := exp.tokenStore.Lookup(context.Background(), le.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1499,7 +1618,7 @@ func TestLeaseEntry(t *testing.T) {
 }
 
 func TestExpiration_RevokeForce(t *testing.T) {
-	core, _, _, root := TestCoreWithTokenStore(t)
+	core, _, root := TestCoreUnsealed(t)
 
 	core.logicalBackends["badrenew"] = badRenewFactory
 	me := &MountEntry{
@@ -1547,7 +1666,7 @@ func TestExpiration_RevokeForce(t *testing.T) {
 }
 
 func TestExpiration_RevokeForceSingle(t *testing.T) {
-	core, _, _, root := TestCoreWithTokenStore(t)
+	core, _, root := TestCoreUnsealed(t)
 
 	core.logicalBackends["badrenew"] = badRenewFactory
 	me := &MountEntry{

@@ -28,6 +28,7 @@ import (
 	"github.com/keybase/go-crypto/openpgp/elgamal"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/rsa"
+	"github.com/keybase/go-crypto/openpgp/s2k"
 )
 
 var (
@@ -324,6 +325,28 @@ func NewElGamalPublicKey(creationTime time.Time, pub *elgamal.PublicKey) *Public
 	return pk
 }
 
+func getCurveOid(curve elliptic.Curve) (res []byte, err error) {
+	switch curve {
+	case elliptic.P256():
+		res = oidCurveP256
+	case elliptic.P384():
+		res = oidCurveP384
+	case elliptic.P521():
+		res = oidCurveP521
+	case brainpool.P256r1():
+		res = oidCurveP256r1
+	case brainpool.P384r1():
+		res = oidCurveP384r1
+	case brainpool.P512r1():
+		res = oidCurveP512r1
+	case curve25519.Cv25519():
+		res = oidCurve25519
+	default:
+		err = errors.UnsupportedError("unknown curve")
+	}
+	return
+}
+
 func NewECDSAPublicKey(creationTime time.Time, pub *ecdsa.PublicKey) *PublicKey {
 	pk := &PublicKey{
 		CreationTime: creationTime,
@@ -331,22 +354,34 @@ func NewECDSAPublicKey(creationTime time.Time, pub *ecdsa.PublicKey) *PublicKey 
 		PublicKey:    pub,
 		ec:           new(ecdsaKey),
 	}
-	switch pub.Curve {
-	case elliptic.P256():
-		pk.ec.oid = oidCurveP256
-	case elliptic.P384():
-		pk.ec.oid = oidCurveP384
-	case elliptic.P521():
-		pk.ec.oid = oidCurveP521
-	case brainpool.P256r1():
-		pk.ec.oid = oidCurveP256r1
-	case brainpool.P384r1():
-		pk.ec.oid = oidCurveP384r1
-	case brainpool.P512r1():
-		pk.ec.oid = oidCurveP512r1
+	oid, _ := getCurveOid(pub.Curve)
+	pk.ec.oid = oid
+	bs, bitLen := ecdh.Marshal(pub.Curve, pub.X, pub.Y)
+	pk.ec.p.bytes = bs
+	pk.ec.p.bitLength = uint16(bitLen)
+
+	pk.setFingerPrintAndKeyId()
+	return pk
+}
+
+func NewECDHPublicKey(creationTime time.Time, pub *ecdh.PublicKey) *PublicKey {
+	pk := &PublicKey{
+		CreationTime: creationTime,
+		PubKeyAlgo:   PubKeyAlgoECDH,
+		PublicKey:    pub,
+		ec:           new(ecdsaKey),
 	}
-	pk.ec.p.bytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
-	pk.ec.p.bitLength = uint16(8 * len(pk.ec.p.bytes))
+	oid, _ := getCurveOid(pub.Curve)
+	pk.ec.oid = oid
+	bs, bitLen := ecdh.Marshal(pub.Curve, pub.X, pub.Y)
+	pk.ec.p.bytes = bs
+	pk.ec.p.bitLength = uint16(bitLen)
+
+	hashbyte, _ := s2k.HashToHashId(crypto.SHA512)
+	pk.ecdh = &ecdhKdf{
+		KdfHash: kdfHashFunction(hashbyte),
+		KdfAlgo: kdfAlgorithm(CipherAES256),
+	}
 
 	pk.setFingerPrintAndKeyId()
 	return pk

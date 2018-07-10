@@ -67,29 +67,14 @@ unsealed](/intro/getting-started/deploy.html).
 
 ### PostgreSQL
 
-This guide requires that you have PostgreSQL that you can connect to,
-and have a database named **`myapp`**. You can download and install
-[PostgreSQL](https://www.postgresql.org/download/) locally, or connect to a
-remote host.
+This guide requires that you have a PostgreSQL server to connect to. If you
+don't have one, install [PostgreSQL](https://www.postgresql.org/download/) to
+perform the steps described in this guide.
 
-**Example on Ubuntu:**
-
-```shell
-# Install PostgreSQL
-$ sudo apt-get install -y postgresql postgresql-contrib
-
-# Initialize PostgreSQL
-$ sudo postgresql-setup initdb
-
-# Switch to postgres user
-$ su - postgres
-
-# Create myapp database
-$ psql -U postgres -c 'CREATE DATABASE myapp;'
-```
-
-[PostgreSQL Wiki](https://wiki.postgresql.org/wiki/First_steps) gives you a
+- Refer to the [PostgreSQL documentation](https://www.postgresql.org/docs/online-resources/) for details
+- [PostgreSQL Wiki](https://wiki.postgresql.org/wiki/First_steps) gives you a
 summary of basic commands to get started.
+
 
 ### Policy requirements
 
@@ -152,13 +137,13 @@ must be mounted.
 
 To mount a database secret engine:
 
-```shell
+```plaintext
 $ vault secrets enable <PATH>
 ```
 
 **Example:**
 
-```shell
+```plaintext
 $ vault secrets enable database
 ```
 
@@ -169,7 +154,7 @@ Vault.  However, it is possible to mount your secret engines at any location.
 
 Mount `database` secret engine using `/sys/mounts` endpoint:
 
-```shell
+```plaintext
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request POST \
        --data <PARAMETERS> \
@@ -184,7 +169,7 @@ parameters](/api/system/mounts.html#enable-secrets-engine) of the secret engine.
 The following example mounts database secret engine at `sys/mounts/database`
 path, and passed the secret engine type ("database") in the request payload.
 
-```shell
+```plaintext
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"type":"database"}' \
@@ -194,7 +179,7 @@ $ curl --header "X-Vault-Token: ..." \
 **NOTE:** It is possible to mount your database secret engines at any location.
 
 
-### <a name="step1"></a>Step 2: Configure PostgreSQL secret engine
+### <a name="step2"></a>Step 2: Configure PostgreSQL secret engine
 (**Persona:** admin)
 
 The PostgreSQL secret engine needs to be configured with valid credentials. It
@@ -217,9 +202,11 @@ command with correct URL to match your environment.
 
 **Example:**
 
-```shell
-$ vault write database/config/postgresql plugin_name=postgresql-database-plugin \
-  allowed_roles=readonly connection_url=postgresql://root:rootpassword@localhost:5432/myapp
+```plaintext
+$ vault write database/config/postgresql
+      plugin_name=postgresql-database-plugin \
+      allowed_roles=readonly \
+      connection_url=postgresql://root:rootpassword@localhost:5432/myapp
 ```
 
 
@@ -227,7 +214,7 @@ $ vault write database/config/postgresql plugin_name=postgresql-database-plugin 
 
 **Example:**
 
-```shell
+```plaintext
 $ curl --header "X-Vault-Token: ..." --request POST --data @payload.json \
     http://127.0.0.1:8200/v1/database/config/postgresql
 
@@ -238,6 +225,13 @@ $ cat payload.json
 	"connection_url": "postgresql://root:rootpassword@localhost:5432/myapp"
 }
 ```
+
+<br>
+
+~> **NOTE:** Read the [Database Root Credential Rotation](/guides/secret-mgmt/db-root-rotation.html)
+guide to learn about rotating the root credential immediately after the initial
+configuration of each database.
+
 
 ### <a name="step3"></a>Step 3: Create a role
 (**Persona:** admin)
@@ -265,7 +259,7 @@ if Vault is offline or unable to communicate with it.
 
 **Example:**
 
-```shell
+```plaintext
 $ vault write database/roles/readonly db_name=postgresql creation_statements=@readonly.sql \
     default_ttl=1h max_ttl=24h
 ```
@@ -278,15 +272,15 @@ statement is passed as the role creation statement.
 
 **Example:**
 
-```shell
+```plaintext
 $ curl --header "X-Vault-Token: ..." --request POST --data @payload.json \
     http://127.0.0.1:8200/v1/database/roles/readonly
 
 $ cat payload.json
 {
 	"db_name": "postgres",
-	"creation_statements": "CREATE ROLE '{{name}}' WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';
-  GRANT SELECT ON ALL TABLES IN SCHEMA public TO '{{name}}';",
+	"creation_statements": ["CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';
+  GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"],
 	"default_ttl": "1h",
 	"max_ttl": "24h"
 }
@@ -415,7 +409,7 @@ Be sure to use the returned token to perform the remaining.
 **NOTE:** [AppRole Pull Authentication](/guides/identity/authentication.html) guide
 demonstrates more sophisticated way of generating a token for your apps.
 
-```shell
+```plaintext
 $ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
        --request GET \
        http://127.0.0.1:8200/v1/database/creds/readonly | jq
@@ -498,5 +492,5 @@ user name exists.
 
 This guide discussed how to generate credentials on-demand so that the access
 credentials no longer need to be written to disk. Next, learn about the
-[Tokens and Leases](/guides/identity/lease.html) so that you can control the lifecycle of
-those credentials.
+[Tokens and Leases](/guides/identity/lease.html) so that you can control the
+lifecycle of those credentials.

@@ -4,13 +4,15 @@
   text-align: left;
   transition: opacity $speed-slow;
   will-change: opacity;
+  z-index: 300;
 
   &.is-animated {
     opacity: 1;
   }
 
   .modal-background {
-    background-image: url("/ui/vault-hex.svg"), linear-gradient(90deg, #191A1C, #1B212D);
+    background-image: url("/ui/vault-hex.svg"),
+      linear-gradient(90deg, #191a1c, #1b212d);
     opacity: 0.97;
   }
 

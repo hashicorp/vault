@@ -8,6 +8,7 @@ export default Ember.Component.extend({
   displayErrors: Ember.computed(
     'errorMessage',
     'model.isError',
+    'model.adapterError.message',
     'model.adapterError.errors.@each',
     'errors',
     'errors.@each',
@@ -24,7 +25,10 @@ export default Ember.Component.extend({
       }
 
       if (modelIsError) {
-        return this.get('model.adapterError.errors');
+        if (this.get('model.adapterError.errors.length') > 0) {
+          return this.get('model.adapterError.errors');
+        }
+        return [this.get('model.adapterError.message')];
       }
     }
   ),

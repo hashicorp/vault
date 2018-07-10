@@ -138,7 +138,7 @@ func (c *SSHCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "user-known-hosts-file",
 		Target:     &c.flagUserKnownHostsFile,
-		Default:    "~/.ssh/known_hosts",
+		Default:    "",
 		EnvVar:     "VAULT_SSH_USER_KNOWN_HOSTS_FILE",
 		Completion: complete.PredictFiles("*"),
 		Usage: "Value to use for the SSH configuration option " +
@@ -243,17 +243,27 @@ func (c *SSHCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Extract the username and IP.
-	username, hostname, ip, err := c.userHostAndIP(args[0])
+	// Extract the hostname, username and port from the ssh command
+	hostname, username, port, err := c.parseSSHCommand(args)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error parsing user and IP: %s", err))
+		c.UI.Error(fmt.Sprintf("Error parsing the ssh command: %q", err))
 		return 1
 	}
 
-	// The rest of the args are ssh args
-	sshArgs := []string{}
-	if len(args) > 1 {
-		sshArgs = args[1:]
+	// Use the current user if no user was specified in the ssh command
+	if username == "" {
+		u, err := user.Current()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error getting the current user: %q", err))
+			return 1
+		}
+		username = u.Username
+	}
+
+	ip, err := c.resolveHostname(hostname)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error resolving the ssh hostname: %q", err))
+		return 1
 	}
 
 	// Set the client in the command
@@ -329,11 +339,11 @@ func (c *SSHCommand) Run(args []string) int {
 
 	switch strings.ToLower(c.flagMode) {
 	case ssh.KeyTypeCA:
-		return c.handleTypeCA(username, hostname, ip, sshArgs)
+		return c.handleTypeCA(username, ip, port, args)
 	case ssh.KeyTypeOTP:
-		return c.handleTypeOTP(username, ip, sshArgs)
+		return c.handleTypeOTP(username, ip, port, args)
 	case ssh.KeyTypeDynamic:
-		return c.handleTypeDynamic(username, ip, sshArgs)
+		return c.handleTypeDynamic(username, ip, port, args)
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown SSH mode: %s", c.flagMode))
 		return 1
@@ -341,7 +351,7 @@ func (c *SSHCommand) Run(args []string) int {
 }
 
 // handleTypeCA is used to handle SSH logins using the "CA" key type.
-func (c *SSHCommand) handleTypeCA(username, hostname, ip string, sshArgs []string) int {
+func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) int {
 	// Read the key from disk
 	publicKey, err := ioutil.ReadFile(c.flagPublicKeyPath)
 	if err != nil {
@@ -451,10 +461,17 @@ func (c *SSHCommand) handleTypeCA(username, hostname, ip string, sshArgs []strin
 	args := append([]string{
 		"-i", c.flagPrivateKeyPath,
 		"-i", signedPublicKeyPath,
-		"-o UserKnownHostsFile=" + userKnownHostsFile,
 		"-o StrictHostKeyChecking=" + strictHostKeyChecking,
-		username + "@" + hostname,
-	}, sshArgs...)
+	})
+
+	if userKnownHostsFile != "" {
+		args = append(args,
+			"-o UserKnownHostsFile="+userKnownHostsFile,
+		)
+	}
+
+	// Add extra user defined ssh arguments
+	args = append(args, sshArgs...)
 
 	cmd := exec.Command("ssh", args...)
 	cmd.Stdin = os.Stdin
@@ -482,7 +499,7 @@ func (c *SSHCommand) handleTypeCA(username, hostname, ip string, sshArgs []strin
 }
 
 // handleTypeOTP is used to handle SSH logins using the "otp" key type.
-func (c *SSHCommand) handleTypeOTP(username, ip string, sshArgs []string) int {
+func (c *SSHCommand) handleTypeOTP(username, ip, port string, sshArgs []string) int {
 	secret, cred, err := c.generateCredential(username, ip)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("failed to generate credential: %s", err))
@@ -503,35 +520,49 @@ func (c *SSHCommand) handleTypeOTP(username, ip string, sshArgs []string) int {
 	// it is then, use it to automate typing in OTP to the prompt. Unfortunately,
 	// it was not possible to automate it without a third-party application, with
 	// only the Go libraries. Feel free to try and remove this dependency.
+	args := make([]string, 0)
+	env := os.Environ()
+	sshCmd := "ssh"
+
 	sshpassPath, err := exec.LookPath("sshpass")
 	if err != nil {
+		// No sshpass available so using normal ssh client
 		c.UI.Warn(wrapAtLength(
 			"Vault could not locate \"sshpass\". The OTP code for the session is " +
 				"displayed below. Enter this code in the SSH password prompt. If you " +
 				"install sshpass, Vault can automatically perform this step for you."))
 		c.UI.Output("OTP for the session is: " + cred.Key)
-
-		args := append([]string{
-			"-o UserKnownHostsFile=" + c.flagUserKnownHostsFile,
-			"-o StrictHostKeyChecking=" + c.flagStrictHostKeyChecking,
-			"-p", cred.Port,
-			username + "@" + ip,
-		}, sshArgs...)
-		cmd = exec.Command("ssh", args...)
 	} else {
-		args := append([]string{
+		// sshpass is available so lets use it instead
+		sshCmd = sshpassPath
+		args = append(args,
 			"-e", // Read password for SSHPASS environment variable
 			"ssh",
-			"-o UserKnownHostsFile=" + c.flagUserKnownHostsFile,
-			"-o StrictHostKeyChecking=" + c.flagStrictHostKeyChecking,
-			"-p", cred.Port,
-			username + "@" + ip,
-		}, sshArgs...)
-		cmd = exec.Command(sshpassPath, args...)
-		env := os.Environ()
+		)
 		env = append(env, fmt.Sprintf("SSHPASS=%s", string(cred.Key)))
-		cmd.Env = env
 	}
+
+	// Only harcode the knownhostsfile path if it has been set
+	if c.flagUserKnownHostsFile != "" {
+		args = append(args,
+			"-o UserKnownHostsFile="+c.flagUserKnownHostsFile,
+		)
+	}
+
+	// If a port wasn't specified in the ssh arguments lets use the port we got back from vault
+	if port == "" {
+		args = append(args, "-p", cred.Port)
+	}
+
+	args = append(args,
+		"-o StrictHostKeyChecking="+c.flagStrictHostKeyChecking,
+	)
+
+	// Add the rest of the ssh args appended by the user
+	args = append(args, sshArgs...)
+
+	cmd = exec.Command(sshCmd, args...)
+	cmd.Env = env
 
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -563,7 +594,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip string, sshArgs []string) int {
 }
 
 // handleTypeDynamic is used to handle SSH logins using the "dyanmic" key type.
-func (c *SSHCommand) handleTypeDynamic(username, ip string, sshArgs []string) int {
+func (c *SSHCommand) handleTypeDynamic(username, ip, port string, sshArgs []string) int {
 	// Generate the credential
 	secret, cred, err := c.generateCredential(username, ip)
 	if err != nil {
@@ -588,13 +619,20 @@ func (c *SSHCommand) handleTypeDynamic(username, ip string, sshArgs []string) in
 		return 1
 	}
 
-	args := append([]string{
+	args := make([]string, 0)
+	// If a port wasn't specified in the ssh arguments lets use the port we got back from vault
+	if port == "" {
+		args = append(args, "-p", cred.Port)
+	}
+
+	args = append(args,
 		"-i", keyPath,
-		"-o UserKnownHostsFile=" + c.flagUserKnownHostsFile,
-		"-o StrictHostKeyChecking=" + c.flagStrictHostKeyChecking,
-		"-p", cred.Port,
-		username + "@" + ip,
-	}, sshArgs...)
+		"-o UserKnownHostsFile="+c.flagUserKnownHostsFile,
+		"-o StrictHostKeyChecking="+c.flagStrictHostKeyChecking,
+	)
+
+	// Add extra user defined ssh arguments
+	args = append(args, sshArgs...)
 
 	cmd := exec.Command("ssh", args...)
 	cmd.Stdin = os.Stdin
@@ -723,37 +761,95 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 	}
 }
 
-// userAndIP takes an argument in the format foo@1.2.3.4 and separates the IP
-// and user parts, returning any errors.
-func (c *SSHCommand) userHostAndIP(s string) (string, string, string, error) {
-	// split the parameter username@ip
-	input := strings.Split(s, "@")
-	var username, address string
+// Finds the hostname, username (optional) and port (optional) from any valid ssh command
+// Supports usrname@hostname but also specifying valid ssh flags like -o User=username,
+// -o Port=2222 and -p 2222 anywhere in the command
+func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username string, port string, err error) {
+	lastArg := ""
 
-	// If only IP is mentioned and username is skipped, assume username to
-	// be the current username. Vault SSH role's default username could have
-	// been used, but in order to retain the consistency with SSH command,
-	// current username is employed.
-	switch len(input) {
-	case 1:
-		u, err := user.Current()
-		if err != nil {
-			return "", "", "", errors.Wrap(err, "failed to fetch current user")
+	for _, i := range args {
+		arg := lastArg
+		lastArg = ""
+
+		// If -p has been specified then this is our ssh port
+		if arg == "-p" {
+			port = i
+			continue
 		}
-		username, address = u.Username, input[0]
-	case 2:
-		username, address = input[0], input[1]
-	default:
-		return "", "", "", fmt.Errorf("invalid arguments: %q", s)
-	}
 
+		// this is an ssh option, lets see if User or Port have been set and use it
+		if arg == "-o" {
+			split := strings.Split(i, "=")
+			key := split[0]
+			// Incase the value contains = signs we want to get all of them
+			value := strings.Join(split[1:], " ")
+
+			if key == "User" {
+				// Don't overwrite the user if it is already set by username@hostname
+				// This matches the behaviour for how regular ssh reponds when both are specified
+				if username == "" {
+					username = value
+				}
+			}
+
+			if key == "Port" {
+				// Don't overwrite the port if it is already set by -p
+				// This matches the behaviour for how regular ssh reponds when both are specified
+				if port == "" {
+					port = value
+				}
+			}
+			continue
+		}
+
+		// This isn't an ssh argument that we care about. Lets keep on parsing the command
+		if arg != "" {
+			continue
+		}
+
+		// If this is an ssh argument we want to look at the value
+		if strings.HasPrefix(i, "-") {
+			lastArg = i
+			continue
+		}
+
+		// If we have gotten this far it means this is a bare argument
+		// The first bare argument is the hostname
+		// The second bare argument is the command to run on the remote host
+
+		// If the hostname hasn't been set yet than it means we have found the first bare argument
+		if hostname == "" {
+			if strings.Contains(i, "@") {
+				split := strings.Split(i, "@")
+				username = split[0]
+				hostname = split[1]
+			} else {
+				hostname = i
+			}
+			continue
+		} else {
+			// The second bare argument is the command to run on the remote host.
+			// We need to break out and stop parsing arugments now
+			break
+		}
+
+	}
+	if hostname == "" {
+		return "", "", "", errors.Wrap(
+			err,
+			fmt.Sprintf("failed to find a hostname in ssh command %q", strings.Join(args, " ")),
+		)
+	}
+	return hostname, username, port, nil
+}
+
+func (c *SSHCommand) resolveHostname(hostname string) (ip string, err error) {
 	// Resolving domain names to IP address on the client side.
 	// Vault only deals with IP addresses.
-	ipAddr, err := net.ResolveIPAddr("ip", address)
+	ipAddr, err := net.ResolveIPAddr("ip", hostname)
 	if err != nil {
-		return "", "", "", errors.Wrap(err, "failed to resolve IP address")
+		return "", errors.Wrap(err, "failed to resolve IP address")
 	}
-	ip := ipAddr.String()
-
-	return username, address, ip, nil
+	ip = ipAddr.String()
+	return ip, nil
 }

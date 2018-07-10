@@ -6,6 +6,7 @@ const POLL_INTERVAL_MS = 10000;
 const { inject } = Ember;
 
 export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
+  version: inject.service(),
   store: inject.service(),
   auth: inject.service(),
   currentCluster: Ember.inject.service(),
@@ -21,7 +22,8 @@ export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const params = this.paramsFor(this.routeName);
     const id = this.getClusterId(params);
     if (id) {
-      return this.get('auth').setCluster(id);
+      this.get('auth').setCluster(id);
+      return this.get('version').fetchFeatures();
     } else {
       return Ember.RSVP.reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
     }
@@ -29,6 +31,7 @@ export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   model(params) {
     const id = this.getClusterId(params);
+
     return this.get('store').findRecord('cluster', id);
   },
 

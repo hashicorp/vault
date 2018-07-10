@@ -276,7 +276,7 @@ func TestCore_Seal_BadToken(t *testing.T) {
 // GH-3497
 func TestCore_Seal_SingleUse(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	c.tokenStore.create(context.Background(), &TokenEntry{
+	c.tokenStore.create(context.Background(), &logical.TokenEntry{
 		ID:       "foo",
 		NumUses:  1,
 		Policies: []string{"root"},
@@ -494,7 +494,7 @@ func TestCore_HandleRequest_NoSlash(t *testing.T) {
 // Test a root path is denied if non-root
 func TestCore_HandleRequest_RootPath(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
-	testCoreMakeToken(t, c, root, "child", "", []string{"test"})
+	testMakeTokenViaCore(t, c, root, "child", "", []string{"test"})
 
 	req := &logical.Request{
 		Operation:   logical.ReadOperation,
@@ -529,7 +529,7 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 	}
 
 	// Child token (non-root) but with 'test' policy should have access
-	testCoreMakeToken(t, c, root, "child", "", []string{"test"})
+	testMakeTokenViaCore(t, c, root, "child", "", []string{"test"})
 	req = &logical.Request{
 		Operation:   logical.ReadOperation,
 		Path:        "sys/policy", // root protected!
@@ -547,7 +547,7 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 // Check that standard permissions work
 func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
-	testCoreMakeToken(t, c, root, "child", "", []string{"test"})
+	testMakeTokenViaCore(t, c, root, "child", "", []string{"test"})
 
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -567,7 +567,7 @@ func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 // Check that standard permissions work
 func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
-	testCoreMakeToken(t, c, root, "child", "", []string{"test"})
+	testMakeTokenViaCore(t, c, root, "child", "", []string{"test"})
 
 	// Set the 'test' policy object to permit access to secret/
 	req := &logical.Request{
@@ -719,7 +719,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	expect := &TokenEntry{
+	expect := &logical.TokenEntry{
 		ID:       clientToken,
 		Accessor: te.Accessor,
 		Parent:   "",
@@ -1022,7 +1022,7 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	expect := &TokenEntry{
+	expect := &logical.TokenEntry{
 		ID:           clientToken,
 		Accessor:     te.Accessor,
 		Parent:       root,
@@ -1067,7 +1067,7 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	expect := &TokenEntry{
+	expect := &logical.TokenEntry{
 		ID:           clientToken,
 		Accessor:     te.Accessor,
 		Parent:       root,

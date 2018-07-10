@@ -84,7 +84,7 @@ Optional JSON output is very useful for scripts. For example below we use the
 `jq` tool to extract the value of the `excited` secret:
 
 ```text
-$ vault kv get -format=json secret/hello | jq -r .data.excited
+$ vault kv get -format=json secret/hello | jq -r .data.data.excited
 yes
 ```
 

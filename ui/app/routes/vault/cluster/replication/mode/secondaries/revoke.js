@@ -2,7 +2,7 @@ import Base from '../../replication-base';
 
 export default Base.extend({
   model() {
-    return this.modelFor('vault.cluster.replication.secondaries');
+    return this.modelFor('vault.cluster.replication.mode.secondaries');
   },
 
   redirect(model) {

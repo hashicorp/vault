@@ -45,25 +45,12 @@ func (h *messageHeader) String() string {
 }
 
 func (h *messageHeader) write(wr *bufio.Writer) error {
-	if err := wr.WriteInt64(h.sessionID); err != nil {
-		return err
-	}
-	if err := wr.WriteInt32(h.packetCount); err != nil {
-		return err
-	}
-	if err := wr.WriteUint32(h.varPartLength); err != nil {
-		return err
-	}
-	if err := wr.WriteUint32(h.varPartSize); err != nil {
-		return err
-	}
-	if err := wr.WriteInt16(h.noOfSegm); err != nil {
-		return err
-	}
-
-	if err := wr.WriteZeroes(10); err != nil { //messageHeaderSize
-		return err
-	}
+	wr.WriteInt64(h.sessionID)
+	wr.WriteInt32(h.packetCount)
+	wr.WriteUint32(h.varPartLength)
+	wr.WriteUint32(h.varPartSize)
+	wr.WriteInt16(h.noOfSegm)
+	wr.WriteZeroes(10) //messageHeaderSize
 
 	if trace {
 		outLogger.Printf("write message header: %s", h)
@@ -73,31 +60,16 @@ func (h *messageHeader) write(wr *bufio.Writer) error {
 }
 
 func (h *messageHeader) read(rd *bufio.Reader) error {
-	var err error
-
-	if h.sessionID, err = rd.ReadInt64(); err != nil {
-		return err
-	}
-	if h.packetCount, err = rd.ReadInt32(); err != nil {
-		return err
-	}
-	if h.varPartLength, err = rd.ReadUint32(); err != nil {
-		return err
-	}
-	if h.varPartSize, err = rd.ReadUint32(); err != nil {
-		return err
-	}
-	if h.noOfSegm, err = rd.ReadInt16(); err != nil {
-		return err
-	}
-
-	if err := rd.Skip(10); err != nil { //messageHeaderSize
-		return err
-	}
+	h.sessionID = rd.ReadInt64()
+	h.packetCount = rd.ReadInt32()
+	h.varPartLength = rd.ReadUint32()
+	h.varPartSize = rd.ReadUint32()
+	h.noOfSegm = rd.ReadInt16()
+	rd.Skip(10) //messageHeaderSize
 
 	if trace {
 		outLogger.Printf("read message header: %s", h)
 	}
 
-	return nil
+	return rd.GetError()
 }

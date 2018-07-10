@@ -92,7 +92,7 @@ New Threshold     2
 Each unseal key holder runs the following command and enters their unseal key:
 
 ```text
-$ vault rekey -nonce=<nonce>
+$ vault operator rekey -nonce=<nonce>
 Rekey operation nonce: dc1aec3b-ae67-5780-b4b5-2a10ca05b17c
 Key (will be hidden):
 ```
@@ -128,7 +128,7 @@ the encryption key rotation.
 To trigger a key rotation, execute the command:
 
 ```text
-$ vault rotate
+$ vault operator rotate
 ```
 
 This will output the key version and installation time:

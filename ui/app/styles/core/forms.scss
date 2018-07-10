@@ -70,19 +70,15 @@ label {
 .input,
 .textarea,
 .select select {
+  border-color: $grey-light;
+  color: $grey-dark;
+  padding-left: $size-8;
+  padding-right: $size-8;
   @include until($desktop) {
     font-size: 16px;
   }
   &::placeholder {
     opacity: 0.5;
-  }
-  border-color: $grey-light;
-  color: $grey-dark;
-  padding-left: $size-8;
-  padding-right: $size-8;
-
-  .has-background-grey-lighter & {
-    background-color: $white;
   }
 }
 
@@ -98,7 +94,7 @@ label {
 }
 .input[disabled],
 .textarea[disabled] {
-  border-color: $grey-lighter;
+  border-color: $grey-lightest;
   background-color: $white-ter;
   color: $grey-light;
 }
@@ -142,7 +138,7 @@ label {
 
 .input,
 .textarea {
-  box-shadow: none;
+  box-shadow: 0 4px 1px rgba($black, 0.06) inset;
 
   @each $name, $pair in $colors {
     $color: nth($pair, 1);
@@ -179,12 +175,21 @@ label {
   }
 }
 
-.select {
-  &:not(.is-multiple)::after {
-    border-width: 2px;
-    margin-top: 0;
-    transform: rotate(-45deg) translateY(-50%);
-  }
+.select select {
+  background-color: $ui-gray-050;
+  box-shadow: 0 3px 1px rgba($black, 0.12);
+}
+
+.select:not(.is-multiple)::after {
+  border-color: $black;
+  border-width: 2px;
+  margin-top: 0;
+  transform: translateY(25%) rotate(-45deg);
+}
+
+.select:not(.is-multiple)::before {
+  @extend .select:not(.is-multiple)::after;
+  transform: translateY(-75%) rotate(135deg);
 }
 
 .field:not(:last-child) {
@@ -242,7 +247,7 @@ label {
   }
   .checkbox {
     @include input;
-    background-color: $dark-white;
+    background-color: $grey-lightest;
     @each $name, $pair in $colors {
       $color: nth($pair, 1);
       &.is-#{$name} {
@@ -255,18 +260,32 @@ label {
   }
 }
 
-.file-icon,
 .file-label {
-  color: $grey-dark;
+  overflow: visible;
 }
+
+.file-input {
+  visibility: hidden;
+}
+
 .file-cta {
-  background: $white-bis;
-  position: relative;
+  min-width: auto;
+
+  .icon:first-child:last-child {
+    display: inline-block;
+    margin-right: 0.1rem;
+    vertical-align: middle;
+  }
 }
+
+.file-name {
+  @extend .input;
+}
+
 .file-delete-button {
   @extend .button;
   @extend .is-transparent;
   color: $grey;
   position: absolute;
-  right: 5px;
+  right: 8px;
 }

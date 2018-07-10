@@ -18,6 +18,10 @@ export default IvyCodemirrorComponent.extend({
   'data-test-component': 'json-editor',
   updateCodeMirrorOptions() {
     const options = assign({}, JSON_EDITOR_DEFAULTS, this.get('options'));
+    if (options.autoHeight) {
+      options.viewportMargin = Infinity;
+      delete options.autoHeight;
+    }
 
     if (options) {
       Object.keys(options).forEach(function(option) {

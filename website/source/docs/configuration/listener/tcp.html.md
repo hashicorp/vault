@@ -17,6 +17,11 @@ listener "tcp" {
 }
 ```
 
+The `listener` stanza may be specified more than once to make Vault listen on
+multiple interfaces. If you configure multiple listeners you also need to
+specify [`api_addr`][api-addr] and [`cluster_addr`][cluster-addr] so Vault will
+advertise the correct address to other nodes.
+
 ## `tcp` Listener Parameters
 
 - `address` `(string: "127.0.0.1:8200")` – Specifies the address to bind to for
@@ -29,18 +34,25 @@ listener "tcp" {
   they need to hop through a TCP load balancer or some other scheme in order to
   talk.
 
+- `max_request_size` `(int: 33554432)` – Specifies a hard maximum allowed
+  request size, in bytes. Defaults to 32 MB. Specifying a number less than or
+  equal to `0` turns off limiting altogether.
+
 - `proxy_protocol_behavior` `(string: "") – When specified, turns on the PROXY
-  protocol for the listener.  
+  protocol for the listener.
   Accepted Values:
-  - *use_always* - The client's IP address will always be used.  
-  - *allow_authorized* - If the source IP address is in the 
+  - *use_always* - The client's IP address will always be used.
+  - *allow_authorized* - If the source IP address is in the
   `proxy_protocol_authorized_addrs` list, the client's IP address will be used.
-  If the source IP is not in the list, the source IP address will be used.  
+  If the source IP is not in the list, the source IP address will be used.
   - *deny_unauthorized* - The traffic will be rejected if the source IP
   address is not in the `proxy_protocol_authorized_addrs` list.
 
-- `proxy_protocol_authorized_addrs` `(string: <required-if-enabled>)` – Specifies
-  the list of allowed source IP addresses to be used with the PROXY protocol.
+- `proxy_protocol_authorized_addrs` `(string: <required-if-enabled> or array: <required-if-enabled> )` –
+  Specifies the list of allowed source IP addresses to be used with the PROXY protocol.
+  Not required if `proxy_protocol_behavior` is set to `use_always`. Source IPs should
+  be comma-delimited if provided as a string. At least one source IP must be provided,
+  `proxy_protocol_authorized_addrs` cannot be an empty array or string.
 
 - `tls_disable` `(string: "false")` – Specifies if TLS will be disabled. Vault
   assumes TLS by default, so you must explicitly disable TLS to opt-in to
@@ -117,4 +129,24 @@ listener "tcp" {
 }
 ```
 
+### Listening on Multiple Interfaces
+
+This example shows Vault listening on a private interface, as well as localhost.
+
+```hcl
+listener "tcp" {
+  address = "127.0.0.1:8200"
+}
+
+listener "tcp" {
+  address = "10.0.0.5:8200"
+}
+
+# Advertise the non-loopback interface
+api_addr = "https://10.0.0.5:8200"
+cluster_addr = "https://10.0.0.5:8201"
+```
+
 [golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go
+[api-addr]: /docs/configuration/index.html#api_addr
+[cluster-addr]: /docs/configuration/index.html#cluster_addr

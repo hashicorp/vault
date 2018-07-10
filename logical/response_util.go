@@ -119,6 +119,13 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 // conditions in a way that can be shared across http's respondError and other
 // locations.
 func AdjustErrorStatusCode(status *int, err error) {
+	// Handle nested errors
+	if t, ok := err.(*multierror.Error); ok {
+		for _, e := range t.Errors {
+			AdjustErrorStatusCode(status, e)
+		}
+	}
+
 	// Adjust status code when sealed
 	if errwrap.Contains(err, consts.ErrSealed.Error()) {
 		*status = http.StatusServiceUnavailable

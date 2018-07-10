@@ -46,7 +46,9 @@ test('policies', function(assert) {
   });
   click('[data-test-policy-list-link]');
   andThen(function() {
-    assert.dom(`[data-test-policy-link="${policyLower}"]`).exists({ count: 1 }, 'new policy shown in the list');
+    assert
+      .dom(`[data-test-policy-link="${policyLower}"]`)
+      .exists({ count: 1 }, 'new policy shown in the list');
   });
 
   // policy deletion
@@ -56,7 +58,9 @@ test('policies', function(assert) {
   click('[data-test-confirm-button]');
   andThen(function() {
     assert.equal(currentURL(), `/vault/policies/acl`, 'navigates to policy list on successful deletion');
-    assert.dom(`[data-test-policy-item="${policyLower}"]`).doesNotExist('deleted policy is not shown in the list');
+    assert
+      .dom(`[data-test-policy-item="${policyLower}"]`)
+      .doesNotExist('deleted policy is not shown in the list');
   });
 });
 

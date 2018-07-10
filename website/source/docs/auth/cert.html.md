@@ -15,7 +15,7 @@ The trusted certificates and CAs are configured directly to the auth method
 using the `certs/` path. This method cannot read trusted certificates from an
 external source.
 
-CA certs are associated with a role; role names and CRL names are normalized to
+CA certificates are associated with a role; role names and CRL names are normalized to
 lower-case.
 
 ## Revocation Checking
@@ -62,8 +62,10 @@ it is up to the administrator to remove it from the method.
 
 The below requires Vault to present a certificate signed by `ca.pem` and
 presents `cert.pem` (using `key.pem`) to authenticate against the `web` cert
-role. If a certificate role name is not specified, the auth method will try to
-authenticate against all trusted certificates.
+role. Note that the name of `web` ties out with the configuration example 
+below writing to a path of `auth/cert/certs/web`. If a certificate role name 
+is not specified, the auth method will try to authenticate against all trusted 
+certificates.
 
 ```
 $ vault login \

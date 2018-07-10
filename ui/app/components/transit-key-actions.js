@@ -3,6 +3,7 @@ const { get, set } = Ember;
 
 const TRANSIT_PARAMS = {
   hash_algorithm: 'sha2-256',
+  algorithm: 'sha2-256',
   signature_algorithm: 'pss',
   bits: 256,
   bytes: 32,
@@ -31,7 +32,7 @@ const TRANSIT_PARAMS = {
 const PARAMS_FOR_ACTION = {
   sign: ['input', 'hash_algorithm', 'key_version', 'prehashed', 'signature_algorithm'],
   verify: ['input', 'hmac', 'signature', 'hash_algorithm', 'prehashed'],
-  hmac: ['input', 'hash_algorithm', 'key_version'],
+  hmac: ['input', 'algorithm', 'key_version'],
   encrypt: ['plaintext', 'context', 'nonce', 'key_version'],
   decrypt: ['ciphertext', 'context', 'nonce'],
   rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],

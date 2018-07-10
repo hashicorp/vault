@@ -129,6 +129,23 @@ func (s *SystemViewClient) LocalMount() bool {
 	return reply.Local
 }
 
+func (s *SystemViewClient) EntityInfo(entityID string) (*logical.Entity, error) {
+	var reply EntityInfoReply
+	args := &EntityInfoArgs{
+		EntityID: entityID,
+	}
+
+	err := s.client.Call("Plugin.EntityInfo", args, &reply)
+	if err != nil {
+		return nil, err
+	}
+	if reply.Error != nil {
+		return nil, reply.Error
+	}
+
+	return reply.Entity, nil
+}
+
 type SystemViewServer struct {
 	impl logical.SystemView
 }
@@ -221,6 +238,21 @@ func (s *SystemViewServer) LocalMount(_ interface{}, reply *LocalMountReply) err
 	return nil
 }
 
+func (s *SystemViewServer) EntityInfo(args *EntityInfoArgs, reply *EntityInfoReply) error {
+	entity, err := s.impl.EntityInfo(args.EntityID)
+	if err != nil {
+		*reply = EntityInfoReply{
+			Error: wrapError(err),
+		}
+		return nil
+	}
+	*reply = EntityInfoReply{
+		Entity: entity,
+	}
+
+	return nil
+}
+
 type DefaultLeaseTTLReply struct {
 	DefaultLeaseTTL time.Duration
 }
@@ -267,4 +299,13 @@ type MlockEnabledReply struct {
 
 type LocalMountReply struct {
 	Local bool
+}
+
+type EntityInfoArgs struct {
+	EntityID string
+}
+
+type EntityInfoReply struct {
+	Entity *logical.Entity
+	Error  error
 }

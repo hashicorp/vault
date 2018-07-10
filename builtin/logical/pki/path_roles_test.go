@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -14,7 +15,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	config.StorageView = &logical.InmemStorage{}
 
 	var err error
-	b := Backend()
+	b := Backend(config)
 	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -63,6 +64,11 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 		t.Fatalf("generate_lease should not be set by default")
 	}
 
+	// Update values due to switching of ttl type
+	resp.Data["ttl_duration"] = resp.Data["ttl"]
+	resp.Data["ttl"] = (time.Duration(resp.Data["ttl"].(int64)) * time.Second).String()
+	resp.Data["max_ttl_duration"] = resp.Data["max_ttl"]
+	resp.Data["max_ttl"] = (time.Duration(resp.Data["max_ttl"].(int64)) * time.Second).String()
 	// role.GenerateLease will be nil after the decode
 	var role roleEntry
 	err = mapstructure.Decode(resp.Data, &role)
@@ -156,6 +162,11 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 		t.Fatalf("key_usage should have 2 values")
 	}
 
+	// Update values due to switching of ttl type
+	resp.Data["ttl_duration"] = resp.Data["ttl"]
+	resp.Data["ttl"] = (time.Duration(resp.Data["ttl"].(int64)) * time.Second).String()
+	resp.Data["max_ttl_duration"] = resp.Data["max_ttl"]
+	resp.Data["max_ttl"] = (time.Duration(resp.Data["max_ttl"].(int64)) * time.Second).String()
 	// Check that old key usage value is nil
 	var role roleEntry
 	err = mapstructure.Decode(resp.Data, &role)
@@ -249,6 +260,11 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 		t.Fatalf("organization should have 2 values")
 	}
 
+	// Update values due to switching of ttl type
+	resp.Data["ttl_duration"] = resp.Data["ttl"]
+	resp.Data["ttl"] = (time.Duration(resp.Data["ttl"].(int64)) * time.Second).String()
+	resp.Data["max_ttl_duration"] = resp.Data["max_ttl"]
+	resp.Data["max_ttl"] = (time.Duration(resp.Data["max_ttl"].(int64)) * time.Second).String()
 	// Check that old key usage value is nil
 	var role roleEntry
 	err = mapstructure.Decode(resp.Data, &role)
@@ -351,6 +367,11 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 		t.Fatalf("allowed_domains should have 2 values")
 	}
 
+	// Update values due to switching of ttl type
+	resp.Data["ttl_duration"] = resp.Data["ttl"]
+	resp.Data["ttl"] = (time.Duration(resp.Data["ttl"].(int64)) * time.Second).String()
+	resp.Data["max_ttl_duration"] = resp.Data["max_ttl"]
+	resp.Data["max_ttl"] = (time.Duration(resp.Data["max_ttl"].(int64)) * time.Second).String()
 	// Check that old key usage value is nil
 	var role roleEntry
 	err = mapstructure.Decode(resp.Data, &role)
@@ -402,6 +423,40 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 	}
 	if len(result.AllowedDomains) != 2 {
 		t.Fatal("allowed_domains should have 2 values")
+	}
+}
+
+func TestPki_RoleAllowedURISANs(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"allowed_uri_sans": []string{"http://foobar.com", "spiffe://*"},
+		"ttl":              "5h",
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/testrole",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	allowedURISANs := resp.Data["allowed_uri_sans"].([]string)
+	if len(allowedURISANs) != 2 {
+		t.Fatalf("allowed_uri_sans should have 2 values")
 	}
 }
 

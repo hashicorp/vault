@@ -71,25 +71,19 @@ func (id *resultsetID) setNumArg(int) {
 }
 
 func (id *resultsetID) read(rd *bufio.Reader) error {
-
-	_id, err := rd.ReadUint64()
-	if err != nil {
-		return err
-	}
+	_id := rd.ReadUint64()
 	*id.id = _id
 
 	if trace {
 		outLogger.Printf("resultset id: %d", *id.id)
 	}
 
-	return nil
+	return rd.GetError()
 }
 
 func (id *resultsetID) write(wr *bufio.Writer) error {
+	wr.WriteUint64(*id.id)
 
-	if err := wr.WriteUint64(*id.id); err != nil {
-		return err
-	}
 	if trace {
 		outLogger.Printf("resultset id: %d", *id.id)
 	}
@@ -97,131 +91,148 @@ func (id *resultsetID) write(wr *bufio.Writer) error {
 	return nil
 }
 
+// ResultFieldSet contains database field metadata for result fields.
+type ResultFieldSet struct {
+	fields []*ResultField
+	names  fieldNames
+}
+
+func newResultFieldSet(size int) *ResultFieldSet {
+	return &ResultFieldSet{
+		fields: make([]*ResultField, size),
+		names:  newFieldNames(),
+	}
+}
+
+// String implements the Stringer interface.
+func (f *ResultFieldSet) String() string {
+	a := make([]string, len(f.fields))
+	for i, f := range f.fields {
+		a[i] = f.String()
+	}
+	return fmt.Sprintf("%v", a)
+}
+
+func (f *ResultFieldSet) read(rd *bufio.Reader) {
+	for i := 0; i < len(f.fields); i++ {
+		field := newResultField(f.names)
+		field.read(rd)
+		f.fields[i] = field
+	}
+
+	pos := uint32(0)
+	for _, offset := range f.names.sortOffsets() {
+		diff := int(offset - pos)
+		if diff > 0 {
+			rd.Skip(diff)
+		}
+		b, size := readShortUtf8(rd)
+		f.names.setName(offset, string(b))
+		pos += uint32(1 + size + diff)
+	}
+}
+
+// NumField returns the number of fields of a query.
+func (f *ResultFieldSet) NumField() int {
+	return len(f.fields)
+}
+
+// Field returns the field at index idx.
+func (f *ResultFieldSet) Field(idx int) *ResultField {
+	return f.fields[idx]
+}
+
 const (
-	resultTableName = iota // used as index: start with 0
-	resultSchemaName
-	resultColumnName
-	resultColumnDisplayName
-	maxResultNames
+	tableName = iota
+	schemaName
+	columnName
+	columnDisplayName
+	maxNames
 )
 
-type resultField struct {
-	columnOptions           columnOptions
-	tc                      typeCode
-	fraction                int16
-	length                  int16
-	tablenameOffset         uint32
-	schemanameOffset        uint32
-	columnnameOffset        uint32
-	columnDisplaynameOffset uint32
+// ResultField contains database field attributes for result fields.
+type ResultField struct {
+	fieldNames    fieldNames
+	columnOptions columnOptions
+	tc            TypeCode
+	fraction      int16
+	length        int16
+	offsets       [maxNames]uint32
 }
 
-func newResultField() *resultField {
-	return &resultField{}
+func newResultField(fieldNames fieldNames) *ResultField {
+	return &ResultField{fieldNames: fieldNames}
 }
 
-func (f *resultField) String() string {
-	return fmt.Sprintf("columnsOptions %s typeCode %s fraction %d length %d tablenameOffset %d schemanameOffset %d columnnameOffset %d columnDisplaynameOffset %d",
+// String implements the Stringer interface.
+func (f *ResultField) String() string {
+	return fmt.Sprintf("columnsOptions %s typeCode %s fraction %d length %d tablename %s schemaname %s columnname %s columnDisplayname %s",
 		f.columnOptions,
 		f.tc,
 		f.fraction,
 		f.length,
-		f.tablenameOffset,
-		f.schemanameOffset,
-		f.columnnameOffset,
-		f.columnDisplaynameOffset,
+		f.fieldNames.name(f.offsets[tableName]),
+		f.fieldNames.name(f.offsets[schemaName]),
+		f.fieldNames.name(f.offsets[columnName]),
+		f.fieldNames.name(f.offsets[columnDisplayName]),
 	)
 }
 
-// Field interface
-func (f *resultField) typeCode() typeCode {
+// TypeCode returns the type code of the field.
+func (f *ResultField) TypeCode() TypeCode {
 	return f.tc
 }
 
-func (f *resultField) typeLength() (int64, bool) {
+// TypeLength returns the type length of the field.
+// see https://golang.org/pkg/database/sql/driver/#RowsColumnTypeLength
+func (f *ResultField) TypeLength() (int64, bool) {
 	if f.tc.isVariableLength() {
 		return int64(f.length), true
 	}
 	return 0, false
 }
 
-func (f *resultField) typePrecisionScale() (int64, int64, bool) {
+// TypePrecisionScale returns the type precision and scale (decimal types) of the field.
+// see https://golang.org/pkg/database/sql/driver/#RowsColumnTypePrecisionScale
+func (f *ResultField) TypePrecisionScale() (int64, int64, bool) {
 	if f.tc.isDecimalType() {
 		return int64(f.length), int64(f.fraction), true
 	}
 	return 0, 0, false
 }
 
-func (f *resultField) nullable() bool {
+// Nullable returns true if the field may be null, false otherwise.
+// see https://golang.org/pkg/database/sql/driver/#RowsColumnTypeNullable
+func (f *ResultField) Nullable() bool {
 	return f.columnOptions == coOptional
 }
 
-func (f *resultField) in() bool {
-	return false
+// Name returns the result field name.
+func (f *ResultField) Name() string {
+	return f.fieldNames.name(f.offsets[columnDisplayName])
 }
 
-func (f *resultField) out() bool {
-	return true
-}
-
-func (f *resultField) name(names map[uint32]string) string {
-	return names[f.columnDisplaynameOffset]
-}
-
-func (f *resultField) nameOffsets() []uint32 {
-	return []uint32{f.tablenameOffset, f.schemanameOffset, f.columnnameOffset, f.columnDisplaynameOffset}
-}
-
-//
-
-func (f *resultField) read(rd *bufio.Reader) error {
-	var err error
-
-	if co, err := rd.ReadInt8(); err == nil {
-		f.columnOptions = columnOptions(co)
-	} else {
-		return err
+func (f *ResultField) read(rd *bufio.Reader) {
+	f.columnOptions = columnOptions(rd.ReadInt8())
+	f.tc = TypeCode(rd.ReadInt8())
+	f.fraction = rd.ReadInt16()
+	f.length = rd.ReadInt16()
+	rd.Skip(2) //filler
+	for i := 0; i < maxNames; i++ {
+		offset := rd.ReadUint32()
+		f.offsets[i] = offset
+		f.fieldNames.addOffset(offset)
 	}
-	if tc, err := rd.ReadInt8(); err == nil {
-		f.tc = typeCode(tc)
-	} else {
-		return err
-	}
-	if f.fraction, err = rd.ReadInt16(); err != nil {
-		return err
-	}
-	if f.length, err = rd.ReadInt16(); err != nil {
-		return err
-	}
-
-	if err := rd.Skip(2); err != nil { //filler
-		return err
-	}
-
-	if f.tablenameOffset, err = rd.ReadUint32(); err != nil {
-		return err
-	}
-	if f.schemanameOffset, err = rd.ReadUint32(); err != nil {
-		return err
-	}
-	if f.columnnameOffset, err = rd.ReadUint32(); err != nil {
-		return err
-	}
-	if f.columnDisplaynameOffset, err = rd.ReadUint32(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 //resultset metadata
 type resultMetadata struct {
-	fieldSet *FieldSet
-	numArg   int
+	resultFieldSet *ResultFieldSet
+	numArg         int
 }
 
 func (r *resultMetadata) String() string {
-	return fmt.Sprintf("result metadata: %s", r.fieldSet.fields)
+	return fmt.Sprintf("result metadata: %s", r.resultFieldSet.fields)
 }
 
 func (r *resultMetadata) kind() partKind {
@@ -234,42 +245,21 @@ func (r *resultMetadata) setNumArg(numArg int) {
 
 func (r *resultMetadata) read(rd *bufio.Reader) error {
 
-	for i := 0; i < r.numArg; i++ {
-		field := newResultField()
-		if err := field.read(rd); err != nil {
-			return err
-		}
-		r.fieldSet.fields[i] = field
-	}
-
-	pos := uint32(0)
-	for _, offset := range r.fieldSet.nameOffsets() {
-		if diff := int(offset - pos); diff > 0 {
-			rd.Skip(diff)
-		}
-
-		b, size, err := readShortUtf8(rd)
-		if err != nil {
-			return err
-		}
-
-		r.fieldSet.names[offset] = string(b)
-
-		pos += uint32(1 + size)
-	}
+	r.resultFieldSet.read(rd)
 
 	if trace {
 		outLogger.Printf("read %s", r)
 	}
 
-	return nil
+	return rd.GetError()
 }
 
 //resultset
 type resultset struct {
-	numArg      int
-	fieldSet    *FieldSet
-	fieldValues *FieldValues
+	numArg         int
+	s              *Session
+	resultFieldSet *ResultFieldSet
+	fieldValues    *FieldValues
 }
 
 func (r *resultset) String() string {
@@ -285,11 +275,21 @@ func (r *resultset) setNumArg(numArg int) {
 }
 
 func (r *resultset) read(rd *bufio.Reader) error {
-	if err := r.fieldValues.read(r.numArg, r.fieldSet, rd); err != nil {
-		return err
+
+	cols := len(r.resultFieldSet.fields)
+	r.fieldValues.resize(r.numArg, cols)
+
+	for i := 0; i < r.numArg; i++ {
+		for j, field := range r.resultFieldSet.fields {
+			var err error
+			if r.fieldValues.values[i*cols+j], err = readField(r.s, rd, field.TypeCode()); err != nil {
+				return err
+			}
+		}
 	}
+
 	if trace {
 		outLogger.Printf("read %s", r)
 	}
-	return nil
+	return rd.GetError()
 }

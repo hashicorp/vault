@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault Auto-unseal using AWS KMS - Guides"
-sidebar_current: "guides-autounseal-aws-kms"
+sidebar_current: "guides-operations-autounseal-aws-kms"
 description: |-
   In this guide, we'll show an example of how to use Terraform to provision an
   instance that can utilize an encryption key from AWS Key Management Services

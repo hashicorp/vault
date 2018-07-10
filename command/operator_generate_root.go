@@ -217,9 +217,11 @@ func (c *OperatorGenerateRootCommand) Run(args []string) int {
 	// TODO: remove in 0.9.0
 	switch {
 	case c.flagGenOTP:
-		c.UI.Warn(wrapAtLength(
-			"The -gen-otp flag is deprecated. Please use the -generate-otp flag " +
-				"instead."))
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! The -gen-otp flag is deprecated. Please use the -generate-otp flag " +
+					"instead."))
+		}
 		c.flagGenerateOTP = c.flagGenOTP
 	}
 
@@ -365,7 +367,7 @@ func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string, dr
 	if !status.Started {
 		c.UI.Error(wrapAtLength(
 			"No root generation is in progress. Start a root generation by " +
-				"running \"vault generate-root -init\"."))
+				"running \"vault operator generate-root -init\"."))
 		return 1
 	}
 
@@ -393,7 +395,7 @@ func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string, dr
 		nonce = status.Nonce
 
 		w := getWriterFromUI(c.UI)
-		fmt.Fprintf(w, "Root generation operation nonce: %s\n", nonce)
+		fmt.Fprintf(w, "Operation nonce: %s\n", nonce)
 		fmt.Fprintf(w, "Unseal Key (will be hidden): ")
 		key, err = password.Read(os.Stdin)
 		fmt.Fprintf(w, "\n")
@@ -487,10 +489,10 @@ func (c *OperatorGenerateRootCommand) printStatus(status *api.GenerateRootStatus
 		out = append(out, fmt.Sprintf("PGP Fingerprint | %s", status.PGPFingerprint))
 	}
 	switch {
-	case status.EncodedRootToken != "":
-		out = append(out, fmt.Sprintf("Root Token | %s", status.EncodedRootToken))
 	case status.EncodedToken != "":
-		out = append(out, fmt.Sprintf("Root Token | %s", status.EncodedToken))
+		out = append(out, fmt.Sprintf("Encoded Token | %s", status.EncodedToken))
+	case status.EncodedRootToken != "":
+		out = append(out, fmt.Sprintf("Encoded Root Token | %s", status.EncodedRootToken))
 	}
 
 	output := columnOutput(out, nil)

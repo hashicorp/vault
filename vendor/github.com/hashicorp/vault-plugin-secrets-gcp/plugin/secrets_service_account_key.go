@@ -90,10 +90,12 @@ func (b *backend) pathServiceAccountKey(ctx context.Context, req *logical.Reques
 
 func (b *backend) secretKeyRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp, err := b.verifySecretServiceKeyExists(ctx, req)
-	if err != nil || resp != nil {
+	if err != nil {
 		return resp, err
 	}
-
+	if resp == nil {
+		resp = &logical.Response{}
+	}
 	cfg, err := getConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -143,7 +145,7 @@ func (b *backend) verifySecretServiceKeyExists(ctx context.Context, req *logical
 	if k, err := iamAdmin.Projects.ServiceAccounts.Keys.Get(keyName.(string)).Do(); err != nil || k == nil {
 		return logical.ErrorResponse(fmt.Sprintf("could not confirm key still exists in GCP: %v", err)), nil
 	}
-	return &logical.Response{}, nil
+	return nil, nil
 }
 
 func secretKeyRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -169,6 +171,9 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 	cfg, err := getConfig(ctx, s)
 	if err != nil {
 		return nil, errwrap.Wrapf("could not read backend config: {{err}}", err)
+	}
+	if cfg == nil {
+		cfg = &config{}
 	}
 
 	iamC, err := newIamAdmin(ctx, s)

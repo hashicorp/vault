@@ -92,13 +92,13 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request, stats sta
 	}
 	for k, vv := range r.Header {
 		k = strings.ToLower(k)
-		if isReservedHeader(k) && !isWhitelistedPseudoHeader(k) {
+		if isReservedHeader(k) && !isWhitelistedHeader(k) {
 			continue
 		}
 		for _, v := range vv {
 			v, err := decodeMetadataHeader(k, v)
 			if err != nil {
-				return nil, streamErrorf(codes.InvalidArgument, "malformed binary metadata: %v", err)
+				return nil, streamErrorf(codes.Internal, "malformed binary metadata: %v", err)
 			}
 			metakv = append(metakv, k, v)
 		}
@@ -354,8 +354,7 @@ func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream), trace
 		pr.AuthInfo = credentials.TLSInfo{State: *req.TLS}
 	}
 	ctx = metadata.NewIncomingContext(ctx, ht.headerMD)
-	ctx = peer.NewContext(ctx, pr)
-	s.ctx = newContextWithStream(ctx, s)
+	s.ctx = peer.NewContext(ctx, pr)
 	if ht.stats != nil {
 		s.ctx = ht.stats.TagRPC(s.ctx, &stats.RPCTagInfo{FullMethodName: s.method})
 		inHeader := &stats.InHeader{
@@ -366,7 +365,7 @@ func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream), trace
 		ht.stats.HandleRPC(s.ctx, inHeader)
 	}
 	s.trReader = &transportReader{
-		reader:        &recvBufferReader{ctx: s.ctx, recv: s.buf},
+		reader:        &recvBufferReader{ctx: s.ctx, ctxDone: s.ctx.Done(), recv: s.buf},
 		windowHandler: func(int) {},
 	}
 
@@ -420,6 +419,10 @@ func (ht *serverHandlerTransport) runStream() {
 		}
 	}
 }
+
+func (ht *serverHandlerTransport) IncrMsgSent() {}
+
+func (ht *serverHandlerTransport) IncrMsgRecv() {}
 
 func (ht *serverHandlerTransport) Drain() {
 	panic("Drain() is not implemented")

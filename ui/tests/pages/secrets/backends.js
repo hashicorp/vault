@@ -1,17 +1,19 @@
-import { create, visitable, collection, text, clickable } from 'ember-cli-page-object';
+import { create, visitable, collection, clickable, text } from 'ember-cli-page-object';
+import uiPanel from 'vault/tests/pages/components/console/ui-panel';
 
 export default create({
+  console: uiPanel,
+  consoleToggle: clickable('[data-test-console-toggle]'),
   visit: visitable('/vault/secrets'),
-  links: collection({
-    itemScope: '[data-test-secret-backend-link]',
+  rows: collection({
+    itemScope: '[data-test-secret-backend-row]',
     item: {
       path: text('[data-test-secret-path]'),
-      toggleDetails: clickable('[data-test-secret-backend-detail]'),
-      defaultTTL: text('[data-test-secret-backend-details="default-ttl"]'),
-      maxTTL: text('[data-test-secret-backend-details="max-ttl"]'),
+      menu: clickable('[data-test-popup-menu-trigger]'),
     },
     findByPath(path) {
       return this.toArray().findBy('path', path + '/');
     },
   }),
+  configLink: clickable('[data-test-engine-config]'),
 });

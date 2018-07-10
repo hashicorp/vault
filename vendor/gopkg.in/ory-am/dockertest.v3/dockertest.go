@@ -3,6 +3,7 @@ package dockertest
 import (
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,7 +11,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	dc "github.com/fsouza/go-dockerclient"
+	dc "github.com/ory/dockertest/docker"
 	"github.com/pkg/errors"
 )
 
@@ -22,6 +23,7 @@ type Pool struct {
 
 // Resource represents a docker container.
 type Resource struct {
+	pool      *Pool
 	Container *dc.Container
 }
 
@@ -58,6 +60,32 @@ func (r *Resource) GetBoundIP(id string) string {
 	}
 
 	return m[0].HostIP
+}
+
+// GetHostPort returns a resource's published port with an address.
+func (r *Resource) GetHostPort(portID string) string {
+	if r.Container == nil {
+		return ""
+	} else if r.Container.NetworkSettings == nil {
+		return ""
+	}
+
+	m, ok := r.Container.NetworkSettings.Ports[dc.Port(portID)]
+	if !ok {
+		return ""
+	} else if len(m) == 0 {
+		return ""
+	}
+	ip := m[0].HostIP
+	if ip == "0.0.0.0" {
+		ip = "localhost"
+	}
+	return net.JoinHostPort(ip, m[0].HostPort)
+}
+
+// Close removes a container and linked volumes from docker by calling pool.Purge.
+func (r *Resource) Close() error {
+	return r.pool.Purge(r)
 }
 
 // NewTLSPool creates a new pool given an endpoint and the certificate path. This is required for endpoints that
@@ -132,6 +160,8 @@ type RunOptions struct {
 	Links        []string
 	ExposedPorts []string
 	ExtraHosts   []string
+	WorkingDir   string
+	Labels       map[string]string
 	Auth         dc.AuthConfiguration
 	PortBindings map[dc.Port][]dc.PortBinding
 }
@@ -171,6 +201,7 @@ func (d *Pool) RunWithOptions(opts *RunOptions) (*Resource, error) {
 	env := opts.Env
 	cmd := opts.Cmd
 	ep := opts.Entrypoint
+	wd := opts.WorkingDir
 	var exp map[dc.Port]struct{}
 
 	if len(opts.ExposedPorts) > 0 {
@@ -219,6 +250,8 @@ func (d *Pool) RunWithOptions(opts *RunOptions) (*Resource, error) {
 			Cmd:          cmd,
 			Mounts:       mounts,
 			ExposedPorts: exp,
+			WorkingDir:   wd,
+			Labels:       opts.Labels,
 		},
 		HostConfig: &dc.HostConfig{
 			PublishAllPorts: true,
@@ -242,6 +275,7 @@ func (d *Pool) RunWithOptions(opts *RunOptions) (*Resource, error) {
 	}
 
 	return &Resource{
+		pool:      d,
 		Container: c,
 	}, nil
 }
@@ -255,10 +289,6 @@ func (d *Pool) Run(repository, tag string, env []string) (*Resource, error) {
 
 // Purge removes a container and linked volumes from docker.
 func (d *Pool) Purge(r *Resource) error {
-	if err := d.Client.KillContainer(dc.KillContainerOptions{ID: r.Container.ID}); err != nil {
-		return errors.Wrap(err, "")
-	}
-
 	if err := d.Client.RemoveContainer(dc.RemoveContainerOptions{ID: r.Container.ID, Force: true, RemoveVolumes: true}); err != nil {
 		return errors.Wrap(err, "")
 	}

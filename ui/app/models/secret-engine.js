@@ -1,7 +1,9 @@
 import Ember from 'ember';
 import DS from 'ember-data';
-import { queryRecord } from 'ember-computed-query';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { fragment } from 'ember-data-model-fragments/attributes';
+
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
 const { computed } = Ember;
@@ -16,10 +18,35 @@ export default DS.Model.extend({
   name: attr('string'),
   type: attr('string'),
   description: attr('string'),
-  config: attr('object'),
-  options: fragment('mount-options'),
+  config: fragment('mount-config', { defaultValue: {} }),
+  options: fragment('mount-options', { defaultValue: {} }),
   local: attr('boolean'),
   sealWrap: attr('boolean'),
+
+  modelTypeForKV: computed('type', 'options.version', function() {
+    let type = this.get('type');
+    let version = this.get('options.version');
+    let modelType = 'secret';
+    if ((type === 'kv' || type === 'generic') && version === 2) {
+      modelType = 'secret-v2';
+    }
+    return modelType;
+  }),
+
+  formFields: [
+    'type',
+    'path',
+    'description',
+    'accessor',
+    'local',
+    'sealWrap',
+    'config.{defaultLeaseTtl,maxLeaseTtl}',
+    'options.{version}',
+  ],
+
+  attrs: computed('formFields', function() {
+    return expandAttributeMeta(this, this.get('formFields'));
+  }),
 
   shouldIncludeInList: computed('type', function() {
     return !LIST_EXCLUDED_BACKENDS.includes(this.get('type'));
@@ -64,16 +91,7 @@ export default DS.Model.extend({
     });
   },
 
-  zeroAddressPath: queryRecord(
-    'capabilities',
-    context => {
-      const { id } = context.getProperties('backend', 'id');
-      return {
-        id: `${id}/config/zeroaddress`,
-      };
-    },
-    'id'
-  ),
+  zeroAddressPath: lazyCapabilities(apiPath`${'id'}/config/zeroaddress`, 'id'),
   canEditZeroAddress: computed.alias('zeroAddressPath.canUpdate'),
 
   // aws backend attrs

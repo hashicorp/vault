@@ -41,6 +41,12 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 }
 
 func kvPreflightVersionRequest(client *api.Client, path string) (string, int, error) {
+	// We don't want to use a wrapping call here so save any custom value and
+	// restore after
+	currentWrappingLookupFunc := client.CurrentWrappingLookupFunc()
+	client.SetWrappingLookupFunc(nil)
+	defer client.SetWrappingLookupFunc(currentWrappingLookupFunc)
+
 	r := client.NewRequest("GET", "/v1/sys/internal/ui/mounts/"+path)
 	resp, err := client.RawRequest(r)
 	if resp != nil {
@@ -93,8 +99,13 @@ func isKVv2(path string, client *api.Client) (string, bool, error) {
 }
 
 func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
-	p = strings.TrimPrefix(p, mountPath)
-	return path.Join(mountPath, apiPrefix, p)
+	switch {
+	case p == mountPath, p == strings.TrimSuffix(mountPath, "/"):
+		return path.Join(mountPath, apiPrefix)
+	default:
+		p = strings.TrimPrefix(p, mountPath)
+		return path.Join(mountPath, apiPrefix, p)
+	}
 }
 
 func getHeaderForMap(header string, data map[string]interface{}) string {

@@ -100,6 +100,9 @@
             <li<%= sidebar_current("docs-configuration-seal-awskms") %>>
               <a href="/docs/configuration/seal/awskms.html">AWS KMS <sup>ENT</sup></a>
             </li>
+            <li<%= sidebar_current("docs-configuration-seal-azurekeyvault") %>>
+              <a href="/docs/configuration/seal/azurekeyvault.html">Azure Key Vault <sup>ENT</sup></a>
+            </li>
             <li<%= sidebar_current("docs-configuration-seal-gcpckms") %>>
               <a href="/docs/configuration/seal/gcpckms.html">GCP Cloud KMS <sup>ENT</sup></a>
             </li>
@@ -166,6 +169,9 @@
           </li>
           <li<%= sidebar_current("docs-configuration-telemetry") %>>
             <a href="/docs/configuration/telemetry.html"><tt>telemetry</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-configuration-ui") %>>
+            <a href="/docs/configuration/ui/index.html"><tt>ui</tt></a>
           </li>
         </ul>
       </li>
@@ -348,6 +354,10 @@
       <li<%= sidebar_current("docs-secrets") %>>
         <a href="/docs/secrets/index.html">Secrets Engines</a>
         <ul class="nav">
+          <li<%= sidebar_current("docs-secrets-ad") %>>
+            <a href="/docs/secrets/ad/index.html">Active Directory</a>
+          </li>
+
           <li<%= sidebar_current("docs-secrets-aws") %>>
             <a href="/docs/secrets/aws/index.html">AWS</a>
           </li>
@@ -578,9 +588,6 @@
           </li>
           <li<%= sidebar_current("docs-vault-enterprise-sealwrap")%>>
             <a href="/docs/enterprise/sealwrap/index.html">Seal Wrap / FIPS 140-2</a>
-          </li>
-          <li<%= sidebar_current("docs-vault-enterprise-ui") %>>
-            <a href="/docs/enterprise/ui/index.html">UI (Web Interface)</a>
           </li>
           <li<%= sidebar_current("docs-vault-enterprise-control-groups") %>>
             <a href="/docs/enterprise/control-groups/index.html">Control Groups</a>

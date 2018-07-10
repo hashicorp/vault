@@ -17,12 +17,8 @@ limitations under the License.
 package driver
 
 import (
-	"database/sql/driver"
-	"errors"
 	"fmt"
 	"io"
-
-	p "github.com/SAP/go-hdb/internal/protocol"
 )
 
 // A Lob is the driver representation of a database large object field.
@@ -31,9 +27,8 @@ import (
 // A Lob can be created by contructor method NewLob with io.Reader and io.Writer as parameters or
 // created by new, setting io.Reader and io.Writer by SetReader and SetWriter methods.
 type Lob struct {
-	rd         io.Reader
-	wr         io.Writer
-	writeDescr *p.LobWriteDescr
+	rd io.Reader
+	wr io.Writer
 }
 
 // NewLob creates a new Lob instance with the io.Reader and io.Writer given as parameters.
@@ -41,43 +36,59 @@ func NewLob(rd io.Reader, wr io.Writer) *Lob {
 	return &Lob{rd: rd, wr: wr}
 }
 
-// SetReader sets the io.Reader source for a lob field to be written to database.
-func (l *Lob) SetReader(rd io.Reader) {
+// SetReader sets the io.Reader source for a lob field to be written to database
+// and return *Lob, to enable simple call chaining.
+func (l *Lob) SetReader(rd io.Reader) *Lob {
 	l.rd = rd
+	return l
 }
 
-// SetWriter sets the io.Writer destination for a lob field to be read from database.
-func (l *Lob) SetWriter(wr io.Writer) {
+// SetWriter sets the io.Writer destination for a lob field to be read from database
+// and return *Lob, to enable simple call chaining.
+func (l *Lob) SetWriter(wr io.Writer) *Lob {
 	l.wr = wr
+	return l
+}
+
+type writerSetter interface {
+	SetWriter(w io.Writer) error
 }
 
 // Scan implements the database/sql/Scanner interface.
 func (l *Lob) Scan(src interface{}) error {
 
 	if l.wr == nil {
-		return errors.New("lob error: initial writer")
+		return fmt.Errorf("lob error: initial reader %[1]T %[1]v", l)
 	}
 
-	ptr, ok := src.(int64)
+	ws, ok := src.(writerSetter)
 	if !ok {
-		return fmt.Errorf("lob: invalid pointer type %T", src)
+		return fmt.Errorf("lob: invalid scan type %T", src)
 	}
 
-	descr := p.PointerToLobReadDescr(ptr)
-	if err := descr.SetWriter(l.wr); err != nil {
+	if err := ws.SetWriter(l.wr); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Value implements the database/sql/Valuer interface.
-func (l *Lob) Value() (driver.Value, error) {
-	if l.rd == nil {
-		return nil, errors.New("lob error: initial reader")
+// NullLob represents an Lob that may be null.
+// NullLob implements the Scanner interface so
+// it can be used as a scan destination, similar to NullString.
+type NullLob struct {
+	Lob   *Lob
+	Valid bool // Valid is true if Lob is not NULL
+}
+
+// Scan implements the database/sql/Scanner interface.
+func (l *NullLob) Scan(src interface{}) error {
+	if src == nil {
+		l.Valid = false
+		return nil
 	}
-	if l.writeDescr == nil {
-		l.writeDescr = new(p.LobWriteDescr)
+	if err := l.Lob.Scan(src); err != nil {
+		return err
 	}
-	l.writeDescr.SetReader(l.rd)
-	return p.LobWriteDescrToPointer(l.writeDescr), nil
+	l.Valid = true
+	return nil
 }

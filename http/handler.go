@@ -1,7 +1,9 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -12,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/NYTimes/gziphandler"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
@@ -51,10 +54,11 @@ const (
 	// soft-mandatory Sentinel policies.
 	PolicyOverrideHeaderName = "X-Vault-Policy-Override"
 
-	// MaxRequestSize is the maximum accepted request size. This is to prevent
-	// a denial of service attack where no Content-Length is provided and the server
-	// is fed ever more data until it exhausts memory.
-	MaxRequestSize = 32 * 1024 * 1024
+	// DefaultMaxRequestSize is the default maximum accepted request size. This
+	// is to prevent a denial of service attack where no Content-Length is
+	// provided and the server is fed ever more data until it exhausts memory.
+	// Can be overridden per listener.
+	DefaultMaxRequestSize = 32 * 1024 * 1024
 )
 
 var (
@@ -66,7 +70,9 @@ var (
 
 // Handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
-func Handler(core *vault.Core) http.Handler {
+func Handler(props *vault.HandlerProperties) http.Handler {
+	core := props.Core
+
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
 	mux.Handle("/v1/sys/init", handleSysInit(core))
@@ -80,8 +86,10 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy)))
 	mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
 	mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
+	mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
 	mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
 	mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
+	mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
 	mux.Handle("/v1/sys/wrapping/lookup", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
 	mux.Handle("/v1/sys/wrapping/rewrap", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
 	mux.Handle("/v1/sys/wrapping/unwrap", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
@@ -92,7 +100,7 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 	if core.UIEnabled() == true {
 		if uiBuiltIn {
-			mux.Handle("/ui/", http.StripPrefix("/ui/", handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
+			mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
 		} else {
 			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 		}
@@ -105,7 +113,7 @@ func Handler(core *vault.Core) http.Handler {
 
 	// Wrap the help wrapped handler with another layer with a generic
 	// handler
-	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler)
+	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler, props.MaxRequestSize)
 
 	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
 	// characters in the request path.
@@ -117,12 +125,20 @@ func Handler(core *vault.Core) http.Handler {
 // wrapGenericHandler wraps the handler with an extra layer of handler where
 // tasks that should be commonly handled for all the requests and/or responses
 // are performed.
-func wrapGenericHandler(h http.Handler) http.Handler {
+func wrapGenericHandler(h http.Handler, maxRequestSize int64) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
 		w.Header().Set("Cache-Control", "no-store")
-		h.ServeHTTP(w, r)
+
+		// Add a context and put the request limit for this handler in it
+		if maxRequestSize > 0 {
+			ctx := context.WithValue(r.Context(), "max_request_size", maxRequestSize)
+			h.ServeHTTP(w, r.WithContext(ctx))
+		} else {
+			h.ServeHTTP(w, r)
+		}
+
 		return
 	})
 }
@@ -270,6 +286,11 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 
 func handleUI(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+
+		// The fileserver handler strips trailing slashes and does a redirect.
+		// We don't want the redirect to happen so we preemptively trim the slash
+		// here.
+		req.URL.Path = strings.TrimSuffix(req.URL.Path, "/")
 		h.ServeHTTP(w, req)
 		return
 	})
@@ -318,8 +339,19 @@ func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
 func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
-	limit := http.MaxBytesReader(w, r.Body, MaxRequestSize)
-	err := jsonutil.DecodeJSONFromReader(limit, out)
+	reader := r.Body
+	ctx := r.Context()
+	maxRequestSize := ctx.Value("max_request_size")
+	if maxRequestSize != nil {
+		max, ok := maxRequestSize.(int64)
+		if !ok {
+			return errors.New("could not parse max_request_size from request context")
+		}
+		if max > 0 {
+			reader = http.MaxBytesReader(w, r.Body, max)
+		}
+	}
+	err := jsonutil.DecodeJSONFromReader(reader, out)
 	if err != nil && err != io.EOF {
 		return errwrap.Wrapf("failed to parse JSON input: {{err}}", err)
 	}
@@ -414,13 +446,20 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	// Request the leader address
 	_, redirectAddr, _, err := core.Leader()
 	if err != nil {
+		if err == vault.ErrHANotEnabled {
+			// Standalone node, serve 503
+			err = errors.New("node is not active")
+			respondError(w, http.StatusServiceUnavailable, err)
+			return
+		}
+
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	// If there is no leader, generate a 503 error
 	if redirectAddr == "" {
-		err = fmt.Errorf("no active Vault instance found")
+		err = errors.New("no active Vault instance found")
 		respondError(w, http.StatusServiceUnavailable, err)
 		return
 	}
@@ -466,6 +505,7 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) *logic
 		if err == nil && te != nil {
 			req.ClientTokenAccessor = te.Accessor
 			req.ClientTokenRemainingUses = te.NumUses
+			req.SetTokenEntry(te)
 		}
 	}
 

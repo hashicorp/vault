@@ -132,6 +132,20 @@ func (s *gRPCSystemViewClient) LocalMount() bool {
 	return reply.Local
 }
 
+func (s *gRPCSystemViewClient) EntityInfo(entityID string) (*logical.Entity, error) {
+	reply, err := s.client.EntityInfo(context.Background(), &pb.EntityInfoArgs{
+		EntityID: entityID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if reply.Err != "" {
+		return nil, errors.New(reply.Err)
+	}
+
+	return reply.Entity, nil
+}
+
 type gRPCSystemViewServer struct {
 	impl logical.SystemView
 }
@@ -214,5 +228,17 @@ func (s *gRPCSystemViewServer) LocalMount(ctx context.Context, _ *pb.Empty) (*pb
 	local := s.impl.LocalMount()
 	return &pb.LocalMountReply{
 		Local: local,
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) EntityInfo(ctx context.Context, args *pb.EntityInfoArgs) (*pb.EntityInfoReply, error) {
+	entity, err := s.impl.EntityInfo(args.EntityID)
+	if err != nil {
+		return &pb.EntityInfoReply{
+			Err: pb.ErrToString(err),
+		}, nil
+	}
+	return &pb.EntityInfoReply{
+		Entity: entity,
 	}, nil
 }

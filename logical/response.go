@@ -24,6 +24,12 @@ const (
 	// This can only be specified for non-secrets, and should should be similarly
 	// avoided like the HTTPContentType. The value must be an integer.
 	HTTPStatusCode = "http_status_code"
+
+	// For unwrapping we may need to know whether the value contained in the
+	// raw body is already JSON-unmarshaled. The presence of this key indicates
+	// that it has already been unmarshaled. That way we don't need to simply
+	// ignore errors.
+	HTTPRawBodyAlreadyJSONDecoded = "http_raw_body_already_json_decoded"
 )
 
 // Response is a struct that stores the response of a request.
@@ -146,8 +152,11 @@ func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, e
 	return &Response{
 		Data: map[string]interface{}{
 			HTTPContentType: "application/json",
-			HTTPRawBody:     body,
-			HTTPStatusCode:  code,
+			// We default to string here so that the value is HMAC'd via audit.
+			// Since this function is always marshaling to JSON, this is
+			// appropriate.
+			HTTPRawBody:    string(body),
+			HTTPStatusCode: code,
 		},
 	}, nil
 }

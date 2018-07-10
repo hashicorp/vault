@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault-plugin-auth-gcp/plugin/util"
+	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -107,13 +107,14 @@ var gceOnlyFieldSchema map[string]*framework.FieldSchema = map[string]*framework
 		Type: framework.TypeString,
 		Description: `
 "gce" roles only. If set, determines the zone that a GCE instance must belong to. If a group is provided, it is assumed
-to be a zonal group and the group must belong to this zone.`,
+to be a zonal group and the group must belong to this zone. Accepts self-link or zone name.`,
 	},
 	"bound_region": {
 		Type: framework.TypeString,
 		Description: `
 "gce" roles only. If set, determines the region that a GCE instance must belong to. If a group is provided, it is
-assumed to be a regional group and the group must belong to this region. If zone is provided, region will be ignored`,
+assumed to be a regional group and the group must belong to this region. If zone is provided, region will be ignored.
+Either self-link or region name are accepted.`,
 	},
 	"bound_instance_group": {
 		Type:        framework.TypeString,
@@ -401,7 +402,7 @@ func (b *GcpAuthBackend) pathRoleEditGceLabels(ctx context.Context, req *logical
 		return logical.ErrorResponse(fmt.Sprintf(errTemplateEditListWrongType, role.RoleType, "labels", gceRoleType)), nil
 	}
 
-	labelsToAdd, invalidLabels := util.ParseGcpLabels(toAdd)
+	labelsToAdd, invalidLabels := gcputil.ParseGcpLabels(toAdd)
 	if len(invalidLabels) > 0 {
 		return logical.ErrorResponse(fmt.Sprintf("given invalid labels to add: %q", invalidLabels)), nil
 	}
@@ -669,23 +670,23 @@ func (role *gcpRole) updateIamFields(data *framework.FieldData, op logical.Opera
 func (role *gcpRole) updateGceFields(data *framework.FieldData, op logical.Operation) error {
 	region, hasRegion := data.GetOk("bound_region")
 	if hasRegion {
-		role.BoundRegion = region.(string)
+		role.BoundRegion = strings.TrimSpace(region.(string))
 	}
 
 	zone, hasZone := data.GetOk("bound_zone")
 	if hasZone {
-		role.BoundZone = zone.(string)
+		role.BoundZone = strings.TrimSpace(zone.(string))
 	}
 
 	instanceGroup, ok := data.GetOk("bound_instance_group")
 	if ok {
-		role.BoundInstanceGroup = instanceGroup.(string)
+		role.BoundInstanceGroup = strings.TrimSpace(instanceGroup.(string))
 	}
 
 	labels, ok := data.GetOk("bound_labels")
 	if ok {
 		var invalidLabels []string
-		role.BoundLabels, invalidLabels = util.ParseGcpLabels(labels.([]string))
+		role.BoundLabels, invalidLabels = gcputil.ParseGcpLabels(labels.([]string))
 		if len(invalidLabels) > 0 {
 			return fmt.Errorf("invalid labels given: %q", invalidLabels)
 		}
