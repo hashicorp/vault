@@ -22,26 +22,6 @@
       padding-top: 0.3rem;
     }
 
-    @include until($tablet) {
-      padding: 0;
-    }
-
-    &:first-child {
-      padding-left: 0;
-
-      @include until($tablet) {
-        padding: $size-8 0 0;
-      }
-    }
-
-    &:last-child {
-      padding-right: 0;
-
-      @include until($tablet) {
-        padding: 0 0 $size-8;
-      }
-    }
-
     textarea {
       min-height: 35px;
     }
@@ -49,6 +29,28 @@
 
   .icon {
     margin-right: 0.25rem;
+  }
+}
+
+.info-table-row:not(.is-mobile) .column {
+  @include until($tablet) {
+    padding: 0;
+  }
+
+  &:first-child {
+    padding-left: 0;
+
+    @include until($tablet) {
+      padding: $size-8 0 0;
+    }
+  }
+
+  &:last-child {
+    padding-right: 0;
+
+    @include until($tablet) {
+      padding: 0 0 $size-8;
+    }
   }
 }
 
