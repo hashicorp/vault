@@ -112,7 +112,7 @@ func TestExpiration_Metadata(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if expMetadata.SHA1HashedLeasesCleared {
+	if expMetadata.SHA1HashedLeasesCleared == 1 {
 		t.Fatalf("expected metadata to indicate that SHA1 hashes are present")
 	}
 
@@ -162,7 +162,7 @@ func TestExpiration_Metadata(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if expMetadata.SHA1HashedLeasesCleared {
+	if expMetadata.SHA1HashedLeasesCleared == 1 {
 		t.Fatalf("expected metadata to indicate that SHA1 hashes are present")
 	}
 
@@ -212,7 +212,7 @@ func TestExpiration_Metadata(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !expMetadata.SHA1HashedLeasesCleared {
+	if expMetadata.SHA1HashedLeasesCleared == 0 {
 		t.Fatalf("expected metadata to indicate that SHA1 hashes are cleared")
 	}
 }

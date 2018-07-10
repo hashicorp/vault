@@ -826,6 +826,10 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	}
 
 	if le == nil {
+		if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 1 {
+			return nil, nil
+		}
+
 		// This is only here for backwards compatibility
 		saltedID, err := m.tokenStore.SaltID(m.quitContext, tokenID)
 		if err != nil {
@@ -1035,6 +1039,10 @@ func (m *ExpirationManager) FetchLeaseTimesByToken(source, tokenID string) (*lea
 	}
 	if le != nil {
 		return le, nil
+	}
+
+	if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 1 {
+		return nil, nil
 	}
 
 	// This is only here for backwards compatibility
@@ -1380,6 +1388,10 @@ func (m *ExpirationManager) indexByToken(tokenID, leaseID string) (*logical.Stor
 		return entry, nil
 	}
 
+	if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 1 {
+		return nil, nil
+	}
+
 	// This is only here for backwards compatibility
 	indexPath, err = m.hashIndexPath(tokenID, leaseID)
 	if err != nil {
@@ -1402,6 +1414,10 @@ func (m *ExpirationManager) removeIndexByToken(tokenID, leaseID string) error {
 	err = m.tokenView.Delete(m.quitContext, indexPath)
 	if err != nil {
 		return errwrap.Wrapf("failed to delete lease index entry: {{err}}", err)
+	}
+
+	if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 1 {
+		return nil
 	}
 
 	// This is only here for backwards compatibility
