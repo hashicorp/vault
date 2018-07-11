@@ -3,6 +3,7 @@ package approle
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -26,12 +27,14 @@ func pathTidySecretID(b *backend) *framework.Path {
 }
 
 // tidySecretID is used to delete entries in the whitelist that are expired.
-func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) (*logical.Response, error) {
+func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	if !atomic.CompareAndSwapUint32(b.tidySecretIDCASGuard, 0, 1) {
 		resp := &logical.Response{}
 		resp.AddWarning("Tidy operation already in progress.")
 		return resp, nil
 	}
+
+	s := req.Storage
 
 	go func() {
 		defer atomic.StoreUint32(b.tidySecretIDCASGuard, 0)
@@ -167,12 +170,12 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) (*logical
 
 	resp := &logical.Response{}
 	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
-	return resp, nil
+	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
 // pathTidySecretIDUpdate is used to delete the expired SecretID entries
 func (b *backend) pathTidySecretIDUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.tidySecretID(ctx, req.Storage)
+	return b.tidySecretID(ctx, req)
 }
 
 const pathTidySecretIDSyn = "Trigger the clean-up of expired SecretID entries."

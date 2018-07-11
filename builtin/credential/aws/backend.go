@@ -165,7 +165,7 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 			}
 			// tidy role tags if explicitly not disabled
 			if !skipBlacklistTidy {
-				b.tidyBlacklistRoleTag(ctx, req.Storage, safety_buffer)
+				b.tidyBlacklistRoleTag(ctx, req, safety_buffer)
 			}
 		}
 
@@ -189,7 +189,7 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 		}
 		// tidy identities if explicitly not disabled
 		if !skipWhitelistTidy {
-			b.tidyWhitelistIdentity(ctx, req.Storage, safety_buffer)
+			b.tidyWhitelistIdentity(ctx, req, safety_buffer)
 		}
 
 		// Update the time at which to run the tidy functions again.
