@@ -1076,8 +1076,7 @@ existing cert/key with new values.
 
 - `permitted_dns_domains` `(string: "")` – A comma separated string (or, string
   array) containing DNS domains for which certificates are allowed to be issued
-  or signed by this CA certificate. Supports subdomains via a `.` in front of
-  the domain, as per
+  or signed by this CA certificate. Note that subdomains are allowed, as per
   [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
 
 - `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
