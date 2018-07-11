@@ -556,7 +556,6 @@ func generateCert(ctx context.Context,
 
 	if isCA {
 		data.params.IsCA = isCA
-
 		data.params.PermittedDNSDomains = data.apiData.Get("permitted_dns_domains").([]string)
 
 		if data.signingBundle == nil {
@@ -1217,11 +1216,6 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		caCert := data.signingBundle.Certificate
 		certTemplate.AuthorityKeyId = caCert.SubjectKeyId
 
-		err = checkPermittedDNSDomains(certTemplate, caCert)
-		if err != nil {
-			return nil, errutil.UserError{Err: err.Error()}
-		}
-
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, result.PrivateKey.Public(), data.signingBundle.PrivateKey)
 	} else {
 		// Creating a self-signed root
@@ -1443,10 +1437,6 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		certTemplate.PermittedDNSDomains = data.params.PermittedDNSDomains
 		certTemplate.PermittedDNSDomainsCritical = true
 	}
-	err = checkPermittedDNSDomains(certTemplate, caCert)
-	if err != nil {
-		return nil, errutil.UserError{Err: err.Error()}
-	}
 
 	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, data.csr.PublicKey, data.signingBundle.PrivateKey)
 
@@ -1463,48 +1453,6 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	result.CAChain = data.signingBundle.GetCAChain()
 
 	return result, nil
-}
-
-func checkPermittedDNSDomains(template, ca *x509.Certificate) error {
-	if len(ca.PermittedDNSDomains) == 0 {
-		return nil
-	}
-
-	namesToCheck := map[string]struct{}{
-		template.Subject.CommonName: struct{}{},
-	}
-	for _, name := range template.DNSNames {
-		namesToCheck[name] = struct{}{}
-	}
-
-	var badName string
-NameCheck:
-	for name := range namesToCheck {
-		for _, perm := range ca.PermittedDNSDomains {
-			switch {
-			case perm == name:
-				break NameCheck
-			case strings.HasSuffix(name, perm):
-				// https://tools.ietf.org/html/rfc5280#section-4.2.1.10 says
-				// zero or more labels are valid. The zero value is handled by
-				// the previous case, so now we need to make sure it's actually
-				// a label. We can do that by trimming the suffix and ensuring
-				// that the last character in the remaining prefix is a period.
-				pre := strings.TrimSuffix(name, perm)
-				if strings.HasSuffix(pre, ".") {
-					break NameCheck
-				}
-			}
-		}
-		badName = name
-		break
-	}
-
-	if badName == "" {
-		return nil
-	}
-
-	return fmt.Errorf("name %q disallowed by CA's permitted DNS domains", badName)
 }
 
 func convertRespToPKCS8(resp *logical.Response) error {
