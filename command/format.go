@@ -196,12 +196,12 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	if secret.LeaseDuration > 0 {
 		if secret.LeaseID != "" {
 			out = append(out, fmt.Sprintf("lease_id %s %s", hopeDelim, secret.LeaseID))
-			out = append(out, fmt.Sprintf("lease_duration %s %s", hopeDelim, humanDurationInt(secret.LeaseDuration)))
+			out = append(out, fmt.Sprintf("lease_duration %s %v", hopeDelim, humanDurationInt(secret.LeaseDuration)))
 			out = append(out, fmt.Sprintf("lease_renewable %s %t", hopeDelim, secret.Renewable))
 		} else {
 			// This is probably the generic secret backend which has leases, but we
 			// print them as refresh_interval to reduce confusion.
-			out = append(out, fmt.Sprintf("refresh_interval %s %s", hopeDelim, humanDurationInt(secret.LeaseDuration)))
+			out = append(out, fmt.Sprintf("refresh_interval %s %v", hopeDelim, humanDurationInt(secret.LeaseDuration)))
 		}
 	}
 
@@ -213,7 +213,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 		if secret.Auth.LeaseDuration == 0 {
 			out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, "∞"))
 		} else {
-			out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, humanDurationInt(secret.Auth.LeaseDuration)))
+			out = append(out, fmt.Sprintf("token_duration %s %v", hopeDelim, humanDurationInt(secret.Auth.LeaseDuration)))
 		}
 		out = append(out, fmt.Sprintf("token_renewable %s %t", hopeDelim, secret.Auth.Renewable))
 		out = append(out, fmt.Sprintf("token_policies %s %q", hopeDelim, secret.Auth.TokenPolicies))
@@ -227,7 +227,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	if secret.WrapInfo != nil {
 		out = append(out, fmt.Sprintf("wrapping_token: %s %s", hopeDelim, secret.WrapInfo.Token))
 		out = append(out, fmt.Sprintf("wrapping_accessor: %s %s", hopeDelim, secret.WrapInfo.Accessor))
-		out = append(out, fmt.Sprintf("wrapping_token_ttl: %s %s", hopeDelim, humanDurationInt(secret.WrapInfo.TTL)))
+		out = append(out, fmt.Sprintf("wrapping_token_ttl: %s %v", hopeDelim, humanDurationInt(secret.WrapInfo.TTL)))
 		out = append(out, fmt.Sprintf("wrapping_token_creation_time: %s %s", hopeDelim, secret.WrapInfo.CreationTime.String()))
 		out = append(out, fmt.Sprintf("wrapping_token_creation_path: %s %s", hopeDelim, secret.WrapInfo.CreationPath))
 		if secret.WrapInfo.WrappedAccessor != "" {
@@ -251,16 +251,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 				k == "duration" || strings.HasSuffix(k, "_duration") ||
 				k == "lease_max" || k == "ttl_max" {
 
-				switch t := v.(type) {
-				case int:
-					v = humanDurationInt(t)
-				case int64:
-					v = humanDurationInt(int(t))
-				case json.Number:
-					if i, err := t.Int64(); err == nil {
-						v = humanDurationInt(int(i))
-					}
-				}
+				v = humanDurationInt(v)
 			}
 
 			out = append(out, fmt.Sprintf("%s %s %v", k, hopeDelim, v))
