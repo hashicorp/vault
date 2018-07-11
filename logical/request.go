@@ -1,7 +1,6 @@
 package logical
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -272,24 +271,4 @@ const (
 	RevokeOperation   Operation = "revoke"
 	RenewOperation              = "renew"
 	RollbackOperation           = "rollback"
-)
-
-var (
-	// ErrUnsupportedOperation is returned if the operation is not supported
-	// by the logical backend.
-	ErrUnsupportedOperation = errors.New("unsupported operation")
-
-	// ErrUnsupportedPath is returned if the path is not supported
-	// by the logical backend.
-	ErrUnsupportedPath = errors.New("unsupported path")
-
-	// ErrInvalidRequest is returned if the request is invalid
-	ErrInvalidRequest = errors.New("invalid request")
-
-	// ErrPermissionDenied is returned if the client is not authorized
-	ErrPermissionDenied = errors.New("permission denied")
-
-	// ErrMultiAuthzPending is returned if the the request needs more
-	// authorizations
-	ErrMultiAuthzPending = errors.New("request needs further approval")
 )
