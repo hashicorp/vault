@@ -4,6 +4,7 @@ IMPROVEMENTS:
 
  * core: A `max_request_size` parameter can now be set per-listener to adjust
    the maximum allowed size per request [GH-4824]
+ * core: Add control group request endpoint to default policy [GH-4904]
 
 BUG FIXES:
 
