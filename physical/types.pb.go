@@ -22,7 +22,7 @@ type SealWrapEntry struct {
 	Ciphertext           []byte   `protobuf:"bytes,1,opt,name=ciphertext,proto3" json:"ciphertext,omitempty"`
 	IV                   []byte   `protobuf:"bytes,2,opt,name=iv,proto3" json:"iv,omitempty"`
 	HMAC                 []byte   `protobuf:"bytes,3,opt,name=hmac,proto3" json:"hmac,omitempty"`
-	Wrapped              bool     `protobuf:"varint,4,opt,name=wrapped" json:"wrapped,omitempty"`
+	Wrapped              bool     `protobuf:"varint,4,opt,name=wrapped,proto3" json:"wrapped,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -32,7 +32,7 @@ func (m *SealWrapEntry) Reset()         { *m = SealWrapEntry{} }
 func (m *SealWrapEntry) String() string { return proto.CompactTextString(m) }
 func (*SealWrapEntry) ProtoMessage()    {}
 func (*SealWrapEntry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_ce937ceb0910505a, []int{0}
+	return fileDescriptor_types_0f1d299b2a49592e, []int{0}
 }
 func (m *SealWrapEntry) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SealWrapEntry.Unmarshal(m, b)
@@ -84,9 +84,9 @@ func init() {
 	proto.RegisterType((*SealWrapEntry)(nil), "physical.SealWrapEntry")
 }
 
-func init() { proto.RegisterFile("physical/types.proto", fileDescriptor_types_ce937ceb0910505a) }
+func init() { proto.RegisterFile("physical/types.proto", fileDescriptor_types_0f1d299b2a49592e) }
 
-var fileDescriptor_types_ce937ceb0910505a = []byte{
+var fileDescriptor_types_0f1d299b2a49592e = []byte{
 	// 173 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x4c, 0xce, 0xb1, 0x0a, 0xc2, 0x30,
 	0x10, 0xc6, 0x71, 0x5a, 0x8b, 0x96, 0x43, 0x1d, 0x82, 0x43, 0x26, 0x29, 0x8a, 0xd0, 0xa9, 0x19,

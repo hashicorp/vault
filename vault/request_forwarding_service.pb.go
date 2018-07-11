@@ -25,13 +25,13 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type EchoRequest struct {
-	Message string `protobuf:"bytes,1,opt,name=message" json:"message,omitempty"`
+	Message string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	// ClusterAddr is used to send up a standby node's address to the active
 	// node upon heartbeat
-	ClusterAddr string `protobuf:"bytes,2,opt,name=cluster_addr,json=clusterAddr" json:"cluster_addr,omitempty"`
+	ClusterAddr string `protobuf:"bytes,2,opt,name=cluster_addr,json=clusterAddr,proto3" json:"cluster_addr,omitempty"`
 	// ClusterAddrs is used to send up a list of cluster addresses to a dr
 	// primary from a dr secondary
-	ClusterAddrs         []string `protobuf:"bytes,3,rep,name=cluster_addrs,json=clusterAddrs" json:"cluster_addrs,omitempty"`
+	ClusterAddrs         []string `protobuf:"bytes,3,rep,name=cluster_addrs,json=clusterAddrs,proto3" json:"cluster_addrs,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -41,7 +41,7 @@ func (m *EchoRequest) Reset()         { *m = EchoRequest{} }
 func (m *EchoRequest) String() string { return proto.CompactTextString(m) }
 func (*EchoRequest) ProtoMessage()    {}
 func (*EchoRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_request_forwarding_service_2fdb694b57983716, []int{0}
+	return fileDescriptor_request_forwarding_service_9602fb43b1d0ebdf, []int{0}
 }
 func (m *EchoRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EchoRequest.Unmarshal(m, b)
@@ -83,9 +83,9 @@ func (m *EchoRequest) GetClusterAddrs() []string {
 }
 
 type EchoReply struct {
-	Message              string   `protobuf:"bytes,1,opt,name=message" json:"message,omitempty"`
-	ClusterAddrs         []string `protobuf:"bytes,2,rep,name=cluster_addrs,json=clusterAddrs" json:"cluster_addrs,omitempty"`
-	ReplicationState     uint32   `protobuf:"varint,3,opt,name=replication_state,json=replicationState" json:"replication_state,omitempty"`
+	Message              string   `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	ClusterAddrs         []string `protobuf:"bytes,2,rep,name=cluster_addrs,json=clusterAddrs,proto3" json:"cluster_addrs,omitempty"`
+	ReplicationState     uint32   `protobuf:"varint,3,opt,name=replication_state,json=replicationState,proto3" json:"replication_state,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -95,7 +95,7 @@ func (m *EchoReply) Reset()         { *m = EchoReply{} }
 func (m *EchoReply) String() string { return proto.CompactTextString(m) }
 func (*EchoReply) ProtoMessage()    {}
 func (*EchoReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_request_forwarding_service_2fdb694b57983716, []int{1}
+	return fileDescriptor_request_forwarding_service_9602fb43b1d0ebdf, []int{1}
 }
 func (m *EchoReply) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_EchoReply.Unmarshal(m, b)
@@ -247,10 +247,10 @@ var _RequestForwarding_serviceDesc = grpc.ServiceDesc{
 }
 
 func init() {
-	proto.RegisterFile("vault/request_forwarding_service.proto", fileDescriptor_request_forwarding_service_2fdb694b57983716)
+	proto.RegisterFile("vault/request_forwarding_service.proto", fileDescriptor_request_forwarding_service_9602fb43b1d0ebdf)
 }
 
-var fileDescriptor_request_forwarding_service_2fdb694b57983716 = []byte{
+var fileDescriptor_request_forwarding_service_9602fb43b1d0ebdf = []byte{
 	// 297 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x91, 0x41, 0x4b, 0xfb, 0x40,
 	0x10, 0xc5, 0x9b, 0xf6, 0xff, 0x57, 0xba, 0x6d, 0xa5, 0x5d, 0x3d, 0x84, 0x82, 0x10, 0x23, 0x48,

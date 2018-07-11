@@ -27,7 +27,7 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 // Deprecated: Do not use.
 type InitializeRequest struct {
 	Config               []byte   `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
-	VerifyConnection     bool     `protobuf:"varint,2,opt,name=verify_connection,json=verifyConnection" json:"verify_connection,omitempty"`
+	VerifyConnection     bool     `protobuf:"varint,2,opt,name=verify_connection,json=verifyConnection,proto3" json:"verify_connection,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -37,7 +37,7 @@ func (m *InitializeRequest) Reset()         { *m = InitializeRequest{} }
 func (m *InitializeRequest) String() string { return proto.CompactTextString(m) }
 func (*InitializeRequest) ProtoMessage()    {}
 func (*InitializeRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{0}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{0}
 }
 func (m *InitializeRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_InitializeRequest.Unmarshal(m, b)
@@ -73,7 +73,7 @@ func (m *InitializeRequest) GetVerifyConnection() bool {
 
 type InitRequest struct {
 	Config               []byte   `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
-	VerifyConnection     bool     `protobuf:"varint,2,opt,name=verify_connection,json=verifyConnection" json:"verify_connection,omitempty"`
+	VerifyConnection     bool     `protobuf:"varint,2,opt,name=verify_connection,json=verifyConnection,proto3" json:"verify_connection,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -83,7 +83,7 @@ func (m *InitRequest) Reset()         { *m = InitRequest{} }
 func (m *InitRequest) String() string { return proto.CompactTextString(m) }
 func (*InitRequest) ProtoMessage()    {}
 func (*InitRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{1}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{1}
 }
 func (m *InitRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_InitRequest.Unmarshal(m, b)
@@ -118,9 +118,9 @@ func (m *InitRequest) GetVerifyConnection() bool {
 }
 
 type CreateUserRequest struct {
-	Statements           *Statements          `protobuf:"bytes,1,opt,name=statements" json:"statements,omitempty"`
-	UsernameConfig       *UsernameConfig      `protobuf:"bytes,2,opt,name=username_config,json=usernameConfig" json:"username_config,omitempty"`
-	Expiration           *timestamp.Timestamp `protobuf:"bytes,3,opt,name=expiration" json:"expiration,omitempty"`
+	Statements           *Statements          `protobuf:"bytes,1,opt,name=statements,proto3" json:"statements,omitempty"`
+	UsernameConfig       *UsernameConfig      `protobuf:"bytes,2,opt,name=username_config,json=usernameConfig,proto3" json:"username_config,omitempty"`
+	Expiration           *timestamp.Timestamp `protobuf:"bytes,3,opt,name=expiration,proto3" json:"expiration,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
 	XXX_unrecognized     []byte               `json:"-"`
 	XXX_sizecache        int32                `json:"-"`
@@ -130,7 +130,7 @@ func (m *CreateUserRequest) Reset()         { *m = CreateUserRequest{} }
 func (m *CreateUserRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateUserRequest) ProtoMessage()    {}
 func (*CreateUserRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{2}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{2}
 }
 func (m *CreateUserRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CreateUserRequest.Unmarshal(m, b)
@@ -172,9 +172,9 @@ func (m *CreateUserRequest) GetExpiration() *timestamp.Timestamp {
 }
 
 type RenewUserRequest struct {
-	Statements           *Statements          `protobuf:"bytes,1,opt,name=statements" json:"statements,omitempty"`
-	Username             string               `protobuf:"bytes,2,opt,name=username" json:"username,omitempty"`
-	Expiration           *timestamp.Timestamp `protobuf:"bytes,3,opt,name=expiration" json:"expiration,omitempty"`
+	Statements           *Statements          `protobuf:"bytes,1,opt,name=statements,proto3" json:"statements,omitempty"`
+	Username             string               `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	Expiration           *timestamp.Timestamp `protobuf:"bytes,3,opt,name=expiration,proto3" json:"expiration,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
 	XXX_unrecognized     []byte               `json:"-"`
 	XXX_sizecache        int32                `json:"-"`
@@ -184,7 +184,7 @@ func (m *RenewUserRequest) Reset()         { *m = RenewUserRequest{} }
 func (m *RenewUserRequest) String() string { return proto.CompactTextString(m) }
 func (*RenewUserRequest) ProtoMessage()    {}
 func (*RenewUserRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{3}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{3}
 }
 func (m *RenewUserRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RenewUserRequest.Unmarshal(m, b)
@@ -226,8 +226,8 @@ func (m *RenewUserRequest) GetExpiration() *timestamp.Timestamp {
 }
 
 type RevokeUserRequest struct {
-	Statements           *Statements `protobuf:"bytes,1,opt,name=statements" json:"statements,omitempty"`
-	Username             string      `protobuf:"bytes,2,opt,name=username" json:"username,omitempty"`
+	Statements           *Statements `protobuf:"bytes,1,opt,name=statements,proto3" json:"statements,omitempty"`
+	Username             string      `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`
 	XXX_sizecache        int32       `json:"-"`
@@ -237,7 +237,7 @@ func (m *RevokeUserRequest) Reset()         { *m = RevokeUserRequest{} }
 func (m *RevokeUserRequest) String() string { return proto.CompactTextString(m) }
 func (*RevokeUserRequest) ProtoMessage()    {}
 func (*RevokeUserRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{4}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{4}
 }
 func (m *RevokeUserRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RevokeUserRequest.Unmarshal(m, b)
@@ -272,7 +272,7 @@ func (m *RevokeUserRequest) GetUsername() string {
 }
 
 type RotateRootCredentialsRequest struct {
-	Statements           []string `protobuf:"bytes,1,rep,name=statements" json:"statements,omitempty"`
+	Statements           []string `protobuf:"bytes,1,rep,name=statements,proto3" json:"statements,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -282,7 +282,7 @@ func (m *RotateRootCredentialsRequest) Reset()         { *m = RotateRootCredenti
 func (m *RotateRootCredentialsRequest) String() string { return proto.CompactTextString(m) }
 func (*RotateRootCredentialsRequest) ProtoMessage()    {}
 func (*RotateRootCredentialsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{5}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{5}
 }
 func (m *RotateRootCredentialsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RotateRootCredentialsRequest.Unmarshal(m, b)
@@ -311,17 +311,17 @@ func (m *RotateRootCredentialsRequest) GetStatements() []string {
 
 type Statements struct {
 	// DEPRECATED, will be removed in 0.12
-	CreationStatements string `protobuf:"bytes,1,opt,name=creation_statements,json=creationStatements" json:"creation_statements,omitempty"` // Deprecated: Do not use.
+	CreationStatements string `protobuf:"bytes,1,opt,name=creation_statements,json=creationStatements,proto3" json:"creation_statements,omitempty"` // Deprecated: Do not use.
 	// DEPRECATED, will be removed in 0.12
-	RevocationStatements string `protobuf:"bytes,2,opt,name=revocation_statements,json=revocationStatements" json:"revocation_statements,omitempty"` // Deprecated: Do not use.
+	RevocationStatements string `protobuf:"bytes,2,opt,name=revocation_statements,json=revocationStatements,proto3" json:"revocation_statements,omitempty"` // Deprecated: Do not use.
 	// DEPRECATED, will be removed in 0.12
-	RollbackStatements string `protobuf:"bytes,3,opt,name=rollback_statements,json=rollbackStatements" json:"rollback_statements,omitempty"` // Deprecated: Do not use.
+	RollbackStatements string `protobuf:"bytes,3,opt,name=rollback_statements,json=rollbackStatements,proto3" json:"rollback_statements,omitempty"` // Deprecated: Do not use.
 	// DEPRECATED, will be removed in 0.12
-	RenewStatements      string   `protobuf:"bytes,4,opt,name=renew_statements,json=renewStatements" json:"renew_statements,omitempty"` // Deprecated: Do not use.
-	Creation             []string `protobuf:"bytes,5,rep,name=creation" json:"creation,omitempty"`
-	Revocation           []string `protobuf:"bytes,6,rep,name=revocation" json:"revocation,omitempty"`
-	Rollback             []string `protobuf:"bytes,7,rep,name=rollback" json:"rollback,omitempty"`
-	Renewal              []string `protobuf:"bytes,8,rep,name=renewal" json:"renewal,omitempty"`
+	RenewStatements      string   `protobuf:"bytes,4,opt,name=renew_statements,json=renewStatements,proto3" json:"renew_statements,omitempty"` // Deprecated: Do not use.
+	Creation             []string `protobuf:"bytes,5,rep,name=creation,proto3" json:"creation,omitempty"`
+	Revocation           []string `protobuf:"bytes,6,rep,name=revocation,proto3" json:"revocation,omitempty"`
+	Rollback             []string `protobuf:"bytes,7,rep,name=rollback,proto3" json:"rollback,omitempty"`
+	Renewal              []string `protobuf:"bytes,8,rep,name=renewal,proto3" json:"renewal,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -331,7 +331,7 @@ func (m *Statements) Reset()         { *m = Statements{} }
 func (m *Statements) String() string { return proto.CompactTextString(m) }
 func (*Statements) ProtoMessage()    {}
 func (*Statements) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{6}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{6}
 }
 func (m *Statements) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Statements.Unmarshal(m, b)
@@ -412,8 +412,8 @@ func (m *Statements) GetRenewal() []string {
 }
 
 type UsernameConfig struct {
-	DisplayName          string   `protobuf:"bytes,1,opt,name=DisplayName" json:"DisplayName,omitempty"`
-	RoleName             string   `protobuf:"bytes,2,opt,name=RoleName" json:"RoleName,omitempty"`
+	DisplayName          string   `protobuf:"bytes,1,opt,name=DisplayName,proto3" json:"DisplayName,omitempty"`
+	RoleName             string   `protobuf:"bytes,2,opt,name=RoleName,proto3" json:"RoleName,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -423,7 +423,7 @@ func (m *UsernameConfig) Reset()         { *m = UsernameConfig{} }
 func (m *UsernameConfig) String() string { return proto.CompactTextString(m) }
 func (*UsernameConfig) ProtoMessage()    {}
 func (*UsernameConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{7}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{7}
 }
 func (m *UsernameConfig) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UsernameConfig.Unmarshal(m, b)
@@ -468,7 +468,7 @@ func (m *InitResponse) Reset()         { *m = InitResponse{} }
 func (m *InitResponse) String() string { return proto.CompactTextString(m) }
 func (*InitResponse) ProtoMessage()    {}
 func (*InitResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{8}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{8}
 }
 func (m *InitResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_InitResponse.Unmarshal(m, b)
@@ -496,8 +496,8 @@ func (m *InitResponse) GetConfig() []byte {
 }
 
 type CreateUserResponse struct {
-	Username             string   `protobuf:"bytes,1,opt,name=username" json:"username,omitempty"`
-	Password             string   `protobuf:"bytes,2,opt,name=password" json:"password,omitempty"`
+	Username             string   `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Password             string   `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -507,7 +507,7 @@ func (m *CreateUserResponse) Reset()         { *m = CreateUserResponse{} }
 func (m *CreateUserResponse) String() string { return proto.CompactTextString(m) }
 func (*CreateUserResponse) ProtoMessage()    {}
 func (*CreateUserResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{9}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{9}
 }
 func (m *CreateUserResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CreateUserResponse.Unmarshal(m, b)
@@ -542,7 +542,7 @@ func (m *CreateUserResponse) GetPassword() string {
 }
 
 type TypeResponse struct {
-	Type                 string   `protobuf:"bytes,1,opt,name=type" json:"type,omitempty"`
+	Type                 string   `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -552,7 +552,7 @@ func (m *TypeResponse) Reset()         { *m = TypeResponse{} }
 func (m *TypeResponse) String() string { return proto.CompactTextString(m) }
 func (*TypeResponse) ProtoMessage()    {}
 func (*TypeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{10}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{10}
 }
 func (m *TypeResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TypeResponse.Unmarshal(m, b)
@@ -590,7 +590,7 @@ func (m *RotateRootCredentialsResponse) Reset()         { *m = RotateRootCredent
 func (m *RotateRootCredentialsResponse) String() string { return proto.CompactTextString(m) }
 func (*RotateRootCredentialsResponse) ProtoMessage()    {}
 func (*RotateRootCredentialsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{11}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{11}
 }
 func (m *RotateRootCredentialsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RotateRootCredentialsResponse.Unmarshal(m, b)
@@ -627,7 +627,7 @@ func (m *Empty) Reset()         { *m = Empty{} }
 func (m *Empty) String() string { return proto.CompactTextString(m) }
 func (*Empty) ProtoMessage()    {}
 func (*Empty) Descriptor() ([]byte, []int) {
-	return fileDescriptor_database_a524e050c674f25f, []int{12}
+	return fileDescriptor_database_4b48b7d6479beb92, []int{12}
 }
 func (m *Empty) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Empty.Unmarshal(m, b)
@@ -968,10 +968,10 @@ var _Database_serviceDesc = grpc.ServiceDesc{
 }
 
 func init() {
-	proto.RegisterFile("builtin/logical/database/dbplugin/database.proto", fileDescriptor_database_a524e050c674f25f)
+	proto.RegisterFile("builtin/logical/database/dbplugin/database.proto", fileDescriptor_database_4b48b7d6479beb92)
 }
 
-var fileDescriptor_database_a524e050c674f25f = []byte{
+var fileDescriptor_database_4b48b7d6479beb92 = []byte{
 	// 724 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x55, 0xd1, 0x4e, 0xdb, 0x4a,
 	0x10, 0x95, 0x93, 0x00, 0xc9, 0x80, 0x80, 0xec, 0x05, 0x64, 0xf9, 0x72, 0x6f, 0x91, 0x1f, 0x28,

@@ -20,11 +20,11 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Entity struct {
 	// ID is the unique identifier for the entity
-	ID string `protobuf:"bytes,1,opt,name=ID" json:"ID,omitempty"`
+	ID string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
 	// Name is the human-friendly unique identifier for the entity
-	Name string `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// Aliases contains thhe alias mappings for the given entity
-	Aliases              []*Alias `protobuf:"bytes,3,rep,name=aliases" json:"aliases,omitempty"`
+	Aliases              []*Alias `protobuf:"bytes,3,rep,name=aliases,proto3" json:"aliases,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -34,7 +34,7 @@ func (m *Entity) Reset()         { *m = Entity{} }
 func (m *Entity) String() string { return proto.CompactTextString(m) }
 func (*Entity) ProtoMessage()    {}
 func (*Entity) Descriptor() ([]byte, []int) {
-	return fileDescriptor_identity_63bdeae5187a0ba9, []int{0}
+	return fileDescriptor_identity_6481f5f23202c059, []int{0}
 }
 func (m *Entity) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Entity.Unmarshal(m, b)
@@ -77,12 +77,12 @@ func (m *Entity) GetAliases() []*Alias {
 
 type Alias struct {
 	// MountType is the backend mount's type to which this identity belongs
-	MountType string `protobuf:"bytes,1,opt,name=mount_type,json=mountType" json:"mount_type,omitempty"`
+	MountType string `protobuf:"bytes,1,opt,name=mount_type,json=mountType,proto3" json:"mount_type,omitempty"`
 	// MountAccessor is the identifier of the mount entry to which this
 	// identity belongs
-	MountAccessor string `protobuf:"bytes,2,opt,name=mount_accessor,json=mountAccessor" json:"mount_accessor,omitempty"`
+	MountAccessor string `protobuf:"bytes,2,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty"`
 	// Name is the identifier of this identity in its authentication source
-	Name                 string   `protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
+	Name                 string   `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -92,7 +92,7 @@ func (m *Alias) Reset()         { *m = Alias{} }
 func (m *Alias) String() string { return proto.CompactTextString(m) }
 func (*Alias) ProtoMessage()    {}
 func (*Alias) Descriptor() ([]byte, []int) {
-	return fileDescriptor_identity_63bdeae5187a0ba9, []int{1}
+	return fileDescriptor_identity_6481f5f23202c059, []int{1}
 }
 func (m *Alias) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Alias.Unmarshal(m, b)
@@ -138,9 +138,9 @@ func init() {
 	proto.RegisterType((*Alias)(nil), "logical.Alias")
 }
 
-func init() { proto.RegisterFile("logical/identity.proto", fileDescriptor_identity_63bdeae5187a0ba9) }
+func init() { proto.RegisterFile("logical/identity.proto", fileDescriptor_identity_6481f5f23202c059) }
 
-var fileDescriptor_identity_63bdeae5187a0ba9 = []byte{
+var fileDescriptor_identity_6481f5f23202c059 = []byte{
 	// 209 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x44, 0xcf, 0x31, 0x6b, 0x85, 0x30,
 	0x14, 0x05, 0x60, 0xd4, 0x56, 0xf1, 0x96, 0x3a, 0x64, 0x28, 0x2e, 0x05, 0x91, 0x16, 0x9c, 0x12,
