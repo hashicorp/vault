@@ -130,7 +130,7 @@ path "sys/tools/random/*" {
 # Allow checking the status of a Control Group request if the user has the
 # accessor
 path "sys/control-group/request" {
-	capabilities = ["update"]
+    capabilities = ["update"]
 }
 `
 )
