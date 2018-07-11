@@ -40,4 +40,7 @@ find -type f | grep '.go' | xargs sed -i -e 's/Sirupsen/sirupsen/'
 # Need the v2 branch for Azure
 govendor fetch github.com/coreos/go-oidc@v2
 
+# Need the v3 branch for dockertest
+govendor fetch github.com/ory/dockertest@v3
+
 echo "Done; to commit run \n\ncd ${GOPATH}/src/github.com/hashicorp/${TOOL}\n"

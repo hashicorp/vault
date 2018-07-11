@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 func prepareMySQLTestContainer(t *testing.T, legacy bool) (cleanup func(), retURL string) {
