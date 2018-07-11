@@ -1,5 +1,14 @@
 ## Next
 
+DEPRECATIONS/CHANGES:
+
+ * Revocations of dynamic secrets leases are now queued/asynchronous rather
+   than synchronous. This allows Vault to take responsibility for revocation
+   even if the initial attempt fails. The previous synchronous behavior can be
+   attained via the `-sync` CLI flag or `sync` API parameter. When in
+   synchronous mode, if the operation results in failure it is up to the user
+   to retry.
+
 FEATURES:
 
  * JWT/OIDC Auth Method: The new `jwt` auth method accepts JWTs and either
