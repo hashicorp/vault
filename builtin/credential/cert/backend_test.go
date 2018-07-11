@@ -353,7 +353,6 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	// Create a new api client with the desired TLS configuration
 	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig)
 
-	// Set the intermediate CA cert as a trusted certificate in the backend
 	secret, err = newClient.Logical().Write("auth/cert/login", map[string]interface{}{
 		"name": "myvault-dot-com",
 	})
