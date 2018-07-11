@@ -1200,7 +1200,9 @@ func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Reque
 		}
 	}()
 
-	return logical.RespondWithStatusCode(nil, req, http.StatusAccepted)
+	resp := &logical.Response{}
+	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
 func (b *SystemBackend) invalidate(ctx context.Context, key string) {
