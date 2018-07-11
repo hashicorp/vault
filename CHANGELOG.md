@@ -22,6 +22,8 @@ IMPROVEMENTS:
  * core: A `max_request_size` parameter can now be set per-listener to adjust
    the maximum allowed size per request [GH-4824]
  * core: Add control group request endpoint to default policy [GH-4904]
+ * secrets/kv: Add support for using `-field=data` to KVv2 when using `vault
+   kv` [GH-4895]
 
 BUG FIXES:
 
