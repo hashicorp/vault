@@ -489,6 +489,36 @@ func (m *ExpirationManager) Revoke(leaseID string) error {
 	return m.revokeCommon(leaseID, false, false)
 }
 
+// Revoke is used to revoke a secret named by the given LeaseID
+func (m *ExpirationManager) LazyRevoke(leaseID string) error {
+	defer metrics.MeasureSince([]string{"expire", "lazy-revoke"}, time.Now())
+
+	// Load the entry
+	le, err := m.loadEntry(leaseID)
+	if err != nil {
+		return err
+	}
+
+	// If there is no entry, nothing to revoke
+	if le == nil {
+		return nil
+	}
+
+	le.ExpireTime = time.Now()
+	{
+		m.pendingLock.Lock()
+		if err := m.persistEntry(le); err != nil {
+			m.pendingLock.Unlock()
+			return err
+		}
+
+		m.updatePendingInternal(le, 0)
+		m.pendingLock.Unlock()
+	}
+
+	return logical.ErrAccepted
+}
+
 // revokeCommon does the heavy lifting. If force is true, we ignore a problem
 // during revocation and still remove entries/index/lease timers
 func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) error {
@@ -503,28 +533,6 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 	// If there is no entry, nothing to revoke
 	if le == nil {
 		return nil
-	}
-
-	// If not in force mode, where we want to ignore errors, and not in
-	// skiptoken mode where we're already in the middle of a revocation
-	// operation, if the expiration time has not already been hit, set
-	// expiration to now, persist, and call updatePending to hand off
-	// revocation to the expiration manager's pending timer map. We still
-	// attempt to continue revocation here.
-	if !force && !skipToken && le.ExpireTime.After(time.Now()) {
-		le.ExpireTime = time.Now()
-		{
-			m.pendingLock.Lock()
-			if err := m.persistEntry(le); err != nil {
-				m.pendingLock.Unlock()
-				return err
-			}
-
-			m.updatePendingInternal(le, 0)
-			m.pendingLock.Unlock()
-
-			return nil
-		}
 	}
 
 	// Revoke the entry
