@@ -1,3 +1,5 @@
+// +build foundationdb
+
 package foundationdb
 
 import (
