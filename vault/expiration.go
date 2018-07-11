@@ -518,7 +518,7 @@ func (m *ExpirationManager) LazyRevoke(leaseID string) error {
 		m.pendingLock.Unlock()
 	}
 
-	return logical.ErrAccepted
+	return nil
 }
 
 // revokeCommon does the heavy lifting. If force is true, we ignore a problem
@@ -687,25 +687,19 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force, sync bool) 
 	// Revoke all the keys
 	for idx, suffix := range existing {
 		leaseID := prefix + suffix
-		switch sync {
-		case true:
+		switch {
+		case sync:
 			if err := m.revokeCommon(leaseID, force, false); err != nil {
 				return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
 			}
 		default:
 			if err := m.LazyRevoke(leaseID); err != nil {
-				if err != logical.ErrAccepted {
-					return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
-				}
+				return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
 			}
 		}
 	}
 
-	if sync {
-		return nil
-	}
-
-	return logical.ErrAccepted
+	return nil
 }
 
 // Renew is used to renew a secret using the given leaseID

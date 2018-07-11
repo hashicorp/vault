@@ -2325,14 +2325,11 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 	}
 
 	if err := b.Core.expiration.LazyRevoke(leaseID); err != nil {
-		if err == logical.ErrAccepted {
-			return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
-		}
 		b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
 
-	return nil, nil
+	return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
 }
 
 // handleRevokePrefix is used to revoke a prefix with many LeaseIDs
@@ -2359,13 +2356,15 @@ func (b *SystemBackend) handleRevokePrefixCommon(
 		err = b.Core.expiration.RevokePrefix(prefix, sync)
 	}
 	if err != nil {
-		if err == logical.ErrAccepted {
-			return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
-		}
 		b.Backend.Logger().Error("revoke prefix failed", "prefix", prefix, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
-	return nil, nil
+
+	if sync {
+		return nil, nil
+	}
+
+	return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
 }
 
 // handleAuthTable handles the "auth" endpoint to provide the auth table
@@ -3988,10 +3987,10 @@ used to revoke the secret with the given Lease ID.
 		"Whether or not to perform the revocation synchronously",
 		`
 If false, the call will return immediately and revocation will be queued; if it
-fails, Vault will keep trying. If true, if the revocation fails, Vault will
-not automatically try again. For revoke-prefix, this setting will apply to all
-leases being revoked. For revoke-force, since errors are ignored, this setting
-is not supported.
+fails, Vault will keep trying. If true, if the revocation fails, Vault will not
+automatically try again and will return an error. For revoke-prefix, this
+setting will apply to all leases being revoked. For revoke-force, since errors
+are ignored, this setting is not supported.
 `,
 	},
 

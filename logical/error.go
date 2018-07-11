@@ -20,10 +20,6 @@ var (
 	// ErrMultiAuthzPending is returned if the the request needs more
 	// authorizations
 	ErrMultiAuthzPending = errors.New("request needs further approval")
-
-	// ErrAccepted is returned if the request has been accepted but not yet
-	// processed
-	ErrAccepted = errors.New("request successfully accepted")
 )
 
 type HTTPCodedError interface {
