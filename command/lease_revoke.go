@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -16,6 +17,7 @@ type LeaseRevokeCommand struct {
 
 	flagForce  bool
 	flagPrefix bool
+	flagSync   bool
 }
 
 func (c *LeaseRevokeCommand) Synopsis() string {
@@ -28,6 +30,12 @@ Usage: vault lease revoke [options] ID
 
   Revokes secrets by their lease ID. This command can revoke a single secret
   or multiple secrets based on a path-matched prefix.
+
+  The default behavior when not using -force is to revoke asynchronously; Vault
+  will queue the revocation and keep trying if it fails (including across
+  restarts). The -sync flag can be used to force a synchronous operation, but
+  it is then up to the caller to retry on failure. Force mode always operates
+  synchronously.
 
   Revoke a single lease:
 
@@ -72,6 +80,14 @@ func (c *LeaseRevokeCommand) Flags() *FlagSets {
 			"revoke multiple leases simultaneously.",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "sync",
+		Target:  &c.flagSync,
+		Default: false,
+		Usage: "Force a synchronous operation; on failure it is up to the client " +
+			"to retry.",
+	})
+
 	return set
 }
 
@@ -114,29 +130,47 @@ func (c *LeaseRevokeCommand) Run(args []string) int {
 
 	leaseID := strings.TrimSpace(args[0])
 
-	switch {
-	case c.flagForce && c.flagPrefix:
+	revokeOpts := &api.RevokeOptions{
+		LeaseID: leaseID,
+		Force:   c.flagForce,
+		Prefix:  c.flagPrefix,
+		Sync:    c.flagSync,
+	}
+
+	if c.flagForce {
 		c.UI.Warn(wrapAtLength("Warning! Force-removing leases can cause Vault " +
 			"to become out of sync with secret engines!"))
-		if err := client.Sys().RevokeForce(leaseID); err != nil {
+	}
+
+	err = client.Sys().RevokeWithOptions(revokeOpts)
+	if err != nil {
+		switch {
+		case c.flagForce:
 			c.UI.Error(fmt.Sprintf("Error force revoking leases with prefix %s: %s", leaseID, err))
 			return 2
-		}
-		c.UI.Output(fmt.Sprintf("Success! Force revoked any leases with prefix: %s", leaseID))
-		return 0
-	case c.flagPrefix:
-		if err := client.Sys().RevokePrefix(leaseID); err != nil {
+		case c.flagPrefix:
 			c.UI.Error(fmt.Sprintf("Error revoking leases with prefix %s: %s", leaseID, err))
 			return 2
-		}
-		c.UI.Output(fmt.Sprintf("Success! Revoked any leases with prefix: %s", leaseID))
-		return 0
-	default:
-		if err := client.Sys().Revoke(leaseID); err != nil {
+		default:
 			c.UI.Error(fmt.Sprintf("Error revoking lease %s: %s", leaseID, err))
 			return 2
+		}
+	}
+
+	if c.flagForce {
+		c.UI.Output(fmt.Sprintf("Success! Force revoked any leases with prefix: %s", leaseID))
+		return 0
+	}
+
+	if c.flagSync {
+		if c.flagPrefix {
+			c.UI.Output(fmt.Sprintf("Success! Revoked any leases with prefix: %s", leaseID))
+			return 0
 		}
 		c.UI.Output(fmt.Sprintf("Success! Revoked lease: %s", leaseID))
 		return 0
 	}
+
+	c.UI.Output("All revocation operations queued successfully!")
+	return 0
 }

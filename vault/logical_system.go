@@ -2331,6 +2331,8 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 		b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
+
+	return nil, nil
 }
 
 // handleRevokePrefix is used to revoke a prefix with many LeaseIDs
