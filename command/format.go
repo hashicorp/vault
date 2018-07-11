@@ -100,8 +100,7 @@ func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 }
 
 // An output formatter for yaml output format of an object
-type YamlFormatter struct {
-}
+type YamlFormatter struct{}
 
 func (y YamlFormatter) Format(data interface{}) ([]byte, error) {
 	return yaml.Marshal(data)
@@ -116,8 +115,7 @@ func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 }
 
 // An output formatter for table output of an object
-type TableFormatter struct {
-}
+type TableFormatter struct{}
 
 // We don't use this
 func (t TableFormatter) Format(data interface{}) ([]byte, error) {
@@ -245,7 +243,27 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 		sort.Strings(keys)
 
 		for _, k := range keys {
-			out = append(out, fmt.Sprintf("%s %s %v", k, hopeDelim, secret.Data[k]))
+			v := secret.Data[k]
+
+			// If the field "looks" like a TTL, print it as a time duration instead.
+			if k == "period" || strings.HasSuffix(k, "_period") ||
+				k == "ttl" || strings.HasSuffix(k, "_ttl") ||
+				k == "duration" || strings.HasSuffix(k, "_duration") ||
+				k == "lease_max" || k == "ttl_max" {
+
+				switch t := v.(type) {
+				case int:
+					v = humanDurationInt(t)
+				case int64:
+					v = humanDurationInt(int(t))
+				case json.Number:
+					if i, err := t.Int64(); err == nil {
+						v = humanDurationInt(int(i))
+					}
+				}
+			}
+
+			out = append(out, fmt.Sprintf("%s %s %v", k, hopeDelim, v))
 		}
 	}
 
