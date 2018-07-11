@@ -1482,12 +1482,18 @@ NameCheck:
 	for name := range namesToCheck {
 		for _, perm := range ca.PermittedDNSDomains {
 			switch {
-			case strings.HasPrefix(perm, ".") && strings.HasSuffix(name, perm):
-				// .example.com matches my.host.example.com and
-				// host.example.com but does not match example.com
-				break NameCheck
 			case perm == name:
 				break NameCheck
+			case strings.HasSuffix(name, perm):
+				// https://tools.ietf.org/html/rfc5280#section-4.2.1.10 says
+				// zero or more labels are valid. The zero value is handled by
+				// the previous case, so now we need to make sure it's actually
+				// a label. We can do that by trimming the suffix and ensuring
+				// that the last character in the remaining prefix is a period.
+				pre := strings.TrimSuffix(name, perm)
+				if strings.HasSuffix(pre, ".") {
+					break NameCheck
+				}
 			}
 		}
 		badName = name

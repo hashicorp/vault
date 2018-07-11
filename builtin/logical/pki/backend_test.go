@@ -1849,7 +1849,7 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
 		"ttl":                   "40h",
 		"common_name":           "myvault.com",
-		"permitted_dns_domains": []string{"foobar.com", ".zipzap.com"},
+		"permitted_dns_domains": []string{"foobar.com", "zipzap.com"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1862,6 +1862,7 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 
 	path := "root/"
 	checkIssue := func(valid bool, args ...interface{}) {
+		t.Helper()
 		argMap := map[string]interface{}{}
 		var currString string
 		for i, arg := range args {
@@ -1930,8 +1931,8 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 	}
 
 	// Check issuing and signing against root's permitted domains
-	checkIssue(false, "common_name", "zipzap.com")
-	checkIssue(false, "common_name", "host.foobar.com")
+	checkIssue(false, "common_name", "zpzap.com")
+	checkIssue(false, "common_name", "hostfoobar.com")
 	checkIssue(true, "common_name", "host.zipzap.com")
 	checkIssue(true, "common_name", "foobar.com")
 
@@ -1945,7 +1946,7 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 	_, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
 		"common_name": "issuer.abc.com",
 		"csr":         resp.Data["csr"],
-		"permitted_dns_domains": []string{"abc.com", ".xyz.com"},
+		"permitted_dns_domains": []string{"abc.com", "xyz.com"},
 		"ttl": "5h",
 	})
 	if err == nil {
@@ -1954,7 +1955,7 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 	_, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
 		"use_csr_values": true,
 		"csr":            resp.Data["csr"],
-		"permitted_dns_domains": []string{"abc.com", ".xyz.com"},
+		"permitted_dns_domains": []string{"abc.com", "xyz.com"},
 		"ttl": "5h",
 	})
 	if err == nil {
@@ -1965,7 +1966,7 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 	resp, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
 		"common_name": "issuer.zipzap.com",
 		"csr":         resp.Data["csr"],
-		"permitted_dns_domains": []string{"abc.com", ".xyz.com"},
+		"permitted_dns_domains": []string{"abc.com", "xyz.com"},
 		"ttl": "5h",
 	})
 	if err != nil {
@@ -1980,8 +1981,9 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 
 	// Check enforcement with the intermediate's set values
 	path = "int/"
-	checkIssue(false, "common_name", "host.abc.com")
-	checkIssue(false, "common_name", "xyz.com")
+	checkIssue(false, "common_name", "hostabc.com")
+	checkIssue(true, "common_name", "host.abc.com")
+	checkIssue(true, "common_name", "xyz.com")
 	checkIssue(true, "common_name", "abc.com")
 	checkIssue(true, "common_name", "host.xyz.com")
 }
