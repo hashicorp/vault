@@ -1269,10 +1269,10 @@
 			"revisionTime": "2018-06-06T02:26:37Z"
 		},
 		{
-			"checksumSHA1": "W0xV5xs8CYxSSGp619gG2RemfMY=",
+			"checksumSHA1": "en64nC2RYQjJuHMcWMqwmDBU9bc=",
 			"path": "github.com/hashicorp/vault-plugin-auth-jwt",
-			"revision": "e579104468327c5aad46cbc92ae6a9ca3a692147",
-			"revisionTime": "2018-07-09T20:20:09Z"
+			"revision": "31980151e62706c98c1f3a27d7d1e733ad766019",
+			"revisionTime": "2018-07-10T15:13:41Z"
 		},
 		{
 			"checksumSHA1": "L5pDwOw2/MLLUSykrwxXbXQI7zI=",

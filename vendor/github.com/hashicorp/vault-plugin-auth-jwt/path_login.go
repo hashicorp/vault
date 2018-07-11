@@ -23,7 +23,7 @@ func pathLogin(b *jwtAuthBackend) *framework.Path {
 				Type:        framework.TypeLowerCaseString,
 				Description: "The role to log in against.",
 			},
-			"token": &framework.FieldSchema{
+			"jwt": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "The signed JWT to validate.",
 			},
@@ -40,7 +40,7 @@ func pathLogin(b *jwtAuthBackend) *framework.Path {
 }
 
 func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	token := d.Get("token").(string)
+	token := d.Get("jwt").(string)
 	if len(token) == 0 {
 		return logical.ErrorResponse("missing token"), nil
 	}
@@ -70,7 +70,7 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		return logical.ErrorResponse("could not load configuration"), nil
 	}
 
-	// Here is where things diverge. If it is using OIDC discovery, validate
+	// Here is where things diverge. If it is using OIDC Discovery, validate
 	// that way; otherwise validate against the locally configured keys. Once
 	// things are validated, we re-unify the request path when evaluating the
 	// claims.
@@ -125,7 +125,7 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 			return logical.ErrorResponse(errwrap.Wrapf("error validating claims: {{err}}", err).Error()), nil
 		}
 
-	case config.OIDCIssuerURL != "":
+	case config.OIDCDiscoveryURL != "":
 		provider, err := b.getProvider(ctx, config)
 		if err != nil {
 			return nil, errwrap.Wrapf("error getting provider for login operation: {{err}}", err)
