@@ -14,7 +14,7 @@ const WRAPPED_RESPONSE_PATHS = [
   'sys/replication/performance/primary/secondary-token',
   'sys/replication/dr/primary/secondary-token',
 ];
-
+export { CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR };
 export default Service.extend({
   version: inject.service(),
   router: inject.service(),
@@ -43,7 +43,7 @@ export default Service.extend({
   deleteControlGroupToken(accessor) {
     this.unmarkTokenForUnwrap();
     let key = this.keyFromAccessor(accessor);
-    return key ? this.storage().removeItem(key) : null;
+    this.storage().removeItem(key);
   },
 
   deleteTokens() {
@@ -107,6 +107,7 @@ export default Service.extend({
     });
     return url.replace('/ui', '');
   },
+
   handleError(error, transition) {
     let { accessor, token, creation_path, creation_time, ttl } = error;
     let url = this.urlFromTransition(transition);
