@@ -1,13 +1,6 @@
 package command
 
 import (
-	"crypto/sha256"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -82,38 +75,14 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Parallel()
 
-		pluginName := "my-plugin"
+		pluginDir, cleanup := testPluginDir(t)
+		defer cleanup(t)
 
-		dir, err := ioutil.TempDir("", "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(dir)
-
-		// OSX tempdir are /var, but actually symlinked to /private/var
-		dir, err = filepath.EvalSymlinks(dir)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		pth := dir + "/" + pluginName
-		if err := ioutil.WriteFile(pth, nil, 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		f, err := os.Open(pth)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer f.Close()
-
-		h := sha256.New()
-		if _, err := io.Copy(h, f); err != nil {
-			t.Fatal(err)
-		}
-
-		client, _, closer := testVaultServerPluginDir(t, dir)
+		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
+
+		pluginName := "my-plugin"
+		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName)
 
 		ui, cmd := testPluginDeregisterCommand(t)
 		cmd.client = client
@@ -121,7 +90,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 			Name:    pluginName,
 			Command: pluginName,
-			SHA256:  fmt.Sprintf("%x", h.Sum(nil)),
+			SHA256:  sha256Sum,
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -171,7 +140,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error deregistering plugin my-plugin: "
+		expected := "Error deregistering plugin named my-plugin: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)

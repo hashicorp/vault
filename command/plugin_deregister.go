@@ -77,7 +77,7 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
 		Name: pluginName,
 	}); err != nil {
-		c.UI.Error(fmt.Sprintf("Error deregistering plugin %s: %s", pluginName, err))
+		c.UI.Error(fmt.Sprintf("Error deregistering plugin named %s: %s", pluginName, err))
 		return 2
 	}
 

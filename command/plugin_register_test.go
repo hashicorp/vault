@@ -1,10 +1,6 @@
 package command
 
 import (
-	"io/ioutil"
-	"log"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -80,32 +76,20 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Parallel()
 
-		pluginName := "my-plugin"
+		pluginDir, cleanup := testPluginDir(t)
+		defer cleanup(t)
 
-		dir, err := ioutil.TempDir("", "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(dir)
-
-		// OSX tempdir are /var, but actually symlinked to /private/var
-		dir, err = filepath.EvalSymlinks(dir)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if err := ioutil.WriteFile(dir+"/"+pluginName, nil, 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		client, _, closer := testVaultServerPluginDir(t, dir)
+		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
+
+		pluginName := "my-plugin"
+		_, sha256Sum := testPluginCreate(t, pluginDir, pluginName)
 
 		ui, cmd := testPluginRegisterCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			"-sha256", "abcd1234",
+			"-sha256", sha256Sum,
 			pluginName,
 		})
 		if exp := 0; code != exp {
