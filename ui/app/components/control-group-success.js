@@ -1,7 +1,7 @@
 import Ember from 'ember';
 import { task } from 'ember-concurrency';
 
-const { computed, inject } = Ember;
+const { inject } = Ember;
 
 export default Ember.Component.extend({
   router: inject.service(),
@@ -30,6 +30,6 @@ export default Ember.Component.extend({
   markAndNavigate: task(function*() {
     this.get('controlGroup').markTokenForUnwrap(this.get('model.id'));
     let { url } = this.get('controlGroupResponse.uiParams');
-    return this.get('router').transitionTo(url);
+    yield this.get('router').transitionTo(url);
   }).drop(),
 });

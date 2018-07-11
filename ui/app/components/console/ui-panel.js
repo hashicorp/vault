@@ -16,12 +16,11 @@ export default Ember.Component.extend({
   console: inject.service(),
   router: inject.service(),
   controlGroup: inject.service(),
+  store: inject.service(),
+
   classNames: 'console-ui-panel-scroller',
   classNameBindings: ['isFullscreen:fullscreen'],
   isFullscreen: false,
-  console: inject.service(),
-  router: inject.service(),
-  store: inject.service(),
   inputValue: null,
   log: computed.alias('console.log'),
 
@@ -82,10 +81,7 @@ export default Ember.Component.extend({
       this.logAndOutput(command, logFromResponse(resp, path, method, flags));
     } catch (error) {
       if (error instanceof ControlGroupError) {
-        return this.logAndOutput(
-          command,
-          this.get('controlGroup').logFromError(error)
-        );
+        return this.logAndOutput(command, this.get('controlGroup').logFromError(error));
       }
       this.logAndOutput(command, logFromError(error, path, method));
     }

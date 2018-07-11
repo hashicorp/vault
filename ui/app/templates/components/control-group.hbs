@@ -4,40 +4,42 @@
     <p>
       <ICon @glyph={{if isSuccess "checkmark-circled" "control-lock"}} @size={{16}} />
       <strong data-test-banner-prefix>{{bannerPrefix}}</strong>
-      {{bannerText}}
+      <span data-test-banner-text>{{bannerText}}</span>
     </p>
   </div>
   {{#if (and currentUserIsRequesting model.approved)}}
-    <ControlGroupSuccess @model={{model}} @controlGroupResponse={{controlGroupResponse}} />
+    <ControlGroupSuccess data-test-control-group-success @model={{model}} @controlGroupResponse={{controlGroupResponse}} />
   {{else}}
     <div class="control-group">
-      {{#if model.requestEntity.canRead}}
-        <a href={{href-to 'vault.cluster.access.identity.show' 'entities' model.requestEntity.id 'details'}}>
+      <div data-test-requestor-text>
+        {{#if model.requestEntity.canRead}}
+          <a href={{href-to 'vault.cluster.access.identity.show' 'entities' model.requestEntity.id 'details'}}>
+            {{requestorName}}
+          </a>
+        {{else}}
           {{requestorName}}
-        </a>
-      {{else}}
-        {{requestorName}}
-      {{/if}}
-      {{#if currentUserIsRequesting}}are{{else}}is{{/if}}
-      {{#if model.approved}}
-        authorized to access <code>{{model.requestPath}}</code>
-      {{else}}
-        requesting access to <code>{{model.requestPath}}</code>
-      {{/if}}
+        {{/if}}
+        {{#if currentUserIsRequesting}}are{{else}}is{{/if}}
+        {{#if model.approved}}
+          authorized to access <code>{{model.requestPath}}</code>
+        {{else}}
+          requesting access to <code>{{model.requestPath}}</code>
+        {{/if}}
+      </div>
 
       {{#if currentUserIsRequesting}}
-        <div class="message is-list is-highlight has-copy-button" tabindex="-1">
+        <div class="message is-list is-highlight has-copy-button" tabindex="-1" data-test-accessor-callout>
           <HoverCopyButton @alwaysShow=true @copyValue={{model.id}} />
           <div class="message-body">
             <h4 class="title is-7 is-marginless">
               Accessor
             </h4>
-            <code class="is-word-break">{{model.id}}</code>
+            <code class="is-word-break" data-test-accessor-value>{{model.id}}</code>
           </div>
         </div>
       {{/if}}
 
-      <div class="authorizations">
+      <div class="authorizations" data-test-authorizations>
         {{#if (gt model.authorizations.length 0)}}
         <span class="has-text-success">
           <ICon @glyph="checkmark-circled-outline" @size={{16}} />
@@ -60,9 +62,9 @@
     </div>
   {{/if}}
     {{#if controlGroupResponse.token}}
-      <p class="control-group-token-text">
+      <p class="control-group-token-text" data-test-token>
         We’ve saved your request token, but you may want to copy it just in case:
-        <span class="tag has-font-monospaced">{{controlGroupResponse.token}}</span>
+        <span class="tag has-font-monospaced" data-test-token-value>{{controlGroupResponse.token}}</span>
         <HoverCopyButton @alwaysShow=true @copyValue={{controlGroupResponse.token}} />
       </p>
     {{/if}}
@@ -71,7 +73,7 @@
     <div class="field is-grouped box is-fullwidth is-bottomless">
       {{#if model.canAuthorize}}
         {{#if (or model.approved currentUserHasAuthorized)}}
-          <a href={{href-to 'vault.cluster.access.control-groups'}} class="button" >
+          <a href={{href-to 'vault.cluster.access.control-groups'}} class="button" data-test-back-link >
             <ICon @glyph="chevron-left" @size=10 /> Back
           </a>
         {{else}}
@@ -79,6 +81,7 @@
             type="button"
             class="button is-primary {{if authorize.isRunning 'is-loading'}}"
             {{action (perform authorize)}}
+            data-test-authorize-button
             >
             Authorize
           </button>
@@ -88,6 +91,7 @@
           type="button"
           class="button is-primary {{if refresh.isRunning 'is-loading'}}"
           {{action (perform refresh)}}
+          data-test-refresh-button
           >
           Refresh
         </button>

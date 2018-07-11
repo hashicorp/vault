@@ -1,7 +1,7 @@
 import Ember from 'ember';
 import { task } from 'ember-concurrency';
 
-const { computed, inject } = Ember;
+const { get, computed, inject } = Ember;
 
 export default Ember.Component.extend({
   tagName: '',
@@ -11,13 +11,11 @@ export default Ember.Component.extend({
   // public API
   model: null,
 
-  init() {
+  didReceiveAttrs() {
     this._super(...arguments);
     let accessor = this.get('model.id');
     let data = this.get('controlGroup').wrapInfoForAccessor(accessor);
-    if (data) {
-      this.set('controlGroupResponse', data);
-    }
+    this.set('controlGroupResponse', data);
   },
 
   currentUserEntityId: computed.alias('auth.authData.entity_id'),
@@ -38,22 +36,17 @@ export default Ember.Component.extend({
     if (this.get('currentUserIsRequesting')) {
       return 'You';
     }
-    if (entity && entity.get('name')) {
-      return entity.get('name');
+    if (entity && get(entity, 'name')) {
+      return get(entity, 'name');
     }
     return 'Someone';
   }),
 
-  bannerPrefix: computed('model.approved', 'currentUserIsRequesting', 'currentUserHasAuthorized', function() {
-    let isApproved = this.get('model.approved');
-    let { currentUserHasAuthorized, currentUserIsRequesting } = this.getProperties(
-      'currentUserIsRequesting',
-      'currentUserHasAuthorized'
-    );
-    if (currentUserHasAuthorized) {
+  bannerPrefix: computed('model.approved', 'currentUserHasAuthorized', function() {
+    if (this.get('currentUserHasAuthorized')) {
       return 'Thanks!';
     }
-    if (isApproved) {
+    if (this.get('model.approved')) {
       return 'Success!';
     }
     return 'Locked';
@@ -81,7 +74,11 @@ export default Ember.Component.extend({
   }),
 
   refresh: task(function*() {
-    yield this.get('model').reload();
+    try {
+      yield this.get('model').reload();
+    } catch (e) {
+      this.set('errors', e);
+    }
   }).drop(),
 
   authorize: task(function*() {
