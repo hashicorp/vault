@@ -62,10 +62,6 @@ If you wish to work on Vault itself or any of its built-in systems, you'll
 first need [Go](https://www.golang.org) installed on your machine (version
 1.10.1+ is *required*).
 
-Make sure you have the FoundationDB client library installed on your system,
-along with Mono (core is enough), as they are necessary to install the Go bindings
-for FoundationDB.
-
 For local dev first make sure Go is properly installed, including setting up a
 [GOPATH](https://golang.org/doc/code.html#GOPATH). Next, clone this repository
 into `$GOPATH/src/github.com/hashicorp/vault`. You can then download any
