@@ -36,6 +36,109 @@ type TokenEntryOld struct {
 	Period         time.Duration
 }
 
+func TestTokenStore_UnleasedTokensUpgradeToSHA256HMAC(t *testing.T) {
+	core, unsealKeys, rootToken := TestCoreUnsealed(t)
+	ts := core.tokenStore
+
+	// Create a root token of version 0
+	te := &logical.TokenEntry{
+		ID:           "root",
+		Policies:     []string{"root"},
+		Path:         "auth/token/root",
+		DisplayName:  "root",
+		CreationTime: time.Now().Unix(),
+	}
+
+	cubbyholeID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	te.CubbyholeID = cubbyholeID
+
+	if err := ts.storeCommon(context.Background(), te, true); err != nil {
+		t.Fatal(err)
+	}
+
+	// Make sure that expiration manager doesn't think that all root tokens are
+	// upgraded.
+	atomic.StoreUint32(&core.expiration.SHA1HashedLeasesCleared, 0)
+	atomic.StoreUint32(&core.expiration.SHA1HashedUnleasedTokensUpgraded, 0)
+
+	expMetadata := &ExpirationMetadata{}
+	// Encode and persist the metadata entry
+	metadataEntry, err := logical.StorageEntryJSON(metadataPath, expMetadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = core.expiration.view.Put(core.expiration.quitContext, metadataEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the new token is readable
+	out, err := ts.Lookup(context.Background(), te.ID)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if out == nil {
+		t.Fatalf("failed to lookup the token")
+	}
+	if out.ID != "root" {
+		t.Fatalf("bad: token id; expected: 'root' actual: %q", out.ID)
+	}
+	if out.Version != 0 {
+		t.Fatalf("bad: token version; expected: 0 actual: %d", out.Version)
+	}
+
+	err = core.Seal(rootToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sealed, err := core.Sealed()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sealed {
+		t.Fatalf("should have been sealed")
+	}
+
+	for i, unsealKey := range unsealKeys {
+		unseal, err := TestCoreUnseal(core, unsealKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i+1 == len(unsealKeys) && !unseal {
+			t.Fatalf("should have been unsealed")
+		}
+	}
+
+	// Give some time for the restoration to complete
+	time.Sleep(2 * time.Second)
+
+	if core.expiration.SHA1HashedUnleasedTokensUpgraded != 1 {
+		t.Fatalf("failed to set status on upgrading SHA1 hashed unleased tokens")
+	}
+
+	if core.expiration.SHA1HashedLeasesCleared != 1 {
+		t.Fatalf("failed to set status on clearing SHA1 hashed lease clearing")
+	}
+
+	out, err = ts.Lookup(context.Background(), te.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out == nil {
+		t.Fatalf("failed to look up the token")
+	}
+	if out.ID != "root" {
+		t.Fatalf("bad: token id; expected: 'root' actual: %q", out.ID)
+	}
+	if out.Version != 2 {
+		t.Fatalf("bad: token version; expected: 2 actual: %d", out.Version)
+	}
+}
+
 func TestTokenStore_TokenEntryVersionCubbyholeDestroy(t *testing.T) {
 	core, _, rootToken := TestCoreUnsealed(t)
 	ts := core.tokenStore

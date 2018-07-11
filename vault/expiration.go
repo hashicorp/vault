@@ -498,8 +498,14 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 					return err
 				}
 
+				// For sanity
+				if te == nil {
+					continue
+				}
+
 				// If the token entry is of an older version, perform the upgrade
 				if te.Version < 2 {
+					originalNumUses := te.NumUses
 					// Calling token store's revoke function instead of removing
 					// the storage entries manually has the advantage of not
 					// missing out on removal of related artifacts such as the
@@ -513,6 +519,9 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 
 					// Upgrade the token entry
 					te.Version = 2
+
+					// Restore token usage
+					te.NumUses = originalNumUses
 
 					// Create the token again
 					err = m.tokenStore.create(m.quitContext, te)
@@ -540,6 +549,7 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 		}
 
 		m.logger.Debug("persisting expiration manager metadata", "sha1_hashed_leases_cleared", expMetadata.SHA1HashedLeasesCleared)
+		m.logger.Debug("persisting expiration manager metadata", "sha1_hashed_unleased_tokens_upgraded", expMetadata.SHA1HashedUnleasedTokensUpgraded)
 
 		// Encode and persist the metadata entry
 		metadataEntry, err := logical.StorageEntryJSON(metadataPath, expMetadata)
