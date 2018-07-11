@@ -1,5 +1,13 @@
 ## Next
 
+FEATURES:
+
+ * JWT/OIDC Auth Method: The new `jwt` auth method accepts JWTs and either
+   validates signatures locally or uses OIDC Discovery to fetch the current set
+   of keys for signature validation. Various claims can be specified for
+   validation (in addition to the cryptographic signature) and a user and
+   optional groups claim can be used to provide Identity information.
+
 IMPROVEMENTS:
 
  * core: A `max_request_size` parameter can now be set per-listener to adjust
