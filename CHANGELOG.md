@@ -9,6 +9,8 @@ BUG FIXES:
 
  * core: Fix returning 500 instead of 503 if a rekey is attempted when Vault is
    sealed [GH-4874]
+ * secrets/pki: Fix permitted DNS domains requiring a prefix of `.` to allow
+   subdomains [GH-4863]
  * secrets/database: Fix panic during DB creds revocation [GH-4846]
 
 ## 0.10.3 (June 20th, 2018)
