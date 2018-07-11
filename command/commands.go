@@ -361,6 +361,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"plugin deregister": func() (cli.Command, error) {
+			return &PluginDeregisterCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"plugin list": func() (cli.Command, error) {
 			return &PluginListCommand{
 				BaseCommand: getBaseCommand(),
