@@ -189,7 +189,7 @@ func (c *Core) disableCredential(ctx context.Context, path string) error {
 
 	if backend != nil {
 		// Revoke credentials from this path
-		if err := c.expiration.RevokePrefix(fullPath); err != nil {
+		if err := c.expiration.RevokePrefix(fullPath, false); err != nil {
 			return err
 		}
 

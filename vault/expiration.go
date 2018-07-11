@@ -489,7 +489,9 @@ func (m *ExpirationManager) Revoke(leaseID string) error {
 	return m.revokeCommon(leaseID, false, false)
 }
 
-// Revoke is used to revoke a secret named by the given LeaseID
+// LazyRevoke is used to queue revocation for a secret named by the given
+// LeaseID. If the lease was not found it returns nil; if the lease was found
+// it triggers a return of a 202.
 func (m *ExpirationManager) LazyRevoke(leaseID string) error {
 	defer metrics.MeasureSince([]string{"expire", "lazy-revoke"}, time.Now())
 
@@ -580,16 +582,16 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 func (m *ExpirationManager) RevokeForce(prefix string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-force"}, time.Now())
 
-	return m.revokePrefixCommon(prefix, true)
+	return m.revokePrefixCommon(prefix, true, false)
 }
 
 // RevokePrefix is used to revoke all secrets with a given prefix.
 // The prefix maps to that of the mount table to make this simpler
 // to reason about.
-func (m *ExpirationManager) RevokePrefix(prefix string) error {
+func (m *ExpirationManager) RevokePrefix(prefix string, async bool) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-prefix"}, time.Now())
 
-	return m.revokePrefixCommon(prefix, false)
+	return m.revokePrefixCommon(prefix, false, async)
 }
 
 // RevokeByToken is used to revoke all the secrets issued with a given token.
@@ -653,7 +655,7 @@ func (m *ExpirationManager) RevokeByToken(te *logical.TokenEntry) error {
 	return nil
 }
 
-func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error {
+func (m *ExpirationManager) revokePrefixCommon(prefix string, force, async bool) error {
 	if m.inRestoreMode() {
 		m.restoreRequestLock.Lock()
 		defer m.restoreRequestLock.Unlock()
@@ -664,6 +666,9 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error 
 	if !strings.HasSuffix(prefix, "/") {
 		le, err := m.loadEntry(prefix)
 		if err == nil && le != nil {
+			if async {
+				return m.LazyRevoke(prefix)
+			}
 			if err := m.revokeCommon(prefix, force, false); err != nil {
 				return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q: {{err}}", prefix), err)
 			}
@@ -682,10 +687,22 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error 
 	// Revoke all the keys
 	for idx, suffix := range existing {
 		leaseID := prefix + suffix
+		if async {
+			if err := m.LazyRevoke(leaseID); err != nil {
+				if err != logical.ErrAccepted {
+					return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
+				}
+			}
+		}
 		if err := m.revokeCommon(leaseID, force, false); err != nil {
 			return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
 		}
 	}
+
+	if async {
+		return logical.ErrAccepted
+	}
+
 	return nil
 }
 
