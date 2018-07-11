@@ -371,6 +371,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"plugin read": func() (cli.Command, error) {
+			return &PluginReadCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"plugin register": func() (cli.Command, error) {
 			return &PluginRegisterCommand{
 				BaseCommand: getBaseCommand(),
