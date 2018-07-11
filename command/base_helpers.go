@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -244,6 +245,10 @@ func humanDurationInt(i interface{}) interface{} {
 		return humanDuration(time.Duration(i.(int)) * time.Second)
 	case int64:
 		return humanDuration(time.Duration(i.(int64)) * time.Second)
+	case json.Number:
+		if i, err := i.(json.Number).Int64(); err == nil {
+			return humanDuration(time.Duration(i) * time.Second)
+		}
 	}
 
 	// If we don't know what type it is, just return the original value

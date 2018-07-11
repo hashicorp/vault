@@ -251,16 +251,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 				k == "duration" || strings.HasSuffix(k, "_duration") ||
 				k == "lease_max" || k == "ttl_max" {
 
-				switch t := v.(type) {
-				case int:
-					v = humanDurationInt(t)
-				case int64:
-					v = humanDurationInt(int(t))
-				case json.Number:
-					if i, err := t.Int64(); err == nil {
-						v = humanDurationInt(int(i))
-					}
-				}
+				v = humanDurationInt(v)
 			}
 
 			out = append(out, fmt.Sprintf("%s %s %v", k, hopeDelim, v))
