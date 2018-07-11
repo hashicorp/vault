@@ -536,10 +536,10 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
 					},
-					"async": &framework.FieldSchema{
+					"sync": &framework.FieldSchema{
 						Type:        framework.TypeBool,
 						Default:     true,
-						Description: strings.TrimSpace(sysHelp["revoke-async"][0]),
+						Description: strings.TrimSpace(sysHelp["revoke-sync"][0]),
 					},
 				},
 
@@ -577,10 +577,10 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["revoke-prefix-path"][0]),
 					},
-					"async": &framework.FieldSchema{
+					"sync": &framework.FieldSchema{
 						Type:        framework.TypeBool,
 						Default:     true,
-						Description: strings.TrimSpace(sysHelp["revoke-async"][0]),
+						Description: strings.TrimSpace(sysHelp["revoke-sync"][0]),
 					},
 				},
 
@@ -2314,40 +2314,38 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 			logical.ErrInvalidRequest
 	}
 
-	async := data.Get("async").(bool)
-
-	if async {
-		if err := b.Core.expiration.LazyRevoke(leaseID); err != nil {
-			if err == logical.ErrAccepted {
-				return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
-			}
+	if data.Get("sync").(bool) {
+		// Invoke the expiration manager directly
+		if err := b.Core.expiration.Revoke(leaseID); err != nil {
 			b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
 			return handleErrorNoReadOnlyForward(err)
 		}
+
+		return nil, nil
 	}
 
-	// Invoke the expiration manager directly
-	if err := b.Core.expiration.Revoke(leaseID); err != nil {
+	if err := b.Core.expiration.LazyRevoke(leaseID); err != nil {
+		if err == logical.ErrAccepted {
+			return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
+		}
 		b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
-
-	return nil, nil
 }
 
 // handleRevokePrefix is used to revoke a prefix with many LeaseIDs
 func (b *SystemBackend) handleRevokePrefix(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRevokePrefixCommon(req, data, false, data.Get("async").(bool))
+	return b.handleRevokePrefixCommon(req, data, false, data.Get("sync").(bool))
 }
 
 // handleRevokeForce is used to revoke a prefix with many LeaseIDs, ignoring errors
 func (b *SystemBackend) handleRevokeForce(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRevokePrefixCommon(req, data, true, false)
+	return b.handleRevokePrefixCommon(req, data, true, true)
 }
 
 // handleRevokePrefixCommon is used to revoke a prefix with many LeaseIDs
 func (b *SystemBackend) handleRevokePrefixCommon(
-	req *logical.Request, data *framework.FieldData, force, async bool) (*logical.Response, error) {
+	req *logical.Request, data *framework.FieldData, force, sync bool) (*logical.Response, error) {
 	// Get all the options
 	prefix := data.Get("prefix").(string)
 
@@ -2356,7 +2354,7 @@ func (b *SystemBackend) handleRevokePrefixCommon(
 	if force {
 		err = b.Core.expiration.RevokeForce(prefix)
 	} else {
-		err = b.Core.expiration.RevokePrefix(prefix, async)
+		err = b.Core.expiration.RevokePrefix(prefix, sync)
 	}
 	if err != nil {
 		if err == logical.ErrAccepted {
@@ -3984,11 +3982,11 @@ used to revoke the secret with the given Lease ID.
 		`,
 	},
 
-	"revoke-async": {
-		"Whether or not to perform the revocation asynchronously",
+	"revoke-sync": {
+		"Whether or not to perform the revocation synchronously",
 		`
-If true, the call will return immediately and revocation will be queued; if it
-fails, Vault will keep trying. If false, if the revocation fails, Vault will
+If false, the call will return immediately and revocation will be queued; if it
+fails, Vault will keep trying. If true, if the revocation fails, Vault will
 not automatically try again. For revoke-prefix, this setting will apply to all
 leases being revoked. For revoke-force, since errors are ignored, this setting
 is not supported.
