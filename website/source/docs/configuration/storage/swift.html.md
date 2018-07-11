@@ -33,8 +33,7 @@ storage "swift" {
 ## `swift` Parameters
 
 - `auth_url` `(string: <required>)` – Specifies the OpenStack authentication
-  endpoint. Currently only v1.0 authentication endpoints are supported. This can
-  also be provided via the environment variable `OS_AUTH_URL`.
+  endpoint. This can also be provided via the environment variable `OS_AUTH_URL`.
 
 - `container` `(string: <required>)` – Specifies the name of the Swift
   container. This can also be provided via the environment variable
@@ -51,6 +50,20 @@ storage "swift" {
 
 - `username` `(string: <required>)` – Specifies the OpenStack account/username.
   This can also be provided via the environment variable `OS_USERNAME`.
+
+- `region` `(string: "")` – Specifies the name of the region. This can also be provided via the environment variable `OS_REGION_NAME`. 
+
+- `tenant_id` `(string: "")` - Specifies the id of the tenant. This can also be provided via the environment variable `OS_TENANT_ID`.
+
+- `domain` `(string: "")` - Specifies the name of the user domain. This can also be provided via the environment variable `OS_USER_DOMAIN_NAME`.
+
+- `project-domain` `(string: "")` - Specifies the name of the project's domain. This can also be provided via the environment variable `OS_PROJECT_DOMAIN_NAME`.
+
+- `trust_id` `(string: "")` - Specifies the id of the trust. This can also be provided via the environment variable `OS_TRUST_ID`.
+
+- `storage_url` `(string: "")` - Specifies storage URL from alternate authentication. This can also be provided via the environment variable `OS_STORAGE_URL`.
+
+- `auth_token` `(string: "")` - Specifies auth token from alternate authentication. This can also be provided via the environment variable `OS_AUTH_TOKEN`.
 
 ## `swift` Examples
 
