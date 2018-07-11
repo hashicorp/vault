@@ -19,7 +19,7 @@
 // Package transport defines and implements message oriented communication
 // channel to complete various transactions (e.g., an RPC).  It is meant for
 // grpc-internal usage and is not intended to be imported directly by users.
-package transport // externally used as import "google.golang.org/grpc/transport"
+package transport
 
 import (
 	"errors"
@@ -454,6 +454,7 @@ type ServerConfig struct {
 	WriteBufferSize       int
 	ReadBufferSize        int
 	ChannelzParentID      int64
+	MaxHeaderListSize     *uint32
 }
 
 // NewServerTransport creates a ServerTransport with conn or non-nil error
@@ -491,6 +492,8 @@ type ConnectOptions struct {
 	ReadBufferSize int
 	// ChannelzParentID sets the addrConn id which initiate the creation of this client transport.
 	ChannelzParentID int64
+	// MaxHeaderListSize sets the max (uncompressed) size of header list that is prepared to be received.
+	MaxHeaderListSize *uint32
 }
 
 // TargetInfo contains the information of the target such as network address and metadata.

@@ -119,6 +119,8 @@ type decodeState struct {
 	statsTags      []byte
 	statsTrace     []byte
 	contentSubtype string
+	// whether decoding on server side or not
+	serverSide bool
 }
 
 // isReservedHeader checks whether hdr belongs to HTTP2 headers
@@ -235,11 +237,20 @@ func decodeMetadataHeader(k, v string) (string, error) {
 	return v, nil
 }
 
-func (d *decodeState) decodeResponseHeader(frame *http2.MetaHeadersFrame) error {
+func (d *decodeState) decodeHeader(frame *http2.MetaHeadersFrame) error {
+	// frame.Truncated is set to true when framer detects that the current header
+	// list size hits MaxHeaderListSize limit.
+	if frame.Truncated {
+		return streamErrorf(codes.Internal, "peer header list size exceeded limit")
+	}
 	for _, hf := range frame.Fields {
 		if err := d.processHeaderField(hf); err != nil {
 			return err
 		}
+	}
+
+	if d.serverSide {
+		return nil
 	}
 
 	// If grpc status exists, no need to check further.
@@ -270,7 +281,6 @@ func (d *decodeState) decodeResponseHeader(frame *http2.MetaHeadersFrame) error 
 	code := int(codes.Unknown)
 	d.rawStatusCode = &code
 	return nil
-
 }
 
 func (d *decodeState) addMetadata(k, v string) {
@@ -581,7 +591,7 @@ type framer struct {
 	fr     *http2.Framer
 }
 
-func newFramer(conn net.Conn, writeBufferSize, readBufferSize int) *framer {
+func newFramer(conn net.Conn, writeBufferSize, readBufferSize int, maxHeaderListSize uint32) *framer {
 	if writeBufferSize < 0 {
 		writeBufferSize = 0
 	}
@@ -597,6 +607,7 @@ func newFramer(conn net.Conn, writeBufferSize, readBufferSize int) *framer {
 	// Opt-in to Frame reuse API on framer to reduce garbage.
 	// Frames aren't safe to read from after a subsequent call to ReadFrame.
 	f.fr.SetReuseFrames()
+	f.fr.MaxHeaderListSize = maxHeaderListSize
 	f.fr.ReadMetaHeaders = hpack.NewDecoder(http2InitHeaderTableSize, nil)
 	return f
 }

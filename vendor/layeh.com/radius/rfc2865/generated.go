@@ -60,7 +60,7 @@ func UserName_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(UserName_Type, a)
-	return nil
+	return
 }
 
 func UserName_AddString(p *radius.Packet, value string) (err error) {
@@ -70,7 +70,7 @@ func UserName_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(UserName_Type, a)
-	return nil
+	return
 }
 
 func UserName_Get(p *radius.Packet) (value []byte) {
@@ -153,7 +153,7 @@ func UserPassword_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(UserPassword_Type, a)
-	return nil
+	return
 }
 
 func UserPassword_AddString(p *radius.Packet, value string) (err error) {
@@ -163,7 +163,7 @@ func UserPassword_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(UserPassword_Type, a)
-	return nil
+	return
 }
 
 func UserPassword_Get(p *radius.Packet) (value []byte) {
@@ -254,7 +254,7 @@ func CHAPPassword_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(CHAPPassword_Type, a)
-	return nil
+	return
 }
 
 func CHAPPassword_AddString(p *radius.Packet, value string) (err error) {
@@ -264,7 +264,7 @@ func CHAPPassword_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(CHAPPassword_Type, a)
-	return nil
+	return
 }
 
 func CHAPPassword_Get(p *radius.Packet) (value []byte) {
@@ -347,7 +347,7 @@ func NASIPAddress_Add(p *radius.Packet, value net.IP) (err error) {
 		return
 	}
 	p.Add(NASIPAddress_Type, a)
-	return nil
+	return
 }
 
 func NASIPAddress_Get(p *radius.Packet) (value net.IP) {
@@ -384,7 +384,7 @@ func NASIPAddress_Set(p *radius.Packet, value net.IP) (err error) {
 		return
 	}
 	p.Set(NASIPAddress_Type, a)
-	return nil
+	return
 }
 
 type NASPort uint32
@@ -401,7 +401,7 @@ func (a NASPort) String() string {
 func NASPort_Add(p *radius.Packet, value NASPort) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(NASPort_Type, a)
-	return nil
+	return
 }
 
 func NASPort_Get(p *radius.Packet) (value NASPort) {
@@ -439,7 +439,7 @@ func NASPort_Lookup(p *radius.Packet) (value NASPort, err error) {
 func NASPort_Set(p *radius.Packet, value NASPort) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(NASPort_Type, a)
-	return nil
+	return
 }
 
 type ServiceType uint32
@@ -482,7 +482,7 @@ func (a ServiceType) String() string {
 func ServiceType_Add(p *radius.Packet, value ServiceType) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(ServiceType_Type, a)
-	return nil
+	return
 }
 
 func ServiceType_Get(p *radius.Packet) (value ServiceType) {
@@ -520,7 +520,7 @@ func ServiceType_Lookup(p *radius.Packet) (value ServiceType, err error) {
 func ServiceType_Set(p *radius.Packet, value ServiceType) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(ServiceType_Type, a)
-	return nil
+	return
 }
 
 type FramedProtocol uint32
@@ -553,7 +553,7 @@ func (a FramedProtocol) String() string {
 func FramedProtocol_Add(p *radius.Packet, value FramedProtocol) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(FramedProtocol_Type, a)
-	return nil
+	return
 }
 
 func FramedProtocol_Get(p *radius.Packet) (value FramedProtocol) {
@@ -591,7 +591,7 @@ func FramedProtocol_Lookup(p *radius.Packet) (value FramedProtocol, err error) {
 func FramedProtocol_Set(p *radius.Packet, value FramedProtocol) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(FramedProtocol_Type, a)
-	return nil
+	return
 }
 
 func FramedIPAddress_Add(p *radius.Packet, value net.IP) (err error) {
@@ -601,7 +601,7 @@ func FramedIPAddress_Add(p *radius.Packet, value net.IP) (err error) {
 		return
 	}
 	p.Add(FramedIPAddress_Type, a)
-	return nil
+	return
 }
 
 func FramedIPAddress_Get(p *radius.Packet) (value net.IP) {
@@ -638,7 +638,7 @@ func FramedIPAddress_Set(p *radius.Packet, value net.IP) (err error) {
 		return
 	}
 	p.Set(FramedIPAddress_Type, a)
-	return nil
+	return
 }
 
 func FramedIPNetmask_Add(p *radius.Packet, value net.IP) (err error) {
@@ -648,7 +648,7 @@ func FramedIPNetmask_Add(p *radius.Packet, value net.IP) (err error) {
 		return
 	}
 	p.Add(FramedIPNetmask_Type, a)
-	return nil
+	return
 }
 
 func FramedIPNetmask_Get(p *radius.Packet) (value net.IP) {
@@ -685,7 +685,7 @@ func FramedIPNetmask_Set(p *radius.Packet, value net.IP) (err error) {
 		return
 	}
 	p.Set(FramedIPNetmask_Type, a)
-	return nil
+	return
 }
 
 type FramedRouting uint32
@@ -714,7 +714,7 @@ func (a FramedRouting) String() string {
 func FramedRouting_Add(p *radius.Packet, value FramedRouting) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(FramedRouting_Type, a)
-	return nil
+	return
 }
 
 func FramedRouting_Get(p *radius.Packet) (value FramedRouting) {
@@ -752,7 +752,7 @@ func FramedRouting_Lookup(p *radius.Packet) (value FramedRouting, err error) {
 func FramedRouting_Set(p *radius.Packet, value FramedRouting) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(FramedRouting_Type, a)
-	return nil
+	return
 }
 
 func FilterID_Add(p *radius.Packet, value []byte) (err error) {
@@ -762,7 +762,7 @@ func FilterID_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(FilterID_Type, a)
-	return nil
+	return
 }
 
 func FilterID_AddString(p *radius.Packet, value string) (err error) {
@@ -772,7 +772,7 @@ func FilterID_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(FilterID_Type, a)
-	return nil
+	return
 }
 
 func FilterID_Get(p *radius.Packet) (value []byte) {
@@ -862,7 +862,7 @@ func (a FramedMTU) String() string {
 func FramedMTU_Add(p *radius.Packet, value FramedMTU) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(FramedMTU_Type, a)
-	return nil
+	return
 }
 
 func FramedMTU_Get(p *radius.Packet) (value FramedMTU) {
@@ -900,7 +900,7 @@ func FramedMTU_Lookup(p *radius.Packet) (value FramedMTU, err error) {
 func FramedMTU_Set(p *radius.Packet, value FramedMTU) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(FramedMTU_Type, a)
-	return nil
+	return
 }
 
 type FramedCompression uint32
@@ -929,7 +929,7 @@ func (a FramedCompression) String() string {
 func FramedCompression_Add(p *radius.Packet, value FramedCompression) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(FramedCompression_Type, a)
-	return nil
+	return
 }
 
 func FramedCompression_Get(p *radius.Packet) (value FramedCompression) {
@@ -967,7 +967,7 @@ func FramedCompression_Lookup(p *radius.Packet) (value FramedCompression, err er
 func FramedCompression_Set(p *radius.Packet, value FramedCompression) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(FramedCompression_Type, a)
-	return nil
+	return
 }
 
 func LoginIPHost_Add(p *radius.Packet, value net.IP) (err error) {
@@ -977,7 +977,7 @@ func LoginIPHost_Add(p *radius.Packet, value net.IP) (err error) {
 		return
 	}
 	p.Add(LoginIPHost_Type, a)
-	return nil
+	return
 }
 
 func LoginIPHost_Get(p *radius.Packet) (value net.IP) {
@@ -1014,7 +1014,7 @@ func LoginIPHost_Set(p *radius.Packet, value net.IP) (err error) {
 		return
 	}
 	p.Set(LoginIPHost_Type, a)
-	return nil
+	return
 }
 
 type LoginService uint32
@@ -1051,7 +1051,7 @@ func (a LoginService) String() string {
 func LoginService_Add(p *radius.Packet, value LoginService) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(LoginService_Type, a)
-	return nil
+	return
 }
 
 func LoginService_Get(p *radius.Packet) (value LoginService) {
@@ -1089,7 +1089,7 @@ func LoginService_Lookup(p *radius.Packet) (value LoginService, err error) {
 func LoginService_Set(p *radius.Packet, value LoginService) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(LoginService_Type, a)
-	return nil
+	return
 }
 
 type LoginTCPPort uint32
@@ -1116,7 +1116,7 @@ func (a LoginTCPPort) String() string {
 func LoginTCPPort_Add(p *radius.Packet, value LoginTCPPort) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(LoginTCPPort_Type, a)
-	return nil
+	return
 }
 
 func LoginTCPPort_Get(p *radius.Packet) (value LoginTCPPort) {
@@ -1154,7 +1154,7 @@ func LoginTCPPort_Lookup(p *radius.Packet) (value LoginTCPPort, err error) {
 func LoginTCPPort_Set(p *radius.Packet, value LoginTCPPort) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(LoginTCPPort_Type, a)
-	return nil
+	return
 }
 
 func ReplyMessage_Add(p *radius.Packet, value []byte) (err error) {
@@ -1164,7 +1164,7 @@ func ReplyMessage_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(ReplyMessage_Type, a)
-	return nil
+	return
 }
 
 func ReplyMessage_AddString(p *radius.Packet, value string) (err error) {
@@ -1174,7 +1174,7 @@ func ReplyMessage_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(ReplyMessage_Type, a)
-	return nil
+	return
 }
 
 func ReplyMessage_Get(p *radius.Packet) (value []byte) {
@@ -1257,7 +1257,7 @@ func CallbackNumber_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(CallbackNumber_Type, a)
-	return nil
+	return
 }
 
 func CallbackNumber_AddString(p *radius.Packet, value string) (err error) {
@@ -1267,7 +1267,7 @@ func CallbackNumber_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(CallbackNumber_Type, a)
-	return nil
+	return
 }
 
 func CallbackNumber_Get(p *radius.Packet) (value []byte) {
@@ -1350,7 +1350,7 @@ func CallbackID_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(CallbackID_Type, a)
-	return nil
+	return
 }
 
 func CallbackID_AddString(p *radius.Packet, value string) (err error) {
@@ -1360,7 +1360,7 @@ func CallbackID_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(CallbackID_Type, a)
-	return nil
+	return
 }
 
 func CallbackID_Get(p *radius.Packet) (value []byte) {
@@ -1443,7 +1443,7 @@ func FramedRoute_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(FramedRoute_Type, a)
-	return nil
+	return
 }
 
 func FramedRoute_AddString(p *radius.Packet, value string) (err error) {
@@ -1453,7 +1453,7 @@ func FramedRoute_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(FramedRoute_Type, a)
-	return nil
+	return
 }
 
 func FramedRoute_Get(p *radius.Packet) (value []byte) {
@@ -1536,7 +1536,7 @@ func FramedIPXNetwork_Add(p *radius.Packet, value net.IP) (err error) {
 		return
 	}
 	p.Add(FramedIPXNetwork_Type, a)
-	return nil
+	return
 }
 
 func FramedIPXNetwork_Get(p *radius.Packet) (value net.IP) {
@@ -1573,7 +1573,7 @@ func FramedIPXNetwork_Set(p *radius.Packet, value net.IP) (err error) {
 		return
 	}
 	p.Set(FramedIPXNetwork_Type, a)
-	return nil
+	return
 }
 
 func State_Add(p *radius.Packet, value []byte) (err error) {
@@ -1583,7 +1583,7 @@ func State_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(State_Type, a)
-	return nil
+	return
 }
 
 func State_AddString(p *radius.Packet, value string) (err error) {
@@ -1593,7 +1593,7 @@ func State_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(State_Type, a)
-	return nil
+	return
 }
 
 func State_Get(p *radius.Packet) (value []byte) {
@@ -1676,7 +1676,7 @@ func Class_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(Class_Type, a)
-	return nil
+	return
 }
 
 func Class_AddString(p *radius.Packet, value string) (err error) {
@@ -1686,7 +1686,7 @@ func Class_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(Class_Type, a)
-	return nil
+	return
 }
 
 func Class_Get(p *radius.Packet) (value []byte) {
@@ -1776,7 +1776,7 @@ func (a SessionTimeout) String() string {
 func SessionTimeout_Add(p *radius.Packet, value SessionTimeout) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(SessionTimeout_Type, a)
-	return nil
+	return
 }
 
 func SessionTimeout_Get(p *radius.Packet) (value SessionTimeout) {
@@ -1814,7 +1814,7 @@ func SessionTimeout_Lookup(p *radius.Packet) (value SessionTimeout, err error) {
 func SessionTimeout_Set(p *radius.Packet, value SessionTimeout) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(SessionTimeout_Type, a)
-	return nil
+	return
 }
 
 type IdleTimeout uint32
@@ -1831,7 +1831,7 @@ func (a IdleTimeout) String() string {
 func IdleTimeout_Add(p *radius.Packet, value IdleTimeout) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(IdleTimeout_Type, a)
-	return nil
+	return
 }
 
 func IdleTimeout_Get(p *radius.Packet) (value IdleTimeout) {
@@ -1869,7 +1869,7 @@ func IdleTimeout_Lookup(p *radius.Packet) (value IdleTimeout, err error) {
 func IdleTimeout_Set(p *radius.Packet, value IdleTimeout) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(IdleTimeout_Type, a)
-	return nil
+	return
 }
 
 type TerminationAction uint32
@@ -1894,7 +1894,7 @@ func (a TerminationAction) String() string {
 func TerminationAction_Add(p *radius.Packet, value TerminationAction) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(TerminationAction_Type, a)
-	return nil
+	return
 }
 
 func TerminationAction_Get(p *radius.Packet) (value TerminationAction) {
@@ -1932,7 +1932,7 @@ func TerminationAction_Lookup(p *radius.Packet) (value TerminationAction, err er
 func TerminationAction_Set(p *radius.Packet, value TerminationAction) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(TerminationAction_Type, a)
-	return nil
+	return
 }
 
 func CalledStationID_Add(p *radius.Packet, value []byte) (err error) {
@@ -1942,7 +1942,7 @@ func CalledStationID_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(CalledStationID_Type, a)
-	return nil
+	return
 }
 
 func CalledStationID_AddString(p *radius.Packet, value string) (err error) {
@@ -1952,7 +1952,7 @@ func CalledStationID_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(CalledStationID_Type, a)
-	return nil
+	return
 }
 
 func CalledStationID_Get(p *radius.Packet) (value []byte) {
@@ -2035,7 +2035,7 @@ func CallingStationID_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(CallingStationID_Type, a)
-	return nil
+	return
 }
 
 func CallingStationID_AddString(p *radius.Packet, value string) (err error) {
@@ -2045,7 +2045,7 @@ func CallingStationID_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(CallingStationID_Type, a)
-	return nil
+	return
 }
 
 func CallingStationID_Get(p *radius.Packet) (value []byte) {
@@ -2128,7 +2128,7 @@ func NASIdentifier_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(NASIdentifier_Type, a)
-	return nil
+	return
 }
 
 func NASIdentifier_AddString(p *radius.Packet, value string) (err error) {
@@ -2138,7 +2138,7 @@ func NASIdentifier_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(NASIdentifier_Type, a)
-	return nil
+	return
 }
 
 func NASIdentifier_Get(p *radius.Packet) (value []byte) {
@@ -2221,7 +2221,7 @@ func ProxyState_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(ProxyState_Type, a)
-	return nil
+	return
 }
 
 func ProxyState_AddString(p *radius.Packet, value string) (err error) {
@@ -2231,7 +2231,7 @@ func ProxyState_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(ProxyState_Type, a)
-	return nil
+	return
 }
 
 func ProxyState_Get(p *radius.Packet) (value []byte) {
@@ -2314,7 +2314,7 @@ func LoginLATService_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(LoginLATService_Type, a)
-	return nil
+	return
 }
 
 func LoginLATService_AddString(p *radius.Packet, value string) (err error) {
@@ -2324,7 +2324,7 @@ func LoginLATService_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(LoginLATService_Type, a)
-	return nil
+	return
 }
 
 func LoginLATService_Get(p *radius.Packet) (value []byte) {
@@ -2407,7 +2407,7 @@ func LoginLATNode_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(LoginLATNode_Type, a)
-	return nil
+	return
 }
 
 func LoginLATNode_AddString(p *radius.Packet, value string) (err error) {
@@ -2417,7 +2417,7 @@ func LoginLATNode_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(LoginLATNode_Type, a)
-	return nil
+	return
 }
 
 func LoginLATNode_Get(p *radius.Packet) (value []byte) {
@@ -2500,7 +2500,7 @@ func LoginLATGroup_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(LoginLATGroup_Type, a)
-	return nil
+	return
 }
 
 func LoginLATGroup_AddString(p *radius.Packet, value string) (err error) {
@@ -2510,7 +2510,7 @@ func LoginLATGroup_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(LoginLATGroup_Type, a)
-	return nil
+	return
 }
 
 func LoginLATGroup_Get(p *radius.Packet) (value []byte) {
@@ -2600,7 +2600,7 @@ func (a FramedAppleTalkLink) String() string {
 func FramedAppleTalkLink_Add(p *radius.Packet, value FramedAppleTalkLink) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(FramedAppleTalkLink_Type, a)
-	return nil
+	return
 }
 
 func FramedAppleTalkLink_Get(p *radius.Packet) (value FramedAppleTalkLink) {
@@ -2638,7 +2638,7 @@ func FramedAppleTalkLink_Lookup(p *radius.Packet) (value FramedAppleTalkLink, er
 func FramedAppleTalkLink_Set(p *radius.Packet, value FramedAppleTalkLink) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(FramedAppleTalkLink_Type, a)
-	return nil
+	return
 }
 
 type FramedAppleTalkNetwork uint32
@@ -2655,7 +2655,7 @@ func (a FramedAppleTalkNetwork) String() string {
 func FramedAppleTalkNetwork_Add(p *radius.Packet, value FramedAppleTalkNetwork) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(FramedAppleTalkNetwork_Type, a)
-	return nil
+	return
 }
 
 func FramedAppleTalkNetwork_Get(p *radius.Packet) (value FramedAppleTalkNetwork) {
@@ -2693,7 +2693,7 @@ func FramedAppleTalkNetwork_Lookup(p *radius.Packet) (value FramedAppleTalkNetwo
 func FramedAppleTalkNetwork_Set(p *radius.Packet, value FramedAppleTalkNetwork) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(FramedAppleTalkNetwork_Type, a)
-	return nil
+	return
 }
 
 func FramedAppleTalkZone_Add(p *radius.Packet, value []byte) (err error) {
@@ -2703,7 +2703,7 @@ func FramedAppleTalkZone_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(FramedAppleTalkZone_Type, a)
-	return nil
+	return
 }
 
 func FramedAppleTalkZone_AddString(p *radius.Packet, value string) (err error) {
@@ -2713,7 +2713,7 @@ func FramedAppleTalkZone_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(FramedAppleTalkZone_Type, a)
-	return nil
+	return
 }
 
 func FramedAppleTalkZone_Get(p *radius.Packet) (value []byte) {
@@ -2796,7 +2796,7 @@ func CHAPChallenge_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(CHAPChallenge_Type, a)
-	return nil
+	return
 }
 
 func CHAPChallenge_AddString(p *radius.Packet, value string) (err error) {
@@ -2806,7 +2806,7 @@ func CHAPChallenge_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(CHAPChallenge_Type, a)
-	return nil
+	return
 }
 
 func CHAPChallenge_Get(p *radius.Packet) (value []byte) {
@@ -2940,7 +2940,7 @@ func (a NASPortType) String() string {
 func NASPortType_Add(p *radius.Packet, value NASPortType) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(NASPortType_Type, a)
-	return nil
+	return
 }
 
 func NASPortType_Get(p *radius.Packet) (value NASPortType) {
@@ -2978,7 +2978,7 @@ func NASPortType_Lookup(p *radius.Packet) (value NASPortType, err error) {
 func NASPortType_Set(p *radius.Packet, value NASPortType) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(NASPortType_Type, a)
-	return nil
+	return
 }
 
 type PortLimit uint32
@@ -2995,7 +2995,7 @@ func (a PortLimit) String() string {
 func PortLimit_Add(p *radius.Packet, value PortLimit) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Add(PortLimit_Type, a)
-	return nil
+	return
 }
 
 func PortLimit_Get(p *radius.Packet) (value PortLimit) {
@@ -3033,7 +3033,7 @@ func PortLimit_Lookup(p *radius.Packet) (value PortLimit, err error) {
 func PortLimit_Set(p *radius.Packet, value PortLimit) (err error) {
 	a := radius.NewInteger(uint32(value))
 	p.Set(PortLimit_Type, a)
-	return nil
+	return
 }
 
 func LoginLATPort_Add(p *radius.Packet, value []byte) (err error) {
@@ -3043,7 +3043,7 @@ func LoginLATPort_Add(p *radius.Packet, value []byte) (err error) {
 		return
 	}
 	p.Add(LoginLATPort_Type, a)
-	return nil
+	return
 }
 
 func LoginLATPort_AddString(p *radius.Packet, value string) (err error) {
@@ -3053,7 +3053,7 @@ func LoginLATPort_AddString(p *radius.Packet, value string) (err error) {
 		return
 	}
 	p.Add(LoginLATPort_Type, a)
-	return nil
+	return
 }
 
 func LoginLATPort_Get(p *radius.Packet) (value []byte) {

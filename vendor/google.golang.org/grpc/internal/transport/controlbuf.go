@@ -285,6 +285,21 @@ func (c *controlBuffer) executeAndPut(f func(it interface{}) bool, it interface{
 	return true, nil
 }
 
+// Note argument f should never be nil.
+func (c *controlBuffer) execute(f func(it interface{}) bool, it interface{}) (bool, error) {
+	c.mu.Lock()
+	if c.err != nil {
+		c.mu.Unlock()
+		return false, c.err
+	}
+	if !f(it) { // f wasn't successful
+		c.mu.Unlock()
+		return false, nil
+	}
+	c.mu.Unlock()
+	return true, nil
+}
+
 func (c *controlBuffer) get(block bool) (interface{}, error) {
 	for {
 		c.mu.Lock()

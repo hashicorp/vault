@@ -29,10 +29,11 @@ Currently, OpenCensus supports:
 
 * [Prometheus][exporter-prom] for stats
 * [OpenZipkin][exporter-zipkin] for traces
-* Stackdriver [Monitoring][exporter-stackdriver] and [Trace][exporter-stackdriver]
+* [Stackdriver][exporter-stackdriver] Monitoring for stats and Trace for traces
 * [Jaeger][exporter-jaeger] for traces
 * [AWS X-Ray][exporter-xray] for traces
 * [Datadog][exporter-datadog] for stats and traces
+
 ## Overview
 
 ![OpenCensus Overview](https://i.imgur.com/cf4ElHE.jpg)
@@ -129,11 +130,64 @@ exported via the registered exporters.
 
 ## Traces
 
+A distributed trace tracks the progression of a single user request as
+it is handled by the services and processes that make up an application.
+Each step is called a span in the trace. Spans include metadata about the step,
+including especially the time spent in the step, called the span’s latency.
+
+Below you see a trace and several spans underneath it.
+
+![Traces and spans](https://i.imgur.com/7hZwRVj.png)
+
+### Spans
+
+Span is the unit step in a trace. Each span has a name, latency, status and
+additional metadata.
+
+Below we are starting a span for a cache read and ending it
+when we are done:
+
 [embedmd]:# (internal/readme/trace.go startend)
 ```go
-ctx, span := trace.StartSpan(ctx, "your choice of name")
+ctx, span := trace.StartSpan(ctx, "cache.Get")
 defer span.End()
+
+// Do work to get from cache.
 ```
+
+### Propagation
+
+Spans can have parents or can be root spans if they don't have any parents.
+The current span is propagated in-process and across the network to allow associating
+new child spans with the parent.
+
+In the same process, context.Context is used to propagate spans.
+trace.StartSpan creates a new span as a root if the current context
+doesn't contain a span. Or, it creates a child of the span that is
+already in current context. The returned context can be used to keep
+propagating the newly created span in the current context.
+
+[embedmd]:# (internal/readme/trace.go startend)
+```go
+ctx, span := trace.StartSpan(ctx, "cache.Get")
+defer span.End()
+
+// Do work to get from cache.
+```
+
+Across the network, OpenCensus provides different propagation
+methods for different protocols.
+
+* gRPC integrations uses the OpenCensus' [binary propagation format](https://godoc.org/go.opencensus.io/trace/propagation).
+* HTTP integrations uses Zipkin's [B3](https://github.com/openzipkin/b3-propagation)
+  by default but can be configured to use a custom propagation method by setting another
+  [propagation.HTTPFormat](https://godoc.org/go.opencensus.io/trace/propagation#HTTPFormat).
+
+## Execution Tracer
+
+With Go 1.11, OpenCensus Go will support integration with the Go execution tracer.
+See [Debugging Latency in Go](https://medium.com/observability/debugging-latency-in-go-1-11-9f97a7910d68)
+for an example of their mutual use.
 
 ## Profiles
 

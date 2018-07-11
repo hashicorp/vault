@@ -218,7 +218,7 @@ func (s *PacketServer) ListenAndServe() error {
 // Shutdown returns after nil all handlers have completed. ctx.Err() is
 // returned if ctx is canceled.
 //
-// Any Serve methods return ErrShutdown if used after Shutdown is called.
+// Any Serve methods return ErrShutdown after Shutdown is called.
 func (s *PacketServer) Shutdown(ctx context.Context) error {
 	s.mu.Lock()
 	s.initLocked()

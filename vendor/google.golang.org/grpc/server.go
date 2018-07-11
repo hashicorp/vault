@@ -45,12 +45,12 @@ import (
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/internal"
 	"google.golang.org/grpc/internal/channelz"
+	"google.golang.org/grpc/internal/transport"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/tap"
-	"google.golang.org/grpc/transport"
 )
 
 const (
@@ -135,6 +135,7 @@ type options struct {
 	writeBufferSize       int
 	readBufferSize        int
 	connectionTimeout     time.Duration
+	maxHeaderListSize     *uint32
 }
 
 var defaultServerOptions = options{
@@ -340,6 +341,14 @@ func UnknownServiceHandler(streamHandler StreamHandler) ServerOption {
 func ConnectionTimeout(d time.Duration) ServerOption {
 	return func(o *options) {
 		o.connectionTimeout = d
+	}
+}
+
+// MaxHeaderListSize returns a ServerOption that sets the max (uncompressed) size
+// of header list that the server is prepared to accept.
+func MaxHeaderListSize(s uint32) ServerOption {
+	return func(o *options) {
+		o.maxHeaderListSize = &s
 	}
 }
 
@@ -665,6 +674,7 @@ func (s *Server) newHTTP2Transport(c net.Conn, authInfo credentials.AuthInfo) tr
 		WriteBufferSize:       s.opts.writeBufferSize,
 		ReadBufferSize:        s.opts.readBufferSize,
 		ChannelzParentID:      s.channelzID,
+		MaxHeaderListSize:     s.opts.maxHeaderListSize,
 	}
 	st, err := transport.NewServerTransport("http2", c, config)
 	if err != nil {
