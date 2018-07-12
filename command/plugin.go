@@ -29,7 +29,7 @@ Usage: vault plugin <subcommand> [options] [args]
 
   Register a new plugin to the catalog:
 
-      $ vault plugin register my-custom-plugin -sha256=d3f0a8b...
+      $ vault plugin register -sha256=d3f0a8b... my-custom-plugin
 
   Get information about a plugin in the catalog:
 
