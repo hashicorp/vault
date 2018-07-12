@@ -14,11 +14,11 @@ auto_auth {
 		tls_skip_verify = true
 	}
 
-	token_sink "file" {
+	sink "file" {
 		path = "/tmp/file-foo"
 	}
 
-	token_sink "file" {
+	sink "file" {
 		path = "/tmp/file-bar"
 	}
 }
