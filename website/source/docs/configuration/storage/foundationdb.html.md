@@ -12,10 +12,14 @@ description: |-
 The FoundationDB storage backend is used to persist Vault's data in
 [FoundationDB][foundationdb] table.
 
+The backend needs to be explicitly enabled at build time, and is not available
+in the standard Vault binary distribution. Please refer to the documentation
+accompanying the backend's source in the Vault source tree.
+
 - **High Availability** – the FoundationDB storage backend supports high
   availability. The HA implementation relies on the clocks of the Vault
   nodes inside the cluster being properly sychronized; clock skews are
-  susceptible to cause issues.
+  susceptible to cause contention on the locks.
 
 ```hcl
 storage "foundationdb" {
@@ -94,7 +98,7 @@ When building Vault, pass the `-r /dest/dir/for/primary` option to the Go
 linker, for instance:
 
 ```
-$ make dev LD_FLAGS="-r /dest/dir/for/primary "
+$ make dev FDB_ENABLED=1 LD_FLAGS="-r /dest/dir/for/primary "
 ```
 
 (Note the trailing space in the variable value above).
