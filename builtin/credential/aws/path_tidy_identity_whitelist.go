@@ -3,6 +3,7 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -33,12 +34,14 @@ expiration, before it is removed from the backend storage.`,
 }
 
 // tidyWhitelistIdentity is used to delete entries in the whitelist that are expired.
-func (b *backend) tidyWhitelistIdentity(ctx context.Context, s logical.Storage, safetyBuffer int) (*logical.Response, error) {
+func (b *backend) tidyWhitelistIdentity(ctx context.Context, req *logical.Request, safetyBuffer int) (*logical.Response, error) {
 	if !atomic.CompareAndSwapUint32(b.tidyWhitelistCASGuard, 0, 1) {
 		resp := &logical.Response{}
 		resp.AddWarning("Tidy operation already in progress.")
 		return resp, nil
 	}
+
+	s := req.Storage
 
 	go func() {
 		defer atomic.StoreUint32(b.tidyWhitelistCASGuard, 0)
@@ -93,12 +96,12 @@ func (b *backend) tidyWhitelistIdentity(ctx context.Context, s logical.Storage, 
 
 	resp := &logical.Response{}
 	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
-	return resp, nil
+	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
 // pathTidyIdentityWhitelistUpdate is used to delete entries in the whitelist that are expired.
 func (b *backend) pathTidyIdentityWhitelistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.tidyWhitelistIdentity(ctx, req.Storage, data.Get("safety_buffer").(int))
+	return b.tidyWhitelistIdentity(ctx, req, data.Get("safety_buffer").(int))
 }
 
 const pathTidyIdentityWhitelistSyn = `

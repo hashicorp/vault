@@ -11,7 +11,7 @@ import (
 	nomadapi "github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/mapstructure"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, nomadToken string) {

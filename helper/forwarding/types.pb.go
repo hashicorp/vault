@@ -22,12 +22,12 @@ type Request struct {
 	// Not used right now but reserving in case it turns out that streaming
 	// makes things more economical on the gRPC side
 	// uint64 id = 1;
-	Method               string                  `protobuf:"bytes,2,opt,name=method" json:"method,omitempty"`
-	Url                  *URL                    `protobuf:"bytes,3,opt,name=url" json:"url,omitempty"`
-	HeaderEntries        map[string]*HeaderEntry `protobuf:"bytes,4,rep,name=header_entries,json=headerEntries" json:"header_entries,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Method               string                  `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
+	Url                  *URL                    `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
+	HeaderEntries        map[string]*HeaderEntry `protobuf:"bytes,4,rep,name=header_entries,json=headerEntries,proto3" json:"header_entries,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	Body                 []byte                  `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
-	Host                 string                  `protobuf:"bytes,6,opt,name=host" json:"host,omitempty"`
-	RemoteAddr           string                  `protobuf:"bytes,7,opt,name=remote_addr,json=remoteAddr" json:"remote_addr,omitempty"`
+	Host                 string                  `protobuf:"bytes,6,opt,name=host,proto3" json:"host,omitempty"`
+	RemoteAddr           string                  `protobuf:"bytes,7,opt,name=remote_addr,json=remoteAddr,proto3" json:"remote_addr,omitempty"`
 	PeerCertificates     [][]byte                `protobuf:"bytes,8,rep,name=peer_certificates,json=peerCertificates,proto3" json:"peer_certificates,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                `json:"-"`
 	XXX_unrecognized     []byte                  `json:"-"`
@@ -38,7 +38,7 @@ func (m *Request) Reset()         { *m = Request{} }
 func (m *Request) String() string { return proto.CompactTextString(m) }
 func (*Request) ProtoMessage()    {}
 func (*Request) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_6ebfa235129f89d8, []int{0}
+	return fileDescriptor_types_7ccf0973261c4726, []int{0}
 }
 func (m *Request) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Request.Unmarshal(m, b)
@@ -108,18 +108,18 @@ func (m *Request) GetPeerCertificates() [][]byte {
 }
 
 type URL struct {
-	Scheme string `protobuf:"bytes,1,opt,name=scheme" json:"scheme,omitempty"`
-	Opaque string `protobuf:"bytes,2,opt,name=opaque" json:"opaque,omitempty"`
+	Scheme string `protobuf:"bytes,1,opt,name=scheme,proto3" json:"scheme,omitempty"`
+	Opaque string `protobuf:"bytes,2,opt,name=opaque,proto3" json:"opaque,omitempty"`
 	// This isn't needed now but might be in the future, so we'll skip the
 	// number to keep the ordering in net/url
 	// UserInfo user = 3;
-	Host    string `protobuf:"bytes,4,opt,name=host" json:"host,omitempty"`
-	Path    string `protobuf:"bytes,5,opt,name=path" json:"path,omitempty"`
-	RawPath string `protobuf:"bytes,6,opt,name=raw_path,json=rawPath" json:"raw_path,omitempty"`
+	Host    string `protobuf:"bytes,4,opt,name=host,proto3" json:"host,omitempty"`
+	Path    string `protobuf:"bytes,5,opt,name=path,proto3" json:"path,omitempty"`
+	RawPath string `protobuf:"bytes,6,opt,name=raw_path,json=rawPath,proto3" json:"raw_path,omitempty"`
 	// This also isn't needed right now, but we'll reserve the number
 	// bool force_query = 7;
-	RawQuery             string   `protobuf:"bytes,8,opt,name=raw_query,json=rawQuery" json:"raw_query,omitempty"`
-	Fragment             string   `protobuf:"bytes,9,opt,name=fragment" json:"fragment,omitempty"`
+	RawQuery             string   `protobuf:"bytes,8,opt,name=raw_query,json=rawQuery,proto3" json:"raw_query,omitempty"`
+	Fragment             string   `protobuf:"bytes,9,opt,name=fragment,proto3" json:"fragment,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -129,7 +129,7 @@ func (m *URL) Reset()         { *m = URL{} }
 func (m *URL) String() string { return proto.CompactTextString(m) }
 func (*URL) ProtoMessage()    {}
 func (*URL) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_6ebfa235129f89d8, []int{1}
+	return fileDescriptor_types_7ccf0973261c4726, []int{1}
 }
 func (m *URL) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_URL.Unmarshal(m, b)
@@ -199,7 +199,7 @@ func (m *URL) GetFragment() string {
 }
 
 type HeaderEntry struct {
-	Values               []string `protobuf:"bytes,1,rep,name=values" json:"values,omitempty"`
+	Values               []string `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -209,7 +209,7 @@ func (m *HeaderEntry) Reset()         { *m = HeaderEntry{} }
 func (m *HeaderEntry) String() string { return proto.CompactTextString(m) }
 func (*HeaderEntry) ProtoMessage()    {}
 func (*HeaderEntry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_6ebfa235129f89d8, []int{2}
+	return fileDescriptor_types_7ccf0973261c4726, []int{2}
 }
 func (m *HeaderEntry) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HeaderEntry.Unmarshal(m, b)
@@ -240,11 +240,11 @@ type Response struct {
 	// Not used right now but reserving in case it turns out that streaming
 	// makes things more economical on the gRPC side
 	// uint64 id = 1;
-	StatusCode uint32 `protobuf:"varint,2,opt,name=status_code,json=statusCode" json:"status_code,omitempty"`
+	StatusCode uint32 `protobuf:"varint,2,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
 	Body       []byte `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
 	// Added in 0.6.2 to ensure that the content-type is set appropriately, as
 	// well as any other information
-	HeaderEntries        map[string]*HeaderEntry `protobuf:"bytes,4,rep,name=header_entries,json=headerEntries" json:"header_entries,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	HeaderEntries        map[string]*HeaderEntry `protobuf:"bytes,4,rep,name=header_entries,json=headerEntries,proto3" json:"header_entries,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	XXX_NoUnkeyedLiteral struct{}                `json:"-"`
 	XXX_unrecognized     []byte                  `json:"-"`
 	XXX_sizecache        int32                   `json:"-"`
@@ -254,7 +254,7 @@ func (m *Response) Reset()         { *m = Response{} }
 func (m *Response) String() string { return proto.CompactTextString(m) }
 func (*Response) ProtoMessage()    {}
 func (*Response) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_6ebfa235129f89d8, []int{3}
+	return fileDescriptor_types_7ccf0973261c4726, []int{3}
 }
 func (m *Response) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Response.Unmarshal(m, b)
@@ -305,10 +305,10 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("helper/forwarding/types.proto", fileDescriptor_types_6ebfa235129f89d8)
+	proto.RegisterFile("helper/forwarding/types.proto", fileDescriptor_types_7ccf0973261c4726)
 }
 
-var fileDescriptor_types_6ebfa235129f89d8 = []byte{
+var fileDescriptor_types_7ccf0973261c4726 = []byte{
 	// 475 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x53, 0x4f, 0x8f, 0xd3, 0x3e,
 	0x10, 0x55, 0x9a, 0x6e, 0xff, 0x4c, 0x77, 0x7f, 0xbf, 0xc5, 0x07, 0x30, 0x8b, 0x10, 0xa1, 0x12,

@@ -1,14 +1,36 @@
 ## Next
 
+DEPRECATIONS/CHANGES:
+
+ * Revocations of dynamic secrets leases are now queued/asynchronous rather
+   than synchronous. This allows Vault to take responsibility for revocation
+   even if the initial attempt fails. The previous synchronous behavior can be
+   attained via the `-sync` CLI flag or `sync` API parameter. When in
+   synchronous mode, if the operation results in failure it is up to the user
+   to retry.
+
+FEATURES:
+
+ * JWT/OIDC Auth Method: The new `jwt` auth method accepts JWTs and either
+   validates signatures locally or uses OIDC Discovery to fetch the current set
+   of keys for signature validation. Various claims can be specified for
+   validation (in addition to the cryptographic signature) and a user and
+   optional groups claim can be used to provide Identity information.
+
 IMPROVEMENTS:
 
  * core: A `max_request_size` parameter can now be set per-listener to adjust
    the maximum allowed size per request [GH-4824]
+ * core: Add control group request endpoint to default policy [GH-4904]
+ * secrets/kv: Add support for using `-field=data` to KVv2 when using `vault
+   kv` [GH-4895]
 
 BUG FIXES:
 
  * core: Fix returning 500 instead of 503 if a rekey is attempted when Vault is
    sealed [GH-4874]
+ * secrets/pki: Fix permitted DNS domains performing improper validation
+   [GH-4863]
  * secrets/database: Fix panic during DB creds revocation [GH-4846]
 
 ## 0.10.3 (June 20th, 2018)

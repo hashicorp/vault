@@ -3,11 +3,13 @@ package vault
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -682,7 +684,7 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 	}
 
 	// Should nuke all the keys
-	if err := exp.RevokePrefix("prod/aws/"); err != nil {
+	if err := exp.RevokePrefix("prod/aws/", true); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -1435,6 +1437,97 @@ func TestExpiration_renewEntry(t *testing.T) {
 	}
 	if !reflect.DeepEqual(req.Data, le.Data) {
 		t.Fatalf("Bad: %v", req)
+	}
+}
+
+func TestExpiration_revokeEntry_rejected(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	exp := core.expiration
+
+	rejected := new(uint32)
+
+	noop := &NoopBackend{
+		RequestHandler: func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+			if req.Operation == logical.RevokeOperation {
+				if atomic.CompareAndSwapUint32(rejected, 0, 1) {
+					t.Logf("denying revocation")
+					return nil, errors.New("nope")
+				}
+				t.Logf("allowing revocation")
+			}
+			return nil, nil
+		},
+	}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "foo/bar/", &MountEntry{Path: "foo/bar/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	le := &leaseEntry{
+		LeaseID: "foo/bar/1234",
+		Path:    "foo/bar",
+		Data: map[string]interface{}{
+			"testing": true,
+		},
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: time.Minute,
+			},
+		},
+		IssueTime:  time.Now(),
+		ExpireTime: time.Now().Add(time.Minute),
+	}
+
+	err = exp.persistEntry(le)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = exp.LazyRevoke(le.LeaseID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Give time to let the request be handled
+	time.Sleep(1 * time.Second)
+
+	if atomic.LoadUint32(rejected) != 1 {
+		t.Fatal("unexpected val for rejected")
+	}
+
+	err = exp.Stop()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = core.setupExpiration()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp = core.expiration
+
+	for {
+		if !exp.inRestoreMode() {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	// Now let the revocation actually process
+	time.Sleep(1 * time.Second)
+
+	le, err = exp.FetchLeaseTimes(le.LeaseID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if le != nil {
+		t.Fatal("lease entry not nil")
 	}
 }
 

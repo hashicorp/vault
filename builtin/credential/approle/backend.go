@@ -157,7 +157,7 @@ func (b *backend) invalidate(_ context.Context, key string) {
 func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error {
 	// Initiate clean-up of expired SecretID entries
 	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
-		b.tidySecretID(ctx, req.Storage)
+		b.tidySecretID(ctx, req)
 	}
 	return nil
 }

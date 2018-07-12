@@ -129,11 +129,7 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 		return nil, err
 	}
 
-	if resp.StatusCode == 200 {
-		return ParseSecret(resp.Body)
-	}
-
-	return nil, nil
+	return ParseSecret(resp.Body)
 }
 
 func (c *Logical) Delete(path string) (*Secret, error) {
@@ -159,11 +155,7 @@ func (c *Logical) Delete(path string) (*Secret, error) {
 		return nil, err
 	}
 
-	if resp.StatusCode == 200 {
-		return ParseSecret(resp.Body)
-	}
-
-	return nil, nil
+	return ParseSecret(resp.Body)
 }
 
 func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {

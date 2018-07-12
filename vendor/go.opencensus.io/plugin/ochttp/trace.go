@@ -53,11 +53,11 @@ func (t *traceTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	name := t.formatSpanName(req)
 	// TODO(jbd): Discuss whether we want to prefix
 	// outgoing requests with Sent.
-	_, span := trace.StartSpan(req.Context(), name,
+	ctx, span := trace.StartSpan(req.Context(), name,
 		trace.WithSampler(t.startOptions.Sampler),
 		trace.WithSpanKind(trace.SpanKindClient))
 
-	req = req.WithContext(trace.WithSpan(req.Context(), span))
+	req = req.WithContext(ctx)
 	if t.format != nil {
 		t.format.SpanContextToRequest(span.SpanContext(), req)
 	}

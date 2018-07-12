@@ -41,13 +41,13 @@ import (
 	"google.golang.org/grpc/internal/backoff"
 	"google.golang.org/grpc/internal/channelz"
 	"google.golang.org/grpc/internal/envconfig"
+	"google.golang.org/grpc/internal/transport"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/resolver"
 	_ "google.golang.org/grpc/resolver/dns"         // To register dns resolver.
 	_ "google.golang.org/grpc/resolver/passthrough" // To register passthrough resolver.
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
-	"google.golang.org/grpc/transport"
 )
 
 const (
@@ -470,6 +470,14 @@ func defaultDialOptions() dialOptions {
 			WriteBufferSize: defaultWriteBufSize,
 			ReadBufferSize:  defaultReadBufSize,
 		},
+	}
+}
+
+// WithMaxHeaderListSize returns a DialOption that specifies the maximum (uncompressed) size of
+// header list that the client is prepared to accept.
+func WithMaxHeaderListSize(s uint32) DialOption {
+	return func(o *dialOptions) {
+		o.copts.MaxHeaderListSize = &s
 	}
 }
 
@@ -1051,8 +1059,10 @@ func (cc *ClientConn) GetMethodConfig(method string) MethodConfig {
 	return m
 }
 
-func (cc *ClientConn) getTransport(ctx context.Context, failfast bool) (transport.ClientTransport, func(balancer.DoneInfo), error) {
-	t, done, err := cc.blockingpicker.pick(ctx, failfast, balancer.PickOptions{})
+func (cc *ClientConn) getTransport(ctx context.Context, failfast bool, method string) (transport.ClientTransport, func(balancer.DoneInfo), error) {
+	t, done, err := cc.blockingpicker.pick(ctx, failfast, balancer.PickOptions{
+		FullMethodName: method,
+	})
 	if err != nil {
 		return nil, nil, toRPCErr(err)
 	}
@@ -1352,7 +1362,7 @@ func (ac *addrConn) createTransport(connectRetryNum, ridx int, backoffDeadline, 
 				// Didn't receive server preface, must kill this new transport now.
 				grpclog.Warningf("grpc: addrConn.createTransport failed to receive server preface before deadline.")
 				newTr.Close()
-				break
+				continue
 			case <-ac.ctx.Done():
 			}
 		}

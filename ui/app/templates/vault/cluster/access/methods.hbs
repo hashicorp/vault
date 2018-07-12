@@ -14,13 +14,16 @@
 
 {{#each (sort-by "path" model) as |method|}}
   <div
-    class="box is-sideless is-marginless"
+    class="list-item-row"
     data-test-auth-backend-link={{method.id}}
     >
     <div class="level is-mobile">
       <div class="level-left">
         <div>
-          {{i-con glyph="folder" size=14 class="has-text-grey-light"}} <span data-test-path data-test-id={{method.id}}>{{method.path}}</span>
+          {{i-con glyph="folder" size=14 class="has-text-grey-light"}}
+          <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-grey">
+            {{method.path}}
+          </span>
           <br />
           <span class="tag">
             {{#if (eq method.type 'plugin')}}

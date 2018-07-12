@@ -666,6 +666,11 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 					"update",
 				},
 			},
+			"sys/control-group/request": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
 			"sys/internal/ui/resultant-acl": map[string]interface{}{
 				"capabilities": []interface{}{
 					"read",

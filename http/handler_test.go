@@ -130,6 +130,26 @@ func TestHandler_CacheControlNoStore(t *testing.T) {
 	}
 }
 
+func TestHandler_Accepted(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	req, err := http.NewRequest("POST", addr+"/v1/auth/token/tidy", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(AuthHeaderName, token)
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	testResponseStatus(t, resp, 202)
+}
+
 // We use this test to verify header auth
 func TestSysMounts_headerAuth(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"time"
@@ -298,9 +299,20 @@ type SecretAuth struct {
 
 // ParseSecret is used to parse a secret value from JSON from an io.Reader.
 func ParseSecret(r io.Reader) (*Secret, error) {
+	// First read the data into a buffer. Not super efficient but we want to
+	// know if we actually have a body or not.
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(r)
+	if err != nil {
+		return nil, err
+	}
+	if buf.Len() == 0 {
+		return nil, nil
+	}
+
 	// First decode the JSON into a map[string]interface{}
 	var secret Secret
-	if err := jsonutil.DecodeJSONFromReader(r, &secret); err != nil {
+	if err := jsonutil.DecodeJSONFromReader(&buf, &secret); err != nil {
 		return nil, err
 	}
 

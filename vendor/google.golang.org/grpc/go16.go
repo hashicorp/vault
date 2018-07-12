@@ -28,8 +28,8 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/internal/transport"
 	"google.golang.org/grpc/status"
-	"google.golang.org/grpc/transport"
 )
 
 // dialContext connects to the address on the named network.

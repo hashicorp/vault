@@ -98,13 +98,6 @@ func FromContext(ctx context.Context) *Span {
 	return s
 }
 
-// WithSpan returns a new context with the given Span attached.
-//
-// Deprecated: Use NewContext.
-func WithSpan(parent context.Context, s *Span) context.Context {
-	return NewContext(parent, s)
-}
-
 // NewContext returns a new context with the given Span attached.
 func NewContext(parent context.Context, s *Span) context.Context {
 	return context.WithValue(parent, contextKey{}, s)
@@ -154,6 +147,9 @@ func WithSampler(sampler Sampler) StartOption {
 
 // StartSpan starts a new child span of the current span in the context. If
 // there is no span in the context, creates a new trace and span.
+//
+// Returned context contains the newly created span. You can use it to
+// propagate the returned span in process.
 func StartSpan(ctx context.Context, name string, o ...StartOption) (context.Context, *Span) {
 	var opts StartOptions
 	var parent SpanContext
@@ -174,6 +170,9 @@ func StartSpan(ctx context.Context, name string, o ...StartOption) (context.Cont
 //
 // If the incoming context contains a parent, it ignores. StartSpanWithRemoteParent is
 // preferred for cases where the parent is propagated via an incoming request.
+//
+// Returned context contains the newly created span. You can use it to
+// propagate the returned span in process.
 func StartSpanWithRemoteParent(ctx context.Context, name string, parent SpanContext, o ...StartOption) (context.Context, *Span) {
 	var opts StartOptions
 	for _, op := range o {
@@ -183,26 +182,6 @@ func StartSpanWithRemoteParent(ctx context.Context, name string, parent SpanCont
 	ctx, end := startExecutionTracerTask(ctx, name)
 	span.executionTracerTaskEnd = end
 	return NewContext(ctx, span), span
-}
-
-// NewSpan returns a new span.
-//
-// If parent is not nil, created span will be a child of the parent.
-//
-// Deprecated: Use StartSpan.
-func NewSpan(name string, parent *Span, o StartOptions) *Span {
-	var parentSpanContext SpanContext
-	if parent != nil {
-		parentSpanContext = parent.SpanContext()
-	}
-	return startSpanInternal(name, parent != nil, parentSpanContext, false, o)
-}
-
-// NewSpanWithRemoteParent returns a new span with the given parent SpanContext.
-//
-// Deprecated: Use StartSpanWithRemoteParent.
-func NewSpanWithRemoteParent(name string, parent SpanContext, o StartOptions) *Span {
-	return startSpanInternal(name, true, parent, true, o)
 }
 
 func startSpanInternal(name string, hasParent bool, parent SpanContext, remoteParent bool, o StartOptions) *Span {

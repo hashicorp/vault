@@ -2587,7 +2587,7 @@ func (c *EC2) CopySnapshotRequest(input *CopySnapshotInput) (req *request.Reques
 // To copy an encrypted snapshot that has been shared from another account,
 // you must have permissions for the CMK used to encrypt the snapshot.
 //
-// Snapshots created by the CopySnapshot action have an arbitrary volume ID
+// Snapshots created by copying another snapshot have an arbitrary volume ID
 // that should not be used for any purpose.
 //
 // For more information, see Copying an Amazon EBS Snapshot (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-copy-snapshot.html)
@@ -4728,7 +4728,8 @@ func (c *EC2) CreateSnapshotRequest(input *CreateSnapshotInput) (req *request.Re
 // protected.
 //
 // You can tag your snapshots during creation. For more information, see Tagging
-// Your Amazon EC2 Resources (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html).
+// Your Amazon EC2 Resources (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html)
+// in the Amazon Elastic Compute Cloud User Guide.
 //
 // For more information, see Amazon Elastic Block Store (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html)
 // and Amazon EBS Encryption (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html)
@@ -5082,7 +5083,8 @@ func (c *EC2) CreateVolumeRequest(input *CreateVolumeInput) (req *request.Reques
 // in the Amazon Elastic Compute Cloud User Guide.
 //
 // You can tag your volumes during creation. For more information, see Tagging
-// Your Amazon EC2 Resources (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html).
+// Your Amazon EC2 Resources (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html)
+// in the Amazon Elastic Compute Cloud User Guide.
 //
 // For more information, see Creating an Amazon EBS Volume (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-creating-volume.html)
 // in the Amazon Elastic Compute Cloud User Guide.
@@ -7634,7 +7636,7 @@ func (c *EC2) DeleteVolumeRequest(input *DeleteVolumeInput) (req *request.Reques
 // Deletes the specified EBS volume. The volume must be in the available state
 // (not attached to an instance).
 //
-// The volume may remain in the deleting state for several minutes.
+// The volume can remain in the deleting state for several minutes.
 //
 // For more information, see Deleting an Amazon EBS Volume (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-deleting-volume.html)
 // in the Amazon Elastic Compute Cloud User Guide.
@@ -14276,8 +14278,9 @@ func (c *EC2) DescribeVolumeStatusRequest(input *DescribeVolumeStatusInput) (req
 // status of the volume is ok. If the check fails, the overall status is impaired.
 // If the status is insufficient-data, then the checks may still be taking place
 // on your volume at the time. We recommend that you retry the request. For
-// more information on volume status, see Monitoring the Status of Your Volumes
-// (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-volume-status.html).
+// more information about volume status, see Monitoring the Status of Your Volumes
+// (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-volume-status.html)
+// in the Amazon Elastic Compute Cloud User Guide.
 //
 // Events: Reflect the cause of a volume status and may require you to take
 // action. For example, if your volume returns an impaired status, then the
@@ -14569,7 +14572,8 @@ func (c *EC2) DescribeVolumesModificationsRequest(input *DescribeVolumesModifica
 // You can also use CloudWatch Events to check the status of a modification
 // to an EBS volume. For information about CloudWatch Events, see the Amazon
 // CloudWatch Events User Guide (http://docs.aws.amazon.com/AmazonCloudWatch/latest/events/).
-// For more information, see Monitoring Volume Modifications" (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-expand-volume.html#monitoring_mods).
+// For more information, see Monitoring Volume Modifications" (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-expand-volume.html#monitoring_mods)
+// in the Amazon Elastic Compute Cloud User Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -18858,7 +18862,7 @@ func (c *EC2) ModifySnapshotAttributeRequest(input *ModifySnapshotAttributeInput
 // be made public. Snapshots encrypted with your default CMK cannot be shared
 // with other accounts.
 //
-// For more information on modifying snapshot permissions, see Sharing Snapshots
+// For more information about modifying snapshot permissions, see Sharing Snapshots
 // (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-modifying-snapshot-permissions.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
@@ -19131,10 +19135,9 @@ func (c *EC2) ModifyVolumeRequest(input *ModifyVolumeInput) (req *request.Reques
 //
 // With previous-generation instance types, resizing an EBS volume may require
 // detaching and reattaching the volume or stopping and restarting the instance.
-// For more information about modifying an EBS volume running Linux, see Modifying
-// the Size, IOPS, or Type of an EBS Volume on Linux (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-expand-volume.html).
-// For more information about modifying an EBS volume running Windows, see Modifying
-// the Size, IOPS, or Type of an EBS Volume on Windows (http://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/ebs-expand-volume.html).
+// For more information, see Modifying the Size, IOPS, or Type of an EBS Volume
+// on Linux (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-expand-volume.html)
+// and Modifying the Size, IOPS, or Type of an EBS Volume on Windows (http://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/ebs-expand-volume.html).
 //
 // If you reach the maximum volume modification rate per volume limit, you will
 // need to wait at least six hours before applying further modifications to
@@ -21751,7 +21754,7 @@ func (c *EC2) ResetSnapshotAttributeRequest(input *ResetSnapshotAttributeInput) 
 //
 // Resets permission settings for the specified snapshot.
 //
-// For more information on modifying snapshot permissions, see Sharing Snapshots
+// For more information about modifying snapshot permissions, see Sharing Snapshots
 // (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-modifying-snapshot-permissions.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
@@ -27034,10 +27037,10 @@ type CopySnapshotInput struct {
 	// copy operation. This parameter is only valid for specifying the destination
 	// region in a PresignedUrl parameter, where it is required.
 	//
-	// CopySnapshot sends the snapshot copy to the regional endpoint that you send
-	// the HTTP request to, such as ec2.us-east-1.amazonaws.com (in the AWS CLI,
-	// this is specified with the --region parameter or the default region in your
-	// AWS configuration file).
+	// The snapshot copy is sent to the regional endpoint that you sent the HTTP
+	// request to (for example, ec2.us-east-1.amazonaws.com). With the AWS CLI,
+	// this is specified using the --region parameter or the default region in your
+	// AWS configuration file.
 	DestinationRegion *string `locationName:"destinationRegion" type:"string"`
 
 	// Checks whether you have the required permissions for the action, without
@@ -29166,16 +29169,6 @@ func (s *CreateNetworkInterfaceInput) Validate() error {
 	if s.SubnetId == nil {
 		invalidParams.Add(request.NewErrParamRequired("SubnetId"))
 	}
-	if s.PrivateIpAddresses != nil {
-		for i, v := range s.PrivateIpAddresses {
-			if v == nil {
-				continue
-			}
-			if err := v.Validate(); err != nil {
-				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "PrivateIpAddresses", i), err.(request.ErrInvalidParams))
-			}
-		}
-	}
 
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -30269,7 +30262,8 @@ type CreateVolumeInput struct {
 
 	// The number of I/O operations per second (IOPS) to provision for the volume,
 	// with a maximum ratio of 50 IOPS/GiB. Range is 100 to 32000 IOPS for volumes
-	// in most regions. For exceptions, see Amazon EBS Volume Types (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html).
+	// in most regions. For exceptions, see Amazon EBS Volume Types (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html)
+	// in the Amazon Elastic Compute Cloud User Guide.
 	//
 	// This parameter is valid only for Provisioned IOPS SSD (io1) volumes.
 	Iops *int64 `type:"integer"`
@@ -50732,26 +50726,6 @@ func (s InstanceNetworkInterfaceSpecification) GoString() string {
 	return s.String()
 }
 
-// Validate inspects the fields of the type to determine if they are valid.
-func (s *InstanceNetworkInterfaceSpecification) Validate() error {
-	invalidParams := request.ErrInvalidParams{Context: "InstanceNetworkInterfaceSpecification"}
-	if s.PrivateIpAddresses != nil {
-		for i, v := range s.PrivateIpAddresses {
-			if v == nil {
-				continue
-			}
-			if err := v.Validate(); err != nil {
-				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "PrivateIpAddresses", i), err.(request.ErrInvalidParams))
-			}
-		}
-	}
-
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	}
-	return nil
-}
-
 // SetAssociatePublicIpAddress sets the AssociatePublicIpAddress field's value.
 func (s *InstanceNetworkInterfaceSpecification) SetAssociatePublicIpAddress(v bool) *InstanceNetworkInterfaceSpecification {
 	s.AssociatePublicIpAddress = &v
@@ -51936,6 +51910,75 @@ func (s *LaunchTemplateConfig) SetOverrides(v []*LaunchTemplateOverrides) *Launc
 	return s
 }
 
+// The CPU options for the instance.
+type LaunchTemplateCpuOptions struct {
+	_ struct{} `type:"structure"`
+
+	// The number of CPU cores for the instance.
+	CoreCount *int64 `locationName:"coreCount" type:"integer"`
+
+	// The number of threads per CPU core.
+	ThreadsPerCore *int64 `locationName:"threadsPerCore" type:"integer"`
+}
+
+// String returns the string representation
+func (s LaunchTemplateCpuOptions) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s LaunchTemplateCpuOptions) GoString() string {
+	return s.String()
+}
+
+// SetCoreCount sets the CoreCount field's value.
+func (s *LaunchTemplateCpuOptions) SetCoreCount(v int64) *LaunchTemplateCpuOptions {
+	s.CoreCount = &v
+	return s
+}
+
+// SetThreadsPerCore sets the ThreadsPerCore field's value.
+func (s *LaunchTemplateCpuOptions) SetThreadsPerCore(v int64) *LaunchTemplateCpuOptions {
+	s.ThreadsPerCore = &v
+	return s
+}
+
+// The CPU options for the instance. Both the core count and threads per core
+// must be specified in the request.
+type LaunchTemplateCpuOptionsRequest struct {
+	_ struct{} `type:"structure"`
+
+	// The number of CPU cores for the instance.
+	CoreCount *int64 `type:"integer"`
+
+	// The number of threads per CPU core. To disable Intel Hyper-Threading Technology
+	// for the instance, specify a value of 1. Otherwise, specify the default value
+	// of 2.
+	ThreadsPerCore *int64 `type:"integer"`
+}
+
+// String returns the string representation
+func (s LaunchTemplateCpuOptionsRequest) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s LaunchTemplateCpuOptionsRequest) GoString() string {
+	return s.String()
+}
+
+// SetCoreCount sets the CoreCount field's value.
+func (s *LaunchTemplateCpuOptionsRequest) SetCoreCount(v int64) *LaunchTemplateCpuOptionsRequest {
+	s.CoreCount = &v
+	return s
+}
+
+// SetThreadsPerCore sets the ThreadsPerCore field's value.
+func (s *LaunchTemplateCpuOptionsRequest) SetThreadsPerCore(v int64) *LaunchTemplateCpuOptionsRequest {
+	s.ThreadsPerCore = &v
+	return s
+}
+
 // Describes a block device for an EBS volume.
 type LaunchTemplateEbsBlockDevice struct {
 	_ struct{} `type:"structure"`
@@ -52414,26 +52457,6 @@ func (s LaunchTemplateInstanceNetworkInterfaceSpecificationRequest) String() str
 // GoString returns the string representation
 func (s LaunchTemplateInstanceNetworkInterfaceSpecificationRequest) GoString() string {
 	return s.String()
-}
-
-// Validate inspects the fields of the type to determine if they are valid.
-func (s *LaunchTemplateInstanceNetworkInterfaceSpecificationRequest) Validate() error {
-	invalidParams := request.ErrInvalidParams{Context: "LaunchTemplateInstanceNetworkInterfaceSpecificationRequest"}
-	if s.PrivateIpAddresses != nil {
-		for i, v := range s.PrivateIpAddresses {
-			if v == nil {
-				continue
-			}
-			if err := v.Validate(); err != nil {
-				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "PrivateIpAddresses", i), err.(request.ErrInvalidParams))
-			}
-		}
-	}
-
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	}
-	return nil
 }
 
 // SetAssociatePublicIpAddress sets the AssociatePublicIpAddress field's value.
@@ -54621,9 +54644,8 @@ func (s *ModifyReservedInstancesOutput) SetReservedInstancesModificationId(v str
 type ModifySnapshotAttributeInput struct {
 	_ struct{} `type:"structure"`
 
-	// The snapshot attribute to modify.
-	//
-	// Only volume creation permissions may be modified at the customer level.
+	// The snapshot attribute to modify. Only volume creation permissions can be
+	// modified.
 	Attribute *string `type:"string" enum:"SnapshotAttributeName"`
 
 	// A JSON representation of the snapshot attribute modification.
@@ -54976,19 +54998,17 @@ type ModifyVolumeInput struct {
 	// it is UnauthorizedOperation.
 	DryRun *bool `type:"boolean"`
 
-	// Target IOPS rate of the volume to be modified.
+	// The target IOPS rate of the volume.
 	//
-	// Only valid for Provisioned IOPS SSD (io1) volumes. For more information about
-	// io1 IOPS configuration, see http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html#EBSVolumeTypes_piops
-	// (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html#EBSVolumeTypes_piops).
+	// This is only valid for Provisioned IOPS SSD (io1) volumes. For more information,
+	// see Provisioned IOPS SSD (io1) Volumes (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html#EBSVolumeTypes_piops).
 	//
 	// Default: If no IOPS value is specified, the existing value is retained.
 	Iops *int64 `type:"integer"`
 
-	// Target size in GiB of the volume to be modified. Target volume size must
-	// be greater than or equal to than the existing size of the volume. For information
-	// about available EBS volume sizes, see http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
-	// (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html).
+	// The target size of the volume, in GiB. The target volume size must be greater
+	// than or equal to than the existing size of the volume. For information about
+	// available EBS volume sizes, see Amazon EBS Volume Types (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html).
 	//
 	// Default: If no size is specified, the existing size is retained.
 	Size *int64 `type:"integer"`
@@ -54998,10 +55018,7 @@ type ModifyVolumeInput struct {
 	// VolumeId is a required field
 	VolumeId *string `type:"string" required:"true"`
 
-	// Target EBS volume type of the volume to be modified
-	//
-	// The API does not support modifications for volume type standard. You also
-	// cannot change the type of a volume to standard.
+	// The target EBS volume type of the volume.
 	//
 	// Default: If no type is specified, the existing type is retained.
 	VolumeType *string `type:"string" enum:"VolumeType"`
@@ -55063,7 +55080,7 @@ func (s *ModifyVolumeInput) SetVolumeType(v string) *ModifyVolumeInput {
 type ModifyVolumeOutput struct {
 	_ struct{} `type:"structure"`
 
-	// A VolumeModification object.
+	// Information about the volume modification.
 	VolumeModification *VolumeModification `locationName:"volumeModification" type:"structure"`
 }
 
@@ -57553,9 +57570,7 @@ type PrivateIpAddressSpecification struct {
 	Primary *bool `locationName:"primary" type:"boolean"`
 
 	// The private IPv4 addresses.
-	//
-	// PrivateIpAddress is a required field
-	PrivateIpAddress *string `locationName:"privateIpAddress" type:"string" required:"true"`
+	PrivateIpAddress *string `locationName:"privateIpAddress" type:"string"`
 }
 
 // String returns the string representation
@@ -57566,19 +57581,6 @@ func (s PrivateIpAddressSpecification) String() string {
 // GoString returns the string representation
 func (s PrivateIpAddressSpecification) GoString() string {
 	return s.String()
-}
-
-// Validate inspects the fields of the type to determine if they are valid.
-func (s *PrivateIpAddressSpecification) Validate() error {
-	invalidParams := request.ErrInvalidParams{Context: "PrivateIpAddressSpecification"}
-	if s.PrivateIpAddress == nil {
-		invalidParams.Add(request.NewErrParamRequired("PrivateIpAddress"))
-	}
-
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	}
-	return nil
 }
 
 // SetPrimary sets the Primary field's value.
@@ -59549,6 +59551,11 @@ type RequestLaunchTemplateData struct {
 	// cannot be changed using this action.
 	BlockDeviceMappings []*LaunchTemplateBlockDeviceMappingRequest `locationName:"BlockDeviceMapping" locationNameList:"BlockDeviceMapping" type:"list"`
 
+	// The CPU options for the instance. For more information, see Optimizing CPU
+	// Options (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-optimize-cpu.html)
+	// in the Amazon Elastic Compute Cloud User Guide.
+	CpuOptions *LaunchTemplateCpuOptionsRequest `type:"structure"`
+
 	// The credit option for CPU usage of the instance. Valid for T2 instances only.
 	CreditSpecification *CreditSpecificationRequest `type:"structure"`
 
@@ -59666,16 +59673,6 @@ func (s *RequestLaunchTemplateData) Validate() error {
 			}
 		}
 	}
-	if s.NetworkInterfaces != nil {
-		for i, v := range s.NetworkInterfaces {
-			if v == nil {
-				continue
-			}
-			if err := v.Validate(); err != nil {
-				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "NetworkInterfaces", i), err.(request.ErrInvalidParams))
-			}
-		}
-	}
 
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -59686,6 +59683,12 @@ func (s *RequestLaunchTemplateData) Validate() error {
 // SetBlockDeviceMappings sets the BlockDeviceMappings field's value.
 func (s *RequestLaunchTemplateData) SetBlockDeviceMappings(v []*LaunchTemplateBlockDeviceMappingRequest) *RequestLaunchTemplateData {
 	s.BlockDeviceMappings = v
+	return s
+}
+
+// SetCpuOptions sets the CpuOptions field's value.
+func (s *RequestLaunchTemplateData) SetCpuOptions(v *LaunchTemplateCpuOptionsRequest) *RequestLaunchTemplateData {
+	s.CpuOptions = v
 	return s
 }
 
@@ -60179,16 +60182,6 @@ func (s *RequestSpotLaunchSpecification) Validate() error {
 	if s.Monitoring != nil {
 		if err := s.Monitoring.Validate(); err != nil {
 			invalidParams.AddNested("Monitoring", err.(request.ErrInvalidParams))
-		}
-	}
-	if s.NetworkInterfaces != nil {
-		for i, v := range s.NetworkInterfaces {
-			if v == nil {
-				continue
-			}
-			if err := v.Validate(); err != nil {
-				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "NetworkInterfaces", i), err.(request.ErrInvalidParams))
-			}
 		}
 	}
 
@@ -61567,6 +61560,11 @@ type ResponseLaunchTemplateData struct {
 	// The block device mappings.
 	BlockDeviceMappings []*LaunchTemplateBlockDeviceMapping `locationName:"blockDeviceMappingSet" locationNameList:"item" type:"list"`
 
+	// The CPU options for the instance. For more information, see Optimizing CPU
+	// Options (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-optimize-cpu.html)
+	// in the Amazon Elastic Compute Cloud User Guide.
+	CpuOptions *LaunchTemplateCpuOptions `locationName:"cpuOptions" type:"structure"`
+
 	// The credit option for CPU usage of the instance.
 	CreditSpecification *CreditSpecification `locationName:"creditSpecification" type:"structure"`
 
@@ -61640,6 +61638,12 @@ func (s ResponseLaunchTemplateData) GoString() string {
 // SetBlockDeviceMappings sets the BlockDeviceMappings field's value.
 func (s *ResponseLaunchTemplateData) SetBlockDeviceMappings(v []*LaunchTemplateBlockDeviceMapping) *ResponseLaunchTemplateData {
 	s.BlockDeviceMappings = v
+	return s
+}
+
+// SetCpuOptions sets the CpuOptions field's value.
+func (s *ResponseLaunchTemplateData) SetCpuOptions(v *LaunchTemplateCpuOptions) *ResponseLaunchTemplateData {
+	s.CpuOptions = v
 	return s
 }
 
@@ -62595,16 +62599,6 @@ func (s *RunInstancesInput) Validate() error {
 	if s.Monitoring != nil {
 		if err := s.Monitoring.Validate(); err != nil {
 			invalidParams.AddNested("Monitoring", err.(request.ErrInvalidParams))
-		}
-	}
-	if s.NetworkInterfaces != nil {
-		for i, v := range s.NetworkInterfaces {
-			if v == nil {
-				continue
-			}
-			if err := v.Validate(); err != nil {
-				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "NetworkInterfaces", i), err.(request.ErrInvalidParams))
-			}
 		}
 	}
 
@@ -65057,26 +65051,6 @@ func (s SpotFleetLaunchSpecification) GoString() string {
 	return s.String()
 }
 
-// Validate inspects the fields of the type to determine if they are valid.
-func (s *SpotFleetLaunchSpecification) Validate() error {
-	invalidParams := request.ErrInvalidParams{Context: "SpotFleetLaunchSpecification"}
-	if s.NetworkInterfaces != nil {
-		for i, v := range s.NetworkInterfaces {
-			if v == nil {
-				continue
-			}
-			if err := v.Validate(); err != nil {
-				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "NetworkInterfaces", i), err.(request.ErrInvalidParams))
-			}
-		}
-	}
-
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	}
-	return nil
-}
-
 // SetAddressingType sets the AddressingType field's value.
 func (s *SpotFleetLaunchSpecification) SetAddressingType(v string) *SpotFleetLaunchSpecification {
 	s.AddressingType = &v
@@ -65398,16 +65372,6 @@ func (s *SpotFleetRequestConfigData) Validate() error {
 	}
 	if s.TargetCapacity == nil {
 		invalidParams.Add(request.NewErrParamRequired("TargetCapacity"))
-	}
-	if s.LaunchSpecifications != nil {
-		for i, v := range s.LaunchSpecifications {
-			if v == nil {
-				continue
-			}
-			if err := v.Validate(); err != nil {
-				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "LaunchSpecifications", i), err.(request.ErrInvalidParams))
-			}
-		}
 	}
 	if s.LaunchTemplateConfigs != nil {
 		for i, v := range s.LaunchTemplateConfigs {
@@ -68119,8 +68083,9 @@ type Volume struct {
 	// For Provisioned IOPS SSD volumes, this represents the number of IOPS that
 	// are provisioned for the volume. For General Purpose SSD volumes, this represents
 	// the baseline performance of the volume and the rate at which the volume accumulates
-	// I/O credits for bursting. For more information on General Purpose SSD baseline
-	// performance, I/O credits, and bursting, see Amazon EBS Volume Types (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html)
+	// I/O credits for bursting. For more information about General Purpose SSD
+	// baseline performance, I/O credits, and bursting, see Amazon EBS Volume Types
+	// (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html)
 	// in the Amazon Elastic Compute Cloud User Guide.
 	//
 	// Constraint: Range is 100-32000 IOPS for io1 volumes and 100-10000 IOPS for
@@ -68351,41 +68316,41 @@ func (s *VolumeDetail) SetSize(v int64) *VolumeDetail {
 type VolumeModification struct {
 	_ struct{} `type:"structure"`
 
-	// Modification completion or failure time.
+	// The modification completion or failure time.
 	EndTime *time.Time `locationName:"endTime" type:"timestamp" timestampFormat:"iso8601"`
 
-	// Current state of modification. Modification state is null for unmodified
+	// The current modification state. The modification state is null for unmodified
 	// volumes.
 	ModificationState *string `locationName:"modificationState" type:"string" enum:"VolumeModificationState"`
 
-	// Original IOPS rate of the volume being modified.
+	// The original IOPS rate of the volume.
 	OriginalIops *int64 `locationName:"originalIops" type:"integer"`
 
-	// Original size of the volume being modified.
+	// The original size of the volume.
 	OriginalSize *int64 `locationName:"originalSize" type:"integer"`
 
-	// Original EBS volume type of the volume being modified.
+	// The original EBS volume type of the volume.
 	OriginalVolumeType *string `locationName:"originalVolumeType" type:"string" enum:"VolumeType"`
 
-	// Modification progress from 0 to 100%.
+	// The modification progress, from 0 to 100 percent complete.
 	Progress *int64 `locationName:"progress" type:"long"`
 
-	// Modification start time
+	// The modification start time.
 	StartTime *time.Time `locationName:"startTime" type:"timestamp" timestampFormat:"iso8601"`
 
-	// Generic status message on modification progress or failure.
+	// A status message about the modification progress or failure.
 	StatusMessage *string `locationName:"statusMessage" type:"string"`
 
-	// Target IOPS rate of the volume being modified.
+	// The target IOPS rate of the volume.
 	TargetIops *int64 `locationName:"targetIops" type:"integer"`
 
-	// Target size of the volume being modified.
+	// The target size of the volume, in GiB.
 	TargetSize *int64 `locationName:"targetSize" type:"integer"`
 
-	// Target EBS volume type of the volume being modified.
+	// The target EBS volume type of the volume.
 	TargetVolumeType *string `locationName:"targetVolumeType" type:"string" enum:"VolumeType"`
 
-	// ID of the volume being modified.
+	// The ID of the volume.
 	VolumeId *string `locationName:"volumeId" type:"string"`
 }
 

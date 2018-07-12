@@ -612,7 +612,7 @@ func (ua *BucketAttrsToUpdate) toRawBucket() *raw.Bucket {
 
 // If returns a new BucketHandle that applies a set of preconditions.
 // Preconditions already set on the BucketHandle are ignored.
-// Operations on the new handle will only occur if the preconditions are
+// Operations on the new handle will return an error if the preconditions are not
 // satisfied. The only valid preconditions for buckets are MetagenerationMatch
 // and MetagenerationNotMatch.
 func (b *BucketHandle) If(conds BucketConditions) *BucketHandle {
