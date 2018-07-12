@@ -1,4 +1,4 @@
-import { isPresent, clickable, text } from 'ember-cli-page-object';
+import { isPresent, fillable, clickable, text } from 'ember-cli-page-object';
 
 export default {
   showsJsonViewer: isPresent('[data-test-json-viewer]'),
