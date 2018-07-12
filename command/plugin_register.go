@@ -33,14 +33,14 @@ Usage: vault plugin register [options] NAME
 
   Register the plugin named my-custom-plugin:
 
-      $ vault plugin register my-custom-plugin \
-          -sha256=d3f0a8be02f6c074cf38c9c99d4d04c9c6466249
+      $ vault plugin register -sha256=d3f0a8b... my-custom-plugin
 
   Register a plugin with custom arguments:
 
-      $ vault plugin register my-custom-plugin \
-          -sha256=d3f0a8be02f6c074cf38c9c99d4d04c9c6466249 \
-          -args=--with-glibc,--with-cgo
+      $ vault plugin register \
+          -sha256=d3f0a8b... \
+          -args=--with-glibc,--with-cgo \
+          my-custom-plugin
 
 ` + c.Flags().Help()
 
@@ -130,6 +130,6 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.UI.Output(fmt.Sprintf("Success! Registered plugin %s", pluginName))
+	c.UI.Output(fmt.Sprintf("Success! Registered plugin: %s", pluginName))
 	return 0
 }
