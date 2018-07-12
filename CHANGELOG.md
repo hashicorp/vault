@@ -8,6 +8,9 @@ DEPRECATIONS/CHANGES:
    attained via the `-sync` CLI flag or `sync` API parameter. When in
    synchronous mode, if the operation results in failure it is up to the user
    to retry.
+ * CLI Retries: The CLI will no longer retry commands on 5xx errors. This was a
+   source of confusion to users as to why Vault would "hang" before returning a
+   5xx error. The Go API client still defaults to two retries.
 
 FEATURES:
 
