@@ -26,7 +26,7 @@ func NewFileSink(conf *SinkConfig) (Sink, error) {
 		return nil, errors.New("nil logger provided")
 	}
 
-	conf.Logger.Trace("creating file sink")
+	conf.Logger.Info("creating file sink")
 
 	f := &fileSink{
 		logger: conf.Logger,
@@ -47,7 +47,7 @@ func NewFileSink(conf *SinkConfig) (Sink, error) {
 		return nil, errwrap.Wrapf("error during write check: {{err}}", err)
 	}
 
-	f.logger.Trace("file sink configured", "path", f.path)
+	f.logger.Info("file sink configured", "path", f.path)
 
 	return f, nil
 }
