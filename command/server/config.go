@@ -433,6 +433,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"cache_size",
 		"disable_cache",
 		"disable_mlock",
+		"disable_printable_check",
 		"ui",
 		"telemetry",
 		"default_lease_ttl",
