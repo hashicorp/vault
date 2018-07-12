@@ -371,8 +371,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"plugin read": func() (cli.Command, error) {
-			return &PluginReadCommand{
+		"plugin info": func() (cli.Command, error) {
+			return &PluginInfoCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

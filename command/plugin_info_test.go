@@ -7,18 +7,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testPluginReadCommand(tb testing.TB) (*cli.MockUi, *PluginReadCommand) {
+func testPluginInfoCommand(tb testing.TB) (*cli.MockUi, *PluginInfoCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &PluginReadCommand{
+	return ui, &PluginInfoCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestPluginReadCommand_Run(t *testing.T) {
+func TestPluginInfoCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -53,7 +53,7 @@ func TestPluginReadCommand_Run(t *testing.T) {
 				client, closer := testVaultServer(t)
 				defer closer()
 
-				ui, cmd := testPluginReadCommand(t)
+				ui, cmd := testPluginInfoCommand(t)
 				cmd.client = client
 
 				code := cmd.Run(tc.args)
@@ -81,7 +81,7 @@ func TestPluginReadCommand_Run(t *testing.T) {
 		pluginName := "my-plugin"
 		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName)
 
-		ui, cmd := testPluginReadCommand(t)
+		ui, cmd := testPluginInfoCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -112,7 +112,7 @@ func TestPluginReadCommand_Run(t *testing.T) {
 		pluginName := "my-plugin"
 		testPluginCreateAndRegister(t, client, pluginDir, pluginName)
 
-		ui, cmd := testPluginReadCommand(t)
+		ui, cmd := testPluginInfoCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -135,7 +135,7 @@ func TestPluginReadCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testPluginReadCommand(t)
+		ui, cmd := testPluginInfoCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -155,7 +155,7 @@ func TestPluginReadCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testPluginReadCommand(t)
+		_, cmd := testPluginInfoCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }
