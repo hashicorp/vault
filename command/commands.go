@@ -371,13 +371,13 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"plugin list": func() (cli.Command, error) {
-			return &PluginListCommand{
+		"plugin info": func() (cli.Command, error) {
+			return &PluginInfoCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"plugin info": func() (cli.Command, error) {
-			return &PluginInfoCommand{
+		"plugin list": func() (cli.Command, error) {
+			return &PluginListCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
