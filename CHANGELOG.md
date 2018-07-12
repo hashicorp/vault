@@ -32,6 +32,8 @@ BUG FIXES:
 
  * core: Fix returning 500 instead of 503 if a rekey is attempted when Vault is
    sealed [GH-4874]
+ * core: Fix a panic that could happen if the server was shut down while still
+   starting up
  * secrets/pki: Fix permitted DNS domains performing improper validation
    [GH-4863]
  * secrets/database: Fix panic during DB creds revocation [GH-4846]
