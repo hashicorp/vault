@@ -21,9 +21,9 @@ type Config struct {
 }
 
 type AutoAuth struct {
-	Method     *Method      `hcl:"-"`
-	Vault      *Vault       `hcl:"-"`
-	TokenSinks []*TokenSink `hcl:"token_sink"`
+	Method *Method `hcl:"-"`
+	Vault  *Vault  `hcl:"-"`
+	Sinks  []*Sink `hcl:"sinks"`
 }
 
 type Method struct {
@@ -39,7 +39,7 @@ type Vault struct {
 	CACert        string `hcl:"ca_cert"`
 }
 
-type TokenSink struct {
+type Sink struct {
 	Type   string
 	Config map[string]interface{}
 }
@@ -118,8 +118,8 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 		return errwrap.Wrapf("error parsing 'vault': {{err}}", err)
 	}
 
-	if err := parseTokenSinks(result, subList); err != nil {
-		return errwrap.Wrapf("error parsing 'token_sink' stanzas: {{err}}", err)
+	if err := parseSinks(result, subList); err != nil {
+		return errwrap.Wrapf("error parsing 'sink' stanzas: {{err}}", err)
 	}
 
 	switch {
@@ -127,8 +127,8 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 		return fmt.Errorf("no 'method' block found")
 	case a.Vault == nil:
 		return fmt.Errorf("no 'vault' block found")
-	case len(a.TokenSinks) == 0:
-		return fmt.Errorf("at least one 'token_sink' block must be provided")
+	case len(a.Sinks) == 0:
+		return fmt.Errorf("at least one 'sink' block must be provided")
 	}
 
 	return nil
@@ -174,15 +174,15 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 	return nil
 }
 
-func parseTokenSinks(result *Config, list *ast.ObjectList) error {
-	name := "token_sink"
+func parseSinks(result *Config, list *ast.ObjectList) error {
+	name := "sink"
 
 	tokenSinkList := list.Filter(name)
 	if len(tokenSinkList.Items) < 1 {
 		return fmt.Errorf("at least one %q block is required", name)
 	}
 
-	var ts []*TokenSink
+	var ts []*Sink
 
 	for _, item := range tokenSinkList.Items {
 		if len(item.Keys) == 0 {
@@ -193,15 +193,15 @@ func parseTokenSinks(result *Config, list *ast.ObjectList) error {
 
 		var m map[string]interface{}
 		if err := hcl.DecodeObject(&m, item.Val); err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("token_sink.%s", tsType))
+			return multierror.Prefix(err, fmt.Sprintf("sink.%s", tsType))
 		}
 
-		ts = append(ts, &TokenSink{
+		ts = append(ts, &Sink{
 			Type:   tsType,
 			Config: m,
 		})
 	}
 
-	result.AutoAuth.TokenSinks = ts
+	result.AutoAuth.Sinks = ts
 	return nil
 }
