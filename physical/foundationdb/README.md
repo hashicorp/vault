@@ -12,7 +12,7 @@ system, along with Mono (core is enough), then install the Go bindings using
 the `fdb-go-install.sh` script:
 
 ```
-$ scripts/fdb-go-install.sh
+$ physical/foundationdb/fdb-go-install.sh
 ```
 
 ## Building Vault
