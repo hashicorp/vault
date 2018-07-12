@@ -14,11 +14,10 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/version"
 )
 
@@ -31,18 +30,13 @@ type AgentCommand struct {
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
 
-	WaitGroup *sync.WaitGroup
-
 	logWriter io.Writer
 	logGate   *gatedwriter.Writer
 	logger    log.Logger
 
 	cleanupGuard sync.Once
 
-	reloadFuncsLock *sync.RWMutex
-	reloadFuncs     *map[string][]reload.ReloadFunc
-	startedCh       chan (struct{}) // for tests
-	reloadedCh      chan (struct{}) // for tests
+	startedCh chan (struct{}) // for tests
 
 	flagConfigs  []string
 	flagLogLevel string
@@ -189,6 +183,10 @@ func (c *AgentCommand) Run(args []string) int {
 				"-config flag."))
 		return 1
 	}
+	if config.AutoAuth == nil {
+		c.UI.Error("No auto_auth block found in config file")
+		return 1
+	}
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
@@ -232,8 +230,24 @@ func (c *AgentCommand) Run(args []string) int {
 		return 0
 	}
 
-	// Instantiate the wait group
-	c.WaitGroup = &sync.WaitGroup{}
+	var sinks []sink.Sink
+	for _, sc := range config.AutoAuth.Sinks {
+		switch sc.Type {
+		case "file":
+			fs, err := sink.NewFileSink(&sink.SinkConfig{
+				Logger: c.logger.Named("sink.file"),
+				Config: sc.Config,
+			})
+			if err != nil {
+				c.UI.Error(errwrap.Wrapf("Error creating file sink: {{err}}", err).Error())
+				return 1
+			}
+			sinks = append(sinks, fs)
+		default:
+			c.UI.Error(fmt.Sprintf("Unknown sink type %q", sc.Type))
+			return 1
+		}
+	}
 
 	// Output the header that the server has started
 	if !c.flagCombineLogs {
@@ -245,6 +259,10 @@ func (c *AgentCommand) Run(args []string) int {
 	case c.startedCh <- struct{}{}:
 	default:
 	}
+
+	ss := sink.NewSinkServer(c.logger.Named("sink.server"))
+	incoming := make(chan string)
+	go ss.Run(incoming, sinks)
 
 	// Release the log gate.
 	c.logGate.Flush()
@@ -268,58 +286,13 @@ func (c *AgentCommand) Run(args []string) int {
 		select {
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault agent shutdown triggered")
-
 			shutdownTriggered = true
-
-		case <-c.SighupCh:
-			c.UI.Output("==> Vault agent reload triggered")
-			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs); err != nil {
-				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
-			}
+			close(ss.ShutdownCh)
+			<-ss.DoneCh
 		}
 	}
 
-	// Wait for dependent goroutines to complete
-	c.WaitGroup.Wait()
 	return 0
-}
-
-func (c *AgentCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reload.ReloadFunc, configPath []string) error {
-	lock.RLock()
-	defer lock.RUnlock()
-
-	var reloadErrors *multierror.Error
-
-	for k, relFuncs := range *reloadFuncs {
-		switch {
-		case strings.HasPrefix(k, "listener|"):
-			for _, relFunc := range relFuncs {
-				if relFunc != nil {
-					if err := relFunc(nil); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf("error encountered reloading listener: {{err}}", err))
-					}
-				}
-			}
-
-		case strings.HasPrefix(k, "audit_file|"):
-			for _, relFunc := range relFuncs {
-				if relFunc != nil {
-					if err := relFunc(nil); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf(fmt.Sprintf("error encountered reloading file audit device at path %q: {{err}}", strings.TrimPrefix(k, "audit_file|")), err))
-					}
-				}
-			}
-		}
-	}
-
-	// Send a message that we reloaded. This prevents "guessing" sleep times
-	// in tests.
-	select {
-	case c.reloadedCh <- struct{}{}:
-	default:
-	}
-
-	return reloadErrors.ErrorOrNil()
 }
 
 // storePidFile is used to write out our PID to a file if necessary

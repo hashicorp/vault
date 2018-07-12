@@ -26,14 +26,14 @@ func TestLoadConfigFile(t *testing.T) {
 				},
 			},
 			Vault: &Vault{Address: "http://127.0.0.1:8200", TLSSkipVerify: true, CAPath: "", CACert: ""},
-			TokenSinks: []*TokenSink{
-				&TokenSink{
+			Sinks: []*Sink{
+				&Sink{
 					Type: "file",
 					Config: map[string]interface{}{
 						"path": "/tmp/file-foo",
 					},
 				},
-				&TokenSink{
+				&Sink{
 					Type: "file",
 					Config: map[string]interface{}{
 						"path": "/tmp/file-bar",
