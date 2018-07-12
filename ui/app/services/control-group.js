@@ -14,17 +14,18 @@ const WRAPPED_RESPONSE_PATHS = [
   'sys/replication/performance/primary/secondary-token',
   'sys/replication/dr/primary/secondary-token',
 ];
-export { CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR };
+
+const storageKey = (accessor, path) => {
+  return `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
+};
+
+export { storageKey, CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR };
 export default Service.extend({
   version: inject.service(),
   router: inject.service(),
 
   storage() {
     return getStorage();
-  },
-
-  storageKey(accessor, path) {
-    return `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
   },
 
   keyFromAccessor(accessor) {
@@ -36,7 +37,7 @@ export default Service.extend({
   },
 
   storeControlGroupToken(info) {
-    let key = this.storageKey(info.accessor, info.creation_path);
+    let key = storageKey(info.accessor, info.creation_path);
     this.storage().setItem(key, info);
   },
 

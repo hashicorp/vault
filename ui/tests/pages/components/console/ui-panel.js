@@ -15,7 +15,20 @@ export default {
     let count = this.logOutputItems.length;
     return this.logOutputItems.objectAt(count - 1).text;
   }),
-
+  logTextItems: collection('[data-test-component="console/log-text"]', {
+    text: text(),
+  }),
+  lastTextOutput: getter(function() {
+    let count = this.logTextItems.length;
+    return this.logTextItems.objectAt(count - 1).text;
+  }),
+  logJSONItems: collection('[data-test-component="console/log-json"]', {
+    text: text(),
+  }),
+  lastJSONOutput: getter(function() {
+    let count = this.logJSONItems.length;
+    return this.logJSONItems.objectAt(count - 1).text;
+  }),
   up: triggerable('keyup', '[data-test-component="console/command-input"] input', {
     eventProperties: { keyCode: keys.UP },
   }),
@@ -32,5 +45,5 @@ export default {
       this.consoleInput(command);
       this.enter();
     });
-  }
+  },
 };

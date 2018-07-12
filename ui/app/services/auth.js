@@ -269,7 +269,7 @@ export default Ember.Service.extend({
     this.set('tokens', tokenNames);
   },
 
-  currentTokenName: computed('activeCluster', 'tokens.[]', function() {
+  currentTokenName: computed('activeCluster', 'tokens', 'tokens.[]', function() {
     const regex = new RegExp(this.get('activeCluster'));
     return this.get('tokens').find(key => regex.test(key));
   }),

@@ -7,7 +7,7 @@
       <span data-test-banner-text>{{bannerText}}</span>
     </p>
   </div>
-  {{#if (and currentUserIsRequesting model.approved)}}
+  {{#if (and model.approved (not currentUserHasAuthorized) (or (not model.requestEntity) currentUserIsRequesting))}}
     <ControlGroupSuccess data-test-control-group-success @model={{model}} @controlGroupResponse={{controlGroupResponse}} />
   {{else}}
     <div class="control-group">
@@ -27,7 +27,7 @@
         {{/if}}
       </div>
 
-      {{#if currentUserIsRequesting}}
+      {{#if (or (not model.requestEntity) currentUserIsRequesting)}}
         <div class="message is-list is-highlight has-copy-button" tabindex="-1" data-test-accessor-callout>
           <HoverCopyButton @alwaysShow=true @copyValue={{model.id}} />
           <div class="message-body">
@@ -69,7 +69,7 @@
       </p>
     {{/if}}
 
-  {{#unless (and model.approved currentUserIsRequesting)}}
+  {{#unless (and model.approved (or (not model.requestEntity) currentUserIsRequesting))}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       {{#if model.canAuthorize}}
         {{#if (or model.approved currentUserHasAuthorized)}}

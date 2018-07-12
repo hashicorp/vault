@@ -2,7 +2,7 @@ import { moduleFor, test } from 'ember-qunit';
 import sinon from 'sinon';
 
 import Ember from 'ember';
-import { CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR } from 'vault/services/control-group';
+import { storageKey, CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR } from 'vault/services/control-group';
 
 let versionStub = Ember.Service.extend();
 let routerStub = Ember.Service.extend({
@@ -172,11 +172,10 @@ test('urlFromTransition', function(assert) {
 });
 
 test('storageKey', function(assert) {
-  let subject = this.subject();
   let accessor = '12345';
   let path = 'kv/foo/bar';
   let expectedKey = `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
-  assert.equal(subject.storageKey(accessor, path), expectedKey, 'uses expected key');
+  assert.equal(storageKey(accessor, path), expectedKey, 'uses expected key');
 });
 
 test('keyFromAccessor', function(assert) {
