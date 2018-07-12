@@ -28,11 +28,13 @@ type Config struct {
 
 	Seal *Seal `hcl:"-"`
 
-	CacheSize       int         `hcl:"cache_size"`
-	DisableCache    bool        `hcl:"-"`
-	DisableCacheRaw interface{} `hcl:"disable_cache"`
-	DisableMlock    bool        `hcl:"-"`
-	DisableMlockRaw interface{} `hcl:"disable_mlock"`
+	CacheSize                int         `hcl:"cache_size"`
+	DisableCache             bool        `hcl:"-"`
+	DisableCacheRaw          interface{} `hcl:"disable_cache"`
+	DisableMlock             bool        `hcl:"-"`
+	DisableMlockRaw          interface{} `hcl:"disable_mlock"`
+	DisablePrintableCheck    bool        `hcl:"-"`
+	DisablePrintableCheckRaw interface{} `hcl:"disable_printable_check"`
 
 	EnableUI    bool        `hcl:"-"`
 	EnableUIRaw interface{} `hcl:"ui"`
@@ -387,6 +389,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 
 	if result.DisableMlockRaw != nil {
 		if result.DisableMlock, err = parseutil.ParseBool(result.DisableMlockRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisablePrintableCheckRaw != nil {
+		if result.DisablePrintableCheck, err = parseutil.ParseBool(result.DisablePrintableCheckRaw); err != nil {
 			return nil, err
 		}
 	}
