@@ -117,7 +117,10 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 
 	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
 	// characters in the request path.
-	printablePathCheckHandler := cleanhttp.PrintablePathCheckHandler(genericWrappedHandler, nil)
+	printablePathCheckHandler := genericWrappedHandler
+	if !props.DisablePrintableCheck {
+		printablePathCheckHandler = cleanhttp.PrintablePathCheckHandler(genericWrappedHandler, nil)
+	}
 
 	return printablePathCheckHandler
 }

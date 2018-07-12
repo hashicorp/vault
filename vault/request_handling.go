@@ -29,8 +29,9 @@ const (
 // HanlderProperties is used to seed configuration into a vaulthttp.Handler.
 // It's in this package to avoid a circular dependency
 type HandlerProperties struct {
-	Core           *Core
-	MaxRequestSize int64
+	Core                  *Core
+	MaxRequestSize        int64
+	DisablePrintableCheck bool
 }
 
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity
