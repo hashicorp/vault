@@ -88,6 +88,5 @@ ui/vault-ui-integration-server.pid
 node_modules
 package-lock.json
 
-# FoundationDB
-vendor/fdb-go-install.sh
+# FoundationDB Go bindings
 vendor/foundation
