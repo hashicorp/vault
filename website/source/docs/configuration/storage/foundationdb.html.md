@@ -26,6 +26,7 @@ storage "foundationdb" {
   api_version  = 510
   cluster_file = "/path/to/fdb.cluster"
   path         = "vault-top-level-directory"
+  ha_enabled   = "true"
 }
 ```
 
@@ -41,6 +42,9 @@ storage "foundationdb" {
 
 - `path` `(string: "vault")` - The path of the top-level FoundationDB directory
   (using the directory layer) under which the Vault data will reside.
+
+- `ha_enabled` `(string: "false")` - Whether or not to enable Vault
+  high-availability mode using the FoundationDB backend.
 
 ## `foundationdb` tips
 

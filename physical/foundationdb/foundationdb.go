@@ -59,6 +59,7 @@ var _ physical.Lock = (*FDBBackendLock)(nil)
 // prefix within FoundationDB.
 type FDBBackend struct {
 	logger        log.Logger
+	haEnabled     bool
 	db            fdb.Database
 	metaKeysSpace subspace.Subspace
 	dataSpace     subspace.Subspace
@@ -154,6 +155,15 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 		return nil, fmt.Errorf("FoundationDB cluster file not specified")
 	}
 
+	haEnabled := false
+	haEnabledStr, ok := conf["ha_enabled"]
+	if ok {
+		haEnabled, err = strconv.ParseBool(haEnabledStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to parse ha_enabled parameter: {{err}}", err)
+		}
+	}
+
 	instanceUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, errwrap.Wrapf("could not generate instance UUID: {{err}}", err)
@@ -177,6 +187,7 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 	// Setup the backend
 	f := &FDBBackend{
 		logger:        logger,
+		haEnabled:     haEnabled,
 		db:            db,
 		metaKeysSpace: topDir.Sub(metaKeysNamespace),
 		dataSpace:     topDir.Sub(dataNamespace),
@@ -510,7 +521,7 @@ func (f *FDBBackend) LockWith(key, value string) (physical.Lock, error) {
 }
 
 func (f *FDBBackend) HAEnabled() bool {
-	return true
+	return f.haEnabled
 }
 
 const (
