@@ -37,6 +37,12 @@ func TestLeaseRevokeCommand_Run(t *testing.T) {
 		{
 			"single",
 			nil,
+			"All revocation operations queued successfully",
+			0,
+		},
+		{
+			"single_sync",
+			[]string{"-sync"},
 			"Success",
 			0,
 		},
@@ -49,6 +55,12 @@ func TestLeaseRevokeCommand_Run(t *testing.T) {
 		{
 			"prefix",
 			[]string{"-prefix"},
+			"All revocation operations queued successfully",
+			0,
+		},
+		{
+			"prefix_sync",
+			[]string{"-prefix", "-sync"},
 			"Success",
 			0,
 		},

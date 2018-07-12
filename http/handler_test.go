@@ -147,12 +147,7 @@ func TestHandler_Accepted(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	t.Logf("%#v", resp)
-
 	testResponseStatus(t, resp, 202)
-	if resp.Body != http.NoBody {
-		t.Fatal("got non-empty body")
-	}
 }
 
 // We use this test to verify header auth
