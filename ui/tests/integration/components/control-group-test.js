@@ -164,6 +164,7 @@ test('authorizer rendering: authorized and success', function(assert) {
   );
   assert.notOk(component.showsSuccessComponent, 'does not render control group success');
 });
+
 test('third-party: success', function(assert) {
   let { model, authData } = setup(
     { approved: true, canAuthorize: true, authorizations: [{ id: 'foo', name: 'foo' }] },

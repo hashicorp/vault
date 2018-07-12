@@ -18,6 +18,7 @@ export default Ember.Component.extend({
 
   unwrap: task(function*(token) {
     let adapter = this.get('store').adapterFor('tools');
+    this.set('error', null);
     try {
       let response = yield adapter.toolAction('unwrap', null, { clientToken: token });
       this.set('unwrapData', response.auth || response.data);
