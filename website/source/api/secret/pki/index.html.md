@@ -1532,6 +1532,10 @@ expiration time.
 - `tidy_revocation_list` `(bool: false)` Specifies whether to tidy up the
   revocation list (CRL).
 
+- `tidy_revoked_certs` `(bool: false)` Set to true to expire all revoked
+  certificates, even if their duration has not yet passed. This will cause these
+  certificates to be removed from the CRL the next time the CRL is generated.
+
 - `safety_buffer` `(string: "")` Specifies  A duration (given as an integer
   number of seconds or a string; defaults to `72h`) used as a safety buffer to
   ensure certificates are not expunged prematurely; as an example, this can keep
