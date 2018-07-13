@@ -1,6 +1,7 @@
 package etcd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -18,7 +19,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
-	"golang.org/x/net/context"
 )
 
 // EtcdBackend is a physical backend that stores data at specific

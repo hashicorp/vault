@@ -1,6 +1,7 @@
 package etcd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -11,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/physical"
 
 	"github.com/coreos/etcd/client"
-	"golang.org/x/net/context"
 )
 
 func TestEtcdBackend(t *testing.T) {
