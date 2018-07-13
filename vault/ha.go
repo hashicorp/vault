@@ -545,7 +545,10 @@ func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 			// deadlock, which then means stopCh can never been seen and we can
 			// block shutdown
 			go func() {
-				defer atomic.AddInt32(opCount, -1)
+				// Bind locally, as the race detector is tripping here
+				lopCount := opCount
+				defer atomic.AddInt32(lopCount, -1)
+
 				c.Leader()
 			}()
 		case <-stopCh:
@@ -568,7 +571,10 @@ func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, doneCh, stopCh chan 
 			}
 
 			go func() {
-				defer atomic.AddInt32(opCount, -1)
+				// Bind locally, as the race detector is tripping here
+				lopCount := opCount
+				defer atomic.AddInt32(lopCount, -1)
+
 				// Only check if we are a standby
 				c.stateLock.RLock()
 				standby := c.standby
