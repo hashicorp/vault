@@ -105,7 +105,7 @@ type IntVar struct {
 func (f *FlagSet) IntVar(i *IntVar) {
 	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
-		if i, err := strconv.ParseInt(v, 0, 64); err != nil {
+		if i, err := strconv.ParseInt(v, 0, 64); err == nil {
 			initial = int(i)
 		}
 	}
@@ -169,7 +169,7 @@ type Int64Var struct {
 func (f *FlagSet) Int64Var(i *Int64Var) {
 	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
-		if i, err := strconv.ParseInt(v, 0, 64); err != nil {
+		if i, err := strconv.ParseInt(v, 0, 64); err == nil {
 			initial = i
 		}
 	}
@@ -233,7 +233,7 @@ type UintVar struct {
 func (f *FlagSet) UintVar(i *UintVar) {
 	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
-		if i, err := strconv.ParseUint(v, 0, 64); err != nil {
+		if i, err := strconv.ParseUint(v, 0, 64); err == nil {
 			initial = uint(i)
 		}
 	}
@@ -297,7 +297,7 @@ type Uint64Var struct {
 func (f *FlagSet) Uint64Var(i *Uint64Var) {
 	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
-		if i, err := strconv.ParseUint(v, 0, 64); err != nil {
+		if i, err := strconv.ParseUint(v, 0, 64); err == nil {
 			initial = i
 		}
 	}
@@ -418,7 +418,7 @@ type Float64Var struct {
 func (f *FlagSet) Float64Var(i *Float64Var) {
 	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
-		if i, err := strconv.ParseFloat(v, 64); err != nil {
+		if i, err := strconv.ParseFloat(v, 64); err == nil {
 			initial = i
 		}
 	}
@@ -482,7 +482,7 @@ type DurationVar struct {
 func (f *FlagSet) DurationVar(i *DurationVar) {
 	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
-		if d, err := time.ParseDuration(appendDurationSuffix(v)); err != nil {
+		if d, err := time.ParseDuration(appendDurationSuffix(v)); err == nil {
 			initial = d
 		}
 	}
