@@ -27,6 +27,8 @@ IMPROVEMENTS:
  * core: Add control group request endpoint to default policy [GH-4904]
  * secrets/kv: Add support for using `-field=data` to KVv2 when using `vault
    kv` [GH-4895]
+ * secrets/pki: Add the ability to tidy revoked but unexpired certificates
+   [GH-4916]
 
 BUG FIXES:
 
