@@ -67,6 +67,8 @@ var Formatters = map[string]Formatter{
 	"table": TableFormatter{},
 	"yaml":  YamlFormatter{},
 	"yml":   YamlFormatter{},
+	"none":  NullFormatter{},
+	"null":  NullFormatter{},
 }
 
 func Format(ui cli.Ui) string {
@@ -81,6 +83,17 @@ func Format(ui cli.Ui) string {
 	}
 
 	return format
+}
+
+// NullFormatter is a formatter that doens't print anything.
+type NullFormatter struct{}
+
+func (f NullFormatter) Format(_ interface{}) ([]byte, error) {
+	return nil, nil
+}
+
+func (f NullFormatter) Output(_ cli.Ui, _ *api.Secret, _ interface{}) error {
+	return nil
 }
 
 // An output formatter for json output of an object
