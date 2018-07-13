@@ -944,8 +944,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Initialize the HTTP servers
 	for _, ln := range lns {
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
-			Core:           core,
-			MaxRequestSize: ln.maxRequestSize,
+			Core:                  core,
+			MaxRequestSize:        ln.maxRequestSize,
+			DisablePrintableCheck: config.DisablePrintableCheck,
 		})
 
 		// We perform validation on the config earlier, we can just cast here

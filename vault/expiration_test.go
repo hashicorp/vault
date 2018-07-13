@@ -684,7 +684,7 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 	}
 
 	// Should nuke all the keys
-	if err := exp.RevokePrefix("prod/aws/"); err != nil {
+	if err := exp.RevokePrefix("prod/aws/", true); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -1489,7 +1489,7 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = exp.Revoke(le.LeaseID)
+	err = exp.LazyRevoke(le.LeaseID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1527,7 +1527,7 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 		t.Fatal(err)
 	}
 	if le != nil {
-		t.Fatal("ugh")
+		t.Fatal("lease entry not nil")
 	}
 }
 

@@ -128,6 +128,7 @@ type MountInput struct {
 type MountConfigInput struct {
 	Options                   map[string]string `json:"options" mapstructure:"options"`
 	DefaultLeaseTTL           string            `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	Description               *string           `json:"description,omitempty" mapstructure:"description"`
 	MaxLeaseTTL               string            `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache              bool              `json:"force_no_cache" mapstructure:"force_no_cache"`
 	PluginName                string            `json:"plugin_name,omitempty" mapstructure:"plugin_name"`

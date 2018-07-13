@@ -150,7 +150,10 @@ func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, e
 
 	if resp != nil {
 		httpResp := LogicalResponseToHTTPResponse(resp)
-		httpResp.RequestID = req.ID
+
+		if req != nil {
+			httpResp.RequestID = req.ID
+		}
 
 		body, err := json.Marshal(httpResp)
 		if err != nil {

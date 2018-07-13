@@ -4066,7 +4066,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Call tidy
-	ts.handleTidy(context.Background(), nil, nil)
+	ts.handleTidy(context.Background(), &logical.Request{}, nil)
 
 	time.Sleep(200 * time.Millisecond)
 

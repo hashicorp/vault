@@ -28,11 +28,13 @@ type Config struct {
 
 	Seal *Seal `hcl:"-"`
 
-	CacheSize       int         `hcl:"cache_size"`
-	DisableCache    bool        `hcl:"-"`
-	DisableCacheRaw interface{} `hcl:"disable_cache"`
-	DisableMlock    bool        `hcl:"-"`
-	DisableMlockRaw interface{} `hcl:"disable_mlock"`
+	CacheSize                int         `hcl:"cache_size"`
+	DisableCache             bool        `hcl:"-"`
+	DisableCacheRaw          interface{} `hcl:"disable_cache"`
+	DisableMlock             bool        `hcl:"-"`
+	DisableMlockRaw          interface{} `hcl:"disable_mlock"`
+	DisablePrintableCheck    bool        `hcl:"-"`
+	DisablePrintableCheckRaw interface{} `hcl:"disable_printable_check"`
 
 	EnableUI    bool        `hcl:"-"`
 	EnableUIRaw interface{} `hcl:"ui"`
@@ -391,6 +393,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
+	if result.DisablePrintableCheckRaw != nil {
+		if result.DisablePrintableCheck, err = parseutil.ParseBool(result.DisablePrintableCheckRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	if result.EnableRawEndpointRaw != nil {
 		if result.EnableRawEndpoint, err = parseutil.ParseBool(result.EnableRawEndpointRaw); err != nil {
 			return nil, err
@@ -425,6 +433,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"cache_size",
 		"disable_cache",
 		"disable_mlock",
+		"disable_printable_check",
 		"ui",
 		"telemetry",
 		"default_lease_ttl",
