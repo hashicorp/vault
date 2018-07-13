@@ -50,7 +50,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		return nil, fmt.Errorf("missing username")
 	}
 	password, ok := conf["password"]
-	if !ok || username == "" {
+	if !ok || password == "" {
 		return nil, fmt.Errorf("missing password")
 	}
 
