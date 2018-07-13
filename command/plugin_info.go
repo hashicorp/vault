@@ -25,8 +25,7 @@ func (c *PluginInfoCommand) Help() string {
 Usage: vault plugin info [options] NAME
 
   Displays information about a plugin in the catalog with the given name. If
-  the plugin does not exist, an error is returned. This command requires sudo
-  privledges.
+  the plugin does not exist, an error is returned.
 
   Get info about a plugin:
 

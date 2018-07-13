@@ -24,8 +24,8 @@ func (c *PluginDeregisterCommand) Help() string {
 	helpText := `
 Usage: vault plugin deregister [options] NAME
 
-  Deregister an existing plugin in the catalog. This command requires sudo
-  privledges.
+  Deregister an existing plugin in the catalog. If the plugin does not exist,
+  no action is taken (the command is idempotent).
 
   Deregister the plugin named my-custom-plugin:
 
