@@ -1,6 +1,7 @@
 package spanner
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -8,7 +9,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	"golang.org/x/net/context"
 )
 
 func testCleanup(t testing.TB, client *spanner.Client, table string) {

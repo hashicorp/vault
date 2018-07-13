@@ -1,6 +1,7 @@
 package gcs
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -18,7 +19,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/armon/go-metrics"
-	"golang.org/x/net/context"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
