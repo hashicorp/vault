@@ -1,0 +1,27 @@
+<form {{action (perform save) on="submit"}}>
+  {{message-error model=model}}
+  <div class="box is-sideless is-fullwidth is-marginless">
+    {{#each model.fields as |attr|}}
+      {{form-field data-test-field attr=attr model=model}}
+    {{/each}}
+  </div>
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <div class="field is-grouped">
+      <div class="control">
+        <button type="submit" data-test-control-group-config-submit=true class="button is-primary {{if save.isRunning 'loading'}}" disabled={{save.isRunning}}>
+          Save
+        </button>
+      </div>
+    </div>
+    {{#if model.canDelete}}
+      {{#confirm-action
+        buttonClasses="button is-ghost"
+        onConfirmAction=(action "deleteItem" model)
+        confirmMessage=(concat "Are you sure you want to delete this config?")
+        data-test-config-delete=true
+      }}
+        {{deleteButtonText}}
+      {{/confirm-action}}
+    {{/if}}
+  </div>
+</form>
