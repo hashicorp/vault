@@ -42,7 +42,7 @@ flags](/docs/commands/index.html) included on all commands.
 ### Output Options
 
 - `-format` `(default: "table")` - Print the output in the given format. Valid
-  formats are "table", "json", or "yaml". This can also be specified via the
+  formats are "table", "json", "yaml", or "none". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
 ### Command Options

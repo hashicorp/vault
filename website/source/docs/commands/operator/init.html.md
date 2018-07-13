@@ -57,7 +57,7 @@ flags](/docs/commands/index.html) included on all commands.
 ### Output Options
 
 - `-format` `(string: "")` - Print the output in the given format. Valid formats
-  are "table", "json", or "yaml". The default is table. This can also be
+  are "table", "json", "yaml", or "none". The default is table. This can also be
   specified via the `VAULT_FORMAT` environment variable.
 
 ### Common Options

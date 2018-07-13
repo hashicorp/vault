@@ -59,7 +59,7 @@ flags](/docs/commands/index.html) included on all commands.
   will not have a trailing newline making it ideal for piping to other processes.
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
-  formats are "table", "json", or "yaml". This can also be specified via the
+  formats are "table", "json", "yaml", or "none". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
 ### Command Options
