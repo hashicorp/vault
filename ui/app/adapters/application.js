@@ -46,19 +46,40 @@ export default DS.RESTAdapter.extend({
     return options;
   },
 
-  ajax(url, type, options = {}) {
+  ajax(intendedUrl, method, passedOptions = {}) {
+    let url = intendedUrl;
+    let type = method;
+    let options = passedOptions;
+    let controlGroup = this.get('controlGroup');
+    let controlGroupToken = controlGroup.tokenForUrl(url);
+    // if we have a control group token that matches the intendedUrl,
+    // then we want to unwrap it and return the unwrapped response as
+    // if it were the initial request
+    // To do this, we rewrite the function args
+    if (controlGroupToken) {
+      url = '/v1/sys/wrapping/unwrap';
+      type = 'POST';
+      options = {
+        clientToken: controlGroupToken.token,
+        data: {
+          token: controlGroupToken.token,
+        },
+      };
+    }
     let opts = this._preRequest(url, options);
 
     return this._super(url, type, opts).then((...args) => {
+      if (controlGroupToken) {
+        controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
+      }
       const [resp] = args;
       if (resp && resp.warnings) {
-        const flash = this.get('flashMessages');
+        let flash = this.get('flashMessages');
         resp.warnings.forEach(message => {
           flash.info(message);
         });
       }
-      return this.get('controlGroup')
-        .checkForControlGroup(args, resp, options.wrapTTL);
+      return controlGroup.checkForControlGroup(args, resp, options.wrapTTL);
     });
   },
 
