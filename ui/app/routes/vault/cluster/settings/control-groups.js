@@ -13,15 +13,17 @@ export default Ember.Route.extend(UnloadModel, {
 
   model() {
     let type = 'control-group-config';
-    return this.store.findRecord(type, 'config').catch(e => {
-      // if you haven't saved a config, the API 404s, so create one here to edit and return it
-      if (e.httpStatus === 404) {
-        return this.store.createRecord(type, {
-          id: 'config',
+    return this.get('version.isOSS')
+      ? null
+      : this.store.findRecord(type, 'config').catch(e => {
+          // if you haven't saved a config, the API 404s, so create one here to edit and return it
+          if (e.httpStatus === 404) {
+            return this.store.createRecord(type, {
+              id: 'config',
+            });
+          }
+          throw e;
         });
-      }
-      throw e;
-    });
   },
 
   actions: {
