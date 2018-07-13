@@ -2,7 +2,7 @@ import Ember from 'ember';
 import { task } from 'ember-concurrency';
 import DS from 'ember-data';
 
-const { computed, inject } = Ember;
+const { inject } = Ember;
 export default Ember.Component.extend({
   flashMessages: inject.service(),
   model: null,
