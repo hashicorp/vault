@@ -34,6 +34,7 @@ BUG FIXES:
 
  * core: Fix returning 500 instead of 503 if a rekey is attempted when Vault is
    sealed [GH-4874]
+ * core: Fix issue releasing the leader lock in some circumstances [GH-4915]
  * core: Fix a panic that could happen if the server was shut down while still
    starting up
  * secrets/pki: Fix permitted DNS domains performing improper validation
