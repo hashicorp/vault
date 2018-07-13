@@ -22,6 +22,9 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * cli: Add a `-description` flag to secrets and auth tune subcommands to allow
+   updating an existing secret engine's or auth method's description. This
+   change also allows the description to be unset by providing an empty string.
  * core: A `max_request_size` parameter can now be set per-listener to adjust
    the maximum allowed size per request [GH-4824]
  * core: Add control group request endpoint to default policy [GH-4904]
