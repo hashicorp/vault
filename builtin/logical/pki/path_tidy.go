@@ -21,14 +21,12 @@ func pathTidy(b *backend) *framework.Path {
 				Type: framework.TypeBool,
 				Description: `Set to true to enable tidying up
 the certificate store`,
-				Default: false,
 			},
 
 			"tidy_revocation_list": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `Set to true to enable tidying up
 the revocation list`,
-				Default: false,
 			},
 
 			"tidy_revoked_certs": &framework.FieldSchema{
@@ -36,7 +34,6 @@ the revocation list`,
 				Description: `Set to true to expire all revoked
 certificates, even if their duration has not yet passed. This will cause these
 certificates to be removed from the CRL the next time the CRL is generated.`,
-				Default: false,
 			},
 
 			"safety_buffer": &framework.FieldSchema{
