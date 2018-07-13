@@ -32,8 +32,6 @@ Router.map(function() {
       });
       this.route('unseal');
       this.route('tools', function() {
-        this.route('control-groups');
-        this.route('control-group-accessor', { path: '/control-groups/:accessor'});
         this.route('tool', { path: '/:selectedAction' });
       });
       this.route('access', function() {
@@ -67,7 +65,7 @@ Router.map(function() {
           });
         });
         this.route('control-groups');
-        this.route('control-group-accessor', {path: '/control-groups/:accessor'});
+        this.route('control-group-accessor', { path: '/control-groups/:accessor' });
       });
       this.route('secrets', function() {
         this.route('backends', { path: '/' });
