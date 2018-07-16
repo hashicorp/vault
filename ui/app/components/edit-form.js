@@ -5,6 +5,8 @@ import DS from 'ember-data';
 const { inject } = Ember;
 export default Ember.Component.extend({
   flashMessages: inject.service(),
+
+  // public API
   model: null,
   successMessage: 'Saved!',
   deleteSuccessMessage: 'Deleted!',
@@ -18,11 +20,11 @@ export default Ember.Component.extend({
    */
   onSave: () => {},
 
-  save: task(function*() {
-    let model = this.get('model');
-
+  save: task(function*(model, options = { method: 'save' }) {
+    let { method } = options;
+    let messageKey = method === 'save' ? 'successMessage' : 'deleteSuccessMessage';
     try {
-      yield model.save();
+      yield model[method]();
     } catch (err) {
       // err will display via model state
       // AdapterErrors are handled by the error-message component
@@ -31,8 +33,8 @@ export default Ember.Component.extend({
       }
       return;
     }
-    this.get('flashMessages').success(this.get('successMessage'));
-    yield this.get('onSave')({ saveType: 'save', model });
+    this.get('flashMessages').success(this.get(messageKey));
+    yield this.get('onSave')({ saveType: method, model });
   }).drop(),
 
   willDestroy() {
@@ -40,15 +42,5 @@ export default Ember.Component.extend({
     if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {
       model.rollbackAttributes();
     }
-  },
-
-  actions: {
-    deleteItem(model) {
-      let flash = this.get('flashMessages');
-      model.destroyRecord().then(() => {
-        flash.success(this.get('deleteSuccessMessage'));
-        return this.get('onSave')({ saveType: 'delete', model });
-      });
-    },
   },
 });
