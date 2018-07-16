@@ -7,35 +7,35 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-uuid"
+	hclog "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/logging"
 )
 
-func TestServerHandler(t *testing.T) {
-	t.Log("[INFO] Starting TestServerHandler")
-	defer t.Log("[INFO] Finished TestServerHandler")
-	core := TestCore(t)
+func TestSinkServer(t *testing.T) {
+	log := logging.NewVaultLogger(hclog.Trace)
 
-	fs1, path1 := testFileServer(t, "")
+	fs1, path1 := testFileSink(t, log)
 	defer os.RemoveAll(path1)
-	fs2, path2 := testFileServer(t, "")
+	fs2, path2 := testFileSink(t, log)
 	defer os.RemoveAll(path2)
 
-	servers := []Server{fs1, fs2}
-	go core.serverHandler.Run(servers)
+	ss := NewSinkServer(log.Named("sink.server"))
 
 	uuidStr, _ := uuid.GenerateUUID()
-	core.serverHandler.TokenCh <- uuidStr
+	in := make(chan string)
+	sinks := []Sink{fs1, fs2}
+	go ss.Run(in, sinks)
+
+	// Seed a token
+	in <- uuidStr
 
 	// Give it a minute to finish writing
 	time.Sleep(1 * time.Second)
 
 	// Tell it to shut down and give it time to do so
-	close(state.ShutdownCh)
-	time.Sleep(1 * time.Second)
-
-	if !core.serverHandler.Stopped() {
-		t.Fatal("serverhandler did not stop")
-	}
+	close(ss.ShutdownCh)
+	<-ss.DoneCh
 
 	for _, path := range []string{path1, path2} {
 		fileBytes, err := ioutil.ReadFile(fmt.Sprintf("%s/token", path))
