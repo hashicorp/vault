@@ -328,7 +328,7 @@ save it as `cert.pem`.
 The command is basically the same as the Google API key example. Now, the path
 convention for certificates is **`secret/<ENVIRONMENT>/cert/<SYSTEM>`**. To
 store the root certificate for production MySQL, the path becomes
-`secret/prod/cert/postgres`.
+`secret/prod/cert/mysql`.
 
 **Example:**
 
