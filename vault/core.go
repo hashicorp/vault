@@ -1119,6 +1119,12 @@ func (c *Core) sealInternal(keepLock bool) error {
 		defer c.stateLock.Unlock()
 		// Even in a non-HA context we key off of this for some things
 		c.standby = true
+
+		// Stop requests from processing
+		if c.activeContextCancelFunc != nil {
+			c.activeContextCancelFunc()
+		}
+
 		if err := c.preSeal(); err != nil {
 			c.logger.Error("pre-seal teardown failed", "error", err)
 			return fmt.Errorf("internal error")
