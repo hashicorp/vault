@@ -547,9 +547,8 @@ func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 			go func() {
 				// Bind locally, as the race detector is tripping here
 				lopCount := opCount
-				defer atomic.AddInt32(lopCount, -1)
-
 				c.Leader()
+				atomic.AddInt32(lopCount, -1)
 			}()
 		case <-stopCh:
 			return
@@ -573,13 +572,13 @@ func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, doneCh, stopCh chan 
 			go func() {
 				// Bind locally, as the race detector is tripping here
 				lopCount := opCount
-				defer atomic.AddInt32(lopCount, -1)
 
 				// Only check if we are a standby
 				c.stateLock.RLock()
 				standby := c.standby
 				c.stateLock.RUnlock()
 				if !standby {
+					atomic.AddInt32(lopCount, -1)
 					return
 				}
 
@@ -590,12 +589,16 @@ func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, doneCh, stopCh chan 
 				if entry != nil && len(entry.Value) > 0 {
 					c.logger.Warn("encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
 					go c.Shutdown()
+					atomic.AddInt32(lopCount, -1)
 					return
 				}
 
 				if err := c.checkKeyUpgrades(ctx); err != nil {
 					c.logger.Error("key rotation periodic upgrade check failed", "error", err)
 				}
+
+				atomic.AddInt32(lopCount, -1)
+				return
 			}()
 		case <-stopCh:
 			return
