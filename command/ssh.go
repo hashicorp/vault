@@ -761,12 +761,30 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 	}
 }
 
+func (c *SSHCommand) isSingleSSHArg(arg string) bool {
+	// list of single SSH arguments is taken from
+	// https://github.com/openssh/openssh-portable/blob/28013759f09ed3ebf7e8335e83a62936bd7a7f47/ssh.c#L204
+	singleArgs := []string{
+		"4", "6", "A", "a", "C", "f", "G", "g", "K", "k", "M", "N", "n", "q",
+		"s", "T", "t", "V", "v", "X", "x", "Y", "y",
+	}
+
+	// We want to get the first character after the dash. This is so args like -vvv are picked up as just being -v
+	flag := string(arg[1])
+
+	for _, a := range singleArgs {
+		if flag == a {
+			return true
+		}
+	}
+	return false
+}
+
 // Finds the hostname, username (optional) and port (optional) from any valid ssh command
 // Supports usrname@hostname but also specifying valid ssh flags like -o User=username,
 // -o Port=2222 and -p 2222 anywhere in the command
 func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username string, port string, err error) {
 	lastArg := ""
-
 	for _, i := range args {
 		arg := lastArg
 		lastArg = ""
@@ -807,9 +825,12 @@ func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username s
 			continue
 		}
 
-		// If this is an ssh argument we want to look at the value
+		// If this is an ssh argument with a value we want to look at it in the next loop
 		if strings.HasPrefix(i, "-") {
-			lastArg = i
+			// If this isn't a single SSH arg we want to store the flag to we can look at the value next loop
+			if !c.isSingleSSHArg(i) {
+				lastArg = i
+			}
 			continue
 		}
 
