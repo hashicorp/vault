@@ -70,11 +70,7 @@ func TestClusterHAFetching(t *testing.T) {
 	}
 
 	// Verify unsealed
-	sealed, err := c.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if c.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 

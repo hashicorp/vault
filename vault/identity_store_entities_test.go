@@ -306,11 +306,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 		}
 	}
 
-	sealed, err := c.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if c.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
@@ -402,11 +398,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 		t.Fatalf("failed to seal core: %v", err)
 	}
 
-	sealed, err = c.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if !sealed {
+	if !c.Sealed() {
 		t.Fatal("should be sealed")
 	}
 
@@ -416,11 +408,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 		}
 	}
 
-	sealed, err = c.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if c.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 

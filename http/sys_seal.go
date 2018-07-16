@@ -95,12 +95,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 		}
 
 		if req.Reset {
-			sealed, err := core.Sealed()
-			if err != nil {
-				respondError(w, http.StatusInternalServerError, err)
-				return
-			}
-			if !sealed {
+			if !core.Sealed() {
 				respondError(w, http.StatusBadRequest, errors.New("vault is unsealed"))
 				return
 			}
@@ -164,13 +159,10 @@ func handleSysSealStatus(core *vault.Core) http.Handler {
 func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
-	sealed, err := core.Sealed()
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
-		return
-	}
+	sealed := core.Sealed()
 
 	var sealConfig *vault.SealConfig
+	var err error
 	if core.SealAccess().RecoveryKeySupported() {
 		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
 	} else {
