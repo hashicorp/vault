@@ -32,6 +32,7 @@ IMPROVEMENTS:
    kv` [GH-4895]
  * secrets/pki: Add the ability to tidy revoked but unexpired certificates
    [GH-4916]
+ * secrets/ssh: Allow Vault to work with single-argument SSH flags [GH-4825]
 
 BUG FIXES:
 
