@@ -516,6 +516,7 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 		case <-stopCh:
 			runSealing()
 			releaseHALock()
+			return
 
 		case <-manualStepDownCh:
 			manualStepDown = true
