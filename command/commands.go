@@ -62,6 +62,7 @@ import (
 	physGCS "github.com/hashicorp/vault/physical/gcs"
 	physInmem "github.com/hashicorp/vault/physical/inmem"
 	physManta "github.com/hashicorp/vault/physical/manta"
+	physMinio "github.com/hashicorp/vault/physical/minio"
 	physMSSQL "github.com/hashicorp/vault/physical/mssql"
 	physMySQL "github.com/hashicorp/vault/physical/mysql"
 	physPostgreSQL "github.com/hashicorp/vault/physical/postgresql"
@@ -152,6 +153,7 @@ var (
 		"inmem_transactional":    physInmem.NewTransactionalInmem,
 		"inmem":                  physInmem.NewInmem,
 		"manta":                  physManta.NewMantaBackend,
+		"minio":                  physMinio.NewMinioBackend,
 		"mssql":                  physMSSQL.NewMSSQLBackend,
 		"mysql":                  physMySQL.NewMySQLBackend,
 		"postgresql":             physPostgreSQL.NewPostgreSQLBackend,

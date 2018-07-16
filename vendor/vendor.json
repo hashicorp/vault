@@ -1545,6 +1545,42 @@
 			"revisionTime": "2018-07-01T18:37:35Z"
 		},
 		{
+			"checksumSHA1": "bRCV9PBLXU7lyE5uwPkjIgeXHX4=",
+			"path": "github.com/minio/minio-go",
+			"revision": "f44ca5490afab26b1b2988eb870b20c5183817b0",
+			"revisionTime": "2018-07-11T12:25:12Z"
+		},
+		{
+			"checksumSHA1": "/Ly8Mgi802nx7zZiBq+H6p+ct8M=",
+			"path": "github.com/minio/minio-go/pkg/credentials",
+			"revision": "f44ca5490afab26b1b2988eb870b20c5183817b0",
+			"revisionTime": "2018-07-11T12:25:12Z"
+		},
+		{
+			"checksumSHA1": "Md5pOKYfoKtrG7xNvs2FtiDPfDc=",
+			"path": "github.com/minio/minio-go/pkg/encrypt",
+			"revision": "f44ca5490afab26b1b2988eb870b20c5183817b0",
+			"revisionTime": "2018-07-11T12:25:12Z"
+		},
+		{
+			"checksumSHA1": "bbWjcrOQsV57qK+BSsrNAsI+Q/o=",
+			"path": "github.com/minio/minio-go/pkg/s3signer",
+			"revision": "f44ca5490afab26b1b2988eb870b20c5183817b0",
+			"revisionTime": "2018-07-11T12:25:12Z"
+		},
+		{
+			"checksumSHA1": "qftVikC9NYZ40HFUccTYg1p1M/Y=",
+			"path": "github.com/minio/minio-go/pkg/s3utils",
+			"revision": "f44ca5490afab26b1b2988eb870b20c5183817b0",
+			"revisionTime": "2018-07-11T12:25:12Z"
+		},
+		{
+			"checksumSHA1": "Wt8ej+rZXTdNBR9Xyw1eGo3Iq5o=",
+			"path": "github.com/minio/minio-go/pkg/set",
+			"revision": "f44ca5490afab26b1b2988eb870b20c5183817b0",
+			"revisionTime": "2018-07-11T12:25:12Z"
+		},
+		{
 			"checksumSHA1": "FpWlypAjr+w5Q6uQybVbNfwmlp8=",
 			"path": "github.com/mitchellh/cli",
 			"revision": "c48282d14eba4b0817ddef3f832ff8d13851aefd",
@@ -2139,6 +2175,12 @@
 			"path": "go.uber.org/zap/zapcore",
 			"revision": "7e7e266a8dbce911a49554b945538c5b950196b8",
 			"revisionTime": "2018-06-27T23:43:35Z"
+		},
+		{
+			"checksumSHA1": "FwW3Vv4jW0Nv7V2SZC7x/Huj5M4=",
+			"path": "golang.org/x/crypto/argon2",
+			"revision": "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
+			"revisionTime": "2018-06-20T09:14:27Z"
 		},
 		{
 			"checksumSHA1": "oCH3J96RWvO8W4xjix47PModpio=",
