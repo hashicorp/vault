@@ -9,11 +9,6 @@ auto_auth {
 		}
 	}
 
-	vault {
-		address = "http://127.0.0.1:8200"
-		tls_skip_verify = true
-	}
-
 	sink "file" {
 		path = "/tmp/file-foo"
 	}

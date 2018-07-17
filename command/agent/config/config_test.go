@@ -25,7 +25,6 @@ func TestLoadConfigFile(t *testing.T) {
 					"role": "foobar",
 				},
 			},
-			Vault: &Vault{Address: "http://127.0.0.1:8200", TLSSkipVerify: true, CAPath: "", CACert: ""},
 			Sinks: []*Sink{
 				&Sink{
 					Type: "file",
