@@ -65,6 +65,8 @@ func (ah *AuthHandler) Run(am AuthMethod) {
 		credCh = make(chan struct{})
 	}
 
+	var renewer *api.Renewer
+
 	for {
 		select {
 		case <-ah.ShutdownCh:
@@ -100,7 +102,11 @@ func (ah *AuthHandler) Run(am AuthMethod) {
 		ah.logger.Info("authentication successful, sending token to sinks")
 		ah.OutputCh <- secret.Auth.ClientToken
 
-		renewer, err := ah.client.NewRenewer(&api.RenewerInput{
+		if renewer != nil {
+			renewer.Stop()
+		}
+
+		renewer, err = ah.client.NewRenewer(&api.RenewerInput{
 			Secret: secret,
 		})
 		if err != nil {
@@ -129,7 +135,7 @@ func (ah *AuthHandler) Run(am AuthMethod) {
 				break RenewerLoop
 
 			case <-renewer.RenewCh():
-				ah.logger.Info("renewed auth token")
+				ah.logger.Info("renewed auth token", "token", secret.Auth.ClientToken)
 
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")

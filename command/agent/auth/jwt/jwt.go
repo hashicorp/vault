@@ -84,6 +84,8 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 }
 
 func (j *jwtMethod) Authenticate(client *api.Client) (*api.Secret, error) {
+	j.logger.Trace("beginning authentication")
+
 	j.ingressToken()
 
 	latestToken := j.latestToken.Load().(string)
@@ -99,6 +101,10 @@ func (j *jwtMethod) Authenticate(client *api.Client) (*api.Secret, error) {
 	if err != nil {
 		return nil, errwrap.Wrapf("error logging in: {{err}}", err)
 	}
+
+	j.once.Do(func() {
+		close(j.credSuccessGate)
+	})
 
 	return secret, nil
 }
@@ -147,12 +153,14 @@ func (j *jwtMethod) ingressToken() {
 	fi, err := os.Lstat(j.path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			j.logger.Trace("no current jwt file found, not updating")
 			return
 		}
 		j.logger.Error("error encountered stat'ing jwt file", "error", err)
 		return
 	}
+
+	j.logger.Debug("new jwt file found")
+
 	if !fi.Mode().IsRegular() {
 		j.logger.Error("jwt file is not a regular file")
 		return
