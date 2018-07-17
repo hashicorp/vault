@@ -849,12 +849,6 @@
 			"revisionTime": "2018-01-23T06:50:59Z"
 		},
 		{
-			"checksumSHA1": "7NP1qUMF8Kx1y0zANxx0e+oq9Oo=",
-			"path": "github.com/fsnotify/fsnotify",
-			"revision": "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9",
-			"revisionTime": "2018-01-10T05:33:47Z"
-		},
-		{
 			"checksumSHA1": "gltDeXUix5pTk06uFY9ed/ft3hE=",
 			"path": "github.com/fullsailor/pkcs7",
 			"revision": "8306686428a5fe132eac8cb7c4848af725098bd4",
