@@ -12,12 +12,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent/auth"
 )
-
-type AuthConfig struct {
-	Logger hclog.Logger
-	Config map[string]interface{}
-}
 
 type jwtMethod struct {
 	logger      hclog.Logger
@@ -33,7 +29,7 @@ type jwtMethod struct {
 	latestToken *atomic.Value
 }
 
-func NewJWTMethod(conf *AuthConfig) (AuthMethod, error) {
+func NewJWTMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	if conf == nil {
 		return nil, errors.New("empty config")
 	}
@@ -41,23 +37,23 @@ func NewJWTMethod(conf *AuthConfig) (AuthMethod, error) {
 		return nil, errors.New("empty config data")
 	}
 
-	m := &jwtMethod{
+	j := &jwtMethod{
 		logger:      conf.Logger,
 		mountPath:   conf.MountPath,
-		credsFound:  new(chan struct{}),
-		watchCh:     new(chan string),
-		stopCh:      new(chan struct{}),
-		doneCh:      new(chan struct{}),
+		credsFound:  make(chan struct{}),
+		watchCh:     make(chan string),
+		stopCh:      make(chan struct{}),
+		doneCh:      make(chan struct{}),
 		once:        new(sync.Once),
 		latestToken: new(atomic.Value),
 	}
-	latestToken.Store("")
+	j.latestToken.Store("")
 
 	pathRaw, ok := conf.Config["path"]
 	if !ok {
 		return nil, errors.New("missing 'path' value")
 	}
-	m.path, ok = pathRaw.(string)
+	j.path, ok = pathRaw.(string)
 	if !ok {
 		return nil, errors.New("could not convert 'path' config value to string")
 	}
@@ -66,15 +62,15 @@ func NewJWTMethod(conf *AuthConfig) (AuthMethod, error) {
 	if !ok {
 		return nil, errors.New("missing 'role' value")
 	}
-	m.role, ok = roleRaw.(string)
+	j.role, ok = roleRaw.(string)
 	if !ok {
 		return nil, errors.New("could not convert 'role' config value to string")
 	}
 
 	switch {
-	case path == "":
+	case j.path == "":
 		return nil, errors.New("'path' value is empty")
-	case role == "":
+	case j.role == "":
 		return nil, errors.New("'role' value is empty")
 	}
 
@@ -88,7 +84,7 @@ func NewJWTMethod(conf *AuthConfig) (AuthMethod, error) {
 		return nil, errwrap.Wrapf("error adding path to watcher: {{err}}", err)
 	}
 
-	return m, nil
+	return j, nil
 }
 
 func (j *jwtMethod) Authenticate(client *api.Client) (*api.Secret, error) {
@@ -99,7 +95,7 @@ func (j *jwtMethod) Authenticate(client *api.Client) (*api.Secret, error) {
 		return nil, errors.New("latest known jwt is empty, cannot authenticate")
 	}
 
-	secret, err := j.client.Logical.Write(fmt.Sprintf("%s/login", j.mountPath), map[string]interface{}{
+	secret, err := client.Logical().Write(fmt.Sprintf("%s/login", j.mountPath), map[string]interface{}{
 		"role": j.role,
 		"jwt":  latestToken,
 	})
@@ -111,7 +107,7 @@ func (j *jwtMethod) Authenticate(client *api.Client) (*api.Secret, error) {
 	// We only start this once we're initially successful, since at startup
 	// Authenticate will be called and we don't want to end up immediately
 	// reauthenticating by having found a new value
-	j.once.Do(j.runWatcher())
+	j.once.Do(j.runWatcher)
 
 	return secret, nil
 }
@@ -120,7 +116,7 @@ func (j *jwtMethod) CredChannel() chan struct{} {
 	return j.credsFound
 }
 
-func (j *jwtMethod) Cleanup() {
+func (j *jwtMethod) Shutdown() {
 	j.watcher.Close()
 	close(j.stopCh)
 	<-j.doneCh
@@ -140,7 +136,7 @@ drainloop:
 
 	for {
 		select {
-		case j.stopCh:
+		case <-j.stopCh:
 			defer close(j.doneCh)
 			return
 
