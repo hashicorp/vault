@@ -146,6 +146,10 @@ func TestJWTEndtoEnd(t *testing.T) {
 		Client: client,
 	})
 	go ah.Run(am)
+	defer func() {
+		close(ah.ShutdownCh)
+		<-ah.DoneCh
+	}()
 
 	fs, err := sink.NewFileSink(&sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
@@ -162,10 +166,7 @@ func TestJWTEndtoEnd(t *testing.T) {
 		Client: client,
 	})
 	go ss.Run(ah.OutputCh, []sink.Sink{fs})
-
 	defer func() {
-		close(ah.ShutdownCh)
-		<-ah.DoneCh
 		close(ss.ShutdownCh)
 		<-ss.DoneCh
 	}()
