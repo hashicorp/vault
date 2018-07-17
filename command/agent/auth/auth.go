@@ -11,7 +11,7 @@ import (
 type AuthMethod interface {
 	Authenticate(*api.Client) (*api.Secret, error)
 	CredChannel() chan struct{}
-	Cleanup()
+	Shutdown()
 }
 
 type AuthConfig struct {
@@ -133,7 +133,7 @@ func (ah *AuthHandler) Run(am AuthMethod) {
 
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")
-				break RenwerLoop
+				break RenewerLoop
 			}
 		}
 	}
