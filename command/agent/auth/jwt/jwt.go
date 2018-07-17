@@ -7,8 +7,8 @@ import (
 	"os"
 	"sync"
 	"sync/atomic"
+	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -25,7 +25,7 @@ type jwtMethod struct {
 	stopCh          chan struct{}
 	doneCh          chan struct{}
 	credSuccessGate chan struct{}
-	watcher         *fsnotify.Watcher
+	ticker          *time.Ticker
 	once            *sync.Once
 	latestToken     *atomic.Value
 }
@@ -76,15 +76,7 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("'role' value is empty")
 	}
 
-	var err error
-	j.watcher, err = fsnotify.NewWatcher()
-	if err != nil {
-		return nil, errwrap.Wrapf("error creating watcher: {{err}}", err)
-	}
-	err = j.watcher.Add(j.path)
-	if err != nil {
-		return nil, errwrap.Wrapf("error adding path to watcher: {{err}}", err)
-	}
+	j.ticker = time.NewTicker(500 * time.Millisecond)
 
 	go j.runWatcher()
 
@@ -116,7 +108,7 @@ func (j *jwtMethod) NewCreds() chan struct{} {
 }
 
 func (j *jwtMethod) Shutdown() {
-	j.watcher.Close()
+	j.ticker.Stop()
 	close(j.stopCh)
 	<-j.doneCh
 }
@@ -124,22 +116,15 @@ func (j *jwtMethod) Shutdown() {
 func (j *jwtMethod) runWatcher() {
 	defer close(j.doneCh)
 
-	// Drain the watcher in case events have been queueing up
-drainloop:
-	for {
-		select {
-		case <-j.watcher.Errors:
-		case <-j.watcher.Events:
-		case <-j.stopCh:
-			return
+	select {
+	case <-j.stopCh:
+		return
 
-		case <-j.credSuccessGate:
-			// We only start the next loop once we're initially successful,
-			// since at startup Authenticate will be called and we don't want
-			// to end up immediately reauthenticating by having found a new
-			// value
-			break drainloop
-		}
+	case <-j.credSuccessGate:
+		// We only start the next loop once we're initially successful,
+		// since at startup Authenticate will be called and we don't want
+		// to end up immediately reauthenticating by having found a new
+		// value
 	}
 
 	for {
@@ -147,30 +132,22 @@ drainloop:
 		case <-j.stopCh:
 			return
 
-		case err := <-j.watcher.Errors:
-			j.logger.Error("error from watcher", "error", err)
-
-		case event := <-j.watcher.Events:
-			switch event.Op {
-			case fsnotify.Create, fsnotify.Write:
-				latestToken := j.latestToken.Load().(string)
-				j.ingressToken()
-				newToken := j.latestToken.Load().(string)
-				if newToken != latestToken {
-					j.credsFound <- struct{}{}
-				}
+		case <-j.ticker.C:
+			latestToken := j.latestToken.Load().(string)
+			j.ingressToken()
+			newToken := j.latestToken.Load().(string)
+			if newToken != latestToken {
+				j.credsFound <- struct{}{}
 			}
 		}
 	}
 }
 
 func (j *jwtMethod) ingressToken() {
-	j.logger.Info("ingressing jwt token file")
-
 	fi, err := os.Lstat(j.path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			j.logger.Info("no current jwt file found, not updating")
+			j.logger.Trace("no current jwt file found, not updating")
 			return
 		}
 		j.logger.Error("error encountered stat'ing jwt file", "error", err)
