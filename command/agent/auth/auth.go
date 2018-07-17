@@ -10,7 +10,7 @@ import (
 
 type AuthMethod interface {
 	Authenticate(*api.Client) (*api.Secret, error)
-	CredChannel() chan struct{}
+	NewCreds() chan struct{}
 	Shutdown()
 }
 
@@ -60,7 +60,7 @@ func (ah *AuthHandler) Run(am AuthMethod) {
 		close(ah.DoneCh)
 	}()
 
-	credCh := am.CredChannel()
+	credCh := am.NewCreds()
 	if credCh == nil {
 		credCh = make(chan struct{})
 	}
