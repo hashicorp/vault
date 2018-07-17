@@ -12,8 +12,6 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 )
 
-type fileFormat uint
-
 // fileSink is a Sink implementation that writes a token to a file
 type fileSink struct {
 	path   string
