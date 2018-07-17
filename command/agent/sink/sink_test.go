@@ -20,7 +20,9 @@ func TestSinkServer(t *testing.T) {
 	fs2, path2 := testFileSink(t, log)
 	defer os.RemoveAll(path2)
 
-	ss := NewSinkServer(log.Named("sink.server"))
+	ss := NewSinkServer(&SinkConfig{
+		Logger: log.Named("sink.server"),
+	})
 
 	uuidStr, _ := uuid.GenerateUUID()
 	in := make(chan string)

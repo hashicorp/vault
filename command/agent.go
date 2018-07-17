@@ -263,7 +263,7 @@ func (c *AgentCommand) Run(args []string) int {
 	var method auth.AuthMethod
 	switch config.AutoAuth.Method.Type {
 	case "jwt":
-		method, err = jwt.NewJWTMethod(&auth.AuthConfig{
+		method, err = jwt.NewJWTAuthMethod(&auth.AuthConfig{
 			Logger:    c.logger.Named("auth.jwt"),
 			MountPath: config.AutoAuth.Method.MountPath,
 			Config:    config.AutoAuth.Method.Config,
