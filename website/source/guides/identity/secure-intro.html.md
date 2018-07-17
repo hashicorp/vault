@@ -115,7 +115,7 @@ is acting as a trusted orchestrator and extending trust to the new machine. The
 new machine, or application running on it, can use the injected credentials to
 authenticate against Vault.
 
-![AppRole auth method workflow](/assets/images/vault-approle-workflow2.png)
+![AppRole auth method workflow](/assets/images/vault-secure-intro-4.png)
 
 
 **Use Case**
