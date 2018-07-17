@@ -849,6 +849,12 @@
 			"revisionTime": "2018-01-23T06:50:59Z"
 		},
 		{
+			"checksumSHA1": "7NP1qUMF8Kx1y0zANxx0e+oq9Oo=",
+			"path": "github.com/fsnotify/fsnotify",
+			"revision": "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9",
+			"revisionTime": "2018-01-10T05:33:47Z"
+		},
+		{
 			"checksumSHA1": "gltDeXUix5pTk06uFY9ed/ft3hE=",
 			"path": "github.com/fullsailor/pkcs7",
 			"revision": "8306686428a5fe132eac8cb7c4848af725098bd4",
@@ -1489,6 +1495,12 @@
 			"path": "github.com/keybase/go-crypto/rsa",
 			"revision": "670ebd3adf7a737d69ffe83a777a8e34eadc1b32",
 			"revisionTime": "2018-06-27T17:25:17Z"
+		},
+		{
+			"checksumSHA1": "3ohk4dFYrERZ6WTdKkIwnTA0HSI=",
+			"path": "github.com/kr/pretty",
+			"revision": "73f6ac0b30a98e433b289500d779f50c1a6f0712",
+			"revisionTime": "2018-05-06T08:33:45Z"
 		},
 		{
 			"checksumSHA1": "SbguDK5lY8uhaHNrmJmNbiWIGM0=",
