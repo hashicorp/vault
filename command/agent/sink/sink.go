@@ -1,6 +1,9 @@
 package sink
 
-import "github.com/hashicorp/go-hclog"
+import (
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/api"
+)
 
 type Sink interface {
 	WriteToken(string) error
@@ -16,13 +19,20 @@ type SinkServer struct {
 	DoneCh     chan struct{}
 	ShutdownCh chan struct{}
 	logger     hclog.Logger
+	client     *api.Client
 }
 
-func NewSinkServer(logger hclog.Logger) *SinkServer {
+type SinkConfig struct {
+	Logger hclog.Logger
+	Client *api.Client
+}
+
+func NewSinkServer(conf *SinkConfig) *SinkServer {
 	ss := &SinkServer{
 		ShutdownCh: make(chan struct{}),
 		DoneCh:     make(chan struct{}),
-		logger:     logger,
+		logger:     conf.Logger,
+		client:     conf.Client,
 	}
 
 	return ss

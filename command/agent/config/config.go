@@ -22,7 +22,6 @@ type Config struct {
 
 type AutoAuth struct {
 	Method *Method `hcl:"-"`
-	Vault  *Vault  `hcl:"-"`
 	Sinks  []*Sink `hcl:"sinks"`
 }
 
@@ -30,13 +29,6 @@ type Method struct {
 	Type      string
 	MountPath string `hcl:"mount_path"`
 	Config    map[string]interface{}
-}
-
-type Vault struct {
-	Address       string
-	TLSSkipVerify bool   `hcl:"tls_skip_verify"`
-	CAPath        string `hcl:"ca_path"`
-	CACert        string `hcl:"ca_cert"`
 }
 
 type Sink struct {
@@ -114,10 +106,6 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 		return errwrap.Wrapf("error parsing 'method': {{err}}", err)
 	}
 
-	if err := parseVault(result, subList); err != nil {
-		return errwrap.Wrapf("error parsing 'vault': {{err}}", err)
-	}
-
 	if err := parseSinks(result, subList); err != nil {
 		return errwrap.Wrapf("error parsing 'sink' stanzas: {{err}}", err)
 	}
@@ -125,8 +113,6 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 	switch {
 	case a.Method == nil:
 		return fmt.Errorf("no 'method' block found")
-	case a.Vault == nil:
-		return fmt.Errorf("no 'vault' block found")
 	case len(a.Sinks) == 0:
 		return fmt.Errorf("at least one 'sink' block must be provided")
 	}
@@ -151,26 +137,6 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.AutoAuth.Method = &m
-	return nil
-}
-
-func parseVault(result *Config, list *ast.ObjectList) error {
-	name := "vault"
-
-	vaultList := list.Filter(name)
-	if len(vaultList.Items) != 1 {
-		return fmt.Errorf("one and only one %q block is required", name)
-	}
-
-	// get our item
-	item := vaultList.Items[0]
-
-	var v Vault
-	if err := hcl.DecodeObject(&v, item.Val); err != nil {
-		return err
-	}
-
-	result.AutoAuth.Vault = &v
 	return nil
 }
 
