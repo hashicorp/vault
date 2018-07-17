@@ -42,6 +42,13 @@ func (u *userpassTestMethod) Authenticate(client *api.Client) (*api.Secret, erro
 	})
 }
 
+func (u *userpassTestMethod) NewCreds() chan struct{} {
+	return nil
+}
+
+func (u *userpassTestMethod) Shutdown() {
+}
+
 func TestAuthHandler(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{

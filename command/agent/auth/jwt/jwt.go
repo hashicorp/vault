@@ -16,20 +16,21 @@ import (
 )
 
 type jwtMethod struct {
-	logger      hclog.Logger
-	path        string
-	mountPath   string
-	role        string
-	credsFound  chan struct{}
-	watchCh     chan string
-	stopCh      chan struct{}
-	doneCh      chan struct{}
-	watcher     *fsnotify.Watcher
-	once        *sync.Once
-	latestToken *atomic.Value
+	logger          hclog.Logger
+	path            string
+	mountPath       string
+	role            string
+	credsFound      chan struct{}
+	watchCh         chan string
+	stopCh          chan struct{}
+	doneCh          chan struct{}
+	credSuccessGate chan struct{}
+	watcher         *fsnotify.Watcher
+	once            *sync.Once
+	latestToken     *atomic.Value
 }
 
-func NewJWTMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
+func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	if conf == nil {
 		return nil, errors.New("empty config")
 	}
@@ -38,14 +39,15 @@ func NewJWTMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	}
 
 	j := &jwtMethod{
-		logger:      conf.Logger,
-		mountPath:   conf.MountPath,
-		credsFound:  make(chan struct{}),
-		watchCh:     make(chan string),
-		stopCh:      make(chan struct{}),
-		doneCh:      make(chan struct{}),
-		once:        new(sync.Once),
-		latestToken: new(atomic.Value),
+		logger:          conf.Logger,
+		mountPath:       conf.MountPath,
+		credsFound:      make(chan struct{}),
+		watchCh:         make(chan string),
+		stopCh:          make(chan struct{}),
+		doneCh:          make(chan struct{}),
+		credSuccessGate: make(chan struct{}),
+		once:            new(sync.Once),
+		latestToken:     new(atomic.Value),
 	}
 	j.latestToken.Store("")
 
@@ -84,6 +86,8 @@ func NewJWTMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errwrap.Wrapf("error adding path to watcher: {{err}}", err)
 	}
 
+	go j.runWatcher()
+
 	return j, nil
 }
 
@@ -104,15 +108,10 @@ func (j *jwtMethod) Authenticate(client *api.Client) (*api.Secret, error) {
 		return nil, errwrap.Wrapf("error logging in: {{err}}", err)
 	}
 
-	// We only start this once we're initially successful, since at startup
-	// Authenticate will be called and we don't want to end up immediately
-	// reauthenticating by having found a new value
-	j.once.Do(j.runWatcher)
-
 	return secret, nil
 }
 
-func (j *jwtMethod) CredChannel() chan struct{} {
+func (j *jwtMethod) NewCreds() chan struct{} {
 	return j.credsFound
 }
 
@@ -123,13 +122,22 @@ func (j *jwtMethod) Shutdown() {
 }
 
 func (j *jwtMethod) runWatcher() {
+	defer close(j.doneCh)
+
 	// Drain the watcher in case events have been queueing up
 drainloop:
 	for {
 		select {
 		case <-j.watcher.Errors:
 		case <-j.watcher.Events:
-		default:
+		case <-j.stopCh:
+			return
+
+		case <-j.credSuccessGate:
+			// We only start the next loop once we're initially successful,
+			// since at startup Authenticate will be called and we don't want
+			// to end up immediately reauthenticating by having found a new
+			// value
 			break drainloop
 		}
 	}
@@ -137,7 +145,6 @@ drainloop:
 	for {
 		select {
 		case <-j.stopCh:
-			defer close(j.doneCh)
 			return
 
 		case err := <-j.watcher.Errors:
