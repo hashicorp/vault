@@ -197,15 +197,15 @@ func TestJWTEndtoEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	timeout := time.Now().Add(5 * time.Second)
-	var foundToken string
+	var origToken string
 	for {
 		if time.Now().After(timeout) {
 			t.Fatal("did not find a written token after timeout")
 		}
 		val, err := ioutil.ReadFile(out)
 		if err == nil {
-			foundToken = string(val)
-			if foundToken == "" {
+			origToken = string(val)
+			if origToken == "" {
 				t.Fatal("written token was empty")
 			}
 			os.Remove(out)
@@ -216,7 +216,7 @@ func TestJWTEndtoEnd(t *testing.T) {
 
 	// Period of 3 seconds, so should still be alive after 7
 	timeout = time.Now().Add(7 * time.Second)
-	cloned.SetToken(foundToken)
+	cloned.SetToken(origToken)
 	for {
 		if time.Now().After(timeout) {
 			break
@@ -252,7 +252,7 @@ func TestJWTEndtoEnd(t *testing.T) {
 			if newToken == "" {
 				t.Fatal("written token was empty")
 			}
-			if newToken == foundToken {
+			if newToken == origToken {
 				t.Fatal("found same token written")
 			}
 			os.Remove(out)
@@ -282,7 +282,7 @@ func TestJWTEndtoEnd(t *testing.T) {
 		}
 	}
 
-	cloned.SetToken(foundToken)
+	cloned.SetToken(origToken)
 	_, err = cloned.Auth().Token().LookupSelf()
 	if err == nil {
 		t.Fatal("expected error")
