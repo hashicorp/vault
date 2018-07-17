@@ -14,6 +14,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/command/agent/auth"
+	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/helper/gated-writer"
@@ -258,6 +260,20 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}
 
+	var method auth.AuthMethod
+	switch config.AutoAuth.Method.Type {
+	case "jwt":
+		method, err = jwt.NewJWTMethod(&auth.AuthConfig{
+			Logger:    c.logger.Named("auth.jwt"),
+			MountPath: config.AutoAuth.Method.MountPath,
+			Config:    config.AutoAuth.Method.Config,
+		})
+		if err != nil {
+			c.UI.Error(errwrap.Wrapf("Error creating jwt auth method: {{err}}", err).Error())
+			return 1
+		}
+	}
+
 	// Output the header that the server has started
 	if !c.flagCombineLogs {
 		c.UI.Output("==> Vault server started! Log data will stream in below:\n")
@@ -273,9 +289,15 @@ func (c *AgentCommand) Run(args []string) int {
 		Logger: c.logger.Named("sink.server"),
 		Client: client,
 	})
-	incoming := make(chan string)
 
-	go ss.Run(incoming, sinks)
+	ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
+		Logger: c.logger.Named("auth.handler"),
+		Client: c.client,
+	})
+
+	// Start things running
+	go ah.Run(method)
+	go ss.Run(ah.OutputCh, sinks)
 
 	// Release the log gate.
 	c.logGate.Flush()
@@ -300,6 +322,8 @@ func (c *AgentCommand) Run(args []string) int {
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault agent shutdown triggered")
 			shutdownTriggered = true
+			close(ah.ShutdownCh)
+			<-ah.DoneCh
 			close(ss.ShutdownCh)
 			<-ss.DoneCh
 		}
