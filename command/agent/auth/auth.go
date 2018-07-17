@@ -10,11 +10,14 @@ import (
 
 type AuthMethod interface {
 	Authenticate(*api.Client) (*api.Secret, error)
+	CredChannel() chan struct{}
+	Cleanup()
 }
 
 type AuthConfig struct {
-	Logger hclog.Logger
-	Config map[string]interface{}
+	Logger    hclog.Logger
+	MountPath string
+	Config    map[string]interface{}
 }
 
 // AuthHandler is responsible for keeping a token alive and renewed and passing
@@ -57,10 +60,17 @@ func (ah *AuthHandler) Run(am AuthMethod) {
 		close(ah.DoneCh)
 	}()
 
+	credCh := am.CredChannel()
+	if credCh == nil {
+		credCh = make(chan struct{})
+	}
+
 	for {
 		select {
 		case <-ah.ShutdownCh:
+			am.Shutdown()
 			return
+
 		default:
 		}
 
@@ -120,6 +130,10 @@ func (ah *AuthHandler) Run(am AuthMethod) {
 
 			case <-renewer.RenewCh():
 				ah.logger.Info("renewed auth token")
+
+			case <-credCh:
+				ah.logger.Info("auth method found new credentials, re-authenticating")
+				break RenwerLoop
 			}
 		}
 	}

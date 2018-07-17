@@ -12,6 +12,7 @@ type Sink interface {
 type SinkConfig struct {
 	Logger hclog.Logger
 	Config map[string]interface{}
+	Client *api.Client
 }
 
 // SinkServer is responsible for pushing tokens to sinks
@@ -20,11 +21,6 @@ type SinkServer struct {
 	ShutdownCh chan struct{}
 	logger     hclog.Logger
 	client     *api.Client
-}
-
-type SinkConfig struct {
-	Logger hclog.Logger
-	Client *api.Client
 }
 
 func NewSinkServer(conf *SinkConfig) *SinkServer {
