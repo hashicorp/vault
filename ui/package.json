@@ -105,6 +105,7 @@
     "string.prototype.endswith": "^0.2.0",
     "string.prototype.startswith": "^0.2.0",
     "text-encoder-lite": "1.0.0",
+    "xstate": "^3.3.3",
     "yargs-parser": "^10.0.0"
   },
   "engines": {
