@@ -3,6 +3,7 @@ package agent
 import (
 	"crypto/ecdsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"io/ioutil"
 	"os"
@@ -185,9 +186,106 @@ func TestJWTEndtoEnd(t *testing.T) {
 		t.Fatal("expected notexist err")
 	}
 
+	cloned, err := client.Clone()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Get a token
 	jwtToken, _ := getTestJWT(t)
 	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
 		t.Fatal(err)
+	}
+	timeout := time.Now().Add(5 * time.Second)
+	var foundToken string
+	for {
+		if time.Now().After(timeout) {
+			t.Fatal("did not find a written token after timeout")
+		}
+		val, err := ioutil.ReadFile(out)
+		if err == nil {
+			foundToken = string(val)
+			if foundToken == "" {
+				t.Fatal("written token was empty")
+			}
+			os.Remove(out)
+			break
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+
+	// Period of 3 seconds, so should still be alive after 7
+	timeout = time.Now().Add(7 * time.Second)
+	cloned.SetToken(foundToken)
+	for {
+		if time.Now().After(timeout) {
+			break
+		}
+		secret, err := cloned.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		ttl, err := secret.Data["ttl"].(json.Number).Int64()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ttl > 3 {
+			t.Fatalf("unexpected ttl: %v", secret.Data["ttl"])
+		}
+	}
+
+	// Get another token to test the backend pushing the need to authenticate
+	// to the handler
+	jwtToken, _ = getTestJWT(t)
+	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
+		t.Fatal(err)
+	}
+	timeout = time.Now().Add(5 * time.Second)
+	var newToken string
+	for {
+		if time.Now().After(timeout) {
+			t.Fatal("did not find a written token after timeout")
+		}
+		val, err := ioutil.ReadFile(out)
+		if err == nil {
+			newToken = string(val)
+			if newToken == "" {
+				t.Fatal("written token was empty")
+			}
+			if newToken == foundToken {
+				t.Fatal("found same token written")
+			}
+			os.Remove(out)
+			break
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+
+	// Repeat the period test. At the end the old token should have expired and
+	// the new token should still be alive after 7
+	timeout = time.Now().Add(7 * time.Second)
+	cloned.SetToken(newToken)
+	for {
+		if time.Now().After(timeout) {
+			break
+		}
+		secret, err := cloned.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		ttl, err := secret.Data["ttl"].(json.Number).Int64()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ttl > 3 {
+			t.Fatalf("unexpected ttl: %v", secret.Data["ttl"])
+		}
+	}
+
+	cloned.SetToken(foundToken)
+	_, err = cloned.Auth().Token().LookupSelf()
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }
 
