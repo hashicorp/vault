@@ -230,6 +230,14 @@ func (c *AgentCommand) Run(args []string) int {
 		return 0
 	}
 
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf(
+			"Error fetching client: %v",
+			err))
+		return 1
+	}
+
 	var sinks []sink.Sink
 	for _, sc := range config.AutoAuth.Sinks {
 		switch sc.Type {
@@ -237,6 +245,7 @@ func (c *AgentCommand) Run(args []string) int {
 			s, err := sink.NewFileSink(&sink.SinkConfig{
 				Logger: c.logger.Named("sink.file"),
 				Config: sc.Config,
+				Client: client,
 			})
 			if err != nil {
 				c.UI.Error(errwrap.Wrapf("Error creating file sink: {{err}}", err).Error())
@@ -260,8 +269,12 @@ func (c *AgentCommand) Run(args []string) int {
 	default:
 	}
 
-	ss := sink.NewSinkServer(c.logger.Named("sink.server"))
+	ss := sink.NewSinkServer(&sink.SinkConfig{
+		Logger: c.logger.Named("sink.server"),
+		Client: client,
+	})
 	incoming := make(chan string)
+
 	go ss.Run(incoming, sinks)
 
 	// Release the log gate.

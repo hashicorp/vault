@@ -136,6 +136,13 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 		return err
 	}
 
+	// Default to Vault's default
+	if m.MountPath == "" {
+		m.MountPath = fmt.Sprintf("auth/%s", m.Type)
+	}
+	// Standardize on no trailing slash
+	m.MountPath = strings.TrimSuffix(m.MountPath, "/")
+
 	result.AutoAuth.Method = &m
 	return nil
 }
