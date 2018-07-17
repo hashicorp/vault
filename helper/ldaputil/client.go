@@ -296,13 +296,13 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 		}
 
 		groupResult, err := conn.Search(&ldap.SearchRequest{
-			BaseDN:     fmt.Sprintf("<SID=%s>", sidString),
-			Scope:      0, // base
-			Filter:     "(objectClass=*)",
+			BaseDN: fmt.Sprintf("<SID=%s>", sidString),
+			Scope:  0, // base
+			Filter: "(objectClass=*)",
 			Attributes: []string{
-				"1.1",
+				"1.1", // RFC no attributes
 			},
-			SizeLimit:  1,
+			SizeLimit: 1,
 		})
 		if err != nil {
 			c.Logger.Warn("unable to read the group sid", "sid", sidString)
