@@ -15,10 +15,11 @@ entities and results in undesired consequences (e.g. unauthorized data access);
 therefore, only the ***trusted entities*** should have an access to your
 secrets.
 
-If you can securely get the first secret from an originator to a consumer,
-all subsequent secrets transmitted between this originator and consumer can be
+If you can securely get the first secret from an originator to a consumer, all
+subsequent secrets transmitted between this originator and consumer can be
 authenticated with the trust established by the successful distribution and user
-of that first secret.  
+of that first secret. Getting the first secret to the consumer, is the ***secure
+introduction*** challenge.
 
 ![Secure Introduction](/assets/images/vault-secure-intro-1.png)
 
@@ -52,13 +53,33 @@ orchestrator](#trusted-orchestrator).
 ### Platform Integration
 
 In the **Platform Integration** model, Vault trusts the underlying platform
-(e.g. AWS, Azure, GCP) which assigns an identifier to its cloud resources (e.g.
-an IAM token, instance ID, JWT). The Vault client (secret consumer)
-authenticates with Vault using its platform provided identifier. Once its
-identity was successfully validated against the platform, Vault returns an
-initial token to the client with a set of configured policies attached.
+(e.g. AWS, Azure, GCP) which assigns a token or cryptographic identity (such as
+IAM token, signed JWT) to virtual machine, container, or serverless function.
+
+Vault uses the provided identifier to verify the identity of the client by
+interacting with the underlying platform. After the client identity is verified,
+Vault returns a token to the client that is bound to their identity and policies
+that grant access to secrets.
 
 ![Platform Integration](/assets/images/vault-secure-intro-2.png)
+
+For example, suppose we have an application running on a virtual machine in AWS
+EC2. When that instance is started, an IAM token is provided via the machine
+local metadata URL. That IAM token is provided to Vault, as part of the AWS Auth
+Method, to login and authenticate the client. Vault uses that token to query the
+AWS API and verify the token validity and fetch additional metadata about the
+instance (Account ID, VPC ID, AMI, Region, etc). These properties are used to
+determine the identity of the client and to distinguish between different roles
+(e.g. a Web server versus an API server).
+
+Once validated and assigned to a role, Vault generates a token that is
+appropriately scoped and returns it to the client. All future requests from the
+client are made with the associated token, allowing Vault to efficiently
+authenticate the client and check for proper authorizations when consuming
+secrets.
+
+![Vault AWS EC2 Authentication Flow](/assets/images/vault-aws-ec2-auth-flow.png)
+
 
 **Use Case**
 
@@ -71,6 +92,7 @@ can leverage the corresponding auth method to authenticate with Vault.
 - [Azure Auth Method](/docs/auth/azure.html)
 - [GCP Auth Method](/docs/auth/azure.html)
 
+
 ### Trusted Orchestrator
 
 In the **Trusted Orchestrator** model, you have an _orchestrator_ which is
@@ -79,6 +101,22 @@ orchestrator launches new applications and inject a mechanism they can use to
 authenticate (e.g. AppRole, PKI cert, token, etc) with Vault.
 
 ![Trusted Orchestrator](/assets/images/vault-secure-intro-3.png)
+
+For example, suppose [Terraform](https://www.terraform.io/) is being used as a
+trusted orchestrator. This means Terraform already has a Vault token, with
+enough capabilities to generate new tokens or create new mechanisms to
+authenticate such as an AppRole. Terraform can interact with platforms such as
+VMware to provision new virtual machines. VMware does not provide a
+cryptographic identity, so a platform integration isn't possible. Instead,
+Terraform can provision a new AppRole credential, and SSH into the new machine
+to inject the credentials. Terraform is creating the new credential in Vault,
+and making that credential available to the new resource. In this way, Terraform
+is acting as a trusted orchestrator and extending trust to the new machine. The
+new machine, or application running on it, can use the injected credentials to
+authenticate against Vault.
+
+![AppRole auth method workflow](/assets/images/vault-approle-workflow2.png)
+
 
 **Use Case**
 
@@ -98,5 +136,8 @@ this model can be applied regardless of where the applications are running.
 
 ## Next steps
 
-Read the reference materials listed for secure introduction model best suited
-for your use case.
+When a [platform integration](#platform-integration) is available that should be
+preferred, as it is generally the simpler solution and works independent of the
+orchestration mechanism. For a [trusted orchestrator](#platform-integration),
+specific documentation for that orchestrator should be consulted on Vault
+integration.
