@@ -234,7 +234,7 @@ func (c *AgentCommand) Run(args []string) int {
 	for _, sc := range config.AutoAuth.Sinks {
 		switch sc.Type {
 		case "file":
-			fs, err := sink.NewFileSink(&sink.SinkConfig{
+			s, err := sink.NewFileSink(&sink.SinkConfig{
 				Logger: c.logger.Named("sink.file"),
 				Config: sc.Config,
 			})
@@ -242,7 +242,7 @@ func (c *AgentCommand) Run(args []string) int {
 				c.UI.Error(errwrap.Wrapf("Error creating file sink: {{err}}", err).Error())
 				return 1
 			}
-			sinks = append(sinks, fs)
+			sinks = append(sinks, s)
 		default:
 			c.UI.Error(fmt.Sprintf("Unknown sink type %q", sc.Type))
 			return 1
