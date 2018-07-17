@@ -299,7 +299,9 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 			BaseDN:     fmt.Sprintf("<SID=%s>", sidString),
 			Scope:      0, // base
 			Filter:     "(objectClass=*)",
-			Attributes: []string{},
+			Attributes: []string{
+				"1.1",
+			},
 			SizeLimit:  1,
 		})
 		if err != nil {
