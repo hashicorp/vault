@@ -62,6 +62,21 @@ the Consul service address (if using Consul):
 https://vault.service.consul:8200/ui
 ```
 
+## Policy to browse secrets
+For a user to browse secrets from the k/v backend using the UI, they need to have read and list access to the secret mount, and also have read and list access to sys/mounts.
+
+Example:
+
+```hcl
+path "secret/*" {
+    capabilities = ["read","list"]
+}
+
+path "sys/mounts" {
+  capabilities = ["list","read"]
+}
+```
+
 ### Note on TLS
 
 When using TLS (recommended), the certificate must be valid for all DNS entries
