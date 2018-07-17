@@ -151,8 +151,8 @@ func (b *backend) RadiusLogin(ctx context.Context, req *logical.Request, usernam
 			Timeout: time.Duration(cfg.DialTimeout) * time.Second,
 		},
 	}
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(cfg.ReadTimeout)*time.Second)
-	received, err := client.Exchange(ctx, packet, hostport)
+	clientCtx, cancelFunc := context.WithTimeout(ctx, time.Duration(cfg.ReadTimeout)*time.Second)
+	received, err := client.Exchange(clientCtx, packet, hostport)
 	cancelFunc()
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
