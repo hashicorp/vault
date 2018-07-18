@@ -50,6 +50,11 @@ renewal and revocation
 - [Token Auth Method (API)](/api/auth/token/index.html)
 - [Lease, Renew, and Revoke](/docs/concepts/lease.html)
 
+~> **NOTE:** An [interactive
+tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-tokens) is
+also available if you do not have a Vault environment to perform the steps
+described in this guide.
+
 ## Estimated Time to Complete
 
 10 minutes

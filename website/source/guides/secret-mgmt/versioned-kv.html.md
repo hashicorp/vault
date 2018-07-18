@@ -23,6 +23,12 @@ demonstrates the new features introduced by the key-value secret engine v2.
 - [KV Secrets Engine - Version 2](/docs/secrets/kv/kv-v2.html)
 - [KV Secrets Engine - Version 2 (API)](/api/secret/kv/kv-v2.html)
 
+~> **NOTE:** An [interactive
+tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-static-secrets) is
+also available if you do not have a Vault environment to perform the steps
+described in this guide.
+
+
 ## Estimated Time to Complete
 
 10 minutes
