@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import Duration from 'Duration.js';
 
 const { computed, get, set } = Ember;
 

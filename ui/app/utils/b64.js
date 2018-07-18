@@ -1,3 +1,5 @@
+import base64js from 'base64-js';
+
 export function encodeString(string) {
   var encoded = new TextEncoderLite('utf-8').encode(string);
   return base64js.fromByteArray(encoded);
