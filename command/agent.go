@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/auth"
+	"github.com/hashicorp/vault/command/agent/auth/aws"
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
@@ -272,6 +273,19 @@ func (c *AgentCommand) Run(args []string) int {
 			c.UI.Error(errwrap.Wrapf("Error creating jwt auth method: {{err}}", err).Error())
 			return 1
 		}
+	case "aws":
+		method, err = aws.NewAWSAuthMethod(&auth.AuthConfig{
+			Logger:    c.logger.Named("auth.aws"),
+			MountPath: config.AutoAuth.Method.MountPath,
+			Config:    config.AutoAuth.Method.Config,
+		})
+		if err != nil {
+			c.UI.Error(errwrap.Wrapf("Error creating jwt auth method: {{err}}", err).Error())
+			return 1
+		}
+	default:
+		c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
+		return 1
 	}
 
 	// Output the header that the server has started
