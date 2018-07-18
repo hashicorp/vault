@@ -1,11 +1,20 @@
 import Ember from 'ember';
-
 import UnloadModel from 'vault/mixins/unload-model-route';
+const { inject } = Ember;
 
 export default Ember.Route.extend(UnloadModel, {
-  model(params) {
-    return this.store.findRecord('control-group', params.accessor);
+  version: inject.service(),
+
+  beforeModel() {
+    return this.get('version').fetchFeatures().then(() => {
+      return this._super(...arguments);
+    });
   },
+
+  model(params) {
+    return this.get('version.isOSS') ? null : this.store.findRecord('control-group', params.accessor);
+  },
+
   actions: {
     willTransition() {
       return true;

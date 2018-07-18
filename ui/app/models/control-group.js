@@ -13,4 +13,6 @@ export default DS.Model.extend({
 
   authorizePath: lazyCapabilities(apiPath`sys/control-group/authorize`),
   canAuthorize: computed.alias('authorizePath.canUpdate'),
+  configurePath: lazyCapabilities(apiPath`sys/config/control-group`),
+  canConfigure: computed.alias('configurePath.canUpdate'),
 });

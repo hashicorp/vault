@@ -56,7 +56,7 @@ export default Ember.Component.extend({
     if (!get(this, 'onChange')) {
       throw new Ember.Error('`onChange` handler is a required attr in `' + this.toString() + '`.');
     }
-    if (get(this, 'initialValue')) {
+    if (get(this, 'initialValue') != undefined) {
       this.parseAndSetTime();
     }
   },
