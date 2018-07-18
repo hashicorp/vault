@@ -17,6 +17,7 @@ import (
 	agentjwt "github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
@@ -153,7 +154,8 @@ func TestJWTEndtoEnd(t *testing.T) {
 	}()
 
 	fs, err := file.NewFileSink(&sink.SinkConfig{
-		Logger: logger.Named("sink.file"),
+		Logger:  logger.Named("sink.file"),
+		WrapTTL: 10 * time.Second,
 		Config: map[string]interface{}{
 			"path": out,
 		},
@@ -206,11 +208,34 @@ func TestJWTEndtoEnd(t *testing.T) {
 		}
 		val, err := ioutil.ReadFile(out)
 		if err == nil {
-			origToken = string(val)
-			if origToken == "" {
+			os.Remove(out)
+			if len(val) == 0 {
 				t.Fatal("written token was empty")
 			}
-			os.Remove(out)
+			wrapInfo := new(api.SecretWrapInfo)
+			err := jsonutil.DecodeJSON(val, wrapInfo)
+			if err != nil {
+				t.Fatal(err)
+			}
+			switch {
+			case wrapInfo.TTL != 10:
+				t.Fatalf("bad wrap info: %v", wrapInfo.TTL)
+			case wrapInfo.CreationPath != "sys/wrapping/wrap":
+				t.Fatalf("bad wrap path: %v", wrapInfo.CreationPath)
+			case wrapInfo.Token == "":
+				t.Fatal("wrap token is empty")
+			}
+			cloned.SetToken(wrapInfo.Token)
+			secret, err := cloned.Logical().Unwrap("")
+			switch {
+			case err != nil:
+				t.Fatal(err)
+			case secret.Data == nil:
+				t.Fatal("unwrap secret data is nil")
+			case secret.Data["token"] == nil:
+				t.Fatal("unwrap secret data is nil")
+			}
+			origToken = secret.Data["token"].(string)
 			break
 		}
 		time.Sleep(250 * time.Millisecond)
@@ -250,14 +275,37 @@ func TestJWTEndtoEnd(t *testing.T) {
 		}
 		val, err := ioutil.ReadFile(out)
 		if err == nil {
-			newToken = string(val)
-			if newToken == "" {
+			os.Remove(out)
+			if len(val) == 0 {
 				t.Fatal("written token was empty")
 			}
+			wrapInfo := new(api.SecretWrapInfo)
+			err := jsonutil.DecodeJSON(val, wrapInfo)
+			if err != nil {
+				t.Fatal(err)
+			}
+			switch {
+			case wrapInfo.TTL != 10:
+				t.Fatalf("bad wrap info: %v", wrapInfo.TTL)
+			case wrapInfo.CreationPath != "sys/wrapping/wrap":
+				t.Fatalf("bad wrap path: %v", wrapInfo.CreationPath)
+			case wrapInfo.Token == "":
+				t.Fatal("wrap token is empty")
+			}
+			cloned.SetToken(wrapInfo.Token)
+			secret, err := cloned.Logical().Unwrap("")
+			switch {
+			case err != nil:
+				t.Fatal(err)
+			case secret.Data == nil:
+				t.Fatal("unwrap secret data is nil")
+			case secret.Data["token"] == nil:
+				t.Fatal("unwrap secret data is nil")
+			}
+			newToken = secret.Data["token"].(string)
 			if newToken == origToken {
 				t.Fatal("found same token written")
 			}
-			os.Remove(out)
 			break
 		}
 		time.Sleep(250 * time.Millisecond)
