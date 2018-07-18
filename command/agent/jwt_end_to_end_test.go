@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth"
 	agentjwt "github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/sink"
+	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/helper/logging"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
@@ -151,7 +152,7 @@ func TestJWTEndtoEnd(t *testing.T) {
 		<-ah.DoneCh
 	}()
 
-	fs, err := sink.NewFileSink(&sink.SinkConfig{
+	fs, err := file.NewFileSink(&sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
 		Config: map[string]interface{}{
 			"path": out,

@@ -1,9 +1,10 @@
 package config
 
 import (
-	"reflect"
 	"testing"
+	"time"
 
+	"github.com/go-test/deep"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 )
@@ -33,9 +34,11 @@ func TestLoadConfigFile(t *testing.T) {
 					},
 				},
 				&Sink{
-					Type: "file",
+					Type:    "file",
+					WrapTTL: 5 * time.Minute,
 					Config: map[string]interface{}{
-						"path": "/tmp/file-bar",
+						"path":     "/tmp/file-bar",
+						"wrap_ttl": "5m",
 					},
 				},
 			},
@@ -43,7 +46,7 @@ func TestLoadConfigFile(t *testing.T) {
 		PidFile: "./pidfile",
 	}
 
-	if !reflect.DeepEqual(config, expected) {
-		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }

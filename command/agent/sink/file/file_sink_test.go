@@ -1,4 +1,4 @@
-package sink
+package file
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/helper/logging"
 )
 
@@ -16,7 +17,7 @@ const (
 	fileServerTestDir = "vault-agent-file-test"
 )
 
-func testFileSink(t *testing.T, log hclog.Logger) (Sink, string) {
+func testFileSink(t *testing.T, log hclog.Logger) (sink.Sink, string) {
 	tmpDir, err := ioutil.TempDir("", fmt.Sprintf("%s.", fileServerTestDir))
 	if err != nil {
 		t.Fatal(err)
@@ -24,7 +25,7 @@ func testFileSink(t *testing.T, log hclog.Logger) (Sink, string) {
 
 	path := filepath.Join(tmpDir, "token")
 
-	config := &SinkConfig{
+	config := &sink.SinkConfig{
 		Logger: log.Named("sink.file"),
 		Config: map[string]interface{}{
 			"path": path,

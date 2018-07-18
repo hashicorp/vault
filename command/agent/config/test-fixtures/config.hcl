@@ -14,6 +14,7 @@ auto_auth {
 	}
 
 	sink "file" {
+		wrap_ttl = "5m" 
 		path = "/tmp/file-bar"
 	}
 }

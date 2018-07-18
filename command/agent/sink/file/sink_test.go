@@ -1,4 +1,4 @@
-package sink
+package file
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/helper/logging"
 )
 
@@ -20,13 +21,13 @@ func TestSinkServer(t *testing.T) {
 	fs2, path2 := testFileSink(t, log)
 	defer os.RemoveAll(path2)
 
-	ss := NewSinkServer(&SinkConfig{
+	ss := sink.NewSinkServer(&sink.SinkConfig{
 		Logger: log.Named("sink.server"),
 	})
 
 	uuidStr, _ := uuid.GenerateUUID()
 	in := make(chan string)
-	sinks := []Sink{fs1, fs2}
+	sinks := []sink.Sink{fs1, fs2}
 	go ss.Run(in, sinks)
 
 	// Seed a token

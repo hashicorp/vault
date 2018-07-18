@@ -5,10 +5,12 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/parseutil"
 
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -32,8 +34,10 @@ type Method struct {
 }
 
 type Sink struct {
-	Type   string
-	Config map[string]interface{}
+	Type       string
+	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
+	WrapTTL    time.Duration `hcl:"-"`
+	Config     map[string]interface{}
 }
 
 // LoadConfig loads the configuration at the given path, regardless if
@@ -150,14 +154,14 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 func parseSinks(result *Config, list *ast.ObjectList) error {
 	name := "sink"
 
-	tokenSinkList := list.Filter(name)
-	if len(tokenSinkList.Items) < 1 {
+	sinkList := list.Filter(name)
+	if len(sinkList.Items) < 1 {
 		return fmt.Errorf("at least one %q block is required", name)
 	}
 
 	var ts []*Sink
 
-	for _, item := range tokenSinkList.Items {
+	for _, item := range sinkList.Items {
 		if len(item.Keys) == 0 {
 			return fmt.Errorf("token sink type must be specified")
 		}
@@ -169,9 +173,18 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 			return multierror.Prefix(err, fmt.Sprintf("sink.%s", tsType))
 		}
 
+		var wrapTTL time.Duration
+		if raw, ok := m["wrap_ttl"]; ok {
+			var err error
+			if wrapTTL, err = parseutil.ParseDurationSecond(raw); err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("sink.%s", tsType))
+			}
+		}
+
 		ts = append(ts, &Sink{
-			Type:   tsType,
-			Config: m,
+			Type:    tsType,
+			WrapTTL: wrapTTL,
+			Config:  m,
 		})
 	}
 
