@@ -25,6 +25,11 @@ onto the operators of Vault.
 - [Transit Secret Engine API](/api/secret/transit/index.html)
 - [Transparent Data Encryption in the Modern Datacenter](https://www.hashicorp.com/blog/transparent-data-encryption-in-the-modern-datacenter)
 
+~> **NOTE:** An [interactive
+tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-transit) is
+also available if you do not have a Vault environment to perform the steps
+described in this guide.
+
 
 ## Estimated Time to Complete
 
