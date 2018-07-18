@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
+	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/version"
@@ -245,10 +246,11 @@ func (c *AgentCommand) Run(args []string) int {
 	for _, sc := range config.AutoAuth.Sinks {
 		switch sc.Type {
 		case "file":
-			s, err := sink.NewFileSink(&sink.SinkConfig{
-				Logger: c.logger.Named("sink.file"),
-				Config: sc.Config,
-				Client: client,
+			s, err := file.NewFileSink(&sink.SinkConfig{
+				Logger:  c.logger.Named("sink.file"),
+				Config:  sc.Config,
+				Client:  client,
+				WrapTTL: sc.WrapTTL,
 			})
 			if err != nil {
 				c.UI.Error(errwrap.Wrapf("Error creating file sink: {{err}}", err).Error())

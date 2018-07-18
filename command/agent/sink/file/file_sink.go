@@ -1,4 +1,4 @@
-package sink
+package file
 
 import (
 	"errors"
@@ -6,20 +6,23 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/command/agent/sink"
 )
 
 // fileSink is a Sink implementation that writes a token to a file
 type fileSink struct {
-	path   string
-	logger hclog.Logger
+	path    string
+	logger  hclog.Logger
+	wrapTTL time.Duration
 }
 
 // NewFileSink creates a new file sink with the given configuration
-func NewFileSink(conf *SinkConfig) (Sink, error) {
+func NewFileSink(conf *sink.SinkConfig) (sink.Sink, error) {
 	if conf.Logger == nil {
 		return nil, errors.New("nil logger provided")
 	}
@@ -27,7 +30,8 @@ func NewFileSink(conf *SinkConfig) (Sink, error) {
 	conf.Logger.Info("creating file sink")
 
 	f := &fileSink{
-		logger: conf.Logger,
+		logger:  conf.Logger,
+		wrapTTL: conf.WrapTTL,
 	}
 
 	pathRaw, ok := conf.Config["path"]
@@ -108,4 +112,8 @@ func (f *fileSink) WriteToken(token string) error {
 
 	f.logger.Info("token written", "path", f.path)
 	return nil
+}
+
+func (f *fileSink) WrapTTL() time.Duration {
+	return f.wrapTTL
 }
