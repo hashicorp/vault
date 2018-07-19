@@ -268,39 +268,24 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	var method auth.AuthMethod
+	authConfig := &auth.AuthConfig{
+		Logger:    c.logger.Named(fmt.Sprintf("auth.%s", config.AutoAuth.Method.Type)),
+		MountPath: config.AutoAuth.Method.MountPath,
+		Config:    config.AutoAuth.Method.Config,
+	}
 	switch config.AutoAuth.Method.Type {
 	case "jwt":
-		method, err = jwt.NewJWTAuthMethod(&auth.AuthConfig{
-			Logger:    c.logger.Named("auth.jwt"),
-			MountPath: config.AutoAuth.Method.MountPath,
-			Config:    config.AutoAuth.Method.Config,
-		})
-		if err != nil {
-			c.UI.Error(errwrap.Wrapf("Error creating jwt auth method: {{err}}", err).Error())
-			return 1
-		}
+		method, err = jwt.NewJWTAuthMethod(authConfig)
 	case "aws":
-		method, err = aws.NewAWSAuthMethod(&auth.AuthConfig{
-			Logger:    c.logger.Named("auth.aws"),
-			MountPath: config.AutoAuth.Method.MountPath,
-			Config:    config.AutoAuth.Method.Config,
-		})
-		if err != nil {
-			c.UI.Error(errwrap.Wrapf("Error creating aws auth method: {{err}}", err).Error())
-			return 1
-		}
+		method, err = aws.NewAWSAuthMethod(authConfig)
 	case "azure":
-		method, err = azure.NewAzureAuthMethod(&auth.AuthConfig{
-			Logger:    c.logger.Named("auth.azure"),
-			MountPath: config.AutoAuth.Method.MountPath,
-			Config:    config.AutoAuth.Method.Config,
-		})
-		if err != nil {
-			c.UI.Error(errwrap.Wrapf("Error creating azure auth method: {{err}}", err).Error())
-			return 1
-		}
+		method, err = azure.NewAzureAuthMethod(authConfig)
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
+		return 1
+	}
+	if err != nil {
+		c.UI.Error(errwrap.Wrapf(fmt.Sprintf("Error creating %s auth method: {{err}}", config.AutoAuth.Method.Type), err).Error())
 		return 1
 	}
 
