@@ -21,6 +21,9 @@ FEATURES:
    optional groups claim can be used to provide Identity information.
  * **FoundationDB Storage**: You can now use FoundationDB for storing Vault
    data.
+ * **UI Control Group Workflow (enterprise)**: The UI will now detect control
+   group responses and provides a workflow to view the status of the request 
+   and to authorize requests.
 
 IMPROVEMENTS:
 
@@ -35,6 +38,10 @@ IMPROVEMENTS:
  * secrets/pki: Add the ability to tidy revoked but unexpired certificates
    [GH-4916]
  * secrets/ssh: Allow Vault to work with single-argument SSH flags [GH-4825]
+ * ui: Choose which auth methods to show to unauthenticated users via 
+   `listing_visibility` in the auth method edit forms [GH-4854]
+ * ui: Authenticate users automatically by passing a wrapped token to the UI via
+   the new `wrapped_token` query parameter [GH-4854]
 
 BUG FIXES:
 
@@ -46,6 +53,8 @@ BUG FIXES:
  * secrets/pki: Fix permitted DNS domains performing improper validation
    [GH-4863]
  * secrets/database: Fix panic during DB creds revocation [GH-4846]
+ * ui: Fix usage of cubbyhole backend in the UI [GH-4851]
+ * ui: Fix toggle state when a secret is JSON-formatted [GH-4913]
 
 ## 0.10.3 (June 20th, 2018)
 
@@ -120,6 +129,7 @@ BUG FIXES:
  * replication: Fix issue enabling replication when a non-auth mount and auth
    mount have the same name
  * auth/kubernetes: Fix issue verifying ECDSA signed JWTs
+ * ui: add missing edit mode for auth method configs [GH-4770]
 
 ## 0.10.2 (June 6th, 2018)
 
