@@ -251,6 +251,9 @@ func (c *AgentCommand) Run(args []string) int {
 				Config:  sc.Config,
 				Client:  client,
 				WrapTTL: sc.WrapTTL,
+				DHType:  sc.DHType,
+				DHPath:  sc.DHPath,
+				AAD:     sc.AAD,
 			})
 			if err != nil {
 				c.UI.Error(errwrap.Wrapf("Error creating file sink: {{err}}", err).Error())

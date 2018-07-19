@@ -17,6 +17,7 @@ import (
 	agentjwt "github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/helper/dhutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -111,6 +112,12 @@ func TestJWTEndtoEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Generate encryption params
+	pub, pri, err := dhutil.GeneratePublicPrivateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// We close these right away because we're just basically testing
 	// permissions and finding a usable file name
 	inf, err := ioutil.TempFile("", "auth.jwt.test.")
@@ -130,6 +137,26 @@ func TestJWTEndtoEnd(t *testing.T) {
 	ouf.Close()
 	os.Remove(out)
 	t.Logf("output: %s", out)
+
+	dhpathf, err := ioutil.TempFile("", "auth.dhpath.test.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dhpath := dhpathf.Name()
+	dhpathf.Close()
+	os.Remove(dhpath)
+	t.Logf("dhpath: %s", dhpath)
+
+	// Write DH public key to file
+	mPubKey, err := jsonutil.EncodeJSON(&dhutil.PublicKeyInfo{
+		Curve25519PublicKey: pub,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(dhpath, mPubKey, 0600); err != nil {
+		t.Fatal(err)
+	}
 
 	am, err := agentjwt.NewJWTAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.jwt"),
@@ -156,6 +183,9 @@ func TestJWTEndtoEnd(t *testing.T) {
 	fs, err := file.NewFileSink(&sink.SinkConfig{
 		Logger:  logger.Named("sink.file"),
 		WrapTTL: 10 * time.Second,
+		AAD:     "foobar",
+		DHType:  "curve25519",
+		DHPath:  dhpath,
 		Config: map[string]interface{}{
 			"path": out,
 		},
@@ -174,7 +204,7 @@ func TestJWTEndtoEnd(t *testing.T) {
 		<-ss.DoneCh
 	}()
 
-	// Check that no jwt file exists and no token exists
+	// Check that no jwt file exists
 	_, err = os.Lstat(in)
 	if err == nil {
 		t.Fatal("expected err")
@@ -200,49 +230,73 @@ func TestJWTEndtoEnd(t *testing.T) {
 	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
 		t.Fatal(err)
 	}
-	timeout := time.Now().Add(5 * time.Second)
-	var origToken string
-	for {
-		if time.Now().After(timeout) {
-			t.Fatal("did not find a written token after timeout")
+
+	checkToken := func() string {
+		t.Helper()
+		timeout := time.Now().Add(5 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				t.Fatal("did not find a written token after timeout")
+			}
+			val, err := ioutil.ReadFile(out)
+			if err == nil {
+				os.Remove(out)
+				if len(val) == 0 {
+					t.Fatal("written token was empty")
+				}
+
+				// First decrypt it
+				resp := new(dhutil.Envelope)
+				if err := jsonutil.DecodeJSON(val, resp); err != nil {
+					continue
+				}
+
+				aesKey, err := dhutil.GenerateSharedKey(pri, resp.Curve25519PublicKey)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(aesKey) == 0 {
+					t.Fatal("got empty aes key")
+				}
+
+				val, err = dhutil.DecryptAES(aesKey, resp.EncryptedPayload, resp.Nonce, []byte("foobar"))
+				if err != nil {
+					t.Fatalf("error: %v\nresp: %v", err, string(val))
+				}
+
+				// Now unwrap it
+				wrapInfo := new(api.SecretWrapInfo)
+				if err := jsonutil.DecodeJSON(val, wrapInfo); err != nil {
+					t.Fatal(err)
+				}
+				switch {
+				case wrapInfo.TTL != 10:
+					t.Fatalf("bad wrap info: %v", wrapInfo.TTL)
+				case wrapInfo.CreationPath != "sys/wrapping/wrap":
+					t.Fatalf("bad wrap path: %v", wrapInfo.CreationPath)
+				case wrapInfo.Token == "":
+					t.Fatal("wrap token is empty")
+				}
+				cloned.SetToken(wrapInfo.Token)
+				secret, err := cloned.Logical().Unwrap("")
+				switch {
+				case err != nil:
+					t.Fatal(err)
+				case secret.Data == nil:
+					t.Fatal("unwrap secret data is nil")
+				case secret.Data["token"] == nil:
+					t.Fatal("unwrap secret data is nil")
+				}
+
+				return secret.Data["token"].(string)
+			}
+			time.Sleep(250 * time.Millisecond)
 		}
-		val, err := ioutil.ReadFile(out)
-		if err == nil {
-			os.Remove(out)
-			if len(val) == 0 {
-				t.Fatal("written token was empty")
-			}
-			wrapInfo := new(api.SecretWrapInfo)
-			err := jsonutil.DecodeJSON(val, wrapInfo)
-			if err != nil {
-				t.Fatal(err)
-			}
-			switch {
-			case wrapInfo.TTL != 10:
-				t.Fatalf("bad wrap info: %v", wrapInfo.TTL)
-			case wrapInfo.CreationPath != "sys/wrapping/wrap":
-				t.Fatalf("bad wrap path: %v", wrapInfo.CreationPath)
-			case wrapInfo.Token == "":
-				t.Fatal("wrap token is empty")
-			}
-			cloned.SetToken(wrapInfo.Token)
-			secret, err := cloned.Logical().Unwrap("")
-			switch {
-			case err != nil:
-				t.Fatal(err)
-			case secret.Data == nil:
-				t.Fatal("unwrap secret data is nil")
-			case secret.Data["token"] == nil:
-				t.Fatal("unwrap secret data is nil")
-			}
-			origToken = secret.Data["token"].(string)
-			break
-		}
-		time.Sleep(250 * time.Millisecond)
 	}
+	origToken := checkToken()
 
 	// Period of 3 seconds, so should still be alive after 7
-	timeout = time.Now().Add(7 * time.Second)
+	timeout := time.Now().Add(7 * time.Second)
 	cloned.SetToken(origToken)
 	for {
 		if time.Now().After(timeout) {
@@ -267,48 +321,10 @@ func TestJWTEndtoEnd(t *testing.T) {
 	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
 		t.Fatal(err)
 	}
-	timeout = time.Now().Add(5 * time.Second)
-	var newToken string
-	for {
-		if time.Now().After(timeout) {
-			t.Fatal("did not find a written token after timeout")
-		}
-		val, err := ioutil.ReadFile(out)
-		if err == nil {
-			os.Remove(out)
-			if len(val) == 0 {
-				t.Fatal("written token was empty")
-			}
-			wrapInfo := new(api.SecretWrapInfo)
-			err := jsonutil.DecodeJSON(val, wrapInfo)
-			if err != nil {
-				t.Fatal(err)
-			}
-			switch {
-			case wrapInfo.TTL != 10:
-				t.Fatalf("bad wrap info: %v", wrapInfo.TTL)
-			case wrapInfo.CreationPath != "sys/wrapping/wrap":
-				t.Fatalf("bad wrap path: %v", wrapInfo.CreationPath)
-			case wrapInfo.Token == "":
-				t.Fatal("wrap token is empty")
-			}
-			cloned.SetToken(wrapInfo.Token)
-			secret, err := cloned.Logical().Unwrap("")
-			switch {
-			case err != nil:
-				t.Fatal(err)
-			case secret.Data == nil:
-				t.Fatal("unwrap secret data is nil")
-			case secret.Data["token"] == nil:
-				t.Fatal("unwrap secret data is nil")
-			}
-			newToken = secret.Data["token"].(string)
-			if newToken == origToken {
-				t.Fatal("found same token written")
-			}
-			break
-		}
-		time.Sleep(250 * time.Millisecond)
+
+	newToken := checkToken()
+	if newToken == origToken {
+		t.Fatal("found same token written")
 	}
 
 	// Repeat the period test. At the end the old token should have expired and
