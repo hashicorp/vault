@@ -8,10 +8,13 @@ const CubbyholeMachine = Machine({
   initial: 'idle',
   states: {
     idle: {
-      on: { INTERACTION: 'active' },
+      on: {
+        DISMISS: 'dismissed',
+        INTERACTION: 'active',
+      },
     },
     active: {
-      on: { DISMISS: 'idle' },
+      on: { DISMISS: 'dismissed' },
       key: 'feature',
       initial: 'create',
       states: {
@@ -25,8 +28,13 @@ const CubbyholeMachine = Machine({
         },
         details: {
           onEntry: [{ type: 'render', component: 'cubbyHoleSuccess' }],
+          on: { RESET: 'create' },
         },
       },
+    },
+    dismissed: {
+      on: { RESET: 'idle' },
+      onEntry: ['saveState'],
     },
   },
 });
