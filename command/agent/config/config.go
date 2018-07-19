@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -37,6 +38,10 @@ type Sink struct {
 	Type       string
 	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
 	WrapTTL    time.Duration `hcl:"-"`
+	DHType     string        `hcl:"dh_type"`
+	DHPath     string        `hcl:"dh_path"`
+	AAD        string        `hcl:"aad"`
+	AADEnvVar  string        `hcl:"aad_env_var"`
 	Config     map[string]interface{}
 }
 
@@ -181,9 +186,58 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 			}
 		}
 
+		var dhType string
+		if raw, ok := m["dh_type"]; ok {
+			var ok bool
+			if dhType, ok = raw.(string); !ok {
+				return multierror.Prefix(errors.New("cannot convert 'dh_type' to string"), fmt.Sprintf("sink.%s", tsType))
+			}
+			switch dhType {
+			case "curve25519":
+			default:
+				return multierror.Prefix(errors.New("invalid value for 'dh_type'"), fmt.Sprintf("sink.%s", tsType))
+			}
+		}
+
+		var dhPath string
+		if raw, ok := m["dh_path"]; ok {
+			var ok bool
+			if dhPath, ok = raw.(string); !ok {
+				return multierror.Prefix(errors.New("cannot convert 'dh_path' to string"), fmt.Sprintf("sink.%s", tsType))
+			}
+		}
+
+		var aad string
+		if raw, ok := m["aad"]; ok {
+			var ok bool
+			if aad, ok = raw.(string); !ok {
+				return multierror.Prefix(errors.New("cannot convert 'aad' to string"), fmt.Sprintf("sink.%s", tsType))
+			}
+		} else if raw, ok := m["aad_env_var"]; ok {
+			var ok bool
+			var envvar string
+			if envvar, ok = raw.(string); !ok {
+				return multierror.Prefix(errors.New("cannot convert 'aad_env_var' to string"), fmt.Sprintf("sink.%s", tsType))
+			}
+			aad = os.Getenv(envvar)
+		}
+
+		switch {
+		case dhPath == "" && dhType == "":
+			if aad != "" {
+				return multierror.Prefix(errors.New("specifying AAD data without 'dh_type' does not make sense"), fmt.Sprintf("sink.%s", tsType))
+			}
+		case dhPath != "" && dhType != "":
+		default:
+			return multierror.Prefix(errors.New("'dh_type' and 'dh_path' must be specified together"), fmt.Sprintf("sink.%s", tsType))
+		}
+
 		ts = append(ts, &Sink{
 			Type:    tsType,
 			WrapTTL: wrapTTL,
+			DHType:  dhType,
+			DHPath:  dhPath,
+			AAD:     aad,
 			Config:  m,
 		})
 	}
