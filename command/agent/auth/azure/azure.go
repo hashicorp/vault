@@ -1,6 +1,7 @@
 package azure
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -73,7 +74,7 @@ func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (a *azureMethod) Authenticate(client *api.Client) (*api.Secret, error) {
+func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (*api.Secret, error) {
 	a.logger.Trace("beginning authentication")
 
 	// Fetch instance data
@@ -85,7 +86,7 @@ func (a *azureMethod) Authenticate(client *api.Client) (*api.Secret, error) {
 		}
 	}
 
-	body, err := getMetadataInfo(instanceEndpoint, "")
+	body, err := getMetadataInfo(ctx, instanceEndpoint, "")
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func (a *azureMethod) Authenticate(client *api.Client) (*api.Secret, error) {
 		AccessToken string `json:"access_token"`
 	}
 
-	body, err = getMetadataInfo(identityEndpoint, a.resource)
+	body, err = getMetadataInfo(ctx, identityEndpoint, a.resource)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +135,7 @@ func (a *azureMethod) NewCreds() chan struct{} {
 func (a *azureMethod) Shutdown() {
 }
 
-func getMetadataInfo(endpoint, resource string) ([]byte, error) {
+func getMetadataInfo(ctx context.Context, endpoint, resource string) ([]byte, error) {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -148,6 +149,7 @@ func getMetadataInfo(endpoint, resource string) ([]byte, error) {
 	req.URL.RawQuery = q.Encode()
 	req.Header.Set("Metadata", "true")
 	req.Header.Set("User-Agent", useragent.String())
+	req = req.WithContext(ctx)
 
 	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)

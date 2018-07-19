@@ -1,10 +1,12 @@
 package aws
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
@@ -31,9 +33,6 @@ type awsMethod struct {
 	accessKey    string
 	secretKey    string
 	sessionToken string
-	watchCh      chan string
-	stopCh       chan struct{}
-	doneCh       chan struct{}
 }
 
 func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
@@ -47,9 +46,6 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	a := &awsMethod{
 		logger:    conf.Logger,
 		mountPath: conf.MountPath,
-		watchCh:   make(chan string),
-		stopCh:    make(chan struct{}),
-		doneCh:    make(chan struct{}),
 	}
 
 	typeRaw, ok := conf.Config["type"]
@@ -114,7 +110,7 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (a *awsMethod) Authenticate(client *api.Client) (*api.Secret, error) {
+func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (*api.Secret, error) {
 	a.logger.Trace("beginning authentication")
 
 	data := make(map[string]interface{})
@@ -125,7 +121,12 @@ func (a *awsMethod) Authenticate(client *api.Client) (*api.Secret, error) {
 
 		// Fetch document
 		{
-			resp, err := client.Get(fmt.Sprintf("%s/document", identityEndpoint))
+			req, err := http.NewRequest("GET", fmt.Sprintf("%s/document", identityEndpoint), nil)
+			if err != nil {
+				return nil, errwrap.Wrapf("error creating request: {{err}}", err)
+			}
+			req = req.WithContext(ctx)
+			resp, err := client.Do(req)
 			if err != nil {
 				return nil, errwrap.Wrapf("error fetching instance document: {{err}}", err)
 			}
@@ -142,7 +143,12 @@ func (a *awsMethod) Authenticate(client *api.Client) (*api.Secret, error) {
 
 		// Fetch signature
 		{
-			resp, err := client.Get(fmt.Sprintf("%s/signature", identityEndpoint))
+			req, err := http.NewRequest("GET", fmt.Sprintf("%s/signature", identityEndpoint), nil)
+			if err != nil {
+				return nil, errwrap.Wrapf("error creating request: {{err}}", err)
+			}
+			req = req.WithContext(ctx)
+			resp, err := client.Do(req)
 			if err != nil {
 				return nil, errwrap.Wrapf("error fetching instance document signature: {{err}}", err)
 			}

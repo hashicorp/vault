@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"math/rand"
 	"time"
 
@@ -9,7 +10,7 @@ import (
 )
 
 type AuthMethod interface {
-	Authenticate(*api.Client) (*api.Secret, error)
+	Authenticate(context.Context, *api.Client) (*api.Secret, error)
 	NewCreds() chan struct{}
 	Shutdown()
 }
@@ -23,27 +24,28 @@ type AuthConfig struct {
 // AuthHandler is responsible for keeping a token alive and renewed and passing
 // new tokens to the sink server
 type AuthHandler struct {
-	DoneCh     chan struct{}
-	ShutdownCh chan struct{}
-	OutputCh   chan string
-	logger     hclog.Logger
-	client     *api.Client
-	random     *rand.Rand
+	DoneCh   chan struct{}
+	OutputCh chan string
+	ctx      context.Context
+	logger   hclog.Logger
+	client   *api.Client
+	random   *rand.Rand
 }
 
 type AuthHandlerConfig struct {
-	Logger hclog.Logger
-	Client *api.Client
+	Logger  hclog.Logger
+	Client  *api.Client
+	Context context.Context
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 	ah := &AuthHandler{
-		ShutdownCh: make(chan struct{}),
-		DoneCh:     make(chan struct{}),
-		OutputCh:   make(chan string),
-		logger:     conf.Logger,
-		client:     conf.Client,
-		random:     rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
+		ctx:      conf.Context,
+		DoneCh:   make(chan struct{}),
+		OutputCh: make(chan string),
+		logger:   conf.Logger,
+		client:   conf.Client,
+		random:   rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 	}
 
 	return ah
@@ -52,7 +54,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 func (ah *AuthHandler) backoffOrQuit(backoff time.Duration) {
 	select {
 	case <-time.After(backoff):
-	case <-ah.ShutdownCh:
+	case <-ah.ctx.Done():
 	}
 }
 
@@ -76,7 +78,7 @@ func (ah *AuthHandler) Run(am AuthMethod) {
 
 	for {
 		select {
-		case <-ah.ShutdownCh:
+		case <-ah.ctx.Done():
 			am.Shutdown()
 			return
 
@@ -87,7 +89,7 @@ func (ah *AuthHandler) Run(am AuthMethod) {
 		backoff := 2*time.Second + time.Duration(ah.random.Int63()%int64(time.Second*2)-int64(time.Second))
 
 		ah.logger.Info("authenticating")
-		secret, err := am.Authenticate(ah.client)
+		secret, err := am.Authenticate(ah.ctx, ah.client)
 		// Check errors/sanity
 		if err != nil {
 			ah.logger.Error("error authenticating, backing off and retrying", "error", err, "backoff", backoff.Seconds())
@@ -129,7 +131,7 @@ func (ah *AuthHandler) Run(am AuthMethod) {
 	RenewerLoop:
 		for {
 			select {
-			case <-ah.ShutdownCh:
+			case <-ah.ctx.Done():
 				ah.logger.Info("shutdown triggered, stopping renewer")
 				renewer.Stop()
 				break RenewerLoop
