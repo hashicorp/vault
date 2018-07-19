@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -243,6 +244,8 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
 	var sinks []sink.Sink
 	for _, sc := range config.AutoAuth.Sinks {
 		switch sc.Type {
@@ -300,14 +303,16 @@ func (c *AgentCommand) Run(args []string) int {
 	default:
 	}
 
-	ss := sink.NewSinkServer(&sink.SinkConfig{
-		Logger: c.logger.Named("sink.server"),
-		Client: client,
+	ss := sink.NewSinkServer(&sink.SinkServerConfig{
+		Logger:  c.logger.Named("sink.server"),
+		Client:  client,
+		Context: ctx,
 	})
 
 	ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-		Logger: c.logger.Named("auth.handler"),
-		Client: c.client,
+		Logger:  c.logger.Named("auth.handler"),
+		Client:  c.client,
+		Context: ctx,
 	})
 
 	// Start things running
@@ -337,9 +342,8 @@ func (c *AgentCommand) Run(args []string) int {
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault agent shutdown triggered")
 			shutdownTriggered = true
-			close(ah.ShutdownCh)
+			cancelFunc()
 			<-ah.DoneCh
-			close(ss.ShutdownCh)
 			<-ss.DoneCh
 		}
 	}

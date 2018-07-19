@@ -1,6 +1,7 @@
 package sink
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 	"time"
@@ -26,22 +27,28 @@ type SinkConfig struct {
 	AAD     string
 }
 
-// SinkServer is responsible for pushing tokens to sinks
-type SinkServer struct {
-	DoneCh     chan struct{}
-	ShutdownCh chan struct{}
-	logger     hclog.Logger
-	client     *api.Client
-	random     *rand.Rand
+type SinkServerConfig struct {
+	Logger  hclog.Logger
+	Client  *api.Client
+	Context context.Context
 }
 
-func NewSinkServer(conf *SinkConfig) *SinkServer {
+// SinkServer is responsible for pushing tokens to sinks
+type SinkServer struct {
+	DoneCh chan struct{}
+	ctx    context.Context
+	logger hclog.Logger
+	client *api.Client
+	random *rand.Rand
+}
+
+func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 	ss := &SinkServer{
-		ShutdownCh: make(chan struct{}),
-		DoneCh:     make(chan struct{}),
-		logger:     conf.Logger,
-		client:     conf.Client,
-		random:     rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
+		DoneCh: make(chan struct{}),
+		ctx:    conf.Context,
+		logger: conf.Logger,
+		client: conf.Client,
+		random: rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 	}
 
 	return ss
@@ -64,7 +71,7 @@ func (ss *SinkServer) Run(incoming chan string, sinks []Sink) {
 	sinkCh := make(chan func() error, len(sinks))
 	for {
 		select {
-		case <-ss.ShutdownCh:
+		case <-ss.ctx.Done():
 			return
 
 		case token := <-incoming:
@@ -124,7 +131,7 @@ func (ss *SinkServer) Run(incoming chan string, sinks []Sink) {
 
 		case sinkFunc := <-sinkCh:
 			select {
-			case <-ss.ShutdownCh:
+			case <-ss.ctx.Done():
 				return
 			default:
 			}

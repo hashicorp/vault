@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/json"
@@ -158,6 +159,8 @@ func TestJWTEndtoEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
 	am, err := agentjwt.NewJWTAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.jwt"),
 		MountPath: "auth/jwt",
@@ -171,12 +174,12 @@ func TestJWTEndtoEnd(t *testing.T) {
 	}
 
 	ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-		Logger: logger.Named("auth.handler"),
-		Client: client,
+		Logger:  logger.Named("auth.handler"),
+		Client:  client,
+		Context: ctx,
 	})
 	go ah.Run(am)
 	defer func() {
-		close(ah.ShutdownCh)
 		<-ah.DoneCh
 	}()
 
@@ -194,15 +197,18 @@ func TestJWTEndtoEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ss := sink.NewSinkServer(&sink.SinkConfig{
-		Logger: logger.Named("sink.server"),
-		Client: client,
+	ss := sink.NewSinkServer(&sink.SinkServerConfig{
+		Logger:  logger.Named("sink.server"),
+		Client:  client,
+		Context: ctx,
 	})
 	go ss.Run(ah.OutputCh, []sink.Sink{fs})
 	defer func() {
-		close(ss.ShutdownCh)
 		<-ss.DoneCh
 	}()
+
+	// This has to be after the other defers so it happens first
+	defer cancelFunc()
 
 	// Check that no jwt file exists
 	_, err = os.Lstat(in)
@@ -232,7 +238,6 @@ func TestJWTEndtoEnd(t *testing.T) {
 	}
 
 	checkToken := func() string {
-		t.Helper()
 		timeout := time.Now().Add(5 * time.Second)
 		for {
 			if time.Now().After(timeout) {

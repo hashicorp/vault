@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ func newUserpassTestMethod(t *testing.T, client *api.Client) AuthMethod {
 	return &userpassTestMethod{}
 }
 
-func (u *userpassTestMethod) Authenticate(client *api.Client) (*api.Secret, error) {
+func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (*api.Secret, error) {
 	_, err := client.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
 		"password": "bar",
 	})
@@ -66,9 +67,12 @@ func TestAuthHandler(t *testing.T) {
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	client := cluster.Cores[0].Client
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
 	ah := NewAuthHandler(&AuthHandlerConfig{
-		Logger: logger.Named("auth.handler"),
-		Client: client,
+		Logger:  logger.Named("auth.handler"),
+		Client:  client,
+		Context: ctx,
 	})
 
 	am := newUserpassTestMethod(t, client)
@@ -84,7 +88,7 @@ consumption:
 			// Nothing
 		case <-time.After(stopTime.Sub(time.Now())):
 			if !closed {
-				close(ah.ShutdownCh)
+				cancelFunc()
 				closed = true
 			}
 		case <-ah.DoneCh:

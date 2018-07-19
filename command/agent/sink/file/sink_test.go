@@ -1,6 +1,7 @@
 package file
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -23,8 +24,11 @@ func TestSinkServer(t *testing.T) {
 	fs2, path2 := testFileSink(t, log)
 	defer os.RemoveAll(path2)
 
-	ss := sink.NewSinkServer(&sink.SinkConfig{
-		Logger: log.Named("sink.server"),
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	ss := sink.NewSinkServer(&sink.SinkServerConfig{
+		Logger:  log.Named("sink.server"),
+		Context: ctx,
 	})
 
 	uuidStr, _ := uuid.GenerateUUID()
@@ -39,7 +43,7 @@ func TestSinkServer(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// Tell it to shut down and give it time to do so
-	close(ss.ShutdownCh)
+	cancelFunc()
 	<-ss.DoneCh
 
 	for _, path := range []string{path1, path2} {
@@ -84,8 +88,11 @@ func TestSinkServerRetry(t *testing.T) {
 	b1 := &badSink{logger: log.Named("b1")}
 	b2 := &badSink{logger: log.Named("b2")}
 
-	ss := sink.NewSinkServer(&sink.SinkConfig{
-		Logger: log.Named("sink.server"),
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	ss := sink.NewSinkServer(&sink.SinkServerConfig{
+		Logger:  log.Named("sink.server"),
+		Context: ctx,
 	})
 
 	in := make(chan string)
@@ -115,6 +122,6 @@ func TestSinkServerRetry(t *testing.T) {
 	}
 
 	// Tell it to shut down and give it time to do so
-	close(ss.ShutdownCh)
+	cancelFunc()
 	<-ss.DoneCh
 }

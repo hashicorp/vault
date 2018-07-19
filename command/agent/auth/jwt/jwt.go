@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -83,7 +84,7 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return j, nil
 }
 
-func (j *jwtMethod) Authenticate(client *api.Client) (*api.Secret, error) {
+func (j *jwtMethod) Authenticate(_ context.Context, client *api.Client) (*api.Secret, error) {
 	j.logger.Trace("beginning authentication")
 
 	j.ingressToken()
