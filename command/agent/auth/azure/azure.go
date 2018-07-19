@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/useragent"
 )
 
 const (
@@ -146,6 +147,7 @@ func getMetadataInfo(endpoint, resource string) ([]byte, error) {
 	}
 	req.URL.RawQuery = q.Encode()
 	req.Header.Set("Metadata", "true")
+	req.Header.Set("User-Agent", useragent.String())
 
 	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)
