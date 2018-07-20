@@ -13,7 +13,7 @@ description: |-
 This guide walks you through Identity and Access Management topics.
 
 - [Secure Introduction of Vault Clients](/guides/identity/secure-intro.html)
-explains the  mechanism of the client authentication against a Vault server. 
+explains the  mechanism of the client authentication against a Vault server.
 
 - [Policies](/guides/identity/policies.html) are used to instrument
 Role-Based Access Control (RBAC) by specifying access privileges. Authoring of
@@ -35,3 +35,7 @@ webinar.
 understand how tokens and leases work in Vault. The understanding of the
 lease hierarchy and expiration mechanism helps you plan for break glass
 procedures and more.
+
+- [Identity - Entities & Groups](/guides/identity/identity.html) guide
+demonstrates the usage of _Entities_ and _Groups_ to manage Vault clients'
+identity.
