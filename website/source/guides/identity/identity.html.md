@@ -37,11 +37,9 @@ described in this guide.
 
 ## Personas
 
-The end-to-end scenario described in this guide involves one persona:
+The steps described in this guide are typically performed by **operations**
+persona.
 
-- **`admin`** with privileged permissions to create and manage identities
-
-See the [policy requirements](#policy-requirements) section for details.
 
 ## Challenge
 
