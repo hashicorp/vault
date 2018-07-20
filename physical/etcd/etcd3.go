@@ -66,7 +66,8 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	cfg := clientv3.Config{
-		Endpoints: endpoints,
+		Endpoints:   endpoints,
+		DialTimeout: 5 * time.Second,
 	}
 
 	haEnabled := os.Getenv("ETCD_HA_ENABLED")
