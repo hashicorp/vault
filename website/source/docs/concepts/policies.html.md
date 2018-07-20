@@ -39,7 +39,7 @@ Vault will delegate the authentication to the auth method.
 access to paths in Vault. Policies are written in HCL in your editor of
 preference and saved to disk.
 
-1. The policy's contents are uploaded and store in Vault and referenced by name.
+1. The policy's contents are uploaded and stored in Vault and referenced by name.
 You can think of the policy's name as a pointer or symlink to its set of rules.
 
 1. Most importantly, the security team maps data in the auth method to a policy.
