@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/aws"
 	"github.com/hashicorp/vault/command/agent/auth/azure"
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
+	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
@@ -283,6 +284,8 @@ func (c *AgentCommand) Run(args []string) int {
 		method, err = aws.NewAWSAuthMethod(authConfig)
 	case "azure":
 		method, err = azure.NewAzureAuthMethod(authConfig)
+	case "kubernetes":
+		method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
 		return 1
