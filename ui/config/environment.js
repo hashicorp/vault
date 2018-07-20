@@ -66,6 +66,7 @@ module.exports = function(environment) {
 
   if (environment === 'production') {
   }
+  ENV.welcomeMessage = process.env.UI_AUTH_WELCOME;
 
   return ENV;
 };
