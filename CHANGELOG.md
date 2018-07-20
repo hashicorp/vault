@@ -1,4 +1,4 @@
-## Next
+## 0.10.4 (Unreleased)
 
 DEPRECATIONS/CHANGES:
 
@@ -50,6 +50,8 @@ BUG FIXES:
  * core: Fix issue releasing the leader lock in some circumstances [GH-4915]
  * core: Fix a panic that could happen if the server was shut down while still
    starting up
+ * replication: Fix a case where a network interruption could cause a secondary
+   to be unable to reconnect to a primary
  * secrets/pki: Fix permitted DNS domains performing improper validation
    [GH-4863]
  * secrets/database: Fix panic during DB creds revocation [GH-4846]
