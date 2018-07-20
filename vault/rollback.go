@@ -168,7 +168,10 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *
 		Operation: logical.RollbackOperation,
 		Path:      path,
 	}
+	var cancelFunc context.CancelFunc
+	ctx, cancelFunc = context.WithTimeout(ctx, DefaultMaxRequestDuration)
 	_, err = m.router.Route(ctx, req)
+	cancelFunc()
 
 	// If the error is an unsupported operation, then it doesn't
 	// matter, the backend doesn't support it.

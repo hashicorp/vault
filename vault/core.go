@@ -941,7 +941,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 
 // SealWithRequest takes in a logical.Request, acquires the lock, and passes
 // through to sealInternal
-func (c *Core) SealWithRequest(req *logical.Request) error {
+func (c *Core) SealWithRequest(httpCtx context.Context, req *logical.Request) error {
 	defer metrics.MeasureSince([]string{"core", "seal-with-request"}, time.Now())
 
 	c.stateLock.RLock()
@@ -951,9 +951,20 @@ func (c *Core) SealWithRequest(req *logical.Request) error {
 		return nil
 	}
 
-	// This will unlock the read lock
 	// We use background context since we may not be active
-	return c.sealInitCommon(context.Background(), req)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-httpCtx.Done():
+			cancel()
+		}
+	}()
+
+	// This will unlock the read lock
+	return c.sealInitCommon(ctx, req)
 }
 
 // Seal takes in a token and creates a logical.Request, acquires the lock, and
@@ -1086,7 +1097,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		// we won't have a token store after sealing.
 		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
 		if err == nil {
-			err = c.expiration.Revoke(leaseID)
+			err = c.expiration.Revoke(ctx, leaseID)
 		}
 		if err != nil {
 			c.logger.Error("token needed revocation before seal but failed to revoke", "error", err)

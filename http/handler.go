@@ -113,7 +113,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 
 	// Wrap the help wrapped handler with another layer with a generic
 	// handler
-	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler, props.MaxRequestSize)
+	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler, props.MaxRequestSize, props.MaxRequestDuration)
 
 	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
 	// characters in the request path.
@@ -128,20 +128,24 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 // wrapGenericHandler wraps the handler with an extra layer of handler where
 // tasks that should be commonly handled for all the requests and/or responses
 // are performed.
-func wrapGenericHandler(h http.Handler, maxRequestSize int64) http.Handler {
+func wrapGenericHandler(h http.Handler, maxRequestSize int64, maxRequestDuration time.Duration) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
 		w.Header().Set("Cache-Control", "no-store")
 
-		// Add a context and put the request limit for this handler in it
+		// Start with the request context
+		ctx := r.Context()
+		var cancelFunc context.CancelFunc
+		// Add our timeout
+		ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
+		// Add a size limiter if desired
 		if maxRequestSize > 0 {
-			ctx := context.WithValue(r.Context(), "max_request_size", maxRequestSize)
-			h.ServeHTTP(w, r.WithContext(ctx))
-		} else {
-			h.ServeHTTP(w, r)
+			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
 		}
-
+		r = r.WithContext(ctx)
+		h.ServeHTTP(w, r)
+		cancelFunc()
 		return
 	})
 }
@@ -432,7 +436,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 // request is a helper to perform a request and properly exit in the
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool) {
-	resp, err := core.HandleRequest(r)
+	resp, err := core.HandleRequest(rawReq.Context(), r)
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)
 		return resp, false

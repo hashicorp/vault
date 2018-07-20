@@ -989,7 +989,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 			return nil, err
 		}
 
-		err = ts.expiration.Revoke(leaseID)
+		err = ts.expiration.Revoke(ctx, leaseID)
 		if err != nil {
 			return nil, err
 		}
@@ -1597,7 +1597,7 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 		return nil, err
 	}
 
-	err = ts.expiration.Revoke(leaseID)
+	err = ts.expiration.Revoke(ctx, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -2052,7 +2052,7 @@ func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	err = ts.expiration.Revoke(leaseID)
+	err = ts.expiration.Revoke(ctx, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -2088,7 +2088,7 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	err = ts.expiration.Revoke(leaseID)
+	err = ts.expiration.Revoke(ctx, leaseID)
 	if err != nil {
 		return nil, err
 	}
