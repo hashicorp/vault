@@ -1100,23 +1100,19 @@ func (m *ExpirationManager) expireID(leaseID string) {
 		case <-m.quitCh:
 			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", leaseID)
 			return
+		case <-m.quitContext.Done():
+			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
+			return
 		default:
 		}
 
 		m.coreStateLock.RLock()
-		if m.quitContext.Err() == context.Canceled {
-			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
-			m.coreStateLock.RUnlock()
-			return
-		}
-
 		err := m.Revoke(leaseID)
+		m.coreStateLock.RUnlock()
 		if err == nil {
-			m.coreStateLock.RUnlock()
 			return
 		}
 
-		m.coreStateLock.RUnlock()
 		m.logger.Error("failed to revoke lease", "lease_id", leaseID, "error", err)
 		time.Sleep((1 << attempt) * revokeRetryBase)
 	}
