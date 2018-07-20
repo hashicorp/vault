@@ -21,6 +21,11 @@ accompanying the backend's source in the Vault source tree.
   nodes inside the cluster being properly sychronized; clock skews are
   susceptible to cause contention on the locks.
 
+- **Community Supported** – the FoundationDB storage backend is supported
+  by the community. While it has undergone review by HashiCorp employees,
+  they may not be as knowledgeable about the technology. If you encounter
+  problems with them, you may be referred to the original author.
+
 ```hcl
 storage "foundationdb" {
   api_version  = 510
