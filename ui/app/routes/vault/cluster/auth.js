@@ -5,7 +5,8 @@ const { RSVP } = Ember;
 
 export default ClusterRouteBase.extend({
   beforeModel() {
-    return this.store.unloadAll('auth-method');
+    this.store.unloadAll('auth-method');
+    return this._super();
   },
   model() {
     let cluster = this._super(...arguments);
