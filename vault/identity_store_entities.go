@@ -332,6 +332,11 @@ func (i *IdentityStore) pathEntityIDUpdate() framework.OperationFunc {
 			return logical.ErrorResponse("missing entity id"), nil
 		}
 
+		// Acquire the lock to modify the entity storage entry
+		lock := locksutil.LockForKey(i.entityLocks, entityID)
+		lock.Lock()
+		defer lock.Unlock()
+
 		entity, err := i.MemDBEntityByID(entityID, true)
 		if err != nil {
 			return nil, err
@@ -408,7 +413,7 @@ func (i *IdentityStore) handleEntityUpdateCommon(req *logical.Request, d *framew
 	respData["aliases"] = aliasIDs
 
 	// Update MemDB and persist entity object
-	err = i.upsertEntity(entity, nil, true)
+	err = i.upsertEntityNonLocked(entity, nil, true)
 	if err != nil {
 		return nil, err
 	}

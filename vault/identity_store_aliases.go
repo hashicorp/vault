@@ -206,19 +206,10 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 	}
 
 	// Get entity id
-	canonicalID := d.Get("entity_id").(string)
+	canonicalID := d.Get("canonical_id").(string)
 	if canonicalID == "" {
-		canonicalID = d.Get("canonical_id").(string)
-	}
-
-	if canonicalID != "" {
-		entity, err = i.MemDBEntityByID(canonicalID, true)
-		if err != nil {
-			return nil, err
-		}
-		if entity == nil {
-			return logical.ErrorResponse("invalid entity ID"), nil
-		}
+		// For backwards compatibility
+		canonicalID = d.Get("entity_id").(string)
 	}
 
 	// Get alias name
@@ -256,6 +247,51 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 		return nil, err
 	}
 
+	var existingEntity *identity.Entity
+	var lockKeys []string
+	if !newAlias {
+		// Verify that the combination of alias name and mount is not
+		// already tied to a different alias
+		if aliasByFactors != nil && aliasByFactors.ID != alias.ID {
+			return logical.ErrorResponse("combination of mount and alias name is already in use"), nil
+		}
+
+		// Fetch the entity to which the alias is tied to
+		existingEntity, err = i.MemDBEntityByAliasID(alias.ID, true)
+		if err != nil {
+			return nil, err
+		}
+
+		if existingEntity == nil {
+			return nil, fmt.Errorf("alias is not associated with an entity")
+		}
+		lockKeys = append(lockKeys, existingEntity.ID)
+	}
+
+	if canonicalID != "" {
+		// Acquire the lock to modify the entity storage entry
+		locks := locksutil.LocksForKeys(i.entityLocks, append(lockKeys, canonicalID))
+		for _, lock := range locks {
+			lock.Lock()
+			defer lock.Unlock()
+		}
+
+		entity, err = i.MemDBEntityByID(canonicalID, true)
+		if err != nil {
+			return nil, err
+		}
+		if entity == nil {
+			return logical.ErrorResponse("invalid canonical ID"), nil
+		}
+	} else {
+		// Acquire the lock to modify the entity storage entry
+		locks := locksutil.LocksForKeys(i.entityLocks, lockKeys)
+		for _, lock := range locks {
+			lock.Lock()
+			defer lock.Unlock()
+		}
+	}
+
 	resp := &logical.Response{}
 
 	if newAlias {
@@ -275,22 +311,6 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 			entity.Aliases = append(entity.Aliases, alias)
 		}
 	} else {
-		// Verify that the combination of alias name and mount is not
-		// already tied to a different alias
-		if aliasByFactors != nil && aliasByFactors.ID != alias.ID {
-			return logical.ErrorResponse("combination of mount and alias name is already in use"), nil
-		}
-
-		// Fetch the entity to which the alias is tied to
-		existingEntity, err := i.MemDBEntityByAliasID(alias.ID, true)
-		if err != nil {
-			return nil, err
-		}
-
-		if existingEntity == nil {
-			return nil, fmt.Errorf("alias is not associated with an entity")
-		}
-
 		if entity != nil && entity.ID != existingEntity.ID {
 			// Alias should be transferred from 'existingEntity' to 'entity'
 			for aliasIndex, item := range existingEntity.Aliases {
@@ -353,7 +373,7 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 	// aliases in storage. If the alias is being transferred over from
 	// one entity to another, previous entity needs to get refreshed in MemDB
 	// and persisted in storage as well.
-	err = i.upsertEntity(entity, previousEntity, true)
+	err = i.upsertEntityNonLocked(entity, previousEntity, true)
 	if err != nil {
 		return nil, err
 	}
