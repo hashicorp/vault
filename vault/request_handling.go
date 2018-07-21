@@ -24,7 +24,9 @@ import (
 
 const (
 	replTimeout = 10 * time.Second
+)
 
+var (
 	// DefaultMaxRequestDuration is the amount of time we'll wait for a request
 	// to complete, unless overridden on a per-handler basis
 	DefaultMaxRequestDuration = 90 * time.Second

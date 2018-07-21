@@ -45,6 +45,9 @@ type Config struct {
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
 	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
 
+	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
+	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_time"`
+
 	ClusterName         string `hcl:"cluster_name"`
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
@@ -288,6 +291,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DefaultLeaseTTL = c2.DefaultLeaseTTL
 	}
 
+	result.DefaultMaxRequestDuration = c.DefaultMaxRequestDuration
+	if c2.DefaultMaxRequestDuration > result.DefaultMaxRequestDuration {
+		result.DefaultMaxRequestDuration = c2.DefaultMaxRequestDuration
+	}
+
 	result.ClusterName = c.ClusterName
 	if c2.ClusterName != "" {
 		result.ClusterName = c2.ClusterName
@@ -370,6 +378,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 	}
 	if result.DefaultLeaseTTLRaw != nil {
 		if result.DefaultLeaseTTL, err = parseutil.ParseDurationSecond(result.DefaultLeaseTTLRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DefaultMaxRequestDurationRaw != nil {
+		if result.DefaultMaxRequestDuration, err = parseutil.ParseDurationSecond(result.DefaultMaxRequestDurationRaw); err != nil {
 			return nil, err
 		}
 	}
