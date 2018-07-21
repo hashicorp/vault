@@ -205,7 +205,7 @@ func TestCore_Route_Sealed(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Path:      "sys/mounts",
 	}
-	_, err := c.HandleRequest(req)
+	_, err := c.HandleRequest(context.Background(), req)
 	if err != consts.ErrSealed {
 		t.Fatalf("err: %v", err)
 	}
@@ -228,7 +228,7 @@ func TestCore_Route_Sealed(t *testing.T) {
 
 	// Should not error after unseal
 	req.ClientToken = res.RootToken
-	_, err = c.HandleRequest(req)
+	_, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -321,7 +321,7 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -332,7 +332,7 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -362,7 +362,7 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -373,7 +373,7 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -403,7 +403,7 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -414,7 +414,7 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -443,7 +443,7 @@ func TestCore_HandleRequest_MissingToken(t *testing.T) {
 			"lease": "1h",
 		},
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err == nil || !errwrap.Contains(err, logical.ErrInvalidRequest.Error()) {
 		t.Fatalf("err: %v", err)
 	}
@@ -464,7 +464,7 @@ func TestCore_HandleRequest_InvalidToken(t *testing.T) {
 		},
 		ClientToken: "foobarbaz",
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v", err)
 	}
@@ -482,7 +482,7 @@ func TestCore_HandleRequest_NoSlash(t *testing.T) {
 		Path:        "secret",
 		ClientToken: root,
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
@@ -501,7 +501,7 @@ func TestCore_HandleRequest_RootPath(t *testing.T) {
 		Path:        "sys/policy", // root protected!
 		ClientToken: "child",
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
@@ -520,7 +520,7 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -535,7 +535,7 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 		Path:        "sys/policy", // root protected!
 		ClientToken: "child",
 	}
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -558,7 +558,7 @@ func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 		},
 		ClientToken: "child",
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
@@ -578,7 +578,7 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -596,7 +596,7 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 		},
 		ClientToken: "child",
 	}
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -619,7 +619,7 @@ func TestCore_HandleRequest_NoClientToken(t *testing.T) {
 	req.Data["type"] = "noop"
 	req.Data["description"] = "foo"
 	req.ClientToken = root
-	_, err := c.HandleRequest(req)
+	_, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -629,7 +629,7 @@ func TestCore_HandleRequest_NoClientToken(t *testing.T) {
 		Path: "foo/login",
 	}
 	req.ClientToken = root
-	if _, err := c.HandleRequest(req); err != nil {
+	if _, err := c.HandleRequest(context.Background(), req); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -653,7 +653,7 @@ func TestCore_HandleRequest_ConnOnLogin(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
-	_, err := c.HandleRequest(req)
+	_, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -663,7 +663,7 @@ func TestCore_HandleRequest_ConnOnLogin(t *testing.T) {
 		Path:       "auth/foo/login",
 		Connection: &logical.Connection{},
 	}
-	if _, err := c.HandleRequest(req); err != nil {
+	if _, err := c.HandleRequest(context.Background(), req); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if noop.Requests[0].Connection == nil {
@@ -694,7 +694,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
-	_, err := c.HandleRequest(req)
+	_, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -703,7 +703,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	lreq := &logical.Request{
 		Path: "auth/foo/login",
 	}
-	lresp, err := c.HandleRequest(lreq)
+	lresp, err := c.HandleRequest(context.Background(), lreq)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -758,7 +758,7 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "sys/audit/noop")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -774,7 +774,7 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 		ClientToken: root,
 	}
 	req.ClientToken = root
-	if _, err := c.HandleRequest(req); err != nil {
+	if _, err := c.HandleRequest(context.Background(), req); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -822,7 +822,7 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/secret/tune")
 	req.Data["audit_non_hmac_request_keys"] = "foo"
 	req.ClientToken = root
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -830,7 +830,7 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	req = logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/secret/tune")
 	req.Data["audit_non_hmac_response_keys"] = "baz"
 	req.ClientToken = root
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -839,7 +839,7 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	req = logical.TestRequest(t, logical.UpdateOperation, "sys/audit/noop")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -854,7 +854,7 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 		ClientToken: root,
 	}
 	req.ClientToken = root
-	if _, err := c.HandleRequest(req); err != nil {
+	if _, err := c.HandleRequest(context.Background(), req); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -896,7 +896,7 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 		ClientToken: root,
 	}
 	req.ClientToken = root
-	if _, err := c.HandleRequest(req); err != nil {
+	if _, err := c.HandleRequest(context.Background(), req); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if len(noop.RespNonHMACKeys) != 1 || noop.RespNonHMACKeys[0] != "baz" {
@@ -940,7 +940,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
-	_, err := c.HandleRequest(req)
+	_, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -949,7 +949,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	req = logical.TestRequest(t, logical.UpdateOperation, "sys/audit/noop")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
-	_, err = c.HandleRequest(req)
+	_, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -958,7 +958,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	lreq := &logical.Request{
 		Path: "auth/foo/login",
 	}
-	lresp, err := c.HandleRequest(lreq)
+	lresp, err := c.HandleRequest(context.Background(), lreq)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1003,7 +1003,7 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
 	req.Data["policies"] = []string{"foo"}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1051,7 +1051,7 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 	req.ClientToken = root
 	req.Data["policies"] = []string{"foo"}
 	req.Data["no_default_policy"] = true
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1089,7 +1089,7 @@ func TestCore_LimitedUseToken(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
 	req.Data["num_uses"] = "1"
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1103,13 +1103,13 @@ func TestCore_LimitedUseToken(t *testing.T) {
 		},
 		ClientToken: resp.Auth.ClientToken,
 	}
-	_, err = c.HandleRequest(req)
+	_, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Second operation should fail
-	_, err = c.HandleRequest(req)
+	_, err = c.HandleRequest(context.Background(), req)
 	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v", err)
 	}
@@ -1346,7 +1346,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Step down core
-	err = core.StepDown(req)
+	err = core.StepDown(context.Background(), req)
 	if err != nil {
 		t.Fatal("error stepping down core 1")
 	}
@@ -1388,7 +1388,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Step down core2
-	err = core2.StepDown(req)
+	err = core2.StepDown(context.Background(), req)
 	if err != nil {
 		t.Fatal("error stepping down core 1")
 	}
@@ -1667,7 +1667,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 		},
 		ClientToken: root,
 	}
-	_, err = core.HandleRequest(req)
+	_, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1720,7 +1720,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	}
 
 	// Request should fail in standby mode
-	_, err = core2.HandleRequest(req)
+	_, err = core2.HandleRequest(context.Background(), req)
 	if err != consts.ErrStandby {
 		t.Fatalf("err: %v", err)
 	}
@@ -1761,7 +1761,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 		Path:        "secret/foo",
 		ClientToken: root,
 	}
-	resp, err := core2.HandleRequest(req)
+	resp, err := core2.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1824,7 +1824,7 @@ func TestCore_HandleRequest_Login_InternalData(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
-	_, err := c.HandleRequest(req)
+	_, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1833,7 +1833,7 @@ func TestCore_HandleRequest_Login_InternalData(t *testing.T) {
 	lreq := &logical.Request{
 		Path: "auth/foo/login",
 	}
-	lresp, err := c.HandleRequest(lreq)
+	lresp, err := c.HandleRequest(context.Background(), lreq)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1868,7 +1868,7 @@ func TestCore_HandleRequest_InternalData(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
-	_, err := c.HandleRequest(req)
+	_, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1879,7 +1879,7 @@ func TestCore_HandleRequest_InternalData(t *testing.T) {
 		Path:        "foo/test",
 		ClientToken: root,
 	}
-	lresp, err := c.HandleRequest(lreq)
+	lresp, err := c.HandleRequest(context.Background(), lreq)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1911,7 +1911,7 @@ func TestCore_HandleLogin_ReturnSecret(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
-	_, err := c.HandleRequest(req)
+	_, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1920,7 +1920,7 @@ func TestCore_HandleLogin_ReturnSecret(t *testing.T) {
 	lreq := &logical.Request{
 		Path: "auth/foo/login",
 	}
-	_, err = c.HandleRequest(lreq)
+	_, err = c.HandleRequest(context.Background(), lreq)
 	if err != ErrInternalError {
 		t.Fatalf("err: %v", err)
 	}
@@ -1940,7 +1940,7 @@ func TestCore_RenewSameLease(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1951,7 +1951,7 @@ func TestCore_RenewSameLease(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1963,7 +1963,7 @@ func TestCore_RenewSameLease(t *testing.T) {
 	// Renew the lease
 	req = logical.TestRequest(t, logical.UpdateOperation, "sys/renew/"+resp.Secret.LeaseID)
 	req.ClientToken = root
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1976,7 +1976,7 @@ func TestCore_RenewSameLease(t *testing.T) {
 	// Renew the lease (alternate path)
 	req = logical.TestRequest(t, logical.UpdateOperation, "sys/leases/renew/"+resp.Secret.LeaseID)
 	req.ClientToken = root
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2000,7 +2000,7 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2012,7 +2012,7 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 	req.Data = map[string]interface{}{
 		"token": newClient,
 	}
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2020,7 +2020,7 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 	// Revoke using the renew prefix
 	req = logical.TestRequest(t, logical.UpdateOperation, "sys/revoke-prefix/auth/token/renew/")
 	req.ClientToken = root
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2031,7 +2031,7 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 		"token": newClient,
 	}
 	req.ClientToken = newClient
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2075,7 +2075,7 @@ path "secret/*" {
 	req := logical.TestRequest(t, logical.UpdateOperation, "sys/auth/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
-	_, err := c.HandleRequest(req)
+	_, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2084,7 +2084,7 @@ path "secret/*" {
 	lreq := &logical.Request{
 		Path: "auth/foo/login",
 	}
-	lresp, err := c.HandleRequest(lreq)
+	lresp, err := c.HandleRequest(context.Background(), lreq)
 	if err == nil || lresp == nil || !lresp.IsError() {
 		t.Fatalf("expected error trying to auth and receive root policy")
 	}
@@ -2094,7 +2094,7 @@ path "secret/*" {
 	lreq = &logical.Request{
 		Path: "auth/foo/login",
 	}
-	lresp, err = c.HandleRequest(lreq)
+	lresp, err = c.HandleRequest(context.Background(), lreq)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2109,7 +2109,7 @@ path "secret/*" {
 		},
 		ClientToken: lresp.Auth.ClientToken,
 	}
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2120,7 +2120,7 @@ path "secret/*" {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2134,7 +2134,7 @@ path "secret/*" {
 		"lease_id": resp.Secret.LeaseID,
 	}
 	req.ClientToken = lresp.Auth.ClientToken
-	_, err = c.HandleRequest(req)
+	_, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2142,7 +2142,7 @@ path "secret/*" {
 	// Disable the credential backend
 	req = logical.TestRequest(t, logical.DeleteOperation, "sys/auth/foo")
 	req.ClientToken = root
-	resp, err = c.HandleRequest(req)
+	resp, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp)
 	}
@@ -2162,7 +2162,7 @@ func TestCore_HandleRequest_MountPointType(t *testing.T) {
 	req.Data["type"] = "noop"
 	req.Data["description"] = "foo"
 	req.ClientToken = root
-	_, err := c.HandleRequest(req)
+	_, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2174,7 +2174,7 @@ func TestCore_HandleRequest_MountPointType(t *testing.T) {
 		Connection: &logical.Connection{},
 	}
 	req.ClientToken = root
-	if _, err := c.HandleRequest(req); err != nil {
+	if _, err := c.HandleRequest(context.Background(), req); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -2246,7 +2246,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 		Path:        "sys/rotate",
 		ClientToken: root,
 	}
-	_, err = core.HandleRequest(req)
+	_, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2266,7 +2266,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 		Path:        "sys/key-status",
 		ClientToken: root,
 	}
-	resp, err := core2.HandleRequest(req)
+	resp, err := core2.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2294,7 +2294,7 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo")
 	req.Data["type"] = "noop"
 	req.ClientToken = root
-	_, err := c.HandleRequest(req)
+	_, err := c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2303,7 +2303,7 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 	req = logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo/tune")
 	req.Data["passthrough_request_headers"] = []string{"Should-Passthrough", "should-passthrough-case-insensitive"}
 	req.ClientToken = root
-	_, err = c.HandleRequest(req)
+	_, err = c.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2319,7 +2319,7 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 			"Should-Not-Passthrough":              []string{"bar"},
 		},
 	}
-	_, err = c.HandleRequest(lreq)
+	_, err = c.HandleRequest(context.Background(), lreq)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
