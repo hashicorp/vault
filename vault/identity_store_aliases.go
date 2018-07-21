@@ -30,9 +30,9 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 				},
 				// entity_id is deprecated in favor of canonical_id
 				"entity_id": {
-					Type:        framework.TypeString,
-					Description: "Entity ID to which this alias belongs to.
-This field is deprecated, use canonical_id.",
+					Type: framework.TypeString,
+					Description: `Entity ID to which this alias belongs to.
+This field is deprecated, use canonical_id.`,
 				},
 				"canonical_id": {
 					Type:        framework.TypeString,
@@ -72,9 +72,9 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 				// entity_id is deprecated
 				"entity_id": {
-					Type:        framework.TypeString,
-					Description: "Entity ID to which this alias belongs to.
-This field is deprecated, use canonical_id.",
+					Type: framework.TypeString,
+					Description: `Entity ID to which this alias belongs to.
+This field is deprecated, use canonical_id.`,
 				},
 				"canonical_id": {
 					Type:        framework.TypeString,
@@ -113,9 +113,9 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 				// entity_id is deprecated
 				"entity_id": {
-					Type:        framework.TypeString,
-					Description: "Entity ID to which this alias belongs to.
-This field is deprecated, use canonical_id.",
+					Type: framework.TypeString,
+					Description: `Entity ID to which this alias belongs to.
+This field is deprecated, use canonical_id.`,
 				},
 				"canonical_id": {
 					Type:        framework.TypeString,
@@ -320,6 +320,9 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 		existingEntity, err := i.MemDBEntityByID(existingEntity.ID, true)
 		if err != nil {
 			return nil, err
+		}
+		if existingEntity == nil {
+			return nil, fmt.Errorf("alias is not associated with an entity")
 		}
 
 		if entity != nil && entity.ID != existingEntity.ID {
