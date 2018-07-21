@@ -412,10 +412,16 @@ func (i *IdentityStore) handleEntityUpdateCommon(req *logical.Request, d *framew
 
 	respData["aliases"] = aliasIDs
 
-	// Update MemDB and persist entity object
-	err = i.upsertEntityNonLocked(entity, nil, true)
-	if err != nil {
-		return nil, err
+	// Update MemDB and persist entity object. New entities have not been
+	// looked up yet so we need to take the lock on the entity on upsert
+	if newEntity {
+		if err := i.upsertEntity(entity, nil, true); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := i.upsertEntityNonLocked(entity, nil, true); err != nil {
+			return nil, err
+		}
 	}
 
 	// Return ID of the entity that was either created or updated along with

@@ -56,6 +56,10 @@ type IdentityStore struct {
 	// categorized to while performing storage modifications.
 	entityLocks []*locksutil.LockEntry
 
+	// aliasLocks are a set of 256 locks to which all the aliases will be
+	// categorized to while performing storage modifications.
+	aliasLocks []*locksutil.LockEntry
+
 	// groupLock is used to protect modifications to group entries
 	groupLock sync.RWMutex
 

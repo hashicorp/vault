@@ -38,6 +38,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		view:        config.StorageView,
 		db:          db,
 		entityLocks: locksutil.CreateLocks(),
+		aliasLocks:  locksutil.CreateLocks(),
 		logger:      logger,
 		core:        core,
 	}
