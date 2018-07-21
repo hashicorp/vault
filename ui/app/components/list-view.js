@@ -1,6 +1,7 @@
 import Ember from 'ember';
 import { pluralize } from 'ember-inflector';
 
+const { computed } = Ember;
 export default Ember.Component.extend({
   tagName: '',
   items: null,

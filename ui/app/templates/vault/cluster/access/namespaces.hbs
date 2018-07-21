@@ -11,7 +11,7 @@
     {{/link-to}}
   </p.levelRight>
 </PageHeader>
-<ListView @items={{model}} @emptyMessage="There are currently no namespaces" as |item|>
+<ListView @items={{model}} @itemNoun="namespace" as |item|>
   <ListItem @item={{item}} />
 </ListView>
 

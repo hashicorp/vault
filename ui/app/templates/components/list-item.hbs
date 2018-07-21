@@ -1,8 +1,24 @@
 {{#if componentName}}
   {{component componentName item=item }}
 {{else if linkParams}}
-  <LinkedBlock @params={{linkParms}} />
+  <LinkedBlock @params={{linkParms}} @class="list-item-row">
+    <div class="columns is-mobile">
+      <div class="column is-10">
+        {{yield}}
+      </div>
+      <div class="column has-text-right">
+      </div>
+    </div>
+  </LinkedBlock>
 {{else}}
-  
+  <div class="list-item-row">
+    <div class="columns is-mobile">
+      <div class="column is-10">
+        {{yield}}
+      </div>
+      <div class="column has-text-right">
+      </div>
+    </div>
+  </div>
 {{/if}}
 
