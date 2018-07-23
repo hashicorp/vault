@@ -21,11 +21,11 @@ func (r *Response) Cleanup() {
 	if r == nil {
 		return
 	}
-	if resp.Body != nil {
-		resp.Body.Close()
+	if r.Body != nil {
+		r.Body.Close()
 	}
 	if r.cancelFunc != nil {
-		cancelFunc()
+		r.cancelFunc()
 	}
 }
 
