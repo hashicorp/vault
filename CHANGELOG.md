@@ -27,6 +27,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * auth/azure: Add support for virtual machine scale sets
  * cli: Add a `-description` flag to secrets and auth tune subcommands to allow
    updating an existing secret engine's or auth method's description. This
    change also allows the description to be unset by providing an empty string.
