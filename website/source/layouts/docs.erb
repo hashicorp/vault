@@ -182,6 +182,9 @@
       <li<%= sidebar_current("docs-commands") %>>
         <a href="/docs/commands/index.html">Commands (CLI)</a>
         <ul class="nav">
+          <li<%= sidebar_current("docs-commands-agent") %>>
+            <a href="/docs/commands/agent.html">agent</a>
+          </li>
           <li<%= sidebar_current("docs-commands-audit") %>>
             <a href="/docs/commands/audit.html">audit</a>
             <ul class="nav">
@@ -368,7 +371,18 @@
           </li>
         </ul>
       </li>
-
+      <li<%= sidebar_current("docs-agent") %>>
+        <a href="/docs/agent/index.html">Vault Agent</a>
+        <ul class="nav">
+          <li<%= sidebar_current("docs-agent-autoauth") %>>
+            <a href="/docs/agent/auto-auth.html">Auto-Auth</a>
+            <ul class="nav">
+              <li<%= sidebar_current("docs-commands-token-capabilities") %>>
+                <a href="/docs/commands/token/capabilities.html">capabilities</a>
+              </li>
+          </li>
+        </ul>
+      </li>
       <hr>
 
       <li<%= sidebar_current("docs-secrets") %>>
