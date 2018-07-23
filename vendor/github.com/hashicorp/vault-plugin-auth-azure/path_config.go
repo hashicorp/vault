@@ -42,6 +42,7 @@ func pathConfig(b *azureAuthBackend) *framework.Path {
 			logical.ReadOperation:   b.pathConfigRead,
 			logical.CreateOperation: b.pathConfigWrite,
 			logical.UpdateOperation: b.pathConfigWrite,
+			logical.DeleteOperation: b.pathConfigDelete,
 		},
 		ExistenceCheck: b.pathConfigExistenceCheck,
 
@@ -154,6 +155,16 @@ func (b *azureAuthBackend) pathConfigRead(ctx context.Context, req *logical.Requ
 		},
 	}
 	return resp, nil
+}
+
+func (b *azureAuthBackend) pathConfigDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete(ctx, "config")
+
+	if err == nil {
+		b.reset()
+	}
+
+	return nil, err
 }
 
 const confHelpSyn = `Configures the Azure authentication backend.`
