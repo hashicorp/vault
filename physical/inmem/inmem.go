@@ -93,6 +93,12 @@ func (i *InmemBackend) PutInternal(ctx context.Context, entry *physical.Entry) e
 		return PutDisabledError
 	}
 
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	i.root.Insert(entry.Key, entry.Value)
 	return nil
 }
@@ -119,6 +125,12 @@ func (i *InmemBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 func (i *InmemBackend) GetInternal(ctx context.Context, key string) (*physical.Entry, error) {
 	if atomic.LoadUint32(i.failGet) != 0 {
 		return nil, GetDisabledError
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
 	}
 
 	if raw, ok := i.root.Get(key); ok {
@@ -153,6 +165,11 @@ func (i *InmemBackend) DeleteInternal(ctx context.Context, key string) error {
 	if atomic.LoadUint32(i.failDelete) != 0 {
 		return DeleteDisabledError
 	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 
 	i.root.Delete(key)
 	return nil
@@ -175,10 +192,10 @@ func (i *InmemBackend) List(ctx context.Context, prefix string) ([]string, error
 	i.RLock()
 	defer i.RUnlock()
 
-	return i.ListInternal(prefix)
+	return i.ListInternal(ctx, prefix)
 }
 
-func (i *InmemBackend) ListInternal(prefix string) ([]string, error) {
+func (i *InmemBackend) ListInternal(ctx context.Context, prefix string) ([]string, error) {
 	if atomic.LoadUint32(i.failList) != 0 {
 		return nil, ListDisabledError
 	}
@@ -200,6 +217,12 @@ func (i *InmemBackend) ListInternal(prefix string) ([]string, error) {
 		return false
 	}
 	i.root.WalkPrefix(prefix, walkFn)
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
 
 	return out, nil
 }
