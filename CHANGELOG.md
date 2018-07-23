@@ -61,6 +61,8 @@ BUG FIXES:
  * secrets/database: Fix panic during DB creds revocation [GH-4846]
  * ui: Fix usage of cubbyhole backend in the UI [GH-4851]
  * ui: Fix toggle state when a secret is JSON-formatted [GH-4913]
+ * ui: Fix coercion of falsey values to empty string when editing secrets as 
+   JSON [GH-4977]
 
 ## 0.10.3 (June 20th, 2018)
 
