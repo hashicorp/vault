@@ -12,6 +12,8 @@
   </p.levelRight>
 </PageHeader>
 <ListView @items={{model}} @itemNoun="namespace" as |item|>
-  <ListItem @item={{item}} />
+  <ListItem @item={{item}} >
+    {{item.id}}
+  </ListItem>
 </ListView>
 
