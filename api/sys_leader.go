@@ -6,7 +6,7 @@ func (c *Sys) Leader() (*LeaderResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result LeaderResponse
 	err = resp.DecodeJSON(&result)

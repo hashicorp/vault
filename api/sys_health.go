@@ -13,7 +13,7 @@ func (c *Sys) Health() (*HealthResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result HealthResponse
 	err = resp.DecodeJSON(&result)

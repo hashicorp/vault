@@ -6,7 +6,7 @@ func (c *Sys) Rotate() error {
 	r := c.c.NewRequest("POST", "/v1/sys/rotate")
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -17,7 +17,7 @@ func (c *Sys) KeyStatus() (*KeyStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	result := new(KeyStatus)
 	err = resp.DecodeJSON(result)

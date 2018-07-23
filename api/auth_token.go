@@ -20,7 +20,7 @@ func (c *TokenAuth) Create(opts *TokenCreateRequest) (*Secret, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return ParseSecret(resp.Body)
 }
@@ -35,7 +35,7 @@ func (c *TokenAuth) CreateOrphan(opts *TokenCreateRequest) (*Secret, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return ParseSecret(resp.Body)
 }
@@ -50,7 +50,7 @@ func (c *TokenAuth) CreateWithRole(opts *TokenCreateRequest, roleName string) (*
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return ParseSecret(resp.Body)
 }
@@ -67,7 +67,7 @@ func (c *TokenAuth) Lookup(token string) (*Secret, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return ParseSecret(resp.Body)
 }
@@ -83,7 +83,7 @@ func (c *TokenAuth) LookupAccessor(accessor string) (*Secret, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return ParseSecret(resp.Body)
 }
@@ -95,7 +95,7 @@ func (c *TokenAuth) LookupSelf() (*Secret, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return ParseSecret(resp.Body)
 }
@@ -113,7 +113,7 @@ func (c *TokenAuth) Renew(token string, increment int) (*Secret, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return ParseSecret(resp.Body)
 }
@@ -130,7 +130,7 @@ func (c *TokenAuth) RenewSelf(increment int) (*Secret, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return ParseSecret(resp.Body)
 }
@@ -150,7 +150,7 @@ func (c *TokenAuth) RenewTokenAsSelf(token string, increment int) (*Secret, erro
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return ParseSecret(resp.Body)
 }
@@ -168,7 +168,7 @@ func (c *TokenAuth) RevokeAccessor(accessor string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return nil
 }
@@ -187,7 +187,7 @@ func (c *TokenAuth) RevokeOrphan(token string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return nil
 }
@@ -201,7 +201,7 @@ func (c *TokenAuth) RevokeSelf(token string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return nil
 }
@@ -221,7 +221,7 @@ func (c *TokenAuth) RevokeTree(token string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return nil
 }

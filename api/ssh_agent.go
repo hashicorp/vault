@@ -211,7 +211,7 @@ func (c *SSHHelper) Verify(otp string) (*SSHVerifyResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	secret, err := ParseSecret(resp.Body)
 	if err != nil {

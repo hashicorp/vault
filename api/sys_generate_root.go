@@ -14,7 +14,7 @@ func (c *Sys) generateRootStatusCommon(path string) (*GenerateRootStatusResponse
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result GenerateRootStatusResponse
 	err = resp.DecodeJSON(&result)
@@ -44,7 +44,7 @@ func (c *Sys) generateRootInitCommon(path, otp, pgpKey string) (*GenerateRootSta
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result GenerateRootStatusResponse
 	err = resp.DecodeJSON(&result)
@@ -63,7 +63,7 @@ func (c *Sys) generateRootCancelCommon(path string) error {
 	r := c.c.NewRequest("DELETE", path)
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -91,7 +91,7 @@ func (c *Sys) generateRootUpdateCommon(path, shard, nonce string) (*GenerateRoot
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result GenerateRootStatusResponse
 	err = resp.DecodeJSON(&result)

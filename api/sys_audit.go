@@ -20,7 +20,7 @@ func (c *Sys) AuditHash(path string, input string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	type d struct {
 		Hash string `json:"hash"`
@@ -41,7 +41,7 @@ func (c *Sys) ListAudit() (map[string]*Audit, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result map[string]interface{}
 	err = resp.DecodeJSON(&result)
@@ -91,7 +91,7 @@ func (c *Sys) EnableAuditWithOptions(path string, options *EnableAuditOptions) e
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return nil
 }
@@ -100,7 +100,7 @@ func (c *Sys) DisableAudit(path string) error {
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/audit/%s", path))
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }

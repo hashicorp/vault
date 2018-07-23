@@ -6,7 +6,7 @@ func (c *Sys) RekeyStatus() (*RekeyStatusResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result RekeyStatusResponse
 	err = resp.DecodeJSON(&result)
@@ -19,7 +19,7 @@ func (c *Sys) RekeyRecoveryKeyStatus() (*RekeyStatusResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result RekeyStatusResponse
 	err = resp.DecodeJSON(&result)
@@ -32,7 +32,7 @@ func (c *Sys) RekeyVerificationStatus() (*RekeyVerificationStatusResponse, error
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result RekeyVerificationStatusResponse
 	err = resp.DecodeJSON(&result)
@@ -45,7 +45,7 @@ func (c *Sys) RekeyRecoveryKeyVerificationStatus() (*RekeyVerificationStatusResp
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result RekeyVerificationStatusResponse
 	err = resp.DecodeJSON(&result)
@@ -62,7 +62,7 @@ func (c *Sys) RekeyInit(config *RekeyInitRequest) (*RekeyStatusResponse, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result RekeyStatusResponse
 	err = resp.DecodeJSON(&result)
@@ -79,7 +79,7 @@ func (c *Sys) RekeyRecoveryKeyInit(config *RekeyInitRequest) (*RekeyStatusRespon
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result RekeyStatusResponse
 	err = resp.DecodeJSON(&result)
@@ -90,7 +90,7 @@ func (c *Sys) RekeyCancel() error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/init")
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -99,7 +99,7 @@ func (c *Sys) RekeyRecoveryKeyCancel() error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/init")
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -108,7 +108,7 @@ func (c *Sys) RekeyVerificationCancel() error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/verify")
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -117,7 +117,7 @@ func (c *Sys) RekeyRecoveryKeyVerificationCancel() error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/verify")
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -137,7 +137,7 @@ func (c *Sys) RekeyUpdate(shard, nonce string) (*RekeyUpdateResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result RekeyUpdateResponse
 	err = resp.DecodeJSON(&result)
@@ -159,7 +159,7 @@ func (c *Sys) RekeyRecoveryKeyUpdate(shard, nonce string) (*RekeyUpdateResponse,
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result RekeyUpdateResponse
 	err = resp.DecodeJSON(&result)
@@ -172,7 +172,7 @@ func (c *Sys) RekeyRetrieveBackup() (*RekeyRetrieveResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result RekeyRetrieveResponse
 	err = resp.DecodeJSON(&result)
@@ -185,7 +185,7 @@ func (c *Sys) RekeyRetrieveRecoveryBackup() (*RekeyRetrieveResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result RekeyRetrieveResponse
 	err = resp.DecodeJSON(&result)
@@ -196,7 +196,7 @@ func (c *Sys) RekeyDeleteBackup() error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/backup")
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 
 	return err
@@ -206,7 +206,7 @@ func (c *Sys) RekeyDeleteRecoveryBackup() error {
 	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/recovery-backup")
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 
 	return err
@@ -227,7 +227,7 @@ func (c *Sys) RekeyVerificationUpdate(shard, nonce string) (*RekeyVerificationUp
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result RekeyVerificationUpdateResponse
 	err = resp.DecodeJSON(&result)
@@ -249,7 +249,7 @@ func (c *Sys) RekeyRecoveryKeyVerificationUpdate(shard, nonce string) (*RekeyVer
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result RekeyVerificationUpdateResponse
 	err = resp.DecodeJSON(&result)

@@ -48,7 +48,7 @@ func (c *Logical) Read(path string) (*Secret, error) {
 	r := c.c.NewRequest("GET", "/v1/"+path)
 	resp, err := c.c.RawRequest(r)
 	if resp != nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	if resp != nil && resp.StatusCode == 404 {
 		secret, parseErr := ParseSecret(resp.Body)
@@ -79,7 +79,7 @@ func (c *Logical) List(path string) (*Secret, error) {
 	r.Params.Set("list", "true")
 	resp, err := c.c.RawRequest(r)
 	if resp != nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	if resp != nil && resp.StatusCode == 404 {
 		secret, parseErr := ParseSecret(resp.Body)
@@ -110,7 +110,7 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 
 	resp, err := c.c.RawRequest(r)
 	if resp != nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	if resp != nil && resp.StatusCode == 404 {
 		secret, parseErr := ParseSecret(resp.Body)
@@ -136,7 +136,7 @@ func (c *Logical) Delete(path string) (*Secret, error) {
 	r := c.c.NewRequest("DELETE", "/v1/"+path)
 	resp, err := c.c.RawRequest(r)
 	if resp != nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	if resp != nil && resp.StatusCode == 404 {
 		secret, parseErr := ParseSecret(resp.Body)
@@ -177,7 +177,7 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 
 	resp, err := c.c.RawRequest(r)
 	if resp != nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	if resp == nil || resp.StatusCode != 404 {
 		if err != nil {

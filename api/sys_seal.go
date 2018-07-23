@@ -9,7 +9,7 @@ func (c *Sys) Seal() error {
 	r := c.c.NewRequest("PUT", "/v1/sys/seal")
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -41,7 +41,7 @@ func sealStatusRequest(c *Sys, r *Request) (*SealStatusResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result SealStatusResponse
 	err = resp.DecodeJSON(&result)
