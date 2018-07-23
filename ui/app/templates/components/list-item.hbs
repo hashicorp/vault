@@ -7,6 +7,9 @@
         {{yield item}}
       </div>
       <div class="column has-text-right">
+        {{#if hasBlock}}
+          {{yield (hash menu=(component "list-item/popup-menu" item=item))}}
+        {{/if}}
       </div>
     </div>
   </LinkedBlock>
@@ -17,6 +20,9 @@
         {{yield item}}
       </div>
       <div class="column has-text-right">
+        {{#if hasBlock}}
+          {{yield (hash menu=(component "list-item/popup-menu" item=item))}}
+        {{/if}}
       </div>
     </div>
   </div>
