@@ -34,6 +34,7 @@ IMPROVEMENTS:
  * core: A `max_request_size` parameter can now be set per-listener to adjust
    the maximum allowed size per request [GH-4824]
  * core: Add control group request endpoint to default policy [GH-4904]
+ * identity: Identity metadata is now passed through to plugins [GH-4967]
  * secrets/kv: Add support for using `-field=data` to KVv2 when using `vault
    kv` [GH-4895]
  * secrets/pki: Add the ability to tidy revoked but unexpired certificates
