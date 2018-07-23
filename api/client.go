@@ -634,7 +634,13 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 	}
 
 	redirectCount := 0
+	var cancelFunc context.CancelFunc
+
 START:
+	// Clean up from any previous retry
+	if cancelFunc != nil {
+		cancelFunc()
+	}
 	req, err := r.toRetryableHTTP()
 	if err != nil {
 		return nil, err
@@ -644,7 +650,6 @@ START:
 	}
 
 	// Set the timeout, if any
-	var cancelFunc context.CancelFunc
 	if timeout != 0 {
 		var ctx context.Context
 		ctx, cancelFunc = context.WithTimeout(context.Background(), timeout)
@@ -667,11 +672,15 @@ START:
 
 	var result *Response
 	resp, err := client.Do(req)
-	if cancelFunc != nil {
-		cancelFunc()
-	}
 	if resp != nil {
-		result = &Response{Response: resp}
+		result = &Response{
+			Response:   resp,
+			cancelFunc: cancelFunc,
+		}
+	} else {
+		if cancelFunc != nil {
+			cancelFunc()
+		}
 	}
 	if err != nil {
 		if strings.Contains(err.Error(), "tls: oversized") {
@@ -688,6 +697,9 @@ START:
 				err)
 		}
 		return result, err
+	}
+	if resp == nil {
+		return nil, nil
 	}
 
 	// Check for a redirect, only allowing for a single redirect

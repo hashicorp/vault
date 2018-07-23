@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +14,19 @@ import (
 // Response is a raw response that wraps an HTTP response.
 type Response struct {
 	*http.Response
+	cancelFunc context.CancelFunc
+}
+
+func (r *Response) Cleanup() {
+	if r == nil {
+		return
+	}
+	if resp.Body != nil {
+		resp.Body.Close()
+	}
+	if r.cancelFunc != nil {
+		cancelFunc()
+	}
 }
 
 // DecodeJSON will decode the response body to a JSON structure. This
