@@ -69,7 +69,7 @@ toJSONTests.forEach(function([name, includeBlanks, input, output]) {
     let expected = JSON.stringify(output, null, 2);
     let data = KVObject.create({ content: [] }).fromJSON(input);
     let result = data.toJSONString(includeBlanks);
-    assert.deepEqual(result, expected, 'has expected output string');
+    assert.equal(result, expected, 'has expected output string');
   });
 });
 
