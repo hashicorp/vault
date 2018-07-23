@@ -281,7 +281,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Backgroud(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
