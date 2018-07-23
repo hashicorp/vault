@@ -83,6 +83,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (*ap
 			Name              string
 			ResourceGroupName string
 			SubscriptionID    string
+			VMScaleSetName    string
 		}
 	}
 
@@ -115,6 +116,7 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (*ap
 	data := map[string]interface{}{
 		"role":                a.role,
 		"vm_name":             instance.Compute.Name,
+		"vmss_name":           instance.Compute.VMScaleSetName,
 		"resource_group_name": instance.Compute.ResourceGroupName,
 		"subscription_id":     instance.Compute.SubscriptionID,
 		"jwt":                 identity.AccessToken,
