@@ -129,6 +129,9 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 // tasks that should be commonly handled for all the requests and/or responses
 // are performed.
 func wrapGenericHandler(h http.Handler, maxRequestSize int64, maxRequestDuration time.Duration) http.Handler {
+	if maxRequestDuration == 0 {
+		maxRequestDuration = vault.DefaultMaxRequestDuration
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
