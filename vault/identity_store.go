@@ -10,7 +10,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -35,12 +34,10 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	}
 
 	iStore := &IdentityStore{
-		view:        config.StorageView,
-		db:          db,
-		entityLocks: locksutil.CreateLocks(),
-		aliasLocks:  locksutil.CreateLocks(),
-		logger:      logger,
-		core:        core,
+		view:   config.StorageView,
+		db:     db,
+		logger: logger,
+		core:   core,
 	}
 
 	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, iStore.logger, "")
@@ -145,7 +142,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 				}
 
 				// Only update MemDB and don't touch the storage
-				err = i.upsertEntityInTxn(txn, entity, nil, false, false)
+				err = i.upsertEntityInTxn(txn, entity, nil, false)
 				if err != nil {
 					i.logger.Error("failed to update entity in MemDB", "error", err)
 					return
@@ -347,6 +344,9 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 		return entity, nil
 	}
 
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
 	// Create a MemDB transaction to update both alias and entity
 	txn := i.db.Txn(true)
 	defer txn.Abort()
@@ -389,7 +389,7 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 	}
 
 	// Update MemDB and persist entity object
-	err = i.upsertEntityInTxn(txn, entity, nil, true, false)
+	err = i.upsertEntityInTxn(txn, entity, nil, true)
 	if err != nil {
 		return nil, err
 	}

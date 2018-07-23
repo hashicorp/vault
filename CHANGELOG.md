@@ -11,6 +11,10 @@ DEPRECATIONS/CHANGES:
  * CLI Retries: The CLI will no longer retry commands on 5xx errors. This was a
    source of confusion to users as to why Vault would "hang" before returning a
    5xx error. The Go API client still defaults to two retries.
+ * Identity Entity Alias metadata: You can no longer manually set metadata on
+   entity aliases. All alias data (except the canonical entity ID it refers to)
+   is intended to be managed by the plugin providing the alias information, so
+   allowing it to be set manually didn't make sense.
 
 FEATURES:
 

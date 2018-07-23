@@ -14,23 +14,23 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
-					Description: "ID of the alias",
+					Description: "ID of the persona",
 				},
 				"entity_id": {
 					Type:        framework.TypeString,
-					Description: "Entity ID to which this alias belongs to",
+					Description: "Entity ID to which this persona belongs to",
 				},
 				"mount_accessor": {
 					Type:        framework.TypeString,
-					Description: "Mount accessor to which this alias belongs to",
+					Description: "Mount accessor to which this persona belongs to",
 				},
 				"name": {
 					Type:        framework.TypeString,
-					Description: "Name of the alias",
+					Description: "Name of the persona",
 				},
 				"metadata": {
 					Type: framework.TypeKVPairs,
-					Description: `Metadata to be associated with the alias.
+					Description: `Metadata to be associated with the persona.
 In CLI, this parameter can be repeated multiple times, and it all gets merged together.
 For example:
 vault <command> <path> metadata=key1=value1 metadata=key2=value2
@@ -38,7 +38,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathAliasRegister(),
+				logical.UpdateOperation: i.handleEntityUpdateCommon(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias"][0]),
@@ -49,23 +49,23 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
-					Description: "ID of the alias",
+					Description: "ID of the persona",
 				},
 				"entity_id": {
 					Type:        framework.TypeString,
-					Description: "Entity ID to which this alias should be tied to",
+					Description: "Entity ID to which this persona should be tied to",
 				},
 				"mount_accessor": {
 					Type:        framework.TypeString,
-					Description: "Mount accessor to which this alias belongs to",
+					Description: "Mount accessor to which this persona belongs to",
 				},
 				"name": {
 					Type:        framework.TypeString,
-					Description: "Name of the alias",
+					Description: "Name of the persona",
 				},
 				"metadata": {
 					Type: framework.TypeKVPairs,
-					Description: `Metadata to be associated with the alias.
+					Description: `Metadata to be associated with the persona.
 In CLI, this parameter can be repeated multiple times, and it all gets merged together.
 For example:
 vault <command> <path> metadata=key1=value1 metadata=key2=value2
@@ -73,7 +73,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathAliasIDUpdate(),
+				logical.UpdateOperation: i.handleEntityUpdateCommon(),
 				logical.ReadOperation:   i.pathAliasIDRead(),
 				logical.DeleteOperation: i.pathAliasIDDelete(),
 			},
@@ -113,17 +113,9 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 					Type:        framework.TypeString,
 					Description: "Name of the alias",
 				},
-				"metadata": {
-					Type: framework.TypeKVPairs,
-					Description: `Metadata to be associated with the alias.
-In CLI, this parameter can be repeated multiple times, and it all gets merged together.
-For example:
-vault <command> <path> metadata=key1=value1 metadata=key2=value2
-`,
-				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathAliasRegister(),
+				logical.UpdateOperation: i.handleAliasUpdateCommon(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias"][0]),
@@ -153,17 +145,9 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 					Type:        framework.TypeString,
 					Description: "Name of the alias",
 				},
-				"metadata": {
-					Type: framework.TypeKVPairs,
-					Description: `Metadata to be associated with the alias.
-In CLI, this parameter can be repeated multiple times, and it all gets merged together.
-For example:
-vault <command> <path> metadata=key1=value1 metadata=key2=value2
-`,
-				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathAliasIDUpdate(),
+				logical.UpdateOperation: i.handleAliasUpdateCommon(),
 				logical.ReadOperation:   i.pathAliasIDRead(),
 				logical.DeleteOperation: i.pathAliasIDDelete(),
 			},
