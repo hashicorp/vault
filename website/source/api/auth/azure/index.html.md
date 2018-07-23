@@ -135,6 +135,8 @@ entities attempting to login.
   is restricted to.
 - `bound_resource_group_names` `(array: [])` - The list of resource groups that 
   login is restricted to. 
+- `bound_scale_sets` `(array: [])` - The list of scale set names that the 
+  login is restricted to. 
 
 ### Sample Payload
 
@@ -283,6 +285,9 @@ entity and then authorizes the entity for the given role.
   metadata.
 - `vm_name` `(string: "")` - The virtual machine name for the machine that
   generated the MSI token.  This information can be obtained through instance
+  metadata.  If vmss_name is provided, this value is ignored.
+- `vmss_name` `(string: "")` - The virtual machine scale set name for the machine 
+  that generated the MSI token.  This information can be obtained through instance
   metadata.
 
 ### Sample Payload

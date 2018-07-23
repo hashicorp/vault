@@ -81,6 +81,11 @@ is restricted to.`,
 					Description: `Comma-separated list of locations that login 
 is restricted to.`,
 				},
+				"bound_scale_sets": &framework.FieldSchema{
+					Type: framework.TypeCommaStringSlice,
+					Description: `Comma-separated list of scale sets that login 
+is restricted to.`,
+				},
 			},
 			ExistenceCheck: b.pathRoleExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -121,6 +126,7 @@ type azureRole struct {
 	BoundResourceGroups      []string `json:"bound_resource_groups"`
 	BoundSubscriptionsIDs    []string `json:"bound_subscription_ids"`
 	BoundLocations           []string `json:"bound_locations"`
+	BoundScaleSets           []string `json:"bound_scale_sets"`
 }
 
 // role takes a storage backend and the name and returns the role's storage
@@ -193,6 +199,7 @@ func (b *azureAuthBackend) pathRoleRead(ctx context.Context, req *logical.Reques
 			"bound_subscription_ids":      role.BoundSubscriptionsIDs,
 			"bound_resource_groups":       role.BoundResourceGroups,
 			"bound_locations":             role.BoundLocations,
+			"bound_scale_sets":            role.BoundScaleSets,
 		},
 	}
 
@@ -291,11 +298,16 @@ func (b *azureAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logica
 		role.BoundLocations = boundLocations.([]string)
 	}
 
+	if boundScaleSets, ok := data.GetOk("bound_scale_sets"); ok {
+		role.BoundScaleSets = boundScaleSets.([]string)
+	}
+
 	if len(role.BoundServicePrincipalIDs) == 0 &&
 		len(role.BoundGroupIDs) == 0 &&
 		len(role.BoundSubscriptionsIDs) == 0 &&
 		len(role.BoundResourceGroups) == 0 &&
-		len(role.BoundLocations) == 0 {
+		len(role.BoundLocations) == 0 && 
+		len(role.BoundScaleSets) == 0 {
 		return logical.ErrorResponse("must have at least one bound constraint when creating/updating a role"), nil
 	}
 
