@@ -24,6 +24,10 @@ type computeClient interface {
 	Get(ctx context.Context, resourceGroup, vmName string, instanceView compute.InstanceViewTypes) (compute.VirtualMachine, error)
 }
 
+type vmssClient interface {
+	Get(ctx context.Context, resourceGroup, vmssName string) (compute.VirtualMachineScaleSet, error)
+}
+
 type tokenVerifier interface {
 	Verify(ctx context.Context, token string) (*oidc.IDToken, error)
 }
@@ -31,6 +35,7 @@ type tokenVerifier interface {
 type provider interface {
 	Verifier() tokenVerifier
 	ComputeClient(subscriptionID string) computeClient
+	VMSSClient(subscriptionID string) vmssClient
 }
 
 type azureProvider struct {
@@ -128,6 +133,14 @@ func (p *azureProvider) Verifier() tokenVerifier {
 
 func (p *azureProvider) ComputeClient(subscriptionID string) computeClient {
 	client := compute.NewVirtualMachinesClient(subscriptionID)
+	client.Authorizer = p.authorizer
+	client.Sender = p.httpClient
+	client.AddToUserAgent(userAgent())
+	return client
+}
+
+func (p *azureProvider) VMSSClient(subscriptionID string) vmssClient {
+	client := compute.NewVirtualMachineScaleSetsClient(subscriptionID)
 	client.Authorizer = p.authorizer
 	client.Sender = p.httpClient
 	client.AddToUserAgent(userAgent())
