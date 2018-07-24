@@ -174,11 +174,10 @@ func TestJWTEndtoEnd(t *testing.T) {
 	}
 
 	ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-		Logger:  logger.Named("auth.handler"),
-		Client:  client,
-		Context: ctx,
+		Logger: logger.Named("auth.handler"),
+		Client: client,
 	})
-	go ah.Run(am)
+	go ah.Run(ctx, am)
 	defer func() {
 		<-ah.DoneCh
 	}()
@@ -198,11 +197,10 @@ func TestJWTEndtoEnd(t *testing.T) {
 	}
 
 	ss := sink.NewSinkServer(&sink.SinkServerConfig{
-		Logger:  logger.Named("sink.server"),
-		Client:  client,
-		Context: ctx,
+		Logger: logger.Named("sink.server"),
+		Client: client,
 	})
-	go ss.Run(ah.OutputCh, []sink.Sink{fs})
+	go ss.Run(ctx, ah.OutputCh, []sink.Sink{fs})
 	defer func() {
 		<-ss.DoneCh
 	}()

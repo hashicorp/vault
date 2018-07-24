@@ -58,4 +58,13 @@ func TestLoadConfigFile(t *testing.T) {
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
+
+	config, err = LoadConfig("./test-fixtures/config-embedded-type.hcl", logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
 }

@@ -27,14 +27,13 @@ func TestSinkServer(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	ss := sink.NewSinkServer(&sink.SinkServerConfig{
-		Logger:  log.Named("sink.server"),
-		Context: ctx,
+		Logger: log.Named("sink.server"),
 	})
 
 	uuidStr, _ := uuid.GenerateUUID()
 	in := make(chan string)
 	sinks := []sink.Sink{fs1, fs2}
-	go ss.Run(in, sinks)
+	go ss.Run(ctx, in, sinks)
 
 	// Seed a token
 	in <- uuidStr
@@ -91,13 +90,12 @@ func TestSinkServerRetry(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	ss := sink.NewSinkServer(&sink.SinkServerConfig{
-		Logger:  log.Named("sink.server"),
-		Context: ctx,
+		Logger: log.Named("sink.server"),
 	})
 
 	in := make(chan string)
 	sinks := []sink.Sink{b1, b2}
-	go ss.Run(in, sinks)
+	go ss.Run(ctx, in, sinks)
 
 	// Seed a token
 	in <- "bad"

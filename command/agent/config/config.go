@@ -173,7 +173,12 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 		}
 
 		if s.Type == "" {
-			return errors.New("sink type must be specified")
+			if len(item.Keys) == 1 {
+				s.Type = strings.ToLower(item.Keys[0].Token.Value().(string))
+			}
+			if s.Type == "" {
+				return errors.New("sink type must be specified")
+			}
 		}
 
 		if s.WrapTTLRaw != nil {

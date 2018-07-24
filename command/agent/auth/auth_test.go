@@ -70,13 +70,12 @@ func TestAuthHandler(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	ah := NewAuthHandler(&AuthHandlerConfig{
-		Logger:  logger.Named("auth.handler"),
-		Client:  client,
-		Context: ctx,
+		Logger: logger.Named("auth.handler"),
+		Client: client,
 	})
 
 	am := newUserpassTestMethod(t, client)
-	go ah.Run(am)
+	go ah.Run(ctx, am)
 
 	// Consume tokens so we don't block
 	stopTime := time.Now().Add(5 * time.Second)
