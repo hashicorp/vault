@@ -644,11 +644,10 @@ START:
 	}
 
 	// Set the timeout, if any
-	var cancelFunc context.CancelFunc
 	if timeout != 0 {
-		var ctx context.Context
-		ctx, cancelFunc = context.WithTimeout(context.Background(), timeout)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
 		req.Request = req.Request.WithContext(ctx)
+		defer cancelFunc()
 	}
 
 	if backoff == nil {
@@ -667,9 +666,6 @@ START:
 
 	var result *Response
 	resp, err := client.Do(req)
-	if cancelFunc != nil {
-		cancelFunc()
-	}
 	if resp != nil {
 		result = &Response{Response: resp}
 	}
