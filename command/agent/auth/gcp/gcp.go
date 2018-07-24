@@ -2,22 +2,29 @@ package gcp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
+	"github.com/hashicorp/vault/helper/parseutil"
+	"golang.org/x/oauth2"
+	iam "google.golang.org/api/iam/v1"
 )
 
 const (
-	typeGCE          = "gce"
-	typeIAM          = "iam"
-	identityEndpoint = "http://metadata/computeMetadata/v1/instance/service-accounts/%s/identity"
+	typeGCE                    = "gce"
+	typeIAM                    = "iam"
+	identityEndpoint           = "http://metadata/computeMetadata/v1/instance/service-accounts/%s/identity"
+	defaultIamMaxJwtExpMinutes = 15
 )
 
 type gcpMethod struct {
@@ -27,6 +34,8 @@ type gcpMethod struct {
 	role           string
 	credentials    string
 	serviceAccount string
+	project        string
+	jwtExp         int64
 }
 
 func NewGCPAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
@@ -36,6 +45,8 @@ func NewGCPAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	if conf.Config == nil {
 		return nil, errors.New("empty config data")
 	}
+
+	var err error
 
 	g := &gcpMethod{
 		logger:         conf.Logger,
@@ -86,6 +97,22 @@ func NewGCPAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		}
 	}
 
+	projectRaw, ok := conf.Config["project"]
+	if ok {
+		g.project, ok = projectRaw.(string)
+		if !ok {
+			return nil, errors.New("could not convert 'project' value into string")
+		}
+	}
+
+	jwtExpRaw, ok := conf.Config["jwt_exp"]
+	if ok {
+		g.jwtExp, err = parseutil.ParseInt(jwtExpRaw)
+		if err != nil {
+			return nil, errwrap.Wrapf("error parsing 'jwt_raw' into integer: {{err}}", err)
+		}
+	}
+
 	return g, nil
 }
 
@@ -93,6 +120,7 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 	g.logger.Trace("beginning authentication")
 
 	data := make(map[string]interface{})
+	var jwt string
 
 	switch g.authType {
 	case typeGCE:
@@ -118,24 +146,77 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 				return nil, errors.New("empty response fetching instance toke")
 			}
 			defer resp.Body.Close()
-			token, err := ioutil.ReadAll(resp.Body)
+			jwtBytes, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
 				return nil, errwrap.Wrapf("error reading instance token response body: {{err}}", err)
 			}
-			data["jwt"] = string(token)
+
+			jwt = string(jwtBytes)
 		}
 
 	default:
-		/*
-			var err error
-			data, err = gcpauth.GenerateLoginData(g.accessKey, g.secretKey, g.sessionToken, g.headerValue)
-			if err != nil {
-				return nil, errwrap.Wrapf("error creating login value: {{err}}", err)
-			}
-		*/
+		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, cleanhttp.DefaultClient())
+
+		credentials, tokenSource, err := gcputil.FindCredentials(g.credentials, ctx, iam.CloudPlatformScope)
+		if err != nil {
+			return nil, errwrap.Wrapf("could not obtain credentials: {{err}}", err)
+		}
+
+		httpClient := oauth2.NewClient(ctx, tokenSource)
+
+		var serviceAccount string
+		if g.serviceAccount == "" && credentials != nil {
+			serviceAccount = credentials.ClientEmail
+		} else {
+			serviceAccount = g.serviceAccount
+		}
+		if serviceAccount == "" {
+			return nil, errors.New("could not obtain service account from credentials (possibly Application Default Credentials are being used); a service account to authenticate as must be provided")
+		}
+
+		project := "-"
+		if g.project != "" {
+			project = g.project
+		} else if credentials != nil {
+			project = credentials.ProjectId
+		}
+
+		ttlMin := int64(defaultIamMaxJwtExpMinutes)
+		if g.jwtExp != 0 {
+			ttlMin = g.jwtExp
+		}
+		ttl := time.Minute * time.Duration(ttlMin)
+
+		jwtPayload := map[string]interface{}{
+			"aud": fmt.Sprintf("http://vault/%s", g.role),
+			"sub": serviceAccount,
+			"exp": time.Now().Add(ttl).Unix(),
+		}
+		payloadBytes, err := json.Marshal(jwtPayload)
+		if err != nil {
+			return nil, errwrap.Wrapf("could not convert JWT payload to JSON string: {{err}}", err)
+		}
+
+		jwtReq := &iam.SignJwtRequest{
+			Payload: string(payloadBytes),
+		}
+
+		iamClient, err := iam.New(httpClient)
+		if err != nil {
+			return nil, errwrap.Wrapf("could not create IAM client: {{err}}", err)
+		}
+
+		resourceName := fmt.Sprintf("projects/%s/serviceAccounts/%s", project, serviceAccount)
+		resp, err := iamClient.Projects.ServiceAccounts.SignJwt(resourceName, jwtReq).Do()
+		if err != nil {
+			return nil, errwrap.Wrapf(fmt.Sprintf("unable to sign JWT for %s using given Vault credentials: {{err}}", resourceName), err)
+		}
+
+		jwt = resp.SignedJwt
 	}
 
 	data["role"] = g.role
+	data["jwt"] = jwt
 
 	secret, err := client.Logical().Write(fmt.Sprintf("%s/login", g.mountPath), data)
 	if err != nil {
