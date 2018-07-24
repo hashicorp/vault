@@ -235,6 +235,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 	maxRetriesInt, ok := data.GetOk("max_retries")
 	if ok {
 		configEntry.MaxRetries = maxRetriesInt.(int)
+		changedOtherConfig = true
 	} else if req.Operation == logical.CreateOperation {
 		configEntry.MaxRetries = data.Get("max_retries").(int)
 	}
