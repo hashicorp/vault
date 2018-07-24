@@ -141,6 +141,14 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 	ldapClientToken := secret.Auth.ClientToken
 
+	expectedPolicies := []string{
+		"default",
+		"testgroup1-policy",
+	}
+	if !reflect.DeepEqual(expectedPolicies, secret.Auth.Policies) {
+		t.Fatalf("bad: identity policies; expected: %#v\nactual: %#v", expectedPolicies, secret.Auth.Policies)
+	}
+
 	// At this point there shouldn't be any identity policy on the token
 	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
 	if err != nil {
@@ -175,7 +183,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 	sort.Strings(actualPolicies)
 
-	expectedPolicies := []string{
+	expectedPolicies = []string{
 		"entity_policy_1",
 		"entity_policy_2",
 	}
@@ -282,6 +290,18 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	sort.Strings(expectedPolicies)
 	if !reflect.DeepEqual(expectedPolicies, actualPolicies) {
 		t.Fatalf("bad: identity policies; expected: %#v\nactual: %#v", expectedPolicies, actualPolicies)
+	}
+
+	// Log in and get a new token, then renew it. See issue #4829
+	secret, err = client.Logical().Write("auth/ldap/login/tesla", map[string]interface{}{
+		"password": "password",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, err = client.Auth().Token().Renew(secret.Auth.ClientToken, 10)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
