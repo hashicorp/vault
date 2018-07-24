@@ -167,79 +167,45 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 	var ts []*Sink
 
 	for _, item := range sinkList.Items {
-		if len(item.Keys) == 0 {
-			return fmt.Errorf("token sink type must be specified")
+		var s Sink
+		if err := hcl.DecodeObject(&s, item.Val); err != nil {
+			return err
 		}
 
-		tsType := strings.ToLower(item.Keys[0].Token.Value().(string))
-
-		var m map[string]interface{}
-		if err := hcl.DecodeObject(&m, item.Val); err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("sink.%s", tsType))
+		if s.Type == "" {
+			return errors.New("sink type must be specified")
 		}
 
-		var wrapTTL time.Duration
-		if raw, ok := m["wrap_ttl"]; ok {
+		if s.WrapTTLRaw != nil {
 			var err error
-			if wrapTTL, err = parseutil.ParseDurationSecond(raw); err != nil {
-				return multierror.Prefix(err, fmt.Sprintf("sink.%s", tsType))
+			if s.WrapTTL, err = parseutil.ParseDurationSecond(s.WrapTTLRaw); err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("sink.%s", s.Type))
 			}
+			s.WrapTTLRaw = nil
 		}
 
-		var dhType string
-		if raw, ok := m["dh_type"]; ok {
-			var ok bool
-			if dhType, ok = raw.(string); !ok {
-				return multierror.Prefix(errors.New("cannot convert 'dh_type' to string"), fmt.Sprintf("sink.%s", tsType))
-			}
-			switch dhType {
-			case "curve25519":
-			default:
-				return multierror.Prefix(errors.New("invalid value for 'dh_type'"), fmt.Sprintf("sink.%s", tsType))
-			}
+		switch s.DHType {
+		case "curve25519":
+		default:
+			return multierror.Prefix(errors.New("invalid value for 'dh_type'"), fmt.Sprintf("sink.%s", s.Type))
 		}
 
-		var dhPath string
-		if raw, ok := m["dh_path"]; ok {
-			var ok bool
-			if dhPath, ok = raw.(string); !ok {
-				return multierror.Prefix(errors.New("cannot convert 'dh_path' to string"), fmt.Sprintf("sink.%s", tsType))
-			}
-		}
-
-		var aad string
-		if raw, ok := m["aad"]; ok {
-			var ok bool
-			if aad, ok = raw.(string); !ok {
-				return multierror.Prefix(errors.New("cannot convert 'aad' to string"), fmt.Sprintf("sink.%s", tsType))
-			}
-		} else if raw, ok := m["aad_env_var"]; ok {
-			var ok bool
-			var envvar string
-			if envvar, ok = raw.(string); !ok {
-				return multierror.Prefix(errors.New("cannot convert 'aad_env_var' to string"), fmt.Sprintf("sink.%s", tsType))
-			}
-			aad = os.Getenv(envvar)
+		if s.AADEnvVar != "" {
+			s.AAD = os.Getenv(s.AADEnvVar)
+			s.AADEnvVar = ""
 		}
 
 		switch {
-		case dhPath == "" && dhType == "":
-			if aad != "" {
-				return multierror.Prefix(errors.New("specifying AAD data without 'dh_type' does not make sense"), fmt.Sprintf("sink.%s", tsType))
+		case s.DHPath == "" && s.DHType == "":
+			if s.AAD != "" {
+				return multierror.Prefix(errors.New("specifying AAD data without 'dh_type' does not make sense"), fmt.Sprintf("sink.%s", s.Type))
 			}
-		case dhPath != "" && dhType != "":
+		case s.DHPath != "" && s.DHType != "":
 		default:
-			return multierror.Prefix(errors.New("'dh_type' and 'dh_path' must be specified together"), fmt.Sprintf("sink.%s", tsType))
+			return multierror.Prefix(errors.New("'dh_type' and 'dh_path' must be specified together"), fmt.Sprintf("sink.%s", s.Type))
 		}
 
-		ts = append(ts, &Sink{
-			Type:    tsType,
-			WrapTTL: wrapTTL,
-			DHType:  dhType,
-			DHPath:  dhPath,
-			AAD:     aad,
-			Config:  m,
-		})
+		ts = append(ts, &s)
 	}
 
 	result.AutoAuth.Sinks = ts

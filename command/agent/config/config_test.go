@@ -37,10 +37,7 @@ func TestLoadConfigFile(t *testing.T) {
 					DHPath: "/tmp/file-foo-dhpath",
 					AAD:    "foobar",
 					Config: map[string]interface{}{
-						"path":    "/tmp/file-foo",
-						"dh_type": "curve25519",
-						"dh_path": "/tmp/file-foo-dhpath",
-						"aad":     "foobar",
+						"path": "/tmp/file-foo",
 					},
 				},
 				&Sink{
@@ -50,11 +47,7 @@ func TestLoadConfigFile(t *testing.T) {
 					DHPath:  "/tmp/file-foo-dhpath2",
 					AAD:     "aad",
 					Config: map[string]interface{}{
-						"path":        "/tmp/file-bar",
-						"wrap_ttl":    "5m",
-						"dh_type":     "curve25519",
-						"dh_path":     "/tmp/file-foo-dhpath2",
-						"aad_env_var": "TEST_AAD_ENV",
+						"path": "/tmp/file-bar",
 					},
 				},
 			},
