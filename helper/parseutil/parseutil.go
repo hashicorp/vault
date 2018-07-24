@@ -28,7 +28,7 @@ func ParseDurationSecond(in interface{}) (time.Duration, error) {
 		}
 		var err error
 		// Look for a suffix otherwise its a plain second value
-		if strings.HasSuffix(inp, "s") || strings.HasSuffix(inp, "m") || strings.HasSuffix(inp, "h") {
+		if strings.HasSuffix(inp, "s") || strings.HasSuffix(inp, "m") || strings.HasSuffix(inp, "h") || strings.HasSuffix(inp, "ms") {
 			dur, err = time.ParseDuration(inp)
 			if err != nil {
 				return dur, err

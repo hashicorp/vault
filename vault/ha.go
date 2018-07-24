@@ -142,7 +142,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 }
 
 // StepDown is used to step down from leadership
-func (c *Core) StepDown(req *logical.Request) (retErr error) {
+func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "step_down"}, time.Now())
 
 	if req == nil {
@@ -159,7 +159,16 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		return nil
 	}
 
-	ctx := c.activeContext
+	ctx, cancel := context.WithCancel(c.activeContext)
+	defer cancel()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-httpCtx.Done():
+			cancel()
+		}
+	}()
 
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
@@ -238,7 +247,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		// we won't have a token store after sealing.
 		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
 		if err == nil {
-			err = c.expiration.Revoke(leaseID)
+			err = c.expiration.Revoke(ctx, leaseID)
 		}
 		if err != nil {
 			c.logger.Error("token needed revocation before step-down but failed to revoke", "error", err)

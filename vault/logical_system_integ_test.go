@@ -1,6 +1,7 @@
 package vault_test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,7 +29,7 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 	// Make a request to lazy load the plugin
 	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
 	req.ClientToken = core.Client.Token()
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -66,7 +67,7 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 	// Make a request to lazy load the plugin
 	req := logical.TestRequest(t, logical.ReadOperation, "auth/mock-0/internal")
 	req.ClientToken = core.Client.Token()
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -108,7 +109,7 @@ func TestSystemBackend_Plugin_MismatchType(t *testing.T) {
 	// and expect an error
 	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
 	req.ClientToken = core.Client.Token()
-	_, err := core.HandleRequest(req)
+	_, err := core.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Fatalf("expected error due to mismatch on error type: %s", err)
 	}
@@ -144,7 +145,7 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 	// Remove the plugin from the catalog
 	req := logical.TestRequest(t, logical.DeleteOperation, "sys/plugins/catalog/mock-plugin")
 	req.ClientToken = core.Client.Token()
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -229,7 +230,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 	// Get the registered plugin
 	req := logical.TestRequest(t, logical.ReadOperation, "sys/plugins/catalog/mock-plugin")
 	req.ClientToken = core.Client.Token()
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil || resp == nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -247,7 +248,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 			"command": filepath.Base(command),
 		}
 		req.ClientToken = core.Client.Token()
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v", err, resp)
 		}
@@ -293,7 +294,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 		"plugin": "mock-plugin",
 	}
 	req.ClientToken = core.Client.Token()
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -309,7 +310,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 
 	req = logical.TestRequest(t, logical.ReadOperation, reqPath)
 	req.ClientToken = core.Client.Token()
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -328,7 +329,7 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "mock-0/internal")
 	req.ClientToken = core.Client.Token()
 	req.Data["value"] = "baz"
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -339,7 +340,7 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 	// Call errors/rpc endpoint to trigger reload
 	req = logical.TestRequest(t, logical.ReadOperation, "mock-0/errors/rpc")
 	req.ClientToken = core.Client.Token()
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Fatalf("expected error from error/rpc request")
 	}
@@ -347,7 +348,7 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 	// Check internal value to make sure it's reset
 	req = logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
 	req.ClientToken = core.Client.Token()
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

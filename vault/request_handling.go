@@ -26,11 +26,20 @@ const (
 	replTimeout = 10 * time.Second
 )
 
+var (
+	// DefaultMaxRequestDuration is the amount of time we'll wait for a request
+	// to complete, unless overridden on a per-handler basis
+	// FIXME: In 0.11 make this 90 seconds; for now keep it at essentially infinity if not set explicitly
+	//DefaultMaxRequestDuration = 90 * time.Second
+	DefaultMaxRequestDuration = 999999 * time.Hour
+)
+
 // HanlderProperties is used to seed configuration into a vaulthttp.Handler.
 // It's in this package to avoid a circular dependency
 type HandlerProperties struct {
 	Core                  *Core
 	MaxRequestSize        int64
+	MaxRequestDuration    time.Duration
 	DisablePrintableCheck bool
 }
 
@@ -265,7 +274,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 }
 
 // HandleRequest is used to handle a new incoming request
-func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
+func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (resp *logical.Response, err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.Sealed() {
@@ -277,6 +286,14 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 	ctx, cancel := context.WithCancel(c.activeContext)
 	defer cancel()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-httpCtx.Done():
+			cancel()
+		}
+	}()
 
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
@@ -430,7 +447,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			defer func(id string) {
 				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
 				if err == nil {
-					err = c.expiration.Revoke(leaseID)
+					err = c.expiration.Revoke(ctx, leaseID)
 				}
 				if err != nil {
 					c.logger.Error("failed to revoke token", "error", err)
