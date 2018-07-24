@@ -11,10 +11,10 @@
     {{/link-to}}
   </p.levelRight>
 </PageHeader>
-<ListView @items={{model}} @itemNoun="namespace" as |item|>
-  <ListItem as |LItem|>
+<ListView @items={{model}} @itemNoun="namespace" as |list|>
+<ListItem as |LItem|>
     <LItem.content>
-      {{item.id}}
+      {{list.item.id}}
     </LItem.content>
 
     <LItem.menu>
@@ -23,10 +23,10 @@
           @confirmButtonClasses="button is-primary"
           @confirmButtonText="Remove"
           @buttonClasses="link is-destroy"
-          @onConfirmAction={{action "performTransaction" model key}}
-          @confirmMessage={{concat "Are you sure you want to remove " key "?"}}
-          @showConfirm={{get this (concat "shouldDelete-" key)}}
-          @class={{if (get this (concat "shouldDelete-" key)) "message is-block is-warning is-outline"}}
+          @onConfirmAction={{action (perform list.deleteItem list.item (concat "Successfully deleted namespace: " list.item.id) "There was an error deleting this namespace: ") }}
+          @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
+          @showConfirm={{get this (concat "shouldDelete-" list.item.id)}}
+          @class={{if (get this (concat "shouldDelete-" list.item.id)) "message is-block is-warning is-outline"}}
           @containerClasses="message-body is-block"
           @messageClasses="is-block"
         >

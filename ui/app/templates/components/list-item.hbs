@@ -4,11 +4,11 @@
   <LinkedBlock @params={{linkParms}} @class="list-item-row">
     <div class="columns is-mobile">
       <div class="column is-10">
-        {{yield item}}
+        {{yield (hash content=(component "list-item/content" ))}}
       </div>
       <div class="column has-text-right">
         {{#if hasBlock}}
-          {{yield (hash menu=(component "list-item/popup-menu" item=item))}}
+          {{yield (hash menu=(component "list-item/popup-menu"))}}
         {{/if}}
       </div>
     </div>
@@ -17,11 +17,11 @@
   <div class="list-item-row">
     <div class="columns is-mobile">
       <div class="column is-10">
-        {{yield item}}
+        {{yield (hash content=(component "list-item/content" ))}}
       </div>
       <div class="column has-text-right">
         {{#if hasBlock}}
-          {{yield (hash menu=(component "list-item/popup-menu" item=item))}}
+          {{yield (hash menu=(component "list-item/popup-menu"))}}
         {{/if}}
       </div>
     </div>

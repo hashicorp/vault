@@ -1,7 +1,7 @@
 {{#if items.length}}
   <div class="box is-fullwidth is-bottomless is-sideless is-paddingless">
     {{#each items as |item|}}
-      {{yield item}}
+      {{yield (hash deleteItem=deleteItem saveItem=saveItem item=item)}}
     {{/each}}
   </div>
 {{else}}
