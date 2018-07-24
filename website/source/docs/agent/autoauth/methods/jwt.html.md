@@ -11,7 +11,8 @@ description: |-
 The `jwt` method reads in a JWT from a file and sends it to the [JWT Auth
 method](https://www.vaultproject.io/docs/auth/jwt.html). Since JWTs often have
 limited lifetime, it constantly watches for a new JWT to be written, and when
-found it will immediately use the new JWT to perform a reauthentication.
+found it will immediately ingress this value, delete the file, and use the new
+JWT to perform a reauthentication.
 
 ## Configuration
 

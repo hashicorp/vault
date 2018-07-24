@@ -99,7 +99,8 @@ The top level `auto_auth` block has two configuration entries:
 These are common configuration values that live within the `method` block:
 
 - `type` `(string: required)` - The type of the method to use, e.g. `aws`,
-  `gcp`, `azure`, etc.
+  `gcp`, `azure`, etc. *Note*: when using HCL this can be used as the key for
+  the block, e.g. `method "aws" {...}`.
 
 - `mount_path` `(string: optional)` - The mount path of the method. If not
   specified, defaults to a value of `auth/<method type>`.
@@ -112,6 +113,8 @@ These are common configuration values that live within the `method` block:
 These configuration values are common to all Sinks:
 
 - `type` `(string: required)` - The type of the method to use, e.g. `file`.
+  *Note*: when using HCL this can be used as the key for the block, e.g. `sink
+  "file" {...}`.
 
 - `wrap_ttl` `(string or integer: optional)` - If specified, the written token will be
   response-wrapped. Rather than a simple string, the written value will be a
