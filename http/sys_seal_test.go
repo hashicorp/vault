@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -281,7 +282,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err := core.HandleRequest(context.Backgroud(), req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -296,7 +297,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 		"policies": []string{"test"},
 	}
 
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
@@ -319,7 +320,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -340,7 +341,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -361,7 +362,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
