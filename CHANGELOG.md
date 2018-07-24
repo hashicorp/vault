@@ -47,6 +47,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * auth/aws: Fix updating `max_retries` [GH-4980]
  * core: Fix returning 500 instead of 503 if a rekey is attempted when Vault is
    sealed [GH-4874]
  * core: Fix issue releasing the leader lock in some circumstances [GH-4915]
