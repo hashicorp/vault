@@ -72,11 +72,7 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	sealed, err := c.Sealed()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !sealed {
+	if !c.Sealed() {
 		t.Fatalf("should be sealed")
 	}
 
@@ -112,11 +108,7 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 		}
 	}
 
-	sealed, err = c.Sealed()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if sealed {
+	if c.Sealed() {
 		t.Fatalf("should not be sealed")
 	}
 
@@ -131,11 +123,7 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	sealed, err = c.Sealed()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !sealed {
+	if !c.Sealed() {
 		t.Fatalf("should be sealed")
 	}
 }
@@ -160,11 +148,7 @@ func TestCore_Unseal_Single(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	sealed, err := c.Sealed()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !sealed {
+	if !c.Sealed() {
 		t.Fatalf("should be sealed")
 	}
 
@@ -184,11 +168,7 @@ func TestCore_Unseal_Single(t *testing.T) {
 		t.Fatalf("bad progress: %d", prog)
 	}
 
-	sealed, err = c.Sealed()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if sealed {
+	if c.Sealed() {
 		t.Fatalf("should not be sealed")
 	}
 }
@@ -257,8 +237,8 @@ func TestCore_Shutdown(t *testing.T) {
 	if err := c.Shutdown(); err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if sealed, err := c.Sealed(); err != nil || !sealed {
-		t.Fatalf("err: %v", err)
+	if !c.Sealed() {
+		t.Fatal("wasn't sealed")
 	}
 }
 
@@ -268,8 +248,8 @@ func TestCore_Seal_BadToken(t *testing.T) {
 	if err := c.Seal("foo"); err == nil {
 		t.Fatalf("err: %v", err)
 	}
-	if sealed, err := c.Sealed(); err != nil || sealed {
-		t.Fatalf("err: %v", err)
+	if c.Sealed() {
+		t.Fatal("was sealed")
 	}
 }
 
@@ -284,8 +264,8 @@ func TestCore_Seal_SingleUse(t *testing.T) {
 	if err := c.Seal("foo"); err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if sealed, err := c.Sealed(); err != nil || !sealed {
-		t.Fatalf("err: %v, sealed: %t", err, sealed)
+	if !c.Sealed() {
+		t.Fatal("not sealed")
 	}
 	for i, key := range keys {
 		unseal, err := TestCoreUnseal(c, key)
@@ -1146,11 +1126,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	}
 
 	// Verify unsealed
-	sealed, err := core.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
@@ -1187,11 +1163,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	}
 
 	// Verify unsealed
-	sealed, err = core2.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if core2.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
@@ -1264,11 +1236,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Verify unsealed
-	sealed, err := core.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
@@ -1305,11 +1273,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Verify unsealed
-	sealed, err = core2.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if core2.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
@@ -1462,11 +1426,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	}
 
 	// Verify unsealed
-	sealed, err := core.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
@@ -1530,11 +1490,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	}
 
 	// Verify unsealed
-	sealed, err = core2.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if core2.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
@@ -1647,11 +1603,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	}
 
 	// Verify unsealed
-	sealed, err := core.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
@@ -1702,11 +1654,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	}
 
 	// Verify unsealed
-	sealed, err = core2.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if core2.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 

@@ -837,14 +837,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				return false
 			}
 
-			sealedFunc := func() bool {
-				if sealed, err := core.Sealed(); err == nil {
-					return sealed
-				}
-				return true
-			}
-
-			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, sealedFunc); err != nil {
+			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed); err != nil {
 				c.UI.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
 				return 1
 			}

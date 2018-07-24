@@ -75,11 +75,7 @@ func TestSysSeal(t *testing.T) {
 	resp := testHttpPut(t, token, addr+"/v1/sys/seal", nil)
 	testResponseStatus(t, resp, 204)
 
-	check, err := core.Sealed()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if !check {
+	if !core.Sealed() {
 		t.Fatal("should be sealed")
 	}
 }
@@ -93,11 +89,7 @@ func TestSysSeal_unsealed(t *testing.T) {
 	resp := testHttpPut(t, token, addr+"/v1/sys/seal", nil)
 	testResponseStatus(t, resp, 204)
 
-	check, err := core.Sealed()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if !check {
+	if !core.Sealed() {
 		t.Fatal("should be sealed")
 	}
 }

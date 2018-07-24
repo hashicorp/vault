@@ -268,7 +268,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil, consts.ErrSealed
 	}
 	if c.standby {

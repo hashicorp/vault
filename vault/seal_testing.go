@@ -34,18 +34,14 @@ func testCoreUnsealedWithConfigs(t testing.T, barrierConf, recoveryConf *SealCon
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if sealed, _ := core.Sealed(); sealed {
+	if core.Sealed() {
 		for _, key := range result.SecretShares {
 			if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
 				t.Fatalf("unseal err: %s", err)
 			}
 		}
 
-		sealed, err = core.Sealed()
-		if err != nil {
-			t.Fatalf("err checking seal status: %s", err)
-		}
-		if sealed {
+		if core.Sealed() {
 			t.Fatal("should not be sealed")
 		}
 	}
@@ -76,11 +72,7 @@ func TestCoreUnsealedWithConfigSealOpts(t testing.T, barrierConf, recoveryConf *
 		}
 	}
 
-	sealed, err := core.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 

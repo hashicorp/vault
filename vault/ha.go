@@ -37,13 +37,12 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 		return false, "", "", ErrHANotEnabled
 	}
 
-	c.stateLock.RLock()
-
 	// Check if sealed
-	if c.sealed {
-		c.stateLock.RUnlock()
+	if c.Sealed() {
 		return false, "", "", consts.ErrSealed
 	}
+
+	c.stateLock.RLock()
 
 	// Check if we are the leader
 	if !c.standby {
@@ -153,7 +152,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil
 	}
 	if c.ha == nil || c.standby {
@@ -396,7 +395,7 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			// We now have the lock and can use it
 		}
 
-		if c.sealed {
+		if c.Sealed() {
 			c.logger.Warn("grabbed HA lock but already sealed, exiting")
 			lock.Unlock()
 			c.stateLock.Unlock()
@@ -475,42 +474,28 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			continue
 		}
 
-		// Monitor a loss of leadership
-		releaseHALock := true
-		grabStateLock := true
-		select {
-		case <-leaderLostCh:
-			c.logger.Warn("leadership lost, stopping active operation")
-		case <-stopCh:
-			// This case comes from sealInternal; we will already be having the
-			// state lock held so we do toggle grabStateLock to false
-			if atomic.LoadUint32(c.keepHALockOnStepDown) == 1 {
-				releaseHALock = false
+		runSealing := func() {
+			metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
+
+			// Tell any requests that know about this to stop
+			if c.activeContextCancelFunc != nil {
+				c.activeContextCancelFunc()
 			}
-			grabStateLock = false
-		case <-manualStepDownCh:
-			c.logger.Warn("stepping down from active operation to standby")
-			manualStepDown = true
+
+			c.standby = true
+
+			if err := c.preSeal(); err != nil {
+				c.logger.Error("pre-seal teardown failed", "error", err)
+			}
 		}
 
-		metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
-
-		// Tell any requests that know about this to stop
-		if c.activeContextCancelFunc != nil {
-			c.activeContextCancelFunc()
-		}
-
-		// Attempt the pre-seal process
-		if grabStateLock {
-			c.stateLock.Lock()
-		}
-		c.standby = true
-		preSealErr := c.preSeal()
-		if grabStateLock {
-			c.stateLock.Unlock()
-		}
-
-		if releaseHALock {
+		releaseHALock := func() {
+			// We may hit this from leaderLostCh or manualStepDownCh if they
+			// triggered before stopCh, so we check here instead of only in the
+			// stopCh case so we can try to do the right thing then, too
+			if atomic.LoadUint32(c.keepHALockOnStepDown) == 1 {
+				return
+			}
 			if err := c.clearLeader(uuid); err != nil {
 				c.logger.Error("clearing leader advertisement failed", "error", err)
 			}
@@ -518,9 +503,29 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			c.heldHALock = nil
 		}
 
-		// Check for a failure to prepare to seal
-		if preSealErr != nil {
-			c.logger.Error("pre-seal teardown failed", "error", err)
+		// Monitor a loss of leadership
+		select {
+		case <-leaderLostCh:
+			c.logger.Warn("leadership lost, stopping active operation")
+
+			c.stateLock.Lock()
+			runSealing()
+			releaseHALock()
+			c.stateLock.Unlock()
+
+		case <-stopCh:
+			runSealing()
+			releaseHALock()
+			return
+
+		case <-manualStepDownCh:
+			manualStepDown = true
+			c.logger.Warn("stepping down from active operation to standby")
+
+			c.stateLock.Lock()
+			runSealing()
+			releaseHALock()
+			c.stateLock.Unlock()
 		}
 	}
 }
