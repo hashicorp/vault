@@ -55,6 +55,7 @@ BUG FIXES:
    starting up
  * plugins: Fix being unable to send very large payloads to or from plugins
    [GH-4958]
+ * physical/azure: Long list responses would sometimes be truncaated [GH-4983]
  * replication: Fix a case where a network interruption could cause a secondary
    to be unable to reconnect to a primary
  * secrets/pki: Fix permitted DNS domains performing improper validation
