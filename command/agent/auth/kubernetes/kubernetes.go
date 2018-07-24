@@ -55,7 +55,7 @@ func NewKubernetesAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 
 func (k *kubeMethod) Authenticate(ctx context.Context, client *api.Client) (*api.Secret, error) {
 	k.logger.Trace("beginning authentication")
-	content, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	content, err := ioutil.ReadFile(serviceAccountFile)
 	if err != nil {
 		log.Fatal(err)
 	}
