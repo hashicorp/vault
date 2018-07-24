@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/auth/aws"
 	"github.com/hashicorp/vault/command/agent/auth/azure"
+	"github.com/hashicorp/vault/command/agent/auth/gcp"
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
 	"github.com/hashicorp/vault/command/agent/config"
@@ -278,12 +279,14 @@ func (c *AgentCommand) Run(args []string) int {
 		Config:    config.AutoAuth.Method.Config,
 	}
 	switch config.AutoAuth.Method.Type {
-	case "jwt":
-		method, err = jwt.NewJWTAuthMethod(authConfig)
 	case "aws":
 		method, err = aws.NewAWSAuthMethod(authConfig)
 	case "azure":
 		method, err = azure.NewAzureAuthMethod(authConfig)
+	case "gcp":
+		method, err = gcp.NewGCPAuthMethod(authConfig)
+	case "jwt":
+		method, err = jwt.NewJWTAuthMethod(authConfig)
 	case "kubernetes":
 		method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
 	default:

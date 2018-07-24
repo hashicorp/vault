@@ -185,6 +185,7 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 		}
 
 		switch s.DHType {
+		case "":
 		case "curve25519":
 		default:
 			return multierror.Prefix(errors.New("invalid value for 'dh_type'"), fmt.Sprintf("sink.%s", s.Type))
