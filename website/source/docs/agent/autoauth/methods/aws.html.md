@@ -8,7 +8,7 @@ description: |-
 
 # Vault Agent Auto-Auth AWS Method 
 
-The `aws` performs authentication against the [AWS Auth
+The `aws` method performs authentication against the [AWS Auth
 method](https://www.vaultproject.io/docs/auth/aws.html). Both `ec2` and `iam`
 authentication types are supported. If `ec2` is used, the agent will store the
 reauthentication value in memory and use it for reauthenticating, but will not
