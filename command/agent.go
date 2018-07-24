@@ -310,20 +310,18 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	ss := sink.NewSinkServer(&sink.SinkServerConfig{
-		Logger:  c.logger.Named("sink.server"),
-		Client:  client,
-		Context: ctx,
+		Logger: c.logger.Named("sink.server"),
+		Client: client,
 	})
 
 	ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-		Logger:  c.logger.Named("auth.handler"),
-		Client:  c.client,
-		Context: ctx,
+		Logger: c.logger.Named("auth.handler"),
+		Client: c.client,
 	})
 
 	// Start things running
-	go ah.Run(method)
-	go ss.Run(ah.OutputCh, sinks)
+	go ah.Run(ctx, method)
+	go ss.Run(ctx, ah.OutputCh, sinks)
 
 	// Release the log gate.
 	c.logGate.Flush()
@@ -340,18 +338,13 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}()
 
-	// Wait for shutdown
-	shutdownTriggered := false
-
-	for !shutdownTriggered {
-		select {
-		case <-c.ShutdownCh:
-			c.UI.Output("==> Vault agent shutdown triggered")
-			shutdownTriggered = true
-			cancelFunc()
-			<-ah.DoneCh
-			<-ss.DoneCh
-		}
+	select {
+	case <-c.ShutdownCh:
+		c.UI.Output("==> Vault agent shutdown triggered")
+		shutdownTriggered = true
+		cancelFunc()
+		<-ah.DoneCh
+		<-ss.DoneCh
 	}
 
 	return 0

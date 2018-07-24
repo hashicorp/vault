@@ -36,7 +36,6 @@ type SinkServerConfig struct {
 // SinkServer is responsible for pushing tokens to sinks
 type SinkServer struct {
 	DoneCh chan struct{}
-	ctx    context.Context
 	logger hclog.Logger
 	client *api.Client
 	random *rand.Rand
@@ -45,7 +44,6 @@ type SinkServer struct {
 func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 	ss := &SinkServer{
 		DoneCh: make(chan struct{}),
-		ctx:    conf.Context,
 		logger: conf.Logger,
 		client: conf.Client,
 		random: rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
@@ -56,7 +54,7 @@ func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 
 // Run executes the server's run loop, which is responsible for reading
 // in new tokens and pushing them out to the various sinks.
-func (ss *SinkServer) Run(incoming chan string, sinks []Sink) {
+func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []Sink) {
 	if incoming == nil {
 		panic("incoming or shutdown channel are nil")
 	}
@@ -71,7 +69,7 @@ func (ss *SinkServer) Run(incoming chan string, sinks []Sink) {
 	sinkCh := make(chan func() error, len(sinks))
 	for {
 		select {
-		case <-ss.ctx.Done():
+		case <-ctx.Done():
 			return
 
 		case token := <-incoming:
@@ -131,7 +129,7 @@ func (ss *SinkServer) Run(incoming chan string, sinks []Sink) {
 
 		case sinkFunc := <-sinkCh:
 			select {
-			case <-ss.ctx.Done():
+			case <-ctx.Done():
 				return
 			default:
 			}

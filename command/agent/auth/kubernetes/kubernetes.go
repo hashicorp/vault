@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"strings"
@@ -59,7 +60,7 @@ func (k *kubeMethod) Authenticate(ctx context.Context, client *api.Client) (*api
 		log.Fatal(err)
 	}
 
-	secret, err := client.Logical().Write("/auth/kubernetes/login", map[string]interface{}{
+	secret, err := client.Logical().Write(fmt.Sprintf("%s/login", k.mountPath), map[string]interface{}{
 		"role": k.role,
 		"jwt":  strings.TrimSpace(string(content)),
 	})
