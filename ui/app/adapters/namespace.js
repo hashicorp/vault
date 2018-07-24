@@ -1,6 +1,4 @@
-import Ember from 'ember';
 import ApplicationAdapter from './application';
-import DS from 'ember-data';
 
 export default ApplicationAdapter.extend({
   pathForType() {

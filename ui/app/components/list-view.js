@@ -14,7 +14,7 @@ export default Ember.Component.extend({
     return `There are currently no ${items}`;
   }),
 
-  saveItem: task(function*(model, successMessage, failureMessage) {}),
+  saveItem: task(function*() {}),
   deleteItem: task(function*(model, successMessage, failureMessage) {
     let flash = this.get('flashMessages');
     try {
