@@ -29,12 +29,111 @@ reauthenticate.
 Every time an authentication is successful, the token is written to the
 configured Sinks, subject to their configuration.
 
+## Advanced Functionality
+
+Sinks support some advanced features, including the ability for the written
+values to be encrypted or
+[response-wrapped](/docs/concepts/response-wrapping.html).
+
+Both mechanisms can be used concurrently; in this case, the value will be
+response-wrapped, then encrypted.
+
+### Response-Wrapping Tokens
+
+Although this works similarly to regular response-wrapping from Vault, there is
+one thing that _must_ be kept in mind:
+
+~> **NOTE**: Because more than one sink can be configured, the token must be
+wrapped after it is fetched, rather than wrapped by Vault as it's being
+returned. As a result, the `creation_path` will always be `sys/wrapping/wrap`,
+and validation of this field cannot be used as protection against MITM attacks.
+A future version of Agent may request wrapping directly by Vault if only one
+sink is configured.
+
+### Encrypting Tokens
+
+Tokens can be encrypted, using a Diffie-Hellman exchange to generate an
+ephemeral key. In this mechanism, the client receiving the token writes a
+generated private key to a file. The sink responsible for writing the token to
+that client looks for this public key and uses it to compute a shared secret
+key, which is then used to encrypt the token via AES-GCM. The nonce, encrypted
+payload, and the sink's public key are then written to the output file, where
+the client can compute the shared secret and decrypt the token value.
+
+~> NOTE: This is not a protection against MITM attacks! The purpose of this
+feature is for forward-secrecy and coverage against bare token values being
+persisted. A MITM that can access the sink's output and public-key input files
+could attack this exchange.
+
+To help mitigate MITM attacks, additional authenticated data (AAD) can be
+provided to the agent. This data is written as part of the AES-GCM tag and must
+match on both the agent and the client. This of course means that protecting
+this AAD becomes important, but it provides another layer for an attacker to
+have to overcome. For instance, if the attacker has access to the file system
+where the token is being written, but not to read agent configuration or read
+environment variables, this AAD can be generated and passed to the agent and
+the client in ways that would be difficult for the attacker to find.
+
+When using AAD, it is always a good idea for this to be as fresh as possible;
+generate a value and pass it to your client and agent on startup. Additionally,
+agent uses a Trust On First Use model; after it finds a generated public key,
+it will reuse that public key instead of looking for new values that have been
+written.
+
+If writing a client that uses this feature, it will likely be helpful to look
+at the
+[dhutil](https://github.com/hashicorp/vault/blob/master/helper/dhutil/dhutil.go)
+library. This shows the expected format of the public key input and envelope
+output formats.
+
 ## Configuration
 
 The top level `auto_auth` block has two configuration entries:
 
-- `method` `(object)` - Configuration for the method
+- `method` `(object: required)` - Configuration for the method
 
-- `sinks` `(array of objects)` - Configuration for the sinks
+- `sinks` `(array of objects: required)` - Configuration for the sinks
 
 ### Configuration (Method)
+
+These are common configuration values that live within the `method` block:
+
+- `type` `(string: required)` - The type of the method to use, e.g. `aws`,
+  `gcp`, `azure`, etc.
+
+- `mount_path` `(string: optional)` - The mount path of the method. If not
+  specified, defaults to a value of `auth/<method type>`.
+
+- `config` `(object: required)` - Configuration of the method itself. See the
+  sidebar for information about each method.
+
+### Configuration (Sinks)
+
+These configuration values are common to all Sinks:
+
+- `type` `(string: required)` - The type of the method to use, e.g. `file`.
+
+- `wrap_ttl` `(string or integer: optional)` - If specified, the written token will be
+  response-wrapped. Rather than a simple string, the written value will be a
+  JSON-encoded
+  [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
+  structure. Values can be an integer number of seconds or a stringish value
+  like `5m`.
+
+- `dh_type` `(string: optional)` - If specified, the type of Diffie-Hellman exchange to
+  perform, meaning, which ciphers and/or curves. Currently only `curve25519` is
+  supported.
+
+- `dh_path` `(string: required if dh_type is set)` - The path from which the
+  agent should read the client's initial parameters (e.g. curve25519 public
+  key).
+
+- `aad` `(string: optional)` - If specified, additional authenticated data to
+  use with the AES-GCM encryption of the token. Can be any string, including
+  serialized data.
+
+- `aad_env_var` `(string: optional)` - If specified, AAD will be read from the
+  given environment variable rather than a value in the configuration file.
+
+- `config` `(object: required)` - Configuration of the sink itself. See the
+  sidebar for information about each sink.
