@@ -17,7 +17,7 @@ func (c *Sys) Renew(id string, increment int) (*Secret, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return ParseSecret(resp.Body)
 }
@@ -26,7 +26,7 @@ func (c *Sys) Revoke(id string) error {
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke/"+id)
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -35,7 +35,7 @@ func (c *Sys) RevokePrefix(id string) error {
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke-prefix/"+id)
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -44,7 +44,7 @@ func (c *Sys) RevokeForce(id string) error {
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke-force/"+id)
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -76,7 +76,7 @@ func (c *Sys) RevokeWithOptions(opts *RevokeOptions) error {
 
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }

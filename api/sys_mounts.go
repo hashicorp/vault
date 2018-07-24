@@ -12,7 +12,7 @@ func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result map[string]interface{}
 	err = resp.DecodeJSON(&result)
@@ -52,7 +52,7 @@ func (c *Sys) Mount(path string, mountInfo *MountInput) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return nil
 }
@@ -61,7 +61,7 @@ func (c *Sys) Unmount(path string) error {
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/mounts/%s", path))
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -79,7 +79,7 @@ func (c *Sys) Remount(from, to string) error {
 
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -92,7 +92,7 @@ func (c *Sys) TuneMount(path string, config MountConfigInput) error {
 
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -104,7 +104,7 @@ func (c *Sys) MountConfig(path string) (*MountConfigOutput, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result MountConfigOutput
 	err = resp.DecodeJSON(&result)

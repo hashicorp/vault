@@ -6,7 +6,7 @@ func (c *Sys) InitStatus() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result InitStatusResponse
 	err = resp.DecodeJSON(&result)
@@ -23,7 +23,7 @@ func (c *Sys) Init(opts *InitRequest) (*InitResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result InitResponse
 	err = resp.DecodeJSON(&result)

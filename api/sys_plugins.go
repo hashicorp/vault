@@ -23,7 +23,7 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result struct {
 		Data struct {
@@ -58,7 +58,7 @@ func (c *Sys) GetPlugin(i *GetPluginInput) (*GetPluginResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result struct {
 		Data GetPluginResponse
@@ -95,7 +95,7 @@ func (c *Sys) RegisterPlugin(i *RegisterPluginInput) error {
 
 	resp, err := c.c.RawRequest(req)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }
@@ -113,7 +113,7 @@ func (c *Sys) DeregisterPlugin(i *DeregisterPluginInput) error {
 	req := c.c.NewRequest(http.MethodDelete, path)
 	resp, err := c.c.RawRequest(req)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }

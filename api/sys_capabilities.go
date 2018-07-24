@@ -26,7 +26,7 @@ func (c *Sys) Capabilities(token, path string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result map[string]interface{}
 	err = resp.DecodeJSON(&result)

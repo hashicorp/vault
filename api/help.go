@@ -12,7 +12,7 @@ func (c *Client) Help(path string) (*Help, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result Help
 	err = resp.DecodeJSON(&result)

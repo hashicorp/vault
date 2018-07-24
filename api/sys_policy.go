@@ -8,7 +8,7 @@ func (c *Sys) ListPolicies() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result map[string]interface{}
 	err = resp.DecodeJSON(&result)
@@ -35,7 +35,7 @@ func (c *Sys) GetPolicy(name string) (string, error) {
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/sys/policy/%s", name))
 	resp, err := c.c.RawRequest(r)
 	if resp != nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 		if resp.StatusCode == 404 {
 			return "", nil
 		}
@@ -74,7 +74,7 @@ func (c *Sys) PutPolicy(name, rules string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return nil
 }
@@ -83,7 +83,7 @@ func (c *Sys) DeletePolicy(name string) error {
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policy/%s", name))
 	resp, err := c.c.RawRequest(r)
 	if err == nil {
-		defer resp.Body.Close()
+		defer resp.Cleanup()
 	}
 	return err
 }

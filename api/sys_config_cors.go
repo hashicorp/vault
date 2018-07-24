@@ -6,7 +6,7 @@ func (c *Sys) CORSStatus() (*CORSResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result CORSResponse
 	err = resp.DecodeJSON(&result)
@@ -23,7 +23,7 @@ func (c *Sys) ConfigureCORS(req *CORSRequest) (*CORSResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result CORSResponse
 	err = resp.DecodeJSON(&result)
@@ -37,7 +37,7 @@ func (c *Sys) DisableCORS() (*CORSResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	var result CORSResponse
 	err = resp.DecodeJSON(&result)

@@ -32,7 +32,7 @@ func (c *SSH) Credential(role string, data map[string]interface{}) (*Secret, err
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return ParseSecret(resp.Body)
 }
@@ -49,7 +49,7 @@ func (c *SSH) SignKey(role string, data map[string]interface{}) (*Secret, error)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Cleanup()
 
 	return ParseSecret(resp.Body)
 }
