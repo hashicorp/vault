@@ -155,7 +155,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical
 	allPolicies := append(te.Policies, identityPolicies...)
 
 	// Construct the corresponding ACL object
-	acl, err := c.policyStore.ACL(c.activeContext, allPolicies...)
+	acl, err := c.policyStore.ACL(c.activeContext, entity, allPolicies...)
 	if err != nil {
 		c.logger.Error("failed to construct ACL", "error", err)
 		return nil, nil, nil, nil, ErrInternalError

@@ -196,7 +196,7 @@ func TestPolicyStore_ACL(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	acl, err := ps.ACL(context.Background(), "dev", "ops")
+	acl, err := ps.ACL(context.Background(), nil, "dev", "ops")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
