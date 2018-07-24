@@ -2,6 +2,11 @@ import Ember from 'ember';
 
 const MOUNTABLE_AUTH_METHODS = [
   {
+    displayName: 'AliCloud',
+    value: 'alicloud',
+    type: 'alicloud',
+  },
+  {
     displayName: 'AppRole',
     value: 'approle',
     type: 'approle',
@@ -22,14 +27,19 @@ const MOUNTABLE_AUTH_METHODS = [
     type: 'gcp',
   },
   {
-    displayName: 'Kubernetes',
-    value: 'kubernetes',
-    type: 'kubernetes',
-  },
-  {
     displayName: 'GitHub',
     value: 'github',
     type: 'github',
+  },
+  {
+    displayName: 'JWT/OIDC',
+    value: 'jwt',
+    type: 'jwt',
+  },
+  {
+    displayName: 'Kubernetes',
+    value: 'kubernetes',
+    type: 'kubernetes',
   },
   {
     displayName: 'LDAP',
