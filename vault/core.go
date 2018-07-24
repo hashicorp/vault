@@ -358,6 +358,8 @@ type Core struct {
 	replicationState           *uint32
 	activeNodeReplicationState *uint32
 
+	shutdownLockGrabCAS *uint32
+
 	// uiConfig contains UI configuration
 	uiConfig *UIConfig
 
@@ -501,6 +503,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		localClusterParsedCert:           new(atomic.Value),
 		activeNodeReplicationState:       new(uint32),
 		keepHALockOnStepDown:             new(uint32),
+		shutdownLockGrabCAS:              new(uint32),
 	}
 
 	atomic.StoreUint32(c.replicationState, uint32(consts.ReplicationDRDisabled|consts.ReplicationPerformanceDisabled))
@@ -641,13 +644,8 @@ func (c *Core) Shutdown() error {
 	}
 	c.stateLock.RUnlock()
 
-	c.logger.Debug("shutdown initiating internal seal")
-	// Seal the Vault, causes a leader stepdown
-	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
-
 	c.logger.Debug("shutdown running internal seal")
-	return c.sealInternal(false)
+	return c.sealInternal(true, false)
 }
 
 // CORSConfig returns the current CORS configuration
@@ -1103,9 +1101,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	c.stateLock.RUnlock()
 
 	//Seal the Vault
-	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
-	sealErr := c.sealInternal(false)
+	sealErr := c.sealInternal(true, false)
 
 	if sealErr != nil {
 		retErr = multierror.Append(retErr, sealErr)
@@ -1126,7 +1122,23 @@ func (c *Core) UIHeaders() (http.Header, error) {
 
 // sealInternal is an internal method used to seal the vault.  It does not do
 // any authorization checking. The stateLock must be held prior to calling.
-func (c *Core) sealInternal(keepLock bool) error {
+func (c *Core) sealInternal(grabLock, keepLock bool) error {
+	if grabLock {
+		// We want to definitively seal, so we spin on this until we can grab
+		// the lock
+		for {
+			if atomic.CompareAndSwapUint32(c.shutdownLockGrabCAS, shutdownCASUpForGrabs, shutdownCASSealing) {
+				break
+			}
+
+			time.Sleep(200 * time.Millisecond)
+		}
+
+		c.stateLock.Lock()
+		defer c.stateLock.Unlock()
+		defer atomic.StoreUint32(c.shutdownLockGrabCAS, shutdownCASUpForGrabs)
+	}
+
 	if c.sealed {
 		return nil
 	}

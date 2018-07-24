@@ -21,6 +21,12 @@ import (
 	"github.com/oklog/run"
 )
 
+const (
+	shutdownCASUpForGrabs   = 0
+	shutdownCASSealing      = 1
+	shutdownCASSteppingDown = 2
+)
+
 // Standby checks if the Vault is in standby mode
 func (c *Core) Standby() (bool, error) {
 	c.stateLock.RLock()
@@ -495,6 +501,21 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 
 		metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
 
+		if grabStateLock {
+			// If it's not zero, we've set it to 1 because we're in the process
+			// of trying to shut down, so we don't actually want to finish this
+			// loop because then we'll try to become active again before
+			// shutting down. So, don't actually grab the lock and instead gate
+			// on stopCh so we can run the proper logic.
+			if !atomic.CompareAndSwapUint32(c.shutdownLockGrabCAS, shutdownCASUpForGrabs, shutdownCASSteppingDown) {
+				grabStateLock = false
+				<-stopCh
+				if atomic.LoadUint32(c.keepHALockOnStepDown) == 1 {
+					releaseHALock = false
+				}
+			}
+		}
+
 		// Tell any requests that know about this to stop
 		if c.activeContextCancelFunc != nil {
 			c.activeContextCancelFunc()
@@ -504,9 +525,12 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 		if grabStateLock {
 			c.stateLock.Lock()
 		}
+
 		c.standby = true
 		preSealErr := c.preSeal()
+
 		if grabStateLock {
+			atomic.StoreUint32(c.shutdownLockGrabCAS, shutdownCASUpForGrabs)
 			c.stateLock.Unlock()
 		}
 
