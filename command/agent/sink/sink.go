@@ -137,9 +137,12 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []Sin
 			if err := sinkFunc(); err != nil {
 				ss.logger.Error("error returned by sink write function, retrying", "error", err)
 				backoff := 2*time.Second + time.Duration(ss.random.Int63()%int64(time.Second*2)-int64(time.Second))
-				time.AfterFunc(backoff, func() {
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(backoff):
 					sinkCh <- sinkFunc
-				})
+				}
 			}
 		}
 	}

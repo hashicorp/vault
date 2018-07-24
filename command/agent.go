@@ -341,7 +341,6 @@ func (c *AgentCommand) Run(args []string) int {
 	select {
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Vault agent shutdown triggered")
-		shutdownTriggered = true
 		cancelFunc()
 		<-ah.DoneCh
 		<-ss.DoneCh
