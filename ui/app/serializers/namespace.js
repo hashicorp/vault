@@ -14,8 +14,9 @@ export default ApplicationSerializer.extend({
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    const nullResponses = ['deleteRecord'];
-    let normalizedPayload = nullResponses.includes(requestType) ? { id } : this.normalizeList(payload);
+    const nullResponses = ['deleteRecord', 'createRecord'];
+    let cid = id || payload.id;
+    let normalizedPayload = nullResponses.includes(requestType) ? { id: cid } : this.normalizeList(payload);
     return this._super(store, primaryModelClass, normalizedPayload, id, requestType);
   },
 });

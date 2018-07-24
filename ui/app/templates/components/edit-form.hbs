@@ -9,9 +9,16 @@
     <div class="field is-grouped">
       <div class="control">
         <button type="submit" data-test-edit-form-submit class="button is-primary {{if save.isRunning 'loading'}}" disabled={{save.isRunning}}>
-          Save
+          {{saveButtonText}}
         </button>
       </div>
+      {{#if cancelLink}}
+        <div class="control">
+          <a href={{cancelLink}} class="button">
+            Cancel
+          </a>
+        </div>
+      {{/if}}
     </div>
     {{#if model.canDelete}}
       <ConfirmAction
