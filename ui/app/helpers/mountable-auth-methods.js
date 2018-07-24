@@ -2,11 +2,6 @@ import Ember from 'ember';
 
 const MOUNTABLE_AUTH_METHODS = [
   {
-    displayName: 'AliCloud',
-    value: 'alicloud',
-    type: 'alicloud',
-  },
-  {
     displayName: 'AppRole',
     value: 'approle',
     type: 'approle',
