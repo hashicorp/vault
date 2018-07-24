@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -38,8 +37,6 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 
 	go func() {
 		defer atomic.StoreUint32(b.tidySecretIDCASGuard, 0)
-
-		var result error
 
 		// Don't cancel when the original client request goes away
 		ctx = context.Background()
@@ -74,7 +71,7 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 				}
 
 				if secretIDEntry == nil {
-					result = multierror.Append(result, fmt.Errorf("entry for SecretID %q is nil", secretIDHMAC))
+					logger.Error("entry for secret id was nil", "secret_id_hmac", secretIDHMAC)
 					return nil
 				}
 

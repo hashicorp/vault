@@ -13,6 +13,9 @@ message Entity {
 
 	// Aliases contains thhe alias mappings for the given entity
 	repeated Alias aliases = 3;
+
+	// Metadata represents the custom data tied to this entity
+	map<string, string> metadata = 4;
 }
 
 message Alias {
@@ -25,5 +28,7 @@ message Alias {
 
 	// Name is the identifier of this identity in its authentication source
 	string name = 3;
-}
 
+	// Metadata represents the custom data tied to this alias
+	map<string, string> metadata = 4;
+}

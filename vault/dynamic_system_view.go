@@ -169,22 +169,40 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 		return nil, nil
 	}
 
-	aliases := make([]*logical.Alias, len(entity.Aliases))
-	for i, alias := range entity.Aliases {
-		aliases[i] = &logical.Alias{
-			MountAccessor: alias.MountAccessor,
-			Name:          alias.Name,
-		}
-		// MountType is not stored with the entity and must be looked up
-		if mount := d.core.router.validateMountByAccessor(alias.MountAccessor); mount != nil {
-			aliases[i].MountType = mount.MountType
+	// Return a subset of the data
+	ret := &logical.Entity{
+		ID:   entity.ID,
+		Name: entity.Name,
+	}
+
+	if entity.Metadata != nil {
+		ret.Metadata = make(map[string]string, len(entity.Metadata))
+		for k, v := range entity.Metadata {
+			ret.Metadata[k] = v
 		}
 	}
 
-	// Only returning a subset of the data
-	return &logical.Entity{
-		ID:      entity.ID,
-		Name:    entity.Name,
-		Aliases: aliases,
-	}, nil
+	aliases := make([]*logical.Alias, len(entity.Aliases))
+	for i, a := range entity.Aliases {
+		alias := &logical.Alias{
+			MountAccessor: a.MountAccessor,
+			Name:          a.Name,
+		}
+		// MountType is not stored with the entity and must be looked up
+		if mount := d.core.router.validateMountByAccessor(a.MountAccessor); mount != nil {
+			alias.MountType = mount.MountType
+		}
+
+		if a.Metadata != nil {
+			alias.Metadata = make(map[string]string, len(a.Metadata))
+			for k, v := range a.Metadata {
+				alias.Metadata[k] = v
+			}
+		}
+
+		aliases[i] = alias
+	}
+	ret.Aliases = aliases
+
+	return ret, nil
 }

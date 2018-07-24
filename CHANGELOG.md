@@ -34,6 +34,7 @@ IMPROVEMENTS:
  * core: A `max_request_size` parameter can now be set per-listener to adjust
    the maximum allowed size per request [GH-4824]
  * core: Add control group request endpoint to default policy [GH-4904]
+ * identity: Identity metadata is now passed through to plugins [GH-4967]
  * secrets/kv: Add support for using `-field=data` to KVv2 when using `vault
    kv` [GH-4895]
  * secrets/pki: Add the ability to tidy revoked but unexpired certificates
@@ -46,6 +47,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * auth/aws: Fix updating `max_retries` [GH-4980]
  * core: Fix returning 500 instead of 503 if a rekey is attempted when Vault is
    sealed [GH-4874]
  * core: Fix issue releasing the leader lock in some circumstances [GH-4915]
@@ -60,6 +62,8 @@ BUG FIXES:
  * secrets/database: Fix panic during DB creds revocation [GH-4846]
  * ui: Fix usage of cubbyhole backend in the UI [GH-4851]
  * ui: Fix toggle state when a secret is JSON-formatted [GH-4913]
+ * ui: Fix coercion of falsey values to empty string when editing secrets as 
+   JSON [GH-4977]
 
 ## 0.10.3 (June 20th, 2018)
 
