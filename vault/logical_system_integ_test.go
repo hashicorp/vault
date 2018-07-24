@@ -49,11 +49,7 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		sealed, err := core.Sealed()
-		if err != nil {
-			t.Fatalf("err checking seal status: %s", err)
-		}
-		if sealed {
+		if core.Sealed() {
 			t.Fatal("should not be sealed")
 		}
 		// Wait for active so post-unseal takes place
@@ -91,11 +87,7 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		sealed, err := core.Sealed()
-		if err != nil {
-			t.Fatalf("err checking seal status: %s", err)
-		}
-		if sealed {
+		if core.Sealed() {
 			t.Fatal("should not be sealed")
 		}
 		// Wait for active so post-unseal takes place
@@ -170,11 +162,7 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 				t.Fatal(err)
 			}
 		}
-		sealed, err := core.Sealed()
-		if err != nil {
-			t.Fatalf("err checking seal status: %s", err)
-		}
-		if sealed {
+		if core.Sealed() {
 			t.Fatal("should not be sealed")
 		}
 	}
@@ -283,11 +271,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 				t.Fatal(err)
 			}
 		}
-		sealed, err := core.Sealed()
-		if err != nil {
-			t.Fatalf("err checking seal status: %s", err)
-		}
-		if sealed {
+		if core.Sealed() {
 			t.Fatal("should not be sealed")
 		}
 	}
@@ -392,11 +376,7 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		sealed, err := core.Sealed()
-		if err != nil {
-			t.Fatalf("err checking seal status: %s", err)
-		}
-		if sealed {
+		if core.Sealed() {
 			t.Fatal("should not be sealed")
 		}
 	}

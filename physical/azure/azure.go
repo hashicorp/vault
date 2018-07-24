@@ -12,17 +12,20 @@ import (
 	"time"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
-	log "github.com/hashicorp/go-hclog"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
 )
 
-// MaxBlobSize at this time
-var MaxBlobSize = 1024 * 1024 * 4
+const (
+	// MaxBlobSize at this time
+	MaxBlobSize = 1024 * 1024 * 4
+	// MaxListResults is the current default value, setting explicitly
+	MaxListResults = 5000
+)
 
 // AzureBackend is a physical backend that stores data
 // within an Azure blob container.
@@ -180,22 +183,35 @@ func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error
 	defer metrics.MeasureSince([]string{"azure", "list"}, time.Now())
 
 	a.permitPool.Acquire()
-	list, err := a.container.ListBlobs(storage.ListBlobsParameters{Prefix: prefix})
-	if err != nil {
-		// Break early.
-		a.permitPool.Release()
-		return nil, err
-	}
-	a.permitPool.Release()
+	defer a.permitPool.Release()
 
+	var marker string
 	keys := []string{}
-	for _, blob := range list.Blobs {
-		key := strings.TrimPrefix(blob.Name, prefix)
-		if i := strings.Index(key, "/"); i == -1 {
-			keys = append(keys, key)
-		} else {
-			keys = strutil.AppendIfMissing(keys, key[:i+1])
+	for {
+		list, err := a.container.ListBlobs(storage.ListBlobsParameters{
+			Prefix:     prefix,
+			Marker:     marker,
+			MaxResults: MaxListResults,
+		})
+		if err != nil {
+			return nil, err
 		}
+
+		for _, blob := range list.Blobs {
+			key := strings.TrimPrefix(blob.Name, prefix)
+			if i := strings.Index(key, "/"); i == -1 {
+				// file
+				keys = append(keys, key)
+			} else {
+				// subdirectory
+				keys = strutil.AppendIfMissing(keys, key[:i+1])
+			}
+		}
+
+		if list.NextMarker == "" {
+			break
+		}
+		marker = list.NextMarker
 	}
 
 	sort.Strings(keys)

@@ -85,11 +85,13 @@ func (c *Core) LookupToken(token string) (*logical.TokenEntry, error) {
 		return nil, fmt.Errorf("missing client token")
 	}
 
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil, consts.ErrSealed
 	}
+
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
 	if c.standby {
 		return nil, consts.ErrStandby
 	}

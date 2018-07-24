@@ -121,7 +121,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	} else {
 		verifyResp = verifyResponse
 	}
-	if !policyutil.EquivalentPolicies(verifyResp.Policies, req.Auth.Policies) {
+	if !policyutil.EquivalentPolicies(verifyResp.Policies, req.Auth.TokenPolicies) {
 		return nil, fmt.Errorf("policies do not match")
 	}
 

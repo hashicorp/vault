@@ -277,7 +277,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (resp *logical.Response, err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil, consts.ErrSealed
 	}
 	if c.standby {
@@ -656,15 +656,19 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		resp.Auth.TokenPolicies = policyutil.SanitizePolicies(resp.Auth.Policies, policyutil.DoNotAddDefaultPolicy)
-		resp.Auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies, policyutil.DoNotAddDefaultPolicy)
-		resp.Auth.Policies = policyutil.SanitizePolicies(append(resp.Auth.Policies, identityPolicies...), policyutil.DoNotAddDefaultPolicy)
-
 		if err := c.expiration.RegisterAuth(resp.Auth.CreationPath, resp.Auth); err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
+
+		// We do these later since it's not meaningful for backends/expmgr to
+		// have what is purely a snapshot of current identity policies, and
+		// plugins can be confused if they are checking contents of
+		// Auth.Policies instead of Auth.TokenPolicies
+		resp.Auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies, policyutil.DoNotAddDefaultPolicy)
+		resp.Auth.Policies = policyutil.SanitizePolicies(append(resp.Auth.Policies, identityPolicies...), policyutil.DoNotAddDefaultPolicy)
 	}
 
 	if resp != nil &&
@@ -853,13 +857,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		}
 
 		auth.TokenPolicies = te.Policies
-		auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies, policyutil.DoNotAddDefaultPolicy)
-		auth.Policies = policyutil.SanitizePolicies(append(te.Policies, identityPolicies...), policyutil.DoNotAddDefaultPolicy)
+		allPolicies := policyutil.SanitizePolicies(append(te.Policies, identityPolicies...), policyutil.DoNotAddDefaultPolicy)
 
 		// Prevent internal policies from being assigned to tokens. We check
 		// this on auth.Policies including derived ones from Identity before
 		// actually making the token.
-		for _, policy := range auth.Policies {
+		for _, policy := range allPolicies {
 			if policy == "root" {
 				return logical.ErrorResponse("auth methods cannot create root tokens"), nil, logical.ErrInvalidRequest
 			}
@@ -884,6 +887,9 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			return nil, auth, ErrInternalError
 		}
+
+		auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies, policyutil.DoNotAddDefaultPolicy)
+		auth.Policies = allPolicies
 
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
