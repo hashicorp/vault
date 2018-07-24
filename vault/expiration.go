@@ -1101,8 +1101,6 @@ func (m *ExpirationManager) expireID(leaseID string) {
 		go func() {
 			select {
 			case <-ctx.Done():
-			case <-m.quitContext.Done():
-				cancel()
 			case <-m.quitCh:
 				cancel()
 			}
