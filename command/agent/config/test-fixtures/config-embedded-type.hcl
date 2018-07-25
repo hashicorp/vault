@@ -1,8 +1,7 @@
 pid_file = "./pidfile"
 
 auto_auth {
-	method {
-		type = "aws-iam"
+	method "aws" {
 		mount_path = "auth/aws"
 		config = {
 			role = "foobar"

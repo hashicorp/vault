@@ -24,7 +24,7 @@ func TestLoadConfigFile(t *testing.T) {
 	expected := &Config{
 		AutoAuth: &AutoAuth{
 			Method: &Method{
-				Type:      "aws-iam",
+				Type:      "aws",
 				MountPath: "auth/aws",
 				Config: map[string]interface{}{
 					"role": "foobar",

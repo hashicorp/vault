@@ -145,6 +145,15 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 		return err
 	}
 
+	if m.Type == "" {
+		if len(item.Keys) == 1 {
+			m.Type = strings.ToLower(item.Keys[0].Token.Value().(string))
+		}
+		if m.Type == "" {
+			return errors.New("method type must be specified")
+		}
+	}
+
 	// Default to Vault's default
 	if m.MountPath == "" {
 		m.MountPath = fmt.Sprintf("auth/%s", m.Type)
