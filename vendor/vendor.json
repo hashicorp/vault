@@ -1495,6 +1495,12 @@
 			"revisionTime": "2018-06-27T17:25:17Z"
 		},
 		{
+			"checksumSHA1": "3ohk4dFYrERZ6WTdKkIwnTA0HSI=",
+			"path": "github.com/kr/pretty",
+			"revision": "73f6ac0b30a98e433b289500d779f50c1a6f0712",
+			"revisionTime": "2018-05-06T08:33:45Z"
+		},
+		{
 			"checksumSHA1": "SbguDK5lY8uhaHNrmJmNbiWIGM0=",
 			"path": "github.com/kr/text",
 			"revision": "e2ffdb16a802fe2bb95e2e35ff34f0e53aeef34f",
