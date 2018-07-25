@@ -48,6 +48,8 @@ IMPROVEMENTS:
  * cli: Add subcommands for interacting with the plugin catalog [GH-4911]
  * core: Add config flag to disable non-printable character check [GH-4917]
  * storage/swift: Add additional configuration options [GH-4901]
+ * replication: Add additional saftey checks and logging when replication is
+   in a bad state
 
 BUG FIXES:
 
@@ -84,6 +86,9 @@ BUG FIXES:
  * core: Fix standby not being able to forward requests larger than 4MB 
    [GH-4844]
  * core: Avoid panic while processing group memberships [GH-4841]
+ * replication: Allow replication status requests to be processed while in 
+   merkle sync
+ * replication: Ensure merkle reindex flushes all changes to storage immediately
 
 ## 0.10.3 (June 20th, 2018)
 
