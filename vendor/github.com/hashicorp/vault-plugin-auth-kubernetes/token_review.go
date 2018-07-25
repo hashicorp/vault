@@ -85,6 +85,7 @@ func (t *tokenReviewAPI) Review(jwt string) (*tokenReviewResult, error) {
 	if len(t.config.TokenReviewerJWT) > 0 {
 		bearer = fmt.Sprintf("Bearer %s", t.config.TokenReviewerJWT)
 	}
+	bearer = strings.TrimSpace(bearer)
 
 	// Set the JWT as the Bearer token
 	req.Header.Set("Authorization", bearer)

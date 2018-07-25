@@ -1321,10 +1321,10 @@
 			"revisionTime": "2018-07-10T15:13:41Z"
 		},
 		{
-			"checksumSHA1": "L5pDwOw2/MLLUSykrwxXbXQI7zI=",
+			"checksumSHA1": "GAsPitFJRlzOg7kkQVKWksOY5bM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "7ca24869a5b9c9e308c475a21c9ce1331734120e",
-			"revisionTime": "2018-06-19T23:09:39Z"
+			"revision": "79458d2576b21c11a9482f0a16074bcb1b657e7f",
+			"revisionTime": "2018-07-23T17:26:15Z"
 		},
 		{
 			"checksumSHA1": "kGEaf6lxGWkJibW4Dto2wFDXrfY=",
