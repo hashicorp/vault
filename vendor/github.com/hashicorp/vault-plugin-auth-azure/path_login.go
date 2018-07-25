@@ -191,7 +191,11 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 	// If vmss name is specified, the vm name will be ignored and only the scale set
 	// will be verified since vm names are generated automatically for scale sets
 	case vmssName != "":
-		client := b.provider.VMSSClient(subscriptionID)
+		client, err := b.provider.VMSSClient(subscriptionID)
+		if err != nil {
+			return errwrap.Wrapf("unable to create vmss client: {{err}}", err)
+		}
+
 		vmss, err := client.Get(ctx, resourceGroupName, vmssName)
 		if err != nil {
 			return errwrap.Wrapf("unable to retrieve virtual machine scale set metadata: {{err}}", err)
@@ -213,7 +217,11 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 		location = vmss.Location
 
 	case vmName != "":
-		client := b.provider.ComputeClient(subscriptionID)
+		client, err := b.provider.ComputeClient(subscriptionID)
+		if err != nil {
+			return errwrap.Wrapf("unable to create compute client: {{err}}", err)
+		}
+
 		vm, err := client.Get(ctx, resourceGroupName, vmName, compute.InstanceView)
 		if err != nil {
 			return errwrap.Wrapf("unable to retrieve virtual machine metadata: {{err}}", err)

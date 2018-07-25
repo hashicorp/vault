@@ -34,13 +34,13 @@ type tokenVerifier interface {
 
 type provider interface {
 	Verifier() tokenVerifier
-	ComputeClient(subscriptionID string) computeClient
-	VMSSClient(subscriptionID string) vmssClient
+	ComputeClient(subscriptionID string) (computeClient, error)
+	VMSSClient(subscriptionID string) (vmssClient, error)
 }
 
 type azureProvider struct {
 	oidcVerifier *oidc.IDTokenVerifier
-	authorizer   autorest.Authorizer
+	settings     *azureSettings
 	httpClient   *http.Client
 }
 
@@ -95,33 +95,11 @@ func newAzureProvider(config *azureConfig) (*azureProvider, error) {
 	}
 	oidcVerifier := oidc.NewVerifier(discoveryInfo.Issuer, remoteKeySet, verifierConfig)
 
-	// Create an OAuth2 client for retrieving VM data
-	var authorizer autorest.Authorizer
-	switch {
-	// Use environment/config first
-	case settings.ClientSecret != "":
-		config := auth.NewClientCredentialsConfig(settings.ClientID, settings.ClientSecret, settings.TenantID)
-		config.AADEndpoint = settings.Environment.ActiveDirectoryEndpoint
-		config.Resource = settings.Environment.ResourceManagerEndpoint
-		authorizer, err = config.Authorizer()
-		if err != nil {
-			return nil, err
-		}
-	// By default use MSI
-	default:
-		config := auth.NewMSIConfig()
-		config.Resource = settings.Environment.ResourceManagerEndpoint
-		authorizer, err = config.Authorizer()
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	// Ping the metadata service (if available)
 	go pingMetadataService()
 
 	return &azureProvider{
-		authorizer:   authorizer,
+		settings:     settings,
 		oidcVerifier: oidcVerifier,
 		httpClient:   httpClient,
 	}, nil
@@ -131,20 +109,56 @@ func (p *azureProvider) Verifier() tokenVerifier {
 	return p.oidcVerifier
 }
 
-func (p *azureProvider) ComputeClient(subscriptionID string) computeClient {
+func (p *azureProvider) ComputeClient(subscriptionID string) (computeClient, error) {
+	authorizer, err := p.getAuthorizer()
+	if err != nil {
+		return nil, err
+	}
+
 	client := compute.NewVirtualMachinesClient(subscriptionID)
-	client.Authorizer = p.authorizer
+	client.Authorizer = authorizer
 	client.Sender = p.httpClient
 	client.AddToUserAgent(userAgent())
-	return client
+	return client, nil
 }
 
-func (p *azureProvider) VMSSClient(subscriptionID string) vmssClient {
+func (p *azureProvider) VMSSClient(subscriptionID string) (vmssClient, error) {
+	authorizer, err := p.getAuthorizer()
+	if err != nil {
+		return nil, err
+	}
+
 	client := compute.NewVirtualMachineScaleSetsClient(subscriptionID)
-	client.Authorizer = p.authorizer
+	client.Authorizer = authorizer
 	client.Sender = p.httpClient
 	client.AddToUserAgent(userAgent())
-	return client
+	return client, nil
+}
+
+func (p *azureProvider) getAuthorizer() (autorest.Authorizer, error) {
+	// Create an OAuth2 client for retrieving VM data
+	var authorizer autorest.Authorizer
+	var err error
+	switch {
+	// Use environment/config first
+	case p.settings.ClientSecret != "":
+		config := auth.NewClientCredentialsConfig(p.settings.ClientID, p.settings.ClientSecret, p.settings.TenantID)
+		config.AADEndpoint = p.settings.Environment.ActiveDirectoryEndpoint
+		config.Resource = p.settings.Environment.ResourceManagerEndpoint
+		authorizer, err = config.Authorizer()
+		if err != nil {
+			return nil, err
+		}
+	// By default use MSI
+	default:
+		config := auth.NewMSIConfig()
+		config.Resource = p.settings.Environment.ResourceManagerEndpoint
+		authorizer, err = config.Authorizer()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return authorizer, nil
 }
 
 type azureSettings struct {
