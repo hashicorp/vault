@@ -79,7 +79,7 @@ BUG FIXES:
    changing [GH-4960]
  * auth/radius: Fix issue where some radius logins were being canceled too early
    [GH-4941]
- * core: Fix accidential seal of vault of we lose leadership during startup 
+ * core: Fix accidental seal of vault of we lose leadership during startup 
    [GH-4924]
  * core: Fix standby not being able to forward requests larger than 4MB 
    [GH-4844]
