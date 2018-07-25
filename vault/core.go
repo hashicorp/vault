@@ -636,7 +636,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 // happens as quickly as possible.
 func (c *Core) Shutdown() error {
 	c.logger.Debug("shutdown called")
-	return c.sealInternal(false)
+	return c.sealInternal()
 }
 
 // CORSConfig returns the current CORS configuration
@@ -1091,7 +1091,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	// Unlock; sealing will grab the lock when needed
 	c.stateLock.RUnlock()
 
-	sealErr := c.sealInternal(false)
+	sealErr := c.sealInternal()
 
 	if sealErr != nil {
 		retErr = multierror.Append(retErr, sealErr)
@@ -1112,7 +1112,11 @@ func (c *Core) UIHeaders() (http.Header, error) {
 
 // sealInternal is an internal method used to seal the vault.  It does not do
 // any authorization checking.
-func (c *Core) sealInternal(keepLock bool) error {
+func (c *Core) sealInternal() error {
+	return c.sealInternalWithOptions(true, false)
+}
+
+func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
 	// Mark sealed, and if already marked return
 	if swapped := atomic.CompareAndSwapUint32(c.sealed, 0, 1); !swapped {
 		return nil
@@ -1145,9 +1149,10 @@ func (c *Core) sealInternal(keepLock bool) error {
 		// If we are keeping the lock we already have the state write lock
 		// held. Otherwise grab it here so that when stopCh is triggered we are
 		// locked.
-		if keepLock {
+		if keepHALock {
 			atomic.StoreUint32(c.keepHALockOnStepDown, 1)
-		} else {
+		}
+		if grabStateLock {
 			c.stateLock.Lock()
 			defer c.stateLock.Unlock()
 		}
