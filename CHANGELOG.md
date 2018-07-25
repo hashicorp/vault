@@ -36,6 +36,7 @@ FEATURES:
 IMPROVEMENTS:
 
  * auth/azure: Add support for virtual machine scale sets
+ * auth/gcp: Support multiple bindings for region, zone, and instance group
  * cli: Add subcommands for interacting with the plugin catalog [GH-4911]
  * cli: Add a `-description` flag to secrets and auth tune subcommands to allow
    updating an existing secret engine's or auth method's description. This
@@ -65,6 +66,7 @@ BUG FIXES:
  * auth/approle: Fix issue with tidy endpoint that would unnecessarily remove
    secret accessors [GH-4981]
  * auth/aws: Fix updating `max_retries` [GH-4980]
+ * auth/kubernetes: Trim trailing whitespace when sending JWT
  * cli: Fix parsing of environment variables for integer flags [GH-4925]
  * core: Fix returning 500 instead of 503 if a rekey is attempted when Vault is
    sealed [GH-4874]
@@ -85,7 +87,7 @@ BUG FIXES:
  * identity: Fix a race condition creating aliases [GH-4965]
  * plugins: Fix being unable to send very large payloads to or from plugins
    [GH-4958]
- * physical/azure: Long list responses would sometimes be truncaated [GH-4983]
+ * physical/azure: Long list responses would sometimes be truncated [GH-4983]
  * replication: Allow replication status requests to be processed while in 
    merkle sync
  * replication: Ensure merkle reindex flushes all changes to storage immediately
