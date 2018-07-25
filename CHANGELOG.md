@@ -1,5 +1,11 @@
 ## 0.10.4 (July 25th, 2018)
 
+SECURITY:
+
+ * Control Groups: The associated Identity entity with a request was not being
+   properly persisted. As a result, the same authorizer could provide more than
+   one authorization.
+
 DEPRECATIONS/CHANGES:
 
  * Revocations of dynamic secrets leases are now queued/asynchronous rather
