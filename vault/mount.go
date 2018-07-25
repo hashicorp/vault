@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/francoispqt/gojay"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -116,10 +117,31 @@ func (c *Core) generateMountAccessor(entryType string) (string, error) {
 	return accessor, nil
 }
 
+type MountEntries []*MountEntry
+
 // MountTable is used to represent the internal mount table
 type MountTable struct {
-	Type    string        `json:"type"`
-	Entries []*MountEntry `json:"entries"`
+	Type    string       `json:"type"`
+	Entries MountEntries `json:"entries"`
+}
+
+func (t *MountTable) MarshalJSONObject(enc *gojay.Encoder) {
+	enc.AddArrayKey("entries", t.Entries)
+	enc.AddStringKey("type", t.Type)
+}
+
+func (t *MountTable) IsNil() bool {
+	return t == nil
+}
+
+func (e MountEntries) MarshalJSONArray(enc *gojay.Encoder) {
+	for _, entry := range e {
+		enc.AddObject(entry)
+	}
+}
+
+func (e MountEntries) IsNil() bool {
+	return e == nil
 }
 
 // shallowClone returns a copy of the mount table that
@@ -192,6 +214,32 @@ type MountEntry struct {
 	// without separately managing their locks individually. See SyncCache() for
 	// the specific values that are being cached.
 	synthesizedConfigCache sync.Map
+}
+
+func (e *MountEntry) MarshalJSONObject(enc *gojay.Encoder) {
+	enc.AddStringKey("table", e.Table)
+	enc.AddStringKey("path", e.Path)
+	enc.AddStringKey("type", e.Type)
+	enc.AddStringKey("description", e.Description)
+	enc.AddStringKey("uuid", e.UUID)
+	enc.AddStringKey("backend_aware_uuid", e.BackendAwareUUID)
+	enc.AddStringKey("accessor", e.Accessor)
+	enc.AddObjectKey("config", e.Config)
+	enc.AddObjectKey("options", e.Options)
+	enc.AddBoolKey("local", e.Local)
+	enc.AddBoolKey("seal_wrap", e.SealWrap)
+	enc.AddBoolKey("tainted", e.Tainted)
+}
+
+func (e *MountEntry) IsNil() bool {
+	return e == nil
+}
+
+func (mc MountConfig) MarshalJSONObject(enc *gojay.Encoder) {
+}
+
+func (mc MountConfig) IsNil() bool {
+	return false
 }
 
 // MountConfig is used to hold settable options

@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/francoispqt/gojay"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -47,6 +48,32 @@ type clusterKeyParams struct {
 	X    *big.Int `json:"x" structs:"x" mapstructure:"x"`
 	Y    *big.Int `json:"y" structs:"y" mapstructure:"y"`
 	D    *big.Int `json:"d" structs:"d" mapstructure:"d"`
+}
+
+func (c clusterKeyParams) MarshalJSONObject(enc *gojay.Encoder) {
+	d, err := c.D.MarshalJSON()
+	if err != nil {
+		return
+	}
+	ed := gojay.EmbeddedJSON(d)
+	x, err := c.X.MarshalJSON()
+	if err != nil {
+		return
+	}
+	ex := gojay.EmbeddedJSON(x)
+	y, err := c.Y.MarshalJSON()
+	if err != nil {
+		return
+	}
+	ey := gojay.EmbeddedJSON(y)
+	enc.AddEmbeddedJSONKey("d", &ed)
+	enc.AddStringKey("type", c.Type)
+	enc.AddEmbeddedJSONKey("x", &ex)
+	enc.AddEmbeddedJSONKey("y", &ey)
+}
+
+func (c clusterKeyParams) IsNil() bool {
+	return false
 }
 
 // Structure representing the storage entry that holds cluster information

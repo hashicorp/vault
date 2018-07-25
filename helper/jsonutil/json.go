@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/francoispqt/gojay"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/compressutil"
 )
@@ -16,12 +18,14 @@ func EncodeJSON(in interface{}) ([]byte, error) {
 	if in == nil {
 		return nil, fmt.Errorf("input for encoding is nil")
 	}
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
+	var b bytes.Buffer
+	enc := gojay.BorrowEncoder(&b)
 	if err := enc.Encode(in); err != nil {
+		enc.Release()
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	enc.Release()
+	return b.Bytes(), nil
 }
 
 // EncodeJSONAndCompress encodes the given input into JSON and compresses the
