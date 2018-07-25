@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/textproto"
 	"regexp"
 	"strings"
 
@@ -37,7 +39,7 @@ func (d *FieldData) Validate() error {
 		switch schema.Type {
 		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString, TypeLowerCaseString,
 			TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
-			TypeKVPairs, TypeCommaIntSlice:
+			TypeKVPairs, TypeCommaIntSlice, TypeHeader:
 			_, _, err := d.getPrimitive(field, schema)
 			if err != nil {
 				return errwrap.Wrapf(fmt.Sprintf("error converting input %v for field %q: {{err}}", value, field), err)
@@ -126,7 +128,7 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	switch schema.Type {
 	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString, TypeLowerCaseString,
 		TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
-		TypeKVPairs, TypeCommaIntSlice:
+		TypeKVPairs, TypeCommaIntSlice, TypeHeader:
 		return d.getPrimitive(k, schema)
 	default:
 		return nil, false,
@@ -288,6 +290,41 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 				return nil, false, fmt.Errorf("invalid key pair %q", keyPair)
 			}
 			result[keyPairSlice[0]] = keyPairSlice[1]
+		}
+		return result, true, nil
+
+	case TypeHeader:
+		// First try to parse this as a map
+		var mapResult map[string][]string
+		if err := mapstructure.WeakDecode(raw, &mapResult); err == nil {
+			// The http.Header Get method is case-insensitive in the key it takes,
+			// but searches the map for a matching canonicalized value. Most headers
+			// will arrive in this format, but just in case they don't, let's
+			// canonicalize all the keys.
+			result := http.Header{}
+			for k, slice := range mapResult {
+				canonicalKey := textproto.CanonicalMIMEHeaderKey(k)
+				for _, v := range slice {
+					result.Add(canonicalKey, v)
+				}
+			}
+			return result, true, nil
+		}
+
+		// If map parse fails, parse as a string list of = delimited pairs
+		var listResult []string
+		if err := mapstructure.WeakDecode(raw, &listResult); err != nil {
+			return nil, true, err
+		}
+
+		result := http.Header{}
+		for _, keyPair := range listResult {
+			keyPairSlice := strings.SplitN(keyPair, "=", 2)
+			if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {
+				return nil, false, fmt.Errorf("invalid key pair %q", keyPair)
+			}
+			// See note above about why we're canonicalizing.
+			result.Add(textproto.CanonicalMIMEHeaderKey(keyPairSlice[0]), keyPairSlice[1])
 		}
 		return result, true, nil
 

@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
 )
@@ -467,6 +468,40 @@ func TestFieldDataGet(t *testing.T) {
 			},
 		},
 
+		"type header, keypair string array": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{"key1=value1", "key2=value2", "key3=1"},
+			},
+			"foo",
+			http.Header{
+				"Key1": []string{"value1"},
+				"Key2": []string{"value2"},
+				"Key3": []string{"1"},
+			},
+		},
+
+		"type header, map string slice": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": map[string][]string{
+					"key1": {"value1"},
+					"key2": {"value2"},
+					"key3": {"1"},
+				},
+			},
+			"foo",
+			http.Header{
+				"Key1": []string{"value1"},
+				"Key2": []string{"value2"},
+				"Key3": []string{"1"},
+			},
+		},
+
 		"name string type, not supplied": {
 			map[string]*FieldSchema{
 				"foo": {Type: TypeNameString},
@@ -555,6 +590,15 @@ func TestFieldDataGet(t *testing.T) {
 			map[string]interface{}{},
 			"foo",
 			map[string]string{},
+		},
+
+		"type header, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{},
+			"foo",
+			http.Header{},
 		},
 	}
 

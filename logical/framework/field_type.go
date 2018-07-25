@@ -42,6 +42,12 @@ const (
 	// TypeCommaIntSlice is a helper for TypeSlice that returns a sanitized
 	// slice of Ints
 	TypeCommaIntSlice
+
+	// TypeHeader is a helper for sending request headers through to Vault.
+	// For instance, the AWS and AliCloud credential plugins both act as a
+	// benevolent MITM for a request, and the headers are sent through and
+	// parsed.
+	TypeHeader
 )
 
 func (t FieldType) String() string {
@@ -64,6 +70,8 @@ func (t FieldType) String() string {
 		return "duration (sec)"
 	case TypeSlice, TypeStringSlice, TypeCommaStringSlice, TypeCommaIntSlice:
 		return "slice"
+	case TypeHeader:
+		return "header"
 	default:
 		return "unknown type"
 	}
