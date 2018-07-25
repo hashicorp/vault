@@ -65,6 +65,7 @@ BUG FIXES:
  * auth/approle: Fix issue with tidy endpoint that would unnecessarily remove
    secret accessors [GH-4981]
  * auth/aws: Fix updating `max_retries` [GH-4980]
+ * cli: Fix parsing of environment variables for integer flags [GH-4925]
  * core: Fix returning 500 instead of 503 if a rekey is attempted when Vault is
    sealed [GH-4874]
  * core: Fix issue releasing the leader lock in some circumstances [GH-4915]
@@ -78,10 +79,10 @@ BUG FIXES:
    [GH-4941]
  * core: Fix accidential seal of vault of we lose leadership during startup 
    [GH-4924]
- * cli: Fix parsing of environment variables for integer flags [GH-4925]
  * core: Fix standby not being able to forward requests larger than 4MB 
    [GH-4844]
  * core: Avoid panic while processing group memberships [GH-4841]
+ * identity: Fix a race condition creating aliases [GH-4965]
  * plugins: Fix being unable to send very large payloads to or from plugins
    [GH-4958]
  * physical/azure: Long list responses would sometimes be truncaated [GH-4983]
