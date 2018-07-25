@@ -44,6 +44,10 @@ IMPROVEMENTS:
    `listing_visibility` in the auth method edit forms [GH-4854]
  * ui: Authenticate users automatically by passing a wrapped token to the UI via
    the new `wrapped_token` query parameter [GH-4854]
+ * ssh: SSH executable path can now be configured in the CLI [GH-4937]
+ * cli: Add subcommands for interacting with the plugin catalog [GH-4911]
+ * core: Add config flag to disable non-printable character check [GH-4917]
+ * storage/swift: Add additional configuration options [GH-4901]
 
 BUG FIXES:
 
@@ -65,6 +69,21 @@ BUG FIXES:
  * ui: Fix toggle state when a secret is JSON-formatted [GH-4913]
  * ui: Fix coercion of falsey values to empty string when editing secrets as 
    JSON [GH-4977]
+ * api: Fix response body being cleared too early [GH-4987]
+ * auth/approle: Fix issue with tidy endpoint that would unnecessarily remove
+   secret accessors [GH-4981]
+ * core: Fix deadlock that would occur if a leadership loss occurs at the same 
+   time as a seal operation [GH-4932]
+ * core: Fix issue with auth mounts failing to renew tokens due to policies 
+   changing [GH-4960]
+ * auth/radius: Fix issue where some radius logins were being canceled too early
+   [GH-4941]
+ * core: Fix accidential seal of vault of we lose leadership during startup 
+   [GH-4924]
+ * cli: Fix parsing of environment variables for integer flags [GH-4925]
+ * core: Fix standby not being able to forward requests larger than 4MB 
+   [GH-4844]
+ * core: Avoid panic while processing group memberships [GH-4841]
 
 ## 0.10.3 (June 20th, 2018)
 
