@@ -81,6 +81,8 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 
 	go j.runWatcher()
 
+	j.logger.Info("jwt auth method created", "path", j.path)
+
 	return j, nil
 }
 

@@ -248,11 +248,11 @@ func (c *AgentCommand) Run(args []string) int {
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
-	var sinks []sink.Sink
+	var sinks []*sink.SinkConfig
 	for _, sc := range config.AutoAuth.Sinks {
 		switch sc.Type {
 		case "file":
-			s, err := file.NewFileSink(&sink.SinkConfig{
+			config := &sink.SinkConfig{
 				Logger:  c.logger.Named("sink.file"),
 				Config:  sc.Config,
 				Client:  client,
@@ -260,12 +260,14 @@ func (c *AgentCommand) Run(args []string) int {
 				DHType:  sc.DHType,
 				DHPath:  sc.DHPath,
 				AAD:     sc.AAD,
-			})
+			}
+			s, err := file.NewFileSink(config)
 			if err != nil {
 				c.UI.Error(errwrap.Wrapf("Error creating file sink: {{err}}", err).Error())
 				return 1
 			}
-			sinks = append(sinks, s)
+			config.Sink = s
+			sinks = append(sinks, config)
 		default:
 			c.UI.Error(fmt.Sprintf("Unknown sink type %q", sc.Type))
 			return 1

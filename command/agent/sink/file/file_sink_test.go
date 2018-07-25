@@ -17,7 +17,7 @@ const (
 	fileServerTestDir = "vault-agent-file-test"
 )
 
-func testFileSink(t *testing.T, log hclog.Logger) (sink.Sink, string) {
+func testFileSink(t *testing.T, log hclog.Logger) (*sink.SinkConfig, string) {
 	tmpDir, err := ioutil.TempDir("", fmt.Sprintf("%s.", fileServerTestDir))
 	if err != nil {
 		t.Fatal(err)
@@ -36,8 +36,9 @@ func testFileSink(t *testing.T, log hclog.Logger) (sink.Sink, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	config.Sink = s
 
-	return s, tmpDir
+	return config, tmpDir
 }
 
 func TestFileSink(t *testing.T) {

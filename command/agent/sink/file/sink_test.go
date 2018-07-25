@@ -32,7 +32,7 @@ func TestSinkServer(t *testing.T) {
 
 	uuidStr, _ := uuid.GenerateUUID()
 	in := make(chan string)
-	sinks := []sink.Sink{fs1, fs2}
+	sinks := []*sink.SinkConfig{fs1, fs2}
 	go ss.Run(ctx, in, sinks)
 
 	// Seed a token
@@ -77,10 +77,6 @@ func (b *badSink) WriteToken(token string) error {
 	}
 }
 
-func (b *badSink) WrapTTL() time.Duration {
-	return 0
-}
-
 func TestSinkServerRetry(t *testing.T) {
 	log := logging.NewVaultLogger(hclog.Trace)
 
@@ -94,7 +90,7 @@ func TestSinkServerRetry(t *testing.T) {
 	})
 
 	in := make(chan string)
-	sinks := []sink.Sink{b1, b2}
+	sinks := []*sink.SinkConfig{&sink.SinkConfig{Sink: b1}, &sink.SinkConfig{Sink: b2}}
 	go ss.Run(ctx, in, sinks)
 
 	// Seed a token

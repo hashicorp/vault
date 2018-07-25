@@ -68,7 +68,7 @@ func getTestJWT(t *testing.T) (string, *ecdsa.PrivateKey) {
 	return raw, key
 }
 
-func TestJWTEndtoEnd(t *testing.T) {
+func TestJWTEndToEnd(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
@@ -146,7 +146,6 @@ func TestJWTEndtoEnd(t *testing.T) {
 	dhpath := dhpathf.Name()
 	dhpathf.Close()
 	os.Remove(dhpath)
-	t.Logf("dhpath: %s", dhpath)
 
 	// Write DH public key to file
 	mPubKey, err := jsonutil.EncodeJSON(&dhutil.PublicKeyInfo{
@@ -157,9 +156,15 @@ func TestJWTEndtoEnd(t *testing.T) {
 	}
 	if err := ioutil.WriteFile(dhpath, mPubKey, 0600); err != nil {
 		t.Fatal(err)
+	} else {
+		logger.Trace("wrote dh param file", "path", dhpath)
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
+	timer := time.AfterFunc(30*time.Second, func() {
+		cancelFunc()
+	})
+	defer timer.Stop()
 
 	am, err := agentjwt.NewJWTAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.jwt"),
@@ -182,7 +187,7 @@ func TestJWTEndtoEnd(t *testing.T) {
 		<-ah.DoneCh
 	}()
 
-	fs, err := file.NewFileSink(&sink.SinkConfig{
+	config := &sink.SinkConfig{
 		Logger:  logger.Named("sink.file"),
 		WrapTTL: 10 * time.Second,
 		AAD:     "foobar",
@@ -191,16 +196,18 @@ func TestJWTEndtoEnd(t *testing.T) {
 		Config: map[string]interface{}{
 			"path": out,
 		},
-	})
+	}
+	fs, err := file.NewFileSink(config)
 	if err != nil {
 		t.Fatal(err)
 	}
+	config.Sink = fs
 
 	ss := sink.NewSinkServer(&sink.SinkServerConfig{
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []sink.Sink{fs})
+	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
 	defer func() {
 		<-ss.DoneCh
 	}()
@@ -233,6 +240,8 @@ func TestJWTEndtoEnd(t *testing.T) {
 	jwtToken, _ := getTestJWT(t)
 	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
 		t.Fatal(err)
+	} else {
+		logger.Trace("wrote test jwt", "path", in)
 	}
 
 	checkToken := func() string {
