@@ -108,7 +108,7 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 	}
 	count := 1
 
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 	now := time.Now()
 	started := false
 	for {
