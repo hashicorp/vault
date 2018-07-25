@@ -1,4 +1,4 @@
-## 0.10.4 (Unreleased)
+## 0.10.4 (July 25th, 2018)
 
 DEPRECATIONS/CHANGES:
 
