@@ -93,7 +93,7 @@ func (f *fileSink) WriteToken(token string) error {
 	}
 
 	// Now, if we were just doing a write check (blank token), remove the file
-	// and exit; otherwise, atomically rename and chmod it
+	// and exit; otherwise, atomically rename it
 	if token == "" {
 		err = os.Remove(tmpFile.Name())
 		if err != nil {

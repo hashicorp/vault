@@ -7,17 +7,20 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
 type AuthMethod interface {
-	Authenticate(context.Context, *api.Client) (*api.Secret, error)
+	Authenticate(context.Context, *api.Client) (string, map[string]interface{}, error)
 	NewCreds() chan struct{}
+	CredSuccess()
 	Shutdown()
 }
 
 type AuthConfig struct {
 	Logger    hclog.Logger
 	MountPath string
+	WrapTTL   time.Duration
 	Config    map[string]interface{}
 }
 
@@ -29,12 +32,13 @@ type AuthHandler struct {
 	logger   hclog.Logger
 	client   *api.Client
 	random   *rand.Rand
+	wrapTTL  time.Duration
 }
 
 type AuthHandlerConfig struct {
 	Logger  hclog.Logger
 	Client  *api.Client
-	Context context.Context
+	WrapTTL time.Duration
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
@@ -44,6 +48,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		logger:   conf.Logger,
 		client:   conf.Client,
 		random:   rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
+		wrapTTL:  conf.WrapTTL,
 	}
 
 	return ah
@@ -87,27 +92,84 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 		backoff := 2*time.Second + time.Duration(ah.random.Int63()%int64(time.Second*2)-int64(time.Second))
 
 		ah.logger.Info("authenticating")
-		secret, err := am.Authenticate(ctx, ah.client)
-		// Check errors/sanity
+		path, data, err := am.Authenticate(ctx, ah.client)
 		if err != nil {
-			ah.logger.Error("error authenticating, backing off and retrying", "error", err, "backoff", backoff.Seconds())
-			backoffOrQuit(ctx, backoff)
-			continue
-		}
-		if secret.Auth == nil {
-			ah.logger.Error("authentication returned nil auth info, backing off and retrying", "backoff", backoff.Seconds())
-			backoffOrQuit(ctx, backoff)
-			continue
-		}
-		if secret.Auth.ClientToken == "" {
-			ah.logger.Error("authentication returned empty client token, backing off and retrying", "backoff", backoff.Seconds())
+			ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff.Seconds())
 			backoffOrQuit(ctx, backoff)
 			continue
 		}
 
-		// Output to the sinks
-		ah.logger.Info("authentication successful, sending token to sinks")
-		ah.OutputCh <- secret.Auth.ClientToken
+		clientToUse := ah.client
+		if ah.wrapTTL > 0 {
+			wrapClient, err := ah.client.Clone()
+			if err != nil {
+				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
+			wrapClient.SetWrappingLookupFunc(func(string, string) string {
+				return ah.wrapTTL.String()
+			})
+			clientToUse = wrapClient
+		}
+
+		secret, err := clientToUse.Logical().Write(path, data)
+		// Check errors/sanity
+		if err != nil {
+			ah.logger.Error("error authenticating", "error", err, "backoff", backoff.Seconds())
+			backoffOrQuit(ctx, backoff)
+			continue
+		}
+
+		switch {
+		case ah.wrapTTL > 0:
+			if secret.WrapInfo == nil {
+				ah.logger.Error("authentication returned nil wrap info", "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
+			if secret.WrapInfo.Token == "" {
+				ah.logger.Error("authentication returned empty wrapped client token", "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
+			wrappedResp, err := jsonutil.EncodeJSON(secret.WrapInfo)
+			if err != nil {
+				ah.logger.Error("failed to encode wrapinfo", "error", err, "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
+			ah.logger.Info("authentication successful, sending wrapped token to sinks and pausing")
+			ah.OutputCh <- string(wrappedResp)
+
+			am.CredSuccess()
+
+			select {
+			case <-ctx.Done():
+				ah.logger.Info("shutdown triggered")
+				return
+
+			case <-credCh:
+				ah.logger.Info("auth method found new credentials, re-authenticating")
+				continue
+			}
+
+		default:
+			if secret.Auth == nil {
+				ah.logger.Error("authentication returned nil auth info", "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
+			if secret.Auth.ClientToken == "" {
+				ah.logger.Error("authentication returned empty client token", "backoff", backoff.Seconds())
+				backoffOrQuit(ctx, backoff)
+				continue
+			}
+			ah.logger.Info("authentication successful, sending token to sinks")
+			ah.OutputCh <- secret.Auth.ClientToken
+
+			am.CredSuccess()
+		}
 
 		if renewer != nil {
 			renewer.Stop()

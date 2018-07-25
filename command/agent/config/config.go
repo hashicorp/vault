@@ -29,9 +29,11 @@ type AutoAuth struct {
 }
 
 type Method struct {
-	Type      string
-	MountPath string `hcl:"mount_path"`
-	Config    map[string]interface{}
+	Type       string
+	MountPath  string        `hcl:"mount_path"`
+	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
+	WrapTTL    time.Duration `hcl:"-"`
+	Config     map[string]interface{}
 }
 
 type Sink struct {
@@ -160,6 +162,14 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 	}
 	// Standardize on no trailing slash
 	m.MountPath = strings.TrimSuffix(m.MountPath, "/")
+
+	if m.WrapTTLRaw != nil {
+		var err error
+		if m.WrapTTL, err = parseutil.ParseDurationSecond(m.WrapTTLRaw); err != nil {
+			return err
+		}
+		m.WrapTTLRaw = nil
+	}
 
 	result.AutoAuth.Method = &m
 	return nil

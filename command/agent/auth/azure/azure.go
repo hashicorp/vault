@@ -74,7 +74,7 @@ func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (*api.Secret, error) {
+func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (retPath string, retData map[string]interface{}, retErr error) {
 	a.logger.Trace("beginning authentication")
 
 	// Fetch instance data
@@ -89,12 +89,14 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (*ap
 
 	body, err := getMetadataInfo(ctx, instanceEndpoint, "")
 	if err != nil {
-		return nil, err
+		retErr = err
+		return
 	}
 
 	err = jsonutil.DecodeJSON(body, &instance)
 	if err != nil {
-		return nil, errwrap.Wrapf("error parsing instance metadata response: {{err}}", err)
+		retErr = errwrap.Wrapf("error parsing instance metadata response: {{err}}", err)
+		return
 	}
 
 	// Fetch JWT
@@ -104,12 +106,14 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (*ap
 
 	body, err = getMetadataInfo(ctx, identityEndpoint, a.resource)
 	if err != nil {
-		return nil, err
+		retErr = err
+		return
 	}
 
 	err = jsonutil.DecodeJSON(body, &identity)
 	if err != nil {
-		return nil, errwrap.Wrapf("error parsing identity metadata response: {{err}}", err)
+		retErr = errwrap.Wrapf("error parsing identity metadata response: {{err}}", err)
+		return
 	}
 
 	// Attempt login
@@ -122,16 +126,14 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (*ap
 		"jwt":                 identity.AccessToken,
 	}
 
-	secret, err := client.Logical().Write(fmt.Sprintf("%s/login", a.mountPath), data)
-	if err != nil {
-		return nil, errwrap.Wrapf("error logging in: {{err}}", err)
-	}
-
-	return secret, nil
+	return fmt.Sprintf("%s/login", a.mountPath), data, nil
 }
 
 func (a *azureMethod) NewCreds() chan struct{} {
 	return nil
+}
+
+func (a *azureMethod) CredSuccess() {
 }
 
 func (a *azureMethod) Shutdown() {

@@ -110,7 +110,7 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return a, nil
 }
 
-func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (*api.Secret, error) {
+func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retToken string, retData map[string]interface{}, retErr error) {
 	a.logger.Trace("beginning authentication")
 
 	data := make(map[string]interface{})
@@ -123,20 +123,24 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 		{
 			req, err := http.NewRequest("GET", fmt.Sprintf("%s/document", identityEndpoint), nil)
 			if err != nil {
-				return nil, errwrap.Wrapf("error creating request: {{err}}", err)
+				retErr = errwrap.Wrapf("error creating request: {{err}}", err)
+				return
 			}
 			req = req.WithContext(ctx)
 			resp, err := client.Do(req)
 			if err != nil {
-				return nil, errwrap.Wrapf("error fetching instance document: {{err}}", err)
+				retErr = errwrap.Wrapf("error fetching instance document: {{err}}", err)
+				return
 			}
 			if resp == nil {
-				return nil, errors.New("empty response fetching instance document")
+				retErr = errors.New("empty response fetching instance document")
+				return
 			}
 			defer resp.Body.Close()
 			doc, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				return nil, errwrap.Wrapf("error reading instance document response body: {{err}}", err)
+				retErr = errwrap.Wrapf("error reading instance document response body: {{err}}", err)
+				return
 			}
 			data["identity"] = base64.StdEncoding.EncodeToString(doc)
 		}
@@ -145,20 +149,24 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 		{
 			req, err := http.NewRequest("GET", fmt.Sprintf("%s/signature", identityEndpoint), nil)
 			if err != nil {
-				return nil, errwrap.Wrapf("error creating request: {{err}}", err)
+				retErr = errwrap.Wrapf("error creating request: {{err}}", err)
+				return
 			}
 			req = req.WithContext(ctx)
 			resp, err := client.Do(req)
 			if err != nil {
-				return nil, errwrap.Wrapf("error fetching instance document signature: {{err}}", err)
+				retErr = errwrap.Wrapf("error fetching instance document signature: {{err}}", err)
+				return
 			}
 			if resp == nil {
-				return nil, errors.New("empty response fetching instance document signature")
+				retErr = errors.New("empty response fetching instance document signature")
+				return
 			}
 			defer resp.Body.Close()
 			sig, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				return nil, errwrap.Wrapf("error reading instance document signature response body: {{err}}", err)
+				retErr = errwrap.Wrapf("error reading instance document signature response body: {{err}}", err)
+				return
 			}
 			data["signature"] = string(sig)
 		}
@@ -167,7 +175,8 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 		if a.nonce == "" {
 			uuid, err := uuid.GenerateUUID()
 			if err != nil {
-				return nil, errwrap.Wrapf("error generating uuid for reauthentication value: {{err}}", err)
+				retErr = errwrap.Wrapf("error generating uuid for reauthentication value: {{err}}", err)
+				return
 			}
 			a.nonce = uuid
 		}
@@ -177,22 +186,21 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 		var err error
 		data, err = awsauth.GenerateLoginData(a.accessKey, a.secretKey, a.sessionToken, a.headerValue)
 		if err != nil {
-			return nil, errwrap.Wrapf("error creating login value: {{err}}", err)
+			retErr = errwrap.Wrapf("error creating login value: {{err}}", err)
+			return
 		}
 	}
 
 	data["role"] = a.role
 
-	secret, err := client.Logical().Write(fmt.Sprintf("%s/login", a.mountPath), data)
-	if err != nil {
-		return nil, errwrap.Wrapf("error logging in: {{err}}", err)
-	}
-
-	return secret, nil
+	return fmt.Sprintf("%s/login", a.mountPath), data, nil
 }
 
 func (a *awsMethod) NewCreds() chan struct{} {
 	return nil
+}
+
+func (a *awsMethod) CredSuccess() {
 }
 
 func (a *awsMethod) Shutdown() {

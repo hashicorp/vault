@@ -22,9 +22,9 @@ value has changed.
 When the agent is started with Auto-Auth enabled, it will attempt to acquire a
 Vault token using the configured Method. On failure, it will back off for a
 short while (including some randomness to help prevent thundering herd
-scenarios) and retry. On success, it will keep the resulting token renewed
-until renewal is no longer allowed or fails, at which point it will attempt to
-reauthenticate.
+scenarios) and retry. On success, unless the auth method is configured to wrap
+the tokens, it will keep the resulting token renewed until renewal is no longer
+allowed or fails, at which point it will attempt to reauthenticate.
 
 Every time an authentication is successful, the token is written to the
 configured Sinks, subject to their configuration.
@@ -40,15 +40,23 @@ response-wrapped, then encrypted.
 
 ### Response-Wrapping Tokens
 
-Although this works similarly to regular response-wrapping from Vault, there is
-one thing that _must_ be kept in mind:
+There are two ways that tokens can be response-wrapped by the agent:
 
-~> **NOTE**: Because more than one sink can be configured, the token must be
-wrapped after it is fetched, rather than wrapped by Vault as it's being
-returned. As a result, the `creation_path` will always be `sys/wrapping/wrap`,
-and validation of this field cannot be used as protection against MITM attacks.
-A future version of Agent may request wrapping directly by Vault if only one
-sink is configured.
+1. By the auth method. This allows the end client to introspect the
+   `creation_path` of the token, helping prevent Man-In-The-Middle (MITM)
+   attacks. However, because the agent cannot then unwrap the token and rewrap
+   it without modifying the `creation_path`, the agent is not able to renew the
+   token; it is up to the end client to renew the token. The agent stays
+   daemonized in this mode since some auth methods allow for reauthentication
+   on certain events.
+
+2. By any of the token sinks. Because more than one sink can be configured, the
+   token must be wrapped after it is fetched, rather than wrapped by Vault as
+   it's being returned. As a result, the `creation_path` will always be
+   `sys/wrapping/wrap`, and validation of this field cannot be used as
+   protection against MITM attacks. However, this mode allows the agent to keep
+   the token renewed for the end client and automatically reauthenticate when
+   it expires.
 
 ### Encrypting Tokens
 
@@ -105,6 +113,15 @@ These are common configuration values that live within the `method` block:
 - `mount_path` `(string: optional)` - The mount path of the method. If not
   specified, defaults to a value of `auth/<method type>`.
 
+- `wrap_ttl` `(string or integer: optional)` - If specified, the written token
+  will be response-wrapped by the agent. This is more secure than wrapping by
+  sinks, but does not allow the agent to keep the token renewed or
+  automatically reauthenticate when it expires. Rather than a simple string,
+  the written value will be a JSON-encoded
+  [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
+  structure. Values can be an integer number of seconds or a stringish value
+  like `5m`.
+
 - `config` `(object: required)` - Configuration of the method itself. See the
   sidebar for information about each method.
 
@@ -116,9 +133,11 @@ These configuration values are common to all Sinks:
   *Note*: when using HCL this can be used as the key for the block, e.g. `sink
   "file" {...}`.
 
-- `wrap_ttl` `(string or integer: optional)` - If specified, the written token will be
-  response-wrapped. Rather than a simple string, the written value will be a
-  JSON-encoded
+- `wrap_ttl` `(string or integer: optional)` - If specified, the written token
+  will be response-wrapped by the sink. This is less secure than wrapping by
+  the method, but allows the agent to keep the token renewed and automatically
+  reauthenticate when it expires. Rather than a simple string, the written
+  value will be a JSON-encoded
   [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
   structure. Values can be an integer number of seconds or a stringish value
   like `5m`.

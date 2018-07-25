@@ -116,7 +116,7 @@ func NewGCPAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return g, nil
 }
 
-func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (*api.Secret, error) {
+func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPath string, retData map[string]interface{}, retErr error) {
 	g.logger.Trace("beginning authentication")
 
 	data := make(map[string]interface{})
@@ -130,7 +130,8 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 		{
 			req, err := http.NewRequest("GET", fmt.Sprintf(identityEndpoint, g.serviceAccount), nil)
 			if err != nil {
-				return nil, errwrap.Wrapf("error creating request: {{err}}", err)
+				retErr = errwrap.Wrapf("error creating request: {{err}}", err)
+				return
 			}
 			req = req.WithContext(ctx)
 			req.Header.Add("Metadata-Flavor", "Google")
@@ -140,15 +141,18 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 			req.URL.RawQuery = q.Encode()
 			resp, err := httpClient.Do(req)
 			if err != nil {
-				return nil, errwrap.Wrapf("error fetching instance token: {{err}}", err)
+				retErr = errwrap.Wrapf("error fetching instance token: {{err}}", err)
+				return
 			}
 			if resp == nil {
-				return nil, errors.New("empty response fetching instance toke")
+				retErr = errors.New("empty response fetching instance toke")
+				return
 			}
 			defer resp.Body.Close()
 			jwtBytes, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				return nil, errwrap.Wrapf("error reading instance token response body: {{err}}", err)
+				retErr = errwrap.Wrapf("error reading instance token response body: {{err}}", err)
+				return
 			}
 
 			jwt = string(jwtBytes)
@@ -159,7 +163,8 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 
 		credentials, tokenSource, err := gcputil.FindCredentials(g.credentials, ctx, iam.CloudPlatformScope)
 		if err != nil {
-			return nil, errwrap.Wrapf("could not obtain credentials: {{err}}", err)
+			retErr = errwrap.Wrapf("could not obtain credentials: {{err}}", err)
+			return
 		}
 
 		httpClient := oauth2.NewClient(ctx, tokenSource)
@@ -171,7 +176,8 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 			serviceAccount = g.serviceAccount
 		}
 		if serviceAccount == "" {
-			return nil, errors.New("could not obtain service account from credentials (possibly Application Default Credentials are being used); a service account to authenticate as must be provided")
+			retErr = errors.New("could not obtain service account from credentials (possibly Application Default Credentials are being used); a service account to authenticate as must be provided")
+			return
 		}
 
 		project := "-"
@@ -194,7 +200,8 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 		}
 		payloadBytes, err := json.Marshal(jwtPayload)
 		if err != nil {
-			return nil, errwrap.Wrapf("could not convert JWT payload to JSON string: {{err}}", err)
+			retErr = errwrap.Wrapf("could not convert JWT payload to JSON string: {{err}}", err)
+			return
 		}
 
 		jwtReq := &iam.SignJwtRequest{
@@ -203,13 +210,15 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 
 		iamClient, err := iam.New(httpClient)
 		if err != nil {
-			return nil, errwrap.Wrapf("could not create IAM client: {{err}}", err)
+			retErr = errwrap.Wrapf("could not create IAM client: {{err}}", err)
+			return
 		}
 
 		resourceName := fmt.Sprintf("projects/%s/serviceAccounts/%s", project, serviceAccount)
 		resp, err := iamClient.Projects.ServiceAccounts.SignJwt(resourceName, jwtReq).Do()
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("unable to sign JWT for %s using given Vault credentials: {{err}}", resourceName), err)
+			retErr = errwrap.Wrapf(fmt.Sprintf("unable to sign JWT for %s using given Vault credentials: {{err}}", resourceName), err)
+			return
 		}
 
 		jwt = resp.SignedJwt
@@ -218,16 +227,14 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (*api.
 	data["role"] = g.role
 	data["jwt"] = jwt
 
-	secret, err := client.Logical().Write(fmt.Sprintf("%s/login", g.mountPath), data)
-	if err != nil {
-		return nil, errwrap.Wrapf("error logging in: {{err}}", err)
-	}
-
-	return secret, nil
+	return fmt.Sprintf("%s/login", g.mountPath), data, nil
 }
 
 func (g *gcpMethod) NewCreds() chan struct{} {
 	return nil
+}
+
+func (g *gcpMethod) CredSuccess() {
 }
 
 func (g *gcpMethod) Shutdown() {

@@ -10,7 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
@@ -86,34 +85,30 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return j, nil
 }
 
-func (j *jwtMethod) Authenticate(_ context.Context, client *api.Client) (*api.Secret, error) {
+func (j *jwtMethod) Authenticate(_ context.Context, client *api.Client) (string, map[string]interface{}, error) {
 	j.logger.Trace("beginning authentication")
 
 	j.ingressToken()
 
 	latestToken := j.latestToken.Load().(string)
 	if latestToken == "" {
-		return nil, errors.New("latest known jwt is empty, cannot authenticate")
+		return "", nil, errors.New("latest known jwt is empty, cannot authenticate")
 	}
 
-	secret, err := client.Logical().Write(fmt.Sprintf("%s/login", j.mountPath), map[string]interface{}{
+	return fmt.Sprintf("%s/login", j.mountPath), map[string]interface{}{
 		"role": j.role,
 		"jwt":  latestToken,
-	})
-
-	if err != nil {
-		return nil, errwrap.Wrapf("error logging in: {{err}}", err)
-	}
-
-	j.once.Do(func() {
-		close(j.credSuccessGate)
-	})
-
-	return secret, nil
+	}, nil
 }
 
 func (j *jwtMethod) NewCreds() chan struct{} {
 	return j.credsFound
+}
+
+func (j *jwtMethod) CredSuccess() {
+	j.once.Do(func() {
+		close(j.credSuccessGate)
+	})
 }
 
 func (j *jwtMethod) Shutdown() {

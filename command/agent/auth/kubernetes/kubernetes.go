@@ -8,7 +8,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
@@ -18,7 +17,7 @@ const (
 	serviceAccountFile = "var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
-type kubeMethod struct {
+type kubernetesMethod struct {
 	logger    hclog.Logger
 	mountPath string
 
@@ -33,7 +32,7 @@ func NewKubernetesAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("empty config data")
 	}
 
-	k := &kubeMethod{
+	k := &kubernetesMethod{
 		logger:    conf.Logger,
 		mountPath: conf.MountPath,
 	}
@@ -53,27 +52,25 @@ func NewKubernetesAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return k, nil
 }
 
-func (k *kubeMethod) Authenticate(ctx context.Context, client *api.Client) (*api.Secret, error) {
+func (k *kubernetesMethod) Authenticate(ctx context.Context, client *api.Client) (string, map[string]interface{}, error) {
 	k.logger.Trace("beginning authentication")
 	content, err := ioutil.ReadFile(serviceAccountFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	secret, err := client.Logical().Write(fmt.Sprintf("%s/login", k.mountPath), map[string]interface{}{
+	return fmt.Sprintf("%s/login", k.mountPath), map[string]interface{}{
 		"role": k.role,
 		"jwt":  strings.TrimSpace(string(content)),
-	})
-	if err != nil {
-		return nil, errwrap.Wrapf("error authenticating with Kubernetes: {{err}}", err)
-	}
-
-	return secret, nil
+	}, nil
 }
 
-func (k *kubeMethod) NewCreds() chan struct{} {
+func (k *kubernetesMethod) NewCreds() chan struct{} {
 	return nil
 }
 
-func (k *kubeMethod) Shutdown() {
+func (k *kubernetesMethod) CredSuccess() {
+}
+
+func (k *kubernetesMethod) Shutdown() {
 }

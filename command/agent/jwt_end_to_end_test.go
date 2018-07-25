@@ -69,6 +69,11 @@ func getTestJWT(t *testing.T) (string, *ecdsa.PrivateKey) {
 }
 
 func TestJWTEndToEnd(t *testing.T) {
+	testJWTEndToEnd(t, false)
+	testJWTEndToEnd(t, true)
+}
+
+func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
@@ -178,24 +183,30 @@ func TestJWTEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
+	ahConfig := &auth.AuthHandlerConfig{
 		Logger: logger.Named("auth.handler"),
 		Client: client,
-	})
+	}
+	if ahWrapping {
+		ahConfig.WrapTTL = 10 * time.Second
+	}
+	ah := auth.NewAuthHandler(ahConfig)
 	go ah.Run(ctx, am)
 	defer func() {
 		<-ah.DoneCh
 	}()
 
 	config := &sink.SinkConfig{
-		Logger:  logger.Named("sink.file"),
-		WrapTTL: 10 * time.Second,
-		AAD:     "foobar",
-		DHType:  "curve25519",
-		DHPath:  dhpath,
+		Logger: logger.Named("sink.file"),
+		AAD:    "foobar",
+		DHType: "curve25519",
+		DHPath: dhpath,
 		Config: map[string]interface{}{
 			"path": out,
 		},
+	}
+	if !ahWrapping {
+		config.WrapTTL = 10 * time.Second
 	}
 	fs, err := file.NewFileSink(config)
 	if err != nil {
@@ -284,46 +295,61 @@ func TestJWTEndToEnd(t *testing.T) {
 				switch {
 				case wrapInfo.TTL != 10:
 					t.Fatalf("bad wrap info: %v", wrapInfo.TTL)
-				case wrapInfo.CreationPath != "sys/wrapping/wrap":
+				case !ahWrapping && wrapInfo.CreationPath != "sys/wrapping/wrap":
+					t.Fatalf("bad wrap path: %v", wrapInfo.CreationPath)
+				case ahWrapping && wrapInfo.CreationPath != "auth/jwt/login":
 					t.Fatalf("bad wrap path: %v", wrapInfo.CreationPath)
 				case wrapInfo.Token == "":
 					t.Fatal("wrap token is empty")
 				}
 				cloned.SetToken(wrapInfo.Token)
 				secret, err := cloned.Logical().Unwrap("")
-				switch {
-				case err != nil:
+				if err != nil {
 					t.Fatal(err)
-				case secret.Data == nil:
-					t.Fatal("unwrap secret data is nil")
-				case secret.Data["token"] == nil:
-					t.Fatal("unwrap secret data is nil")
 				}
-
-				return secret.Data["token"].(string)
+				if ahWrapping {
+					switch {
+					case secret.Auth == nil:
+						t.Fatal("unwrap secret auth is nil")
+					case secret.Auth.ClientToken == "":
+						t.Fatal("unwrap token is nil")
+					}
+					return secret.Auth.ClientToken
+				} else {
+					switch {
+					case secret.Data == nil:
+						t.Fatal("unwrap secret data is nil")
+					case secret.Data["token"] == nil:
+						t.Fatal("unwrap token is nil")
+					}
+					return secret.Data["token"].(string)
+				}
 			}
 			time.Sleep(250 * time.Millisecond)
 		}
 	}
 	origToken := checkToken()
 
-	// Period of 3 seconds, so should still be alive after 7
-	timeout := time.Now().Add(7 * time.Second)
-	cloned.SetToken(origToken)
-	for {
-		if time.Now().After(timeout) {
-			break
-		}
-		secret, err := cloned.Auth().Token().LookupSelf()
-		if err != nil {
-			t.Fatal(err)
-		}
-		ttl, err := secret.Data["ttl"].(json.Number).Int64()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if ttl > 3 {
-			t.Fatalf("unexpected ttl: %v", secret.Data["ttl"])
+	// We only check this if the renewer is actually renewing for us
+	if !ahWrapping {
+		// Period of 3 seconds, so should still be alive after 7
+		timeout := time.Now().Add(7 * time.Second)
+		cloned.SetToken(origToken)
+		for {
+			if time.Now().After(timeout) {
+				break
+			}
+			secret, err := cloned.Auth().Token().LookupSelf()
+			if err != nil {
+				t.Fatal(err)
+			}
+			ttl, err := secret.Data["ttl"].(json.Number).Int64()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ttl > 3 {
+				t.Fatalf("unexpected ttl: %v", secret.Data["ttl"])
+			}
 		}
 	}
 
@@ -339,31 +365,33 @@ func TestJWTEndToEnd(t *testing.T) {
 		t.Fatal("found same token written")
 	}
 
-	// Repeat the period test. At the end the old token should have expired and
-	// the new token should still be alive after 7
-	timeout = time.Now().Add(7 * time.Second)
-	cloned.SetToken(newToken)
-	for {
-		if time.Now().After(timeout) {
-			break
+	if !ahWrapping {
+		// Repeat the period test. At the end the old token should have expired and
+		// the new token should still be alive after 7
+		timeout := time.Now().Add(7 * time.Second)
+		cloned.SetToken(newToken)
+		for {
+			if time.Now().After(timeout) {
+				break
+			}
+			secret, err := cloned.Auth().Token().LookupSelf()
+			if err != nil {
+				t.Fatal(err)
+			}
+			ttl, err := secret.Data["ttl"].(json.Number).Int64()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ttl > 3 {
+				t.Fatalf("unexpected ttl: %v", secret.Data["ttl"])
+			}
 		}
-		secret, err := cloned.Auth().Token().LookupSelf()
-		if err != nil {
-			t.Fatal(err)
-		}
-		ttl, err := secret.Data["ttl"].(json.Number).Int64()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if ttl > 3 {
-			t.Fatalf("unexpected ttl: %v", secret.Data["ttl"])
-		}
-	}
 
-	cloned.SetToken(origToken)
-	_, err = cloned.Auth().Token().LookupSelf()
-	if err == nil {
-		t.Fatal("expected error")
+		cloned.SetToken(origToken)
+		_, err = cloned.Auth().Token().LookupSelf()
+		if err == nil {
+			t.Fatal("expected error")
+		}
 	}
 }
 

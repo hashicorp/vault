@@ -31,20 +31,23 @@ func newUserpassTestMethod(t *testing.T, client *api.Client) AuthMethod {
 	return &userpassTestMethod{}
 }
 
-func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (*api.Secret, error) {
+func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (string, map[string]interface{}, error) {
 	_, err := client.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
 		"password": "bar",
 	})
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
-	return client.Logical().Write("auth/userpass/login/foo", map[string]interface{}{
+	return "auth/userpass/login/foo", map[string]interface{}{
 		"password": "bar",
-	})
+	}, nil
 }
 
 func (u *userpassTestMethod) NewCreds() chan struct{} {
 	return nil
+}
+
+func (u *userpassTestMethod) CredSuccess() {
 }
 
 func (u *userpassTestMethod) Shutdown() {

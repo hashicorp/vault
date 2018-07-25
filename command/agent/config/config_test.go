@@ -25,6 +25,7 @@ func TestLoadConfigFile(t *testing.T) {
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
+				WrapTTL:   300 * time.Second,
 				MountPath: "auth/aws",
 				Config: map[string]interface{}{
 					"role": "foobar",
