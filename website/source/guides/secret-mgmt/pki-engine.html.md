@@ -36,8 +36,8 @@ Revocation List (CRL) Profile](https://tools.ietf.org/html/rfc5280)
 
 ## Personas
 
-The steps described in this guide are typically performed by **security engineer**
-persona.
+The steps described in this guide are typically performed by **security
+engineer**.
 
 
 ## Challenge
@@ -127,6 +127,7 @@ In this guide, you perform the following:
 1. [Create a Role](#step3)
 1. [Request Certificates](#step4)
 1. [Revoke Certificates](#step5)
+1. [Remove Expired Certificates](#step6)
 
 
 
@@ -523,7 +524,7 @@ Execute the following command to request a new certificate for `test.example.com
 domain based on the `example-dot-com` role:
 
 ```plaintext
-$ vault write pki_int/issue/example-dot-com common_name="test.example.com" ttl="720h"
+$ vault write pki_int/issue/example-dot-com common_name="test.example.com" ttl="24h"
 
 Key                 Value
 ---                 -----
@@ -565,7 +566,7 @@ Request a certificate for `test.example.com` domain based on the
 ```plaintext
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
-       --data '{"common_name": "test.example.com", "ttl": "720h"}' \
+       --data '{"common_name": "test.example.com", "ttl": "24h"}' \
        https://127.0.0.1:8200/v1/pki_int/issue/example-dot-com | jq
 {
  "request_id": "6fa8d77d-0758-33ae-b5ea-8b3d15014fd1",
@@ -595,7 +596,7 @@ serial number.
 1. Select **pki_int** from the **Secrets Engines** list.
 1. Select **example-dot-com** under **Roles**.
 1. Enter **`test.example.com`** in the **Common Name** field.
-1. Select **Options** to expand, and then set the **TTL** to **`720 hours`**.  
+1. Select **Options** to expand, and then set the **TTL** to **`24 hours`**.  
 1. Select **Hide Options** and then click **Generate**.
     ![Issue Certificate](/assets/images/vault-pki-3.png)
 
@@ -661,15 +662,41 @@ $ curl --header "X-Vault-Token: ..." \
 1. Click **Revoke**.  At the confirmation, click **Revoke** again.
 
 
+### <a name="step6"></a>Step 6: Remove Expired Certificates
 
+Keep the storage backend and CRL by periodically removing certificates that have
+expired and are past a certain buffer period beyond their expiration time.
 
+#### CLI Command
 
+To remove revoked certificate and clean the CRL.
 
+```plaintext
+$ vault write pki_int/tidy tidy_cert_store=true tidy_revocation_list=true
+```
 
+#### API call using cURL
 
+Invoke the **`/pki_int/tidy`** endpoint to remove revoked certificate and clean
+the CRL.
 
+**Example:**
 
+```plaintext
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       --data '{"tidy_cert_store": true, "tidy_revocation_list": true}' \
+       https://127.0.0.1:8200/v1/pki_int/tidy
+```
 
+#### Web UI
+
+1. Select **Secrets**.
+1. Select **pki_int** from the **Secrets Engines** list.
+1. Select **Configure**.
+1. Select the **Tidy** tab.
+1. Select the check-box for **Tidy the Certificate Store** and **Tidy the Revocation List (CRL)**.
+1. Click **Save**.
 
 
 ## Next steps
