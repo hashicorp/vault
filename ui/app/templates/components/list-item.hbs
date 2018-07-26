@@ -1,19 +1,19 @@
 {{#if componentName}}
-  {{component componentName item=item }}
+  {{component componentName item=item}}
 {{else if linkParams}}
   <LinkedBlock @params={{linkParms}} @class="list-item-row">
     <div class="level is-mobile">
       <div class="level-left">
         <div>
           <a href={{href-to params=linkParams}} class="has-text-weight-semibold">
-            {{yield (hash content=(component "list-item/content" ))}}
+            {{yield (hash content=(component "list-item/content"))}}
           </a>
         </div>
       </div>
       <div class="level-right">
         <div class="level-item">
           {{#if hasBlock}}
-            {{yield (hash menu=(component "list-item/popup-menu"))}}
+            {{yield (hash callMethod=callMethod menu=(component "list-item/popup-menu"))}}
           {{/if}}
         </div>
       </div>
@@ -24,14 +24,12 @@
     <div class="level is-mobile">
       <div class="level-left">
         <div class="has-text-grey has-text-weight-semibold">
-          {{yield (hash content=(component "list-item/content" ))}}
+          {{yield (hash content=(component "list-item/content"))}}
         </div>
       </div>
       <div class="level-right">
         <div class="level-item">
-          {{#if hasBlock}}
-            {{yield (hash menu=(component "list-item/popup-menu"))}}
-          {{/if}}
+            {{yield (hash callMethod=callMethod menu=(component "list-item/popup-menu"))}}
         </div>
       </div>
     </div>

@@ -12,18 +12,18 @@
   </p.levelRight>
 </PageHeader>
 <ListView @items={{model}} @itemNoun="namespace" as |list|>
-<ListItem as |LItem|>
-    <LItem.content>
+<ListItem as |Item|>
+    <Item.content>
       {{list.item.id}}
-    </LItem.content>
+    </Item.content>
 
-    <LItem.menu>
+    <Item.menu>
       <li class="action">
         <ConfirmAction
           @confirmButtonClasses="button is-primary"
           @confirmButtonText="Remove"
           @buttonClasses="link is-destroy"
-          @onConfirmAction={{action (perform list.deleteItem list.item (concat "Successfully deleted namespace: " list.item.id) "There was an error deleting this namespace: ") }}
+          @onConfirmAction={{action (perform Item.callMethod "destroyRecord" list.item (concat "Successfully deleted namespace: " list.item.id) "There was an error deleting this namespace: ") }}
           @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
           @showConfirm={{get this (concat "shouldDelete-" list.item.id)}}
           @class={{if (get this (concat "shouldDelete-" list.item.id)) "message is-block is-warning is-outline"}}
@@ -33,6 +33,6 @@
           Delete
         </ConfirmAction>
       </li>
-    </LItem.menu>
+    </Item.menu>
   </ListItem>
 </ListView>
