@@ -1,6 +1,6 @@
 ---
 layout: "guides"
-page_title: "PKI Secrets Engine Demo - Guides"
+page_title: "Build Your Own Certificate Authority - Guides"
 sidebar_current: "guides-secret-mgmt-pki"
 description: |-
   The PKI secrets engine generates dynamic X.509 certificates. With this secrets
@@ -11,33 +11,22 @@ description: |-
   functionality.
 ---
 
-# PKI Secrets Engine
+# Build Your Own Certificate Authority (CA)
 
-Use Vault to create X509 certificates for usage in MTLS or other arbitrary PKI
-encryption.   While this can be used to create web server certificates.  If
-users do not import the CA chains, the browser will complain about self-signed
-certificates.
-
-Creating PKI certificates is generally a cumbersome process using traditional
-tools like openssl or even more advanced frameworks like CFSSL.   These tools
-also require a human component to verify certificate distribution meets
-organizational security policies.   
-
-The purpose of this guide is to provide the instruction to reproduce the working
-implementation demo introduced in the [Streamline Certificate Management with HashiCorp Vault](https://www.hashicorp.com/resources/streamline-certificate-management-with-vault)
-webinar.
-
-[![YouTube](/assets/images/vault-pki-demo-1.png)](https://youtu.be/k8FXTeFCp90)
+Vault's PKI secrets engine can dynamically generate X.509 certificates on
+demand. This allows services to acquire certificates without going through the
+usual manual process of generating a private key and Certificates Signing
+Request (CSR), submitting to a CA, and then wait for the verification and
+signing process to complete.
 
 
 ## Reference Material
 
-- [Streamline Certificate Management with HashiCorp Vault](https://www.hashicorp.com/resources/streamline-certificate-management-with-vault)
+- [PKI (Certificates) Secrets Engine](/docs/secrets/pki/index.html)
+- [PKI Secrets Engine (API)](/api/secret/pki/index.html)
 - [RFC 5280 Internet X.509 Public Key Infrastructure Certificate and Certificate
 Revocation List (CRL) Profile](https://tools.ietf.org/html/rfc5280)
 - [OpenSSL x509 Man Pages](https://www.openssl.org/docs/man1.1.0/apps/x509.html)
-- [PKI (Certificates) Secrets Engine](/docs/secrets/pki/index.html)
-- [PKI Secrets Engine (API)](/api/secret/pki/index.html)
 
 
 ## Estimated Time to Complete
@@ -45,29 +34,30 @@ Revocation List (CRL) Profile](https://tools.ietf.org/html/rfc5280)
 15 minutes
 
 
+## Personas
+
+The steps described in this guide are typically performed by **security engineer**
+persona.
+
+
 ## Challenge
 
-Traditional PKI process workflow looks like:
+Organizations should protect their website; however, the Traditional PKI process
+workflow takes a long time which motivates organizations to create certificates
+which do not expire for a year or more.
 
-1. Create Certificates Signing Request (CSR)
-    - Generate public and private keys
-    - Sign CSR with your private key
-1. Submit your CSR to Certificate Authority (CA)
-1. CA usually signs the CSR and returns the public key which is your certificate
-
-If revocation is needed, you have to update your locate Certificate Revocation
-List (CRL) or Online Certificate Status Protocol (OCSP).
-
-
-Typical SSH login methods:
-
-- Host-based
-- Username and Password
-- SSH keys
-
-The host must be well secured.
 
 ## Solution
+
+Use Vault to create X509 certificates for usage in MTLS or other arbitrary PKI
+encryption.   While this can be used to create web server certificates.  If
+users do not import the CA chains, the browser will complain about self-signed
+certificates.
+
+Creating PKI certificates is generally a cumbersome process using traditional
+tools like `openssl` or even more advanced frameworks like CFSSL.   These tools
+also require a human component to verify certificate distribution meets
+organizational security policies.   
 
 Vault PKI secrets engine makes this a lot simpler.  The PKI secrets engine can
 be an Intermediate-Only certificate authority which potentially allows for
@@ -81,545 +71,600 @@ higher levels of security.
 
 ## Prerequisites
 
-The following resources are required to perform the demo described in this guide:
+To perform the tasks described in this guide, you need to have a Vault
+environment.  Refer to the [Getting
+Started](/intro/getting-started/install.html) guide to install Vault.
 
-* Linux or iOS (Windows support in the future)
-* [VirtualBox](https://www.virtualbox.org/wiki/Downloads) (tested with `5.2.6`)
-* [Vagrant](https://www.vagrantup.com/downloads.html) (tested with `2.0.2`)
+Alternatively, you can use the [Vault
+Playground](https://www.katacoda.com/hashicorp/scenarios/vault-playground)
+environment.
 
 
-### Download the demo assets
+### <a name="policy"></a>Policy requirements
 
-Clone or download the demo assets from the
-[hashicorp/vault-guides](https://github.com/hashicorp/vault-guides/tree/master/secrets/pki/vagrant)
-GitHub repository to perform the steps described in this guide.
+-> **NOTE:** For the purpose of this guide, you can use **`root`** token to work
+with Vault. However, it is recommended that root tokens are only used for just
+enough initial setup or in emergencies. As a best practice, use tokens with
+appropriate set of policies based on your role in the organization.
 
-```plaintext
-$ git clone https://github.com/hashicorp/vault-guides.git
-$ cd vault-guides/secrets/pki/vagrant
+To perform all tasks demonstrated in this guide, your policy must include the
+following permissions:
+
+```shell
+# Enable secrets engine
+path "sys/mounts/*" {
+  capabilities = [ "create", "read", "update", "delete", "list" ]
+}
+
+# List enabled secrets engine
+path "sys/mounts" {
+  capabilities = [ "read", "list" ]
+}
+
+# Work with pki secrets engine
+path "pki*" {
+  capabilities = [ "create", "read", "update", "delete", "list", "sudo" ]
+}
 ```
+
+If you are not familiar with policies, complete the
+[policies](/guides/identity/policies.html) guide.
+
 
 ## Steps
 
--> **NOTE:** This guide leverages Vegrant to setup a
-[Vault](https://www.vagrantup.com/downloads.html) environment. Make sure that
-you have installed Vagrant as well as VirtualBox as specified in the
-[Prerequisites](#prerequisites).
+In this guide, you are going to first generate a self-signed root certificate.
+Then you are going to generate an intermediate certificate which is signed by
+the root. Finally, you are going to generate a certificate for
+`test.example.com` domain.
 
+![Overview](/assets/images/vault-pki-4.png)
 
 In this guide, you perform the following:
 
-1. [Provision a demo virtual machine](#step1)
-1. [Run demo \#1](#step2)
-1. [Run demo \#2](#step3)
-1. [Run demo \#3](#step4)
-1. [Run demo \#4](#step5)
-1. [Run demo \#5](#step6)
-1. [Tear down the demo environment](#step7)
+1. [Generate Root CA](#step1)
+1. [Generate Intermediate CA](#step2)
+1. [Create a Role](#step3)
+1. [Request Certificates](#step4)
+1. [Revoke Certificates](#step5)
 
 
-### <a name="step1"></a>Step 1: Provision a demo virtual machine
 
-1. First, change your working directory to `pki/vagrant/demo`.
+### <a name="step1"></a>Step 1: Generate Root CA
+
+In this step, you are going to generate a self-signed root certificate using
+PKI secrets engine.
+
+#### CLI command
+
+1. First, enable the `pki` secrets engine at `pki` path:
 
     ```plaintext
-    $ cd vault-guides/secrets/pki/vagrant/demo
+    $ vault secrets enable pki
     ```
 
-1. Locate the **`default_env.sh`** file in which a number of environment variables
-are listed.  Some of them have default values set with a matching variable name
-prefixed with "`DEFAULT_`".
+1. Tune the `pki` secrets engine to issue certificates with a maximum time-to-live (TTL) of 87600 hours.
 
-    ```shell
-    # These are all the defaults for any environment variables below.  Setting environment variables before accessing this set of defaults will override anything set here.
-    DEFAULT_ROOT_DOMAIN=hashidemos.com
-
-    # Software versions.   These are probably the only values that should change over time
-    DEFAULT_VAULT_VERSION=0.10.1
-    DEFAULT_CONSUL_VERSION=1.0.6
-    DEFAULT_CONSUL_TEMPLATE_VERSION=0.19.4
-    ...
-
-    VAULT_VERSION=${VAULT_VERSION:-$DEFAULT_VAULT_VERSION}
-    ...
-
-    CONSUL_VERSION=${CONSUL_VERSION:-$DEFAULT_CONSUL_VERSION}
-    ...
-
-    CONSUL_TEMPLATE_VERSION=${CONSUL_TEMPLATE_VERSION:-$DEFAULT_CONSUL_TEMPLATE_VERSION}
-    ...
+    ```plaintext
+    $ vault secrets tune -max-lease-ttl=87600h pki
     ```
 
-    The default values should be sufficient enough to perform this guide. If you
-    wish to overwrite any of the values, set the values of the environment
-    variables without the "`DEFAULT_`" prefix.
+1. Generate the ***root*** certificate and save the certificate in `CA_cert.crt`.
+
+    ```plaintext
+    $ vault write -field=certificate pki/root/generate/internal common_name="example.com" \
+            ttl=87600h > CA_cert.crt
+    ```
+
+    This generates a new self-signed CA certificate and private key. Vault will
+    _automatically_ revoke the generated root at the end of its lease period
+    (TTL); the CA certificate will sign its own Certificate Revocation List
+    (CRL).
+
+1. Configure the CA and CRL URLs:
+
+    ```plaintext
+    $ vault write pki/config/urls \
+            issuing_certificates="http://127.0.0.1:8200/v1/pki/ca" \
+            crl_distribution_points="http://127.0.0.1:8200/v1/pki/crl"
+    ```
+
+#### API call using cURL
+
+1. First, enable the `pki` secrets engine at `pki` path using `/sys/mounts` endpoint:
+
+    ```plaintext
+    $ curl --header "X-Vault-Token: <TOKEN>" \
+           --request POST \
+           --data <PARAMETERS> \
+           <VAULT_ADDRESS>/v1/sys/mounts/<PATH>
+    ```
+
+    Where `<TOKEN>` is your valid token, and `<PARAMETERS>` holds [configuration
+    parameters](/api/system/mounts.html#enable-secrets-engine) of the secret engine.
 
     **Example:**
 
-    ```shell
-    # These are all the defaults for any environment variables below.  Setting environment variables before accessing this set of defaults will override anything set here.
-    DEFAULT_ROOT_DOMAIN=hashidemos.com
-
-    # Software versions.   These are probably the only values that should change over time
-    DEFAULT_VAULT_VERSION=0.10.1
-    DEFAULT_CONSUL_VERSION=1.0.6
-    DEFAULT_CONSUL_TEMPLATE_VERSION=0.19.4
-    ...
-
-    # Overwrite the default of 0.10.1
-    VAULT_VERSION=0.10.3
-    ...
-    # Overwrite the default of 1.0.6
-    CONSUL_VERSION=1.1.0
-    ...
-    # Overwrite the default of 0.19.4
-    CONSUL_TEMPLATE_VERSION=0.19.5
-    ...
-    ```
-
-1. Run the `run_me_first.sh` script in the
-`vault-guides/secrets/pki/vagrant` directory to create the customized
-provisioners.
-
-    The user-data and provisioning scripts rely on the environment variables you've
-    set (or left default) from the previous step.   
+    The following example mounts `pki` secret engine.
 
     ```plaintext
-    $ cd ..
-    $ ./run_me_first.sh
+    $ curl --header "X-Vault-Token: ..." \
+           --request POST \
+           --data '{"type":"pki"}' \
+           https://127.0.0.1:8200/v1/sys/mounts/pki
     ```
 
-1. Now, spin up a vagrant image by executing the `vagrant` command.
+1. Tune the `pki` secrets engine to issue certificates with a maximum
+time-to-live (TTL) of 87600 hours.
 
     ```plaintext
-    $ vagrant up
-
-    ...
-    ==> core-01: Exporting NFS shared folders...
-    ==> core-01: Preparing to edit /etc/exports. Administrator privileges will be required...
-    Password:
+    $ curl --header "X-Vault-Token: ..." \
+           --request POST \
+           --data '{"max_lease_ttl":"87600h"}' \
+           https://127.0.0.1:8200/v1/sys/mounts/pki/tune
     ```
 
-    ~> **NOTE:** Vagrant will need to make some updates to `/etc/exports`.  This
-    will require **sudo** access that you will be prompted to enter your
-    password.  The same will be required during the `vagrant destroy` as well.
+1. Generate the ***root*** certificate and extract the CA certificate and save
+it as `CA_cert.crt`.
 
-1. Open **three terminal sessions** and connect to the virtual machine
-provisioned by Vagrant:
+    > **NOTE:** The following command uses `jq` tool to parse the output JSON.
+    You can install [`jq`](https://stedolan.github.io/jq/download/) or manually
+    copy and paste the certificate in a file, `CA_cert.crt`.
 
     ```plaintext
-    $ vagrant ssh
-    ```
-
-    > If you have a terminal like [iTerm2](https://www.iterm2.com/downloads.html),
-    Screen, [tmux](https://github.com/tmux/tmux/wiki) or any other kind of terminal
-    window management tool, open up three sessions as shown.   
-
-![Vagrant Sessions](/assets/images/vault-pki-demo.png)
-
-
-### <a name="step2"></a>Step 2: Run demo \#1
-
-In one of the terminal sessions, execute the `demo1_bootstrap_environment.sh`
-script in the `/demo` directory.
-
-```plaintext
-$ cd /demo
-$ sudo ./demo1_bootstrap_environment.sh
-```
-
-This demo script bootstraps a Vault development server to create an initial set
-of certificates that will later be used for securing Vault and Consul
-communicates over TLS.
-
--> A short description of each task gets displayed along with the vault command.
-Review the command and then press **Return** or **Enter** key on your keyboard
-to execute each command.
-
-<br>
-Commands getting executed in this demo are:
-
-```shell
-# Enabling CA Certificate PKI Secret Engine
-vault secrets enable -path=pki_root pki
-
-# Tuning CA Certificate PKI Secret Engine
-vault secrets tune -max-lease-ttl=87648h pki_root
-
-# Generating CA Root certificate. JSON output found at /var/tmp/root_ca_output.json
-curl -s --header "X-Vault-Token: 0bf5d133-5b15-711b-b19e-110db6994d18" \
-      --request POST \
-      --data @/var/tmp/input-params.json \
-      http://172.18.0.3:8200/v1/pki_root/root/generate/internal > /var/tmp/root_ca_output.json
-
-# Updating CRL And CA information
-vault write pki_root/config/urls \
-      issuing_certificates=http://172.18.0.3:8200/v1/pki_root/ca \
-      crl_distribution_points=http://172.18.0.3:8200/v1/pki_root/crl     
-
-# Enabling PKI Secret Engine at pki_int_main
-vault secrets enable -path=pki_int_main pki
-
-# Tuning PKI Secret Engine pki_int_main
-vault secrets tune -max-lease-ttl=43824h pki_int_main
-
-# Generating Intermediate CSR. JSON output found at /var/tmp/intermediate_csr_output.json CSR located at /var/tmp/pki_int_main.csr
-curl -s --header "X-Vault-Token: 0bf5d133-5b15-711b-b19e-110db6994d18" \
-        --request POST \
-        --data @/var/tmp/input-params.json \
-        http://172.18.0.3:8200/v1/pki_int_main/intermediate/generate/internal \
-        > /var/tmp/intermediate_csr_output.json
-
-# Generating Intermediate PEM cert. JSON output found at /var/tmp/intermediate_csr_output.json
-vault write -format=json pki_root/root/sign-intermediate \
-      csr=@/var/tmp/docker/pki_int_main.csr \
-      format=pem_bundle  > /var/tmp/intermediate_csr_output.json
-
-# Store the certificate in /var/tmp/pki_int_main.pem
-jq -r '.data.certificate' /var/tmp/intermediate_csr_output.json > /var/tmp/pki_int_main.pem
-
-vault write pki_int_main/intermediate/set-signed certificate=@/var/tmp/docker/pki_int_main.pem
-
-# Updating CRL And CA information for pki_int_main
-vault write pki_int_main/config/urls \
-      issuing_certificates=http://172.18.0.3:8200/v1/pki_int_main/ca \
-      crl_distribution_points=http://172.18.0.3:8200/v1/pki_int_main/crl
-
-# Roles are the entities allowed to create certificates
-# Creating role hashidemos-com in pki_int_main
-vault write pki_int_main/roles/hashidemos-com \
-      allowed_domains=hashidemos.com \
-      allow_subdomains=true \
-      max_ttl=43824h \
-      allow_any_name=true \
-      generate_lease=true \
-      enforce_hostnames=false
-
-# Creating role consul-dev-hashidemos-com in pki_int_main
-vault write pki_int_main/roles/consul-dev-hashidemos-com \
-      allowed_domains=dev.hashidemos.com \
-      allow_subdomains=true \
-      max_ttl=43824h \
-      allow_any_name=true \
-      generate_lease=true \
-      enforce_hostnames=false
-
-# Creating role vault-dev-hashidemos-com in pki_int_main
-vault write pki_int_main/roles/vault-dev-hashidemos-com \
-      allowed_domains=dev.hashidemos.com \
-      allow_subdomains=true \
-      max_ttl=43824h \
-      allow_any_name=true \
-      generate_lease=true \
-      enforce_hostnames=false
-
-# Creating cert for hashidemos.com. JSON Output: /var/tmp/hashidemos.com_cert.json
-vault write -format=json pki_int_main/issue/hashidemos-com \
-      common_name=hashidemos.com \
-      ttl=168h > /var/tmp/hashidemos.com_cert.json
-
-# Creating cert for consul1.dev.hashidemos.com. JSON Output: /var/tmp/consul1.dev.hashidemos.com_cert.json
-vault write -format=json pki_int_main/issue/consul-dev-hashidemos-com \
-      common_name=consul1.dev.hashidemos.com \
-      ttl=168h > /var/tmp/consul1.dev.hashidemos.com_cert.json
-
-# Creating cert for vault1.dev.hashidemos.com. JSON Output: /var/tmp/vault1.dev.hashidemos.com_cert.json
-vault write -format=json pki_int_main/issue/vault-dev-hashidemos-com \
-      common_name=vault1.dev.hashidemos.com \
-      ttl=168h > /var/tmp/vault1.dev.hashidemos.com_cert.json
-```
-
-When you finish, the development server is stopped and a new non-development
-server will be started to run the rest of the demo.
-
-
-
-### <a name="step3"></a>Step 3: Run demo \#2
-
-Now, run the `demo2_short_ttls.sh` script. This script creates a short lived TTL
-(default 60s) and immediately begins verify the cert with openssl. You should
-notice that after the TTL expires, the cert becomes invalid.
-
-```plaintext
-$ cd /demo
-$ sudo ./demo2_short_ttls.sh
-```
-
--> A short description of each task gets displayed along with the vault command.
-Review the command and then press **Return** or **Enter** key on your keyboard
-to execute each command.
-
-<br>
-Commands getting executed in this demo are:
-
-```shell
-# Creating role short-ttl-hashidemos-com in pki_int_main
-vault write pki_int_main/roles/short-ttl-hashidemos-com \
-      allowed_domains=dev.hashidemos.com \
-      allow_subdomains=true \
-      max_ttl=43824h \
-      allow_any_name=true \
-      generate_lease=true \
-      enforce_hostnames=false
-
-# Creating policy to assign to token(s)
-cat > /var/tmp/policy-short-ttl-hashidemos-com << EOF
-path "pki_int_main/issue*" {
-    capabilities = ["create","update"]
-}
-
-path "pki_root/cert/ca" {
-    capabilities = ["read"]
-}
-
-path "auth/token/renew" {
-    capabilities = ["update"]
-}
-
-path "auth/token/renew-self" {
-    capabilities = ["update"]
-}
-EOF
-
-
-#  Create short-ttl-hashidemos-com policy
-vault policy write short-ttl-hashidemos-com /var/tmp/docker/policy-short-ttl-hashidemos-com
-
-# Creating token with single policy into /var/tmp/token-short-ttl-hashidemos-com
-vault token create -policy=short-ttl-hashidemos-com \
-      -field=token -ttl=120s > /var/tmp/token-short-ttl-hashidemos-com
-
-# Creating cert for shortttl.dev.hashidemos.com. JSON Output: /var/tmp/shortttl.dev.hashidemos.com_cert.json
-vault write -format=json pki_int_main/issue/short-ttl-hashidemos-com \
-      common_name=shortttl.dev.hashidemos.com \
-      ttl=60 > /var/tmp/shortttl.dev.hashidemos.com_cert.json
-```
-
-~> **NOTE:** Keep the script running in this window.
-
-
-### <a name="step4"></a>Step 4: Run demo \#3
-
-Run the `demo3_renew_lease.sh` in **another** terminal session window.
-
-```plaintext
-$ cd /demo
-$ sudo ./demo3_renew_lease.sh
-```
-This script renews the certificate that's not invalid every 30 seconds.
-
-```shell
-# Creating cert for shortttl.dev.hashidemos.com. JSON Output: /var/tmp/shortttl.dev.hashidemos.com_cert.json
-vault write -format=json pki_int_main/issue/short-ttl-hashidemos-com \
-      common_name=shortttl.dev.hashidemos.com \
-      ttl=60 > /var/tmp/shortttl.dev.hashidemos.com_cert.json
-```
-
-You should now see the certificate is now **valid** in the window running
-`demo2_short_ttls.sh`.
-
-![Vagrant Sessions](/assets/images/vault-pki-demo-2.png)
-
-
-~> **NOTE:** Keep the script running in this window.
-
-
-
-### <a name="step5"></a>Step 5: Run demo \#4
-
-Run `demo4_revoke_cert.sh` in another window.
-
-```plaintext
-$ cd /demo
-$ sudo ./demo4_revoke_cert.sh
-```
-
-This script creates a CRL entry in the CRL endpoint registered within
-Vault.   
-
-```plaintext
-Revoking from pki_int_main serial 30:22:5b:73:f0:e1:35:f3:5b:eb:51:ab:ad:e9:a2:00:b1:65:2b:be
-{"request_id":"bee24fc0-2043-f3e9-1a82-8b290f7b0ea0","lease_id":"","renewable":false,"lease_duration":0,"data":{"revocation_time":1529455943,"revocation_time_rfc3339":"2018-06-20T00:52:23.141146857Z"},"wrap_info":null,"warnings":null,"auth":null}
-Checking CRL
-Certificate Revocation List (CRL):
-        Version 2 (0x1)
-    Signature Algorithm: sha256WithRSAEncryption
-        Issuer: /CN=hashidemos.com Intermediate 1
-        Last Update: Jun 20 00:52:23 2018 GMT
-        Next Update: Jun 23 00:52:23 2018 GMT
-        CRL extensions:
-            X509v3 Authority Key Identifier:
-                keyid:BD:D1:C0:06:7C:91:83:81:D1:53:B4:F7:02:67:41:A2:B2:3E:3B:85
-
-Revoked Certificates:
-    Serial Number: 30225B73F0E135F35BEB51ABADE9A200B1652BBE
-        Revocation Date: Jun 20 00:52:23 2018 GMT
-    Signature Algorithm: sha256WithRSAEncryption
-         19:9f:25:2d:6d:2d:4f:aa:f0:83:d5:ae:d7:ba:9e:31:89:01:
-         ...
-         27:a4:09:3d
-```
-
-You will notice that the CRL has the serial number of the certificate you
-revoked into.  However, if you're looking at the terminal window which is
-running `demo2_short_ttls.sh`, you should notice that the certificate is still
-valid. This is a reminder that when you're validating certificates, make sure to
-check the CRL to ensure it hasn't been revoked.
-
-There's another point to this however. Using short-lived TTLs is a powerful
-pattern that often obviates the need to use CRLs because the certificate will
-expire in such a short period of time to reduce any kind of damage caused by a
-leaked certificate.   
-
-
-If you wait until the renewal runs in the `demo3_renew_lease.sh` terminal, you
-can run this command again.  Notice the change in serial number for the revoked
-certificate.
-
-
-### <a name="step6"></a>Step 6: Run demo \#5
-
-Stop the **`demo2_short_ttls.sh`** and **`demo3_renew_lease.sh`** that are
-running by pressing **Ctrl+C**, and then execute the
-**`demo5_consul_template_renew.sh`** script in one of the terminals.
-
-```plaintext
-$ sudo ./demo5_consul_template_renew.sh
-```
-
-This demo script combines the concepts of `demo2_short_ttls.sh` and
-`demo3_renew_lease.sh` together using Consul Teamplate as the structure for
-renewal.  Consul-template has the ability to watch certain Vault endpoints and
-dump the secrets to a file location of your choosing.   It's smart enough to
-know to renew any tokens that it's using that are expiring.   
-
--> A short description of each task gets displayed along with the vault command.
-Review the command and then press **Return** or **Enter** key on your keyboard
-to execute each command.
-
-<br>
-Commands getting executed in this demo are:
-
-```shell
-# Write policy file which gets attached to token(s)
-cat > /var/tmp/policy-short-ttl-hashidemos-com << EOF
-path "pki_int_main/issue*" {
-    capabilities = ["create","update"]
-}
-
-path "pki_root/cert/ca" {
-    capabilities = ["read"]
-}
-
-path "auth/token/renew" {
-    capabilities = ["update"]
-}
-
-path "auth/token/renew-self" {
-    capabilities = ["update"]
-}
-EOF
-
-# Create short-ttl-hashidemos-com policy
-vault policy write short-ttl-hashidemos-com /var/tmp/docker/policy-short-ttl-hashidemos-com
-
-# Creating token with single policy into /var/tmp/token-short-ttl-hashidemos-com
-vault token create -policy=short-ttl-hashidemos-com -field=token \
-      -ttl=120s > /var/tmp/token-short-ttl-hashidemos-com
-
-# Creating Consul Teamplate template, cert.tmpl
-cat /etc/consul_templates/pki/shortttl.dev.hashidemos.com/cert.tmpl
-{{- with secret "pki_int_main/issue/short-ttl-hashidemos-com" "common_name=shortttl.dev.hashidemos.com" "ttl=120s" -}}
-{{ .Data.certificate }}{{ end }}
-
-# Creating Consul Teamplate template, ca.tmpl
-cat /etc/consul_templates/pki/shortttl.dev.hashidemos.com/ca.tmpl
-{{ with secret "pki_root/cert/ca" -}}
-{{ .Data.certificate }}{{ end }}
-{{ with secret "pki_int_main/issue/short-ttl-hashidemos-com" "common_name=shortttl.dev.hashidemos.com" "ttl=120s" -}}
-{{ .Data.issuing_ca }}{{ end }}
-
-# Creating Consul Teamplate template, key.tmpl
-cat /etc/consul_templates/pki/shortttl.dev.hashidemos.com/key.tmpl
-{{ with secret "pki_int_main/issue/short-ttl-hashidemos-com" "common_name=shortttl.dev.hashidemos.com" "ttl=120s" -}}
-{{ .Data.private_key }}{{ end }}
-
-# Creating Consul Teamplate template, serial.tmpl
-cat /etc/consul_templates/pki/shortttl.dev.hashidemos.com/serial.tmpl
-{{ with secret "pki_int_main/issue/short-ttl-hashidemos-com" "common_name=shortttl.dev.hashidemos.com" "ttl=120s" -}}
-{{ .Data.serial_number }}{{ end }}
-
-# Creating Consul Teamplate config file, consul_template.tmpl
-cat /etc/consul_templates/pki/shortttl.dev.hashidemos.com/consul_template.tmpl
-  vault {
-    address = "https://vault1.dev.hashidemos.com:8200"
-    token = "652ded21-c06d-371a-b0c6-f27e25537b83"
-    ssl {
-      cert    = "/etc/certs/vault1.dev.hashidemos.com_crt.pem"
-      key     = "/etc/certs/vault1.dev.hashidemos.com_key.pem"
-      ca_cert = "/etc/certs/vault1.dev.hashidemos.com_ca_chain_full.pem"
+    $ tee payload.json <<EOF
+    {
+      "common_name": "example.com",
+      "ttl": "87600h"
     }
-  }
-  template {
-    source      = "/etc/consul_templates/pki/shortttl.dev.hashidemos.com/cert.tmpl"
-    destination = "/var/tmp/shortttl.dev.hashidemos.com_crt.pem"
-  }
+    EOF
 
-  template {
-    source      = "/etc/consul_templates/pki/shortttl.dev.hashidemos.com/key.tmpl"
-    destination = "/var/tmp/shortttl.dev.hashidemos.com_key.pem"
-  }
+    $ curl --header "X-Vault-Token: ..." \
+           --request POST \
+           --data @payload.json \
+           https://127.0.0.1:8200/v1/pki/root/generate/internal \
+           | jq -r ".data.certificate" > CA_cert.crt
+    ```
 
-  template {
-    source      = "/etc/consul_templates/pki/shortttl.dev.hashidemos.com/ca.tmpl"
-    destination = "/var/tmp/shortttl.dev.hashidemos.com_ca_chain_full.pem"
-  }
+    This generates a new self-signed CA certificate and private key. Vault will
+    _automatically_ revoke the generated root at the end of its lease period
+    (TTL); the CA certificate will sign its own Certificate Revocation List
+    (CRL).
 
-  template {
-    source      = "/etc/consul_templates/pki/shortttl.dev.hashidemos.com/serial.tmpl"
-    destination = "/var/tmp/shortttl.dev.hashidemos.com.serial"
-  }
+1. Configure the CA and CRL URLs:
 
-# Restoring demo prompt waits
-# Testing certificate validity using openssl
-01:02:45: Verifying Certificate: [root@core-01] /opt/bin/consul-template -config=/etc/consul_templates/pki/shortttl.dev.hashidemos.com/consul_template.tmpl
+    ```plaintext
+    $ tee payload-url.json <<EOF
+    {
+      "issuing_certificates": "http://127.0.0.1:8200/v1/pki/ca",
+      "crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl"
+    }
+    EOF
 
-Certificate /var/tmp/shortttl.dev.hashidemos.com_crt.pem is invalid
-01:02:50: Verifying Certificate: Certificate /var/tmp/shortttl.dev.hashidemos.com_crt.pem is valid
-01:02:55: Verifying Certificate: Certificate /var/tmp/shortttl.dev.hashidemos.com_crt.pem is valid
-...
-```
+    $ curl --header "X-Vault-Token: ..." \
+           --request POST \
+           --data @payload-url.json \
+           https://127.0.0.1:8200/v1/pki/config/urls
+    ```
 
-After running this for 2-3 minutes (or however long you want), stop the demo by pressing **Ctrl+C**.
+
+#### Web UI
+
+Open a web browser and launch the Vault UI (e.g. http://127.0.0.1:8200/ui) and
+then login.
+
+1. Select **Enable new engine**.
+1. Select **PKI** from the **Secrets engine type** drop-down list.
+1. Click **More options** to expand and set the **Maximum lease TTL** to **`87600 hours`**.
+1. Click **Enable Engine**.
+1. Select **Configure**.
+1. Click **Configure CA**.
+1. Leave **CA Type** as **root**, and **Type** to be **internal**.  Enter
+**`example.com`** in the **Common Name** field.
+1. Select **Options** and then set **TTL** field to be **87600 hours**.
+1. Click **Save**.
+1. Click **Copy Certificate** and save it in a file named, **`CA_cert.crt`**.
+1. Click the **URLs** tab, and then set:
+    - Issuing certificates: `http://127.0.0.1:8200/v1/pki/ca`
+    - CRL Distribution Points: `http://127.0.0.1:8200/v1/pki/crl`
+    ![Configure URL](/assets/images/vault-pki-1.png)
+1. Click **Save**.
 
 <br>
 
--> **NOTE:** Vault doesn't have the concept of blocking queries like Consul does.
-This means that it doesn't have the capabilities of noticing changes to a
-particular secret you are monitoring.  However, in the case of PKI certs,
-[Consul Template](https://github.com/hashicorp/consul-template) will renew based on the lease for the certificate. Keep this
-in mind of you're trying to use Consul Template for automating retrieval of
-other Vault secrets.
+-> **NOTE:** To examine the generated root certificate, you can use
+[OpenSSL](https://www.openssl.org/source/).
+
+  ```shell
+  # Print the certificate in text form
+  $ openssl x509 -in CA_cert.crt -text
+
+  # Print the validity dates
+  $ openssl x509 -in CA_cert.crt -noout -dates
+  ```
 
 
-### <a name="step7"></a>Step 7: Tear down the demo environment
+### <a name="step2"></a>Step 2: Generate Intermediate CA
 
-Clean up your environment.
+Now, you are going to create an intermediate CA using the root CA you regenerate
+in the previous step.
+
+#### CLI Command
+
+1. First, enable the `pki` secrets engine at **`pki_int`** path:
+
+    ```plaintext
+    $ vault secrets enable -path=pki_int pki
+    ```
+
+1. Tune the `pki_int` secrets engine to issue certificates with a maximum
+time-to-live (TTL) of 43800 hours.
+
+    ```plaintext
+    $ vault secrets tune -max-lease-ttl=43800h pki_int
+    ```
+
+1. Execute the following command to generate an intermediate and save the CSR as
+`pki_intermediate.csr`:
+
+    ```plaintext
+    $ vault write -format=json pki_int/intermediate/generate/internal \
+            common_name="example.com Intermediate Authority" ttl="43800h" \
+            | jq -r '.data.csr' > pki_intermediate.csr
+    ```
+
+1. Sign the intermediate certificate with the root certificate and save the
+generated certificate as `intermediate.cert.pem`:
+
+    ```plaintext
+    $ vault write -format=json pki/root/sign-intermediate csr=@pki_intermediate.csr \
+            format=pem_bundle \
+            | jq -r '.data.certificate' > intermediate.cert.pem
+    ```
+
+1. Once the CSR is signed and the root CA returns a certificate, it can be
+  imported back into Vault:
+
+    ```plaintext
+    $ vault write pki_int/intermediate/set-signed certificate=@intermediate.cert.pem
+    ```
+
+
+#### API call using cURL
+
+
+1. First, enable the `pki` secrets engine at **`pki_int`** path:
+
+    **Example:**
+
+    ```plaintext
+    $ curl --header "X-Vault-Token: ..." \
+           --request POST \
+           --data '{"type":"pki"}' \
+           https://127.0.0.1:8200/v1/sys/mounts/pki_int
+    ```
+
+1. Tune the `pki_int` secrets engine to issue certificates with a maximum
+time-to-live (TTL) of 43800 hours.
+
+    ```plaintext
+    $ curl --header "X-Vault-Token: ..." \
+           --request POST \
+           --data '{"max_lease_ttl":"43800h"}' \
+           https://127.0.0.1:8200/v1/sys/mounts/pki_int/tune
+    ```
+
+1. Generate an intermediate using the `/pki_int/intermediate/generate/internal`
+endpoint.
+
+    ```plaintext
+    $ tee payload-int.json <<EOF
+    {
+      "common_name": "example.com Intermediate Authority",
+      "ttl": "43800h"
+    }
+    EOF
+
+    $ curl --header "X-Vault-Token: ..." \
+           --request POST \
+           --data @payload-int.json \
+           https://127.0.0.1:8200/v1/pki_int/intermediate/generate/internal | jq
+    ```
+
+    Copy the generated CSR.
+
+1. Sign the intermediate certificate with the root certificate and save the
+certificate as `intermediate.cert.pem`.  
+
+    -> **NOTE:** The API request payload should contain the CSR you obtained.
+
+    ```plaintext
+    $ tee payload-int-cert.json <<EOF
+    {
+      "csr": "...",
+      "format": "pem_bundle"
+    }
+    EOF
+
+    $ curl --header "X-Vault-Token: ..." \
+           --request POST \
+           --data @payload-int-cert.json \
+           https://127.0.0.1:8200/v1/pki/root/sign-intermediate | jq
+    ```
+
+    > **NOTE:** The **`format`** in the payload specifies the format of the
+    returned data.  When `pem_bundle`, the certificate field will contain the
+    certificate.
+
+    Copy the generated certificate.
+
+1. Once the CSR is signed and the root CA returns a certificate, it can be
+imported back into Vault using the `/pki_int/intermediate/set-signed` endpoint.
+
+    -> **NOTE:** The API request payload should contain the certificate you
+    obtained.
+
+    ```plaintext
+    $ tee payload-signed.json <<EOF
+    {
+      "certificate": "..."
+    }
+    EOF
+
+    $ curl --header "X-Vault-Token: ..." \
+           --request POST \
+           --data @payload-signed.json \
+           https://127.0.0.1:8200/v1/pki_int/intermediate/set-signed
+    ```
+
+
+#### Web UI
+
+1. Select **Enable new engine** in the **Secrets** tab.
+1. Select **PKI** from the **Secrets engine type** drop-down list.
+1. Enter **`pki_int`** in the **Path** field.
+1. Click **More options** to expand and set the **Maximum lease TTL** to **`43800
+hours`**.
+1. Click **Enable Engine**.
+1. Select **Configure**.
+1. Click **Configure CA**.
+1. Select **intermediate** from **CA Type** drop-down list.  
+1. Enter **`example.com Intermediate Authority`** in the **Common Name** field,
+and then click **Save**.
+1. Click **Copy CSR** and save it in a file, `pki_intermediate.csr`.
+1. Select **pki** from the **Secrets** tab to return to the root CA.
+1. Select **Configure** and then click **Sign intermediate**.
+1. Paste in the CSR in the **Certificate Signing Request (CSR)** field.
+1. Enter **`example.com`** in the **Common Name**.
+1. Select **pem_bundle** from the **Format** drop-down list, and then click
+**Save**.
+1. Click **Cooy Certificate** and save the generated certificate in a file, `intermediate.cert.pem`.
+1. Select **pki_int** from the **Secrets** tab to return to the intermediate CA.
+1. Select **Configure** and then click **Set signed intermediate**.
+1. Paste in the certificate in the **Signed Intermediate Certificate** field and
+then click **Save**.
+
+
+
+### <a name="step3"></a>Step 3: Create a Role
+
+A role is a logical name that maps to a policy used to generate those
+credentials. In this step, you are going to create a role named,
+**`example-dot-com`**.
+
+#### CLI Command
+
+Create a role named **`example-dot-com`**:
 
 ```plaintext
-$ exit
-$ vagrant destroy
+$ vault write pki_int/roles/example-dot-com \
+        allowed_domains="example.com" \
+        allow_subdomains=true \
+        max_ttl="720h"
 ```
 
-~> **NOTE:** Vagrant will need to make some updates to `/etc/exports`.  This
-will require **sudo** access that you will be prompted to enter your
-password during the `vagrant destroy`.
+This creates the role definition for "example-dot-com". Refer
+to the [Create/Update Role](/api/secret/pki/index.html#create-update-role)
+for the entire list of available parameters for creating a role.
+
+
+#### API call using cURL
+
+Create a role named **`example-dot-com`**:
+
+```plaintext
+$ tee payload-role.json <<EOF
+{
+  "allowed_domains": "example.com",
+  "allow_subdomains": true,
+  "max_ttl": "720h"
+}
+
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       --data @payload-role.json \
+       https://127.0.0.1:8200/v1/pki_int/roles/example-dot-com
+```
+
+This creates the role definition for "example-dot-com". Refer
+to the [Create/Update Role](/api/secret/pki/index.html#create-update-role)
+for the entire list of available parameters for creating a role.
+
+
+#### Web UI
+
+1. Click **pki_int** and then select **Create role**.
+1. Enter **`example-dot-com`** in the **Role name** field.
+1. Select **Options** to expand, and then set the **Max TTL** to **`43800 hours`**.  
+Select **Hide Options**.
+1. Select **Domain Handling** to expand, and then select the **Allow subdomains** check-box.
+Enter **`example.com`** in the **Allowed domains** field.
+    ![Create Role](/assets/images/vault-pki-2.png)
+1. Click **Create role**.
+
+
+### <a name="step4"></a>Step 4: Request Certificates
+
+Keep certificate lifetimes to be short to align with Vault's philosophy of
+short-lived secrets.
+
+#### CLI Command
+
+Execute the following command to request a new certificate for `test.example.com`
+domain based on the `example-dot-com` role:
+
+```plaintext
+$ vault write pki_int/issue/example-dot-com common_name="test.example.com" ttl="720h"
+
+Key                 Value
+---                 -----
+certificate         -----BEGIN CERTIFICATE-----
+MIIDwzCCAqugAwIBAgIUTQABMCAsXjG6ExFTX8201xKVH4IwDQYJKoZIhvcNAQEL
+BQAwGjEYMBYGA1UEAxMPd3d3LmV4YW1wbGUuY29tMB4XDTE4MDcyNDIxMTMxOVoX
+             ...
+
+-----END CERTIFICATE-----
+issuing_ca          -----BEGIN CERTIFICATE-----
+MIIDQTCCAimgAwIBAgIUbMYp39mdj7dKX033ZjK18rx05x8wDQYJKoZIhvcNAQEL
+             ...
+
+-----END CERTIFICATE-----
+private_key         -----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAte1fqy2Ekj+EFqKV6N5QJlBgMo/U4IIxwLZI6a87yAC/rDhm
+W58liadXrwjzRgWeqVOoCRr/B5JnRLbyIKBVp6MMFwZVkynEPzDmy0ynuomSfJkM
+             ...
+
+-----END RSA PRIVATE KEY-----
+private_key_type    rsa
+serial_number       4d:00:01:30:20:2c:5e:31:ba:13:11:53:5f:cd:b4:d7:12:95:1f:82
+```
+
+The response contains the PEM-encoded private key, key type and certificate
+serial number.
+
+
+
+#### API call using cURL
+
+Invoke the **`/pki_int/issue/<role_name>`** endpoint to request a new certificate.
+
+**Example:**
+
+Request a certificate for `test.example.com` domain based on the
+`example-dot-com` role:
+
+```plaintext
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       --data '{"common_name": "test.example.com", "ttl": "720h"}' \
+       https://127.0.0.1:8200/v1/pki_int/issue/example-dot-com | jq
+{
+ "request_id": "6fa8d77d-0758-33ae-b5ea-8b3d15014fd1",
+ "lease_id": "",
+ "renewable": false,
+ "lease_duration": 0,
+ "data": {
+   "certificate": "-----BEGIN CERTIFICATE-----\nMIIDvzCCAqegAwIBAgIUG7H0Pzpqm+...-----END CERTIFICATE-----",
+   "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDNTCCAh2gAwIBAgIUQhIX9D...-----END CERTIFICATE-----",
+   "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEAr6IsROOW5...-----END RSA PRIVATE KEY-----",
+   "private_key_type": "rsa",
+   "serial_number": "1b:b1:f4:3f:3a:6a:9b:e8:33:af:f7:1b:b1:4d:57:7f:65:65:39:c1"
+ },
+ "wrap_info": null,
+ "warnings": null,
+ "auth": null
+}
+```
+
+The response contains the PEM-encoded private key, key type and certificate
+serial number.
+
+
+#### Web UI
+
+1. Select **Secrets**.
+1. Select **pki_int** from the **Secrets Engines** list.
+1. Select **example-dot-com** under **Roles**.
+1. Enter **`test.example.com`** in the **Common Name** field.
+1. Select **Options** to expand, and then set the **TTL** to **`720 hours`**.  
+1. Select **Hide Options** and then click **Generate**.
+    ![Issue Certificate](/assets/images/vault-pki-3.png)
+
+    > The response contains the PEM-encoded private key, key type and certificate
+    serial number.
+
+1. Click **Copy credentials** and save it in a file.
+
+<br>
+
+-> **NOTE:** A certificate can be rotated at any time by simply issuing a new
+certificate with the same CN.
+
+
+### <a name="step5"></a>Step 5: Revoke Certificates
+
+If a certificate must be revoked, you can easily perform the revocation action
+which will cause the CRL to be regenerated. When the CRL is regenerated, any
+expired certificates are removed from the CRL.
+
+
+#### CLI Command
+
+In a certain circumstances, you may wish to revoke an issued certificate.
+
+To revoke:
+
+```plaintext
+$ vault write pki_int/revoke serial_number=<serial_number>
+```
+
+**Example:**
+
+```plaintext
+$ vault write pki_int/revoke serial_number="48:97:82:dd:f0:d3:d9:7e:53:25:ba:fd:f6:77:3e:89:e5:65:cc:e7"
+Key                        Value
+---                        -----
+revocation_time            1532539632
+revocation_time_rfc3339    2018-07-25T17:27:12.165206399Z
+```
+
+
+#### API call using cURL
+
+Invoke the **`/pki_int/revoke`** endpoint to invoke a certificate using its
+serial number.
+
+**Example:**
+
+```plaintext
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       --data '{"serial_number": "48:97:82:dd:f0:d3:d9:7e:53:25:ba:fd:f6:77:3e:89:e5:65:cc:e7"}' \
+       https://127.0.0.1:8200/v1/pki_int/revoke
+```
+
+#### Web UI
+
+1. Select **Secrets**.
+1. Select **pki_int** from the **Secrets Engines** list.
+1. Select the **eCertificates** tab.
+1. Select the serial number for the certificate you wish to revoke.
+1. Click **Revoke**.  At the confirmation, click **Revoke** again.
+
+
+
+
+
+
+
+
+
+
 
 
 
 ## Next steps
 
-The use of [AppRole Pull Authentication](/guides/identity/authentication.html) is a good
-use case to leverage the response wrapping. Go through the guide if you have not
-done so.  To better understand the lifecycle of Vault tokens, proceed to [Tokens
-and Leases](/guides/identity/lease.html) guide.
+Check out the [Streamline Certificate Management with HashiCorp
+Vault](https://www.hashicorp.com/resources/streamline-certificate-management-with-vault)
+webinar recording.

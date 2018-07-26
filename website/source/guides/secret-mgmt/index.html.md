@@ -37,6 +37,6 @@ credentials for those managed by Vault.
 demonstrates a secure method to distribute secrets by wrapping them where only
 the expecting client can unwrap.
 
-- [Vault PKI Secrets Engine Demo](/guides/secret-mgmt/pki-engine.html) guide walks
-you through the use of the PKI secrets engine to generate dynamic X.509
-certificates.
+- [Build Your Own Certificate Authority](/guides/secret-mgmt/pki-engine.html)
+guide walks you through the use of the PKI secrets engine to generate dynamic
+X.509 certificates.
