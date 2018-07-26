@@ -3,7 +3,7 @@ import Ember from 'ember';
 const { Component, inject } = Ember;
 
 export default Component.extend({
-  namespaceService: inject.service(),
+  namespaceService: inject.service('namespace'),
   //passed from the queryParam
   namespace: null,
 

@@ -101,6 +101,7 @@
       <input
         data-test-input={{attr.name}}
         id={{attr.name}}
+        autocomplete="off"
         value={{or (get model valuePath) attr.options.defaultValue}}
         oninput={{action (action "setAndBroadcast" valuePath) value="target.value"}}
         class="input" 
