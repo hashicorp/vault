@@ -6,10 +6,11 @@ const POLL_INTERVAL_MS = 10000;
 const { inject } = Ember;
 
 export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
+  namespace: inject.service(),
   version: inject.service(),
   store: inject.service(),
   auth: inject.service(),
-  currentCluster: Ember.inject.service(),
+  currentCluster: inject.service(),
   modelTypes: ['node', 'secret', 'secret-engine'],
 
   getClusterId(params) {
@@ -61,6 +62,12 @@ export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
     this.get('currentCluster').setCluster(model);
     this._super(...arguments);
     this.poll();
+
+    // Check that namespaces is enabled and if not,
+    // clear the namespace by transition to this route w/o it
+    if (this.get('namespace.path') && !this.get('version.hasNamspaces')) {
+      return this.transitionTo(this.routeName, { queryParams: { namespace: '' } });
+    }
     return this.transitionToTargetRoute();
   },
 

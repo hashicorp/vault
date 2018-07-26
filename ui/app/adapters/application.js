@@ -7,6 +7,7 @@ const { inject, assign, set, RSVP } = Ember;
 
 export default DS.RESTAdapter.extend({
   auth: inject.service(),
+  tenant: inject.service('namespace'),
   controlGroup: inject.service(),
 
   flashMessages: inject.service(),
@@ -26,7 +27,7 @@ export default DS.RESTAdapter.extend({
   },
 
   _preRequest(url, options) {
-    const token = options.clientToken || this.get('auth.currentToken');
+    let token = options.clientToken || this.get('auth.currentToken');
     if (token && !options.unauthenticated) {
       options.headers = assign(options.headers || {}, {
         'X-Vault-Token': token,
@@ -34,6 +35,12 @@ export default DS.RESTAdapter.extend({
       if (options.wrapTTL) {
         assign(options.headers, { 'X-Vault-Wrap-TTL': options.wrapTTL });
       }
+    }
+    let namespace = this.get('tenant.namespace');
+    if (namespace) {
+      options.headers = assign(options.headers || {}, {
+        'X-Vault-Namespace': namespace,
+      });
     }
     const isPolling = POLLING_URL_PATTERNS.some(str => url.includes(str));
     if (!isPolling) {
