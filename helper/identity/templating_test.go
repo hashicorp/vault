@@ -33,6 +33,16 @@ func TestPopulate_Basic(t *testing.T) {
 			err:   UnbalancedTemplatingCharacterErr,
 		},
 		{
+			name:  "closing_in_front",
+			input: "path }} {{foobar}} {",
+			err:   UnbalancedTemplatingCharacterErr,
+		},
+		{
+			name:  "closing_in_back",
+			input: "path {{foobar}} }}",
+			err:   UnbalancedTemplatingCharacterErr,
+		},
+		{
 			name:   "basic",
 			input:  "path /{{identity.entity.id}}/ {",
 			output: "path /entityID/ {",
@@ -74,7 +84,7 @@ func TestPopulate_Basic(t *testing.T) {
 		},
 		{
 			name:          "alias_id_name",
-			input:         "path {{identity.entity.name}} {\n\tval = {{identity.entity.aliases.foomount.id}}\n}",
+			input:         "path {{ identity.entity.name}} {\n\tval = {{identity.entity.aliases.foomount.id}}\n}",
 			entityName:    "entityName",
 			aliasAccessor: "foomount",
 			aliasID:       "aliasID",
@@ -83,13 +93,13 @@ func TestPopulate_Basic(t *testing.T) {
 		},
 		{
 			name:          "alias_id_name_bad_selector",
-			input:         "path \"foobar\" }} {\n\tval = {{identity.entity.aliases.foomount}}\n}",
+			input:         "path foobar {\n\tval = {{identity.entity.aliases.foomount}}\n}",
 			aliasAccessor: "foomount",
 			err:           errors.New("invalid alias selector"),
 		},
 		{
 			name:          "alias_id_name_bad_accessor",
-			input:         "path \"foobar\" }} {\n\tval = {{identity.entity.aliases.barmount.id}}\n}",
+			input:         "path \"foobar\" {\n\tval = {{identity.entity.aliases.barmount.id}}\n}",
 			aliasAccessor: "foomount",
 			err:           errors.New("alias not found"),
 		},

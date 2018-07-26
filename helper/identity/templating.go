@@ -24,13 +24,20 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 		return false, "", errors.New("nil input")
 	}
 
+	if p.String == "" {
+		return false, "", nil
+	}
+
 	var subst bool
 	splitStr := strings.Split(p.String, "{{")
-	if len(splitStr) == 1 {
-		if strings.Index(p.String, "}}") != -1 {
+
+	if len(splitStr) >= 1 {
+		if strings.Index(splitStr[0], "}}") != -1 {
 			return false, "", UnbalancedTemplatingCharacterErr
 		}
-		return false, p.String, nil
+		if len(splitStr) == 1 {
+			return false, p.String, nil
+		}
 	}
 
 	var b strings.Builder
