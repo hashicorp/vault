@@ -449,12 +449,28 @@ then click **Save**.
 ### <a name="step3"></a>Step 3: Create a Role
 
 A role is a logical name that maps to a policy used to generate those
-credentials. In this step, you are going to create a role named,
-**`example-dot-com`**.
+credentials. It allows [configuration
+parameters]((/api/secret/pki/index.html#create-update-role)) to control
+certificate common names, alternate names, the key usages that they are valid
+for, and more.
+
+Calling out some of the parameters:
+
+- **`allowed_domains`** - specifies the domains of the role (used with
+  `allow_bare_domains` and `allow-subdomains` options)
+- **`allow_bare_domains`** - specifies if clients can request certificates
+matching the value of the actual domains themselves
+- **`allow_subdomains`** - specifies if clients can request certificates with
+CNs that are subdomains of the CNs allowed by the other role options (NOTE: This
+  includes wildcard subdomains.)
+- **`allow_glob_domains`** - allows names specified in allowed_domains to
+contain glob patterns (e.g. ftp*.example.com)
+
+In this step, you are going to create a role named, **`example-dot-com`**.
 
 #### CLI Command
 
-Create a role named **`example-dot-com`**:
+Create a role named **`example-dot-com`** which allows subdomains.
 
 ```plaintext
 $ vault write pki_int/roles/example-dot-com \
@@ -463,14 +479,9 @@ $ vault write pki_int/roles/example-dot-com \
         max_ttl="720h"
 ```
 
-This creates the role definition for "example-dot-com". Refer
-to the [Create/Update Role](/api/secret/pki/index.html#create-update-role)
-for the entire list of available parameters for creating a role.
-
-
 #### API call using cURL
 
-Create a role named **`example-dot-com`**:
+Create a role named **`example-dot-com`** which allows subdomains.
 
 ```plaintext
 $ tee payload-role.json <<EOF
@@ -486,19 +497,17 @@ $ curl --header "X-Vault-Token: ..." \
        https://127.0.0.1:8200/v1/pki_int/roles/example-dot-com
 ```
 
-This creates the role definition for "example-dot-com". Refer
-to the [Create/Update Role](/api/secret/pki/index.html#create-update-role)
-for the entire list of available parameters for creating a role.
-
-
 #### Web UI
+
+Create a role named **`example-dot-com`** which allows subdomains.
 
 1. Click **pki_int** and then select **Create role**.
 1. Enter **`example-dot-com`** in the **Role name** field.
-1. Select **Options** to expand, and then set the **Max TTL** to **`43800 hours`**.  
-Select **Hide Options**.
-1. Select **Domain Handling** to expand, and then select the **Allow subdomains** check-box.
-Enter **`example.com`** in the **Allowed domains** field.
+1. Select **Options** to expand, and then set the **Max TTL** to **`43800
+hours`**.   Select **Hide Options**.
+1. Select **Domain Handling** to expand, and then select the **Allow
+subdomains** check-box. Enter **`example.com`** in the **Allowed domains**
+field.
     ![Create Role](/assets/images/vault-pki-2.png)
 1. Click **Create role**.
 
