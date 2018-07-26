@@ -2666,6 +2666,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 				return handleError(err)
 			}
 			policy.Paths = p.Paths
+			policy.Templated = p.Templated
 
 		default:
 			return logical.ErrorResponse("unknown policy type"), nil
