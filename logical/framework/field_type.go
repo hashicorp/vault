@@ -47,6 +47,14 @@ const (
 	// For instance, the AWS and AliCloud credential plugins both act as a
 	// benevolent MITM for a request, and the headers are sent through and
 	// parsed.
+	// IMPORTANT NOTES:
+	//   - Under the hood, http.Header is a map[string][]string and its Get
+	//     method will only return the first value. To retrieve all values,
+	//     you must access them like you would in a map.
+	//   - This implementation of http.Header has CASE-INSENSITIVE keys. All
+	//     keys are converted to Title Case on their way in so that the Get
+	//     method will match the keys no matter what case you use when
+	//     looking for them.
 	TypeHeader
 )
 

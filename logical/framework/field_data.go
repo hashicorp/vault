@@ -311,7 +311,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			return result, true, nil
 		}
 
-		// If map parse fails, parse as a string list of = delimited pairs
+		// If map parse fails, parse as a string list of : delimited pairs
 		var listResult []string
 		if err := mapstructure.WeakDecode(raw, &listResult); err != nil {
 			return nil, true, err
@@ -319,7 +319,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 
 		result := http.Header{}
 		for _, keyPair := range listResult {
-			keyPairSlice := strings.SplitN(keyPair, "=", 2)
+			keyPairSlice := strings.SplitN(keyPair, ":", 2)
 			if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {
 				return nil, false, fmt.Errorf("invalid key pair %q", keyPair)
 			}

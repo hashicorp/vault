@@ -473,13 +473,28 @@ func TestFieldDataGet(t *testing.T) {
 				"foo": {Type: TypeHeader},
 			},
 			map[string]interface{}{
-				"foo": []interface{}{"key1=value1", "key2=value2", "key3=1"},
+				"foo": []interface{}{"key1:value1", "key2:value2", "key3:1"},
 			},
 			"foo",
 			http.Header{
 				"Key1": []string{"value1"},
 				"Key2": []string{"value2"},
 				"Key3": []string{"1"},
+			},
+		},
+
+		"type header, keypair string array with dupe key": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{"key1:value1", "key2:value2", "key3:1", "key3:true"},
+			},
+			"foo",
+			http.Header{
+				"Key1": []string{"value1"},
+				"Key2": []string{"value2"},
+				"Key3": []string{"1", "true"},
 			},
 		},
 
