@@ -38,6 +38,7 @@ const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
 const EnvVaultToken = "VAULT_TOKEN"
 const EnvVaultMFA = "VAULT_MFA"
 const EnvRateLimit = "VAULT_RATE_LIMIT"
+const EnvVaultBearerToken = "VAULT_BEARER_TOKEN"
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
@@ -377,6 +378,14 @@ func NewClient(c *Config) (*Client, error) {
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.token = token
+	}
+
+	if v := os.Getenv(EnvVaultBearerToken); v != "" {
+		if client.headers == nil {
+			client.headers = make(http.Header)
+		}
+		header := "Bearer " + v
+		client.headers.Set("Authorization", header)
 	}
 
 	return client, nil
