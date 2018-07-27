@@ -2,9 +2,9 @@
   <nav class="menu">
     <ul class="menu-list">
       <li class="action">
-        <a href={{href-to 'vault.cluster.secrets.backend.show' item.idForNav}} data-test-pki-cert-link="show">
+        {{#link-to "vault.cluster.secrets.backend.show" item.idForNav data-test-pki-cert-link="show"}}
           Details
-        </a>
+        {{/link-to}}
       </li>
       {{#if item.canRevoke}}
         <li class="action">

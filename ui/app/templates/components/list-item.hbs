@@ -1,13 +1,13 @@
 {{#if componentName}}
   {{component componentName item=item}}
 {{else if linkParams}}
-  <LinkedBlock @params={{linkParms}} @class="list-item-row">
+  <LinkedBlock @params={{linkParams}} @class="list-item-row">
     <div class="level is-mobile">
       <div class="level-left">
         <div>
-          <a href={{href-to params=linkParams}} class="has-text-weight-semibold">
+          {{#link-to params=linkParams class="has-text-weight-semibold"}}
             {{yield (hash content=(component "list-item/content"))}}
-          </a>
+          {{/link-to}}
         </div>
       </div>
       <div class="level-right">

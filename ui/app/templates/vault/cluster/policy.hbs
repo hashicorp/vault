@@ -1,12 +1,12 @@
 <div class="columns">
   {{#menu-sidebar title="Access" class="is-3" data-test-sidebar=true}}
     <li>
-      <a href={{href-to "vault.cluster.policies" "acl"}} data-test-link=true class={{if (is-active-route "vault.cluster.policy" "acl") "is-active"}}>
+      {{#link-to "vault.cluster.policies" "acl" data-test-link=true class=(if (is-active-route "vault.cluster.policy" "acl") "is-active")}}
         ACL Policies
-      </a>
+      {{/link-to}}
     </li>
     <li>
-      <a href={{href-to "vault.cluster.policies" "rgp"}} data-test-link=true class={{if (is-active-route "vault.cluster.policy" "rgp") "is-active"}}>
+      {{#link-to "vault.cluster.policies" "rgp" data-test-link=true class=(if (is-active-route "vault.cluster.policy" "rgp") "is-active")}}
         Role Governing Policies
        {{#unless (has-feature "Sentinel")}}
          {{#if (is-version "OSS")}}
@@ -15,10 +15,10 @@
            {{edition-badge edition="Premium"}}
          {{/if}}
        {{/unless}}
-      </a>
+      {{/link-to}}
     </li>
     <li>
-      <a href={{href-to "vault.cluster.policies" "egp"}} data-test-link=true class={{if (is-active-route "vault.cluster.policy" "egp") "is-active"}}>
+      {{#link-to "vault.cluster.policies" "egp" data-test-link=true class=(if (is-active-route "vault.cluster.policy" "egp") "is-active")}}
         Endpoint Governing Policies
        {{#unless (has-feature "Sentinel")}}
          {{#if (is-version "OSS")}}
@@ -27,7 +27,7 @@
            {{edition-badge edition="Premium"}}
          {{/if}}
        {{/unless}}
-      </a>
+      {{/link-to}}
     </li>
   {{/menu-sidebar}}
   <div class="column is-9">

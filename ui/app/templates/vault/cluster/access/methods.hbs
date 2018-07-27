@@ -43,15 +43,15 @@
             <nav class="menu">
               <ul class="menu-list">
                 <li>
-                  <a href={{href-to "vault.cluster.access.method.section" method.id "configuration"}}>
-                  View Configuration
-                  </a>
+                  {{#link-to "vault.cluster.access.method.section" method.id "configuration"}}
+                    View Configuration
+                  {{/link-to}}
                 </li>
                 {{#if method.canEdit}}
                   <li>
-                    <a href={{href-to "vault.cluster.settings.auth.configure" method.id}}>
+                    {{#link-to "vault.cluster.settings.auth.configure" method.id}}
                       Edit Configuration
-                    </a>
+                    {{/link-to}}
                   </li>
                 {{/if}}
 

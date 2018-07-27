@@ -4,24 +4,24 @@
       {{#with (or method.path method.type) as |methodKey|}}
         {{#if hasMethodsWithPath}}
           <li class="{{if (and selectedAuthIsPath (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey)) 'is-active' ''}}" data-test-auth-method>
-            <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with=methodKey)}}" data-test-auth-method-link={{method.type}}>
+            {{#link-to 'vault.cluster.auth' cluster.name (query-params with=methodKey) data-test-auth-method-link=method.type}}
               {{or method.id (capitalize method.type)}}
-            </a>
+            {{/link-to}}
           </li>
         {{else}}
           <li class="{{if (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey) 'is-active' ''}}" data-test-auth-method>
-            <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with=methodKey)}}" data-test-auth-method-link={{method.type}}>
+            {{#link-to 'vault.cluster.auth' cluster.name (query-params with=methodKey) data-test-auth-method-link=method.type}}
               {{or method.id method.typeDisplay}}
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
       {{/with}}
     {{/each}}
     {{#if hasMethodsWithPath}}
       <li class="{{if (not selectedAuthIsPath) 'is-active' ''}}" data-test-auth-method>
-        <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with='token')}}" data-test-auth-method-link=other>
+        {{#link-to 'vault.cluster.auth' cluster.name (query-params with='token') data-test-auth-method-link="other"}}
           Other
-        </a>
+        {{/link-to}}
       </li>
     {{/if}}
   </ul>

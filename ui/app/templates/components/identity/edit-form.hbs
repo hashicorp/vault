@@ -22,13 +22,13 @@
           {{/if}}
         </button>
         {{#if (or (eq mode "merge") (eq mode "create" ))}}
-          <a href={{href-to cancelLink}} class="button" data-test-cancel-link>
+          {{#link-to cancelLink class="button" data-test-cancel-link=true}}
             Cancel
-          </a>
+          {{/link-to}}
         {{else}}
-          <a href={{href-to cancelLink model.id "details"}} class="button" data-test-cancel-link>
+          {{#link-to cancelLink model.id "details" class="button" data-test-cancel-link=true}}
             Cancel
-          </a>
+          {{/link-to}}
         {{/if}}
       </div>
     </div>

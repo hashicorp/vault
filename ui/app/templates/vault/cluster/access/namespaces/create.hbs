@@ -1,10 +1,10 @@
 <PageHeader as |p|>
   <p.top>
     <div class="breadcrumb">
-      <a href="{{href-to 'vault.cluster.access.namespaces.index'}}">
+      {{#link-to "vault.cluster.access.namespaces.index"}}
         <span class="sep">&#x0002f;</span>
         Namespaces
-      </a>
+      {{/link-to}}
     </div>
   </p.top>
   <p.levelLeft>
@@ -16,5 +16,5 @@
 <EditForm
   @model={{model}}
   @onSave={{action "onSave"}}
-  @cancelLink={{href-to "vault.cluster.access.namespaces.index"}}
+  @cancelLinkParams={{array "vault.cluster.access.namespaces.index"}}
 />

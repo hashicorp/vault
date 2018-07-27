@@ -29,20 +29,20 @@
     <nav class="tabs sub-nav">
       <ul>
         <li class="{{if (is-active-route 'vault.cluster.replication.mode.index') 'is-active' ''}}">
-          <a href="{{href-to 'vault.cluster.replication.mode' model.name replicationMode }}" data-test-replication-link="details">
+          {{#link-to "vault.cluster.replication.mode" model.name replicationMode data-test-replication-link="details"}}
             Details
-          </a>
+          {{/link-to}}
         </li>
         <li class="{{if (is-active-route 'vault.cluster.replication.mode.manage') 'is-active' ''}}">
-          <a href="{{href-to 'vault.cluster.replication.mode.manage' model.name replicationMode }}" data-test-replication-link="manage">
+          {{#link-to "vault.cluster.replication.mode.manage" model.name replicationMode data-test-replication-link="manage"}}
             Manage
-          </a>
+          {{/link-to}}
         </li>
         {{#if model.replicationAttrs.isPrimary}}
           <li class="{{if (is-active-route 'vault.cluster.replication.mode.secondaries') 'is-active' ''}}">
-            <a href="{{href-to 'vault.cluster.replication.mode.secondaries' model.name replicationMode }}" data-test-replication-link="secondaries">
+            {{#link-to "vault.cluster.replication.mode.secondaries" model.name replicationMode data-test-replication-link="secondaries"}}
               Secondaries
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
       </ul>

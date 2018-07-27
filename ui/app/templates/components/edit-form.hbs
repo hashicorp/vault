@@ -12,11 +12,11 @@
           {{saveButtonText}}
         </button>
       </div>
-      {{#if cancelLink}}
+      {{#if cancelLinkParams}}
         <div class="control">
-          <a href={{cancelLink}} class="button">
+          {{#link-to params=cancelLinkParams class="button"}}
             Cancel
-          </a>
+          {{/link-to}}
         </div>
       {{/if}}
     </div>

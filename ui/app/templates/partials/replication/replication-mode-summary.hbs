@@ -42,9 +42,9 @@
 </div>
 <div class="level-right">
   {{#if replicationDisabled}}
-    <a href="{{href-to 'vault.cluster.replication.mode.index' cluster.name mode}}" class="button is-primary">
+    {{#link-to "vault.cluster.replication.mode.index" cluster.name mode class="button is-primary"}}
       Enable
-    </a>
+    {{/link-to}}
   {{else if (eq mode 'dr')}}
     {{cluster.drReplicationStateDisplay}}
   {{else if (eq mode 'performance')}}

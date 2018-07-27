@@ -2,12 +2,12 @@
   {{#menu-sidebar title="Tools" class="is-3"}}
     {{#each (tools-actions) as |supportedAction|}}
       <li>
-        <a href="{{href-to 'vault.cluster.tools.tool' supportedAction refreshModel=true}}"
-           class="{{if (eq supportedAction selectedAction) 'is-active'}}"
-           data-test-tools-action-link={{supportedAction}}
-           >
+        {{#link-to 'vault.cluster.tools.tool' supportedAction refreshModel=true
+           class="(if (eq supportedAction selectedAction) 'is-active')"
+           data-test-tools-action-link=supportedAction
+          }}
           {{capitalize supportedAction}}
-          </a>
+        {{/link-to}}
       </li>
     {{/each}}
   {{/menu-sidebar}}

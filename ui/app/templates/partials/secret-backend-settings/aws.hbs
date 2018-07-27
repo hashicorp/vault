@@ -2,15 +2,15 @@
   <nav class="tabs sub-nav">
     <ul>
       {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='') tagName="li"}}
-        <a href="{{href-to  "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='') }}" data-test-aws-link="root-creds">
+        {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='') data-test-aws-link="root-creds"}}
           Dynamic IAM Root Credentials
-        </a>
+        {{/link-to}}
       {{/link-to}}
 
       {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='leases') tagName="li"}}
-        <a href="{{href-to  "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='leases') }}" data-test-aws-link="leases">
+        {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='leases') data-test-aws-link="leases"}}
           Leases
-        </a>
+        {{/link-to}}
       {{/link-to}}
     </ul>
   </nav>

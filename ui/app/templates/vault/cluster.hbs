@@ -28,41 +28,41 @@
 
         <ul class="navbar-sections tabs tabs-subnav">
           <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
-            <a href="{{href-to "vault.cluster.secrets" activeClusterName}}">
+            {{#link-to "vault.cluster.secrets" activeClusterName}}
               Secrets
-            </a>
+            {{/link-to}}
           </li>
           <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
-            <a href="{{href-to "vault.cluster.access" activeClusterName}}">
+            {{#link-to "vault.cluster.access" activeClusterName}}
               Access
-            </a>
+            {{/link-to}}
           </li>
           <li class="{{if (is-active-route 'vault.cluster.replication') 'is-active'}}">
             {{#if activeCluster.anyReplicationEnabled}}
               {{status-menu type="replication"}}
             {{else}}
-              <a href="{{href-to "vault.cluster.replication" activeClusterName}}">
+              {{#link-to "vault.cluster.replication" activeClusterName}}
                 Replication
                 {{#if (is-version "OSS")}}
                   <ICon @glyph="edition-enterprise" @size=16 @class="edition-icon" />
                 {{/if}}
-              </a>
+              {{/link-to}}
             {{/if}}
           </li>
           <li class="{{if (is-active-route (array 'vault.cluster.policies' 'vault.cluster.policy')) 'is-active'}}">
-            <a href="{{href-to "vault.cluster.policies" "acl" current-when='vault.cluster.policies vault.cluster.policy'}}">
+            {{#link-to "vault.cluster.policies" "acl" current-when="vault.cluster.policies vault.cluster.policy"}}
               Policies
-            </a>
+            {{/link-to}}
           </li>
           <li class="{{if (is-active-route 'vault.cluster.tools') 'is-active'}}">
-            <a href="{{href-to "vault.cluster.tools.tool" activeClusterName "wrap" }}">
+            {{#link-to "vault.cluster.tools.tool" activeClusterName "wrap"}}
               Tools
-            </a>
+            {{/link-to}}
           </li>
           <li class="{{if (is-active-route 'vault.cluster.settings') 'is-active'}}">
-            <a href="{{href-to "vault.cluster.settings" activeClusterName}}">
+            {{#link-to "vault.cluster.settings" activeClusterName}}
               Settings
-            </a>
+            {{/link-to}}
           </li>
         </ul>
         {{console/ui-panel isFullscreen=consoleFullscreen}}
