@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/textproto"
 	"regexp"
 	"strings"
 
@@ -303,9 +302,8 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			// canonicalize all the keys.
 			result := http.Header{}
 			for k, slice := range mapResult {
-				canonicalKey := textproto.CanonicalMIMEHeaderKey(k)
 				for _, v := range slice {
-					result.Add(canonicalKey, v)
+					result.Add(k, v)
 				}
 			}
 			return result, true, nil
@@ -324,7 +322,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 				return nil, false, fmt.Errorf("invalid key pair %q", keyPair)
 			}
 			// See note above about why we're canonicalizing.
-			result.Add(textproto.CanonicalMIMEHeaderKey(keyPairSlice[0]), keyPairSlice[1])
+			result.Add(keyPairSlice[0], keyPairSlice[1])
 		}
 		return result, true, nil
 
