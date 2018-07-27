@@ -4039,12 +4039,6 @@ ember-get-config@^0.2.2:
     broccoli-file-creator "^1.1.1"
     ember-cli-babel "^6.3.0"
 
-ember-href-to@^1.13.0:
-  version "1.13.0"
-  resolved "https://registry.yarnpkg.com/ember-href-to/-/ember-href-to-1.13.0.tgz#308ab4803d9d08e30a92af888cc67412a800468d"
-  dependencies:
-    ember-cli-babel "^5.1.6"
-
 ember-inflector@^1.9.4:
   version "1.12.1"
   resolved "https://registry.yarnpkg.com/ember-inflector/-/ember-inflector-1.12.1.tgz#d8bd2ca2f327b439720f89923fe614d46b5da1ca"

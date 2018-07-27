@@ -79,7 +79,6 @@
     "ember-data-model-fragments": "2.11.x",
     "ember-export-application-global": "^2.0.0",
     "ember-fetch": "^3.4.3",
-    "ember-href-to": "^1.13.0",
     "ember-inflector": "^3.0.0",
     "ember-load-initializers": "^1.0.0",
     "ember-maybe-in-element": "^0.1.3",
