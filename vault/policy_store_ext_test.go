@@ -2,6 +2,7 @@ package vault_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -24,6 +25,7 @@ path "secret/{{ identity.entity.aliases.%s.name}}/*" {
 
 }
 `
+
 	goodPolicy2 := `
 path "secret/{{ identity.groups.ids.%s.name}}/*" {
 	capabilities = ["read", "create", "update"]
@@ -34,8 +36,15 @@ path "secret/{{ identity.groups.names.%s.id}}/*" {
 	capabilities = ["read", "create", "update"]
 
 }
-
 `
+
+	badPolicy1 := `
+path "secret/{{ identity.groups.ids.foobar.name}}/*" {
+	capabilities = ["read", "create", "update"]
+
+}
+`
+
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
@@ -55,6 +64,7 @@ path "secret/{{ identity.groups.names.%s.id}}/*" {
 		"name": "entity_name",
 		"policies": []string{
 			"goodPolicy1",
+			"badPolicy1",
 		},
 	})
 	if err != nil {
@@ -162,8 +172,11 @@ path "secret/{{ identity.groups.names.%s.id}}/*" {
 	rootToken := client.Token()
 	client.SetToken(clientToken)
 	for _, test := range tests {
-		_, err := client.Logical().Write(test.path, map[string]interface{}{"zip": "zap"})
+		resp, err := client.Logical().Write(test.path, map[string]interface{}{"zip": "zap"})
 		if err != nil && !test.fail {
+			if resp.Data["error"].(string) != "permission denied" {
+				t.Fatalf("unexpected status %v", resp.Data["error"])
+			}
 			t.Fatalf("%s: got unexpected error: %v", test.name, err)
 		}
 		if err == nil && test.fail {
@@ -172,4 +185,19 @@ path "secret/{{ identity.groups.names.%s.id}}/*" {
 	}
 
 	client.SetToken(rootToken)
+	err = client.Sys().PutPolicy("badPolicy1", badPolicy1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client.SetToken(clientToken)
+	resp, err = client.Logical().Write("secret/entity_name/foo", map[string]interface{}{"zip": "zap"})
+	if err == nil {
+		t.Fatalf("expected error, resp is %#v", *resp)
+	}
+	if !strings.Contains(err.Error(), "permission denied") {
+		t.Fatalf("unexpected status: %v", err)
+		//if resp.Data["error"].(string) != "permission denied" {
+		//t.Fatalf("unexpected status %v", resp.Data["error"])
+	}
 }

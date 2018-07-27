@@ -475,6 +475,18 @@ func (ps *PolicyStore) DeletePolicy(ctx context.Context, name string, policyType
 	return nil
 }
 
+type TemplateError struct {
+	Err error
+}
+
+func (t *TemplateError) WrappedErrors() []error {
+	return []error{t.Err}
+}
+
+func (t *TemplateError) Error() string {
+	return t.Err.Error()
+}
+
 // ACL is used to return an ACL which is built using the
 // named policies.
 func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, names ...string) (*ACL, error) {
@@ -510,7 +522,7 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, names .
 				Groups: groups,
 			})
 			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("error performing templating on policy %q: {{err}}", policy.Name), err)
+				return nil, &TemplateError{Err: errwrap.Wrapf(fmt.Sprintf("error performing templating on policy %q: {{err}}", policy.Name), err)}
 			}
 			if !subst {
 				ps.logger.Warn("found templated policy that reported no substitutions", "policy", policy.Name)

@@ -3510,6 +3510,10 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		// Load the ACL policies so we can walk the prefix for this mount
 		acl, te, entity, _, err = b.Core.fetchACLTokenEntryAndEntity(req)
 		if err != nil {
+			if errwrap.ContainsType(err, new(TemplateError)) {
+				b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
+				err = logical.ErrPermissionDenied
+			}
 			return nil, err
 		}
 		if entity != nil && entity.Disabled {
@@ -3595,6 +3599,10 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	// Load the ACL policies so we can walk the prefix for this mount
 	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
+		if errwrap.ContainsType(err, new(TemplateError)) {
+			b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
+			err = logical.ErrPermissionDenied
+		}
 		return nil, err
 	}
 	if entity != nil && entity.Disabled {
@@ -3621,6 +3629,10 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 
 	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
+		if errwrap.ContainsType(err, new(TemplateError)) {
+			b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
+			err = logical.ErrPermissionDenied
+		}
 		return nil, err
 	}
 
