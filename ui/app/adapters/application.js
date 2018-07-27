@@ -7,7 +7,7 @@ const { inject, assign, set, RSVP } = Ember;
 
 export default DS.RESTAdapter.extend({
   auth: inject.service(),
-  tenant: inject.service('namespace'),
+  //tenant: inject.service('namespace'),
   controlGroup: inject.service(),
 
   flashMessages: inject.service(),

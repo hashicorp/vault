@@ -1,9 +1,10 @@
 import Pretender from 'pretender';
 import { moduleFor, test } from 'ember-qunit';
 import { storeMVP } from './_test-cases';
+import needs from 'vault/tests/unit/adapters/_adapter-needs';
 
 moduleFor('adapter:identity/entity-merge', 'Unit | Adapter | identity/entity-merge', {
-  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
+  needs,
   beforeEach() {
     this.server = new Pretender(function() {
       this.post('/v1/**', response => {
