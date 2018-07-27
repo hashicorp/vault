@@ -109,7 +109,7 @@ flags](/docs/commands/index.html) included on all commands.
 
 - `-role` `(string: "")` - Name of the role to create the token against.
   Specifying -role may override other arguments. The locally authenticated Vault
-  token must have permission for "auth/token/create/<role>".
+  token must have permission for `auth/token/create/<role>`.
 
 - `-ttl` `(duration: "")` - Initial TTL to associate with the token. Token
   renewals may be able to extend beyond this value, depending on the configured

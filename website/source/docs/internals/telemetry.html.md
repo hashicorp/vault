@@ -378,7 +378,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of operations): Number of database secrets engine initialization operations across database secrets engines
 
-### database.<name>.Initialize
+### database.&lt;name&gt;.Initialize
 
 **[S]** Summary (Milliseconds): Time taken to initialize a database secret engine for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize`
 
@@ -388,7 +388,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of errors): Number of database secrets engine initialization operation errors across all database secrets engines
 
-### database.<name>.Initialize.error
+### database.&lt;name&gt;.Initialize.error
 
 **[C]** Counter (Number of errors): Number of database secrets engine initialization operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize.error`
 
@@ -398,7 +398,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of operations): Number of database secrets engine close operations across database secrets engines
 
-### database.<name>.Close
+### database.&lt;name&gt;.Close
 
 **[S]** Summary (Milliseconds): Time taken to close a database secret engine for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close`
 
@@ -408,7 +408,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of errors): Number of database secrets engine close operation errors across all database secrets engines
 
-### database.<name>.Close.error
+### database.&lt;name&gt;.Close.error
 
 **[C]** Counter (Number of errors): Number of database secrets engine close operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close.error`
 
@@ -418,7 +418,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of operations): Number of user creation operations across database secrets engines
 
-### database.<name>.CreateUser
+### database.&lt;name&gt;.CreateUser
 
 **[S]** Summary (Milliseconds): Time taken to create a user for the named database secrets engine `<name>`
 
@@ -428,7 +428,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of errors): Number of user creation operation errors across all database secrets engines
 
-### database.<name>.CreateUser.error
+### database.&lt;name&gt;.CreateUser.error
 
 **[C]** Counter (Number of operations): Number of user creation operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.CreateUser.error`
 
@@ -438,7 +438,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of operations): Number of user renewal operations across database secrets engines
 
-### database.<name>.RenewUser
+### database.&lt;name&gt;.RenewUser
 
 **[S]** Summary (Milliseconds): Time taken to renew a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RenewUser`
 
@@ -448,7 +448,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of errors): Number of user renewal operation errors across all database secrets engines
 
-### database.<name>.RenewUser.error
+### database.&lt;name&gt;.RenewUser.error
 
 **[C]** Counter (Number of errors): Number of user renewal operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RenewUser.error`
 
@@ -458,7 +458,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of operations): Number of user revocation operations across database secrets engines
 
-### database.<name>.RevokeUser
+### database.&lt;name&gt;.RevokeUser
 
 **[S]** Summary (Milliseconds): Time taken to revoke a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser`
 
@@ -468,7 +468,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of errors): Number of user revocation operation errors across all database secrets engines
 
-### database.<name>.RevokeUser.error
+### database.&lt;name&gt;.RevokeUser.error
 
 **[C]** Counter (Number of errors): Number of user revocation operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser.error`
 
