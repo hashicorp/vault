@@ -185,7 +185,7 @@ type Core struct {
 
 	// stateLock protects mutable state
 	stateLock sync.RWMutex
-	sealed    bool
+	sealed    *uint32
 
 	standby              bool
 	standbyDoneCh        chan struct{}
@@ -480,7 +480,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterAddr:                      conf.ClusterAddr,
 		seal:                             conf.Seal,
 		router:                           NewRouter(),
-		sealed:                           true,
+		sealed:                           new(uint32),
 		standby:                          true,
 		logger:                           conf.Logger.Named("core"),
 		defaultLeaseTTL:                  conf.DefaultLeaseTTL,
@@ -502,6 +502,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		activeNodeReplicationState:       new(uint32),
 		keepHALockOnStepDown:             new(uint32),
 	}
+
+	atomic.StoreUint32(c.sealed, 1)
 
 	atomic.StoreUint32(c.replicationState, uint32(consts.ReplicationDRDisabled|consts.ReplicationPerformanceDisabled))
 	c.localClusterCert.Store(([]byte)(nil))
@@ -634,20 +636,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 // happens as quickly as possible.
 func (c *Core) Shutdown() error {
 	c.logger.Debug("shutdown called")
-	c.stateLock.RLock()
-	// Tell any requests that know about this to stop
-	if c.activeContextCancelFunc != nil {
-		c.activeContextCancelFunc()
-	}
-	c.stateLock.RUnlock()
-
-	c.logger.Debug("shutdown initiating internal seal")
-	// Seal the Vault, causes a leader stepdown
-	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
-
-	c.logger.Debug("shutdown running internal seal")
-	return c.sealInternal(false)
+	return c.sealInternal()
 }
 
 // CORSConfig returns the current CORS configuration
@@ -663,10 +652,8 @@ func (c *Core) GetContext() (context.Context, context.CancelFunc) {
 }
 
 // Sealed checks if the Vault is current sealed
-func (c *Core) Sealed() (bool, error) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	return c.sealed, nil
+func (c *Core) Sealed() bool {
+	return atomic.LoadUint32(c.sealed) == 1
 }
 
 // SecretProgress returns the number of keys provided so far
@@ -686,9 +673,6 @@ func (c *Core) SecretProgress() (int, string) {
 func (c *Core) ResetUnsealProcess() {
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
-	if !c.sealed {
-		return
-	}
 	c.unlockInfo = nil
 }
 
@@ -732,7 +716,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	}
 
 	// Check if already unsealed
-	if !c.sealed {
+	if !c.Sealed() {
 		return true, nil
 	}
 
@@ -774,7 +758,7 @@ func (c *Core) UnsealWithRecoveryKeys(ctx context.Context, key []byte) (bool, er
 	}
 
 	// Check if already unsealed
-	if !c.sealed {
+	if !c.Sealed() {
 		return true, nil
 	}
 
@@ -918,13 +902,13 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		go c.runStandby(c.standbyDoneCh, c.manualStepDownCh, c.standbyStopCh)
 	}
 
-	// Success!
-	c.sealed = false
-
 	// Force a cache bust here, which will also run migration code
 	if c.seal.RecoveryKeySupported() {
 		c.seal.SetRecoveryConfig(ctx, nil)
 	}
+
+	// Success!
+	atomic.StoreUint32(c.sealed, 0)
 
 	if c.ha != nil {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
@@ -941,19 +925,30 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 
 // SealWithRequest takes in a logical.Request, acquires the lock, and passes
 // through to sealInternal
-func (c *Core) SealWithRequest(req *logical.Request) error {
+func (c *Core) SealWithRequest(httpCtx context.Context, req *logical.Request) error {
 	defer metrics.MeasureSince([]string{"core", "seal-with-request"}, time.Now())
 
-	c.stateLock.RLock()
-
-	if c.sealed {
-		c.stateLock.RUnlock()
+	if c.Sealed() {
 		return nil
 	}
 
+	c.stateLock.RLock()
+
 	// This will unlock the read lock
 	// We use background context since we may not be active
-	return c.sealInitCommon(context.Background(), req)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-httpCtx.Done():
+			cancel()
+		}
+	}()
+
+	// This will unlock the read lock
+	return c.sealInitCommon(ctx, req)
 }
 
 // Seal takes in a token and creates a logical.Request, acquires the lock, and
@@ -961,12 +956,11 @@ func (c *Core) SealWithRequest(req *logical.Request) error {
 func (c *Core) Seal(token string) error {
 	defer metrics.MeasureSince([]string{"core", "seal"}, time.Now())
 
-	c.stateLock.RLock()
-
-	if c.sealed {
-		c.stateLock.RUnlock()
+	if c.Sealed() {
 		return nil
 	}
+
+	c.stateLock.RLock()
 
 	req := &logical.Request{
 		Operation:   logical.UpdateOperation,
@@ -1086,7 +1080,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		// we won't have a token store after sealing.
 		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
 		if err == nil {
-			err = c.expiration.Revoke(leaseID)
+			err = c.expiration.Revoke(ctx, leaseID)
 		}
 		if err != nil {
 			c.logger.Error("token needed revocation before seal but failed to revoke", "error", err)
@@ -1094,18 +1088,10 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		}
 	}
 
-	// Tell any requests that know about this to stop
-	if c.activeContextCancelFunc != nil {
-		c.activeContextCancelFunc()
-	}
-
-	// Unlock from the request handling
+	// Unlock; sealing will grab the lock when needed
 	c.stateLock.RUnlock()
 
-	//Seal the Vault
-	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
-	sealErr := c.sealInternal(false)
+	sealErr := c.sealInternal()
 
 	if sealErr != nil {
 		retErr = multierror.Append(retErr, sealErr)
@@ -1125,14 +1111,16 @@ func (c *Core) UIHeaders() (http.Header, error) {
 }
 
 // sealInternal is an internal method used to seal the vault.  It does not do
-// any authorization checking. The stateLock must be held prior to calling.
-func (c *Core) sealInternal(keepLock bool) error {
-	if c.sealed {
+// any authorization checking.
+func (c *Core) sealInternal() error {
+	return c.sealInternalWithOptions(true, false)
+}
+
+func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
+	// Mark sealed, and if already marked return
+	if swapped := atomic.CompareAndSwapUint32(c.sealed, 0, 1); !swapped {
 		return nil
 	}
-
-	// Enable that we are sealed to prevent further transactions
-	c.sealed = true
 
 	c.logger.Debug("marked as sealed")
 
@@ -1143,15 +1131,30 @@ func (c *Core) sealInternal(keepLock bool) error {
 
 	// Do pre-seal teardown if HA is not enabled
 	if c.ha == nil {
+		c.stateLock.Lock()
+		defer c.stateLock.Unlock()
 		// Even in a non-HA context we key off of this for some things
 		c.standby = true
+
+		// Stop requests from processing
+		if c.activeContextCancelFunc != nil {
+			c.activeContextCancelFunc()
+		}
+
 		if err := c.preSeal(); err != nil {
 			c.logger.Error("pre-seal teardown failed", "error", err)
 			return fmt.Errorf("internal error")
 		}
 	} else {
-		if keepLock {
+		// If we are keeping the lock we already have the state write lock
+		// held. Otherwise grab it here so that when stopCh is triggered we are
+		// locked.
+		if keepHALock {
 			atomic.StoreUint32(c.keepHALockOnStepDown, 1)
+		}
+		if grabStateLock {
+			c.stateLock.Lock()
+			defer c.stateLock.Unlock()
 		}
 		// If we are trying to acquire the lock, force it to return with nil so
 		// runStandby will exit

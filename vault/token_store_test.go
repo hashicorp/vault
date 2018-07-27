@@ -333,7 +333,7 @@ func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, polic
 	req.Data["policies"] = policy
 	req.Data["ttl"] = ttl
 
-	resp, err := c.HandleRequest(req)
+	resp, err := c.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2085,7 +2085,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	req := logical.TestRequest(t, logical.ReadOperation, "auth/token/roles/test")
 	req.ClientToken = root
 
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2102,7 +2102,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"path_suffix":      "happenin",
 	}
 
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2114,7 +2114,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	req.Operation = logical.ReadOperation
 	req.Data = map[string]interface{}{}
 
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2148,7 +2148,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"renewable":        false,
 	}
 
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2160,7 +2160,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	req.Operation = logical.ReadOperation
 	req.Data = map[string]interface{}{}
 
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2189,7 +2189,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"explicit_max_ttl": "5",
 		"period":           "0s",
 	}
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2197,7 +2197,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	req.Operation = logical.ReadOperation
 	req.Data = map[string]interface{}{}
 
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2223,7 +2223,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	req.Operation = logical.ListOperation
 	req.Path = "auth/token/roles"
 	req.Data = map[string]interface{}{}
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2247,7 +2247,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 
 	req.Operation = logical.DeleteOperation
 	req.Path = "auth/token/roles/test"
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2256,7 +2256,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	req.Operation = logical.ReadOperation
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2598,7 +2598,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		"period": 5,
 	}
 
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2615,7 +2615,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"policies": []string{"default"},
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -2626,7 +2626,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2640,14 +2640,14 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/renew-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2663,14 +2663,14 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 1,
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2686,7 +2686,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.ClientToken = root
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/create/test"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -2703,7 +2703,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2720,14 +2720,14 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 1,
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2754,7 +2754,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		"explicit_max_ttl": "100h",
 	}
 
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2764,7 +2764,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 
 	req.Operation = logical.UpdateOperation
 	req.Path = "auth/token/create/test"
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("expected an error")
 	}
@@ -2779,7 +2779,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		"explicit_max_ttl": "10s",
 	}
 
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2795,7 +2795,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"policies": []string{"default"},
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -2806,7 +2806,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2820,14 +2820,14 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/renew-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2843,7 +2843,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.ClientToken = root
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/create/test"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -2860,7 +2860,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2882,14 +2882,14 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 300,
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2906,14 +2906,14 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 300,
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2930,7 +2930,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 300,
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err == nil {
 			t.Fatalf("expected error")
 		}
@@ -2939,7 +2939,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if resp != nil && err == nil {
 			t.Fatalf("expected error, response is %#v", *resp)
 		}
@@ -2964,7 +2964,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 		"period": 5,
 	}
 
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2977,7 +2977,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 		req.ClientToken = root
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/create"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2994,7 +2994,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3011,14 +3011,14 @@ func TestTokenStore_Periodic(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 1,
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3038,7 +3038,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"period": 5,
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -3055,7 +3055,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3072,14 +3072,14 @@ func TestTokenStore_Periodic(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 1,
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3105,7 +3105,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		"period": 5,
 	}
 
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -3122,7 +3122,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 			"period":           5,
 			"explicit_max_ttl": 4,
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3139,7 +3139,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3156,14 +3156,14 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 76,
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3185,7 +3185,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 			"explicit_max_ttl": 4,
 		}
 
-		resp, err := core.HandleRequest(req)
+		resp, err := core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -3196,7 +3196,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		req.ClientToken = root
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/create/test"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -3213,7 +3213,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3230,14 +3230,14 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 1,
 		}
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}

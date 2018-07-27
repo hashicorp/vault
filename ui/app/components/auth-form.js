@@ -8,6 +8,7 @@ const DEFAULTS = {
   token: null,
   username: null,
   password: null,
+  customPath: null,
 };
 
 export default Ember.Component.extend(DEFAULTS, {
@@ -75,10 +76,14 @@ export default Ember.Component.extend(DEFAULTS, {
     'selectedAuth',
     'selectedAuthIsPath',
     function() {
-      let methods = this.get('allSupportedMethods');
+      let methods = this.get('methods');
+      let selectedAuth = this.get('selectedAuth');
       let keyIsPath = this.get('selectedAuthIsPath');
-      let findKey = keyIsPath ? 'path' : 'type';
-      return methods.findBy(findKey, this.get('selectedAuth'));
+      if (keyIsPath) {
+        return methods.findBy('path', selectedAuth);
+      } else {
+        return BACKENDS.findBy('type', selectedAuth);
+      }
     }
   ),
 
@@ -143,15 +148,14 @@ export default Ember.Component.extend(DEFAULTS, {
       });
       let targetRoute = this.get('redirectTo') || 'vault.cluster';
       let backend = this.get('selectedAuthBackend') || {};
-      let path = get(backend, 'path') || this.get('customPath');
       let backendMeta = BACKENDS.find(
         b => get(b, 'type').toLowerCase() === get(backend, 'type').toLowerCase()
       );
       let attributes = get(backendMeta, 'formAttributes');
 
       data = Ember.assign(data, this.getProperties(...attributes));
-      if (get(backend, 'path') || (this.get('useCustomPath') && path)) {
-        data.path = path;
+      if (this.get('customPath') || get(backend, 'id')) {
+        data.path = this.get('customPath') || get(backend, 'id');
       }
       const clusterId = this.get('cluster.id');
       this.get('auth').authenticate({ clusterId, backend: get(backend, 'type'), data }).then(

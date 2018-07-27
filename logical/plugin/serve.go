@@ -2,7 +2,10 @@ package plugin
 
 import (
 	"crypto/tls"
+	"math"
 	"os"
+
+	"google.golang.org/grpc"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
@@ -54,7 +57,11 @@ func Serve(opts *ServeOpts) error {
 		Logger:          logger,
 
 		// A non-nil value here enables gRPC serving for this plugin...
-		GRPCServer: plugin.DefaultGRPCServer,
+		GRPCServer: func(opts []grpc.ServerOption) *grpc.Server {
+			opts = append(opts, grpc.MaxRecvMsgSize(math.MaxInt32))
+			opts = append(opts, grpc.MaxSendMsgSize(math.MaxInt32))
+			return plugin.DefaultGRPCServer(opts)
+		},
 	}
 
 	if !pluginutil.GRPCSupport() {

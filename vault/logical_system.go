@@ -2319,7 +2319,7 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 
 	if data.Get("sync").(bool) {
 		// Invoke the expiration manager directly
-		if err := b.Core.expiration.Revoke(leaseID); err != nil {
+		if err := b.Core.expiration.Revoke(ctx, leaseID); err != nil {
 			b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
 			return handleErrorNoReadOnlyForward(err)
 		}

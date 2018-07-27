@@ -26,11 +26,20 @@ const (
 	replTimeout = 10 * time.Second
 )
 
+var (
+	// DefaultMaxRequestDuration is the amount of time we'll wait for a request
+	// to complete, unless overridden on a per-handler basis
+	// FIXME: In 0.11 make this 90 seconds; for now keep it at essentially infinity if not set explicitly
+	//DefaultMaxRequestDuration = 90 * time.Second
+	DefaultMaxRequestDuration = 999999 * time.Hour
+)
+
 // HanlderProperties is used to seed configuration into a vaulthttp.Handler.
 // It's in this package to avoid a circular dependency
 type HandlerProperties struct {
 	Core                  *Core
 	MaxRequestSize        int64
+	MaxRequestDuration    time.Duration
 	DisablePrintableCheck bool
 }
 
@@ -265,10 +274,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 }
 
 // HandleRequest is used to handle a new incoming request
-func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
+func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (resp *logical.Response, err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil, consts.ErrSealed
 	}
 	if c.standby {
@@ -277,6 +286,14 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 	ctx, cancel := context.WithCancel(c.activeContext)
 	defer cancel()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-httpCtx.Done():
+			cancel()
+		}
+	}()
 
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
@@ -430,7 +447,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			defer func(id string) {
 				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
 				if err == nil {
-					err = c.expiration.Revoke(leaseID)
+					err = c.expiration.Revoke(ctx, leaseID)
 				}
 				if err != nil {
 					c.logger.Error("failed to revoke token", "error", err)
@@ -639,15 +656,19 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		resp.Auth.TokenPolicies = policyutil.SanitizePolicies(resp.Auth.Policies, policyutil.DoNotAddDefaultPolicy)
-		resp.Auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies, policyutil.DoNotAddDefaultPolicy)
-		resp.Auth.Policies = policyutil.SanitizePolicies(append(resp.Auth.Policies, identityPolicies...), policyutil.DoNotAddDefaultPolicy)
-
 		if err := c.expiration.RegisterAuth(resp.Auth.CreationPath, resp.Auth); err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
+
+		// We do these later since it's not meaningful for backends/expmgr to
+		// have what is purely a snapshot of current identity policies, and
+		// plugins can be confused if they are checking contents of
+		// Auth.Policies instead of Auth.TokenPolicies
+		resp.Auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies, policyutil.DoNotAddDefaultPolicy)
+		resp.Auth.Policies = policyutil.SanitizePolicies(append(resp.Auth.Policies, identityPolicies...), policyutil.DoNotAddDefaultPolicy)
 	}
 
 	if resp != nil &&
@@ -836,13 +857,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		}
 
 		auth.TokenPolicies = te.Policies
-		auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies, policyutil.DoNotAddDefaultPolicy)
-		auth.Policies = policyutil.SanitizePolicies(append(te.Policies, identityPolicies...), policyutil.DoNotAddDefaultPolicy)
+		allPolicies := policyutil.SanitizePolicies(append(te.Policies, identityPolicies...), policyutil.DoNotAddDefaultPolicy)
 
 		// Prevent internal policies from being assigned to tokens. We check
 		// this on auth.Policies including derived ones from Identity before
 		// actually making the token.
-		for _, policy := range auth.Policies {
+		for _, policy := range allPolicies {
 			if policy == "root" {
 				return logical.ErrorResponse("auth methods cannot create root tokens"), nil, logical.ErrInvalidRequest
 			}
@@ -867,6 +887,9 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			return nil, auth, ErrInternalError
 		}
+
+		auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies, policyutil.DoNotAddDefaultPolicy)
+		auth.Policies = allPolicies
 
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName

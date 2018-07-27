@@ -256,6 +256,14 @@ Thes operations take a request and response with an associated lease and registe
 
 **[S]** Summary (Milliseconds): Time taken for register authentication operations which create lease entries without lease ID
 
+### vault.merkle_flushdirty
+
+**[S]** Summary (Milliseconds): Time taken to flush any dirty pages to cold storage
+
+### vault.merkle_savecheckpoint
+
+**[S]** Summary (Milliseconds): Time taken to save the checkpoint
+
 ### vault.policy.get_policy
 
 **[S]** Summary (Milliseconds): Time taken to get a policy
@@ -295,6 +303,26 @@ Thes operations take a request and response with an associated lease and registe
 ### vault.token.store
 
 **[S]** Summary (Milliseconds): Time taken to store an updated token entry without writing to the secondary index
+
+### vault.wal_deletewals
+
+**[S]** Summary (Milliseconds): Time taken to delete a Write Ahead Log (WAL)
+
+### vault.wal_gc_deleted
+
+**[C]** Counter (Number of WAL): Number of Write Ahead Logs (WAL) deleted during each garbage collection run
+
+### vault.wal_gc_total
+
+**[C]** Counter (Number of WAL): Total Number of Write Ahead Logs (WAL) on disk
+
+### vault.wal_persistwals
+
+**[S]** Summary (Milliseconds): Time taken to persist a Write Ahead Log (WAL)
+
+### vault.wal_flushready
+
+**[S]** Summary (Milliseconds): Time taken to flush a ready Write Ahead Log (WAL) to storage
 
 ## Auth Methods Metrics
 

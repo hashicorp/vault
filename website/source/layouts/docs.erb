@@ -135,6 +135,9 @@
               <li<%= sidebar_current("docs-configuration-storage-filesystem")%>>
                 <a href="/docs/configuration/storage/filesystem.html">Filesystem</a>
               </li>
+              <li<%= sidebar_current("docs-configuration-storage-foundationdb")%>>
+                <a href="/docs/configuration/storage/foundationdb.html">FoundationDB</a>
+              </li>
               <li<%= sidebar_current("docs-configuration-storage-google-cloud")%>>
                 <a href="/docs/configuration/storage/google-cloud-storage.html">Google Cloud Storage</a>
               </li>
@@ -179,6 +182,9 @@
       <li<%= sidebar_current("docs-commands") %>>
         <a href="/docs/commands/index.html">Commands (CLI)</a>
         <ul class="nav">
+          <li<%= sidebar_current("docs-commands-agent") %>>
+            <a href="/docs/commands/agent.html">agent</a>
+          </li>
           <li<%= sidebar_current("docs-commands-audit") %>>
             <a href="/docs/commands/audit.html">audit</a>
             <ul class="nav">
@@ -365,7 +371,44 @@
           </li>
         </ul>
       </li>
-
+      <li<%= sidebar_current("docs-agent") %>>
+        <a href="/docs/agent/index.html">Vault Agent</a>
+        <ul class="nav">
+          <li<%= sidebar_current("docs-agent-autoauth") %>>
+            <a href="/docs/agent/autoauth/index.html">Auto-Auth</a>
+            <ul class="nav">
+              <li<%= sidebar_current("docs-agent-autoauth-methods") %>>
+                <a href="/docs/agent/autoauth/methods/index.html">Methods</a>
+                <ul class="nav">
+                  <li<%= sidebar_current("docs-agent-autoauth-methods-aws") %>>
+                    <a href="/docs/agent/autoauth/methods/aws.html">AWS</a>
+                  </li>
+                  <li<%= sidebar_current("docs-agent-autoauth-methods-azure") %>>
+                    <a href="/docs/agent/autoauth/methods/azure.html">Azure</a>
+                  </li>
+                  <li<%= sidebar_current("docs-agent-autoauth-methods-gcp") %>>
+                    <a href="/docs/agent/autoauth/methods/gcp.html">GCP</a>
+                  </li>
+                   <li<%= sidebar_current("docs-agent-autoauth-methods-jwt") %>>
+                    <a href="/docs/agent/autoauth/methods/jwt.html">JWT/OIDC</a>
+                  </li>
+                  <li<%= sidebar_current("docs-agent-autoauth-methods-kubernetes") %>>
+                    <a href="/docs/agent/autoauth/methods/kubernetes.html">Kubernetes</a>
+                  </li>
+                 </ul>
+              </li>
+              <li<%= sidebar_current("docs-agent-autoauth-sinks") %>>
+                <a href="/docs/agent/autoauth/sinks/index.html">Sinks</a>
+                <ul class="nav">
+                  <li<%= sidebar_current("docs-agent-autoauth-sinks-file") %>>
+                    <a href="/docs/agent/autoauth/sinks/file.html">File</a>
+                  </li>
+                </ul>
+              </li>
+             </ul>
+          </li>
+        </ul>
+      </li>
       <hr>
 
       <li<%= sidebar_current("docs-secrets") %>>

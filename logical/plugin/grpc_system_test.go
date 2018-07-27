@@ -8,6 +8,7 @@ import (
 
 	"reflect"
 
+	"github.com/gogo/protobuf/proto"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
@@ -170,6 +171,19 @@ func TestSystem_GRPC_entityInfo(t *testing.T) {
 	sys.EntityVal = &logical.Entity{
 		ID:   "id",
 		Name: "name",
+		Metadata: map[string]string{
+			"foo": "bar",
+		},
+		Aliases: []*logical.Alias{
+			&logical.Alias{
+				MountType:     "logical",
+				MountAccessor: "accessor",
+				Name:          "name",
+				Metadata: map[string]string{
+					"zip": "zap",
+				},
+			},
+		},
 	}
 	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
 		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{
@@ -183,7 +197,7 @@ func TestSystem_GRPC_entityInfo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sys.EntityVal.ID != actual.ID || sys.EntityVal.Name != actual.Name {
+	if !proto.Equal(sys.EntityVal, actual) {
 		t.Fatalf("expected: %v, got: %v", sys.EntityVal, actual)
 	}
 }

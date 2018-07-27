@@ -595,22 +595,26 @@
 			"revisionTime": "2018-05-24T23:10:29Z"
 		},
 		{
-			"checksumSHA1": "l8gIVOjlnOrceuJLONvgA8p4FI4=",
+			"checksumSHA1": "XZGYFHhCogxNxPW12m2isdjzHV8=",
 			"path": "github.com/circonus-labs/circonus-gometrics",
-			"revision": "b5b9c6e8f93c67411193a170108e951e642c453c",
-			"revisionTime": "2018-02-07T19:24:15Z"
+			"revision": "f57cec857aa60ee9ffa19016d5edc822f9b1fea1",
+			"revisionTime": "2018-07-19T04:14:26Z"
 		},
 		{
-			"checksumSHA1": "I6MmriS6eBxiKW9g+p23t0YFDVg=",
+			"checksumSHA1": "z3WEOjH/vGFhybYzw8jrug2EE6s=",
 			"path": "github.com/circonus-labs/circonus-gometrics/api",
-			"revision": "b5b9c6e8f93c67411193a170108e951e642c453c",
-			"revisionTime": "2018-02-07T19:24:15Z"
+			"revision": "f57cec857aa60ee9ffa19016d5edc822f9b1fea1",
+			"revisionTime": "2018-07-19T04:14:26Z"
+		},
+		{
+			"path": "github.com/circonus-labs/circonus-gometrics/api/checkmgr",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "bQhz/fcyZPmuHSH2qwC4ZtATy5c=",
 			"path": "github.com/circonus-labs/circonus-gometrics/api/config",
-			"revision": "b5b9c6e8f93c67411193a170108e951e642c453c",
-			"revisionTime": "2018-02-07T19:24:15Z"
+			"revision": "f57cec857aa60ee9ffa19016d5edc822f9b1fea1",
+			"revisionTime": "2018-07-19T04:14:26Z"
 		},
 		{
 			"checksumSHA1": "YCRBAIvGNWV9L59Wu7GjUVwpK7Q=",
@@ -1113,10 +1117,10 @@
 			"revisionTime": "2018-03-31T00:25:53Z"
 		},
 		{
-			"checksumSHA1": "s6mKR1dSKP04+A3kwSsFr/PvsOU=",
+			"checksumSHA1": "/yKfFSspjuDzyOe/bBslrPzyfYM=",
 			"path": "github.com/hashicorp/go-retryablehttp",
-			"revision": "3b087ef2d313afe6c55b2f511d20db04ca767075",
-			"revisionTime": "2018-05-31T21:13:21Z"
+			"revision": "e651d75abec6fbd4f2c09508f72ae7af8a8b7171",
+			"revisionTime": "2018-07-18T19:50:05Z"
 		},
 		{
 			"checksumSHA1": "A1PcINvF3UiwHRKn8UcgARgvGRs=",
@@ -1293,10 +1297,10 @@
 			"revisionTime": "2018-05-30T15:59:58Z"
 		},
 		{
-			"checksumSHA1": "SQ1DvDihitOt2BxCOXn9mrGXnSA=",
+			"checksumSHA1": "TBYf7b18sac9sBSaiRHJQXJvnWA=",
 			"path": "github.com/hashicorp/vault-plugin-auth-azure",
-			"revision": "5bbc3c8a4d777d9655b6009ace708f725d9679f7",
-			"revisionTime": "2018-06-26T21:25:21Z"
+			"revision": "2a679470bdb9aa58ab4d671ec1589a0538190861",
+			"revisionTime": "2018-07-25T02:07:40Z"
 		},
 		{
 			"checksumSHA1": "LI3ZsYvX/mU/o5EL3gE0qwKcSPs=",
@@ -1317,16 +1321,16 @@
 			"revisionTime": "2018-07-10T15:13:41Z"
 		},
 		{
-			"checksumSHA1": "L5pDwOw2/MLLUSykrwxXbXQI7zI=",
+			"checksumSHA1": "GAsPitFJRlzOg7kkQVKWksOY5bM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "7ca24869a5b9c9e308c475a21c9ce1331734120e",
-			"revisionTime": "2018-06-19T23:09:39Z"
+			"revision": "79458d2576b21c11a9482f0a16074bcb1b657e7f",
+			"revisionTime": "2018-07-23T17:26:15Z"
 		},
 		{
-			"checksumSHA1": "kGEaf6lxGWkJibW4Dto2wFDXrfY=",
+			"checksumSHA1": "pNERL2s72vwnApekzTLxGsvkyNU=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin",
-			"revision": "6afcfbb25eb6f5adec1b9bba1cf8601f95e89d06",
-			"revisionTime": "2018-06-19T16:09:38Z"
+			"revision": "bef8c4ed4d9125ee372abd4d5d43408523ae7a35",
+			"revisionTime": "2018-07-27T20:22:23Z"
 		},
 		{
 			"checksumSHA1": "GOxdFElG31lXWgKFG9aqpDcG47M=",
@@ -1489,6 +1493,12 @@
 			"path": "github.com/keybase/go-crypto/rsa",
 			"revision": "670ebd3adf7a737d69ffe83a777a8e34eadc1b32",
 			"revisionTime": "2018-06-27T17:25:17Z"
+		},
+		{
+			"checksumSHA1": "3ohk4dFYrERZ6WTdKkIwnTA0HSI=",
+			"path": "github.com/kr/pretty",
+			"revision": "73f6ac0b30a98e433b289500d779f50c1a6f0712",
+			"revisionTime": "2018-05-06T08:33:45Z"
 		},
 		{
 			"checksumSHA1": "SbguDK5lY8uhaHNrmJmNbiWIGM0=",

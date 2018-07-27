@@ -9,7 +9,7 @@ moduleForAcceptance('Acceptance | tools', {
   },
   afterEach() {
     return authLogout();
-  },
+  }
 });
 
 const DATA_TO_WRAP = JSON.stringify({ tools: 'tests' });

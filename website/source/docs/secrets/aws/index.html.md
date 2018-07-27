@@ -220,7 +220,7 @@ To generate a new set of STS federation token credentials, we simply write to
 the role using the aws/sts endpoint:
 
 ```text
-$vault write aws/sts/deploy ttl=60m
+$ vault write aws/sts/deploy ttl=60m
 Key            	Value
 lease_id       	aws/sts/deploy/31d771a6-fb39-f46b-fdc5-945109106422
 lease_duration 	60m0s
@@ -289,7 +289,7 @@ To generate a new set of STS assumed role credentials, we again write to
 the role using the aws/sts endpoint:
 
 ```text
-$vault write aws/sts/deploy ttl=60m
+$ vault write aws/sts/deploy ttl=60m
 Key            	Value
 lease_id       	aws/sts/deploy/31d771a6-fb39-f46b-fdc5-945109106422
 lease_duration 	60m0s
