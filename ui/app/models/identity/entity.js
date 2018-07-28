@@ -43,6 +43,7 @@ export default IdentityModel.extend({
   updatePath: identityCapabilities(),
   canDelete: computed.alias('updatePath.canDelete'),
   canEdit: computed.alias('updatePath.canUpdate'),
+  canRead: computed.alias('updatePath.canRead'),
 
   aliasPath: lazyCapabilities(apiPath`identity/entity-alias`),
   canAddAlias: computed.alias('aliasPath.canCreate'),

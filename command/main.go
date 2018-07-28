@@ -182,6 +182,7 @@ var commonCommands = []string{
 	"delete",
 	"list",
 	"login",
+	"agent",
 	"server",
 	"status",
 	"unwrap",

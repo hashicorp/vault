@@ -574,7 +574,7 @@ func TestExpiration_Revoke(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if err := exp.Revoke(id); err != nil {
+	if err := exp.Revoke(context.Background(), id); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -1732,7 +1732,7 @@ func TestExpiration_RevokeForce(t *testing.T) {
 		ClientToken: root,
 	}
 
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1746,13 +1746,13 @@ func TestExpiration_RevokeForce(t *testing.T) {
 	req.Operation = logical.UpdateOperation
 	req.Path = "sys/revoke-prefix/badrenew/creds"
 
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 
 	req.Path = "sys/revoke-force/badrenew/creds"
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("got error: %s", err)
 	}
@@ -1780,7 +1780,7 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 		ClientToken: root,
 	}
 
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1795,7 +1795,7 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 	req.Operation = logical.UpdateOperation
 	req.Path = "sys/leases/lookup"
 	req.Data = map[string]interface{}{"lease_id": leaseID}
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1808,20 +1808,20 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 
 	req.Path = "sys/revoke-prefix/" + leaseID
 
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 
 	req.Path = "sys/revoke-force/" + leaseID
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("got error: %s", err)
 	}
 
 	req.Path = "sys/leases/lookup"
 	req.Data = map[string]interface{}{"lease_id": leaseID}
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Fatal("expected error")
 	}

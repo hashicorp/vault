@@ -200,7 +200,6 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 	aliasData := map[string]interface{}{
 		"name":           "testaliasname",
 		"mount_accessor": githubAccessor,
-		"metadata":       []string{"organization=hashicorp", "team=vault"},
 	}
 
 	aliasReq := &logical.Request{
@@ -219,7 +218,6 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 	updateData := map[string]interface{}{
 		"name":           "updatedaliasname",
 		"mount_accessor": githubAccessor,
-		"metadata":       []string{"organization=updatedorganization", "team=updatedteam"},
 	}
 
 	aliasReq.Data = updateData
@@ -235,11 +233,7 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	aliasMetadata := resp.Data["metadata"].(map[string]string)
-	updatedOrg := aliasMetadata["organization"]
-	updatedTeam := aliasMetadata["team"]
-
-	if resp.Data["name"] != "updatedaliasname" || updatedOrg != "updatedorganization" || updatedTeam != "updatedteam" {
+	if resp.Data["name"] != "updatedaliasname" {
 		t.Fatalf("failed to update alias information; \n response data: %#v\n", resp.Data)
 	}
 }
@@ -252,7 +246,6 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 	updateData := map[string]interface{}{
 		"name":           "updatedaliasname",
 		"mount_accessor": githubAccessor,
-		"metadata":       []string{"organization=updatedorganization", "team=updatedteam"},
 	}
 
 	updateReq := &logical.Request{
@@ -273,7 +266,6 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 	registerData := map[string]interface{}{
 		"name":           "testaliasname",
 		"mount_accessor": githubAccessor,
-		"metadata":       []string{"organization=hashicorp", "team=vault"},
 	}
 
 	registerReq := &logical.Request{
@@ -311,11 +303,7 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	aliasMetadata := resp.Data["metadata"].(map[string]string)
-	updatedOrg := aliasMetadata["organization"]
-	updatedTeam := aliasMetadata["team"]
-
-	if resp.Data["name"] != "updatedaliasname" || updatedOrg != "updatedorganization" || updatedTeam != "updatedteam" {
+	if resp.Data["name"] != "updatedaliasname" {
 		t.Fatalf("failed to update alias information; \n response data: %#v\n", resp.Data)
 	}
 

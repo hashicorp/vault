@@ -629,7 +629,8 @@ to be able to delegate specific endpoints using Vault's ACL system.
 | `GET/POST/DELETE`   | `/auth/approle/role/:role_name/token-ttl`  | `200/204` |
 | `GET/POST/DELETE`   | `/auth/approle/role/:role_name/token-max-ttl`  | `200/204` |
 | `GET/POST/DELETE`   | `/auth/approle/role/:role_name/bind-secret-id`  | `200/204` |
-| `GET/POST/DELETE`   | `/auth/approle/role/:role_name/bound-cidr-list`  | `200/204` |
+| `GET/POST/DELETE`   | `/auth/approle/role/:role_name/secret-id-bound-cidrs`  | `200/204` |
+| `GET/POST/DELETE`   | `/auth/approle/role/:role_name/token-bound-cidrs`  | `200/204` |
 | `GET/POST/DELETE`   | `/auth/approle/role/:role_name/period`  | `200/204` |
 
 Refer to `/auth/approle/role/:role_name` endpoint.

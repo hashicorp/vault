@@ -35,7 +35,11 @@ func pathLogin(b *azureAuthBackend) *framework.Path {
 			},
 			"vm_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: `The name of the virtual machine.`,
+				Description: `The name of the virtual machine. This value is ignored if vmss_name is specified.`,
+			},
+			"vmss_name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: `The name of the virtual machine scale set the instance is in.`,
 			},
 		},
 
@@ -60,11 +64,15 @@ func (b *azureAuthBackend) pathLogin(ctx context.Context, req *logical.Request, 
 	}
 	subscriptionID := data.Get("subscription_id").(string)
 	resourceGroupName := data.Get("resource_group_name").(string)
+	vmssName := data.Get("vmss_name").(string)
 	vmName := data.Get("vm_name").(string)
 
 	config, err := b.config(ctx, req.Storage)
 	if err != nil {
 		return nil, errwrap.Wrapf("unable to retrieve backend configuration: {{err}}", err)
+	}
+	if config == nil {
+		config = new(azureConfig)
 	}
 
 	role, err := b.role(ctx, req.Storage, roleName)
@@ -75,7 +83,6 @@ func (b *azureAuthBackend) pathLogin(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse(fmt.Sprintf("invalid role name %q", roleName)), nil
 	}
 
-	// Set the client id for 'aud' claim verification
 	provider, err := b.getProvider(config)
 	if err != nil {
 		return nil, err
@@ -98,7 +105,7 @@ func (b *azureAuthBackend) pathLogin(ctx context.Context, req *logical.Request, 
 		return nil, err
 	}
 
-	if err := b.verifyResource(ctx, subscriptionID, resourceGroupName, vmName, claims, role); err != nil {
+	if err := b.verifyResource(ctx, subscriptionID, resourceGroupName, vmName, vmssName, claims, role); err != nil {
 		return nil, err
 	}
 
@@ -168,30 +175,80 @@ func (b *azureAuthBackend) verifyClaims(claims *additionalClaims, role *azureRol
 	return nil
 }
 
-func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, resourceGroupName, vmName string, claims *additionalClaims, role *azureRole) error {
+func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, resourceGroupName, vmName string, vmssName string, claims *additionalClaims, role *azureRole) error {
 	// If not checking anything with the resource id, exit early
-	if len(role.BoundResourceGroups) == 0 && len(role.BoundSubscriptionsIDs) == 0 && len(role.BoundLocations) == 0 {
+	if len(role.BoundResourceGroups) == 0 && len(role.BoundSubscriptionsIDs) == 0 && len(role.BoundLocations) == 0 && len(role.BoundScaleSets) == 0 {
 		return nil
 	}
 
-	if subscriptionID == "" || resourceGroupName == "" || vmName == "" {
-		return errors.New("subscription_id, resource_group_name, and vm_name are required")
+	if subscriptionID == "" || resourceGroupName == "" {
+		return errors.New("subscription_id and resource_group_name are required")
 	}
 
-	client := b.provider.ComputeClient(subscriptionID)
-	vm, err := client.Get(ctx, resourceGroupName, vmName, compute.InstanceView)
-	if err != nil {
-		return errwrap.Wrapf("unable to retrieve virtual machine metadata: {{err}}", err)
+	var principalID, location *string
+
+	switch {
+	// If vmss name is specified, the vm name will be ignored and only the scale set
+	// will be verified since vm names are generated automatically for scale sets
+	case vmssName != "":
+		client, err := b.provider.VMSSClient(subscriptionID)
+		if err != nil {
+			return errwrap.Wrapf("unable to create vmss client: {{err}}", err)
+		}
+
+		vmss, err := client.Get(ctx, resourceGroupName, vmssName)
+		if err != nil {
+			return errwrap.Wrapf("unable to retrieve virtual machine scale set metadata: {{err}}", err)
+		}
+
+		if vmss.Identity == nil {
+			return errors.New("vmss client did not return identity information")
+		}
+		if vmss.Identity.PrincipalID == nil {
+			return errors.New("vmss principal id is empty")
+		}
+
+		// Check bound scale sets
+		if len(role.BoundScaleSets) > 0 && !strListContains(role.BoundScaleSets, vmssName) {
+			return errors.New("scale set not authorized")
+		}
+
+		principalID = vmss.Identity.PrincipalID
+		location = vmss.Location
+
+	case vmName != "":
+		client, err := b.provider.ComputeClient(subscriptionID)
+		if err != nil {
+			return errwrap.Wrapf("unable to create compute client: {{err}}", err)
+		}
+
+		vm, err := client.Get(ctx, resourceGroupName, vmName, compute.InstanceView)
+		if err != nil {
+			return errwrap.Wrapf("unable to retrieve virtual machine metadata: {{err}}", err)
+		}
+
+		if vm.Identity == nil {
+			return errors.New("vm client did not return identity information")
+		}
+
+		if vm.Identity.PrincipalID == nil {
+			return errors.New("vm principal id is empty")
+		}
+
+		// Check bound scale sets
+		if len(role.BoundScaleSets) > 0 {
+			return errors.New("bound scale set defined but this vm isn't in a scale set")
+		}
+
+		principalID = vm.Identity.PrincipalID
+		location = vm.Location
+
+	default:
+		return errors.New("either vm_name or vmss_name is required")
 	}
 
 	// Ensure the principal id for the VM matches the verified token OID
-	if vm.Identity == nil {
-		return errors.New("vm client did not return identity information")
-	}
-	if vm.Identity.PrincipalID == nil {
-		return errors.New("vm principal id is empty")
-	}
-	if to.String(vm.Identity.PrincipalID) != claims.ObjectID {
+	if to.String(principalID) != claims.ObjectID {
 		return errors.New("token object id does not match virtual machine principal id")
 	}
 
@@ -207,10 +264,10 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 
 	// Check bound locations
 	if len(role.BoundLocations) > 0 {
-		if vm.Location == nil {
+		if location == nil {
 			return errors.New("vm location is empty")
 		}
-		if !strListContains(role.BoundLocations, to.String(vm.Location)) {
+		if !strListContains(role.BoundLocations, to.String(location)) {
 			return errors.New("location not authorized")
 		}
 	}

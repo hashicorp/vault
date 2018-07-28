@@ -119,11 +119,7 @@ func TestSysInit_put(t *testing.T) {
 		}
 	}
 
-	seal, err := core.Sealed()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if seal {
+	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 }

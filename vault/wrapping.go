@@ -319,11 +319,12 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 		return false, fmt.Errorf("token is empty")
 	}
 
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return false, consts.ErrSealed
 	}
+
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
 	if c.standby {
 		return false, consts.ErrStandby
 	}
