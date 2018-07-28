@@ -926,7 +926,11 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 		return nil, fmt.Errorf("unable to retrieve canonical ARN from metadata during renewal")
 	}
 
-	roleName := req.Auth.InternalData["role_name"].(string)
+	roleName := ""
+	roleNameIfc, ok := req.Auth.InternalData["role_name"]
+	if ok {
+		roleName = roleNameIfc.(string)
+	}
 	if roleName == "" {
 		return nil, fmt.Errorf("error retrieving role_name during renewal")
 	}

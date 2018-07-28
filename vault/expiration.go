@@ -274,7 +274,7 @@ func (m *ExpirationManager) Tidy() error {
 		if revokeLease {
 			// Force the revocation and skip going through the token store
 			// again
-			err = m.revokeCommon(leaseID, true, true)
+			err = m.revokeCommon(m.quitContext, leaseID, true, true)
 			if err != nil {
 				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke an invalid lease with ID %q: {{err}}", leaseID), err))
 				return
@@ -307,6 +307,10 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 
 		switch {
 		case retErr == nil:
+		case errwrap.Contains(retErr, context.Canceled.Error()):
+			// Don't run error func because we lost leadership
+			m.logger.Warn("context cancled while restoring leases, stopping lease loading")
+			retErr = nil
 		case errwrap.Contains(retErr, ErrBarrierSealed.Error()):
 			// Don't run error func because we're likely already shutting down
 			m.logger.Warn("barrier sealed while restoring leases, stopping lease loading")
@@ -483,15 +487,47 @@ func (m *ExpirationManager) Stop() error {
 }
 
 // Revoke is used to revoke a secret named by the given LeaseID
-func (m *ExpirationManager) Revoke(leaseID string) error {
+func (m *ExpirationManager) Revoke(ctx context.Context, leaseID string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke"}, time.Now())
 
-	return m.revokeCommon(leaseID, false, false)
+	return m.revokeCommon(ctx, leaseID, false, false)
+}
+
+// LazyRevoke is used to queue revocation for a secret named by the given
+// LeaseID. If the lease was not found it returns nil; if the lease was found
+// it triggers a return of a 202.
+func (m *ExpirationManager) LazyRevoke(leaseID string) error {
+	defer metrics.MeasureSince([]string{"expire", "lazy-revoke"}, time.Now())
+
+	// Load the entry
+	le, err := m.loadEntry(leaseID)
+	if err != nil {
+		return err
+	}
+
+	// If there is no entry, nothing to revoke
+	if le == nil {
+		return nil
+	}
+
+	le.ExpireTime = time.Now()
+	{
+		m.pendingLock.Lock()
+		if err := m.persistEntry(le); err != nil {
+			m.pendingLock.Unlock()
+			return err
+		}
+
+		m.updatePendingInternal(le, 0)
+		m.pendingLock.Unlock()
+	}
+
+	return nil
 }
 
 // revokeCommon does the heavy lifting. If force is true, we ignore a problem
 // during revocation and still remove entries/index/lease timers
-func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) error {
+func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, force, skipToken bool) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-common"}, time.Now())
 
 	// Load the entry
@@ -550,16 +586,16 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 func (m *ExpirationManager) RevokeForce(prefix string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-force"}, time.Now())
 
-	return m.revokePrefixCommon(prefix, true)
+	return m.revokePrefixCommon(prefix, true, true)
 }
 
 // RevokePrefix is used to revoke all secrets with a given prefix.
 // The prefix maps to that of the mount table to make this simpler
 // to reason about.
-func (m *ExpirationManager) RevokePrefix(prefix string) error {
+func (m *ExpirationManager) RevokePrefix(prefix string, sync bool) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-prefix"}, time.Now())
 
-	return m.revokePrefixCommon(prefix, false)
+	return m.revokePrefixCommon(prefix, false, sync)
 }
 
 // RevokeByToken is used to revoke all the secrets issued with a given token.
@@ -617,13 +653,13 @@ func (m *ExpirationManager) RevokeByToken(te *logical.TokenEntry) error {
 		// we're already revoking the token, so we just want to clean up the lease.
 		// This avoids spurious revocations later in the log when the timer runs
 		// out, and eases up resource usage.
-		return m.revokeCommon(tokenLeaseID, false, true)
+		return m.revokeCommon(m.quitContext, tokenLeaseID, false, true)
 	}
 
 	return nil
 }
 
-func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error {
+func (m *ExpirationManager) revokePrefixCommon(prefix string, force, sync bool) error {
 	if m.inRestoreMode() {
 		m.restoreRequestLock.Lock()
 		defer m.restoreRequestLock.Unlock()
@@ -634,10 +670,13 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error 
 	if !strings.HasSuffix(prefix, "/") {
 		le, err := m.loadEntry(prefix)
 		if err == nil && le != nil {
-			if err := m.revokeCommon(prefix, force, false); err != nil {
-				return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q: {{err}}", prefix), err)
+			if sync {
+				if err := m.revokeCommon(m.quitContext, prefix, force, false); err != nil {
+					return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q: {{err}}", prefix), err)
+				}
+				return nil
 			}
-			return nil
+			return m.LazyRevoke(prefix)
 		}
 		prefix = prefix + "/"
 	}
@@ -652,10 +691,18 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error 
 	// Revoke all the keys
 	for idx, suffix := range existing {
 		leaseID := prefix + suffix
-		if err := m.revokeCommon(leaseID, force, false); err != nil {
-			return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
+		switch {
+		case sync:
+			if err := m.revokeCommon(m.quitContext, leaseID, force, false); err != nil {
+				return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
+			}
+		default:
+			if err := m.LazyRevoke(leaseID); err != nil {
+				return errwrap.Wrapf(fmt.Sprintf("failed to revoke %q (%d / %d): {{err}}", leaseID, idx+1, len(existing)), err)
+			}
 		}
 	}
+
 	return nil
 }
 
@@ -1049,27 +1096,34 @@ func (m *ExpirationManager) expireID(leaseID string) {
 	m.pendingLock.Unlock()
 
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
+		ctx, cancel := context.WithTimeout(m.quitContext, DefaultMaxRequestDuration)
+
+		go func() {
+			select {
+			case <-ctx.Done():
+			case <-m.quitCh:
+				cancel()
+			}
+		}()
+
 		select {
 		case <-m.quitCh:
 			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", leaseID)
+			return
+		case <-m.quitContext.Done():
+			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
 			return
 		default:
 		}
 
 		m.coreStateLock.RLock()
-		if m.quitContext.Err() == context.Canceled {
-			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
-			m.coreStateLock.RUnlock()
-			return
-		}
-
-		err := m.Revoke(leaseID)
-		if err == nil {
-			m.coreStateLock.RUnlock()
-			return
-		}
-
+		err := m.Revoke(ctx, leaseID)
 		m.coreStateLock.RUnlock()
+		cancel()
+		if err == nil {
+			return
+		}
+
 		m.logger.Error("failed to revoke lease", "lease_id", leaseID, "error", err)
 		time.Sleep((1 << attempt) * revokeRetryBase)
 	}

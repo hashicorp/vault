@@ -1,3 +1,8 @@
+# v2.1.2
+
+* upd: breaking change in upstream repo
+* upd: upstream deps
+
 # v2.1.1
 
 * dep dependencies

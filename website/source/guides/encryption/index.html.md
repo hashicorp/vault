@@ -16,6 +16,12 @@ data is encrypted and the attacker would never get a hold of the raw data.
 
 This guide walks you through Encryption as a Service topics.
 
+- [Encryption as a Service](/guides/encryption/transit.html) guide walks you
+through the usage of the `transit` secrets engine in Vault.
+Read this guide first before proceeding to the [Transit Secrets
+Re-wrapping](/guides/encryption/transit-rewrap.html) guide or [Java Application
+Demo](/guides/encryption/spring-demo.html) guide.
+
 - [Java Application Demo](/guides/encryption/spring-demo.html) guide walks
 through a sample application which relies on Vault to generate database
 credentials as well as encrypting sensitive data.  This guide is for anyone who

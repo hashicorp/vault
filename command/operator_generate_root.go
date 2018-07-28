@@ -395,7 +395,7 @@ func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string, dr
 		nonce = status.Nonce
 
 		w := getWriterFromUI(c.UI)
-		fmt.Fprintf(w, "Root generation operation nonce: %s\n", nonce)
+		fmt.Fprintf(w, "Operation nonce: %s\n", nonce)
 		fmt.Fprintf(w, "Unseal Key (will be hidden): ")
 		key, err = password.Read(os.Stdin)
 		fmt.Fprintf(w, "\n")
@@ -489,10 +489,10 @@ func (c *OperatorGenerateRootCommand) printStatus(status *api.GenerateRootStatus
 		out = append(out, fmt.Sprintf("PGP Fingerprint | %s", status.PGPFingerprint))
 	}
 	switch {
-	case status.EncodedRootToken != "":
-		out = append(out, fmt.Sprintf("Root Token | %s", status.EncodedRootToken))
 	case status.EncodedToken != "":
-		out = append(out, fmt.Sprintf("Root Token | %s", status.EncodedToken))
+		out = append(out, fmt.Sprintf("Encoded Token | %s", status.EncodedToken))
+	case status.EncodedRootToken != "":
+		out = append(out, fmt.Sprintf("Encoded Root Token | %s", status.EncodedRootToken))
 	}
 
 	output := columnOutput(out, nil)

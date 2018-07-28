@@ -23,7 +23,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 var (
@@ -603,7 +603,7 @@ func TestBackend_basic(t *testing.T) {
 					"username":              credsResp.Data["username"],
 					"role":                  "plugin-role-test",
 					"db_name":               "plugin-test",
-					"revocation_statements": []string(nil),
+					"revocation_statements": []interface{}(nil),
 				},
 			},
 		})

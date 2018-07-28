@@ -26,6 +26,11 @@ The following documentation assumes that the method has been
 * A configured [Azure AD application](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-integrating-applications) which is used as the resource for generating MSI access tokens.
 * Client credentials (shared secret) for accessing the Azure Resource Manager with read access to compute endpoints. See [Azure AD Service to Service Client Credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service)
 
+Required Azure API permissions to be granted to Vault user:
+
+* `Microsoft.Compute/virtualMachines/*/read`
+* `Microsoft.Compute/virtualMachineScaleSets/*/read`
+
 If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shared secret.  MSI must be [enabled](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm) on the VMs hosting Vault. 
 
 The next sections review how the authN/Z workflows work. If you

@@ -48,16 +48,19 @@
   {{#if model.meta.total}}
     {{#each model as |item|}}
       {{#if (eq item.id "root")}}
-        <div class="is-flex box is-sideless is-marginless" data-test-policy-item>
+        <div class="list-item-row is-flex" data-test-policy-item>
           {{i-con
             glyph='file'
             size=14
             class="has-text-grey-light"
           }}
           <div>
-            <span class="has-text-weight-semibold" data-test-policy-name>{{item.id}}</span>
+            <span class="has-text-weight-semibold has-text-grey" data-test-policy-name>
+              {{item.id}}
+            </span>
             <p class="help has-text-grey">
-            The <code>root</code> policy does not contain any rules but can do anything within Vault. It should be used with extreme care.
+              The <code>root</code> policy does not contain any rules but can
+              do anything within Vault. It should be used with extreme care.
             </p>
           </div>
         </div>
@@ -66,7 +69,7 @@
           "vault.cluster.policy.show"
           policyType
           item.id
-          class="box is-sideless is-marginless"
+          class="list-item-row"
           data-test-policy-link=item.id
         }}
           <div class="columns is-mobile">

@@ -259,11 +259,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 		return nil
 	}
 
-	sealed, err := c.Sealed()
-	if err != nil {
-		c.logger.Error("error checking sealed status in auto-unseal", "error", err)
-		return errwrap.Wrapf("error checking sealed status in auto-unseal: {{err}}", err)
-	}
+	sealed := c.Sealed()
 	if !sealed {
 		return nil
 	}

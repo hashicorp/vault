@@ -724,7 +724,7 @@ type CborHandle struct {
 	// If unset, we encode time.Time using seconds past epoch.
 	TimeRFC3339 bool
 
-	_ [1]uint64 // padding
+	// _ [1]uint64 // padding
 }
 
 // Name returns the name of the handle: cbor

@@ -21,7 +21,10 @@ import (
 	"fmt"
 	"math/rand"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"go.opencensus.io/internal"
 )
 
 // Span represents a span of a trace.  It has an associated SpanContext, and
@@ -40,10 +43,14 @@ type Span struct {
 	spanContext SpanContext
 	// spanStore is the spanStore this span belongs to, if any, otherwise it is nil.
 	*spanStore
-	exportOnce sync.Once
+	endOnce sync.Once
+
+	executionTracerTaskEnd func() // ends the execution tracer span
 }
 
 // IsRecordingEvents returns true if events are being recorded for this span.
+// Use this check to avoid computing expensive annotations when they will never
+// be used.
 func (s *Span) IsRecordingEvents() bool {
 	if s == nil {
 		return false
@@ -91,83 +98,103 @@ func FromContext(ctx context.Context) *Span {
 	return s
 }
 
-// WithSpan returns a new context with the given Span attached.
-func WithSpan(parent context.Context, s *Span) context.Context {
+// NewContext returns a new context with the given Span attached.
+func NewContext(parent context.Context, s *Span) context.Context {
 	return context.WithValue(parent, contextKey{}, s)
 }
 
+// All available span kinds. Span kind must be either one of these values.
+const (
+	SpanKindUnspecified = iota
+	SpanKindServer
+	SpanKindClient
+)
+
 // StartOptions contains options concerning how a span is started.
 type StartOptions struct {
-	// RecordEvents indicates whether to record data for this span, and include
-	// the span in a local span store.
-	// Events will also be recorded if the span will be exported.
-	RecordEvents bool
+	// Sampler to consult for this Span. If provided, it is always consulted.
+	//
+	// If not provided, then the behavior differs based on whether
+	// the parent of this Span is remote, local, or there is no parent.
+	// In the case of a remote parent or no parent, the
+	// default sampler (see Config) will be consulted. Otherwise,
+	// when there is a non-remote parent, no new sampling decision will be made:
+	// we will preserve the sampling of the parent.
+	Sampler Sampler
 
-	Sampler Sampler // if non-nil, the Sampler to consult for this span.
-
-	// RegisterNameForLocalSpanStore indicates that a local span store for spans
-	// of this name should be created, if one does not exist.
-	// If RecordEvents is false, this option has no effect.
-	RegisterNameForLocalSpanStore bool
+	// SpanKind represents the kind of a span. If none is set,
+	// SpanKindUnspecified is used.
+	SpanKind int
 }
 
-// TODO(jbd): Remove start options.
+// StartOption apply changes to StartOptions.
+type StartOption func(*StartOptions)
 
-// StartSpan starts a new child span of the current span in the context.
-//
-// If there is no span in the context, creates a new trace and span.
-func StartSpan(ctx context.Context, name string) (context.Context, *Span) {
-	parentSpan, _ := ctx.Value(contextKey{}).(*Span)
-	span := NewSpan(name, parentSpan, StartOptions{})
-	return WithSpan(ctx, span), span
-}
-
-// StartSpanWithOptions starts a new child span of the current span in the context.
-//
-// If there is no span in the context, creates a new trace and span.
-func StartSpanWithOptions(ctx context.Context, name string, o StartOptions) (context.Context, *Span) {
-	parentSpan, _ := ctx.Value(contextKey{}).(*Span)
-	span := NewSpan(name, parentSpan, o)
-	return WithSpan(ctx, span), span
-}
-
-// StartSpanWithRemoteParent starts a new child span with the given parent SpanContext.
-//
-// If there is an existing span in ctx, it is ignored -- the returned Span is a
-// child of the span specified by parent.
-func StartSpanWithRemoteParent(ctx context.Context, name string, parent SpanContext, o StartOptions) (context.Context, *Span) {
-	span := NewSpanWithRemoteParent(name, parent, o)
-	return WithSpan(ctx, span), span
-}
-
-// NewSpan returns a new span.
-//
-// If parent is not nil, created span will be a child of the parent.
-func NewSpan(name string, parent *Span, o StartOptions) *Span {
-	hasParent := false
-	var parentSpanContext SpanContext
-	if parent != nil {
-		hasParent = true
-		parentSpanContext = parent.SpanContext()
+// WithSpanKind makes new spans to be created with the given kind.
+func WithSpanKind(spanKind int) StartOption {
+	return func(o *StartOptions) {
+		o.SpanKind = spanKind
 	}
-	return startSpanInternal(name, hasParent, parentSpanContext, false, o)
 }
 
-// NewSpanWithRemoteParent returns a new span with the given parent SpanContext.
-func NewSpanWithRemoteParent(name string, parent SpanContext, o StartOptions) *Span {
-	return startSpanInternal(name, true, parent, true, o)
+// WithSampler makes new spans to be be created with a custom sampler.
+// Otherwise, the global sampler is used.
+func WithSampler(sampler Sampler) StartOption {
+	return func(o *StartOptions) {
+		o.Sampler = sampler
+	}
+}
+
+// StartSpan starts a new child span of the current span in the context. If
+// there is no span in the context, creates a new trace and span.
+//
+// Returned context contains the newly created span. You can use it to
+// propagate the returned span in process.
+func StartSpan(ctx context.Context, name string, o ...StartOption) (context.Context, *Span) {
+	var opts StartOptions
+	var parent SpanContext
+	if p := FromContext(ctx); p != nil {
+		parent = p.spanContext
+	}
+	for _, op := range o {
+		op(&opts)
+	}
+	span := startSpanInternal(name, parent != SpanContext{}, parent, false, opts)
+
+	ctx, end := startExecutionTracerTask(ctx, name)
+	span.executionTracerTaskEnd = end
+	return NewContext(ctx, span), span
+}
+
+// StartSpanWithRemoteParent starts a new child span of the span from the given parent.
+//
+// If the incoming context contains a parent, it ignores. StartSpanWithRemoteParent is
+// preferred for cases where the parent is propagated via an incoming request.
+//
+// Returned context contains the newly created span. You can use it to
+// propagate the returned span in process.
+func StartSpanWithRemoteParent(ctx context.Context, name string, parent SpanContext, o ...StartOption) (context.Context, *Span) {
+	var opts StartOptions
+	for _, op := range o {
+		op(&opts)
+	}
+	span := startSpanInternal(name, parent != SpanContext{}, parent, true, opts)
+	ctx, end := startExecutionTracerTask(ctx, name)
+	span.executionTracerTaskEnd = end
+	return NewContext(ctx, span), span
 }
 
 func startSpanInternal(name string, hasParent bool, parent SpanContext, remoteParent bool, o StartOptions) *Span {
 	span := &Span{}
 	span.spanContext = parent
-	mu.Lock()
+
+	cfg := config.Load().(*Config)
+
 	if !hasParent {
-		span.spanContext.TraceID = newTraceIDLocked()
+		span.spanContext.TraceID = cfg.IDGenerator.NewTraceID()
 	}
-	span.spanContext.SpanID = newSpanIDLocked()
-	sampler := defaultSampler
-	mu.Unlock()
+	span.spanContext.SpanID = cfg.IDGenerator.NewSpanID()
+	sampler := cfg.DefaultSampler
 
 	if !hasParent || remoteParent || o.Sampler != nil {
 		// If this span is the child of a local span and no Sampler is set in the
@@ -178,7 +205,7 @@ func startSpanInternal(name string, hasParent bool, parent SpanContext, remotePa
 		if o.Sampler != nil {
 			sampler = o.Sampler
 		}
-		span.spanContext.setIsSampled(sampler.Sample(SamplingParameters{
+		span.spanContext.setIsSampled(sampler(SamplingParameters{
 			ParentContext:   parent,
 			TraceID:         span.spanContext.TraceID,
 			SpanID:          span.spanContext.SpanID,
@@ -186,26 +213,23 @@ func startSpanInternal(name string, hasParent bool, parent SpanContext, remotePa
 			HasRemoteParent: remoteParent}).Sample)
 	}
 
-	if !o.RecordEvents && !span.spanContext.IsSampled() {
+	if !internal.LocalSpanStoreEnabled && !span.spanContext.IsSampled() {
 		return span
 	}
 
 	span.data = &SpanData{
 		SpanContext:     span.spanContext,
 		StartTime:       time.Now(),
+		SpanKind:        o.SpanKind,
 		Name:            name,
 		HasRemoteParent: remoteParent,
 	}
 	if hasParent {
 		span.data.ParentSpanID = parent.SpanID
 	}
-	if o.RecordEvents {
+	if internal.LocalSpanStoreEnabled {
 		var ss *spanStore
-		if o.RegisterNameForLocalSpanStore {
-			ss = spanStoreForNameCreateIfNew(name)
-		} else {
-			ss = spanStoreForName(name)
-		}
+		ss = spanStoreForNameCreateIfNew(name)
 		if ss != nil {
 			span.spanStore = ss
 			ss.add(span)
@@ -220,20 +244,23 @@ func (s *Span) End() {
 	if !s.IsRecordingEvents() {
 		return
 	}
-	s.exportOnce.Do(func() {
+	s.endOnce.Do(func() {
+		if s.executionTracerTaskEnd != nil {
+			s.executionTracerTaskEnd()
+		}
 		// TODO: optimize to avoid this call if sd won't be used.
 		sd := s.makeSpanData()
-		sd.EndTime = sd.StartTime.Add(time.Since(sd.StartTime))
+		sd.EndTime = internal.MonotonicEndTime(sd.StartTime)
 		if s.spanStore != nil {
 			s.spanStore.finished(s, sd)
 		}
 		if s.spanContext.IsSampled() {
 			// TODO: consider holding exportersMu for less time.
 			exportersMu.Lock()
-			defer exportersMu.Unlock()
 			for e := range exporters {
 				e.ExportSpan(sd)
 			}
+			exportersMu.Unlock()
 		}
 	})
 }
@@ -262,6 +289,16 @@ func (s *Span) SpanContext() SpanContext {
 	return s.spanContext
 }
 
+// SetName sets the name of the span, if it is recording events.
+func (s *Span) SetName(name string) {
+	if !s.IsRecordingEvents() {
+		return
+	}
+	s.mu.Lock()
+	s.data.Name = name
+	s.mu.Unlock()
+}
+
 // SetStatus sets the status of the span, if it is recording events.
 func (s *Span) SetStatus(status Status) {
 	if !s.IsRecordingEvents() {
@@ -272,10 +309,10 @@ func (s *Span) SetStatus(status Status) {
 	s.mu.Unlock()
 }
 
-// SetAttributes sets attributes in the span.
+// AddAttributes sets attributes in the span.
 //
 // Existing attributes whose keys appear in the attributes parameter are overwritten.
-func (s *Span) SetAttributes(attributes ...Attribute) {
+func (s *Span) AddAttributes(attributes ...Attribute) {
 	if !s.IsRecordingEvents() {
 		return
 	}
@@ -290,14 +327,7 @@ func (s *Span) SetAttributes(attributes ...Attribute) {
 // copyAttributes copies a slice of Attributes into a map.
 func copyAttributes(m map[string]interface{}, attributes []Attribute) {
 	for _, a := range attributes {
-		switch a := a.(type) {
-		case BoolAttribute:
-			m[a.Key] = a.Value
-		case Int64Attribute:
-			m[a.Key] = a.Value
-		case StringAttribute:
-			m[a.Key] = a.Value
-		}
+		m[a.key] = a.value
 	}
 }
 
@@ -418,46 +448,58 @@ func (s *Span) String() string {
 	return str
 }
 
-var (
-	mu          sync.Mutex // protects the variables below
+var config atomic.Value // access atomically
+
+func init() {
+	gen := &defaultIDGenerator{}
+	// initialize traceID and spanID generators.
+	var rngSeed int64
+	for _, p := range []interface{}{
+		&rngSeed, &gen.traceIDAdd, &gen.nextSpanID, &gen.spanIDInc,
+	} {
+		binary.Read(crand.Reader, binary.LittleEndian, p)
+	}
+	gen.traceIDRand = rand.New(rand.NewSource(rngSeed))
+	gen.spanIDInc |= 1
+
+	config.Store(&Config{
+		DefaultSampler: ProbabilitySampler(defaultSamplingProbability),
+		IDGenerator:    gen,
+	})
+}
+
+type defaultIDGenerator struct {
+	sync.Mutex
 	traceIDRand *rand.Rand
 	traceIDAdd  [2]uint64
 	nextSpanID  uint64
 	spanIDInc   uint64
-)
-
-func init() {
-	// initialize traceID and spanID generators.
-	var rngSeed int64
-	for _, p := range []interface{}{
-		&rngSeed, &traceIDAdd, &nextSpanID, &spanIDInc,
-	} {
-		binary.Read(crand.Reader, binary.LittleEndian, p)
-	}
-	traceIDRand = rand.New(rand.NewSource(rngSeed))
-	spanIDInc |= 1
 }
 
-// newSpanIDLocked returns a non-zero SpanID from a randomly-chosen sequence.
+// NewSpanID returns a non-zero span ID from a randomly-chosen sequence.
 // mu should be held while this function is called.
-func newSpanIDLocked() SpanID {
-	id := nextSpanID
-	nextSpanID += spanIDInc
-	if nextSpanID == 0 {
-		nextSpanID += spanIDInc
+func (gen *defaultIDGenerator) NewSpanID() [8]byte {
+	gen.Lock()
+	id := gen.nextSpanID
+	gen.nextSpanID += gen.spanIDInc
+	if gen.nextSpanID == 0 {
+		gen.nextSpanID += gen.spanIDInc
 	}
-	var sid SpanID
+	gen.Unlock()
+	var sid [8]byte
 	binary.LittleEndian.PutUint64(sid[:], id)
 	return sid
 }
 
-// newTraceIDLocked returns a non-zero TraceID from a randomly-chosen sequence.
+// NewTraceID returns a non-zero trace ID from a randomly-chosen sequence.
 // mu should be held while this function is called.
-func newTraceIDLocked() TraceID {
-	var tid TraceID
+func (gen *defaultIDGenerator) NewTraceID() [16]byte {
+	var tid [16]byte
 	// Construct the trace ID from two outputs of traceIDRand, with a constant
 	// added to each half for additional entropy.
-	binary.LittleEndian.PutUint64(tid[0:8], traceIDRand.Uint64()+traceIDAdd[0])
-	binary.LittleEndian.PutUint64(tid[8:16], traceIDRand.Uint64()+traceIDAdd[1])
+	gen.Lock()
+	binary.LittleEndian.PutUint64(tid[0:8], gen.traceIDRand.Uint64()+gen.traceIDAdd[0])
+	binary.LittleEndian.PutUint64(tid[8:16], gen.traceIDRand.Uint64()+gen.traceIDAdd[1])
+	gen.Unlock()
 	return tid
 }

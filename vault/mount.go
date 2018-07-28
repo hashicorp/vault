@@ -45,8 +45,10 @@ const (
 type ListingVisibilityType string
 
 const (
+	// ListingVisibilityDefault is the default value for listing visibility
+	ListingVisibilityDefault ListingVisibilityType = ""
 	// ListingVisibilityHidden is the hidden type for listing visibility
-	ListingVisibilityHidden ListingVisibilityType = ""
+	ListingVisibilityHidden ListingVisibilityType = "hidden"
 	// ListingVisibilityUnauth is the unauth type for listing visibility
 	ListingVisibilityUnauth ListingVisibilityType = "unauth"
 )
@@ -406,7 +408,7 @@ func (c *Core) unmountInternal(ctx context.Context, path string) error {
 		}
 
 		// Revoke all the dynamic keys
-		if err := c.expiration.RevokePrefix(path); err != nil {
+		if err := c.expiration.RevokePrefix(path, true); err != nil {
 			return err
 		}
 
@@ -553,7 +555,7 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	}
 
 	// Revoke all the dynamic keys
-	if err := c.expiration.RevokePrefix(src); err != nil {
+	if err := c.expiration.RevokePrefix(src, true); err != nil {
 		return err
 	}
 

@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/circonus-labs/circonusllhist"
   packages = ["."]
-  revision = "1e65893c445875524c5610f2a58aef24e30ef98a"
+  revision = "5eb751da55c6d3091faf3861ec5062ae91fee9d0"
 
 [[projects]]
   branch = "master"
@@ -17,7 +17,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-retryablehttp"
   packages = ["."]
-  revision = "794af36148bf63c118d6db80eb902a136b907e71"
+  revision = "e651d75abec6fbd4f2c09508f72ae7af8a8b7171"
 
 [[projects]]
   name = "github.com/pkg/errors"

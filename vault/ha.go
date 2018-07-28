@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
+	"github.com/oklog/run"
 )
 
 // Standby checks if the Vault is in standby mode
@@ -36,13 +37,12 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 		return false, "", "", ErrHANotEnabled
 	}
 
-	c.stateLock.RLock()
-
 	// Check if sealed
-	if c.sealed {
-		c.stateLock.RUnlock()
+	if c.Sealed() {
 		return false, "", "", consts.ErrSealed
 	}
+
+	c.stateLock.RLock()
 
 	// Check if we are the leader
 	if !c.standby {
@@ -142,7 +142,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 }
 
 // StepDown is used to step down from leadership
-func (c *Core) StepDown(req *logical.Request) (retErr error) {
+func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "step_down"}, time.Now())
 
 	if req == nil {
@@ -152,14 +152,23 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil
 	}
 	if c.ha == nil || c.standby {
 		return nil
 	}
 
-	ctx := c.activeContext
+	ctx, cancel := context.WithCancel(c.activeContext)
+	defer cancel()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-httpCtx.Done():
+			cancel()
+		}
+	}()
 
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
@@ -238,7 +247,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		// we won't have a token store after sealing.
 		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
 		if err == nil {
-			err = c.expiration.Revoke(leaseID)
+			err = c.expiration.Revoke(ctx, leaseID)
 		}
 		if err != nil {
 			c.logger.Error("token needed revocation before step-down but failed to revoke", "error", err)
@@ -255,31 +264,76 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	return retErr
 }
 
-// runStandby is a long running routine that is used when an HA backend
-// is enabled. It waits until we are leader and switches this Vault to
-// active.
+// runStandby is a long running process that manages a number of the HA
+// subsystems.
 func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
 	c.logger.Info("entering standby mode")
 
-	// Monitor for key rotation
-	keyRotateDone := make(chan struct{})
-	keyRotateStop := make(chan struct{})
-	go c.periodicCheckKeyUpgrade(context.Background(), keyRotateDone, keyRotateStop)
-	// Monitor for new leadership
-	checkLeaderDone := make(chan struct{})
-	checkLeaderStop := make(chan struct{})
-	go c.periodicLeaderRefresh(checkLeaderDone, checkLeaderStop)
-	defer func() {
-		c.logger.Debug("closed periodic key rotation checker stop channel")
-		close(keyRotateStop)
-		<-keyRotateDone
-		close(checkLeaderStop)
-		c.logger.Debug("closed periodic leader refresh stop channel")
-		<-checkLeaderDone
-		c.logger.Debug("periodic leader refresh returned")
-	}()
+	var g run.Group
+	{
+		// This will cause all the other actors to close when the stop channel
+		// is closed.
+		g.Add(func() error {
+			<-stopCh
+			return nil
+		}, func(error) {})
+	}
+	{
+		// Monitor for key rotation
+		keyRotateDone := make(chan struct{})
+		keyRotateStop := make(chan struct{})
+
+		g.Add(func() error {
+			c.periodicCheckKeyUpgrade(context.Background(), keyRotateDone, keyRotateStop)
+			return nil
+		}, func(error) {
+			close(keyRotateStop)
+			c.logger.Debug("shutting down periodic key rotation checker")
+			<-keyRotateDone
+		})
+	}
+	{
+		// Monitor for new leadership
+		checkLeaderDone := make(chan struct{})
+		checkLeaderStop := make(chan struct{})
+
+		g.Add(func() error {
+			c.periodicLeaderRefresh(checkLeaderDone, checkLeaderStop)
+			return nil
+		}, func(error) {
+			close(checkLeaderStop)
+			c.logger.Debug("shutting down periodic leader refresh")
+			<-checkLeaderDone
+		})
+	}
+	{
+		// Wait for leadership
+		leaderDoneCh := make(chan struct{})
+		leaderStopCh := make(chan struct{})
+
+		g.Add(func() error {
+			c.waitForLeadership(leaderDoneCh, manualStepDownCh, leaderStopCh)
+			return nil
+		}, func(error) {
+			close(leaderStopCh)
+			c.logger.Debug("shutting down leader elections")
+			<-leaderDoneCh
+		})
+	}
+
+	// Start all the actors
+	g.Run()
+}
+
+// waitForLeadership is a long running routine that is used when an HA backend
+// is enabled. It waits until we are leader and switches this Vault to
+// active.
+func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{}) {
+	defer close(doneCh)
+
+	c.logger.Info("entering standby mode")
 
 	var manualStepDown bool
 	for {
@@ -350,7 +404,7 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 			// We now have the lock and can use it
 		}
 
-		if c.sealed {
+		if c.Sealed() {
 			c.logger.Warn("grabbed HA lock but already sealed, exiting")
 			lock.Unlock()
 			c.stateLock.Unlock()
@@ -429,42 +483,28 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 			continue
 		}
 
-		// Monitor a loss of leadership
-		releaseHALock := true
-		grabStateLock := true
-		select {
-		case <-leaderLostCh:
-			c.logger.Warn("leadership lost, stopping active operation")
-		case <-stopCh:
-			// This case comes from sealInternal; we will already be having the
-			// state lock held so we do toggle grabStateLock to false
-			if atomic.LoadUint32(c.keepHALockOnStepDown) == 1 {
-				releaseHALock = false
+		runSealing := func() {
+			metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
+
+			// Tell any requests that know about this to stop
+			if c.activeContextCancelFunc != nil {
+				c.activeContextCancelFunc()
 			}
-			grabStateLock = false
-		case <-manualStepDownCh:
-			c.logger.Warn("stepping down from active operation to standby")
-			manualStepDown = true
+
+			c.standby = true
+
+			if err := c.preSeal(); err != nil {
+				c.logger.Error("pre-seal teardown failed", "error", err)
+			}
 		}
 
-		metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
-
-		// Tell any requests that know about this to stop
-		if c.activeContextCancelFunc != nil {
-			c.activeContextCancelFunc()
-		}
-
-		// Attempt the pre-seal process
-		if grabStateLock {
-			c.stateLock.Lock()
-		}
-		c.standby = true
-		preSealErr := c.preSeal()
-		if grabStateLock {
-			c.stateLock.Unlock()
-		}
-
-		if releaseHALock {
+		releaseHALock := func() {
+			// We may hit this from leaderLostCh or manualStepDownCh if they
+			// triggered before stopCh, so we check here instead of only in the
+			// stopCh case so we can try to do the right thing then, too
+			if atomic.LoadUint32(c.keepHALockOnStepDown) == 1 {
+				return
+			}
 			if err := c.clearLeader(uuid); err != nil {
 				c.logger.Error("clearing leader advertisement failed", "error", err)
 			}
@@ -472,9 +512,29 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 			c.heldHALock = nil
 		}
 
-		// Check for a failure to prepare to seal
-		if preSealErr != nil {
-			c.logger.Error("pre-seal teardown failed", "error", err)
+		// Monitor a loss of leadership
+		select {
+		case <-leaderLostCh:
+			c.logger.Warn("leadership lost, stopping active operation")
+
+			c.stateLock.Lock()
+			runSealing()
+			releaseHALock()
+			c.stateLock.Unlock()
+
+		case <-stopCh:
+			runSealing()
+			releaseHALock()
+			return
+
+		case <-manualStepDownCh:
+			manualStepDown = true
+			c.logger.Warn("stepping down from active operation to standby")
+
+			c.stateLock.Lock()
+			runSealing()
+			releaseHALock()
+			c.stateLock.Unlock()
 		}
 	}
 }
@@ -499,8 +559,10 @@ func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 			// deadlock, which then means stopCh can never been seen and we can
 			// block shutdown
 			go func() {
-				defer atomic.AddInt32(opCount, -1)
+				// Bind locally, as the race detector is tripping here
+				lopCount := opCount
 				c.Leader()
+				atomic.AddInt32(lopCount, -1)
 			}()
 		case <-stopCh:
 			return
@@ -522,12 +584,15 @@ func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, doneCh, stopCh chan 
 			}
 
 			go func() {
-				defer atomic.AddInt32(opCount, -1)
+				// Bind locally, as the race detector is tripping here
+				lopCount := opCount
+
 				// Only check if we are a standby
 				c.stateLock.RLock()
 				standby := c.standby
 				c.stateLock.RUnlock()
 				if !standby {
+					atomic.AddInt32(lopCount, -1)
 					return
 				}
 
@@ -538,12 +603,16 @@ func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, doneCh, stopCh chan 
 				if entry != nil && len(entry.Value) > 0 {
 					c.logger.Warn("encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
 					go c.Shutdown()
+					atomic.AddInt32(lopCount, -1)
 					return
 				}
 
 				if err := c.checkKeyUpgrades(ctx); err != nil {
 					c.logger.Error("key rotation periodic upgrade check failed", "error", err)
 				}
+
+				atomic.AddInt32(lopCount, -1)
+				return
 			}()
 		case <-stopCh:
 			return
@@ -721,7 +790,7 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 // clearLeader is used to clear our leadership entry
 func (c *Core) clearLeader(uuid string) error {
 	key := coreLeaderPrefix + uuid
-	err := c.barrier.Delete(c.activeContext, key)
+	err := c.barrier.Delete(context.Background(), key)
 
 	// Advertise ourselves as a standby
 	sd, ok := c.ha.(physical.ServiceDiscovery)

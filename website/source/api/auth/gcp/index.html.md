@@ -1,17 +1,17 @@
 ---
 layout: "api"
-page_title: "Google Cloud Platform - Auth Methods - HTTP API"
+page_title: "Google Cloud - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-gcp"
 description: |-
-  This is the API documentation for the Vault GCP authentication
-  method plugin.
+  This is the API documentation for the Vault Google Cloud authentication
+  method.
 ---
 
-# GCP Auth Method (API)
+# Google Cloud Auth Method (API)
 
-This is the API documentation for the Vault GCP auth method
-plugin. To learn more about the usage and operation, see the
-[Vault GCP method documentation](/docs/auth/gcp.html).
+This is the API documentation for the Vault Google Cloud auth method. To learn
+more about the usage and operation, see the
+[Vault Google Cloud method documentation](/docs/auth/gcp.html).
 
 This documentation assumes the plugin method is mounted at the
 `/auth/gcp` path in Vault. Since it is possible to enable auth methods
@@ -20,36 +20,38 @@ at any location, please update your API calls accordingly.
 ## Configure
 
 Configures the credentials required for the plugin to perform API calls
-to GCP. These credentials will be used to query the status of IAM
+to Google Cloud. These credentials will be used to query the status of IAM
 entities and get service account or other Google public certificates
 to confirm signed JWTs passed in during login.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/gcp/config`          | `204 (empty body)`     |
+| `POST`   | `/auth/gcp/config`           | `204 (empty body)`     |
 
 ### Parameters
 
-- `credentials` `(string: "")` - A marshaled JSON string that is the content
-  of a GCP credentials file. If you would rather specify a file, you can use
-  `credentials="@path/to/creds.json`. The GCP permissions
-  Vault currently requires are:
-    - `iam.serviceAccounts.get`
-    - `iam.serviceAccountKeys.get`
+- `credentials` `(string: "")` - A JSON string containing the contents
+  of a GCP credentials file. The credentials file must have the following
+  [permissions](https://cloud.google.com/compute/docs/access/iam):
 
-  If this value is not specified or if it is explicitly set to empty,
-  Vault will attempt to use [Application Default Credentials](https://developers.google.com/identity/protocols/application-default-credentials)
-  for that server's machine.
+    ```
+    iam.serviceAccounts.get
+    iam.serviceAccountKeys.get
+    ```
 
-- `google_certs_endpoint` `(string: "")`: The Google OAuth2 endpoint to obtain public certificates for. This is used
-    primarily for testing and should generally not be set. If not set, will default to the [Google public certs
-    endpoint](https://www.googleapis.com/oauth2/v3/certs)
+    If this value is empty, Vault will try to use [Application Default
+    Credentials][gcp-adc] from the machine on which the Vault server is running.
+
+- `google_certs_endpoint` `(string:
+  "https://www.googleapis.com/oauth2/v3/certs")`: The Google OAuth2 endpoint
+  from which to obtain public certificates. This is used for testing and should
+  generally not be set by end users.
 
 ### Sample Payload
 
 ```json
 {
-  "credentials": "{ \"type\": \"service_account\", \"project_id\": \"project-123456\",...}"
+  "credentials": "{ \"type\": \"service_account\", \"project_id\": \"project-123456\", ...}"
 }
 ```
 
@@ -65,7 +67,7 @@ $ curl \
 
 ## Read Config
 
-Returns the previously configured config, including credentials.
+Returns the configuration, if any, including credentials.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -83,22 +85,18 @@ $ curl \
 
 ```json
 {
-  "data":{
-    "client_email":"serviceaccount1@project-123456.iam.gserviceaccount.com",
-    "client_id":"...",
-    "private_key":"-----BEGIN PRIVATE KEY-----...-----END PRIVATE KEY-----\n",
-    "private_key_id":"...",
-    "project_id":"project-123456",
-    "google_certs_url": ""
+  "data": {
+    "client_email": "service-account@project-123456.iam.gserviceaccount.com",
+    "client_id": "123456789101112131415",
+    "private_key_id": "97fd7ba59a96e1f3830296aedb4f50879e4d5382",
+    "project_id": "project-123456"
   },
-  ...
 }
-
 ```
 
 ## Delete Config
 
-Deletes the previously configured GCP config and credentials.
+Deletes all GCP configuration data. This operation is idempotent.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -125,97 +123,107 @@ entities attempting to login.
 | `POST`   | `/auth/gcp/role/:name`       | `204 (empty body)`     |
 
 ### Parameters
-- `name` `(string: <required>)` - Name of the role.
-- `type` `(string: <required>)` - The type of this role. Only the
-  restrictions applicable to this role type will be allowed to
-  be configured on the role (see below). Valid choices are: `iam`.
-- `project_id` `(string: "")` - Required. Only entities belonging to this
-  project can login for this role.
-- `ttl` `(string: "")` - The TTL period of tokens issued using this role in
-  seconds.
-- `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens
-  issued in seconds using this role.
+
+- `name` `(string: <required>)` - The name of the role.
+
+- `type` `(string: <required>)` - The type of this role. Certain fields
+  correspond to specific roles and will be rejected otherwise. Please see below
+  for more information.
+
+- `project_id` `(string: <required>)` - The GCP project ID. Only entities belonging to this
+  project can authenticate with this role.
+
+- `ttl` `(string: "")` - The TTL period of tokens issued using this role. This
+  can be specified as an integer number of seconds or as a duration value like
+  "5m".
+
+- `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens issued in
+  seconds using this role. This can be specified as an integer number of seconds
+  or as a duration value like "5m".
+
 - `period` `(string: "")` - If set, indicates that the token generated using
   this role should never expire. The token should be renewed within the duration
   specified by this value. At each renewal, the token's TTL will be set to the
-  value of this parameter.
-- `policies` `(array: [])` - Policies to be set on tokens issued using this
-  role.
-- `bound_service_accounts` `(array: [])` - Required for `iam` roles.
-  A comma-separated list of service account emails or ids.
-  Defines the service accounts that login is restricted to. If set to `\*`, all
-  service accounts are allowed (role will still be bound by project). Will be
-  inferred from service account used to issue metadata token for GCE instances.
+  value of this parameter. This can be specified as an integer number of seconds
+  or as a duration value like "5m".
 
-**`iam`-only params**:
-- `max_jwt_exp` `(string: "")` - Optional, defaults to 900 (15min).
-  Number of seconds past the time of authentication that the login param JWT
-  must expire within. For example, if a user attempts to login with a token
-  that expires within an hour and this is set to 15 minutes, Vault will return
-  an error prompting the user to create a new signed JWT with a shorter `exp`.
-  The GCE metadata tokens currently do not allow the `exp` claim to be customized.
+- `policies` `(array: [default])` - The list of policies to be set on tokens
+  issued using this role.
+
+- `bound_bound_service_accounts` `(array: <required for iam>)` - A comma-separated
+  list of service account emails or IDs that login is restricted to. If set to
+  `*`, all service accounts are allowed (role will still be bound by project).
+  Will be inferred from service account used to issue metadata token for GCE
+  instances.
+
+#### `iam`-only Parameters
+
+The following parameters are only valid when the role is of type `"iam"`:
+
+- `max_jwt_exp` `(string: "15m")` - The number of seconds past the time of
+  authentication that the login param JWT must expire within. For example, if a
+  user attempts to login with a token that expires within an hour and this is
+  set to 15 minutes, Vault will return an error prompting the user to create a
+  new signed JWT with a shorter `exp`. The GCE metadata tokens currently do not
+  allow the `exp` claim to be customized.
 
 - `allow_gce_inference` `(bool: true)` - A flag to determine if this role should
    allow GCE instances to authenticate by inferring service accounts from the
    GCE identity metadata token.
 
-**`gce`-only params**:
+#### `gce`-only Parameters
 
-- `bound_zone` `(string: "")`: If set, determines the zone that a GCE instance must belong to.
-   If bound_instance_group is provided, it is assumed to be a zonal group and the group must belong to this zone.
+The following parameters are only valid when the role is of type `"gce"`:
 
-- `bound_region` `(string: "")`: If set, determines the region that a GCE instance must belong to.
-   If bound_instance_group is provided, it is assumed to be a regional group and the group must belong to this region.
-   **If bound_zone is provided, region will be ignored.**
-- `bound_instance_group` `(string: "")`: If set, determines the instance group that an authorized instance must belong to.
-   bound_zone or bound_region must also be set if bound_instance_group is set.
-- `bound_labels` `(array: [])`: A comma-separated list of Google Cloud Platform labels formatted as "$key:$value" strings that
-   must be set on authorized GCE instances. Because GCP labels are not currently ACL'd, we recommend that this be used in
-   conjunction with other restrictions.
+- `bound_zones` `(array: [])`: The list of zones that a GCE instance must belong
+  to in order to be authenticated. If `bound_instance_groups` is provided, it is
+  assumed to be a zonal group and the group must belong to this zone.
+
+- `bound_regions` `(array: [])`: The list of regions that a GCE instance must
+  belong to in order to be authenticated. If `bound_instance_groups` is
+  provided, it is assumed to be a regional group and the group must belong to
+  this region. If `bound_zones` are provided, this attribute is ignored.
+
+- `bound_instance_groups` `(array: [])`: The instance groups that an authorized
+  instance must belong to in order to be authenticated. If specified, either
+  `bound_zones` or `bound_regions` must be set too.
+
+- `bound_labels` `(array: [])`: A comma-separated list of GCP labels formatted
+  as "key:value" strings that must be set on authorized GCE instances. Because
+  GCP labels are not currently ACL'd, we recommend that this be used in
+  conjunction with other restrictions.
 
 ### Sample Payload
 
-Example `iam` Role:
+Example `iam` role:
 
 ```json
 {
   "type": "iam",
-  "project": "project-123456",
-  "policies": [
-    "default",
-    "dev",
-    "prod"
-  ],
-  "max_ttl": 1800000,
-  "max_jwt_exp": 10000,
-  "service_accounts": [
-    "dev-1@project-123456.iam.gserviceaccount.com",
-    "dev-2@project-123456.iam.gserviceaccount.com",
-    "123456789"
-  ],
-  "allow_instance_migration": false
+  "project_id": "project-123456",
+  "policies": ["prod"],
+  "ttl": "30m",
+  "max_ttl": "24h",
+  "max_jwt_exp": "5m",
+  "bound_bound_service_accounts": [
+    "dev-1@project-123456.iam.gserviceaccount.com"
+  ]
 }
 ```
 
-Example `gce` Role:
+Example `gce` role:
 
 ```json
 {
   "type": "gce",
-  "project": "project-123456",
-  "policies": [
-    "default",
-    "dev",
-    "prod"
-  ],
-  "max_ttl": 1800000,
-  "max_jwt_exp": 10000,
-  "service_accounts": [
-    "dev-1@project-123456.iam.gserviceaccount.com",
-    "dev-2@project-123456.iam.gserviceaccount.com",
-    "123456789"
-  ],
-  "allow_instance_migration": false
+  "project_id": "project-123456",
+  "policies": ["prod"],
+  "bound_zones": ["us-east1-b", "eu-west2-a"],
+  "ttl": "30m",
+  "max_ttl": "24h",
+  "bound_service_accounts": [
+    "dev-1@project-123456.iam.gserviceaccount.com"
+  ]
 }
 ```
 
@@ -226,10 +234,10 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/gcp/role/dev-role
+    http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
-## Edit Service Accounts For IAM Role
+## Edit Service Accounts on IAM Role
 
 Edit service accounts for an existing IAM role in the method.
 This allows you to add or remove service accounts from the list of
@@ -240,23 +248,26 @@ service accounts on the role.
 | `POST`   | `/auth/gcp/role/:name/service-accounts` | `204 (empty body)` |
 
 ### Parameters
-- `name` `(string: <required>)` - Name of an existing `iam` role.
-    Returns error if role is not an `iam` role.
-- `add` `(array: [])` - List of service accounts to add to the role's
-    service accounts
-- `remove` `(array: [])` - List of service accounts to remove from the
-    role's service accounts
+
+- `name` `(string: <required>)` - The name of an existing `iam` type role. This
+  will return an error if role is not an `iam` type role.
+
+- `add` `(array: [])` - The list of service accounts to add to the role's
+  service accounts.
+
+- `remove` `(array: [])` - The list of service accounts to remove from the
+  role's service accounts.
 
 ### Sample Payload
 
 ```json
 {
   "add": [
-      "dev-1@project-123456.iam.gserviceaccount.com",
-      "123456789"
+    "dev-1@project-123456.iam.gserviceaccount.com",
+    "123456789"
   ],
   "remove": [
-      "dev-2@project-123456.iam.gserviceaccount.com"
+    "dev-2@project-123456.iam.gserviceaccount.com"
   ]
 }
 ```
@@ -268,35 +279,42 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/gcp/role/dev-role
+    http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
-## Edit Labels For GCE Role
+## Edit Labels on GCE Role
 
-Edit service accounts for an existing IAM role in the backend.
-This allows you to add or remove service accounts from the list of
-service accounts on the role.
+Edit labels for an existing GCE role in the backend. This allows you to add or
+remove labels (keys, values, or both) from the list of keys on the role.
 
 | Method   | Path                                    | Produces           |
 | :------- | :---------------------------------------| :------------------|
-| `POST`   | `/auth/gcp/role/:name/labels` | `204 (empty body)` |
+| `POST`   | `/auth/gcp/role/:name/labels`           | `204 (empty body)` |
 
 ### Parameters
-- `name` `(string: <required>)` - Name of an existing `gce` role. Returns error if role is not an `gce` role.
-- `add` `(array: [])` - List of `$key:$value` labels to add to the GCE role's bound labels.
-- `remove` `(array: [])` - List of label keys to remove from the role's bound labels.
+
+- `name` `(string: <required>)` - The name of an existing `gce` role. This will
+  return an error if role is not a `gce` type role.
+
+- `add` `(array: [])` - The list of `key:value` labels to add to the GCE role's
+  bound labels.
+
+- `remove` `(array: [])` - The list of label _keys_ to remove from the role's
+  bound labels. If any of the specified keys do not exist, no error is returned
+  (idempotent).
 
 ### Sample Payload
 
 ```json
 {
   "add": [
-      "foo:bar",
-      "env:dev",
-      "key:value"
+    "foo:bar",
+    "env:dev",
+    "key:value"
   ],
   "remove": [
-      "keyInLabel1, keyInLabel2"
+    "key1",
+    "key2"
   ]
 }
 ```
@@ -308,7 +326,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/gcp/role/dev-role
+    http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
 ## Read Role
@@ -317,45 +335,46 @@ Returns the previously registered role configuration.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/gcp/role/:name`        | `200 application/json` |
+| `GET`    | `/auth/gcp/role/:name`       | `200 application/json` |
 
 ### Parameters
 
-- `name` `(string: <required>)` - Name of the role.
+- `name` `(string: <required>)` - The name of the role to read.
 
 ### Sample Request
 
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/auth/gcp/role/dev-role
+    http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
 ### Sample Response
 
 ```json
 {
-    "data":{
-        "max_jwt_exp": 900,
-        "max_ttl": 0,
-        "ttl":0,
-        "period": 0,
-        "policies":[
-            "default",
-            "dev",
-            "prod"
-        ],
-        "project_id":"project-123456",
-        "role_type":"iam",
-        "service_accounts": [
-            "dev-1@project-123456.iam.gserviceaccount.com",
-            "dev-2@project-123456.iam.gserviceaccount.com",
-            "123456789",
-        ]
+  "data": {
+    "bound_labels": {
+      "env": "dev",
+      "foo": "bar",
+      "key": "value"
     },
-    ...
+    "bound_service_accounts": [
+      "dev-1@project-123456.iam.gserviceaccount.com"
+    ],
+    "bound_zones": [
+      "eu-west2-a",
+      "us-east1-b"
+    ],
+    "max_ttl": 86400,
+    "policies": [
+      "prod"
+    ],
+    "project_id": "project-123456",
+    "role_type": "gce",
+    "ttl": 1800
+  }
 }
-
 ```
 
 ## List Roles
@@ -379,13 +398,12 @@ $ curl \
 
 ```json  
 {
-    "data": {
-        "keys": [
-            "dev-role",
-            "prod-role"
-        ]
-    },
-    ...
+  "data": {
+    "keys": [
+      "my-role",
+      "my-other-role"
+    ]
+  }
 }
 ```
 
@@ -399,7 +417,7 @@ Deletes the previously registered role.
 
 ### Parameters
 
-- `role` `(string: <required>)` - Name of the role.
+- `role` `(string: <required>)` - The name of the role to delete.
 
 ### Sample Request
 
@@ -407,14 +425,15 @@ Deletes the previously registered role.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/gcp/role/dev-role
+    http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
 ## Login
 
-Fetch a token. This endpoint takes a signed JSON Web Token (JWT) and
-a role name for some entity. It verifies the JWT signature to authenticate that
-entity and then authorizes the entity for the given role.
+Login to retrieve a Vault token. This endpoint takes a signed JSON Web Token
+(JWT) and a role name for some entity. It verifies the JWT signature with Google
+Cloud to authenticate that entity and then authorizes the entity for the given
+role.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -422,20 +441,23 @@ entity and then authorizes the entity for the given role.
 
 ### Sample Payload
 
-- `role` `(string: "")` - Name of the role against which the login is being
-  attempted.
-- `jwt` `(string: "")` - Signed [JSON Web Token](https://tools.ietf.org/html/rfc7519) (JWT).
-  For `iam`, this is a JWT generated using the IAM API method
-  [signJwt](https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts/signJwt)
-  or a self-signed JWT. For `gce`, this is an [identity metadata token](https://cloud.google.com/compute/docs/instances/verifying-instance-identity#request_signature).
+- `role` `(string: <required>)` - The name of the role against which the login
+  is being attempted.
+
+- `jwt` `(string: <required>)` - A Signed [JSON Web Token][jwt].
+
+  - For `iam` type roles, this is a JWT signed with the
+  [`signJwt` method][signjwt-method] or a self-signed JWT.
+
+  - For `gce` type roles, this is an [identity metadata token][instance-token].
 
 
 ### Sample Payload
 
 ```json
 {
-    "role": "dev-role",
-    "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "role": "my-role",
+  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
@@ -452,22 +474,26 @@ $ curl \
 
 ```json
 {
-    "auth":{
-        "client_token":"f33f8c72-924e-11f8-cb43-ac59d697597c",
-        "accessor":"0e9e354a-520f-df04-6867-ee81cae3d42d",
-        "policies":[
-            "default",
-            "dev",
-            "prod"
-        ],
-        "metadata":{
-            "role": "dev-role",
-            "service_account_email": "dev1@project-123456.iam.gserviceaccount.com",
-            "service_account_id": "111111111111111111111"
-        },
-        "lease_duration":2764800,
-        "renewable":true
+  "auth": {
+    "client_token": "f33f8c72-924e-11f8-cb43-ac59d697597c",
+    "accessor": "0e9e354a-520f-df04-6867-ee81cae3d42d",
+    "policies": [
+      "default",
+      "dev",
+      "prod"
+    ],
+    "metadata": {
+      "role": "my-role",
+      "service_account_email": "dev1@project-123456.iam.gserviceaccount.com",
+      "service_account_id": "111111111111111111111"
     },
-    ...
+    "lease_duration": 2764800,
+    "renewable": true
+  }
 }
 ```
+
+[gcp-adc]: https://developers.google.com/identity/protocols/application-default-credentials
+[jwt]: https://tools.ietf.org/html/rfc7519
+[signjwt-method]: https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts/signJwt
+[instance-token]: https://cloud.google.com/compute/docs/instances/verifying-instance-identity#request_signature

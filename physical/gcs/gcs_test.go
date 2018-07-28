@@ -1,6 +1,7 @@
 package gcs
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -11,7 +12,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	"golang.org/x/net/context"
 	"google.golang.org/api/googleapi"
 )
 

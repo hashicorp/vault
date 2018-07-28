@@ -130,6 +130,26 @@ func TestHandler_CacheControlNoStore(t *testing.T) {
 	}
 }
 
+func TestHandler_Accepted(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	req, err := http.NewRequest("POST", addr+"/v1/auth/token/tidy", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(AuthHeaderName, token)
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	testResponseStatus(t, resp, 202)
+}
+
 // We use this test to verify header auth
 func TestSysMounts_headerAuth(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
@@ -390,11 +410,22 @@ func TestHandler_error(t *testing.T) {
 }
 
 func TestHandler_nonPrintableChars(t *testing.T) {
+	testNonPrintable(t, false)
+	testNonPrintable(t, true)
+}
+
+func testNonPrintable(t *testing.T, disable bool) {
 	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := TestServer(t, core)
+	ln, addr := TestListener(t)
+	props := &vault.HandlerProperties{
+		Core:                  core,
+		MaxRequestSize:        DefaultMaxRequestSize,
+		DisablePrintableCheck: disable,
+	}
+	TestServerWithListenerAndProperties(t, ln, addr, core, props)
 	defer ln.Close()
 
-	req, err := http.NewRequest("GET", addr+"/v1/sys/mounts\n", nil)
+	req, err := http.NewRequest("PUT", addr+"/v1/cubbyhole/foo\u2028bar", strings.NewReader(`{"zip": "zap"}`))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -406,5 +437,9 @@ func TestHandler_nonPrintableChars(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	testResponseStatus(t, resp, 400)
+	if disable {
+		testResponseStatus(t, resp, 204)
+	} else {
+		testResponseStatus(t, resp, 400)
+	}
 }

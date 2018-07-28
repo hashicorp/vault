@@ -82,6 +82,12 @@ type QueryOptions struct {
 	// until the timeout or the next index is reached
 	WaitIndex uint64
 
+	// WaitHash is used by some endpoints instead of WaitIndex to perform blocking
+	// on state based on a hash of the response rather than a monotonic index.
+	// This is required when the state being blocked on is not stored in Raft, for
+	// example agent-local proxy configuration.
+	WaitHash string
+
 	// WaitTime is used to bound the duration of a wait.
 	// Defaults to that of the Config, but can be overridden.
 	WaitTime time.Duration
@@ -101,10 +107,14 @@ type QueryOptions struct {
 	// be provided for filtering.
 	NodeMeta map[string]string
 
-	// RelayFactor is used in keyring operations to cause reponses to be
+	// RelayFactor is used in keyring operations to cause responses to be
 	// relayed back to the sender through N other random nodes. Must be
 	// a value from 0 to 5 (inclusive).
 	RelayFactor uint8
+
+	// Connect filters prepared query execution to only include Connect-capable
+	// services. This currently affects prepared query execution.
+	Connect bool
 
 	// ctx is an optional context pass through to the underlying HTTP
 	// request layer. Use Context() and WithContext() to manage this.
@@ -137,7 +147,7 @@ type WriteOptions struct {
 	// which overrides the agent's default token.
 	Token string
 
-	// RelayFactor is used in keyring operations to cause reponses to be
+	// RelayFactor is used in keyring operations to cause responses to be
 	// relayed back to the sender through N other random nodes. Must be
 	// a value from 0 to 5 (inclusive).
 	RelayFactor uint8
@@ -168,6 +178,11 @@ type QueryMeta struct {
 	// LastIndex. This can be used as a WaitIndex to perform
 	// a blocking query
 	LastIndex uint64
+
+	// LastContentHash. This can be used as a WaitHash to perform a blocking query
+	// for endpoints that support hash-based blocking. Endpoints that do not
+	// support it will return an empty hash.
+	LastContentHash string
 
 	// Time of last contact from the leader for the
 	// server servicing the request
@@ -533,6 +548,9 @@ func (r *request) setQueryOptions(q *QueryOptions) {
 	if q.WaitTime != 0 {
 		r.params.Set("wait", durToMsec(q.WaitTime))
 	}
+	if q.WaitHash != "" {
+		r.params.Set("hash", q.WaitHash)
+	}
 	if q.Token != "" {
 		r.header.Set("X-Consul-Token", q.Token)
 	}
@@ -546,6 +564,9 @@ func (r *request) setQueryOptions(q *QueryOptions) {
 	}
 	if q.RelayFactor != 0 {
 		r.params.Set("relay-factor", strconv.Itoa(int(q.RelayFactor)))
+	}
+	if q.Connect {
+		r.params.Set("connect", "true")
 	}
 	r.ctx = q.ctx
 }
@@ -724,12 +745,16 @@ func (c *Client) write(endpoint string, in, out interface{}, q *WriteOptions) (*
 func parseQueryMeta(resp *http.Response, q *QueryMeta) error {
 	header := resp.Header
 
-	// Parse the X-Consul-Index
-	index, err := strconv.ParseUint(header.Get("X-Consul-Index"), 10, 64)
-	if err != nil {
-		return fmt.Errorf("Failed to parse X-Consul-Index: %v", err)
+	// Parse the X-Consul-Index (if it's set - hash based blocking queries don't
+	// set this)
+	if indexStr := header.Get("X-Consul-Index"); indexStr != "" {
+		index, err := strconv.ParseUint(indexStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Failed to parse X-Consul-Index: %v", err)
+		}
+		q.LastIndex = index
 	}
-	q.LastIndex = index
+	q.LastContentHash = header.Get("X-Consul-ContentHash")
 
 	// Parse the X-Consul-LastContact
 	last, err := strconv.ParseUint(header.Get("X-Consul-LastContact"), 10, 64)

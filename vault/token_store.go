@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"sync"
 	"sync/atomic"
 
@@ -84,11 +85,13 @@ func (c *Core) LookupToken(token string) (*logical.TokenEntry, error) {
 		return nil, fmt.Errorf("missing client token")
 	}
 
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil, consts.ErrSealed
 	}
+
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
 	if c.standby {
 		return nil, consts.ErrStandby
 	}
@@ -988,7 +991,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 			return nil, err
 		}
 
-		err = ts.expiration.Revoke(leaseID)
+		err = ts.expiration.Revoke(ctx, leaseID)
 		if err != nil {
 			return nil, err
 		}
@@ -1507,7 +1510,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 	resp := &logical.Response{}
 	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
-	return resp, nil
+	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
 // handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
@@ -1596,7 +1599,7 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 		return nil, err
 	}
 
-	err = ts.expiration.Revoke(leaseID)
+	err = ts.expiration.Revoke(ctx, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -2051,7 +2054,7 @@ func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	err = ts.expiration.Revoke(leaseID)
+	err = ts.expiration.Revoke(ctx, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -2087,7 +2090,7 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	err = ts.expiration.Revoke(leaseID)
+	err = ts.expiration.Revoke(ctx, leaseID)
 	if err != nil {
 		return nil, err
 	}

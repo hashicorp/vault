@@ -20,8 +20,8 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Item struct {
-	ID                   string   `sentinel:"" protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
-	Message              *any.Any `sentinel:"" protobuf:"bytes,2,opt,name=message" json:"message,omitempty"`
+	ID                   string   `sentinel:"" protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Message              *any.Any `sentinel:"" protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -31,7 +31,7 @@ func (m *Item) Reset()         { *m = Item{} }
 func (m *Item) String() string { return proto.CompactTextString(m) }
 func (*Item) ProtoMessage()    {}
 func (*Item) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_d6d76d5cfa424ba8, []int{0}
+	return fileDescriptor_types_6092d91e5958c3db, []int{0}
 }
 func (m *Item) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Item.Unmarshal(m, b)
@@ -66,8 +66,8 @@ func (m *Item) GetMessage() *any.Any {
 }
 
 type Bucket struct {
-	Key                  string   `sentinel:"" protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
-	Items                []*Item  `sentinel:"" protobuf:"bytes,2,rep,name=items" json:"items,omitempty"`
+	Key                  string   `sentinel:"" protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Items                []*Item  `sentinel:"" protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -77,7 +77,7 @@ func (m *Bucket) Reset()         { *m = Bucket{} }
 func (m *Bucket) String() string { return proto.CompactTextString(m) }
 func (*Bucket) ProtoMessage()    {}
 func (*Bucket) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_d6d76d5cfa424ba8, []int{1}
+	return fileDescriptor_types_6092d91e5958c3db, []int{1}
 }
 func (m *Bucket) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Bucket.Unmarshal(m, b)
@@ -117,10 +117,10 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("helper/storagepacker/types.proto", fileDescriptor_types_d6d76d5cfa424ba8)
+	proto.RegisterFile("helper/storagepacker/types.proto", fileDescriptor_types_6092d91e5958c3db)
 }
 
-var fileDescriptor_types_d6d76d5cfa424ba8 = []byte{
+var fileDescriptor_types_6092d91e5958c3db = []byte{
 	// 219 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x8f, 0x41, 0x4b, 0xc3, 0x40,
 	0x10, 0x85, 0x49, 0xaa, 0x15, 0xb7, 0x28, 0xb2, 0x7a, 0x88, 0x9e, 0x42, 0x4f, 0xf1, 0x32, 0x83,

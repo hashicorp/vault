@@ -27,9 +27,9 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/http/httpguts"
 	"golang.org/x/net/http2/hpack"
 	"golang.org/x/net/idna"
-	"golang.org/x/net/lex/httplex"
 )
 
 const (
@@ -159,6 +159,7 @@ type ClientConn struct {
 	cond            *sync.Cond // hold mu; broadcast on flow/closed changes
 	flow            flow       // our conn-level flow control quota (cs.flow is per stream)
 	inflow          flow       // peer's conn-level flow control
+	closing         bool
 	closed          bool
 	wantSettingsAck bool                     // we sent a SETTINGS frame and haven't heard back
 	goAway          *GoAwayFrame             // if non-nil, the GoAwayFrame we received
@@ -567,6 +568,10 @@ func (t *Transport) newClientConn(c net.Conn, singleUse bool) (*ClientConn, erro
 	// henc in response to SETTINGS frames?
 	cc.henc = hpack.NewEncoder(&cc.hbuf)
 
+	if t.AllowHTTP {
+		cc.nextStreamID = 3
+	}
+
 	if cs, ok := c.(connectionStater); ok {
 		state := cs.ConnectionState()
 		cc.tlsState = &state
@@ -626,12 +631,32 @@ func (cc *ClientConn) CanTakeNewRequest() bool {
 	return cc.canTakeNewRequestLocked()
 }
 
-func (cc *ClientConn) canTakeNewRequestLocked() bool {
+// clientConnIdleState describes the suitability of a client
+// connection to initiate a new RoundTrip request.
+type clientConnIdleState struct {
+	canTakeNewRequest bool
+	freshConn         bool // whether it's unused by any previous request
+}
+
+func (cc *ClientConn) idleState() clientConnIdleState {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+	return cc.idleStateLocked()
+}
+
+func (cc *ClientConn) idleStateLocked() (st clientConnIdleState) {
 	if cc.singleUse && cc.nextStreamID > 1 {
-		return false
+		return
 	}
-	return cc.goAway == nil && !cc.closed &&
+	st.canTakeNewRequest = cc.goAway == nil && !cc.closed && !cc.closing &&
 		int64(cc.nextStreamID)+int64(cc.pendingRequests) < math.MaxInt32
+	st.freshConn = cc.nextStreamID == 1 && st.canTakeNewRequest
+	return
+}
+
+func (cc *ClientConn) canTakeNewRequestLocked() bool {
+	st := cc.idleStateLocked()
+	return st.canTakeNewRequest
 }
 
 // onIdleTimeout is called from a time.AfterFunc goroutine. It will
@@ -659,6 +684,88 @@ func (cc *ClientConn) closeIfIdle() {
 		cc.vlogf("http2: Transport closing idle conn %p (forSingleUse=%v, maxStream=%v)", cc, cc.singleUse, nextID-2)
 	}
 	cc.tconn.Close()
+}
+
+var shutdownEnterWaitStateHook = func() {}
+
+// Shutdown gracefully close the client connection, waiting for running streams to complete.
+// Public implementation is in go17.go and not_go17.go
+func (cc *ClientConn) shutdown(ctx contextContext) error {
+	if err := cc.sendGoAway(); err != nil {
+		return err
+	}
+	// Wait for all in-flight streams to complete or connection to close
+	done := make(chan error, 1)
+	cancelled := false // guarded by cc.mu
+	go func() {
+		cc.mu.Lock()
+		defer cc.mu.Unlock()
+		for {
+			if len(cc.streams) == 0 || cc.closed {
+				cc.closed = true
+				done <- cc.tconn.Close()
+				break
+			}
+			if cancelled {
+				break
+			}
+			cc.cond.Wait()
+		}
+	}()
+	shutdownEnterWaitStateHook()
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		cc.mu.Lock()
+		// Free the goroutine above
+		cancelled = true
+		cc.cond.Broadcast()
+		cc.mu.Unlock()
+		return ctx.Err()
+	}
+}
+
+func (cc *ClientConn) sendGoAway() error {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+	cc.wmu.Lock()
+	defer cc.wmu.Unlock()
+	if cc.closing {
+		// GOAWAY sent already
+		return nil
+	}
+	// Send a graceful shutdown frame to server
+	maxStreamID := cc.nextStreamID
+	if err := cc.fr.WriteGoAway(maxStreamID, ErrCodeNo, nil); err != nil {
+		return err
+	}
+	if err := cc.bw.Flush(); err != nil {
+		return err
+	}
+	// Prevent new requests
+	cc.closing = true
+	return nil
+}
+
+// Close closes the client connection immediately.
+//
+// In-flight requests are interrupted. For a graceful shutdown, use Shutdown instead.
+func (cc *ClientConn) Close() error {
+	cc.mu.Lock()
+	defer cc.cond.Broadcast()
+	defer cc.mu.Unlock()
+	err := errors.New("http2: client connection force closed via ClientConn.Close")
+	for id, cs := range cc.streams {
+		select {
+		case cs.resc <- resAndError{err: err}:
+		default:
+		}
+		cs.bufPipe.CloseWithError(err)
+		delete(cc.streams, id)
+	}
+	cc.closed = true
+	return cc.tconn.Close()
 }
 
 const maxAllocFrameSize = 512 << 10
@@ -743,7 +850,7 @@ func checkConnHeaders(req *http.Request) error {
 	if vv := req.Header["Transfer-Encoding"]; len(vv) > 0 && (len(vv) > 1 || vv[0] != "" && vv[0] != "chunked") {
 		return fmt.Errorf("http2: invalid Transfer-Encoding request header: %q", vv)
 	}
-	if vv := req.Header["Connection"]; len(vv) > 0 && (len(vv) > 1 || vv[0] != "" && vv[0] != "close" && vv[0] != "keep-alive") {
+	if vv := req.Header["Connection"]; len(vv) > 0 && (len(vv) > 1 || vv[0] != "" && !strings.EqualFold(vv[0], "close") && !strings.EqualFold(vv[0], "keep-alive")) {
 		return fmt.Errorf("http2: invalid Connection request header: %q", vv)
 	}
 	return nil
@@ -951,6 +1058,9 @@ func (cc *ClientConn) awaitOpenSlotForRequest(req *http.Request) error {
 	for {
 		cc.lastActive = time.Now()
 		if cc.closed || !cc.canTakeNewRequestLocked() {
+			if waitingForConn != nil {
+				close(waitingForConn)
+			}
 			return errClientConnUnusable
 		}
 		if int64(len(cc.streams))+1 <= int64(cc.maxConcurrentStreams) {
@@ -1174,7 +1284,7 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 	if host == "" {
 		host = req.URL.Host
 	}
-	host, err := httplex.PunycodeHostPort(host)
+	host, err := httpguts.PunycodeHostPort(host)
 	if err != nil {
 		return nil, err
 	}
@@ -1199,11 +1309,11 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 	// potentially pollute our hpack state. (We want to be able to
 	// continue to reuse the hpack encoder for future requests)
 	for k, vv := range req.Header {
-		if !httplex.ValidHeaderFieldName(k) {
+		if !httpguts.ValidHeaderFieldName(k) {
 			return nil, fmt.Errorf("invalid HTTP header name %q", k)
 		}
 		for _, v := range vv {
-			if !httplex.ValidHeaderFieldValue(v) {
+			if !httpguts.ValidHeaderFieldValue(v) {
 				return nil, fmt.Errorf("invalid HTTP header value %q for header %q", v, k)
 			}
 		}
@@ -1284,9 +1394,16 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 		return nil, errRequestHeaderListSize
 	}
 
+	trace := requestTrace(req)
+	traceHeaders := traceHasWroteHeaderField(trace)
+
 	// Header list size is ok. Write the headers.
 	enumerateHeaders(func(name, value string) {
-		cc.writeHeader(strings.ToLower(name), value)
+		name = strings.ToLower(name)
+		cc.writeHeader(name, value)
+		if traceHeaders {
+			traceWroteHeaderField(trace, name, value)
+		}
 	})
 
 	return cc.hbuf.Bytes(), nil
@@ -2244,7 +2361,7 @@ func (t *Transport) getBodyWriterState(cs *clientStream, body io.Reader) (s body
 	}
 	s.delay = t.expectContinueTimeout()
 	if s.delay == 0 ||
-		!httplex.HeaderValuesContainsToken(
+		!httpguts.HeaderValuesContainsToken(
 			cs.req.Header["Expect"],
 			"100-continue") {
 		return
@@ -2299,5 +2416,5 @@ func (s bodyWriterState) scheduleBodyWrite() {
 // isConnectionCloseRequest reports whether req should use its own
 // connection for a single request and then close the connection.
 func isConnectionCloseRequest(req *http.Request) bool {
-	return req.Close || httplex.HeaderValuesContainsToken(req.Header["Connection"], "close")
+	return req.Close || httpguts.HeaderValuesContainsToken(req.Header["Connection"], "close")
 }

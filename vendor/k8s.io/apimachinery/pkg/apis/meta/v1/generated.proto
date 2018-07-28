@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ message APIGroup {
   // The server returns only those CIDRs that it thinks that the client can match.
   // For example: the master will return an internal IP CIDR only, if the client reaches the server using an internal IP.
   // Server looks at X-Forwarded-For header or X-Real-Ip header or request.RemoteAddr (in that order) to get the client IP.
+  // +optional
   repeated ServerAddressByClientCIDR serverAddressByClientCIDRs = 4;
 }
 

@@ -35,9 +35,10 @@ import (
 	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 
-	credAzure "github.com/hashicorp/vault-plugin-auth-azure/plugin"
+	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
+	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
@@ -58,6 +59,7 @@ import (
 	physDynamoDB "github.com/hashicorp/vault/physical/dynamodb"
 	physEtcd "github.com/hashicorp/vault/physical/etcd"
 	physFile "github.com/hashicorp/vault/physical/file"
+	physFoundationDB "github.com/hashicorp/vault/physical/foundationdb"
 	physGCS "github.com/hashicorp/vault/physical/gcs"
 	physInmem "github.com/hashicorp/vault/physical/inmem"
 	physManta "github.com/hashicorp/vault/physical/manta"
@@ -80,6 +82,8 @@ const (
 	flagNameAuditNonHMACRequestKeys = "audit-non-hmac-request-keys"
 	// flagNameAuditNonHMACResponseKeys is the flag name used for auth/secrets enable
 	flagNameAuditNonHMACResponseKeys = "audit-non-hmac-response-keys"
+	// flagNameDescription is the flag name used for tuning the secret and auth mount description parameter
+	flagNameDescription = "description"
 	// flagListingVisibility is the flag to toggle whether to show the mount in the UI-specific listing endpoint
 	flagNameListingVisibility = "listing-visibility"
 	// flagNamePassthroughRequestHeaders is the flag name used to set passthrough request headers to the backend
@@ -102,6 +106,7 @@ var (
 		"cert":       credCert.Factory,
 		"gcp":        credGcp.Factory,
 		"github":     credGitHub.Factory,
+		"jwt":        credJWT.Factory,
 		"kubernetes": credKube.Factory,
 		"ldap":       credLdap.Factory,
 		"okta":       credOkta.Factory,
@@ -142,6 +147,7 @@ var (
 		"etcd":                   physEtcd.NewEtcdBackend,
 		"file_transactional":     physFile.NewTransactionalFileBackend,
 		"file":                   physFile.NewFileBackend,
+		"foundationdb":           physFoundationDB.NewFDBBackend,
 		"gcs":                    physGCS.NewBackend,
 		"inmem_ha":               physInmem.NewInmemHA,
 		"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
@@ -224,6 +230,14 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 	}
 
 	Commands = map[string]cli.CommandFactory{
+		"agent": func() (cli.Command, error) {
+			return &AgentCommand{
+				BaseCommand: &BaseCommand{
+					UI: serverCmdUi,
+				},
+				ShutdownCh: MakeShutdownCh(),
+			}, nil
+		},
 		"audit": func() (cli.Command, error) {
 			return &AuditCommand{
 				BaseCommand: getBaseCommand(),
@@ -354,6 +368,31 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"path-help": func() (cli.Command, error) {
 			return &PathHelpCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin": func() (cli.Command, error) {
+			return &PluginCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin deregister": func() (cli.Command, error) {
+			return &PluginDeregisterCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin info": func() (cli.Command, error) {
+			return &PluginInfoCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin list": func() (cli.Command, error) {
+			return &PluginListCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin register": func() (cli.Command, error) {
+			return &PluginRegisterCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

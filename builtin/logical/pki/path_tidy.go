@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -20,14 +21,19 @@ func pathTidy(b *backend) *framework.Path {
 				Type: framework.TypeBool,
 				Description: `Set to true to enable tidying up
 the certificate store`,
-				Default: false,
 			},
 
 			"tidy_revocation_list": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `Set to true to enable tidying up
 the revocation list`,
-				Default: false,
+			},
+
+			"tidy_revoked_certs": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `Set to true to expire all revoked
+certificates, even if their duration has not yet passed. This will cause these
+certificates to be removed from the CRL the next time the CRL is generated.`,
 			},
 
 			"safety_buffer": &framework.FieldSchema{
@@ -53,6 +59,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	safetyBuffer := d.Get("safety_buffer").(int)
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
 	tidyRevocationList := d.Get("tidy_revocation_list").(bool)
+	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool)
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
@@ -162,7 +169,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						return errwrap.Wrapf(fmt.Sprintf("unable to parse stored revoked certificate with serial %q: {{err}}", serial), err)
 					}
 
-					if time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
+					if tidyRevokedCerts || time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
 						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from revoked list: {{err}}", serial), err)
 						}
@@ -188,7 +195,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 	resp := &logical.Response{}
 	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
-	return resp, nil
+	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
 const pathTidyHelpSyn = `

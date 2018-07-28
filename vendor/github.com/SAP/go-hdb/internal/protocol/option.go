@@ -66,36 +66,20 @@ func (o multiLineOptions) size() int {
 }
 
 //pointer: append multiLineOptions itself
-func (o *multiLineOptions) read(rd *bufio.Reader, lineCnt int) error {
-
+func (o *multiLineOptions) read(rd *bufio.Reader, lineCnt int) {
 	for i := 0; i < lineCnt; i++ {
-
 		m := plainOptions{}
-
-		cnt, err := rd.ReadInt16()
-		if err != nil {
-			return err
-		}
-		if err := m.read(rd, int(cnt)); err != nil {
-			return err
-		}
-
+		cnt := rd.ReadInt16()
+		m.read(rd, int(cnt))
 		*o = append(*o, m)
 	}
-	return nil
 }
 
-func (o multiLineOptions) write(wr *bufio.Writer) error {
+func (o multiLineOptions) write(wr *bufio.Writer) {
 	for _, m := range o {
-
-		if err := wr.WriteInt16(int16(len(m))); err != nil {
-			return err
-		}
-		if err := m.write(wr); err != nil {
-			return err
-		}
+		wr.WriteInt16(int16(len(m)))
+		m.write(wr)
 	}
-	return nil
 }
 
 type plainOptions map[int8]interface{}
@@ -123,88 +107,51 @@ func (o plainOptions) size() int {
 	return size
 }
 
-func (o plainOptions) read(rd *bufio.Reader, cnt int) error {
+func (o plainOptions) read(rd *bufio.Reader, cnt int) {
 
 	for i := 0; i < cnt; i++ {
 
-		k, err := rd.ReadInt8()
-		if err != nil {
-			return err
-		}
+		k := rd.ReadInt8()
+		tc := rd.ReadB()
 
-		tc, err := rd.ReadByte()
-		if err != nil {
-			return err
-		}
-
-		switch typeCode(tc) {
+		switch TypeCode(tc) {
 
 		default:
-			outLogger.Fatalf("type code %s not implemented", typeCode(tc))
+			outLogger.Fatalf("type code %s not implemented", TypeCode(tc))
 
 		case tcBoolean:
-			if v, err := rd.ReadBool(); err == nil {
-				o[k] = booleanType(v)
-			} else {
-				return err
-			}
+			o[k] = booleanType(rd.ReadBool())
 
 		case tcInteger:
-			if v, err := rd.ReadInt32(); err == nil {
-				o[k] = intType(v)
-			} else {
-				return err
-			}
+			o[k] = intType(rd.ReadInt32())
 
 		case tcBigint:
-			if v, err := rd.ReadInt64(); err == nil {
-				o[k] = bigintType(v)
-			} else {
-				return err
-			}
+			o[k] = bigintType(rd.ReadInt64())
 
 		case tcDouble:
-			if v, err := rd.ReadFloat64(); err == nil {
-				o[k] = doubleType(v)
-			} else {
-				return err
-			}
+			o[k] = doubleType(rd.ReadFloat64())
 
 		case tcString:
-			size, err := rd.ReadInt16()
-			if err != nil {
-				return err
-			}
+			size := rd.ReadInt16()
 			v := make([]byte, size)
-			if err := rd.ReadFull(v); err == nil {
-				o[k] = stringType(v)
-			} else {
-				return err
-			}
+			rd.ReadFull(v)
+			o[k] = stringType(v)
 
 		case tcBstring:
-			size, err := rd.ReadInt16()
-			if err != nil {
-				return err
-			}
+			size := rd.ReadInt16()
 			v := make([]byte, size)
-			if err := rd.ReadFull(v); err == nil {
-				o[k] = binaryStringType(v)
-			} else {
-				return err
-			}
+			rd.ReadFull(v)
+			o[k] = binaryStringType(v)
+
 		}
 	}
-	return nil
 }
 
-func (o plainOptions) write(wr *bufio.Writer) error {
+func (o plainOptions) write(wr *bufio.Writer) {
 
 	for k, v := range o {
 
-		if err := wr.WriteInt8(k); err != nil {
-			return err
-		}
+		wr.WriteInt8(k)
 
 		switch v := v.(type) {
 
@@ -212,59 +159,30 @@ func (o plainOptions) write(wr *bufio.Writer) error {
 			outLogger.Fatalf("type %T not implemented", v)
 
 		case booleanType:
-			if err := wr.WriteInt8(int8(tcBoolean)); err != nil {
-				return err
-			}
-			if err := wr.WriteBool(bool(v)); err != nil {
-				return err
-			}
+			wr.WriteInt8(int8(tcBoolean))
+			wr.WriteBool(bool(v))
 
 		case intType:
-			if err := wr.WriteInt8(int8(tcInteger)); err != nil {
-				return err
-			}
-			if err := wr.WriteInt32(int32(v)); err != nil {
-				return err
-			}
+			wr.WriteInt8(int8(tcInteger))
+			wr.WriteInt32(int32(v))
 
 		case bigintType:
-			if err := wr.WriteInt8(int8(tcBigint)); err != nil {
-				return err
-			}
-			if err := wr.WriteInt64(int64(v)); err != nil {
-				return err
-			}
+			wr.WriteInt8(int8(tcBigint))
+			wr.WriteInt64(int64(v))
 
 		case doubleType:
-			if err := wr.WriteInt8(int8(tcDouble)); err != nil {
-				return err
-			}
-			if err := wr.WriteFloat64(float64(v)); err != nil {
-				return err
-			}
+			wr.WriteInt8(int8(tcDouble))
+			wr.WriteFloat64(float64(v))
 
 		case stringType:
-			if err := wr.WriteInt8(int8(tcString)); err != nil {
-				return err
-			}
-			if err := wr.WriteInt16(int16(len(v))); err != nil {
-				return err
-			}
-			if _, err := wr.Write(v); err != nil {
-				return err
-			}
+			wr.WriteInt8(int8(tcString))
+			wr.WriteInt16(int16(len(v)))
+			wr.Write(v)
 
 		case binaryStringType:
-			if err := wr.WriteInt8(int8(tcBstring)); err != nil {
-				return err
-			}
-			if err := wr.WriteInt16(int16(len(v))); err != nil {
-				return err
-			}
-			if _, err := wr.Write(v); err != nil {
-				return err
-			}
+			wr.WriteInt8(int8(tcBstring))
+			wr.WriteInt16(int16(len(v)))
+			wr.Write(v)
 		}
 	}
-	return nil
 }

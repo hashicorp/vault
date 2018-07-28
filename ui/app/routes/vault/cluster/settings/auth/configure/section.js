@@ -13,6 +13,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
       'azure-configuration': 'auth-config/azure',
       'github-configuration': 'auth-config/github',
       'gcp-configuration': 'auth-config/gcp',
+      'jwt-configuration': 'auth-config/jwt',
       'kubernetes-configuration': 'auth-config/kubernetes',
       'ldap-configuration': 'auth-config/ldap',
       'okta-configuration': 'auth-config/okta',

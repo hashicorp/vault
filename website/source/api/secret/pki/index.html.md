@@ -1076,8 +1076,7 @@ existing cert/key with new values.
 
 - `permitted_dns_domains` `(string: "")` – A comma separated string (or, string
   array) containing DNS domains for which certificates are allowed to be issued
-  or signed by this CA certificate. Supports subdomains via a `.` in front of
-  the domain, as per
+  or signed by this CA certificate. Note that subdomains are allowed, as per
   [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
 
 - `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
@@ -1532,6 +1531,10 @@ expiration time.
 
 - `tidy_revocation_list` `(bool: false)` Specifies whether to tidy up the
   revocation list (CRL).
+
+- `tidy_revoked_certs` `(bool: false)` Set to true to expire all revoked
+  certificates, even if their duration has not yet passed. This will cause these
+  certificates to be removed from the CRL the next time the CRL is generated.
 
 - `safety_buffer` `(string: "")` Specifies  A duration (given as an integer
   number of seconds or a string; defaults to `72h`) used as a safety buffer to

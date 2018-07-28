@@ -346,7 +346,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		reToken := regexp.MustCompile(`Root Token\s+(.+)`)
+		reToken := regexp.MustCompile(`Encoded Token\s+(.+)`)
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		match := reToken.FindAllStringSubmatch(combined, -1)
 		if len(match) < 1 || len(match[0]) < 2 {
@@ -421,7 +421,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		reToken := regexp.MustCompile(`Root Token\s+(.+)`)
+		reToken := regexp.MustCompile(`Encoded Token\s+(.+)`)
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		match := reToken.FindAllStringSubmatch(combined, -1)
 		if len(match) < 1 || len(match[0]) < 2 {

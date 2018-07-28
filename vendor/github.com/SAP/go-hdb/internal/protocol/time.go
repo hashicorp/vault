@@ -37,9 +37,9 @@ func timeToJulianDay(t time.Time) int {
 
 	if t.Before(gregorianDate) { // Julian Calendar
 		return t.Day() + (153*m+2)/5 + 365*y + y/4 - 32083
-	} else { // Gregorian Calendar
-		return t.Day() + (153*m+2)/5 + 365*y + y/4 - y/100 + y/400 - 32045
 	}
+	// Gregorian Calendar
+	return t.Day() + (153*m+2)/5 + 365*y + y/4 - y/100 + y/400 - 32045
 }
 
 // JulianDayToTime returns the correcponding UTC date for a Julian Day Number.

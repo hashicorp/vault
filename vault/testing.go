@@ -260,11 +260,7 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 		}
 	}
 
-	sealed, err := core.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
@@ -293,11 +289,7 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 		t.Fatal(err)
 	}
 
-	sealed, err := core.Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
@@ -740,11 +732,7 @@ func (c *TestCluster) UnsealCoresWithError() error {
 	}
 
 	// Verify unsealed
-	sealed, err := c.Cores[0].Sealed()
-	if err != nil {
-		return fmt.Errorf("err checking seal status: %s", err)
-	}
-	if sealed {
+	if c.Cores[0].Sealed() {
 		return fmt.Errorf("should not be sealed")
 	}
 
@@ -818,11 +806,7 @@ func (c *TestCluster) ensureCoresSealed() error {
 			if time.Now().After(timeout) {
 				return fmt.Errorf("timeout waiting for core to seal")
 			}
-			sealed, err := core.Sealed()
-			if err != nil {
-				return err
-			}
-			if sealed {
+			if core.Sealed() {
 				break
 			}
 			time.Sleep(250 * time.Millisecond)
@@ -842,11 +826,7 @@ func (c *TestCluster) UnsealWithStoredKeys(t testing.T) error {
 			if time.Now().After(timeout) {
 				return fmt.Errorf("timeout waiting for core to unseal")
 			}
-			sealed, err := core.Sealed()
-			if err != nil {
-				return err
-			}
-			if !sealed {
+			if !core.Sealed() {
 				break
 			}
 			time.Sleep(250 * time.Millisecond)
@@ -880,7 +860,7 @@ type TestClusterCore struct {
 type TestClusterOptions struct {
 	KeepStandbysSealed bool
 	SkipInit           bool
-	HandlerFunc        func(*Core) http.Handler
+	HandlerFunc        func(*HandlerProperties) http.Handler
 	BaseListenAddress  string
 	NumCores           int
 	SealFunc           func() Seal
@@ -1249,7 +1229,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		cores = append(cores, c)
 		if opts != nil && opts.HandlerFunc != nil {
-			handlers[i] = opts.HandlerFunc(c)
+			handlers[i] = opts.HandlerFunc(&HandlerProperties{
+				Core:               c,
+				MaxRequestDuration: DefaultMaxRequestDuration,
+			})
 			servers[i].Handler = handlers[i]
 		}
 	}
@@ -1326,11 +1309,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 
 		// Verify unsealed
-		sealed, err := cores[0].Sealed()
-		if err != nil {
-			t.Fatalf("err checking seal status: %s", err)
-		}
-		if sealed {
+		if cores[0].Sealed() {
 			t.Fatal("should not be sealed")
 		}
 
@@ -1397,6 +1376,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
 		config.HttpClient = client
+		config.MaxRetries = 0
 		apiClient, err := api.NewClient(config)
 		if err != nil {
 			t.Fatal(err)

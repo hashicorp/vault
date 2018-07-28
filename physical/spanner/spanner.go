@@ -1,6 +1,7 @@
 package spanner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
@@ -20,7 +21,6 @@ import (
 
 	"cloud.google.com/go/spanner"
 	"github.com/pkg/errors"
-	"golang.org/x/net/context"
 )
 
 // Verify Backend satisfies the correct interfaces

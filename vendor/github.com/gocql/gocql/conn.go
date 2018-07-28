@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/gocql/gocql/internal/lru"
-
 	"github.com/gocql/gocql/internal/streams"
 )
 
@@ -116,17 +115,20 @@ func (fn connErrorHandlerFn) HandleError(conn *Conn, err error, closed bool) {
 // If not zero, how many timeouts we will allow to occur before the connection is closed
 // and restarted. This is to prevent a single query timeout from killing a connection
 // which may be serving more queries just fine.
-// Default is 10, should not be changed concurrently with queries.
-var TimeoutLimit int64 = 10
+// Default is 0, should not be changed concurrently with queries.
+//
+// depreciated
+var TimeoutLimit int64 = 0
 
 // Conn is a single connection to a Cassandra node. It can be used to execute
 // queries, but users are usually advised to use a more reliable, higher
 // level API.
 type Conn struct {
-	conn    net.Conn
-	r       *bufio.Reader
-	timeout time.Duration
-	cfg     *ConnConfig
+	conn          net.Conn
+	r             *bufio.Reader
+	timeout       time.Duration
+	cfg           *ConnConfig
+	frameObserver FrameHeaderObserver
 
 	headerBuf [maxFrameHeaderSize]byte
 
@@ -134,12 +136,14 @@ type Conn struct {
 	mu      sync.RWMutex
 	calls   map[int]*callReq
 
-	errorHandler    ConnErrorHandler
-	compressor      Compressor
-	auth            Authenticator
-	addr            string
+	errorHandler ConnErrorHandler
+	compressor   Compressor
+	auth         Authenticator
+	addr         string
+
 	version         uint8
 	currentKeyspace string
+	host            *HostInfo
 
 	session *Session
 
@@ -150,7 +154,10 @@ type Conn struct {
 }
 
 // Connect establishes a connection to a Cassandra node.
-func (s *Session) dial(ip net.IP, port int, cfg *ConnConfig, errorHandler ConnErrorHandler) (*Conn, error) {
+func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHandler) (*Conn, error) {
+	ip := host.ConnectAddress()
+	port := host.port
+
 	// TODO(zariel): remove these
 	if len(ip) == 0 || ip.IsUnspecified() {
 		panic(fmt.Sprintf("host missing connect ip address: %v", ip))
@@ -183,19 +190,21 @@ func (s *Session) dial(ip net.IP, port int, cfg *ConnConfig, errorHandler ConnEr
 	}
 
 	c := &Conn{
-		conn:         conn,
-		r:            bufio.NewReader(conn),
-		cfg:          cfg,
-		calls:        make(map[int]*callReq),
-		timeout:      cfg.Timeout,
-		version:      uint8(cfg.ProtoVersion),
-		addr:         conn.RemoteAddr().String(),
-		errorHandler: errorHandler,
-		compressor:   cfg.Compressor,
-		auth:         cfg.Authenticator,
-		quit:         make(chan struct{}),
-		session:      s,
-		streams:      streams.New(cfg.ProtoVersion),
+		conn:          conn,
+		r:             bufio.NewReader(conn),
+		cfg:           cfg,
+		calls:         make(map[int]*callReq),
+		timeout:       cfg.Timeout,
+		version:       uint8(cfg.ProtoVersion),
+		addr:          conn.RemoteAddr().String(),
+		errorHandler:  errorHandler,
+		compressor:    cfg.Compressor,
+		auth:          cfg.Authenticator,
+		quit:          make(chan struct{}),
+		session:       s,
+		streams:       streams.New(cfg.ProtoVersion),
+		host:          host,
+		frameObserver: s.frameObserver,
 	}
 
 	if cfg.Keepalive > 0 {
@@ -371,8 +380,6 @@ func (c *Conn) authenticateHandshake(ctx context.Context, authFrame *authenticat
 		default:
 			return fmt.Errorf("unknown frame response during authentication: %v", v)
 		}
-
-		framerPool.Put(framer)
 	}
 }
 
@@ -456,14 +463,28 @@ func (c *Conn) recv() error {
 		c.conn.SetReadDeadline(time.Time{})
 	}
 
+	headStartTime := time.Now()
 	// were just reading headers over and over and copy bodies
 	head, err := readHeader(c.r, c.headerBuf[:])
+	headEndTime := time.Now()
 	if err != nil {
 		return err
 	}
 
+	if c.frameObserver != nil {
+		c.frameObserver.ObserveFrameHeader(context.Background(), ObservedFrameHeader{
+			Version: byte(head.version),
+			Flags:   head.flags,
+			Stream:  int16(head.stream),
+			Opcode:  byte(head.op),
+			Length:  int32(head.length),
+			Start:   headStartTime,
+			End:     headEndTime,
+		})
+	}
+
 	if head.stream > c.streams.NumStreams {
-		return fmt.Errorf("gocql: frame header stream is beyond call exepected bounds: %d", head.stream)
+		return fmt.Errorf("gocql: frame header stream is beyond call expected bounds: %d", head.stream)
 	} else if head.stream == -1 {
 		// TODO: handle cassandra event frames, we shouldnt get any currently
 		framer := newFramer(c, c, c.compressor, c.version)
@@ -479,7 +500,6 @@ func (c *Conn) recv() error {
 		if err := framer.readFrame(&head); err != nil {
 			return err
 		}
-		defer framerPool.Put(framer)
 
 		frame, err := framer.parseFrame()
 		if err != nil {
@@ -524,7 +544,7 @@ func (c *Conn) releaseStream(stream int) {
 	c.mu.Lock()
 	call := c.calls[stream]
 	if call != nil && stream != call.streamID {
-		panic(fmt.Sprintf("attempt to release streamID with ivalid stream: %d -> %+v\n", stream, call))
+		panic(fmt.Sprintf("attempt to release streamID with invalid stream: %d -> %+v\n", stream, call))
 	} else if call == nil {
 		panic(fmt.Sprintf("releasing a stream not in use: %d", stream))
 	}
@@ -575,20 +595,21 @@ func (c *Conn) exec(ctx context.Context, req frameWriter, tracer Tracer) (*frame
 	// resp is basically a waiting semaphore protecting the framer
 	framer := newFramer(c, c, c.compressor, c.version)
 
-	c.mu.Lock()
-	call := c.calls[stream]
-	if call != nil {
-		c.mu.Unlock()
-		return nil, fmt.Errorf("attempting to use stream already in use: %d -> %d", stream, call.streamID)
-	} else {
-		call = streamPool.Get().(*callReq)
-	}
-	c.calls[stream] = call
-
+	call := streamPool.Get().(*callReq)
 	call.framer = framer
 	call.timeout = make(chan struct{})
 	call.streamID = stream
+
+	c.mu.Lock()
+	existingCall := c.calls[stream]
+	if existingCall == nil {
+		c.calls[stream] = call
+	}
 	c.mu.Unlock()
+
+	if existingCall != nil {
+		return nil, fmt.Errorf("attempting to use stream already in use: %d -> %d", stream, existingCall.streamID)
+	}
 
 	if tracer != nil {
 		framer.trace()
@@ -714,6 +735,7 @@ func (c *Conn) prepareStatement(ctx context.Context, stmt string, tracer Tracer)
 	if err != nil {
 		flight.err = err
 		flight.wg.Done()
+		c.session.stmtsLRU.remove(stmtCacheKey)
 		return nil, err
 	}
 
@@ -744,8 +766,6 @@ func (c *Conn) prepareStatement(ctx context.Context, stmt string, tracer Tracer)
 	if flight.err != nil {
 		c.session.stmtsLRU.remove(stmtCacheKey)
 	}
-
-	framerPool.Put(framer)
 
 	return flight.preparedStatment, flight.err
 }
@@ -988,6 +1008,7 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 	for i := 0; i < n; i++ {
 		entry := &batch.Entries[i]
 		b := &req.statements[i]
+
 		if len(entry.Args) > 0 || entry.binding != nil {
 			info, err := c.prepareStatement(batch.context, entry.Stmt, nil)
 			if err != nil {
@@ -1044,7 +1065,6 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 
 	switch x := resp.(type) {
 	case *resultVoidFrame:
-		framerPool.Put(framer)
 		return &Iter{}
 	case *RequestErrUnprepared:
 		stmt, found := stmts[string(x.StatementId)]
@@ -1052,8 +1072,6 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 			key := c.session.stmtsLRU.keyFor(c.addr, c.currentKeyspace, stmt)
 			c.session.stmtsLRU.remove(key)
 		}
-
-		framerPool.Put(framer)
 
 		if found {
 			return c.executeBatch(batch)

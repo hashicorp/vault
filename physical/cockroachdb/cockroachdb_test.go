@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"strconv"
 	"sync"
 	"time"
@@ -51,22 +52,16 @@ func (c *Client) AllocFS() *AllocFS {
 
 // List is used to list the files at a given path of an allocation directory
 func (a *AllocFS) List(alloc *Allocation, path string, q *QueryOptions) ([]*AllocFileInfo, *QueryMeta, error) {
-	nodeClient, err := a.client.GetNodeClient(alloc.NodeID, q)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	if q == nil {
 		q = &QueryOptions{}
 	}
 	if q.Params == nil {
 		q.Params = make(map[string]string)
 	}
-
 	q.Params["path"] = path
 
 	var resp []*AllocFileInfo
-	qm, err := nodeClient.query(fmt.Sprintf("/v1/client/fs/ls/%s", alloc.ID), &resp, q)
+	qm, err := a.client.query(fmt.Sprintf("/v1/client/fs/ls/%s", alloc.ID), &resp, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -76,11 +71,6 @@ func (a *AllocFS) List(alloc *Allocation, path string, q *QueryOptions) ([]*Allo
 
 // Stat is used to stat a file at a given path of an allocation directory
 func (a *AllocFS) Stat(alloc *Allocation, path string, q *QueryOptions) (*AllocFileInfo, *QueryMeta, error) {
-	nodeClient, err := a.client.GetNodeClient(alloc.NodeID, q)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	if q == nil {
 		q = &QueryOptions{}
 	}
@@ -91,7 +81,7 @@ func (a *AllocFS) Stat(alloc *Allocation, path string, q *QueryOptions) (*AllocF
 	q.Params["path"] = path
 
 	var resp AllocFileInfo
-	qm, err := nodeClient.query(fmt.Sprintf("/v1/client/fs/stat/%s", alloc.ID), &resp, q)
+	qm, err := a.client.query(fmt.Sprintf("/v1/client/fs/stat/%s", alloc.ID), &resp, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -101,7 +91,7 @@ func (a *AllocFS) Stat(alloc *Allocation, path string, q *QueryOptions) (*AllocF
 // ReadAt is used to read bytes at a given offset until limit at the given path
 // in an allocation directory. If limit is <= 0, there is no limit.
 func (a *AllocFS) ReadAt(alloc *Allocation, path string, offset int64, limit int64, q *QueryOptions) (io.ReadCloser, error) {
-	nodeClient, err := a.client.GetNodeClient(alloc.NodeID, q)
+	nodeClient, err := a.client.GetNodeClientWithTimeout(alloc.NodeID, ClientConnTimeout, q)
 	if err != nil {
 		return nil, err
 	}
@@ -117,17 +107,28 @@ func (a *AllocFS) ReadAt(alloc *Allocation, path string, offset int64, limit int
 	q.Params["offset"] = strconv.FormatInt(offset, 10)
 	q.Params["limit"] = strconv.FormatInt(limit, 10)
 
-	r, err := nodeClient.rawQuery(fmt.Sprintf("/v1/client/fs/readat/%s", alloc.ID), q)
+	reqPath := fmt.Sprintf("/v1/client/fs/readat/%s", alloc.ID)
+	r, err := nodeClient.rawQuery(reqPath, q)
 	if err != nil {
-		return nil, err
+		// There was a networking error when talking directly to the client.
+		if _, ok := err.(net.Error); !ok {
+			return nil, err
+		}
+
+		// Try via the server
+		r, err = a.client.rawQuery(reqPath, q)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	return r, nil
 }
 
 // Cat is used to read contents of a file at the given path in an allocation
 // directory
 func (a *AllocFS) Cat(alloc *Allocation, path string, q *QueryOptions) (io.ReadCloser, error) {
-	nodeClient, err := a.client.GetNodeClient(alloc.NodeID, q)
+	nodeClient, err := a.client.GetNodeClientWithTimeout(alloc.NodeID, ClientConnTimeout, q)
 	if err != nil {
 		return nil, err
 	}
@@ -140,11 +141,21 @@ func (a *AllocFS) Cat(alloc *Allocation, path string, q *QueryOptions) (io.ReadC
 	}
 
 	q.Params["path"] = path
-
-	r, err := nodeClient.rawQuery(fmt.Sprintf("/v1/client/fs/cat/%s", alloc.ID), q)
+	reqPath := fmt.Sprintf("/v1/client/fs/cat/%s", alloc.ID)
+	r, err := nodeClient.rawQuery(reqPath, q)
 	if err != nil {
-		return nil, err
+		// There was a networking error when talking directly to the client.
+		if _, ok := err.(net.Error); !ok {
+			return nil, err
+		}
+
+		// Try via the server
+		r, err = a.client.rawQuery(reqPath, q)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	return r, nil
 }
 
@@ -160,7 +171,7 @@ func (a *AllocFS) Stream(alloc *Allocation, path, origin string, offset int64,
 	cancel <-chan struct{}, q *QueryOptions) (<-chan *StreamFrame, <-chan error) {
 
 	errCh := make(chan error, 1)
-	nodeClient, err := a.client.GetNodeClient(alloc.NodeID, q)
+	nodeClient, err := a.client.GetNodeClientWithTimeout(alloc.NodeID, ClientConnTimeout, q)
 	if err != nil {
 		errCh <- err
 		return nil, errCh
@@ -177,10 +188,21 @@ func (a *AllocFS) Stream(alloc *Allocation, path, origin string, offset int64,
 	q.Params["offset"] = strconv.FormatInt(offset, 10)
 	q.Params["origin"] = origin
 
-	r, err := nodeClient.rawQuery(fmt.Sprintf("/v1/client/fs/stream/%s", alloc.ID), q)
+	reqPath := fmt.Sprintf("/v1/client/fs/stream/%s", alloc.ID)
+	r, err := nodeClient.rawQuery(reqPath, q)
 	if err != nil {
-		errCh <- err
-		return nil, errCh
+		// There was a networking error when talking directly to the client.
+		if _, ok := err.(net.Error); !ok {
+			errCh <- err
+			return nil, errCh
+		}
+
+		// Try via the server
+		r, err = a.client.rawQuery(reqPath, q)
+		if err != nil {
+			errCh <- err
+			return nil, errCh
+		}
 	}
 
 	// Create the output channel
@@ -232,11 +254,16 @@ func (a *AllocFS) Stream(alloc *Allocation, path, origin string, offset int64,
 // * cancel: A channel that when closed, streaming will end.
 //
 // The return value is a channel that will emit StreamFrames as they are read.
+// The chan will be closed when follow=false and the end of the file is
+// reached.
+//
+// Unexpected (non-EOF) errors will be sent on the error chan.
 func (a *AllocFS) Logs(alloc *Allocation, follow bool, task, logType, origin string,
 	offset int64, cancel <-chan struct{}, q *QueryOptions) (<-chan *StreamFrame, <-chan error) {
 
 	errCh := make(chan error, 1)
-	nodeClient, err := a.client.GetNodeClient(alloc.NodeID, q)
+
+	nodeClient, err := a.client.GetNodeClientWithTimeout(alloc.NodeID, ClientConnTimeout, q)
 	if err != nil {
 		errCh <- err
 		return nil, errCh
@@ -255,10 +282,21 @@ func (a *AllocFS) Logs(alloc *Allocation, follow bool, task, logType, origin str
 	q.Params["origin"] = origin
 	q.Params["offset"] = strconv.FormatInt(offset, 10)
 
-	r, err := nodeClient.rawQuery(fmt.Sprintf("/v1/client/fs/logs/%s", alloc.ID), q)
+	reqPath := fmt.Sprintf("/v1/client/fs/logs/%s", alloc.ID)
+	r, err := nodeClient.rawQuery(reqPath, q)
 	if err != nil {
-		errCh <- err
-		return nil, errCh
+		// There was a networking error when talking directly to the client.
+		if _, ok := err.(net.Error); !ok {
+			errCh <- err
+			return nil, errCh
+		}
+
+		// Try via the server
+		r, err = a.client.rawQuery(reqPath, q)
+		if err != nil {
+			errCh <- err
+			return nil, errCh
+		}
 	}
 
 	// Create the output channel
@@ -282,8 +320,11 @@ func (a *AllocFS) Logs(alloc *Allocation, follow bool, task, logType, origin str
 			// Decode the next frame
 			var frame StreamFrame
 			if err := dec.Decode(&frame); err != nil {
-				errCh <- err
-				close(frames)
+				if err == io.EOF || err == io.ErrClosedPipe {
+					close(frames)
+				} else {
+					errCh <- err
+				}
 				return
 			}
 
@@ -327,7 +368,7 @@ func NewFrameReader(frames <-chan *StreamFrame, errCh <-chan error, cancelCh cha
 }
 
 // SetUnblockTime sets the time to unblock and return zero bytes read. If the
-// duration is unset or is zero or less, the read will block til data is read.
+// duration is unset or is zero or less, the read will block until data is read.
 func (f *FrameReader) SetUnblockTime(d time.Duration) {
 	f.unblockTime = d
 }

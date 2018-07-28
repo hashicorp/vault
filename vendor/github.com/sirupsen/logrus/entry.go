@@ -48,7 +48,7 @@ type Entry struct {
 func NewEntry(logger *Logger) *Entry {
 	return &Entry{
 		Logger: logger,
-		// Default is three fields, give a little extra room
+		// Default is five fields, give a little extra room
 		Data: make(Fields, 5),
 	}
 }
@@ -113,10 +113,12 @@ func (entry Entry) log(level Level, msg string) {
 	}
 }
 
-func (entry *Entry) fireHooks() {
+// This function is not declared with a pointer value because otherwise
+// race conditions will occur when using multiple goroutines
+func (entry Entry) fireHooks() {
 	entry.Logger.mu.Lock()
 	defer entry.Logger.mu.Unlock()
-	err := entry.Logger.Hooks.Fire(entry.Level, entry)
+	err := entry.Logger.Hooks.Fire(entry.Level, &entry)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to fire hook: %v\n", err)
 	}

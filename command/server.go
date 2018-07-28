@@ -97,7 +97,9 @@ type ServerCommand struct {
 
 type ServerListener struct {
 	net.Listener
-	config map[string]interface{}
+	config             map[string]interface{}
+	maxRequestSize     int64
+	maxRequestDuration time.Duration
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -392,6 +394,10 @@ func (c *ServerCommand) Run(args []string) int {
 	if config.Storage == nil {
 		c.UI.Output("A storage backend must be specified")
 		return 1
+	}
+
+	if config.DefaultMaxRequestDuration != 0 {
+		vault.DefaultMaxRequestDuration = config.DefaultMaxRequestDuration
 	}
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
@@ -689,11 +695,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			return 1
 		}
 
-		lns = append(lns, ServerListener{
-			Listener: ln,
-			config:   lnConfig.Config,
-		})
-
 		if reloadFunc != nil {
 			relSlice := (*c.reloadFuncs)["listener|"+lnConfig.Type]
 			relSlice = append(relSlice, reloadFunc)
@@ -727,6 +728,41 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 			props["cluster address"] = addr
 		}
+
+		var maxRequestSize int64 = vaulthttp.DefaultMaxRequestSize
+		if valRaw, ok := lnConfig.Config["max_request_size"]; ok {
+			val, err := parseutil.ParseInt(valRaw)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse max_request_size value %v", valRaw))
+				return 1
+			}
+
+			if val >= 0 {
+				maxRequestSize = val
+			}
+		}
+		props["max_request_size"] = fmt.Sprintf("%d", maxRequestSize)
+
+		var maxRequestDuration time.Duration = vault.DefaultMaxRequestDuration
+		if valRaw, ok := lnConfig.Config["max_request_duration"]; ok {
+			val, err := parseutil.ParseDurationSecond(valRaw)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse max_request_duration value %v", valRaw))
+				return 1
+			}
+
+			if val >= 0 {
+				maxRequestDuration = val
+			}
+		}
+		props["max_request_duration"] = fmt.Sprintf("%s", maxRequestDuration.String())
+
+		lns = append(lns, ServerListener{
+			Listener:           ln,
+			config:             lnConfig.Config,
+			maxRequestSize:     maxRequestSize,
+			maxRequestDuration: maxRequestDuration,
+		})
 
 		// Store the listener props for output later
 		key := fmt.Sprintf("listener %d", i+1)
@@ -792,7 +828,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set
 	core.SetClusterListenerAddrs(clusterAddrs)
-	core.SetClusterHandler(vaulthttp.Handler(core))
+	core.SetClusterHandler(vaulthttp.Handler(&vault.HandlerProperties{
+		Core: core,
+	}))
 
 	err = core.UnsealWithStoredKeys(context.Background())
 	if err != nil {
@@ -819,14 +857,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				return false
 			}
 
-			sealedFunc := func() bool {
-				if sealed, err := core.Sealed(); err == nil {
-					return sealed
-				}
-				return true
-			}
-
-			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, sealedFunc); err != nil {
+			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed); err != nil {
 				c.UI.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
 				return 1
 			}
@@ -925,7 +956,12 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Initialize the HTTP servers
 	for _, ln := range lns {
-		handler := vaulthttp.Handler(core)
+		handler := vaulthttp.Handler(&vault.HandlerProperties{
+			Core:                  core,
+			MaxRequestSize:        ln.maxRequestSize,
+			MaxRequestDuration:    ln.maxRequestDuration,
+			DisablePrintableCheck: config.DisablePrintableCheck,
+		})
 
 		// We perform validation on the config earlier, we can just cast here
 		if _, ok := ln.config["x_forwarded_for_authorized_addrs"]; ok {
@@ -1098,7 +1134,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 				"no_default_policy": true,
 			},
 		}
-		resp, err := core.HandleRequest(req)
+		resp, err := core.HandleRequest(context.Background(), req)
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create root token with ID %q: {{err}}", coreConfig.DevToken), err)
 		}
@@ -1114,7 +1150,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to revoke initial root token: {{err}}", err)
 		}
@@ -1130,22 +1166,24 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Upgrade the default K/V store
-	req := &logical.Request{
-		Operation:   logical.UpdateOperation,
-		ClientToken: init.RootToken,
-		Path:        "sys/mounts/secret/tune",
-		Data: map[string]interface{}{
-			"options": map[string]string{
-				"version": "2",
+	if !c.flagDevLeasedKV {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: init.RootToken,
+			Path:        "sys/mounts/secret/tune",
+			Data: map[string]interface{}{
+				"options": map[string]string{
+					"version": "2",
+				},
 			},
-		},
-	}
-	resp, err := core.HandleRequest(req)
-	if err != nil {
-		return nil, errwrap.Wrapf("error upgrading default K/V store: {{err}}", err)
-	}
-	if resp.IsError() {
-		return nil, errwrap.Wrapf("failed to upgrade default K/V store: {{err}}", resp.Error())
+		}
+		resp, err := core.HandleRequest(context.Background(), req)
+		if err != nil {
+			return nil, errwrap.Wrapf("error upgrading default K/V store: {{err}}", err)
+		}
+		if resp.IsError() {
+			return nil, errwrap.Wrapf("failed to upgrade default K/V store: {{err}}", resp.Error())
+		}
 	}
 
 	return init, nil
@@ -1195,7 +1233,9 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	c.UI.Output("")
 
 	for _, core := range testCluster.Cores {
-		core.Server.Handler = vaulthttp.Handler(core.Core)
+		core.Server.Handler = vaulthttp.Handler(&vault.HandlerProperties{
+			Core: core.Core,
+		})
 		core.SetClusterHandler(core.Server.Handler)
 	}
 
@@ -1214,7 +1254,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 				"no_default_policy": true,
 			},
 		}
-		resp, err := testCluster.Cores[0].HandleRequest(req)
+		resp, err := testCluster.Cores[0].HandleRequest(context.Background(), req)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("failed to create root token with ID %s: %s", base.DevToken, err))
 			return 1
@@ -1233,7 +1273,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
-		resp, err = testCluster.Cores[0].HandleRequest(req)
+		resp, err = testCluster.Cores[0].HandleRequest(context.Background(), req)
 		if err != nil {
 			c.UI.Output(fmt.Sprintf("failed to revoke initial root token: %s", err))
 			return 1
@@ -1366,7 +1406,7 @@ func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 			"command": name,
 		},
 	}
-	if _, err := core.HandleRequest(req); err != nil {
+	if _, err := core.HandleRequest(context.Background(), req); err != nil {
 		return err
 	}
 

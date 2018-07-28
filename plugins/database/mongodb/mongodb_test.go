@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`

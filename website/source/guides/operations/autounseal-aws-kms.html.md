@@ -70,7 +70,7 @@ and basic understanding of its usage
 ### Download demo assets
 
 Clone or download the demo assets from the
-[hashicorp/vault-guides](https://github.com/hashicorp/vault-guides/tree/master/operations/aws-kms-unseal/terraform)
+[hashicorp/vault-guides](https://github.com/hashicorp/vault-guides/tree/master/operations/aws-kms-unseal/terraform-aws)
 GitHub repository to perform the steps described in this guide.
 
 
@@ -97,7 +97,8 @@ You are going to perform the following steps:
 ### Step 1: Provision the Cloud Resources
 
 **Task 1:** Be sure to set your working directory to where the
-[`/aws-kms-unseal/terraform`](#download-demo-assets) folder is located.
+[`/operations/aws-kms-unseal/terraform-aws`](#download-demo-assets) folder is
+located.
 
 The working directory should contain the provided Terraform files:
 
@@ -122,12 +123,13 @@ $ export AWS_ACCESS_KEY_ID = "<YOUR_AWS_ACCESS_KEY_ID>"
 $ export AWS_SECRET_ACCESS_KEY = "<YOUR_AWS_SECRET_ACCESS_KEY>"
 ```
 
-Specify your Vault Enterprise URL in a file named **`terraform.tfvars`**.
+Create a file named **`terraform.tfvars`** and specify your Vault Enterprise
+binary download URL. 
 
-An example is provided (`terraform.tfvars.example`):
+**Example:**
 
 ```plaintext
-vault_url = "http://s3.amazonaws.com/some/path/to/vault-enterprise.zip"
+vault_url = "https://s3-us-west-2.amazonaws.com/hc-enterprise-binaries/vault/ent/0.10.3/vault-enterprise_0.10.3%2Bent_linux_amd64.zip"
 ```
 
 **Task 3:** Perform a **`terraform init`** to pull down the necessary provider

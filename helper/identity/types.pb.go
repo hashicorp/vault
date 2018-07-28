@@ -22,41 +22,41 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 // Group represents an identity group.
 type Group struct {
 	// ID is the unique identifier for this group
-	ID string `sentinel:"" protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	ID string `sentinel:"" protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Name is the unique name for this group
-	Name string `sentinel:"" protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
+	Name string `sentinel:"" protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// Policies are the vault policies to be granted to members of this group
-	Policies []string `sentinel:"" protobuf:"bytes,3,rep,name=policies" json:"policies,omitempty"`
+	Policies []string `sentinel:"" protobuf:"bytes,3,rep,name=policies,proto3" json:"policies,omitempty"`
 	// ParentGroupIDs are the identifiers of those groups to which this group is a
 	// member of. These will serve as references to the parent group in the
 	// hierarchy.
-	ParentGroupIDs []string `sentinel:"" protobuf:"bytes,4,rep,name=parent_group_ids,json=parentGroupIds" json:"parent_group_ids,omitempty"`
+	ParentGroupIDs []string `sentinel:"" protobuf:"bytes,4,rep,name=parent_group_ids,json=parentGroupIds,proto3" json:"parent_group_ids,omitempty"`
 	// MemberEntityIDs are the identifiers of entities which are members of this
 	// group
-	MemberEntityIDs []string `sentinel:"" protobuf:"bytes,5,rep,name=member_entity_ids,json=memberEntityIDs" json:"member_entity_ids,omitempty"`
+	MemberEntityIDs []string `sentinel:"" protobuf:"bytes,5,rep,name=member_entity_ids,json=memberEntityIDs,proto3" json:"member_entity_ids,omitempty"`
 	// Metadata represents the custom data tied with this group
-	Metadata map[string]string `sentinel:"" protobuf:"bytes,6,rep,name=metadata" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Metadata map[string]string `sentinel:"" protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// CreationTime is the time at which this group was created
-	CreationTime *timestamp.Timestamp `sentinel:"" protobuf:"bytes,7,opt,name=creation_time,json=creationTime" json:"creation_time,omitempty"`
+	CreationTime *timestamp.Timestamp `sentinel:"" protobuf:"bytes,7,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
 	// LastUpdateTime is the time at which this group was last modified
-	LastUpdateTime *timestamp.Timestamp `sentinel:"" protobuf:"bytes,8,opt,name=last_update_time,json=lastUpdateTime" json:"last_update_time,omitempty"`
+	LastUpdateTime *timestamp.Timestamp `sentinel:"" protobuf:"bytes,8,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty"`
 	// ModifyIndex tracks the number of updates to the group. It is useful to detect
 	// updates to the groups.
-	ModifyIndex uint64 `sentinel:"" protobuf:"varint,9,opt,name=modify_index,json=modifyIndex" json:"modify_index,omitempty"`
+	ModifyIndex uint64 `sentinel:"" protobuf:"varint,9,opt,name=modify_index,json=modifyIndex,proto3" json:"modify_index,omitempty"`
 	// BucketKeyHash is the MD5 hash of the storage bucket key into which this
 	// group is stored in the underlying storage. This is useful to find all
 	// the groups belonging to a particular bucket during invalidation of the
 	// storage key.
-	BucketKeyHash string `sentinel:"" protobuf:"bytes,10,opt,name=bucket_key_hash,json=bucketKeyHash" json:"bucket_key_hash,omitempty"`
+	BucketKeyHash string `sentinel:"" protobuf:"bytes,10,opt,name=bucket_key_hash,json=bucketKeyHash,proto3" json:"bucket_key_hash,omitempty"`
 	// Alias is used to mark this group as an internal mapping of a group that
 	// is external to the identity store. Alias can only be set if the 'type'
 	// is set to 'external'.
-	Alias *Alias `sentinel:"" protobuf:"bytes,11,opt,name=alias" json:"alias,omitempty"`
+	Alias *Alias `sentinel:"" protobuf:"bytes,11,opt,name=alias,proto3" json:"alias,omitempty"`
 	// Type indicates if this group is an internal group or an external group.
 	// Memberships of the internal groups can be managed over the API whereas
 	// the memberships on the external group --for which a corresponding alias
 	// will be set-- will be managed automatically.
-	Type                 string   `sentinel:"" protobuf:"bytes,12,opt,name=type" json:"type,omitempty"`
+	Type                 string   `sentinel:"" protobuf:"bytes,12,opt,name=type,proto3" json:"type,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -66,7 +66,7 @@ func (m *Group) Reset()         { *m = Group{} }
 func (m *Group) String() string { return proto.CompactTextString(m) }
 func (*Group) ProtoMessage()    {}
 func (*Group) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_d1c3c8d60c8e2caa, []int{0}
+	return fileDescriptor_types_01b7fd3cfabd028f, []int{0}
 }
 func (m *Group) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Group.Unmarshal(m, b)
@@ -176,44 +176,44 @@ type Entity struct {
 	// Aliases are the identities that this entity is made of. This can be
 	// empty as well to favor being able to create the entity first and then
 	// incrementally adding aliases.
-	Aliases []*Alias `sentinel:"" protobuf:"bytes,1,rep,name=aliases" json:"aliases,omitempty"`
+	Aliases []*Alias `sentinel:"" protobuf:"bytes,1,rep,name=aliases,proto3" json:"aliases,omitempty"`
 	// ID is the unique identifier of the entity which always be a UUID. This
 	// should never be allowed to be updated.
-	ID string `sentinel:"" protobuf:"bytes,2,opt,name=id" json:"id,omitempty"`
+	ID string `sentinel:"" protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	// Name is a unique identifier of the entity which is intended to be
 	// human-friendly. The default name might not be human friendly since it
 	// gets suffixed by a UUID, but it can optionally be updated, unlike the ID
 	// field.
-	Name string `sentinel:"" protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
+	Name string `sentinel:"" protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	// Metadata represents the explicit metadata which is set by the
 	// clients.  This is useful to tie any information pertaining to the
 	// aliases. This is a non-unique field of entity, meaning multiple
 	// entities can have the same metadata set. Entities will be indexed based
 	// on this explicit metadata. This enables virtual groupings of entities
 	// based on its metadata.
-	Metadata map[string]string `sentinel:"" protobuf:"bytes,4,rep,name=metadata" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Metadata map[string]string `sentinel:"" protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// CreationTime is the time at which this entity is first created.
-	CreationTime *timestamp.Timestamp `sentinel:"" protobuf:"bytes,5,opt,name=creation_time,json=creationTime" json:"creation_time,omitempty"`
+	CreationTime *timestamp.Timestamp `sentinel:"" protobuf:"bytes,5,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
 	// LastUpdateTime is the most recent time at which the properties of this
 	// entity got modified. This is helpful in filtering out entities based on
 	// its age and to take action on them, if desired.
-	LastUpdateTime *timestamp.Timestamp `sentinel:"" protobuf:"bytes,6,opt,name=last_update_time,json=lastUpdateTime" json:"last_update_time,omitempty"`
+	LastUpdateTime *timestamp.Timestamp `sentinel:"" protobuf:"bytes,6,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty"`
 	// MergedEntityIDs are the entities which got merged to this one. Entities
 	// will be indexed based on all the entities that got merged into it. This
 	// helps to apply the actions on this entity on the tokens that are merged
 	// to the merged entities. Merged entities will be deleted entirely and
 	// this is the only trackable trail of its earlier presence.
-	MergedEntityIDs []string `sentinel:"" protobuf:"bytes,7,rep,name=merged_entity_ids,json=mergedEntityIDs" json:"merged_entity_ids,omitempty"`
+	MergedEntityIDs []string `sentinel:"" protobuf:"bytes,7,rep,name=merged_entity_ids,json=mergedEntityIDs,proto3" json:"merged_entity_ids,omitempty"`
 	// Policies the entity is entitled to
-	Policies []string `sentinel:"" protobuf:"bytes,8,rep,name=policies" json:"policies,omitempty"`
+	Policies []string `sentinel:"" protobuf:"bytes,8,rep,name=policies,proto3" json:"policies,omitempty"`
 	// BucketKeyHash is the MD5 hash of the storage bucket key into which this
 	// entity is stored in the underlying storage. This is useful to find all
 	// the entities belonging to a particular bucket during invalidation of the
 	// storage key.
-	BucketKeyHash string `sentinel:"" protobuf:"bytes,9,opt,name=bucket_key_hash,json=bucketKeyHash" json:"bucket_key_hash,omitempty"`
+	BucketKeyHash string `sentinel:"" protobuf:"bytes,9,opt,name=bucket_key_hash,json=bucketKeyHash,proto3" json:"bucket_key_hash,omitempty"`
 	// Disabled indicates whether tokens associated with the account should not
 	// be able to be used
-	Disabled             bool     `sentinel:"" protobuf:"varint,11,opt,name=disabled" json:"disabled,omitempty"`
+	Disabled             bool     `sentinel:"" protobuf:"varint,11,opt,name=disabled,proto3" json:"disabled,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -223,7 +223,7 @@ func (m *Entity) Reset()         { *m = Entity{} }
 func (m *Entity) String() string { return proto.CompactTextString(m) }
 func (*Entity) ProtoMessage()    {}
 func (*Entity) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_d1c3c8d60c8e2caa, []int{1}
+	return fileDescriptor_types_01b7fd3cfabd028f, []int{1}
 }
 func (m *Entity) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Entity.Unmarshal(m, b)
@@ -318,37 +318,37 @@ func (m *Entity) GetDisabled() bool {
 // alias object.
 type Alias struct {
 	// ID is the unique identifier that represents this alias
-	ID string `sentinel:"" protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	ID string `sentinel:"" protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// CanonicalID is the entity identifier to which this alias belongs to
-	CanonicalID string `sentinel:"" protobuf:"bytes,2,opt,name=canonical_id,json=canonicalId" json:"canonical_id,omitempty"`
+	CanonicalID string `sentinel:"" protobuf:"bytes,2,opt,name=canonical_id,json=canonicalId,proto3" json:"canonical_id,omitempty"`
 	// MountType is the backend mount's type to which this alias belongs to.
 	// This enables categorically querying aliases of specific backend types.
-	MountType string `sentinel:"" protobuf:"bytes,3,opt,name=mount_type,json=mountType" json:"mount_type,omitempty"`
+	MountType string `sentinel:"" protobuf:"bytes,3,opt,name=mount_type,json=mountType,proto3" json:"mount_type,omitempty"`
 	// MountAccessor is the backend mount's accessor to which this alias
 	// belongs to.
-	MountAccessor string `sentinel:"" protobuf:"bytes,4,opt,name=mount_accessor,json=mountAccessor" json:"mount_accessor,omitempty"`
+	MountAccessor string `sentinel:"" protobuf:"bytes,4,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty"`
 	// MountPath is the backend mount's path to which the Maccessor belongs to. This
 	// field is not used for any operational purposes. This is only returned when
 	// alias is read, only as a nicety.
-	MountPath string `sentinel:"" protobuf:"bytes,5,opt,name=mount_path,json=mountPath" json:"mount_path,omitempty"`
+	MountPath string `sentinel:"" protobuf:"bytes,5,opt,name=mount_path,json=mountPath,proto3" json:"mount_path,omitempty"`
 	// Metadata is the explicit metadata that clients set against an entity
 	// which enables virtual grouping of aliases. Aliases will be indexed
 	// against their metadata.
-	Metadata map[string]string `sentinel:"" protobuf:"bytes,6,rep,name=metadata" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Metadata map[string]string `sentinel:"" protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// Name is the identifier of this alias in its authentication source.
 	// This does not uniquely identify an alias in Vault. This in conjunction
 	// with MountAccessor form to be the factors that represent an alias in a
 	// unique way. Aliases will be indexed based on this combined uniqueness
 	// factor.
-	Name string `sentinel:"" protobuf:"bytes,7,opt,name=name" json:"name,omitempty"`
+	Name string `sentinel:"" protobuf:"bytes,7,opt,name=name,proto3" json:"name,omitempty"`
 	// CreationTime is the time at which this alias was first created
-	CreationTime *timestamp.Timestamp `sentinel:"" protobuf:"bytes,8,opt,name=creation_time,json=creationTime" json:"creation_time,omitempty"`
+	CreationTime *timestamp.Timestamp `sentinel:"" protobuf:"bytes,8,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
 	// LastUpdateTime is the most recent time at which the properties of this
 	// alias got modified. This is helpful in filtering out aliases based
 	// on its age and to take action on them, if desired.
-	LastUpdateTime *timestamp.Timestamp `sentinel:"" protobuf:"bytes,9,opt,name=last_update_time,json=lastUpdateTime" json:"last_update_time,omitempty"`
+	LastUpdateTime *timestamp.Timestamp `sentinel:"" protobuf:"bytes,9,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty"`
 	// MergedFromCanonicalIDs is the FIFO history of merging activity
-	MergedFromCanonicalIDs []string `sentinel:"" protobuf:"bytes,10,rep,name=merged_from_canonical_ids,json=mergedFromCanonicalIds" json:"merged_from_canonical_ids,omitempty"`
+	MergedFromCanonicalIDs []string `sentinel:"" protobuf:"bytes,10,rep,name=merged_from_canonical_ids,json=mergedFromCanonicalIds,proto3" json:"merged_from_canonical_ids,omitempty"`
 	XXX_NoUnkeyedLiteral   struct{} `json:"-"`
 	XXX_unrecognized       []byte   `json:"-"`
 	XXX_sizecache          int32    `json:"-"`
@@ -358,7 +358,7 @@ func (m *Alias) Reset()         { *m = Alias{} }
 func (m *Alias) String() string { return proto.CompactTextString(m) }
 func (*Alias) ProtoMessage()    {}
 func (*Alias) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_d1c3c8d60c8e2caa, []int{2}
+	return fileDescriptor_types_01b7fd3cfabd028f, []int{2}
 }
 func (m *Alias) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Alias.Unmarshal(m, b)
@@ -457,9 +457,9 @@ func init() {
 	proto.RegisterMapType((map[string]string)(nil), "identity.Alias.MetadataEntry")
 }
 
-func init() { proto.RegisterFile("helper/identity/types.proto", fileDescriptor_types_d1c3c8d60c8e2caa) }
+func init() { proto.RegisterFile("helper/identity/types.proto", fileDescriptor_types_01b7fd3cfabd028f) }
 
-var fileDescriptor_types_d1c3c8d60c8e2caa = []byte{
+var fileDescriptor_types_01b7fd3cfabd028f = []byte{
 	// 656 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x95, 0x5d, 0x6f, 0xd3, 0x3c,
 	0x14, 0xc7, 0xd5, 0xa6, 0x2f, 0xe9, 0x69, 0xd7, 0xed, 0xb1, 0x1e, 0xa1, 0x50, 0x34, 0xe8, 0x26,

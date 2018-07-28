@@ -13,6 +13,10 @@ var SecretProxy = Ember.Object.extend(KeyMixin, {
     let backendModel = this.store.peekRecord('secret-engine', backend);
     return this.store.createRecord(backendModel.get('modelTypeForKV'), this.toModel());
   },
+
+  willDestroy() {
+    this.store = null;
+  },
 });
 
 export default EditBase.extend({
