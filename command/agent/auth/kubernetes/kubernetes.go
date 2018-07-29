@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	serviceAccountFile = "var/run/secrets/kubernetes.io/serviceaccount/token"
+	serviceAccountFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 type kubernetesMethod struct {
