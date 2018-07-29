@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/vault/physical"
 )
 
-func cloudEnvironmentForCleanupClient(name string) (azure.Environment, error) {
+func environmentForCleanupClient(name string) (azure.Environment, error) {
 	if name == "" {
 		return azure.EnvironmentFromName("AzurePublicCloud")
 	}
@@ -31,25 +31,25 @@ func TestAzureBackend(t *testing.T) {
 
 	accountName := os.Getenv("AZURE_ACCOUNT_NAME")
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
-	cloudEnvironmentName := os.Getenv("AZURE_ENVIRONMENT")
+	environmentName := os.Getenv("AZURE_ENVIRONMENT")
 
 	ts := time.Now().UnixNano()
 	name := fmt.Sprintf("vault-test-%d", ts)
 
-	cleanupCloudEnvironment, err := cloudEnvironmentForCleanupClient(cloudEnvironmentName)
+	cleanupEnvironment, err := environmentForCleanupClient(environmentName)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	cleanupClient, _ := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, cleanupCloudEnvironment)
+	cleanupClient, _ := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, cleanupEnvironment)
 	cleanupClient.HTTPClient = cleanhttp.DefaultPooledClient()
 
 	logger := logging.NewVaultLogger(log.Debug)
 
 	backend, err := NewAzureBackend(map[string]string{
-		"container":        name,
-		"accountName":      accountName,
-		"accountKey":       accountKey,
-		"cloudEnvironment": cloudEnvironmentName,
+		"container":   name,
+		"accountName": accountName,
+		"accountKey":  accountKey,
+		"environment": environmentName,
 	}, logger)
 
 	defer func() {
@@ -74,25 +74,25 @@ func TestAzureBackend_ListPaging(t *testing.T) {
 
 	accountName := os.Getenv("AZURE_ACCOUNT_NAME")
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
-	cloudEnvironmentName := os.Getenv("AZURE_ENVIRONMENT")
+	environmentName := os.Getenv("AZURE_ENVIRONMENT")
 
 	ts := time.Now().UnixNano()
 	name := fmt.Sprintf("vault-test-%d", ts)
 
-	cleanupCloudEnvironment, err := cloudEnvironmentForCleanupClient(cloudEnvironmentName)
+	cleanupEnvironment, err := environmentForCleanupClient(environmentName)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	cleanupClient, _ := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, cleanupCloudEnvironment)
+	cleanupClient, _ := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, cleanupEnvironment)
 	cleanupClient.HTTPClient = cleanhttp.DefaultPooledClient()
 
 	logger := logging.NewVaultLogger(log.Debug)
 
 	backend, err := NewAzureBackend(map[string]string{
-		"container":        name,
-		"accountName":      accountName,
-		"accountKey":       accountKey,
-		"cloudEnvironment": cloudEnvironmentName,
+		"container":   name,
+		"accountName": accountName,
+		"accountKey":  accountKey,
+		"environment": environmentName,
 	}, logger)
 
 	defer func() {

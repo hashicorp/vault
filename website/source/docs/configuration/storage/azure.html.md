@@ -28,7 +28,7 @@ storage "azure" {
   accountName = "my-storage-account"
   accountKey  = "abcd1234"
   container   = "container-efgh5678"
-  cloudEnvironment = "AzurePublicCloud"
+  environment = "AzurePublicCloud"
 }
 ```
 
@@ -44,7 +44,7 @@ The current implementation is limited to a maximum of 4 megabytes per blob.
 - `container` `(string: <required>)` – Specifies the Azure Storage Blob
   container name.
 
-- `cloudEnvironment` `(string: "AzurePublicCloud")` - Specifies the cloud
+- `environment` `(string: "AzurePublicCloud")` - Specifies the cloud
    environment the storage account belongs to by way of the case-insensitive
    name defined in the [Azure Go SDK][azure-environment].
 

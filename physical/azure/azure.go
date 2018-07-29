@@ -67,21 +67,21 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
-	cloudEnvironmentName := os.Getenv("AZURE_ENVIRONMENT")
-	if cloudEnvironmentName == "" {
-		cloudEnvironmentName = conf["cloudEnvironment"]
-		if cloudEnvironmentName == "" {
-			cloudEnvironmentName = "AzurePublicCloud"
+	environmentName := os.Getenv("AZURE_ENVIRONMENT")
+	if environmentName == "" {
+		environmentName = conf["environment"]
+		if environmentName == "" {
+			environmentName = "AzurePublicCloud"
 		}
 	}
-	cloudEnvironment, err := azure.EnvironmentFromName(cloudEnvironmentName)
+	environment, err := azure.EnvironmentFromName(environmentName)
 	if err != nil {
 		errorMsg := fmt.Sprintf("failed to look up Azure environment descriptor for name %q: {{err}}",
-			cloudEnvironmentName)
+			environmentName)
 		return nil, errwrap.Wrapf(errorMsg, err)
 	}
 
-	client, err := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, cloudEnvironment)
+	client, err := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, environment)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create Azure client: {{err}}", err)
 	}
