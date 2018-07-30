@@ -26,10 +26,14 @@ Auto-Auth functionality takes place within an `auto_auth` configuration stanza.
 
 ## Configuration
 
-There is one currently-available general configuration option:
+These are the currently-available general configuration option:
 
 - `pid_file` `(string: "")` - Path to the file in which the agent's Process ID
-  (PID) should be stored.
+  (PID) should be stored
+
+- `exit_after_auth` `(bool: false)` - If set to `true`, the agent will exit
+  with code `0` after a single successful auth, where success means that a
+  token was retrieved and all sinks successfully wrote it
 
 ## Example Configuration
 

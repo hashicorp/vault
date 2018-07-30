@@ -169,7 +169,9 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.logger = logging.NewVaultLoggerWithWriter(c.logWriter, level)
+	if c.logger == nil {
+		c.logger = logging.NewVaultLoggerWithWriter(c.logWriter, level)
+	}
 
 	// Validation
 	if len(c.flagConfigs) != 1 {
@@ -313,8 +315,9 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	ss := sink.NewSinkServer(&sink.SinkServerConfig{
-		Logger: c.logger.Named("sink.server"),
-		Client: client,
+		Logger:        c.logger.Named("sink.server"),
+		Client:        client,
+		ExitAfterAuth: config.ExitAfterAuth,
 	})
 
 	ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
@@ -342,6 +345,9 @@ func (c *AgentCommand) Run(args []string) int {
 	}()
 
 	select {
+	case <-ss.DoneCh:
+		// This will happen if we exit-on-auth
+		c.logger.Info("sinks finished, exiting")
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Vault agent shutdown triggered")
 		cancelFunc()
