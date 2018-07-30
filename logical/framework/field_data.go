@@ -295,7 +295,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		// First try to parse this as a map
 		var mapResult map[string][]string
 		if err := mapstructure.WeakDecode(raw, &mapResult); err == nil {
-			result := NewHeader()
+			result := parseutil.NewHeader()
 			for k, slice := range mapResult {
 				for _, v := range slice {
 					result.Add(k, v)
@@ -310,7 +310,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			return nil, true, err
 		}
 
-		result := NewHeader()
+		result := parseutil.NewHeader()
 		for _, keyPair := range listResult {
 			keyPairSlice := strings.SplitN(keyPair, ":", 2)
 			if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {

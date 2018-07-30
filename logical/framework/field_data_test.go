@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/parseutil"
 )
 
 func TestFieldDataGet(t *testing.T) {
@@ -476,7 +478,7 @@ func TestFieldDataGet(t *testing.T) {
 				"foo": []interface{}{"key1:value1", "key2:value2", "key3:1"},
 			},
 			"foo",
-			Header{http.Header{
+			parseutil.Header{http.Header{
 				"Key1": []string{"value1"},
 				"Key2": []string{"value2"},
 				"Key3": []string{"1"},
@@ -492,7 +494,7 @@ func TestFieldDataGet(t *testing.T) {
 				"foo": []interface{}{"key1:value1", "key2:value2", "key3:1", "key3:true"},
 			},
 			"foo",
-			Header{http.Header{
+			parseutil.Header{http.Header{
 				"Key1": []string{"value1"},
 				"Key2": []string{"value2"},
 				"Key3": []string{"1", "true"},
@@ -511,7 +513,7 @@ func TestFieldDataGet(t *testing.T) {
 				},
 			},
 			"foo",
-			Header{http.Header{
+			parseutil.Header{http.Header{
 				"Key1": []string{"value1"},
 				"Key2": []string{"value2"},
 				"Key3": []string{"1"},
@@ -614,7 +616,7 @@ func TestFieldDataGet(t *testing.T) {
 			},
 			map[string]interface{}{},
 			"foo",
-			Header{http.Header{}},
+			parseutil.Header{http.Header{}},
 		},
 	}
 

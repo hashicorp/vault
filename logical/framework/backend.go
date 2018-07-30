@@ -549,7 +549,7 @@ func (t FieldType) Zero() interface{} {
 	case TypeCommaIntSlice:
 		return []int{}
 	case TypeHeader:
-		return NewHeader()
+		return parseutil.NewHeader()
 	default:
 		panic("unknown type: " + t.String())
 	}

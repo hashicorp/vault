@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -535,7 +536,7 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 
 		"default header not set": {
 			&FieldSchema{Type: TypeHeader},
-			NewHeader(),
+			parseutil.NewHeader(),
 		},
 	}
 
