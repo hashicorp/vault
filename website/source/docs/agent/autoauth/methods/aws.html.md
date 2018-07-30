@@ -14,8 +14,8 @@ authentication types are supported. If `ec2` is used, the agent will store the
 reauthentication value in memory and use it for reauthenticating, but will not
 persist it to disk.
 
-Due to the complexity of the TOFU model used in the `ec2` method, we recommend
-the `iam` method when possible.
+Due to the complexity of the Trust On First Use (TOFU) model used in the `ec2`
+method, we recommend the `iam` method when possible.
 
 ## Credentials
 
