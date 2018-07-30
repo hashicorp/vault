@@ -103,18 +103,18 @@ func (t FieldType) String() string {
 
 	You'd expect that the header now have "hello" for a key, and
 	both "world" and "monde" for a value. But it doesn't. "Hello"
-	is now capitalized in the map, but "world" isn't.
+	is now capitalized in the map, but "world" and "monde" aren't.
 
 	Later, when you do this:
 	h.Get("hello")
 
-	You'll receive only "world".
+	You'll receive only "world", silently missing "monde".
 
-	If you try to solve for this by doing this:
+	If you try to solve that by doing this:
 	h["hello"]
 
 	You'll receive nothing back, because remember, it's now in the
-	map as "Hello.
+	map as "Hello".
 
 	To avoid bugs like this, we provide one more method. GetAll,
 	which returns all the values for a key.
