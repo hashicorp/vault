@@ -1639,6 +1639,18 @@
 			"revisionTime": "2018-07-10T14:09:40Z"
 		},
 		{
+			"checksumSHA1": "slFCp2ofjlyL6h3MOqZCFFgHeAA=",
+			"path": "github.com/oracle/oci-go-sdk/common",
+			"revision": "b98b8fe42e1d32d5f4d298484dfd9be0853ab89e",
+			"revisionTime": "2018-07-26T22:41:36Z"
+		},
+		{
+			"checksumSHA1": "4ijcDGLdYEMGfGcuf5InSTLCyH0=",
+			"path": "github.com/oracle/oci-go-sdk/objectstorage",
+			"revision": "b98b8fe42e1d32d5f4d298484dfd9be0853ab89e",
+			"revisionTime": "2018-07-26T22:41:36Z"
+		},
+		{
 			"checksumSHA1": "wJWRH5ORhyIO29LxvA/Sug1skF0=",
 			"path": "github.com/ory-am/common/env",
 			"revision": "1a6879dc80f2da8d4693fdf2a3956931a463a238",
