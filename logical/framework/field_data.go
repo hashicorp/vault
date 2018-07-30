@@ -295,10 +295,6 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		// First try to parse this as a map
 		var mapResult map[string][]string
 		if err := mapstructure.WeakDecode(raw, &mapResult); err == nil {
-			// The http.Header Get method is case-insensitive in the key it takes,
-			// but searches the map for a matching canonicalized value. Most headers
-			// will arrive in this format, but just in case they don't, let's
-			// canonicalize all the keys.
 			result := NewHeader()
 			for k, slice := range mapResult {
 				for _, v := range slice {
@@ -320,7 +316,6 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {
 				return nil, false, fmt.Errorf("invalid key pair %q", keyPair)
 			}
-			// See note above about why we're canonicalizing.
 			result.Add(keyPairSlice[0], keyPairSlice[1])
 		}
 		return result, true, nil
