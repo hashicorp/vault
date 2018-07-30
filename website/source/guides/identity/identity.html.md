@@ -102,22 +102,22 @@ path "auth/github/*" {
 
 # Display the Policies tab in UI
 path "sys/policies" {
-  capabilities = [ "read", "list", "sudo" ]
+  capabilities = [ "read", "list" ]
 }
 
 # Create and manage ACL policies from UI
 path "sys/policies/acl/*" {
-  capabilities = [ "create", "read", "update", "delete", "list", "sudo" ]
+  capabilities = [ "create", "read", "update", "delete", "list" ]
 }
 
 # Create and manage policies
 path "sys/policy" {
-  capabilities = [ "read", "list", "sudo"]
+  capabilities = [ "read", "list" ]
 }
 
 # Create and manage policies
 path "sys/policy/*" {
-  capabilities = [ "create", "read", "update", "delete", "list", "sudo" ]
+  capabilities = [ "create", "read", "update", "delete", "list" ]
 }
 
 # List available secret engines to retrieve accessor ID
@@ -190,6 +190,10 @@ path "secret/team-qa" {
    capabilities = [ "create", "read", "update", "delete" ]
 }
 ```
+
+~> **NOTE:** If you are running [K/V Secrets Engine v2](/api/secret/kv/kv-v2.html)
+at `secret`, set the policies path accordingly: `secret/data/training_*`,
+`secret/data/test`, and `secret/data/team-qa`.
 
 Now, you are going to create `bob` and `bsmith` users with appropriate policies
 attached.
