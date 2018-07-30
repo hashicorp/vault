@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"net/http"
-
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -537,7 +535,7 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 
 		"default header not set": {
 			&FieldSchema{Type: TypeHeader},
-			http.Header{},
+			NewHeader(),
 		},
 	}
 

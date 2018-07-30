@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
 
@@ -300,7 +299,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			// but searches the map for a matching canonicalized value. Most headers
 			// will arrive in this format, but just in case they don't, let's
 			// canonicalize all the keys.
-			result := http.Header{}
+			result := NewHeader()
 			for k, slice := range mapResult {
 				for _, v := range slice {
 					result.Add(k, v)
@@ -315,7 +314,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			return nil, true, err
 		}
 
-		result := http.Header{}
+		result := NewHeader()
 		for _, keyPair := range listResult {
 			keyPairSlice := strings.SplitN(keyPair, ":", 2)
 			if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {
