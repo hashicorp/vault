@@ -483,13 +483,16 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			continue
 		}
 
+		cancelCtx := func() {
+			// Tell any requests that know about this to stop
+			cancelFunc := c.activeContextCancelFunc
+			if cancelFunc != nil {
+				cancelFunc()
+			}
+		}
+
 		runSealing := func() {
 			metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
-
-			// Tell any requests that know about this to stop
-			if c.activeContextCancelFunc != nil {
-				c.activeContextCancelFunc()
-			}
 
 			c.standby = true
 
@@ -516,13 +519,14 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 		select {
 		case <-leaderLostCh:
 			c.logger.Warn("leadership lost, stopping active operation")
-
+			cancelCtx()
 			c.stateLock.Lock()
 			runSealing()
 			releaseHALock()
 			c.stateLock.Unlock()
 
 		case <-stopCh:
+			cancelCtx()
 			runSealing()
 			releaseHALock()
 			return
@@ -531,6 +535,7 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			manualStepDown = true
 			c.logger.Warn("stepping down from active operation to standby")
 
+			cancelCtx()
 			c.stateLock.Lock()
 			runSealing()
 			releaseHALock()
