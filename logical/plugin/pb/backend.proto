@@ -5,6 +5,7 @@ option go_package = "github.com/hashicorp/vault/logical/plugin/pb";
 
 import "google/protobuf/timestamp.proto";
 import "logical/identity.proto";
+import "logical/plugin.proto";
 
 message Empty {}
 
@@ -498,6 +499,11 @@ message EntityInfoReply {
 	string err = 2;
 }
 
+message PluginEnvReply {
+	logical.PluginEnvironment plugin_environment = 1;
+	string err = 2;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -544,6 +550,9 @@ service SystemView {
 
 	// EntityInfo returns the basic entity information for the given entity id
 	rpc EntityInfo(EntityInfoArgs) returns (EntityInfoReply);
+
+	// PluginEnv returns Vault environment information used by plugins
+	rpc PluginEnv(Empty) returns (PluginEnvReply);
 }
 
 message Connection {

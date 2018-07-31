@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/version"
 )
 
 type dynamicSystemView struct {
@@ -205,4 +206,10 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 	ret.Aliases = aliases
 
 	return ret, nil
+}
+
+func (d dynamicSystemView) PluginEnv() (*logical.PluginEnvironment, error) {
+	return &logical.PluginEnvironment{
+		VaultVersion: version.GetVersion().Version,
+	}, nil
 }

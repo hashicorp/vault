@@ -146,6 +146,20 @@ func (s *SystemViewClient) EntityInfo(entityID string) (*logical.Entity, error) 
 	return reply.Entity, nil
 }
 
+func (s *SystemViewClient) PluginEnv() (*logical.PluginEnvironment, error) {
+	var reply PluginEnvReply
+
+	err := s.client.Call("Plugin.PluginEnv", new(interface{}), &reply)
+	if err != nil {
+		return nil, err
+	}
+	if reply.Error != nil {
+		return nil, reply.Error
+	}
+
+	return reply.PluginEnvironment, nil
+}
+
 type SystemViewServer struct {
 	impl logical.SystemView
 }
@@ -308,4 +322,9 @@ type EntityInfoArgs struct {
 type EntityInfoReply struct {
 	Entity *logical.Entity
 	Error  error
+}
+
+type PluginEnvReply struct {
+	PluginEnvironment *logical.PluginEnvironment
+	Error             error
 }
