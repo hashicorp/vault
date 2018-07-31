@@ -3,7 +3,7 @@ import getStorage from '../lib/token-storage';
 import ENV from 'vault/config/environment';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 
-const { get, isArray, computed, getOwner } = Ember;
+const { get, isArray, computed, getOwner, Service, inject } = Ember;
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
@@ -13,7 +13,8 @@ const BACKENDS = supportedAuthBackends();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
-export default Ember.Service.extend({
+export default Service.extend({
+  namespace: inject.service(),
   expirationCalcTS: null,
   init() {
     this._super(...arguments);
@@ -69,6 +70,9 @@ export default Ember.Service.extend({
         'X-Vault-Token': this.get('currentToken'),
       },
     };
+    if (this.get('namespace.path')) {
+      defaults.headers['X-Vault-Namespace'] = this.get('namespace.path');
+    }
     return Ember.$.ajax(Ember.assign(defaults, options));
   },
 

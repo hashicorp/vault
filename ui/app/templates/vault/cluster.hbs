@@ -1,9 +1,20 @@
   {{#if showNav}}
     <NavHeader data-test-header-with-nav @class="{{if consoleOpen 'panel-open'}} {{if consoleFullscreen ' panel-fullscreen'}}" as |Nav|>
       <Nav.home>
-        {{#component (if (has-feature "Namespaces") "namespace-picker" "home-link") class="navbar-item has-text-white has-current-color-fill" namespace=namespace }}
-          {{partial 'svg/vault-logo'}}
-        {{/component}}
+        {{#if (has-feature "Namespaces")}}
+          {{#if media.isMobile}}
+            <NamespacePicker
+              @class="navbar-item has-text-white has-current-color-fill"
+              @namespace={{namespaceQueryParam}}
+            >
+              {{partial 'svg/vault-logo'}}
+            </NamespacePicker>
+          {{/if}}
+        {{else}}
+          <HomeLink @class="navbar-item has-text-white has-current-color-fill">
+            {{partial 'svg/vault-logo'}}
+          </HomeLink>
+        {{/if}}
       </Nav.home>
       <Nav.items>
         <div class="navbar-item">
@@ -25,8 +36,17 @@
         </div>
       </Nav.items>
       <Nav.main>
-
-        <ul class="navbar-sections tabs tabs-subnav">
+        <ul class="navbar-sections tabs tabs-subnav {{if renderPicker 'tabs-with-picker' ''}}">
+          {{#if (and (has-feature "Namespaces") media.isTablet) }}
+            <li>
+              <NamespacePicker
+                @class="navbar-item has-text-white has-current-color-fill"
+                @namespace={{namespaceQueryParam}}
+              >
+                {{partial 'svg/vault-logo'}}
+              </NamespacePicker>
+            </li>
+          {{/if}}
           <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
             {{#link-to "vault.cluster.secrets" activeClusterName}}
               Secrets

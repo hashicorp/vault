@@ -4,5 +4,6 @@ const needs = [
   'service:control-group',
   'service:version',
   'service:namespace',
+  'service:media',
 ];
 export default needs;

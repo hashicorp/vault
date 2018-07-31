@@ -4,12 +4,13 @@ const { Controller, computed, inject } = Ember;
 export default Controller.extend({
   auth: inject.service(),
   store: inject.service(),
+  media: inject.service(),
 
   vaultVersion: inject.service('version'),
   console: inject.service(),
 
-  queryParams: ['namespace'],
-  namespace: '',
+  queryParams: [{ namespaceQueryParam: 'namespace' }],
+  namespaceQueryParam: '',
 
   consoleOpen: computed.alias('console.isOpen'),
   activeCluster: computed('auth.activeCluster', function() {
