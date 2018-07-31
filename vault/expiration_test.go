@@ -1286,7 +1286,7 @@ func TestExpiration_revokeEntry(t *testing.T) {
 		ExpireTime: time.Now(),
 	}
 
-	err = exp.revokeEntry(le)
+	err = exp.revokeEntry(context.Background(), le)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1340,12 +1340,12 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 	if err := exp.persistEntry(context.Background(), le); err != nil {
 		t.Fatalf("error persisting entry: %v", err)
 	}
-	if err := exp.createIndexByToken(le.ClientToken, le.LeaseID); err != nil {
+	if err := exp.createIndexByToken(context.Background(), le.ClientToken, le.LeaseID); err != nil {
 		t.Fatalf("error creating secondary index: %v", err)
 	}
 	exp.updatePending(le, le.Secret.LeaseTotal())
 
-	indexEntry, err := exp.indexByToken(le.ClientToken, le.LeaseID)
+	indexEntry, err := exp.indexByToken(context.Background(), le.ClientToken, le.LeaseID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1353,7 +1353,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: should have found a secondary index entry")
 	}
 
-	err = exp.revokeEntry(le)
+	err = exp.revokeEntry(context.Background(), le)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1368,7 +1368,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("bad: %v", out)
 	}
 
-	indexEntry, err = exp.indexByToken(le.ClientToken, le.LeaseID)
+	indexEntry, err = exp.indexByToken(context.Background(), le.ClientToken, le.LeaseID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1419,7 +1419,7 @@ func TestExpiration_renewEntry(t *testing.T) {
 		ExpireTime: time.Now(),
 	}
 
-	resp, err := exp.renewEntry(le, 0)
+	resp, err := exp.renewEntry(context.Background(), le, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1571,7 +1571,7 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 		ExpireTime: time.Now().Add(time.Minute),
 	}
 
-	resp, err := exp.renewAuthEntry(&logical.Request{}, le, 0)
+	resp, err := exp.renewAuthEntry(context.Background(), &logical.Request{}, le, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
