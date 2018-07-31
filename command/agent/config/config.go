@@ -19,8 +19,9 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	AutoAuth *AutoAuth `hcl:"auto_auth"`
-	PidFile  string    `hcl:"pid_file"`
+	AutoAuth      *AutoAuth `hcl:"auto_auth"`
+	ExitAfterAuth bool      `hcl:"exit_after_auth"`
+	PidFile       string    `hcl:"pid_file"`
 }
 
 type AutoAuth struct {

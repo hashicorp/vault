@@ -49,6 +49,8 @@ type RollbackManager struct {
 	shutdownCh   chan struct{}
 	shutdownLock sync.Mutex
 	quitContext  context.Context
+
+	core *Core
 }
 
 // rollbackState is used to track the state of a single rollback attempt
@@ -58,7 +60,7 @@ type rollbackState struct {
 }
 
 // NewRollbackManager is used to create a new rollback manager
-func NewRollbackManager(logger log.Logger, backendsFunc func() []*MountEntry, router *Router, ctx context.Context) *RollbackManager {
+func NewRollbackManager(ctx context.Context, logger log.Logger, backendsFunc func() []*MountEntry, router *Router, core *Core) *RollbackManager {
 	r := &RollbackManager{
 		logger:      logger,
 		backends:    backendsFunc,
@@ -68,6 +70,7 @@ func NewRollbackManager(logger log.Logger, backendsFunc func() []*MountEntry, ro
 		doneCh:      make(chan struct{}),
 		shutdownCh:  make(chan struct{}),
 		quitContext: ctx,
+		core:        core,
 	}
 	return r
 }
@@ -170,7 +173,9 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *
 	}
 	var cancelFunc context.CancelFunc
 	ctx, cancelFunc = context.WithTimeout(ctx, DefaultMaxRequestDuration)
+	m.core.stateLock.RLock()
 	_, err = m.router.Route(ctx, req)
+	m.core.stateLock.RUnlock()
 	cancelFunc()
 
 	// If the error is an unsupported operation, then it doesn't
@@ -232,7 +237,7 @@ func (c *Core) startRollback() error {
 		}
 		return ret
 	}
-	c.rollback = NewRollbackManager(c.logger.ResetNamed("rollback"), backendsFunc, c.router, c.activeContext)
+	c.rollback = NewRollbackManager(c.activeContext, c.logger.ResetNamed("rollback"), backendsFunc, c.router, c)
 	c.rollback.Start()
 	return nil
 }

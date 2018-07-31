@@ -150,7 +150,7 @@ entities attempting to login.
 - `policies` `(array: [default])` - The list of policies to be set on tokens
   issued using this role.
 
-- `bound_bound_service_accounts` `(array: <required for iam>)` - A comma-separated
+- `bound_service_accounts` `(array: <required for iam>)` - A comma-separated
   list of service account emails or IDs that login is restricted to. If set to
   `*`, all service accounts are allowed (role will still be bound by project).
   Will be inferred from service account used to issue metadata token for GCE
@@ -205,7 +205,7 @@ Example `iam` role:
   "ttl": "30m",
   "max_ttl": "24h",
   "max_jwt_exp": "5m",
-  "bound_bound_service_accounts": [
+  "bound_service_accounts": [
     "dev-1@project-123456.iam.gserviceaccount.com"
   ]
 }

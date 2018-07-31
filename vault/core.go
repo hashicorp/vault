@@ -1131,8 +1131,10 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
 
 	// Do pre-seal teardown if HA is not enabled
 	if c.ha == nil {
-		c.stateLock.Lock()
-		defer c.stateLock.Unlock()
+		if grabStateLock {
+			c.stateLock.Lock()
+			defer c.stateLock.Unlock()
+		}
 		// Even in a non-HA context we key off of this for some things
 		c.standby = true
 

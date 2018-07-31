@@ -26,6 +26,11 @@ long as its policy allows it.
 - [Cubbyhole](/docs/secrets/cubbyhole/index.html)
 - [Response Wrapping](/docs/concepts/response-wrapping.html)
 
+~> **NOTE:** An [interactive
+tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-cubbyhole) is
+also available if you do not have a Vault environment to perform the steps
+described in this guide.
+
 ## Estimated Time to Complete
 
 10 minutes
