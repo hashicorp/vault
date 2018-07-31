@@ -976,7 +976,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 	if ts.expiration == nil {
 		return nil, errors.New("expiration manager is nil on tokenstore")
 	}
-	le, err := ts.expiration.FetchLeaseTimesByToken(entry.Path, entry.ID)
+	le, err := ts.expiration.FetchLeaseTimesByToken(ctx, entry.Path, entry.ID)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to fetch lease times: {{err}}", err)
 	}
@@ -986,7 +986,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 	switch {
 	// It's any kind of expiring token with no lease, immediately delete it
 	case le == nil:
-		leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(entry)
+		leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(ctx, entry)
 		if err != nil {
 			return nil, err
 		}
@@ -1096,7 +1096,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string, skipOrp
 
 	// Revoke all secrets under this token. This should go first as it's a
 	// security-sensitive item.
-	if err := ts.expiration.RevokeByToken(entry); err != nil {
+	if err := ts.expiration.RevokeByToken(ctx, entry); err != nil {
 		return err
 	}
 
@@ -1468,7 +1468,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 					// Attempt to revoke the token. This will also revoke
 					// the leases associated with the token.
-					err := ts.expiration.RevokeByToken(tokenEntry)
+					err := ts.expiration.RevokeByToken(ctx, tokenEntry)
 					if err != nil {
 						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to revoke leases of expired token: {{err}}", err))
 						continue
@@ -1594,7 +1594,7 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
 	}
 
-	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(te)
+	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(ctx, te)
 	if err != nil {
 		return nil, err
 	}
@@ -2049,7 +2049,7 @@ func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
 	}
 
-	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(te)
+	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(ctx, te)
 	if err != nil {
 		return nil, err
 	}
@@ -2085,7 +2085,7 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
 	}
 
-	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(te)
+	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(ctx, te)
 	if err != nil {
 		return nil, err
 	}
@@ -2228,7 +2228,7 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	}
 
 	// Fetch the last renewal time
-	leaseTimes, err := ts.expiration.FetchLeaseTimesByToken(out.Path, out.ID)
+	leaseTimes, err := ts.expiration.FetchLeaseTimesByToken(ctx, out.Path, out.ID)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
@@ -2297,7 +2297,7 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 	}
 
 	// Renew the token and its children
-	resp, err := ts.expiration.RenewToken(req, te.Path, te.ID, increment)
+	resp, err := ts.expiration.RenewToken(ctx, req, te.Path, te.ID, increment)
 
 	if urltoken {
 		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)

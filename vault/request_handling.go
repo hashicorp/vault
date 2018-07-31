@@ -34,7 +34,7 @@ var (
 	DefaultMaxRequestDuration = 999999 * time.Hour
 )
 
-// HanlderProperties is used to seed configuration into a vaulthttp.Handler.
+// HandlerProperties is used to seed configuration into a vaulthttp.Handler.
 // It's in this package to avoid a circular dependency
 type HandlerProperties struct {
 	Core                  *Core
@@ -445,7 +445,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			// valid request (this is the token's final use). We pass the ID in
 			// directly just to be safe in case something else modifies te later.
 			defer func(id string) {
-				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
+				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(ctx, te)
 				if err == nil {
 					err = c.expiration.Revoke(ctx, leaseID)
 				}
@@ -613,7 +613,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			}
 			resp.Secret.TTL = ttl
 
-			leaseID, err := c.expiration.Register(req, resp)
+			leaseID, err := c.expiration.Register(ctx, req, resp)
 			if err != nil {
 				c.logger.Error("failed to register lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
@@ -656,7 +656,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		resp.Auth.TokenPolicies = policyutil.SanitizePolicies(resp.Auth.Policies, policyutil.DoNotAddDefaultPolicy)
-		if err := c.expiration.RegisterAuth(resp.Auth.CreationPath, resp.Auth); err != nil {
+		if err := c.expiration.RegisterAuth(context.Background(), resp.Auth.CreationPath, resp.Auth); err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -882,7 +882,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		auth.TTL = te.TTL
 
 		// Register with the expiration manager
-		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
+		if err := c.expiration.RegisterAuth(context.Background(), te.Path, auth); err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			return nil, auth, ErrInternalError

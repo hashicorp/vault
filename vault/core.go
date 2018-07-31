@@ -1078,7 +1078,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	if te != nil && te.NumUses == tokenRevocationPending {
 		// Token needs to be revoked. We do this immediately here because
 		// we won't have a token store after sealing.
-		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
+		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(ctx, te)
 		if err == nil {
 			err = c.expiration.Revoke(ctx, leaseID)
 		}

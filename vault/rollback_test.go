@@ -17,6 +17,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 	backend := new(NoopBackend)
 	mounts := new(MountTable)
 	router := NewRouter()
+	core, _, _ := TestCoreUnsealed(t)
 
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
@@ -40,7 +41,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 
 	logger := logging.NewVaultLogger(log.Trace)
 
-	rb := NewRollbackManager(logger, mountsFunc, router, context.Background())
+	rb := NewRollbackManager(context.Background(), logger, mountsFunc, router, core)
 	rb.period = 10 * time.Millisecond
 	return rb, backend
 }

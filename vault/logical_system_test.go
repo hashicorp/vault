@@ -1305,7 +1305,7 @@ func TestSystemBackend_revokePrefixAuth_newUrl(t *testing.T) {
 			TTL: time.Hour,
 		},
 	}
-	err = exp.RegisterAuth(te.Path, auth)
+	err = exp.RegisterAuth(context.Background(), te.Path, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1368,7 +1368,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			TTL: time.Hour,
 		},
 	}
-	err = exp.RegisterAuth(te.Path, auth)
+	err = exp.RegisterAuth(context.Background(), te.Path, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

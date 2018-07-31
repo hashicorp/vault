@@ -2235,7 +2235,7 @@ func (b *SystemBackend) handleLeaseLookup(ctx context.Context, req *logical.Requ
 			logical.ErrInvalidRequest
 	}
 
-	leaseTimes, err := b.Core.expiration.FetchLeaseTimes(leaseID)
+	leaseTimes, err := b.Core.expiration.FetchLeaseTimes(ctx, leaseID)
 	if err != nil {
 		b.Backend.Logger().Error("error retrieving lease", "lease_id", leaseID, "error", err)
 		return handleError(err)
@@ -2297,7 +2297,7 @@ func (b *SystemBackend) handleRenew(ctx context.Context, req *logical.Request, d
 	increment := time.Duration(incrementRaw) * time.Second
 
 	// Invoke the expiration manager directly
-	resp, err := b.Core.expiration.Renew(leaseID, increment)
+	resp, err := b.Core.expiration.Renew(ctx, leaseID, increment)
 	if err != nil {
 		b.Backend.Logger().Error("lease renewal failed", "lease_id", leaseID, "error", err)
 		return handleErrorNoReadOnlyForward(err)
@@ -2327,7 +2327,7 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 		return nil, nil
 	}
 
-	if err := b.Core.expiration.LazyRevoke(leaseID); err != nil {
+	if err := b.Core.expiration.LazyRevoke(ctx, leaseID); err != nil {
 		b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
@@ -2337,16 +2337,16 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 
 // handleRevokePrefix is used to revoke a prefix with many LeaseIDs
 func (b *SystemBackend) handleRevokePrefix(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRevokePrefixCommon(req, data, false, data.Get("sync").(bool))
+	return b.handleRevokePrefixCommon(ctx, req, data, false, data.Get("sync").(bool))
 }
 
 // handleRevokeForce is used to revoke a prefix with many LeaseIDs, ignoring errors
 func (b *SystemBackend) handleRevokeForce(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRevokePrefixCommon(req, data, true, true)
+	return b.handleRevokePrefixCommon(ctx, req, data, true, true)
 }
 
 // handleRevokePrefixCommon is used to revoke a prefix with many LeaseIDs
-func (b *SystemBackend) handleRevokePrefixCommon(
+func (b *SystemBackend) handleRevokePrefixCommon(ctx context.Context,
 	req *logical.Request, data *framework.FieldData, force, sync bool) (*logical.Response, error) {
 	// Get all the options
 	prefix := data.Get("prefix").(string)
@@ -2354,9 +2354,9 @@ func (b *SystemBackend) handleRevokePrefixCommon(
 	// Invoke the expiration manager directly
 	var err error
 	if force {
-		err = b.Core.expiration.RevokeForce(prefix)
+		err = b.Core.expiration.RevokeForce(ctx, prefix)
 	} else {
-		err = b.Core.expiration.RevokePrefix(prefix, sync)
+		err = b.Core.expiration.RevokePrefix(ctx, prefix, sync)
 	}
 	if err != nil {
 		b.Backend.Logger().Error("revoke prefix failed", "prefix", prefix, "error", err)
