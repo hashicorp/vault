@@ -55,7 +55,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 	if accessKeyID == "" {
 		accessKeyID = conf["access_key"]
 		if accessKeyID == "" {
-			return nil, fmt.Errorf("'access_key_id' must be set")
+			return nil, fmt.Errorf("'access_key' must be set")
 		}
 	}
 
@@ -63,7 +63,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 	if accessKeySecret == "" {
 		accessKeySecret = conf["secret_key"]
 		if accessKeySecret == "" {
-			return nil, fmt.Errorf("'access_key_secret' must be set")
+			return nil, fmt.Errorf("'secret_key' must be set")
 		}
 	}
 
