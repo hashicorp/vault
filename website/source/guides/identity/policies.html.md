@@ -45,6 +45,12 @@ valid input.
 - [Policy API](/api/system/policy.html) documentation
 - [Getting Started guide](/intro/getting-started/policies.html) on policies
 
+~> **NOTE:** An [interactive
+tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-policies) is
+also available if you do not have a Vault environment to perform the steps
+described in this guide.
+
+
 ## Estimated Time to Complete
 
 10 minutes
