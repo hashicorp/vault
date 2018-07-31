@@ -40,7 +40,11 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 
 	logger := logging.NewVaultLogger(log.Trace)
 
-	rb := NewRollbackManager(logger, mountsFunc, router, context.Background())
+	core, err := NewCore(&CoreConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rb := NewRollbackManager(context.Background(), logger, mountsFunc, router, core)
 	rb.period = 10 * time.Millisecond
 	return rb, backend
 }

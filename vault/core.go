@@ -886,7 +886,8 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 			return false, err
 		}
 
-		if err := c.postUnseal(); err != nil {
+		ctx, ctxCancel := context.WithCancel(context.Background())
+		if err := c.postUnseal(ctx, ctxCancel); err != nil {
 			c.logger.Error("post-unseal setup failed", "error", err)
 			c.barrier.Seal()
 			c.logger.Warn("vault is sealed")
@@ -1198,18 +1199,18 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
 // allowing any user operations. This allows us to setup any state that
 // requires the Vault to be unsealed such as mount tables, logical backends,
 // credential stores, etc.
-func (c *Core) postUnseal() (retErr error) {
+func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
 
 	// Clear any out
 	c.postUnsealFuncs = nil
 
 	// Create a new request context
-	c.activeContext, c.activeContextCancelFunc = context.WithCancel(context.Background())
+	c.activeContext, c.activeContextCancelFunc = ctx, ctxCancelFunc
 
 	defer func() {
 		if retErr != nil {
-			c.activeContextCancelFunc()
+			ctxCancelFunc()
 			c.preSeal()
 		}
 	}()
@@ -1221,7 +1222,7 @@ func (c *Core) postUnseal() (retErr error) {
 	c.requestForwardingConnectionLock.Unlock()
 
 	// Enable the cache
-	c.physicalCache.Purge(c.activeContext)
+	c.physicalCache.Purge(ctx)
 	if !c.cachingDisabled {
 		c.physicalCache.SetEnabled(true)
 	}
@@ -1234,36 +1235,36 @@ func (c *Core) postUnseal() (retErr error) {
 	}
 
 	// Purge these for safety in case of a rekey
-	c.seal.SetBarrierConfig(c.activeContext, nil)
+	c.seal.SetBarrierConfig(ctx, nil)
 	if c.seal.RecoveryKeySupported() {
-		c.seal.SetRecoveryConfig(c.activeContext, nil)
+		c.seal.SetRecoveryConfig(ctx, nil)
 	}
 
 	if err := enterprisePostUnseal(c); err != nil {
 		return err
 	}
-	if err := c.ensureWrappingKey(c.activeContext); err != nil {
+	if err := c.ensureWrappingKey(ctx); err != nil {
 		return err
 	}
 	if err := c.setupPluginCatalog(); err != nil {
 		return err
 	}
-	if err := c.loadMounts(c.activeContext); err != nil {
+	if err := c.loadMounts(ctx); err != nil {
 		return err
 	}
-	if err := c.setupMounts(c.activeContext); err != nil {
+	if err := c.setupMounts(ctx); err != nil {
 		return err
 	}
-	if err := c.setupPolicyStore(c.activeContext); err != nil {
+	if err := c.setupPolicyStore(ctx); err != nil {
 		return err
 	}
-	if err := c.loadCORSConfig(c.activeContext); err != nil {
+	if err := c.loadCORSConfig(ctx); err != nil {
 		return err
 	}
-	if err := c.loadCredentials(c.activeContext); err != nil {
+	if err := c.loadCredentials(ctx); err != nil {
 		return err
 	}
-	if err := c.setupCredentials(c.activeContext); err != nil {
+	if err := c.setupCredentials(ctx); err != nil {
 		return err
 	}
 	if err := c.startRollback(); err != nil {
@@ -1272,21 +1273,21 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupExpiration(); err != nil {
 		return err
 	}
-	if err := c.loadAudits(c.activeContext); err != nil {
+	if err := c.loadAudits(ctx); err != nil {
 		return err
 	}
-	if err := c.setupAudits(c.activeContext); err != nil {
+	if err := c.setupAudits(ctx); err != nil {
 		return err
 	}
-	if err := c.loadIdentityStoreArtifacts(c.activeContext); err != nil {
+	if err := c.loadIdentityStoreArtifacts(ctx); err != nil {
 		return err
 	}
-	if err := c.setupAuditedHeadersConfig(c.activeContext); err != nil {
+	if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 		return err
 	}
 
 	if c.ha != nil {
-		if err := c.startClusterListener(c.activeContext); err != nil {
+		if err := c.startClusterListener(ctx); err != nil {
 			return err
 		}
 	}

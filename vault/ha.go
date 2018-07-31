@@ -415,19 +415,19 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 		// Store the lock so that we can manually clear it later if needed
 		c.heldHALock = lock
 
-		// We haven't run postUnseal yet so we have nothing meaningful to use here
-		ctx := context.Background()
+		// Create the active context
+		activeCtx, activeCtxCancel := context.WithCancel(context.Background())
 
 		// This block is used to wipe barrier/seal state and verify that
 		// everything is sane. If we have no sanity in the barrier, we actually
 		// seal, as there's little we can do.
 		{
-			c.seal.SetBarrierConfig(ctx, nil)
+			c.seal.SetBarrierConfig(activeCtx, nil)
 			if c.seal.RecoveryKeySupported() {
-				c.seal.SetRecoveryConfig(ctx, nil)
+				c.seal.SetRecoveryConfig(activeCtx, nil)
 			}
 
-			if err := c.performKeyUpgrades(ctx); err != nil {
+			if err := c.performKeyUpgrades(activeCtx); err != nil {
 				// We call this in a goroutine so that we can give up the
 				// statelock and have this shut us down; sealInternal has a
 				// workflow where it watches for the stopCh to close so we want
@@ -442,23 +442,24 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			}
 		}
 
-		// Clear previous local cluster cert info so we generate new. Since the
-		// UUID will have changed, standbys will know to look for new info
-		c.localClusterParsedCert.Store((*x509.Certificate)(nil))
-		c.localClusterCert.Store(([]byte)(nil))
-		c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
+		{
+			// Clear previous local cluster cert info so we generate new. Since the
+			// UUID will have changed, standbys will know to look for new info
+			c.localClusterParsedCert.Store((*x509.Certificate)(nil))
+			c.localClusterCert.Store(([]byte)(nil))
+			c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
 
-		if err := c.setupCluster(ctx); err != nil {
-			c.heldHALock = nil
-			lock.Unlock()
-			c.stateLock.Unlock()
-			c.logger.Error("cluster setup failed", "error", err)
-			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
-			continue
+			if err := c.setupCluster(activeCtx); err != nil {
+				c.heldHALock = nil
+				lock.Unlock()
+				c.stateLock.Unlock()
+				c.logger.Error("cluster setup failed", "error", err)
+				metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+				continue
+			}
 		}
-
 		// Advertise as leader
-		if err := c.advertiseLeader(ctx, uuid, leaderLostCh); err != nil {
+		if err := c.advertiseLeader(activeCtx, uuid, leaderLostCh); err != nil {
 			c.heldHALock = nil
 			lock.Unlock()
 			c.stateLock.Unlock()
@@ -468,7 +469,7 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 		}
 
 		// Attempt the post-unseal process
-		err = c.postUnseal()
+		err = c.postUnseal(activeCtx, activeCtxCancel)
 		if err == nil {
 			c.standby = false
 		}
@@ -481,14 +482,6 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			lock.Unlock()
 			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 			continue
-		}
-
-		cancelCtx := func() {
-			// Tell any requests that know about this to stop
-			cancelFunc := c.activeContextCancelFunc
-			if cancelFunc != nil {
-				cancelFunc()
-			}
 		}
 
 		runSealing := func() {
@@ -519,14 +512,14 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 		select {
 		case <-leaderLostCh:
 			c.logger.Warn("leadership lost, stopping active operation")
-			cancelCtx()
+			activeCtxCancel()
 			c.stateLock.Lock()
 			runSealing()
 			releaseHALock()
 			c.stateLock.Unlock()
 
 		case <-stopCh:
-			cancelCtx()
+			activeCtxCancel()
 			runSealing()
 			releaseHALock()
 			return
@@ -535,7 +528,7 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			manualStepDown = true
 			c.logger.Warn("stepping down from active operation to standby")
 
-			cancelCtx()
+			activeCtxCancel()
 			c.stateLock.Lock()
 			runSealing()
 			releaseHALock()
