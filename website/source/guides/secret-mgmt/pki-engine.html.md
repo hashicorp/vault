@@ -451,7 +451,7 @@ then click **Save**.
 
 A role is a logical name that maps to a policy used to generate those
 credentials. It allows [configuration
-parameters]((/api/secret/pki/index.html#create-update-role)) to control
+parameters](/api/secret/pki/index.html#create-update-role) to control
 certificate common names, alternate names, the key usages that they are valid
 for, and more.
 
