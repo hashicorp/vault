@@ -4134,6 +4134,12 @@ ember-resolver@^4.0.0:
     ember-cli-version-checker "1.3.1"
     resolve "^1.3.3"
 
+ember-responsive@^3.0.0-beta.3:
+  version "3.0.0-beta.3"
+  resolved "https://registry.yarnpkg.com/ember-responsive/-/ember-responsive-3.0.0-beta.3.tgz#63f4f5cad179399e40cd6a591bb2677c4cc0a874"
+  dependencies:
+    ember-cli-babel "^6.6.0"
+
 ember-rfc176-data@^0.2.0:
   version "0.2.5"
   resolved "https://registry.yarnpkg.com/ember-rfc176-data/-/ember-rfc176-data-0.2.5.tgz#b26f62d9c03d3b02485153cf31137e089299839a"
