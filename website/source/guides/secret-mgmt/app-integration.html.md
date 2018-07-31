@@ -319,7 +319,7 @@ $ curl --header "X-Vault-Token: ..." \
 Copy the **`client_token`** value and proceed to [Step 3](#step3).
 
 
-### Step 3: Use Consul Template to Populate DB Credentials
+### <a name="step3"></a>Step 3: Use Consul Template to Populate DB Credentials
 
 Assume that your application requires PostgreSQL database credentials to read
 data.  Its configuration file, **`config.yml`** looks like:
