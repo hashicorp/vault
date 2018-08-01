@@ -1,5 +1,11 @@
 ## Next (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * Request Timeouts: A default request timeout of 90s is now enforced. This
+   setting can be overwritten in the config file. If you anticipate requests
+   taking longer than 90s this setting should be updated before upgrading.
+
 IMPROVEMENTS:
 
  * agent: Add `exit_after_auth` to be able to use the Agent for a single

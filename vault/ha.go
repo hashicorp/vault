@@ -417,6 +417,8 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 
 		// Create the active context
 		activeCtx, activeCtxCancel := context.WithCancel(context.Background())
+		c.activeContext = activeCtx
+		c.activeContextCancelFunc.Store(activeCtxCancel)
 
 		// This block is used to wipe barrier/seal state and verify that
 		// everything is sane. If we have no sanity in the barrier, we actually
@@ -484,6 +486,19 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			continue
 		}
 
+		cancelCtxAndLock := func() {
+			go func() {
+				select {
+				case <-activeCtx.Done():
+				// Attempt to drain any inflight requests
+				case <-time.After(DefaultMaxRequestDuration):
+					activeCtxCancel()
+				}
+			}()
+			c.stateLock.Lock()
+			activeCtxCancel()
+		}
+
 		runSealing := func() {
 			metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
 
@@ -512,8 +527,7 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 		select {
 		case <-leaderLostCh:
 			c.logger.Warn("leadership lost, stopping active operation")
-			activeCtxCancel()
-			c.stateLock.Lock()
+			cancelCtxAndLock()
 			runSealing()
 			releaseHALock()
 			c.stateLock.Unlock()
@@ -528,8 +542,7 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			manualStepDown = true
 			c.logger.Warn("stepping down from active operation to standby")
 
-			activeCtxCancel()
-			c.stateLock.Lock()
+			cancelCtxAndLock()
 			runSealing()
 			releaseHALock()
 			c.stateLock.Unlock()
