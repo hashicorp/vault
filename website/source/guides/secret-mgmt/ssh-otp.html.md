@@ -132,7 +132,7 @@ onto every ***target host***.
     $ wget https://releases.hashicorp.com/vault-ssh-helper/0.1.4/vault-ssh-helper_0.1.4_linux_amd64.zip
 
     # Unzip the vault-ssh-helper in /user/local/bin
-    $ unzip -q vault-ssh-helper_0.1.4_linux_amd64.zip -d /usr/local/bin
+    $ sudo unzip -q vault-ssh-helper_0.1.4_linux_amd64.zip -d /usr/local/bin
 
     # Make sure that vault-ssh-helper is executable
     $ sudo chmod 0755 /usr/local/bin/vault-ssh-helper
@@ -141,7 +141,8 @@ onto every ***target host***.
     $ sudo chown root:root /usr/local/bin/vault-ssh-helper
     ```
 
-1. Create a Vault SSH Helper configuration file, **`/etc/vault-ssh-helper.d/config.hcl`**.
+1. Create a Vault SSH Helper configuration file,
+**`/etc/vault-ssh-helper.d/config.hcl`**.
 
     ```hcl
     vault_addr = "<VAULT_ADDRESS>"
@@ -171,12 +172,17 @@ onto every ***target host***.
 
     ```shell
     # PAM configuration for the Secure Shell service
-    ...
 
+    # Standard Un*x authentication.
     #@include common-auth
-    auth requisite pam_exec.so quiet expose_authtok log=/tmp/vaultssh.log /usr/local/bin/vault-ssh-helper -config=/etc/vault-ssh-helper.d/config.hcl
+    auth requisite pam_exec.so quiet expose_authtok log=/tmp/vaultssh.log /usr/local/bin/vault-ssh-helper -dev -config=/etc/vault-ssh-helper.d/config.hcl
     auth optional pam_unix.so not_set_pass use_first_pass nodelay
+
+    ...
     ```
+
+    **NOTE:** `common-auth` is the standard Linux authentication module which is
+    commented out in favor of using our custom configuration.
 
     > Refer to the
     [documentation](https://github.com/hashicorp/vault-ssh-helper#pam-configuration)
@@ -187,13 +193,18 @@ onto every ***target host***.
 
     ```plaintext
     ChallengeResponseAuthentication yes
-    UsePAM yes
     PasswordAuthentication no
+    UsePAM yes
     ```
 
     This enables the keyboard-interactive authentication and PAM authentication
     modules. The password authentication is disabled.
 
+1. Restart the SSH service:
+
+    ```plaintext
+    $ sudo systemctl restart sshd
+    ```
 
 ~> This step must be performed on **all** target hosts that you wish to connect
 using the Vault's one-time SSH password.
