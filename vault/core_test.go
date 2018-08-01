@@ -614,7 +614,7 @@ func TestCore_HandleRequest_NoClientToken(t *testing.T) {
 	}
 
 	ct := noop.Requests[0].ClientToken
-	if ct == "" || ct == root {
+	if ct != "" {
 		t.Fatalf("bad: %#v", noop.Requests)
 	}
 }
@@ -711,6 +711,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		DisplayName:  "foo-armon",
 		TTL:          time.Hour * 24,
 		CreationTime: te.CreationTime,
+		Version:      2,
 	}
 
 	if !reflect.DeepEqual(te, expect) {
@@ -1003,14 +1004,16 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expect := &logical.TokenEntry{
-		ID:           clientToken,
-		Accessor:     te.Accessor,
-		Parent:       root,
-		Policies:     []string{"default", "foo"},
-		Path:         "auth/token/create",
-		DisplayName:  "token",
-		CreationTime: te.CreationTime,
-		TTL:          time.Hour * 24 * 32,
+		ID:            clientToken,
+		Accessor:      te.Accessor,
+		Parent:        root,
+		Policies:      []string{"default", "foo"},
+		Path:          "auth/token/create",
+		DisplayName:   "token",
+		CreationTime:  te.CreationTime,
+		TTL:           time.Hour * 24 * 32,
+		Version:       2,
+		ParentVersion: 2,
 	}
 	if !reflect.DeepEqual(te, expect) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)
@@ -1048,14 +1051,16 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expect := &logical.TokenEntry{
-		ID:           clientToken,
-		Accessor:     te.Accessor,
-		Parent:       root,
-		Policies:     []string{"foo"},
-		Path:         "auth/token/create",
-		DisplayName:  "token",
-		CreationTime: te.CreationTime,
-		TTL:          time.Hour * 24 * 32,
+		ID:            clientToken,
+		Accessor:      te.Accessor,
+		Parent:        root,
+		Policies:      []string{"foo"},
+		Path:          "auth/token/create",
+		DisplayName:   "token",
+		CreationTime:  te.CreationTime,
+		TTL:           time.Hour * 24 * 32,
+		Version:       2,
+		ParentVersion: 2,
 	}
 	if !reflect.DeepEqual(te, expect) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)

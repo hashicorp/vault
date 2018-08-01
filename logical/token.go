@@ -65,6 +65,17 @@ type TokenEntry struct {
 
 	// The set of CIDRs that this token can be used with
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
+
+	// Version of this token entry. Version '0' uses SHA1 for path obfuscation,
+	// whereas the version 2 uses SHA2-256 HMAC.
+	Version int `json:"version" mapstructure:"version" structs:"version" sentinel:""`
+
+	// ParentVersion is the token entry version of the parent token
+	ParentVersion int `json:"parent_version" mapstructure:"parent_version" structs:"parent_version" sentinel:""`
+
+	// CubbyholeID is the identifier of the cubbyhole storage belonging to this
+	// token
+	CubbyholeID string `json:"cubbyhole_id" mapstructure:"cubbyhole_id" structs:"cubbyhole_id" sentinel:""`
 }
 
 func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {

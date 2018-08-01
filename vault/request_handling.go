@@ -126,6 +126,10 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical
 		return nil, nil, nil, nil, logical.ErrPermissionDenied
 	}
 
+	// Populate the token entry's version in the request to help appropriately
+	// obfuscate the client token while routing
+	req.TokenEntryVersion = te.Version
+
 	// CIDR checks bind all tokens except non-expiring root tokens
 	if te.TTL != 0 && len(te.BoundCIDRs) > 0 {
 		var valid bool
@@ -847,6 +851,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			NumUses:      auth.NumUses,
 			EntityID:     auth.EntityID,
 			BoundCIDRs:   auth.BoundCIDRs,
+			Version:      2,
 		}
 
 		te.Policies = policyutil.SanitizePolicies(auth.Policies, policyutil.AddDefaultPolicy)

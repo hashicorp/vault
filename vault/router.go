@@ -82,8 +82,9 @@ func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse
 	}
 }
 
-// SaltID is used to apply a salt and hash to an ID to make sure its not reversible
-func (re *routeEntry) SaltID(id string) string {
+// SaltIDSHA1 is used to apply a salt and hash to an ID to make sure its not
+// reversible. This is only here for backwards compatibility.
+func (re *routeEntry) SaltIDSHA1(id string) string {
 	return salt.SaltID(re.mountEntry.UUID, id, salt.SHA1Hash)
 }
 
@@ -439,22 +440,38 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	originalEntityID := req.EntityID
 
-	// Hash the request token unless the request is being routed to the token
-	// or system backend.
 	clientToken := req.ClientToken
 	switch {
+	// Passthrough the client token for token engine
 	case strings.HasPrefix(originalPath, "auth/token/"):
+	// Passthrough the client token for system engine
 	case strings.HasPrefix(originalPath, "sys/"):
 	case strings.HasPrefix(originalPath, "cubbyhole/"):
-		// In order for the token store to revoke later, we need to have the same
-		// salted ID, so we double-salt what's going to the cubbyhole backend
 		salt, err := r.tokenStoreSaltFunc(ctx)
 		if err != nil {
 			return nil, false, false, err
 		}
-		req.ClientToken = re.SaltID(salt.SaltID(req.ClientToken))
+		switch {
+		case req.TokenEntryVersion < 2:
+			// This is only here for backwards compatibility
+			// In order for the token store to revoke later, we need to have the same
+			// salted ID, so we double-salt what's going to the cubbyhole backend
+			req.ClientToken = re.SaltIDSHA1(salt.SaltID(req.ClientToken))
+		default:
+			if req.TokenEntry() == nil {
+				return nil, false, false, fmt.Errorf("missing token entry in request")
+			}
+
+			if req.TokenEntry().CubbyholeID == "" {
+				return nil, false, false, fmt.Errorf("missing cubbyhole ID in token entry")
+			}
+
+			req.ClientToken = req.TokenEntry().CubbyholeID
+		}
 	default:
-		req.ClientToken = re.SaltID(req.ClientToken)
+		// There are no use cases yet that would require client token to be
+		// passed through to backends.
+		req.ClientToken = ""
 	}
 
 	// Cache the pointer to the original connection object

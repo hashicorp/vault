@@ -174,6 +174,9 @@ DONELISTHANDLING:
 		Path:        "cubbyhole/response",
 		ClientToken: te.ID,
 	}
+
+	cubbyReq.SetTokenEntry(&te)
+
 	if sealWrap {
 		cubbyReq.WrapInfo = &logical.RequestWrapInfo{
 			SealWrap: true,

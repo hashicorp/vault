@@ -50,7 +50,25 @@ const (
 
 	//maxLeaseThreshold is the maximum lease count before generating log warning
 	maxLeaseThreshold = 256000
+
+	// metadata is the path at which operational metadata for the expiration
+	// manager is persisted
+	metadataPath = "metadata"
 )
+
+// ExpirationMetadata holds operational information for the expiration
+// manager
+type ExpirationMetadata struct {
+	// SHA1HashedLeasesCleared indicates whether or not all the active leases
+	// are of version 2 (uses SHA2-256 HMAC and not SHA1 hash for obfuscation
+	// of lease IDs and indexes).
+	SHA1HashedLeasesCleared uint32 `json:"sha1_hashed_leases_cleared"`
+
+	// SHA1HashedUnleasedTokensUpgraded indicates whether or not all the tokens
+	// that are not associated with a lease are upgraded to storage paths which
+	// are SHA2-256 HMACed instead of SHA1 hash.
+	SHA1HashedUnleasedTokensUpgraded uint32 `json:"sha1_hashed_unleased_tokens_upgraded"`
+}
 
 type pendingInfo struct {
 	exportLeaseTimes *leaseEntry
@@ -63,6 +81,7 @@ type pendingInfo struct {
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
 	router     *Router
+	view       *BarrierView
 	idView     *BarrierView
 	tokenView  *BarrierView
 	tokenStore *TokenStore
@@ -85,6 +104,20 @@ type ExpirationManager struct {
 	leaseCheckCounter *uint32
 
 	logLeaseExpirations bool
+
+	obfuscatedTokens map[string]bool
+
+	// SHA1HashedLeasesPresent tracks the presence of active leases that use
+	// SHA1 hash for the obfuscation of lease ID or lease's secondary index
+	SHA1HashedLeasesPresent uint32
+
+	// SHA1HashedLeasesCleared is set when there are no active leases that use
+	// SHA1 hash for the obfuscation of lease ID or lease's secondary index
+	SHA1HashedLeasesCleared uint32
+
+	// SHA1HashedUnleasedTokensUpgraded is set when there are no unleased
+	// tokens that use SHA1 hash for the obfuscation of their IDs.
+	SHA1HashedUnleasedTokensUpgraded uint32
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -92,6 +125,7 @@ type ExpirationManager struct {
 func NewExpirationManager(c *Core, view *BarrierView, logger log.Logger) *ExpirationManager {
 	exp := &ExpirationManager{
 		router:     c.router,
+		view:       view,
 		idView:     view.SubView(leaseViewPrefix),
 		tokenView:  view.SubView(tokenViewPrefix),
 		tokenStore: c.tokenStore,
@@ -110,6 +144,7 @@ func NewExpirationManager(c *Core, view *BarrierView, logger log.Logger) *Expira
 		leaseCheckCounter: new(uint32),
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
+		obfuscatedTokens:    make(map[string]bool),
 	}
 	*exp.restoreMode = 1
 
@@ -123,7 +158,7 @@ func NewExpirationManager(c *Core, view *BarrierView, logger log.Logger) *Expira
 
 // setupExpiration is invoked after we've loaded the mount table to
 // initialize the expiration manager
-func (c *Core) setupExpiration() error {
+func (c *Core) setupExpiration(ctx context.Context) error {
 	c.metricsMutex.Lock()
 	defer c.metricsMutex.Unlock()
 	// Create a sub-view
@@ -131,6 +166,22 @@ func (c *Core) setupExpiration() error {
 
 	// Create the manager
 	mgr := NewExpirationManager(c, view, c.logger.ResetNamed("expiration"))
+
+	// Read the metadata for the expiration manager
+	entry, err := view.Get(ctx, metadataPath)
+	if err != nil {
+		return errwrap.Wrapf("failed to read expiration metadata: {{err}}", err)
+	}
+	if entry != nil {
+		var expMetadata ExpirationMetadata
+		err = entry.DecodeJSON(&expMetadata)
+		if err != nil {
+			return errwrap.Wrapf("failed to decode expiration metadata: {{err}}", err)
+		}
+		atomic.StoreUint32(&mgr.SHA1HashedLeasesCleared, expMetadata.SHA1HashedLeasesCleared)
+		atomic.StoreUint32(&mgr.SHA1HashedUnleasedTokensUpgraded, expMetadata.SHA1HashedUnleasedTokensUpgraded)
+	}
+
 	c.expiration = mgr
 
 	// Link the token store to this
@@ -235,16 +286,10 @@ func (m *ExpirationManager) Tidy() error {
 
 		isValid, ok = tokenCache[le.ClientToken]
 		if !ok {
-			saltedID, err := m.tokenStore.SaltID(m.quitContext, le.ClientToken)
-			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup salt id: {{err}}", err))
-				return
-			}
 			lock := locksutil.LockForKey(m.tokenStore.tokenLocks, le.ClientToken)
 			lock.RLock()
-			te, err := m.tokenStore.lookupSalted(m.quitContext, saltedID, true)
+			te, err := m.tokenStore.lookupTokenNonLocked(m.quitContext, le.ClientToken, true)
 			lock.RUnlock()
-
 			if err != nil {
 				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup token: {{err}}", err))
 				return
@@ -322,6 +367,19 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 			}
 		}
 	}()
+
+	if atomic.LoadUint32(&m.SHA1HashedUnleasedTokensUpgraded) == 0 {
+		// Accumulate obfuscated tokens
+		existingTokens, err := logical.CollectKeys(m.quitContext, m.tokenStore.view.SubView(lookupPrefix))
+		if err != nil {
+			return errwrap.Wrapf("failed to scan for obfuscated tokens: {{err}}", err)
+		}
+
+		// Insert all the obfuscated tokens in a map
+		for _, obfuscatedToken := range existingTokens {
+			m.obfuscatedTokens[obfuscatedToken] = true
+		}
+	}
 
 	// Accumulate existing leases
 	m.logger.Debug("collecting leases")
@@ -426,6 +484,88 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	m.restoreModeLock.Unlock()
 
 	m.logger.Info("lease restore complete")
+
+	if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 0 {
+		expMetadata := &ExpirationMetadata{}
+		if atomic.LoadUint32(&m.SHA1HashedUnleasedTokensUpgraded) == 0 {
+			// The obfuscated tokens remaining in the map after lease restoration
+			// would only be those of root tokens without leases and of tokens that
+			// have lost leases. Revoke all the tokens that have lost the leases
+			// and upgrade the root tokens to use SHA2-256 HMAC instead of SHA1
+			// hash.
+			for obfuscatedToken, _ := range m.obfuscatedTokens {
+				// lookupObfuscatedToken will take care of revoking tokens that
+				// do not have an associated lease. The token entries that get
+				// returned should only be of root tokens.
+				te, err := m.tokenStore.lookupObfuscatedToken(m.quitContext, obfuscatedToken, false)
+				if err != nil {
+					return err
+				}
+
+				// For sanity
+				if te == nil {
+					continue
+				}
+
+				// If the token entry is of an older version, perform the upgrade
+				if te.Version < 2 {
+					originalNumUses := te.NumUses
+					// Calling token store's revoke function instead of removing
+					// the storage entries manually has the advantage of not
+					// missing out on removal of related artifacts such as the
+					// accessor, cubbyhole and parent index. The disadvantage
+					// however is that the lookup is performed again. Since this
+					// upgrade happens only once, it should be okay.
+					err = m.tokenStore.revokeObfuscatedToken(m.quitContext, obfuscatedToken, false, te)
+					if err != nil {
+						return err
+					}
+
+					// Upgrade the token entry
+					te.Version = 2
+
+					// Restore token usage
+					te.NumUses = originalNumUses
+
+					// Create the token again
+					err = m.tokenStore.create(m.quitContext, te)
+					if err != nil {
+						return err
+					}
+				}
+			}
+
+			expMetadata.SHA1HashedUnleasedTokensUpgraded = 1
+			// Store the result in the running expiration manager as well
+			atomic.StoreUint32(&m.SHA1HashedUnleasedTokensUpgraded, 1)
+		}
+
+		// At this time all the leases are loaded. The restoration of leases
+		// would have also computed if there were any leases that had either
+		// its ID or secondary index obfuscated using SHA1 hash instead of
+		// SHA2-256 HMAC. Persist the result of that computation across
+		// reboots.
+		if atomic.LoadUint32(&m.SHA1HashedLeasesPresent) == 0 {
+			expMetadata.SHA1HashedLeasesCleared = 1
+
+			// Store the result in the running expiration manager as well
+			atomic.StoreUint32(&m.SHA1HashedLeasesCleared, 1)
+		}
+
+		m.logger.Debug("persisting expiration manager metadata", "sha1_hashed_leases_cleared", expMetadata.SHA1HashedLeasesCleared)
+		m.logger.Debug("persisting expiration manager metadata", "sha1_hashed_unleased_tokens_upgraded", expMetadata.SHA1HashedUnleasedTokensUpgraded)
+
+		// Encode and persist the metadata entry
+		metadataEntry, err := logical.StorageEntryJSON(metadataPath, expMetadata)
+		if err != nil {
+			return err
+		}
+		err = m.view.Put(m.quitContext, metadataEntry)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -601,7 +741,7 @@ func (m *ExpirationManager) RevokePrefix(prefix string, sync bool) error {
 // RevokeByToken is used to revoke all the secrets issued with a given token.
 // This is done by using the secondary index. It also removes the lease entry
 // for the token itself. As a result it should *ONLY* ever be called from the
-// token store's revokeSalted function.
+// token store's revokeObfuscatedToken function.
 func (m *ExpirationManager) RevokeByToken(te *logical.TokenEntry) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
 
@@ -640,11 +780,20 @@ func (m *ExpirationManager) RevokeByToken(te *logical.TokenEntry) error {
 
 	// te.Path should never be empty, but we check just in case
 	if te.Path != "" {
-		saltedID, err := m.tokenStore.SaltID(m.quitContext, te.ID)
-		if err != nil {
-			return err
+		var obfuscatedID string
+		switch {
+		case te.Version < 2:
+			obfuscatedID, err = m.tokenStore.SaltID(m.quitContext, te.ID)
+			if err != nil {
+				return err
+			}
+		default:
+			obfuscatedID, err = m.tokenStore.hmac(m.quitContext, te.ID)
+			if err != nil {
+				return err
+			}
 		}
-		tokenLeaseID := path.Join(te.Path, saltedID)
+		tokenLeaseID := path.Join(te.Path, obfuscatedID)
 
 		// We want to skip the revokeEntry call as that will call back into
 		// revocation logic in the token store, which is what is running this
@@ -787,21 +936,36 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
-func (m *ExpirationManager) RenewToken(req *logical.Request, source string, token string,
+func (m *ExpirationManager) RenewToken(req *logical.Request, source string, tokenID string,
 	increment time.Duration) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 
 	// Compute the Lease ID
-	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
+	idHMAC, err := m.tokenStore.hmac(m.quitContext, tokenID)
 	if err != nil {
 		return nil, err
 	}
-	leaseID := path.Join(source, saltedID)
 
-	// Load the entry
-	le, err := m.loadEntry(leaseID)
+	le, err := m.loadEntry(path.Join(source, idHMAC))
 	if err != nil {
 		return nil, err
+	}
+
+	if le == nil {
+		if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 1 {
+			return nil, nil
+		}
+
+		// This is only here for backwards compatibility
+		saltedID, err := m.tokenStore.SaltID(m.quitContext, tokenID)
+		if err != nil {
+			return nil, err
+		}
+
+		le, err = m.loadEntry(path.Join(source, saltedID))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Check if the lease is renewable. Note that this also checks for a nil
@@ -843,7 +1007,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	resp.Auth.TTL = ttl
 
 	// Attach the ClientToken
-	resp.Auth.ClientToken = token
+	resp.Auth.ClientToken = tokenID
 
 	// Update the lease entry
 	le.Auth = resp.Auth
@@ -925,6 +1089,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		Secret:      resp.Secret,
 		IssueTime:   time.Now(),
 		ExpireTime:  resp.Secret.ExpirationTime(),
+		Version:     2,
 	}
 
 	// Encode the entry
@@ -958,19 +1123,20 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 		return consts.ErrPathContainsParentReferences
 	}
 
-	saltedID, err := m.tokenStore.SaltID(m.quitContext, auth.ClientToken)
+	idHMAC, err := m.tokenStore.hmac(m.quitContext, auth.ClientToken)
 	if err != nil {
 		return err
 	}
 
 	// Create a lease entry
 	le := leaseEntry{
-		LeaseID:     path.Join(source, saltedID),
+		LeaseID:     path.Join(source, idHMAC),
 		ClientToken: auth.ClientToken,
 		Auth:        auth,
 		Path:        source,
 		IssueTime:   time.Now(),
 		ExpireTime:  auth.ExpirationTime(),
+		Version:     2,
 	}
 
 	// Encode the entry
@@ -986,16 +1152,31 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 
 // FetchLeaseTimesByToken is a helper function to use token values to compute
 // the leaseID, rather than pushing that logic back into the token store.
-func (m *ExpirationManager) FetchLeaseTimesByToken(source, token string) (*leaseEntry, error) {
+func (m *ExpirationManager) FetchLeaseTimesByToken(source, tokenID string) (*leaseEntry, error) {
 	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times-by-token"}, time.Now())
 
-	// Compute the Lease ID
-	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
+	idHMAC, err := m.tokenStore.hmac(m.quitContext, tokenID)
 	if err != nil {
 		return nil, err
 	}
-	leaseID := path.Join(source, saltedID)
-	return m.FetchLeaseTimes(leaseID)
+	le, err := m.FetchLeaseTimes(path.Join(source, idHMAC))
+	if err != nil {
+		return nil, err
+	}
+	if le != nil {
+		return le, nil
+	}
+
+	if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 1 {
+		return nil, nil
+	}
+
+	// This is only here for backwards compatibility
+	saltedID, err := m.tokenStore.SaltID(m.quitContext, tokenID)
+	if err != nil {
+		return nil, err
+	}
+	return m.FetchLeaseTimes(path.Join(source, saltedID))
 }
 
 // FetchLeaseTimes is used to fetch the issue time, expiration time, and last
@@ -1227,6 +1408,26 @@ func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreMode bool, 
 			}
 		}
 
+		if le.Version < 2 {
+			atomic.StoreUint32(&m.SHA1HashedLeasesPresent, 1)
+		}
+
+		// If the lease is of a token, then remove the obfuscated token from
+		// the tracker map
+		if le.ClientToken != "" && atomic.LoadUint32(&m.SHA1HashedUnleasedTokensUpgraded) == 0 {
+			var obfuscatedToken string
+			switch {
+			case le.Version < 2:
+				obfuscatedToken, err = m.tokenStore.SaltID(m.quitContext, le.ClientToken)
+			default:
+				obfuscatedToken, err = m.tokenStore.hmac(m.quitContext, le.ClientToken)
+			}
+			if err != nil {
+				return nil, err
+			}
+			delete(m.obfuscatedTokens, obfuscatedToken)
+		}
+
 		// Update the cache of restored leases, either synchronously or through
 		// the lazy loaded restore process
 		m.restoreLoaded.Store(le.LeaseID, struct{}{})
@@ -1267,42 +1468,86 @@ func (m *ExpirationManager) deleteEntry(leaseID string) error {
 	return nil
 }
 
-// createIndexByToken creates a secondary index from the token to a lease entry
-func (m *ExpirationManager) createIndexByToken(token, leaseID string) error {
-	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
+// hmacIndexPath takes in a token ID and lease ID and returns the storage path
+// to be used for the lease's secondary index. The storage path is created by
+// SHA2-256 HMACing the IDs using the token store's salt.
+func (m *ExpirationManager) hmacIndexPath(tokenID, leaseID string) (string, error) {
+	tokenIDHMAC, err := m.tokenStore.hmac(m.quitContext, tokenID)
 	if err != nil {
-		return err
+		return "", err
 	}
 
+	leaseIDHMAC, err := m.tokenStore.hmac(m.quitContext, leaseID)
+	if err != nil {
+		return "", err
+	}
+
+	return path.Join(tokenIDHMAC, leaseIDHMAC), nil
+}
+
+// Deprecated: hashIndexPath takes in a token ID and lease ID and returns the
+// storage path to be used for the lease's secondary index. The storage path is
+// created by SHA1 hashing the IDs using the token store's salt. This is only
+// here for backwards compatibility.
+func (m *ExpirationManager) hashIndexPath(tokenID, leaseID string) (string, error) {
+	saltedID, err := m.tokenStore.SaltID(m.quitContext, tokenID)
+	if err != nil {
+		return "", err
+	}
 	leaseSaltedID, err := m.tokenStore.SaltID(m.quitContext, leaseID)
 	if err != nil {
+		return "", err
+	}
+
+	return path.Join(saltedID, leaseSaltedID), nil
+}
+
+// createIndexByToken creates a secondary index from the token to a lease entry
+func (m *ExpirationManager) createIndexByToken(tokenID, leaseID string) error {
+	indexPath, err := m.hmacIndexPath(tokenID, leaseID)
+	if err != nil {
 		return err
 	}
 
-	ent := logical.StorageEntry{
-		Key:   saltedID + "/" + leaseSaltedID,
+	entry := logical.StorageEntry{
+		Key:   indexPath,
 		Value: []byte(leaseID),
 	}
-	if err := m.tokenView.Put(m.quitContext, &ent); err != nil {
+
+	err = m.tokenView.Put(m.quitContext, &entry)
+	if err != nil {
 		return errwrap.Wrapf("failed to persist lease index entry: {{err}}", err)
 	}
+
 	return nil
 }
 
 // indexByToken looks up the secondary index from the token to a lease entry
-func (m *ExpirationManager) indexByToken(token, leaseID string) (*logical.StorageEntry, error) {
-	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
+func (m *ExpirationManager) indexByToken(tokenID, leaseID string) (*logical.StorageEntry, error) {
+	indexPath, err := m.hmacIndexPath(tokenID, leaseID)
 	if err != nil {
 		return nil, err
 	}
 
-	leaseSaltedID, err := m.tokenStore.SaltID(m.quitContext, leaseID)
+	entry, err := m.tokenView.Get(m.quitContext, indexPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to look up secondary index entry")
+	}
+	if entry != nil {
+		return entry, nil
+	}
+
+	if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 1 {
+		return nil, nil
+	}
+
+	// This is only here for backwards compatibility
+	indexPath, err = m.hashIndexPath(tokenID, leaseID)
 	if err != nil {
 		return nil, err
 	}
 
-	key := saltedID + "/" + leaseSaltedID
-	entry, err := m.tokenView.Get(m.quitContext, key)
+	entry, err = m.tokenView.Get(m.quitContext, indexPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to look up secondary index entry")
 	}
@@ -1310,21 +1555,31 @@ func (m *ExpirationManager) indexByToken(token, leaseID string) (*logical.Storag
 }
 
 // removeIndexByToken removes the secondary index from the token to a lease entry
-func (m *ExpirationManager) removeIndexByToken(token, leaseID string) error {
-	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
+func (m *ExpirationManager) removeIndexByToken(tokenID, leaseID string) error {
+	indexPath, err := m.hmacIndexPath(tokenID, leaseID)
 	if err != nil {
 		return err
 	}
-
-	leaseSaltedID, err := m.tokenStore.SaltID(m.quitContext, leaseID)
+	err = m.tokenView.Delete(m.quitContext, indexPath)
 	if err != nil {
-		return err
-	}
-
-	key := saltedID + "/" + leaseSaltedID
-	if err := m.tokenView.Delete(m.quitContext, key); err != nil {
 		return errwrap.Wrapf("failed to delete lease index entry: {{err}}", err)
 	}
+
+	if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 1 {
+		return nil
+	}
+
+	// This is only here for backwards compatibility
+	indexPath, err = m.hashIndexPath(tokenID, leaseID)
+	if err != nil {
+		return err
+	}
+
+	err = m.tokenView.Delete(m.quitContext, indexPath)
+	if err != nil {
+		return errwrap.Wrapf("failed to delete lease index entry: {{err}}", err)
+	}
+
 	return nil
 }
 
@@ -1332,14 +1587,22 @@ func (m *ExpirationManager) removeIndexByToken(token, leaseID string) error {
 // leaseID for a particular token. The lease is set to expire immediately after
 // it's created.
 func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(te *logical.TokenEntry) (string, error) {
-	// Fetch the saltedID of the token and construct the leaseID
-	saltedID, err := m.tokenStore.SaltID(m.quitContext, te.ID)
+	var obfuscatedID string
+	var err error
+	switch {
+	case te.Version < 2:
+		// This is only here for backwards compatibility
+		obfuscatedID, err = m.tokenStore.SaltID(m.quitContext, te.ID)
+	default:
+		obfuscatedID, err = m.tokenStore.hmac(m.quitContext, te.ID)
+	}
+
 	if err != nil {
 		return "", err
 	}
-	leaseID := path.Join(te.Path, saltedID)
 
-	// Load the entry
+	leaseID := path.Join(te.Path, obfuscatedID)
+
 	le, err := m.loadEntry(leaseID)
 	if err != nil {
 		return "", err
@@ -1378,15 +1641,42 @@ func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(te *logical.Toke
 	return le.LeaseID, nil
 }
 
-// lookupLeasesByToken is used to lookup all the leaseID's via the tokenID
-func (m *ExpirationManager) lookupLeasesByToken(token string) ([]string, error) {
-	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
+// lookupLeasesByToken is used to lookup all the leaseID's via the token ID
+func (m *ExpirationManager) lookupLeasesByToken(tokenID string) ([]string, error) {
+	var leaseIDs []string
+
+	idHMAC, err := m.tokenStore.hmac(m.quitContext, tokenID)
+	if err != nil {
+		return nil, err
+	}
+	ids, err := m.scanLeaseIDsByPrefix(idHMAC + "/")
 	if err != nil {
 		return nil, err
 	}
 
+	leaseIDs = append(leaseIDs, ids...)
+
+	// Avoid putting SHA1 hash of the tokenID on the wire when there are no
+	// active leases that use SHA1 hash anymore
+	if atomic.LoadUint32(&m.SHA1HashedLeasesCleared) == 1 {
+		return leaseIDs, nil
+	}
+
+	// This is only here for backwards compatibility
+	saltedID, err := m.tokenStore.SaltID(m.quitContext, tokenID)
+	if err != nil {
+		return nil, err
+	}
+	ids, err = m.scanLeaseIDsByPrefix(saltedID + "/")
+	if err != nil {
+		return nil, err
+	}
+
+	return append(leaseIDs, ids...), nil
+}
+
+func (m *ExpirationManager) scanLeaseIDsByPrefix(prefix string) ([]string, error) {
 	// Scan via the index for sub-leases
-	prefix := saltedID + "/"
 	subKeys, err := m.tokenView.List(m.quitContext, prefix)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to list leases: {{err}}", err)
@@ -1436,6 +1726,7 @@ type leaseEntry struct {
 	IssueTime       time.Time              `json:"issue_time"`
 	ExpireTime      time.Time              `json:"expire_time"`
 	LastRenewalTime time.Time              `json:"last_renewal_time"`
+	Version         int                    `json:"version"`
 }
 
 // encode is used to JSON encode the lease entry
