@@ -639,7 +639,7 @@ token_meta_username    bob
 
 > Upon a successful authentication, a token will be returned. Notice that the
 output displays **`token_policies`** and **`identity_policies`**. The generated
-token has both `test` and `base` policies are attached.
+token has both `test` and `base` policies attached.
 
 The `test` policy grants CRUD operations on the `secret/test` path.  
 Test to make sure that you can write secrets in the path.
@@ -712,7 +712,7 @@ $ curl --request POST \
 
 > Upon a successful authentication, a token will be returned. Notice that the
 output displays **`token_policies`** and **`identity_policies`**. The generated
-token has both `test` and `base` policies are attached.
+token has both `test` and `base` policies attached.
 
 The `test` policy grants CRUD operations on the `secret/test` path. Test
 to make sure that you can write secrets in the path.
@@ -1105,7 +1105,7 @@ you are running KV v2, set the path to **`secret/data/education`** instead.)
 
 <br>
 
-> **Summary:** At this point, any GitHub user who belongs to either `training`
+> **Summary:** At this point, any GitHub user who belongs to `training`
 team within the `example-inc` organization can authenticate with Vault. The
 generated token for the user has `education` policy attached.
 
