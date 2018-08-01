@@ -89,8 +89,8 @@ path "sys/mounts" {
   capabilities = [ "read", "update" ]
 }
 
-# Write and manage secrets in key-value secret engine
-path "secret*" {
+# To configure the SSH secrets engine
+path "ssh/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
 
@@ -308,11 +308,12 @@ granular as you can since there is no need to keep this role open to the world.
 ### <a name="step3"></a>Step 3: Request an OTP
 (**Persona:** client)
 
-The client must have the following permission to request an OTP.
+The client must have the following permission to request an OTP for
+`otp_key_role`.
 
 ```hcl
 path "ssh/creds/otp_key_role" {
-  capabilities = [ "create" ]
+  capabilities = [ "update" ]
 }
 ```
 
