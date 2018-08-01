@@ -210,9 +210,10 @@ path "auth/approle/login" {
 }
 
 # Read test data
-path "secret/mysql/*" {
+path "secret/data/mysql/*" {
   capabilities = [ "read" ]
 }
+
 ```
 
 #### CLI command
@@ -551,7 +552,7 @@ found" message.
 `secret/mysql/webapp` path.
 
 ```shell
-$ vault kv put secret/dev/config/mongodb @mysqldb.txt
+$ vault kv put secret/mysql/webapp @mysqldb.txt
 
 $ cat mysqldb.txt
 {
