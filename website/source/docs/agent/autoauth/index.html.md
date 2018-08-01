@@ -62,7 +62,7 @@ There are two ways that tokens can be response-wrapped by the agent:
 
 Tokens can be encrypted, using a Diffie-Hellman exchange to generate an
 ephemeral key. In this mechanism, the client receiving the token writes a
-generated private key to a file. The sink responsible for writing the token to
+generated public key to a file. The sink responsible for writing the token to
 that client looks for this public key and uses it to compute a shared secret
 key, which is then used to encrypt the token via AES-GCM. The nonce, encrypted
 payload, and the sink's public key are then written to the output file, where
