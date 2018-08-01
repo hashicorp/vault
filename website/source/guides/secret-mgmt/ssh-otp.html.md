@@ -10,7 +10,7 @@ description: |-
 
 # Vault SSH Secrets Engine: One-Time SSH Password
 
-In a distributed cloud environment, the system security is increasingly
+In a distributed cloud environment, tenant and system is increasingly
 important part of the online security. If an attacker gains access to your
 virtual machines, they can get control of most running applications, local data
 as well as its connected machines and systems.  
