@@ -41,8 +41,15 @@ func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token
 		return false
 	}
 
+	entity, err := d.core.FetchEntity(te.EntityID)
+	if err != nil {
+		d.core.logger.Error("no matching entity for token")
+		// Couldn't find an associated entity
+		return false
+	}
+
 	// Construct the corresponding ACL object
-	acl, err := d.core.policyStore.ACL(ctx, te.Policies...)
+	acl, err := d.core.policyStore.EntityACL(ctx, entity, te.Policies...)
 	if err != nil {
 		d.core.logger.Error("failed to retrieve ACL for token's policies", "token_policies", te.Policies, "error", err)
 		return false

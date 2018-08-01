@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/hclutil"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/mitchellh/copystructure"
 )
@@ -85,6 +86,32 @@ type Policy struct {
 	Paths []*PathRules `hcl:"-"`
 	Raw   string
 	Type  PolicyType
+
+	// True if any path rule is interpolated
+	Interpolated bool
+}
+
+func (p *Policy) Interpolate(entity *identity.Entity) (*Policy, error) {
+	if !p.Interpolated {
+		return p, nil
+	}
+
+	rules := p.Raw
+	transforms := map[string]string{}
+
+	if entity != nil {
+		transforms = entity.InterpolationMap()
+	}
+
+	if _, ok := transforms["entity.name"]; !ok {
+		transforms["entity.name"] = "anonymous"
+	}
+
+	for find, replace := range transforms {
+		rules = strings.Replace(rules, fmt.Sprintf("{{%s}}", find), replace, -1)
+	}
+
+	return ParseACLPolicy(rules)
 }
 
 // PathRules represents a policy for a path in the namespace.
@@ -94,6 +121,9 @@ type PathRules struct {
 	Permissions  *ACLPermissions
 	Glob         bool
 	Capabilities []string
+
+	// True if the path is interpolated
+	Interpolated bool
 
 	// These keys are used at the top level to make the HCL nicer; we store in
 	// the ACLPermissions object though
@@ -229,6 +259,12 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		if strings.HasSuffix(pc.Prefix, "*") {
 			pc.Prefix = strings.TrimSuffix(pc.Prefix, "*")
 			pc.Glob = true
+		}
+
+		// Mark that this is an interpolated path, if it contains {{ }}
+		if strings.Contains(pc.Prefix, "{{entity") && strings.Contains(pc.Prefix, "}}") {
+			pc.Interpolated = true
+			result.Interpolated = true
 		}
 
 		// Map old-style policies into capabilities

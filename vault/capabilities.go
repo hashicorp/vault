@@ -62,6 +62,16 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 
 	if len(policies) == 0 {
 		return []string{DenyCapability}, nil
+	} else if entity != nil {
+		for idx, p := range policies {
+			if p.Interpolated {
+				policy, err := p.Interpolate(entity)
+				if err != nil {
+					return nil, err
+				}
+				policies[idx] = policy
+			}
+		}
 	}
 
 	acl, err := NewACL(policies)

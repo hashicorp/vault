@@ -12,6 +12,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/helper/consts"
+	identity "github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -150,9 +151,9 @@ var (
 // PolicyStore is used to provide durable storage of policy, and to
 // manage ACLs associated with them.
 type PolicyStore struct {
-	core             *Core
-	aclView          *BarrierView
-	tokenPoliciesLRU *lru.TwoQueueCache
+	core        *Core
+	aclView     *BarrierView
+	policyCache *PolicyCache
 	// This is used to ensure that writes to the store (acl/rgp) or to the egp
 	// path tree don't happen concurrently. We are okay reading stale data so
 	// long as there aren't concurrent writes.
@@ -161,6 +162,56 @@ type PolicyStore struct {
 	policyTypeMap sync.Map
 	// logger is the server logger copied over from core
 	logger log.Logger
+}
+
+type PolicyCache struct {
+	static  *lru.TwoQueueCache
+	dynamic *lru.TwoQueueCache
+}
+
+func NewPolicyCache(cacheSize int) *PolicyCache {
+	pc := &PolicyCache{}
+
+	cache, _ := lru.New2Q(cacheSize)
+	pc.static = cache
+
+	cache, _ = lru.New2Q(cacheSize)
+	pc.dynamic = cache
+
+	return pc
+}
+
+func (pc *PolicyCache) Add(policyName string, policy *Policy) {
+	if policy.Interpolated {
+		// Don't bother adding the policy if there's already a
+		// static version of the named policy
+		if !pc.static.Contains(policyName) {
+			pc.dynamic.Add(policyName, policy)
+		}
+	} else {
+		pc.static.Add(policyName, policy)
+	}
+}
+
+func (pc *PolicyCache) Get(policyName string) (policy *Policy, ok bool) {
+	if raw, ok := pc.static.Get(policyName); ok {
+		return raw.(*Policy), ok
+	}
+	if raw, ok := pc.dynamic.Get(policyName); ok {
+		return raw.(*Policy), ok
+	}
+
+	return nil, false
+}
+
+func (pc *PolicyCache) Purge() {
+	pc.static.Purge()
+	pc.dynamic.Purge()
+}
+
+func (pc *PolicyCache) Remove(policyName string) {
+	pc.static.Remove(policyName)
+	pc.dynamic.Remove(policyName)
 }
 
 // PolicyEntry is used to store a policy by name
@@ -179,9 +230,9 @@ func NewPolicyStore(ctx context.Context, core *Core, baseView *BarrierView, syst
 		logger:     logger,
 		core:       core,
 	}
+
 	if !system.CachingDisabled() {
-		cache, _ := lru.New2Q(policyCacheSize)
-		ps.tokenPoliciesLRU = cache
+		ps.policyCache = NewPolicyCache(policyCacheSize)
 	}
 
 	keys, err := logical.CollectKeys(ctx, ps.aclView)
@@ -232,12 +283,12 @@ func (ps *PolicyStore) invalidate(ctx context.Context, name string, policyType P
 	// This may come with a prefixed "/" due to joining the file path
 	saneName := strings.TrimPrefix(name, "/")
 
-	// We don't lock before removing from the LRU here because the worst that
+	// We don't lock before removing from the cache here because the worst that
 	// can happen is we load again if something since added it
 	switch policyType {
 	case PolicyTypeACL:
-		if ps.tokenPoliciesLRU != nil {
-			ps.tokenPoliciesLRU.Remove(saneName)
+		if ps.policyCache != nil {
+			ps.policyCache.Remove(saneName)
 		}
 
 	default:
@@ -289,9 +340,8 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 		}
 		ps.policyTypeMap.Store(p.Name, PolicyTypeACL)
 
-		if ps.tokenPoliciesLRU != nil {
-			// Update the LRU cache
-			ps.tokenPoliciesLRU.Add(p.Name, p)
+		if ps.policyCache != nil {
+			ps.policyCache.Add(p.Name, p)
 		}
 
 	default:
@@ -308,14 +358,15 @@ func (ps *PolicyStore) GetPolicy(ctx context.Context, name string, policyType Po
 	// Policies are normalized to lower-case
 	name = ps.sanitizeName(name)
 
-	var cache *lru.TwoQueueCache
+	var policyCache *PolicyCache
 	var view *BarrierView
+
 	switch policyType {
 	case PolicyTypeACL:
-		cache = ps.tokenPoliciesLRU
+		policyCache = ps.policyCache
 		view = ps.aclView
 	case PolicyTypeToken:
-		cache = ps.tokenPoliciesLRU
+		policyCache = ps.policyCache
 		val, ok := ps.policyTypeMap.Load(name)
 		if !ok {
 			// Doesn't exist
@@ -330,18 +381,17 @@ func (ps *PolicyStore) GetPolicy(ctx context.Context, name string, policyType Po
 		}
 	}
 
-	if cache != nil {
-		// Check for cached policy
-		if raw, ok := cache.Get(name); ok {
-			return raw.(*Policy), nil
+	if policyCache != nil {
+		if policy, ok := policyCache.Get(name); ok {
+			return policy, nil
 		}
 	}
 
 	// Special case the root policy
 	if policyType == PolicyTypeACL && name == "root" {
 		p := &Policy{Name: "root"}
-		if cache != nil {
-			cache.Add(p.Name, p)
+		if policyCache != nil {
+			policyCache.Add(p.Name, p)
 		}
 		return p, nil
 	}
@@ -350,9 +400,9 @@ func (ps *PolicyStore) GetPolicy(ctx context.Context, name string, policyType Po
 	defer ps.modifyLock.Unlock()
 
 	// See if anything has added it since we got the lock
-	if cache != nil {
-		if raw, ok := cache.Get(name); ok {
-			return raw.(*Policy), nil
+	if policyCache != nil {
+		if policy, ok := policyCache.Get(name); ok {
+			return policy, nil
 		}
 	}
 
@@ -394,12 +444,28 @@ func (ps *PolicyStore) GetPolicy(ctx context.Context, name string, policyType Po
 		return nil, fmt.Errorf("unknown policy type %q", policyEntry.Type.String())
 	}
 
-	if cache != nil {
+	if policyCache != nil {
 		// Update the LRU cache
-		cache.Add(name, policy)
+		policyCache.Add(name, policy)
 	}
 
 	return policy, nil
+}
+
+// GetEntityPolicy is used to fetch a policy and interpolate it, if possible, based on the given token
+func (ps *PolicyStore) GetEntityPolicy(ctx context.Context, entity *identity.Entity, name string, policyType PolicyType) (*Policy, error) {
+	var policy *Policy
+
+	policy, err := ps.GetPolicy(ctx, name, policyType)
+	if err != nil {
+		return nil, err
+	}
+
+	if policy == nil {
+		return nil, nil
+	}
+
+	return policy.Interpolate(entity)
 }
 
 // ListPolicies is used to list the available policies
@@ -460,9 +526,9 @@ func (ps *PolicyStore) DeletePolicy(ctx context.Context, name string, policyType
 			return errwrap.Wrapf("failed to delete policy: {{err}}", err)
 		}
 
-		if ps.tokenPoliciesLRU != nil {
+		if ps.policyCache != nil {
 			// Clear the cache
-			ps.tokenPoliciesLRU.Remove(name)
+			ps.policyCache.Remove(name)
 		}
 
 		ps.policyTypeMap.Delete(name)
@@ -478,6 +544,27 @@ func (ps *PolicyStore) ACL(ctx context.Context, names ...string) (*ACL, error) {
 	var policies []*Policy
 	for _, name := range names {
 		p, err := ps.GetPolicy(ctx, name, PolicyTypeToken)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to get policy: {{err}}", err)
+		}
+		policies = append(policies, p)
+	}
+
+	// Construct the ACL
+	acl, err := NewACL(policies)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to construct ACL: {{err}}", err)
+	}
+	return acl, nil
+}
+
+// EntityACL is used to return an ACL which is built using the
+// named, and interpolated, policies
+func (ps *PolicyStore) EntityACL(ctx context.Context, entity *identity.Entity, names ...string) (*ACL, error) {
+	// Fetch the policies
+	var policies []*Policy
+	for _, name := range names {
+		p, err := ps.GetEntityPolicy(ctx, entity, name, PolicyTypeToken)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to get policy: {{err}}", err)
 		}

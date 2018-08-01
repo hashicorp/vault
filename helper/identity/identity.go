@@ -7,6 +7,10 @@ import (
 	"github.com/hashicorp/errwrap"
 )
 
+func Anonymous() *Entity {
+	return &Entity{Name: "anonymous"}
+}
+
 func (g *Group) Clone() (*Group, error) {
 	if g == nil {
 		return nil, fmt.Errorf("nil group")
@@ -43,6 +47,18 @@ func (e *Entity) Clone() (*Entity, error) {
 	}
 
 	return &clonedEntity, nil
+}
+
+func (e *Entity) InterpolationMap() map[string]string {
+	transforms := map[string]string{}
+
+	// Entity level key/values use their raw keys
+	transforms["entity.name"] = e.GetName()
+	for key, value := range e.GetMetadata() {
+		transforms[fmt.Sprintf("entity.metadata.%s", key)] = value
+	}
+
+	return transforms
 }
 
 func (p *Alias) Clone() (*Alias, error) {
