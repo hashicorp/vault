@@ -656,7 +656,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		resp.Auth.TokenPolicies = policyutil.SanitizePolicies(resp.Auth.Policies, policyutil.DoNotAddDefaultPolicy)
-		if err := c.expiration.RegisterAuth(context.Background(), resp.Auth.CreationPath, resp.Auth); err != nil {
+		if err := c.expiration.RegisterAuth(ctx, resp.Auth.CreationPath, resp.Auth); err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -882,7 +882,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		auth.TTL = te.TTL
 
 		// Register with the expiration manager
-		if err := c.expiration.RegisterAuth(context.Background(), te.Path, auth); err != nil {
+		if err := c.expiration.RegisterAuth(ctx, te.Path, auth); err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to register token lease", "request_path", req.Path, "error", err)
 			return nil, auth, ErrInternalError

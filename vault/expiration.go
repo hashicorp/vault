@@ -502,9 +502,6 @@ func (m *ExpirationManager) Revoke(ctx context.Context, leaseID string) error {
 func (m *ExpirationManager) LazyRevoke(ctx context.Context, leaseID string) error {
 	defer metrics.MeasureSince([]string{"expire", "lazy-revoke"}, time.Now())
 
-	// Setting context to the running active context
-	ctx = m.quitContext
-
 	// Load the entry
 	le, err := m.loadEntry(ctx, leaseID)
 	if err != nil {
