@@ -1,36 +1,38 @@
+{{!-- TODO ask Joshua about showing the full path in the display bar when the 
+user doesn't have a list to look at --}}
 {{#if accessibleNamespaces.length}}
   <BasicDropdownHover @horizontalPosition="auto-left" @verticalPosition="below" as |D|>
-  <D.trigger
-    @tagName="button"
-    @class="button is-transparent"
-    >
-    {{yield}} {{namespace}}
-    <ICon
-      @glyph="chevron-down"
-      @size=8
-      @class="has-text-white auto-width is-status-chevron"
-      aria-hidden="true"
-    />
-  </D.trigger>
+    <D.trigger
+      @tagName="button"
+      @class="button is-transparent"
+      >
+      {{yield}} {{namespaceDisplay}}
+      <ICon
+        @glyph="chevron-down"
+        @size=8
+        @class="has-text-white auto-width is-status-chevron"
+        aria-hidden="true"
+      />
+    </D.trigger>
     <D.content @class="namespace-picker-content">
-    {{#if (or (not isUserRootNamespace) userCanManageNamespaces)}}
-    {{/if}}
-    <div class="namespace-header-bar level">
-      {{#if (not isUserNamespace)}}
-      {{/if}}
-      {{#link-to "vault.cluster" (query-params namespace=userRootNamespace) class="level-left"}}
-        Back
-      {{/link-to}}
-      {{#link-to "vault.cluster.access.namespaces"class="level-right"}}
-        Manage
-      {{/link-to}}
-    </div>
-    <h5 class="namespace-header">Current namespace</h5>
-    <NamespaceLink @targetNamespace={{namespace}} @class="namespace-link" />
-      <div class="namespace-list">
-        {{#each accessibleNamespaces as |ns|}}
-        <NamespaceLink @targetNamespace={{ns.id}} @onClick={{action D.actions.close}} @class="namespace-link" />
-        {{/each}}
+      <div onclick={{D.actions.close}}>
+        <div class="namespace-header-bar level">
+          {{#if (not isUserRootNamespace)}}
+            {{#link-to "vault.cluster.access" (query-params namespace=(or auth.authData.userRootNamespace 'default'))  class="level-left"}}
+              Back
+            {{/link-to}}
+          {{/if}}
+          {{#link-to "vault.cluster.access.namespaces"class="level-right"}}
+            Manage
+          {{/link-to}}
+        </div>
+        <h5 class="namespace-header">Current namespace</h5>
+        <NamespaceLink @targetNamespace={{namespacePath}} @class="namespace-link" />
+        <div class="namespace-list">
+          {{#each accessibleNamespaces as |ns|}}
+          <NamespaceLink @targetNamespace={{ns.id}} @class="namespace-link" />
+          {{/each}}
+        </div>
       </div>
     </D.content>
   </BasicDropdownHover>

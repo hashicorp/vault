@@ -12,11 +12,11 @@ const DEFAULTS = {
 };
 
 export default Ember.Component.extend(DEFAULTS, {
-  classNames: ['auth-form'],
   router: inject.service(),
   auth: inject.service(),
   flashMessages: inject.service(),
   store: inject.service(),
+  namespace: inject.service(),
   csp: inject.service('csp-event'),
 
   // set during init and potentially passed in via a query param
@@ -24,6 +24,7 @@ export default Ember.Component.extend(DEFAULTS, {
   methods: null,
   cluster: null,
   redirectTo: null,
+  namespaceQueryParam: null,
 
   didRender() {
     this._super(...arguments);

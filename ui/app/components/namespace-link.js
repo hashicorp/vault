@@ -23,4 +23,10 @@ export default Component.extend({
 
     return target;
   }),
+
+  actions: {
+    setNamespace(ns) {
+      this.get('namespaceService').setNamespace(ns);
+    },
+  },
 });

@@ -11,7 +11,6 @@ export { INIT, UNSEAL, AUTH, CLUSTER, DR_REPLICATION_SECONDARY };
 
 export default Mixin.create({
   auth: inject.service(),
-  namespace: inject.service(),
 
   transitionToTargetRoute() {
     const targetRoute = this.targetRouteName();

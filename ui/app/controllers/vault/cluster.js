@@ -9,8 +9,15 @@ export default Controller.extend({
   vaultVersion: inject.service('version'),
   console: inject.service(),
 
-  queryParams: [{ namespaceQueryParam: 'namespace' }],
-  namespaceQueryParam: '',
+  queryParams: [
+    {
+      namespaceQueryParam: {
+        scope: 'controller',
+        as: 'namespace',
+      },
+    },
+  ],
+  namespaceQueryParam: 'default',
 
   consoleOpen: computed.alias('console.isOpen'),
   activeCluster: computed('auth.activeCluster', function() {

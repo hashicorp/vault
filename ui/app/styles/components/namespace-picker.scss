@@ -15,7 +15,7 @@
 }
 
 .namespace-header {
-  margin: $size-9;
+  margin: $size-9 $size-9 0;
   color: $grey;
   font-size: $size-8;
   font-weight: $font-weight-semibold;
@@ -23,7 +23,7 @@
 }
 
 .namespace-list {
-  padding-left: $size-10;
+  padding-left: $size-9;
 }
 
 .namespace-link {

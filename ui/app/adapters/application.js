@@ -7,7 +7,7 @@ const { inject, assign, set, RSVP } = Ember;
 
 export default DS.RESTAdapter.extend({
   auth: inject.service(),
-  //tenant: inject.service('namespace'),
+  namespaceService: inject.service('namespace'),
   controlGroup: inject.service(),
 
   flashMessages: inject.service(),
@@ -36,7 +36,7 @@ export default DS.RESTAdapter.extend({
         assign(options.headers, { 'X-Vault-Wrap-TTL': options.wrapTTL });
       }
     }
-    let namespace = this.get('tenant.namespace');
+    let namespace = this.get('namespaceService.path');
     if (namespace) {
       options.headers = assign(options.headers || {}, {
         'X-Vault-Namespace': namespace,

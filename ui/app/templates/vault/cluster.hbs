@@ -36,7 +36,7 @@
         </div>
       </Nav.items>
       <Nav.main>
-        <ul class="navbar-sections tabs tabs-subnav {{if renderPicker 'tabs-with-picker' ''}}">
+        <ul class="navbar-sections tabs tabs-subnav {{if (and (has-feature "Namespaces") media.isTablet) 'with-ns-picker'}}">
           {{#if (and (has-feature "Namespaces") media.isTablet) }}
             <li>
               <NamespacePicker
@@ -48,12 +48,12 @@
             </li>
           {{/if}}
           <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
-            {{#link-to "vault.cluster.secrets" activeClusterName}}
+            {{#link-to "vault.cluster.secrets"}}
               Secrets
             {{/link-to}}
           </li>
           <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
-            {{#link-to "vault.cluster.access" activeClusterName}}
+            {{#link-to "vault.cluster.access"}}
               Access
             {{/link-to}}
           </li>
@@ -61,7 +61,7 @@
             {{#if activeCluster.anyReplicationEnabled}}
               {{status-menu type="replication"}}
             {{else}}
-              {{#link-to "vault.cluster.replication" activeClusterName}}
+              {{#link-to "vault.cluster.replication"}}
                 Replication
                 {{#if (is-version "OSS")}}
                   <ICon @glyph="edition-enterprise" @size=16 @class="edition-icon" />
@@ -75,12 +75,12 @@
             {{/link-to}}
           </li>
           <li class="{{if (is-active-route 'vault.cluster.tools') 'is-active'}}">
-            {{#link-to "vault.cluster.tools.tool" activeClusterName "wrap"}}
+            {{#link-to "vault.cluster.tools.tool" "wrap"}}
               Tools
             {{/link-to}}
           </li>
           <li class="{{if (is-active-route 'vault.cluster.settings') 'is-active'}}">
-            {{#link-to "vault.cluster.settings" activeClusterName}}
+            {{#link-to "vault.cluster.settings"}}
               Settings
             {{/link-to}}
           </li>

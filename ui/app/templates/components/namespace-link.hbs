@@ -4,7 +4,10 @@
     <ICon @glyph="checkmark-circled-outline" @size="16" @class="has-text-success level-right" />
   </div>
 {{else}}
-  {{#link-to "vault.cluster" (query-params namespace=queryParamValue) class=(concat "is-block " class) onclick=onClick}}
+<div {{action "setNamespace" queryParamValue}}>
+  {{#link-to "vault.cluster.access" (query-params namespace=queryParamValue)
+    class=(concat "is-block " class)
+  }}
     {{#if hasBlock}}
       {{yield}}
     {{else}}
@@ -14,4 +17,5 @@
       </div>
     {{/if}}
   {{/link-to}}
+</div>
 {{/if}}

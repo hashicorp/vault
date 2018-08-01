@@ -43,6 +43,9 @@ a.navbar-item {
     left: 3.5em;
     top: 0;
     height: 3.25rem;
+    &.with-ns-picker {
+      left: 0;
+    }
   }
 
   .icon.edition-icon {

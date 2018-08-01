@@ -101,7 +101,7 @@ export default Service.extend({
   },
 
   persistAuthData() {
-    const [firstArg, resp] = arguments;
+    let [firstArg, resp, userNamespace] = arguments;
     let tokens = this.get('tokens');
     let tokenName;
     let options;
@@ -114,7 +114,7 @@ export default Service.extend({
       backend = options.backend;
     }
 
-    const currentBackend = BACKENDS.findBy('type', backend);
+    let currentBackend = BACKENDS.findBy('type', backend);
     let displayName;
     if (isArray(currentBackend.displayNamePath)) {
       displayName = currentBackend.displayNamePath.map(name => get(resp, name)).join('/');
@@ -122,8 +122,9 @@ export default Service.extend({
       displayName = get(resp, currentBackend.displayNamePath);
     }
 
-    const { entity_id, policies, renewable } = resp;
+    let { entity_id, policies, renewable } = resp;
     let data = {
+      userRootNamespace: userNamespace || '',
       displayName,
       backend: currentBackend,
       token: resp.client_token || get(resp, currentBackend.tokenPath),
@@ -257,7 +258,7 @@ export default Service.extend({
     const adapter = this.clusterAdapter();
 
     return adapter.authenticate(options).then(resp => {
-      return this.persistAuthData(options, resp.auth || resp.data);
+      return this.persistAuthData(options, resp.auth || resp.data, this.get('namespace.path'));
     });
   },
 
