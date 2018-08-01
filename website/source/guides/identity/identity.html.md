@@ -208,10 +208,10 @@ attached.
     # Create base policy
     $ vault policy write base base.hcl
 
-    # Create base policy
+    # Create test policy
     $ vault policy write test test.hcl
 
-    # Create base policy
+    # Create team-qa policy
     $ vault policy write team-qa team-qa.hcl
 
     # List all policies to verify that 'base', 'test' and 'team-qa' policies exist
@@ -627,15 +627,19 @@ $ vault login -method=userpass username=bob password=training
 
 Key                    Value
 ---                    -----
-token                  eaad830e-b2d5-0ecb-284c-a7266c113424
-token_accessor         b0787781-3807-f32f-4622-8d75e69baf4b
+token                  ac318416-0dc1-4311-67e4-b58381c86fde
+token_accessor         79cced7b-51df-9523-920f-a1579687516b
 token_duration         768h
 token_renewable        true
 token_policies         ["default" "test"]
-...
+identity_policies      ["base"]
+policies               ["base" "default" "test"]
+token_meta_username    bob
 ```
 
-Upon a successful authentication, a token will be returned.
+> Upon a successful authentication, a token will be returned. Notice that the
+output displays **`token_policies`** and **`identity_policies`**. The generated
+token has both `test` and `base` policies are attached.
 
 The `test` policy grants CRUD operations on the `secret/test` path.  
 Test to make sure that you can write secrets in the path.
@@ -696,11 +700,19 @@ $ curl --request POST \
      "default",
      "test"
    ],
+   "token_policies": [
+      "default",
+      "test"
+    ],
+    "identity_policies": [
+      "base"
+    ],
    ...
 ```
 
 > Upon a successful authentication, a token will be returned. Notice that the
-generated token is attached with `test` policy as well as `base`.
+output displays **`token_policies`** and **`identity_policies`**. The generated
+token has both `test` and `base` policies are attached.
 
 The `test` policy grants CRUD operations on the `secret/test` path. Test
 to make sure that you can write secrets in the path.
@@ -913,27 +925,27 @@ and/or `member_group_ids`.
 ### <a name="step4"></a>Step 4: Create an External Group
 
 It is common for organizations to enable auth methods such as LDAP, Okta and
-perhaps GitHub to handle the Vault user authentication. A user may belong to one
-or more groups defined within the identity provider. Also, the Vault server may
-have one or more auth methods enabled.
+perhaps GitHub to handle the Vault user authentication, and individual user's
+group memberships are defined within those identity providers.
 
 In order to manage the group-level authorization, you can create an external
-group to link Vault with the external identity provider (auth provider).
+group to link Vault with the external identity provider (auth provider) and
+attach appropriate policies to the group.
 
 #### Example Scenario
 
-Any user who belongs to **`certification`** and **`training`** teams in GitHub
-organization, **`example-inc`** are automatically a member of `education` group
-and permitted to perform all operations against the `secret/education` path.
+Any user who belongs to **`training`** team in GitHub organization,
+**`example-inc`** are permitted to perform all operations against the
+`secret/education` path.
 
 **NOTE:** This scenario assumes that the GitHub organization, `example-inc`
-exists as well as `certification` and `training` team within the organization.
+exists as well as `training` team within the organization.
 
 ### CLI Command
 
-
 ```shell
 # Write a new policy file
+# If you are running KV v2, set the path to "secret/data/education" instead
 $ tee education.hcl <<EOF
 path "secret/education" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
@@ -957,25 +969,22 @@ $ vault write auth/github/config organization=example-inc
 $ vault write identity/group name="education" \
        policies="education" \
        type="external" \
-       metadata=organization="Training and Certification"
+       metadata=organization="Product Education"
 
 # Create a group alias where canonical_id is the group ID
 # 'name' is the actual GitHub team name (NOTE: Use slugified team name.)
 $ vault write identity/group-alias name="training" \
        mount_accessor=$(cat accessor.txt) \
        canonical_id="<group_ID>"
-
-# Repeat the step to add certification team to education group
-$ vault write identity/group-alias name="certification" \
-      mount_accessor=$(cat accessor.txt) \
-      canonical_id="<group_ID>"
 ```
+
 
 
 #### API call using cURL
 
 ```shell
 # API request payload containing stringfied policy
+# If you are running KV v2, set the path to "secret/data/education" instead
 $ cat payload-pol.json
 {
   "policy": "path \"secret/education\" {\n capabilities = [\"create\", \"read\", \"delete\", \"update\", \"list\"]\n }"
@@ -1018,7 +1027,7 @@ $ tee payload-edu.json <<<EOF
    "policies": ["education"],
    "type": "external",
    "metadata": {
-     "organization": "Training and Certification"
+     "organization": "Product Education"
    }
 }
 EOF
@@ -1054,28 +1063,15 @@ $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data @payload-training.json \
        http://127.0.0.1:8200/v1/identity/group-alias | jq
-
-# API request msg payload to create a group aliases, certification
-$ tee payload-cert.json <<EOF
-{
- "canonical_id": "<GROUP_ID>",
- "mount_accessor": "auth_github_XXXXX",
- "name": "certification"
-}
-EOF
-
-# Create 'certification' group alias
-$ curl --header "X-Vault-Token: ..." \
-       --request POST \
-       --data @payload-cert.json \
-       http://127.0.0.1:8200/v1/identity/group-alias | jq
 ```
 
 #### Web UI
 
 1. Click the **Policies** tab, and then select **Create ACL policy**.
 
-1. Enter **`education`** in the **Name** field, and enter the following policy in the **Policy** text editor, and then click **Create Policy**.
+1. Enter **`education`** in the **Name** field, and enter the following policy
+in the **Policy** text editor, and then click **Create Policy**. (**NOTE:** If
+you are running KV v2, set the path to **`secret/data/education`** instead.)
 
     ```plaintext
     path "secret/education" {
@@ -1089,8 +1085,6 @@ $ curl --header "X-Vault-Token: ..." \
 
 1. Select **GitHub** from the **Type** drop-down menu, and then enter
 **`example-inc`** in the **Organization** field.  
-
-    ![Create Policy](/assets/images/vault-entity-8.png)
 
 1. Click **Enable Method**.
 
@@ -1109,14 +1103,11 @@ $ curl --header "X-Vault-Token: ..." \
 
 1. Click **Create**.
 
-1. Repeat the step to add **`certification`** team to the **`education`** group.
-
 <br>
 
-> **Summary:** At this point, any GitHub user who belongs to either
-`certification` or `training` team within the `example-inc` organization can
-authenticate with Vault. The generated token for the user has `education` policy
-attached.
+> **Summary:** At this point, any GitHub user who belongs to either `training`
+team within the `example-inc` organization can authenticate with Vault. The
+generated token for the user has `education` policy attached.
 
 
 ## Next steps
