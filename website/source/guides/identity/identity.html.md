@@ -768,7 +768,7 @@ The user can access the `secret/team-qa` path only if he logs in with
 `bsmith` credentials.
 
 
-~> Log back in with the token you used to configure the entity before proceed to
+!> **NOTE:** Log back in with the token you used to configure the entity before proceed to
 [Step 3](#step3).
 
 
@@ -823,7 +823,7 @@ group member and attach `team-eng`.
 
 Now, when you login as `bob` or `bsmith`, its generated token inherits the
 group-level policy, **`team-eng`**. You can perform similar tests demonstrated
-in [Step 3](#step3) to verify that.
+in [Step 2](#step2) to verify that.
 
 
 #### API call using cURL
@@ -881,7 +881,7 @@ group member and attach `team-eng`.
 
 Now, when you login as `bob` or `bsmith`, its generated token inherits the
 group-level policy, **`team-eng`**. You can perform similar tests demonstrated
-in [Step 3](#step3) to verify that.
+in [Step 2](#step2) to verify that.
 
 
 #### Web UI
