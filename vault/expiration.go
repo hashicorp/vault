@@ -490,9 +490,6 @@ func (m *ExpirationManager) Stop() error {
 func (m *ExpirationManager) Revoke(ctx context.Context, leaseID string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke"}, time.Now())
 
-	// Setting context to the running active context
-	ctx = m.quitContext
-
 	return m.revokeCommon(ctx, leaseID, false, false)
 }
 
@@ -589,9 +586,6 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 func (m *ExpirationManager) RevokeForce(ctx context.Context, prefix string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-force"}, time.Now())
 
-	// Setting context to the running active context
-	ctx = m.quitContext
-
 	return m.revokePrefixCommon(ctx, prefix, true, true)
 }
 
@@ -600,9 +594,6 @@ func (m *ExpirationManager) RevokeForce(ctx context.Context, prefix string) erro
 // to reason about.
 func (m *ExpirationManager) RevokePrefix(ctx context.Context, prefix string, sync bool) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-prefix"}, time.Now())
-
-	// Setting context to the running active context
-	ctx = m.quitContext
 
 	return m.revokePrefixCommon(ctx, prefix, false, sync)
 }
@@ -613,9 +604,6 @@ func (m *ExpirationManager) RevokePrefix(ctx context.Context, prefix string, syn
 // token store's revokeSalted function.
 func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.TokenEntry) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
-
-	// Setting context to the running active context
-	ctx = m.quitContext
 
 	// Lookup the leases
 	existing, err := m.lookupLeasesByToken(ctx, te.ID)
