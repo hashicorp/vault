@@ -259,7 +259,7 @@ DONELISTHANDLING:
 	}
 
 	// Register the wrapped token with the expiration manager
-	if err := c.expiration.RegisterAuth(te.Path, wAuth); err != nil {
+	if err := c.expiration.RegisterAuth(ctx, te.Path, wAuth); err != nil {
 		// Revoke since it's not yet being tracked for expiration
 		c.tokenStore.revokeOrphan(ctx, te.ID)
 		c.logger.Error("failed to register cubbyhole wrapping token lease", "request_path", req.Path, "error", err)
