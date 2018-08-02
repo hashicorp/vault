@@ -1306,7 +1306,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		defer atomic.StoreUint32(ts.tidyLock, 0)
 
 		// Don't cancel when the original client request goes away
-		ctx = context.Background()
+		ctx = ts.quitContext
 
 		logger := ts.logger.Named("tidy")
 
