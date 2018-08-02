@@ -30,11 +30,11 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     let store = this.store;
     let modelsToKeep = this.get('globalNamespaceModels');
     for (let model of getOwner(this).lookup('data-adapter:main').getModelTypes()) {
-      let { type } = model;
-      if (modelsToKeep.includes(type)) {
+      let { name } = model;
+      if (modelsToKeep.includes(name)) {
         return;
       }
-      store.unloadAll(type);
+      store.unloadAll(name);
     }
   },
 

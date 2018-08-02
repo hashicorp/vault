@@ -20,7 +20,7 @@
         <div class="namespace-header-bar level">
           <div class="level-left">
             {{#if (not isUserRootNamespace)}}
-              {{#link-to "vault.cluster.access" (query-params namespace=auth.authData.userRootNamespace)}}
+              {{#link-to "vault.cluster.secrets" (query-params namespace=auth.authData.userRootNamespace)}}
                 Back
               {{/link-to}}
             {{/if}}
