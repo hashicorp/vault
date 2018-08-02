@@ -63,7 +63,7 @@ type SystemView interface {
 	EntityInfo(entityID string) (*Entity, error)
 
 	// PluginEnv returns Vault environment information used by plugins
-	PluginEnv() (*PluginEnvironment, error)
+	PluginEnv(context.Context) (*PluginEnvironment, error)
 }
 
 type StaticSystemView struct {
@@ -125,6 +125,6 @@ func (d StaticSystemView) EntityInfo(entityID string) (*Entity, error) {
 	return d.EntityVal, nil
 }
 
-func (d StaticSystemView) PluginEnv() (*PluginEnvironment, error) {
+func (d StaticSystemView) PluginEnv(_ context.Context) (*PluginEnvironment, error) {
 	return d.PluginEnvironment, nil
 }

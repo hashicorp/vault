@@ -208,7 +208,7 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 	return ret, nil
 }
 
-func (d dynamicSystemView) PluginEnv() (*logical.PluginEnvironment, error) {
+func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironment, error) {
 	return &logical.PluginEnvironment{
 		VaultVersion: version.GetVersion().Version,
 	}, nil

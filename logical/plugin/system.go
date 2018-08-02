@@ -146,7 +146,7 @@ func (s *SystemViewClient) EntityInfo(entityID string) (*logical.Entity, error) 
 	return reply.Entity, nil
 }
 
-func (s *SystemViewClient) PluginEnv() (*logical.PluginEnvironment, error) {
+func (s *SystemViewClient) PluginEnv(_ context.Context) (*logical.PluginEnvironment, error) {
 	var reply PluginEnvReply
 
 	err := s.client.Call("Plugin.PluginEnv", new(interface{}), &reply)
@@ -262,6 +262,21 @@ func (s *SystemViewServer) EntityInfo(args *EntityInfoArgs, reply *EntityInfoRep
 	}
 	*reply = EntityInfoReply{
 		Entity: entity,
+	}
+
+	return nil
+}
+
+func (s *SystemViewServer) PluginEnv(_ interface{}, reply *PluginEnvReply) error {
+	pluginEnv, err := s.impl.PluginEnv(context.Background())
+	if err != nil {
+		*reply = PluginEnvReply{
+			Error: wrapError(err),
+		}
+		return nil
+	}
+	*reply = PluginEnvReply{
+		PluginEnvironment: pluginEnv,
 	}
 
 	return nil

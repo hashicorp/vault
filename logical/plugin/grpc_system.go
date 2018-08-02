@@ -146,8 +146,8 @@ func (s *gRPCSystemViewClient) EntityInfo(entityID string) (*logical.Entity, err
 	return reply.Entity, nil
 }
 
-func (s *gRPCSystemViewClient) PluginEnv() (*logical.PluginEnvironment, error) {
-	reply, err := s.client.PluginEnv(context.Background(), &pb.Empty{})
+func (s *gRPCSystemViewClient) PluginEnv(ctx context.Context) (*logical.PluginEnvironment, error) {
+	reply, err := s.client.PluginEnv(ctx, &pb.Empty{})
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func (s *gRPCSystemViewServer) EntityInfo(ctx context.Context, args *pb.EntityIn
 }
 
 func (s *gRPCSystemViewServer) PluginEnv(ctx context.Context, _ *pb.Empty) (*pb.PluginEnvReply, error) {
-	pluginEnv, err := s.impl.PluginEnv()
+	pluginEnv, err := s.impl.PluginEnv(ctx)
 	if err != nil {
 		return &pb.PluginEnvReply{
 			Err: pb.ErrToString(err),
