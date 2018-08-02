@@ -2319,7 +2319,7 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 
 	if data.Get("sync").(bool) {
 		// Invoke the expiration manager directly
-		if err := b.Core.expiration.Revoke(ctx, leaseID); err != nil {
+		if err := b.Core.expiration.Revoke(b.Core.activeContext, leaseID); err != nil {
 			b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
 			return handleErrorNoReadOnlyForward(err)
 		}
@@ -2327,7 +2327,7 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 		return nil, nil
 	}
 
-	if err := b.Core.expiration.LazyRevoke(ctx, leaseID); err != nil {
+	if err := b.Core.expiration.LazyRevoke(b.Core.activeContext, leaseID); err != nil {
 		b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
@@ -2354,9 +2354,9 @@ func (b *SystemBackend) handleRevokePrefixCommon(ctx context.Context,
 	// Invoke the expiration manager directly
 	var err error
 	if force {
-		err = b.Core.expiration.RevokeForce(ctx, prefix)
+		err = b.Core.expiration.RevokeForce(b.Core.activeContext, prefix)
 	} else {
-		err = b.Core.expiration.RevokePrefix(ctx, prefix, sync)
+		err = b.Core.expiration.RevokePrefix(b.Core.activeContext, prefix, sync)
 	}
 	if err != nil {
 		b.Backend.Logger().Error("revoke prefix failed", "prefix", prefix, "error", err)

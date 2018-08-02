@@ -447,7 +447,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			defer func(id string) {
 				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(ctx, te)
 				if err == nil {
-					err = c.expiration.Revoke(ctx, leaseID)
+					err = c.expiration.LazyRevoke(ctx, leaseID)
 				}
 				if err != nil {
 					c.logger.Error("failed to revoke token", "error", err)

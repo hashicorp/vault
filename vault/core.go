@@ -1080,7 +1080,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		// we won't have a token store after sealing.
 		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(ctx, te)
 		if err == nil {
-			err = c.expiration.Revoke(ctx, leaseID)
+			err = c.expiration.Revoke(c.activeContext, leaseID)
 		}
 		if err != nil {
 			c.logger.Error("token needed revocation before seal but failed to revoke", "error", err)

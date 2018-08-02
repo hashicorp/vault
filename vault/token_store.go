@@ -136,6 +136,8 @@ type TokenStore struct {
 	tidyLock *uint32
 
 	identityPoliciesDeriverFunc func(string) (*identity.Entity, []string, error)
+
+	quitContext context.Context
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -154,6 +156,7 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 		saltLock:                    sync.RWMutex{},
 		identityPoliciesDeriverFunc: c.fetchEntityAndDerivedPolicies,
 		tidyLock:                    new(uint32),
+		quitContext:                 c.activeContext,
 	}
 
 	if c.policyStore != nil {
@@ -991,7 +994,7 @@ func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted
 			return nil, err
 		}
 
-		err = ts.expiration.Revoke(ctx, leaseID)
+		err = ts.expiration.Revoke(ts.quitContext, leaseID)
 		if err != nil {
 			return nil, err
 		}
@@ -1096,7 +1099,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string, skipOrp
 
 	// Revoke all secrets under this token. This should go first as it's a
 	// security-sensitive item.
-	if err := ts.expiration.RevokeByToken(ctx, entry); err != nil {
+	if err := ts.expiration.RevokeByToken(ts.quitContext, entry); err != nil {
 		return err
 	}
 
@@ -1599,7 +1602,7 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 		return nil, err
 	}
 
-	err = ts.expiration.Revoke(ctx, leaseID)
+	err = ts.expiration.Revoke(ts.quitContext, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -2054,7 +2057,7 @@ func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	err = ts.expiration.Revoke(ctx, leaseID)
+	err = ts.expiration.Revoke(ts.quitContext, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -2090,7 +2093,7 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	err = ts.expiration.Revoke(ctx, leaseID)
+	err = ts.expiration.Revoke(ts.quitContext, leaseID)
 	if err != nil {
 		return nil, err
 	}
