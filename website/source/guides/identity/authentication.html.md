@@ -118,6 +118,7 @@ path "sys/policy/*" {
 }
 
 # Write test data
+# Set the path to "secret/data/mysql/*" if you are running `kv-v2`
 path "secret/mysql/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
@@ -210,7 +211,8 @@ path "auth/approle/login" {
 }
 
 # Read test data
-path "secret/data/mysql/*" {
+# Set the path to "secret/data/mysql/*" if you are running `kv-v2`
+path "secret/mysql/*" {
   capabilities = [ "read" ]
 }
 
