@@ -445,7 +445,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			// valid request (this is the token's final use). We pass the ID in
 			// directly just to be safe in case something else modifies te later.
 			defer func(id string) {
-				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(ctx, te)
+				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(c.activeContext, te)
 				if err == nil {
 					err = c.expiration.LazyRevoke(ctx, leaseID)
 				}
