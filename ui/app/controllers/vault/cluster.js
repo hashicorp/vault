@@ -1,10 +1,11 @@
 import Ember from 'ember';
 
-const { Controller, computed, inject } = Ember;
+const { Controller, computed, observer, inject } = Ember;
 export default Controller.extend({
   auth: inject.service(),
   store: inject.service(),
   media: inject.service(),
+  namespaceService: inject.service('namespace'),
 
   vaultVersion: inject.service('version'),
   console: inject.service(),
@@ -17,16 +18,24 @@ export default Controller.extend({
       },
     },
   ],
-  namespaceQueryParam: 'default',
+
+  namespaceQueryParam: '',
+
+  onQPChange: observer('namespaceQueryParam', function() {
+    this.get('namespaceService').setNamespace(this.get('namespaceQueryParam'));
+  }),
 
   consoleOpen: computed.alias('console.isOpen'),
+
   activeCluster: computed('auth.activeCluster', function() {
     return this.get('store').peekRecord('cluster', this.get('auth.activeCluster'));
   }),
+
   activeClusterName: computed('activeCluster', function() {
     const activeCluster = this.get('activeCluster');
     return activeCluster ? activeCluster.get('name') : null;
   }),
+
   showNav: computed(
     'activeClusterName',
     'auth.currentToken',
@@ -45,6 +54,7 @@ export default Controller.extend({
       }
     }
   ),
+
   actions: {
     toggleConsole() {
       this.toggleProperty('consoleOpen');

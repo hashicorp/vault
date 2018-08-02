@@ -6,9 +6,12 @@ const { RSVP, inject } = Ember;
 
 export default ClusterRouteBase.extend({
   flashMessages: inject.service(),
+  version: inject.service(),
   beforeModel() {
     this.store.unloadAll('auth-method');
-    return this._super();
+    return this._super().then(() => {
+      return this.get('version').fetchFeatures();
+    });
   },
   model() {
     let cluster = this._super(...arguments);

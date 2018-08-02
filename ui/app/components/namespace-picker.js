@@ -4,38 +4,14 @@ const { Component, computed, inject } = Ember;
 
 export default Component.extend({
   namespaceService: inject.service('namespace'),
-  router: inject.service(),
   auth: inject.service(),
-
-  //passed from the queryParam
-  namespace: null,
-
-  namespacePath: computed('namespace', function() {
-    let namespace = this.get('namespace');
-    // the queryParam default is 'default',
-    // but the default ns path for vault is ''
-    if (namespace === 'default') {
-      return '';
-    }
-    return namespace;
-  }),
 
   init() {
     this._super(...arguments);
-    this.get('namespaceService').setNamespace(this.get('namespacePath'));
-  },
-  didReceiveAttrs() {
-    let ns = this.get('namespacePath');
-    let oldNS = this.get('oldNamespace');
-    this._super(...arguments);
-    if (oldNS !== null && oldNS !== ns) {
-      this.get('namespaceService').setNamespace(ns);
-    }
-    this.set('oldNamespace', ns);
+    this.get('namespaceService.findNamespacesForUser').perform();
   },
 
-  // internal tracking of namespace
-  oldNamespace: null,
+  namespacePath: computed.alias('namespaceService.path'),
 
   accessibleNamespaces: computed.alias('namespaceService.accessibleNamespaces'),
   canAccessMultipleNamespaces: computed.gt('accessibleNamespaces.length', 1),

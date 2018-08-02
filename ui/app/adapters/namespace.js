@@ -2,7 +2,7 @@ import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
   pathForType() {
-    return 'namespace';
+    return 'namespaces';
   },
   urlForFindAll() {
     return `/${this.urlPrefix()}/namespaces?list=true`;

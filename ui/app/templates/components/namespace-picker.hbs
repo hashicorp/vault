@@ -1,6 +1,7 @@
-{{!-- TODO ask Joshua about showing the full path in the display bar when the 
-user doesn't have a list to look at --}}
-{{#if accessibleNamespaces.length}}
+{{#if (and (not accessibleNamespaces) (eq namespace "default"))}}
+  {{!-- Just yield the logo if they're in the default namespace and only have access to it --}}
+  {{yield}}
+{{else}}
   <BasicDropdownHover @horizontalPosition="auto-left" @verticalPosition="below" as |D|>
     <D.trigger
       @tagName="button"
@@ -17,14 +18,18 @@ user doesn't have a list to look at --}}
     <D.content @class="namespace-picker-content">
       <div onclick={{D.actions.close}}>
         <div class="namespace-header-bar level">
-          {{#if (not isUserRootNamespace)}}
-            {{#link-to "vault.cluster.access" (query-params namespace=(or auth.authData.userRootNamespace 'default'))  class="level-left"}}
-              Back
+          <div class="level-left">
+            {{#if (not isUserRootNamespace)}}
+              {{#link-to "vault.cluster.access" (query-params namespace=auth.authData.userRootNamespace)}}
+                Back
+              {{/link-to}}
+            {{/if}}
+          </div>
+          <div class="level-right">
+            {{#link-to "vault.cluster.access.namespaces"}}
+              Manage
             {{/link-to}}
-          {{/if}}
-          {{#link-to "vault.cluster.access.namespaces"class="level-right"}}
-            Manage
-          {{/link-to}}
+          </div>
         </div>
         <h5 class="namespace-header">Current namespace</h5>
         <NamespaceLink @targetNamespace={{namespacePath}} @class="namespace-link" />
@@ -36,7 +41,5 @@ user doesn't have a list to look at --}}
       </div>
     </D.content>
   </BasicDropdownHover>
-{{else}}
-  {{yield}} {{namespace}}
 {{/if}}
 

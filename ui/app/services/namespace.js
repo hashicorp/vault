@@ -12,12 +12,9 @@ export default Service.extend({
   accessibleNamespaces: null,
 
   isDefault: computed.equal('namespace', DEFAULT_NAMESPACE),
-  setNamespace(path, skipFetch = false) {
+
+  setNamespace(path) {
     this.set('path', path);
-    if (skipFetch) {
-      return;
-    }
-    this.get('findNamespacesForUser').perform();
   },
 
   findNamespacesForUser: task(function*() {
