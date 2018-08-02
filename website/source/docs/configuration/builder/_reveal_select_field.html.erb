@@ -1,0 +1,22 @@
+<fieldset name="<%= name %>">
+  <%= partial "builder/reveal_label", locals: {
+    label: label,
+    name: "include_#{name}",
+    required: (required if defined?(required)),
+    docs_url: (docs_url if defined?(docs_url))
+  } %>
+  <div class="config-reveal-container <%= "active" if (defined?(required) && required) %>">
+    <div class="select">
+      <select
+        id="<%= name %>"
+        name="<%= name %>"
+        required="<%= required if defined?(required) %>"
+        class="<%= "config-reveal-select" if defined?(reveal) %>"
+      />
+        <% options.each do |value, label| %>
+          <option value="<%= value %>"><%= label %></option>
+        <% end %>
+      </select>
+    </div>
+  </div>
+</fieldset>

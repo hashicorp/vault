@@ -1,0 +1,877 @@
+<section data-config-stanza="storage">
+  <fieldset>
+    <%= partial "builder/reveal_label", locals: {
+      label: "Storage",
+      name: "include_storage",
+      required: true,
+      docs_url: "storage"
+    } %>
+    <span class="select">
+      <select name="storage" id="storage" class="config-reveal-select">
+        <optgroup label="Local">
+          <option value="file">Filesystem</option>
+          <option value="inmem">In-Memory</option>
+        </optgroup>
+        <optgroup label="Remote">
+          <option value="azure">Azure</option>
+          <option value="cockroachdb">CockroachDB</option>
+          <option value="consul">Consul</option>
+          <option value="couchdb">CouchDB</option>
+          <option value="dynamodb">DynamoDB</option>
+          <option value="etcd">Etcd</option>
+          <option value="foundationdb">FoundationDB</option>
+          <option value="gcs">Google Cloud Storage</option>
+          <option value="spanner">Google Cloud Spanner</option>
+          <option value="manta">Manta</option>
+          <option value="mysql">MySQL</option>
+          <option value="postgresql">PostgreSQL</option>
+          <option value="cassandra">Cassandra</option>
+          <option value="s3">S3</option>
+          <option value="swift">Swift</option>
+          <option value="zookeeper">Zookeeper</option>
+        </optgroup>
+      </select>
+    </span>
+  </fieldset>
+
+  <div class="config-reveal-container nested-fields active" data-if-option="file">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path",
+      name: "path",
+      required: true,
+      docs_url: "storage/filesystem.html#path"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="azure">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Account Name",
+      name: "accountName",
+      required: true,
+      docs_url: "storage/azure.html#path"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Account Key",
+      name: "accountKey",
+      value: "<AZURE_ACCOUNT_KEY>",
+      sensitive_disabled: true,
+      required: true,
+      docs_url: "storage/azure.html#accountKey"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Storage Blob container name",
+      name: "container",
+      required: true,
+      docs_url: "storage/azure.html#container"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Maximum number of concurrent requests",
+      name: "max_parallel",
+      value: "128",
+      docs_url: "storage/azure.html#max_parallel"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="cockroachdb">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Connection URL",
+      name: "connection_url",
+      required: true,
+      docs_url: "storage/cockroachdb.html#connection_url"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the table in which to write Vault data",
+      name: "table",
+      value: "vault_kv_store",
+      docs_url: "storage/cockroachdb.html#vault_kv_store"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Maximum number of concurrent requests",
+      name: "max_parallel",
+      value: "128",
+      docs_url: "storage/cockroachdb.html#max_parallel"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="consul">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Address of Consul agent",
+      name: "address",
+      value: "127.0.0.1:8500",
+      docs_url: "storage/consul.html#address"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Check interval to send health checks back to Consul",
+      name: "check_timeout",
+      value: "5s",
+      docs_url: "storage/consul.html#check_timeout"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "Consul consistency mode",
+      name: "consistency_mode",
+      options: {
+        default: "Default",
+        strong: "Strong"
+      },
+      docs_url: "storage/consul.html#consistency_mode"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "Should Vault should register itself with Consul",
+      name: "disable_registration",
+      options: {
+        false: "No",
+        true: "Yes"
+      },
+      docs_url: "storage/consul.html#disable_registration"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Maximum number of concurrent requests",
+      name: "max_parallel",
+      value: "128",
+      docs_url: "storage/consul.html#max_parallel"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path in Consul's key-value store where Vault data will be stored",
+      name: "path",
+      value: "vault/",
+      docs_url: "storage/consul.html#path"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "Scheme to use when communicating with Consul",
+      name: "scheme",
+      options: {
+        http: "http",
+        https: "https"
+      },
+      docs_url: "storage/consul.html#scheme"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the service to register in Consul",
+      name: "service",
+      value: "vault",
+      docs_url: "storage/consul.html#service"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "List of Service tags",
+      name: "service_tags",
+      docs_url: "storage/consul.html#service_tags"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Service-specific address to set on the service registration",
+      name: "service_address",
+      docs_url: "storage/consul.html#service_address"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Consul ACL token",
+      name: "token",
+      docs_url: "storage/consul.html#token"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Minimum allows session TTL",
+      name: "session_ttl",
+      value: "15s",
+      docs_url: "storage/consul.html#session_ttl"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Minimum time to cancel a lock acquisition",
+      name: "lock_wait_time",
+      value: "15s",
+      docs_url: "storage/consul.html#lock_wait_time"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path to CA certificate used for Consul communication",
+      name: "tls_ca_file",
+      value: "<CONSUL_TLS_CA_FILE>",
+      sensitive_disabled: true,
+      docs_url: "storage/consul.html#tls_ca_file"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path to certificate for Consul communication",
+      name: "tls_cert_file",
+      value: "<CONSUL_TLS_CERT_FILE>",
+      sensitive_disabled: true,
+      docs_url: "storage/consul.html#tls_cert_file"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path to the private key for Consul communication",
+      name: "tls_key_file",
+      value: "<TLS_KEY_FILE>",
+      sensitive_disabled: true,
+      docs_url: "storage/consul.html#tls_key_file"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "Minimum TLS version",
+      name: "tls_min_version",
+      options: {
+        tls12: "TLS 1.2",
+        tls11: "TLS 1.1",
+        tls10: "TLS 1.0"
+      },
+      docs_url: "storage/consul.html#tls_min_version"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "Disable TLS Host verification",
+      name: "tls_skip_verify",
+      options: {
+        false: "Use TLS Host verification",
+        true: "Disable TLS Host verification (highly discouraged)"
+      },
+      docs_url: "storage/consul.html#tls_skip_verify"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="couchdb">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "CouchDB endpoint",
+      name: "endpoint",
+      docs_url: "storage/couchdb.html#endpoint"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "User to use for authentication",
+      name: "username",
+      value: "<COUCHDB_USERNAME>",
+      sensitive_disabled: true,
+      docs_url: "storage/couchdb.html#username"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Password",
+      name: "password",
+      value: "<COUCHDB_PASSWORD>",
+      sensitive_disabled: true,
+      docs_url: "storage/couchdb.html#password"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Maximum number of concurrent requests",
+      name: "max_parallel",
+      value: "128",
+      docs_url: "storage/couchdb.html#max_parallel"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="dynamodb">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Access Key",
+      name: "access_key",
+      required: true,
+      value: "<DYNAMODB_ACCESS_KEY>",
+      sensitive_disabled: true,
+      docs_url: "storage/dynamodb.html#access_key"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Secret Key",
+      name: "secret_key",
+      required: true,
+      value: "<DYNAMODB_SECRET_KEY>",
+      sensitive_disabled: true,
+      docs_url: "storage/dynamodb.html#secret_key"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "DynamoDB endpoint",
+      name: "endpoint",
+      docs_url: "storage/dynamodb.html#endpoint"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "High Availability mode (HA)",
+      name: "ha_enabled",
+      options: {
+        false: "Use High Availablity mode",
+        true: "Disable High Availablity mode"
+      },
+      docs_url: "storage/dynamodb.html#ha_enabled"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Maximum number of concurrent requests",
+      name: "max_parallel",
+      value: "128",
+      docs_url: "storage/dynamodb.html#max_parallel"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "AWS Region",
+      name: "region",
+      value: "us-east-1",
+      docs_url: "storage/dynamodb.html#region"
+    } %>
+    <%= partial "builder/reveal_number_field", locals: {
+      label: "Maximum number of reads per second",
+      name: "read_capacity",
+      value: 5,
+      docs_url: "storage/dynamodb.html#read_capacity"
+    } %>
+    <%= partial "builder/reveal_number_field", locals: {
+      label: "Maximum number of writes per second",
+      name: "write_capacity",
+      value: 5,
+      docs_url: "storage/dynamodb.html#write_capacity"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the DynamoDB table in which to store Vault data",
+      name: "table",
+      value: "vault-dynamodb-backend",
+      docs_url: "storage/dynamodb.html#table"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Session Token",
+      name: "session_token",
+      value: "<DYNAMODB_SESSION_TOKEN>",
+      sensitive_disabled: true,
+      docs_url: "storage/dynamodb.html#session_token"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="etcd">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "List of addresses of the Etcd instances",
+      name: "address",
+      value: "http://localhost:2379",
+      docs_url: "storage/etcd.html#address"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Domain name to query for SRV records describing cluster endpoints",
+      name: "discovery_srv",
+      value: "example.com",
+      docs_url: "storage/etcd.html#discovery_srv"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Etcd API Version",
+      name: "etcd_api",
+      docs_url: "storage/etcd.html#etcd_api"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "High Availability mode (HA)",
+      name: "ha_enabled",
+      options: {
+        false: "Use High Availablity mode",
+        true: "Disable High Availablity mode"
+      },
+      docs_url: "storage/etcd.html#ha_enabled"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path in Etcd where Vault data will be stored",
+      name: "path",
+      value: "vault/",
+      docs_url: "storage/etcd.html#path"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "Sync the list of available Etcd services on startup",
+      name: "sync",
+      options: {
+        true: "Enable Sync",
+        false: "Disable Sync"
+      },
+      docs_url: "storage/etcd.html#sync"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Username to use when authenticating with the Etcd server",
+      name: "username",
+      value: "<ETCD_USERNAME>",
+      sensitive_disabled: true,
+      docs_url: "storage/etcd.html#username"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Password",
+      name: "password",
+      value: "<ETCD_PASSWORD>",
+      sensitive_disabled: true,
+      docs_url: "storage/etcd.html#password"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path to the CA certificate used for Etcd communication",
+      name: "tls_ca_file",
+      value: "<ETCD_TLS_CA_FILE>",
+      sensitive_disabled: true,
+      docs_url: "storage/etcd.html#tls_ca_file"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path to the certificate used for Etcd communication",
+      name: "tls_cert_file",
+      value: "<ETCD_TLS_CERT_FILE>",
+      sensitive_disabled: true,
+      docs_url: "storage/etcd.html#tls_cert_file"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path to the private key for Etcd communication",
+      name: "tls_key_file",
+      value: "<ETCD_TLS_KEY_FILE>",
+      sensitive_disabled: true,
+      docs_url: "storage/etcd.html#tls_key_file"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="foundationdb">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path to the cluster file containing the connection data for the target cluster",
+      name: "cluster_file",
+      required: true,
+      docs_url: "storage/foundationdb.html#cluster_file"
+    } %>
+    <%= partial "builder/reveal_number_field", locals: {
+      label: "FoundationDB API version",
+      name: "api_version",
+      docs_url: "storage/foundationdb.html#api_version"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "High Availability mode (HA)",
+      name: "ha_enabled",
+      options: {
+        false: "Use High Availablity mode",
+        true: "Disable High Availablity mode"
+      },
+      docs_url: "storage/foundationdb.html#ha_enabled"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path in Etcd where Vault data will be stored",
+      name: "path",
+      value: "vault",
+      docs_url: "storage/foundationdb.html#path"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="gcs">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the bucket to use for storage",
+      name: "bucket",
+      required: true,
+      docs_url: "storage/gcs.html#bucket"
+    } %>
+    <%= partial "builder/reveal_number_field", locals: {
+      label: "Maximum size (in kilobytes) to send in a single request",
+      name: "chunk_size",
+      value: "8192",
+      docs_url: "storage/gcs.html#chunk_size"
+    } %>
+    <%= partial "builder/reveal_number_field", locals: {
+      label: "Maximum number of concurrent requests",
+      name: "max_parallel",
+      value: 128,
+      docs_url: "storage/gcs.html#max_parallel"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "High Availability mode (HA)",
+      name: "ha_enabled",
+      options: {
+        false: "Use High Availablity mode",
+        true: "Disable High Availablity mode"
+      },
+      docs_url: "storage/gcs.html#ha_enabled"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="spanner">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the database",
+      name: "database",
+      required: true,
+      docs_url: "storage/spanner.html#database"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the table where data will be stored and retrieved",
+      name: "table",
+      value: "Vault",
+      docs_url: "storage/spanner.html#table"
+    } %>
+    <%= partial "builder/reveal_number_field", locals: {
+      label: "Maximum number of concurrent requests",
+      name: "max_parallel",
+      value: 128,
+      docs_url: "storage/spanner.html#max_parallel"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "High Availability mode (HA)",
+      name: "ha_enabled",
+      options: {
+        false: "Use High Availablity mode",
+        true: "Disable High Availablity mode"
+      },
+      docs_url: "storage/spanner.html#ha_enabled"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the table to use for storing high availability information",
+      name: "ha_table",
+      value: "VaultHA",
+      docs_url: "storage/spanner.html#ha_table"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="manta">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the manta directory to use",
+      name: "directory",
+      required: true,
+      docs_url: "storage/manta.html#directory"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Manta user account name",
+      name: "user",
+      required: true,
+      value: "<MANTA_USERNAME>",
+      sensitive_disabled: true,
+      docs_url: "storage/manta.html#user"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Fingerprint of the public key of the SSH key pair to use for authentication",
+      name: "key_id",
+      required: true,
+      value: "<MANTA_KEY_ID>",
+      sensitive_disabled: true,
+      docs_url: "storage/manta.html#key_id"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of a subuser that has been granted access to the Manta account",
+      name: "subuser",
+      docs_url: "storage/manta.html#subuser"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Manta URL",
+      name: "url",
+      value: "https://us-east.manta.joyent.com",
+      docs_url: "storage/manta.html#url"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Maximum number of concurrent requests",
+      name: "max_parallel",
+      value: "128",
+      docs_url: "storage/manta.html#max_parallel"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="mysql">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "MySQL username to connect to the database",
+      name: "username",
+      value: "<MYSQL_USERNAME>",
+      sensitive_disabled: true,
+      required: true,
+      docs_url: "storage/mysql.html#username"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "MySQL password to connect to the database",
+      name: "password",
+      value: "<MYSQL_PASSWORD>",
+      sensitive_disabled: true,
+      required: true,
+      docs_url: "storage/mysql.html#password"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Address of the MySQL host",
+      name: "address",
+      value: "127.0.0.1:3306",
+      docs_url: "storage/mysql.html#address"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the database",
+      name: "database",
+      value: "vault",
+      docs_url: "storage/mysql.html#database"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the table",
+      name: "table",
+      value: "vault",
+      docs_url: "storage/mysql.html#table"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path to the CA certificate to connect using TLS",
+      name: "tls_ca_file",
+      value: "<MYSQL_TLS_CA_FILE>",
+      sensitive_disabled: true,
+      docs_url: "storage/mysql.html#tls_ca_file"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Maximum number of concurrent requests",
+      name: "max_parallel",
+      value: "128",
+      docs_url: "storage/mysql.html#max_parallel"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="postgresql">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Connection string to use to authenticate and connect to PostgreSQL",
+      name: "connection_url",
+      required: true,
+      docs_url: "storage/postgresql.html#connection_url"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the table in which to write Vault data",
+      name: "table",
+      value: "vault_kv_store",
+      docs_url: "storage/postgresql.html#table"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Maximum number of concurrent requests",
+      name: "max_parallel",
+      value: "128",
+      docs_url: "storage/postgresql.html#max_parallel"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="cassandra">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Comma-separated list of Cassandra hosts to connect to",
+      name: "hosts",
+      value: "127.0.0.1",
+      docs_url: "storage/cassandra.html#hosts"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Cassandra keyspace to use",
+      name: "keyspace",
+      value: "vault",
+      docs_url: "storage/cassandra.html#keyspace"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Table within the keyspace in which to store data",
+      name: "keyspace",
+      value: "entries",
+      docs_url: "storage/cassandra.html#table"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "Consistency level to use when reading/writing data",
+      name: "consistency",
+      options: {
+        ANY: "Any",
+        ONE: "One",
+        TWO: "Two",
+        THREE: "Three",
+        QUORUM: "Quorum",
+        ALL: "All",
+        LOCAL_QUORUM: "Local Quorum",
+        EACH_QUORUM: "Each Quorum",
+        LOCAL_ONE: "Local One"
+      },
+      docs_url: "storage/cassandra.html#consistency"
+    } %>
+    <%= partial "builder/reveal_number_field", locals: {
+      label: "Cassandra protocol version to use",
+      name: "protocol_version",
+      value: "2",
+      min: "0",
+      docs_url: "storage/cassandra.html#protocol_version"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Username to use when authenticating with the Cassandra hosts",
+      name: "username",
+      value: "<CASSANDRA_USERNAME>",
+      sensitive_disabled: true,
+      docs_url: "storage/cassandra.html#username"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Password to use when authenticating with the Cassandra hosts",
+      name: "password",
+      value: "<CASSANDRA_PASSWORD>",
+      sensitive_disabled: true,
+      docs_url: "storage/cassandra.html#password"
+    } %>
+    <%= partial "builder/reveal_number_field", locals: {
+      label: "Timeout in seconds to wait until a connection is established",
+      name: "connection_timeout",
+      value: "0",
+      min: "0",
+      docs_url: "storage/cassandra.html#connection_timeout"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "Connection with the Cassandra hosts should use TLS",
+      name: "tls",
+      options: {
+        "0": "Do not use TLS",
+        "1": "Use TLS"
+      },
+      docs_url: "storage/cassandra.html#tls"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "PEM Bundle File",
+      name: "pem_bundle_file",
+      value: "<CASSANDRA_PEM_BUNDLE_FILE>",
+      sensitive_disabled: true,
+      docs_url: "storage/cassandra.html#pem_bundle_file"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "PEM JSON File",
+      name: "pem_json_file",
+      value: "<CASSANDRA_PEM_JSON_FILE>",
+      sensitive_disabled: true,
+      docs_url: "storage/cassandra.html#pem_json_file"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "Disable TLS host verification",
+      name: "tls_skip_verify",
+      options: {
+        "0": "Use TLS host verification",
+        "1": "Disable TLS host verification"
+      },
+      docs_url: "storage/cassandra.html#tls_skip_verify"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "Minimum TLS version",
+      name: "tls_min_version",
+      options: {
+        tls12: "TLS 1.2",
+        tls11: "TLS 1.1",
+        tls10: "TLS 1.0"
+      },
+      docs_url: "storage/cassandra.html#tls_min_version"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="s3">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the S3 bucket",
+      name: "bucket",
+      required: true,
+      docs_url: "storage/s3.html#bucket"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Alternative, AWS compatible, S3 endpoint",
+      name: "endpoint",
+      docs_url: "storage/s3.html#endpoint"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "AWS region",
+      name: "region",
+      docs_url: "storage/s3.html#region"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "AWS Access Key",
+      name: "access_key",
+      value: "<AWS_ACCESS_KEY>",
+      sensitive_disabled: true,
+      docs_url: "storage/s3.html#access_key"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "AWS Secret Key",
+      name: "secret_key",
+      value: "<AWS_SECRET_KEY>",
+      sensitive_disabled: true,
+      docs_url: "storage/s3.html#secret_key"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Session Token",
+      name: "session_token",
+      value: "<AWS_SESSION_TOKEN>",
+      sensitive_disabled: true,
+      docs_url: "storage/s3.html#session_token"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Maximum number of concurrent requests",
+      name: "max_parallel",
+      docs_url: "storage/s3.html#max_parallel"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "Use host bucket style domains",
+      name: "s3_force_path_style",
+      options: {
+        false: "No",
+        true: "Yes"
+      },
+      docs_url: "storage/s3.html#s3_force_path_style"
+    } %>
+    <%= partial "builder/reveal_select_field", locals: {
+      label: "Use SSL for the endpoint connection",
+      name: "disable_ssl",
+      options: {
+        false: "No",
+        true: "Yes"
+      },
+      docs_url: "storage/s3.html#disable_ssl"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="swift">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "OpenStack authentication endpoint",
+      name: "auth_url",
+      required: true,
+      docs_url: "swift/swift.html#auth_url"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the Swift container",
+      name: "container",
+      required: true,
+      docs_url: "swift/swift.html#container"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "OpenStack username",
+      name: "username",
+      value: "<SWIFT_USERNAME>",
+      sensitive_disabled: true,
+      required: true,
+      docs_url: "storage/swift.html#username"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "OpenStack password",
+      name: "password",
+      value: "<SWIFT_PASSWORD>",
+      sensitive_disabled: true,
+      required: true,
+      docs_url: "storage/swift.html#password"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Maximum number of concurrent requests",
+      name: "max_parallel",
+      docs_url: "storage/swift.html#max_parallel"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the region",
+      name: "region",
+      docs_url: "storage/swift.html#region"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "ID of the tenant",
+      name: "tenant_id",
+      docs_url: "storage/swift.html#tenant_id"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the user domain",
+      name: "domain",
+      docs_url: "storage/swift.html#domain"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Name of the project's domain",
+      name: "project-domain",
+      docs_url: "storage/swift.html#project-domain"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "ID of the trust",
+      name: "trust_id",
+      docs_url: "storage/swift.html#trust_id"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Storage URL from alternate authentication",
+      name: "storage_url",
+      docs_url: "storage/swift.html#storage_url"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Auth token from alternate authentication",
+      name: "auth_token",
+      value: "<SWIFT_AUTH_TOKEN>",
+      sensitive_disabled: true,
+      docs_url: "storage/swift.html#auth_token"
+    } %>
+  </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="zookeeper">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "List of addresses of the Zookeeper instances",
+      name: "address",
+      value: "localhost:2181",
+      docs_url: "swift/swift.html#address"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Path in Zookeeper where data will be stored",
+      name: "path",
+      value: "vault/",
+      docs_url: "swift/swift.html#path"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Authentication string in Zookeeper AddAuth format",
+      name: "auth_info",
+      value: "<ZOOKEEPER_AUTH_INFO>",
+      sensitive_disabled: true,
+      docs_url: "swift/swift.html#auth_info"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Set permissions (CRWDA) to the ACL",
+      name: "znode_owner",
+      docs_url: "swift/swift.html#znode_owner"
+    } %>
+  </div>
+</section>

@@ -8,6 +8,21 @@ description: |-
 
 # Vault Configuration
 
+<nav class="tabs">
+  <ul>
+    <li>
+      <a href="/docs/configuration/builder.html">
+        Configuration Builder
+      </a>
+    </li>
+    <li>
+      <a href="/docs/configuration/index.html" class="is-active">
+        Manual Configuration
+      </a>
+    </li>
+  </ul>
+</nav>
+
 Outside of development mode, Vault servers are configured using a file.
 The format of this file is [HCL](https://github.com/hashicorp/hcl) or JSON.
 An example configuration is shown below:
@@ -150,6 +165,7 @@ The following parameters are used on backends that support [high availability][h
   such as request forwarding are enabled. Setting this to true on one Vault node
   will disable these features _only when that node is the active node_.
 
+[config-builder]: /docs/configuration/builder.html
 [storage-backend]: /docs/configuration/storage/index.html
 [listener]: /docs/configuration/listener/index.html
 [seal]: /docs/configuration/seal/index.html
