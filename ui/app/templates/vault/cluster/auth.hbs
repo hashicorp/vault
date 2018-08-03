@@ -15,12 +15,13 @@
             <div class="control">
               <input
                 value={{namespaceQueryParam}}
+                placeholder="/ (Root)"
                 oninput={{perform updateNamespace value="target.value"}}
+                autocomplete="off"
                 name="namespace"
                 id="namespace"
                 class="input"
                 type="text"
-                placeholder="/ (Root)"
               />
             </div>
           </div>
