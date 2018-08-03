@@ -20,6 +20,7 @@ const REPLICATION_ENDPOINTS = {
 const REPLICATION_MODES = ['dr', 'performance'];
 export default ApplicationAdapter.extend({
   version: inject.service(),
+  namespaceService: inject.service('namespace'),
   shouldBackgroundReloadRecord() {
     return true;
   },
@@ -28,7 +29,7 @@ export default ApplicationAdapter.extend({
       health: this.health(),
       sealStatus: this.sealStatus().catch(e => e),
     };
-    if (this.get('version.isEnterprise')) {
+    if (this.get('version.isEnterprise') && this.get('namespaceService.inRootNamespace')) {
       fetches.replicationStatus = this.replicationStatus().catch(e => e);
     }
     return Ember.RSVP.hash(fetches).then(({ health, sealStatus, replicationStatus }) => {
