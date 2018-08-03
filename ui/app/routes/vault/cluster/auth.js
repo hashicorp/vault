@@ -2,7 +2,7 @@ import ClusterRouteBase from './cluster-route-base';
 import Ember from 'ember';
 import config from 'vault/config/environment';
 
-const { RSVP, inject } = Ember;
+const { inject } = Ember;
 
 export default ClusterRouteBase.extend({
   flashMessages: inject.service(),

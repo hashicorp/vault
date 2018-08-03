@@ -1,5 +1,5 @@
 import Ember from 'ember';
-const { computed, Component, inject } = Ember;
+const { computed, Component } = Ember;
 
 export function linkParams({ mode, secret, queryParams }) {
   let params;

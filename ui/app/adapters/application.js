@@ -3,7 +3,8 @@ import DS from 'ember-data';
 import fetch from 'fetch';
 import config from '../config/environment';
 
-const { POLLING_URLS, NAMESPACE_ROOT_URLS } = config.APP;
+const { APP } = config;
+const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
 const { inject, assign, set, RSVP } = Ember;
 
 export default DS.RESTAdapter.extend({

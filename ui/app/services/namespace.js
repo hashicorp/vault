@@ -19,7 +19,11 @@ export default Service.extend({
 
   findNamespacesForUser: task(function*() {
     try {
-      let ns = yield this.get('store').findAll('namespace');
+      let ns = yield this.get('store').findAll('namespace', {
+        adapterOptions: {
+          forUser: true,
+        },
+      });
       this.set('accessibleNamespaces', ns);
     } catch (e) {
       //do nothing here

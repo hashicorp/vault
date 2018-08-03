@@ -4,7 +4,10 @@ export default ApplicationAdapter.extend({
   pathForType() {
     return 'namespaces';
   },
-  urlForFindAll() {
+  urlForFindAll(modelName, snapshot) {
+    if (snapshot.adapterOptions && snapshot.adapterOptions.forUser) {
+      return `/${this.urlPrefix()}/internal/ui/namespaces`;
+    }
     return `/${this.urlPrefix()}/namespaces?list=true`;
   },
   urlForCreateRecord(modelName, snapshot) {

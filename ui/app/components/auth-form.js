@@ -147,7 +147,6 @@ export default Ember.Component.extend(DEFAULTS, {
       });
       this.set('methods', methods);
     } catch (e) {
-      console.log(e);
       this.set('error', `There was an error fetching auth methods: ${e.errors[0]}`);
     }
   }),
