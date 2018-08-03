@@ -90,7 +90,7 @@ can leverage the corresponding auth method to authenticate with Vault.
 
 - [AWS Auth Method](/docs/auth/aws.html)
 - [Azure Auth Method](/docs/auth/azure.html)
-- [GCP Auth Method](/docs/auth/azure.html)
+- [GCP Auth Method](/docs/auth/gcp.html)
 
 
 ### Trusted Orchestrator
