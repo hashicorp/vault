@@ -1,4 +1,4 @@
-{{#if (and (not accessibleNamespaces) (eq namespace "default"))}}
+{{#if (and (not accessibleNamespaces) inRootNamespace)}}
   {{!-- Just yield the logo if they're in the default namespace and only have access to it --}}
   {{yield}}
 {{else}}

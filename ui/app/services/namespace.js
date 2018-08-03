@@ -2,7 +2,7 @@ import Ember from 'ember';
 import { task } from 'ember-concurrency';
 
 const { Service, computed, inject } = Ember;
-const DEFAULT_NAMESPACE = '';
+const ROOT_NAMESPACE = '';
 export default Service.extend({
   store: inject.service(),
   //populated by the query param on the cluster route
@@ -11,7 +11,7 @@ export default Service.extend({
   // current namespace
   accessibleNamespaces: null,
 
-  isDefault: computed.equal('namespace', DEFAULT_NAMESPACE),
+  inRootNamespace: computed.equal('path', ROOT_NAMESPACE),
 
   setNamespace(path) {
     this.set('path', path);

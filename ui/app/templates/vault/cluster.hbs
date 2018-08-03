@@ -28,9 +28,11 @@
             {{/if}}
           </button>
         </div>
-        <div class="navbar-item">
-          {{status-menu}}
-        </div>
+        {{#if namespaceService.inRootNamespace}}
+          <div class="navbar-item">
+            {{status-menu}}
+          </div>
+        {{/if}}
         <div class="navbar-item">
           {{status-menu type="user"}}
         </div>
@@ -57,18 +59,20 @@
               Access
             {{/link-to}}
           </li>
-          <li class="{{if (is-active-route 'vault.cluster.replication') 'is-active'}}">
-            {{#if activeCluster.anyReplicationEnabled}}
-              {{status-menu type="replication"}}
-            {{else}}
-              {{#link-to "vault.cluster.replication"}}
-                Replication
-                {{#if (is-version "OSS")}}
-                  <ICon @glyph="edition-enterprise" @size=16 @class="edition-icon" />
-                {{/if}}
-              {{/link-to}}
-            {{/if}}
-          </li>
+          {{#if namespaceService.inRootNamespace}}
+            <li class="{{if (is-active-route 'vault.cluster.replication') 'is-active'}}">
+              {{#if activeCluster.anyReplicationEnabled}}
+                {{status-menu type="replication"}}
+              {{else}}
+                {{#link-to "vault.cluster.replication"}}
+                  Replication
+                  {{#if (is-version "OSS")}}
+                    <ICon @glyph="edition-enterprise" @size=16 @class="edition-icon" />
+                  {{/if}}
+                {{/link-to}}
+              {{/if}}
+            </li>
+          {{/if}}
           <li class="{{if (is-active-route (array 'vault.cluster.policies' 'vault.cluster.policy')) 'is-active'}}">
             {{#link-to "vault.cluster.policies" "acl" current-when="vault.cluster.policies vault.cluster.policy"}}
               Policies
