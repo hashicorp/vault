@@ -48,8 +48,8 @@ export default DS.Model.extend({
     return expandAttributeMeta(this, this.get('formFields'));
   }),
 
-  // namespaces introduced types with a `ns_` prefix, we need
-  // to strip that to determine the type of secret
+  // namespaces introduced types with a `ns_` prefix for built-in engines
+  // so we need to strip that to normalize the type
   engineType: computed('type', function() {
     return this.get('type').replace(/^ns_/, '');
   }),

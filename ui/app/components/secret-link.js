@@ -20,19 +20,14 @@ export function linkParams({ mode, secret, queryParams }) {
 
 export default Component.extend({
   tagName: '',
-  namespace: inject.service(),
   mode: 'list',
 
   secret: null,
   queryParams: null,
   ariaLabel: null,
 
-  linkParams: computed('namespace.path', 'mode', 'secret', 'queryParams', function() {
-    let namespace = this.get('namespace.path');
+  linkParams: computed('mode', 'secret', 'queryParams', function() {
     let data = this.getProperties('mode', 'secret', 'queryParams');
-    if (namespace) {
-      data.queryParams = { ...{ namespace }, ...(data.queryParams || {}) };
-    }
     return linkParams(data);
   }),
 });
