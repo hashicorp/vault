@@ -27,6 +27,8 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   },
 
   clearNonGlobalModels() {
+    // this method clears all of the ember data cached models except
+    // the model types blacklisted in `globalNamespaceModels`
     let store = this.store;
     let modelsToKeep = this.get('globalNamespaceModels');
     for (let model of getOwner(this).lookup('data-adapter:main').getModelTypes()) {
