@@ -1,4 +1,9 @@
 <div class="auth-form">
+  {{#if showLoading}}
+    <div class="vault-loader">
+      {{partial 'svg/vault-loading'}}
+    </div>
+  {{/if}}
   <nav class="tabs sub-nav is-marginless">
     <ul>
       {{#each methodsToShow as |method|}}

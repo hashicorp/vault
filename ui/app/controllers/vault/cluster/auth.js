@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import { task, timeout } from 'ember-concurrency';
 
 const { inject, computed, Controller } = Ember;
 export default Controller.extend({
@@ -11,12 +12,9 @@ export default Controller.extend({
   authMethod: '',
   redirectTo: null,
 
-  actions: {
-    updateNamespace(event) {
-      let { value } = event.target;
-
-      this.get('namespaceService').setNamespace(value, true);
-      this.set('namespaceQueryParam', value);
-    },
-  },
+  updateNamespace: task(function*(value) {
+    yield timeout(200);
+    this.get('namespaceService').setNamespace(value, true);
+    this.set('namespaceQueryParam', value);
+  }).restartable(),
 });

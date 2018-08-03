@@ -13,7 +13,15 @@
         <div class="field-body">
           <div class="field">
             <div class="control">
-              <input value={{namespaceQueryParam}} oninput={{action "updateNamespace"}} name="namespace" id="namespace" class="input" type="text" placeholder="/ (Default)" />
+              <input
+                value={{namespaceQueryParam}}
+                oninput={{perform updateNamespace value="target.value"}}
+                name="namespace"
+                id="namespace"
+                class="input"
+                type="text"
+                placeholder="/ (Root)"
+              />
             </div>
           </div>
         </div>
@@ -23,8 +31,8 @@
   <Page.content>
     <AuthForm
       @wrappedToken={{wrappedToken}}
-      @cluster={{model.cluster}}
-      @methods={{model.methods}}
+      @cluster={{model}}
+      @namespace={{namespaceQueryParam}}
       @redirectTo={{redirectTo}}
       @selectedAuth={{authMethod}}
       />
