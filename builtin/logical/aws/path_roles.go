@@ -53,7 +53,7 @@ func pathRoles(b *backend) *framework.Path {
 			},
 
 			"policy_document": &framework.FieldSchema{
-				Type: framework.TypeString, // TODO: Investigate adding a TypeJSON
+				Type: framework.TypeString,
 				Description: `JSON-encoded IAM policy document. Behavior varies by credential_type. When credential_type is
 iam_user, then it will attach the contents of the policy_document to the IAM
 user generated. When credential_type is assumed_role or federation_token, this
@@ -167,7 +167,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 				resp.AddWarning(fmt.Sprintf("Invalid data of %q cleared out of role", roleEntry.InvalidData))
 				roleEntry.InvalidData = ""
 			}
-			err = nonLockedSetAwsRole(ctx, req.Storage, roleName, roleEntry)
+			err = setAwsRole(ctx, req.Storage, roleName, roleEntry)
 			if err != nil {
 				return nil, err
 			}
@@ -213,10 +213,8 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		if legacyRole != "" {
 			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with policy_document"), nil
 		}
-		var compacted string
-		if policyDocumentRaw.(string) == "" {
-			compacted = ""
-		} else {
+		compacted := policyDocumentRaw.(string)
+		if len(compacted) > 0 {
 			compacted, err = compactJSON(policyDocumentRaw.(string))
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("cannot parse policy document: %q", policyDocumentRaw.(string))), nil
@@ -235,7 +233,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		roleEntry.ProhibitFlexibleCredPath = false
 	}
 
-	if len(roleEntry.CredentialTypes) < 1 {
+	if len(roleEntry.CredentialTypes) == 0 {
 		return logical.ErrorResponse("did not supply credential_type"), nil
 	}
 
@@ -246,7 +244,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		return logical.ErrorResponse(fmt.Sprintf("cannot supply policy_arns when credential_type isn't %s", iamUserCred)), nil
 	}
 
-	err = nonLockedSetAwsRole(ctx, req.Storage, roleName, roleEntry)
+	err = setAwsRole(ctx, req.Storage, roleName, roleEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -287,6 +285,14 @@ func (b *backend) lockedRoleRead(ctx context.Context, s logical.Storage, roleNam
 
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
+	roleEntry, err = nonLockedRoleRead(ctx, s, roleName)
+
+	if err != nil {
+		return nil, err
+	}
+	if roleEntry != nil {
+		return roleEntry, nil
+	}
 	legacyEntry, err := s.Get(ctx, "policy/"+roleName)
 	if err != nil {
 		return nil, err
@@ -297,7 +303,7 @@ func (b *backend) lockedRoleRead(ctx context.Context, s logical.Storage, roleNam
 
 	newRoleEntry := upgradeLegacyPolicyEntry(string(legacyEntry.Value))
 	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
-		err = nonLockedSetAwsRole(ctx, s, roleName, newRoleEntry)
+		err = setAwsRole(ctx, s, roleName, newRoleEntry)
 		if err != nil {
 			return nil, err
 		}
@@ -366,7 +372,7 @@ func upgradeLegacyPolicyEntry(entry string) *awsRoleEntry {
 	return newRoleEntry
 }
 
-func nonLockedSetAwsRole(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry) error {
+func setAwsRole(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry) error {
 	if roleName == "" {
 		return fmt.Errorf("empty role name")
 	}

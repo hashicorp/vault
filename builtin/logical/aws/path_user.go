@@ -29,6 +29,7 @@ func pathUser(b *backend) *framework.Path {
 			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Description: "Lifetime of the returned credentials in seconds",
+				Default:     3600,
 			},
 		},
 
@@ -93,9 +94,6 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	case iamUserCred:
 		return b.secretAccessKeysCreate(ctx, req.Storage, req.DisplayName, roleName, role)
 	case assumedRoleCred:
-		if ttl == 0 {
-			ttl = 3600
-		}
 		switch {
 		case roleArn == "":
 			if len(role.RoleArns) != 1 {
@@ -107,9 +105,6 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		}
 		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, ttl)
 	case federationTokenCred:
-		if ttl == 0 {
-			ttl = 3600
-		}
 		return b.secretTokenCreate(ctx, req.Storage, req.DisplayName, roleName, role.PolicyDocument, ttl)
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown credential_type: %q", credentialType)), nil
