@@ -111,7 +111,7 @@ func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *
 }
 
 func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entry, err := b.lockedRoleRead(ctx, req.Storage, d.Get("name").(string))
+	entry, err := b.roleRead(ctx, req.Storage, d.Get("name").(string), true)
 	if err != nil {
 		return nil, err
 	}
@@ -150,32 +150,15 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
-	roleEntry, err := nonLockedRoleRead(ctx, req.Storage, roleName)
+	roleEntry, err := b.roleRead(ctx, req.Storage, roleName, false)
 	if err != nil {
 		return nil, err
 	}
 	if roleEntry == nil {
-		legacyEntry, err := req.Storage.Get(ctx, "policy/"+roleName)
-		if err != nil {
-			return nil, err
-		}
-		if legacyEntry == nil {
-			roleEntry = &awsRoleEntry{}
-		} else {
-			roleEntry = upgradeLegacyPolicyEntry(string(legacyEntry.Value))
-			if roleEntry.InvalidData != "" {
-				resp.AddWarning(fmt.Sprintf("Invalid data of %q cleared out of role", roleEntry.InvalidData))
-				roleEntry.InvalidData = ""
-			}
-			err = setAwsRole(ctx, req.Storage, roleName, roleEntry)
-			if err != nil {
-				return nil, err
-			}
-			err = req.Storage.Delete(ctx, "policy/"+roleName)
-			if err != nil {
-				return nil, err
-			}
-		}
+		roleEntry = &awsRoleEntry{}
+	} else if roleEntry.InvalidData != "" {
+		resp.AddWarning(fmt.Sprintf("Invalid data of %q cleared out of role", roleEntry.InvalidData))
+		roleEntry.InvalidData = ""
 	}
 
 	legacyRole, err := legacyRoleData(d)
@@ -252,47 +235,44 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	return &resp, nil
 }
 
-func nonLockedRoleRead(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
+func (b *backend) roleRead(ctx context.Context, s logical.Storage, roleName string, shouldLock bool) (*awsRoleEntry, error) {
 	if roleName == "" {
 		return nil, fmt.Errorf("missing role name")
 	}
+	if shouldLock {
+		b.roleMutex.RLock()
+	}
 	entry, err := s.Get(ctx, "role/"+roleName)
+	if shouldLock {
+		b.roleMutex.RUnlock()
+	}
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return nil, nil
+	var roleEntry awsRoleEntry
+	if entry != nil {
+		if err := entry.DecodeJSON(&roleEntry); err != nil {
+			return nil, err
+		}
+		return &roleEntry, nil
 	}
 
-	var result awsRoleEntry
-	if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
+	if shouldLock {
+		b.roleMutex.Lock()
+		defer b.roleMutex.Unlock()
 	}
-	return &result, nil
-}
-
-func (b *backend) lockedRoleRead(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
-	b.roleMutex.RLock()
-	roleEntry, err := nonLockedRoleRead(ctx, s, roleName)
-	b.roleMutex.RUnlock()
-
+	entry, err = s.Get(ctx, "role/"+roleName)
 	if err != nil {
 		return nil, err
 	}
-	if roleEntry != nil {
-		return roleEntry, nil
+
+	if entry != nil {
+		if err := entry.DecodeJSON(&roleEntry); err != nil {
+			return nil, err
+		}
+		return &roleEntry, nil
 	}
 
-	b.roleMutex.Lock()
-	defer b.roleMutex.Unlock()
-	roleEntry, err = nonLockedRoleRead(ctx, s, roleName)
-
-	if err != nil {
-		return nil, err
-	}
-	if roleEntry != nil {
-		return roleEntry, nil
-	}
 	legacyEntry, err := s.Get(ctx, "policy/"+roleName)
 	if err != nil {
 		return nil, err

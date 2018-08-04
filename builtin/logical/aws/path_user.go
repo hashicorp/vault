@@ -47,7 +47,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	roleName := d.Get("name").(string)
 
 	// Read the policy
-	role, err := b.lockedRoleRead(ctx, req.Storage, roleName)
+	role, err := b.roleRead(ctx, req.Storage, roleName, true)
 	if err != nil {
 		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
 	}
