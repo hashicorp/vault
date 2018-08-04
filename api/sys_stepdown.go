@@ -8,8 +8,9 @@ func (c *Sys) StepDown() error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
-	if err == nil {
-		defer resp.Body.Close()
+	if err != nil {
+		return err
 	}
-	return err
+	defer resp.Body.Close()
+	return nil
 }
