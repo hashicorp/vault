@@ -61,7 +61,7 @@ type RekeyBackup struct {
 func (c *Core) RekeyThreshold(ctx context.Context, recovery bool) (int, logical.HTTPCodedError) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return 0, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
@@ -95,7 +95,7 @@ func (c *Core) RekeyThreshold(ctx context.Context, recovery bool) (int, logical.
 func (c *Core) RekeyProgress(recovery, verification bool) (bool, int, logical.HTTPCodedError) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return false, 0, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
@@ -126,7 +126,7 @@ func (c *Core) RekeyProgress(recovery, verification bool) (bool, int, logical.HT
 func (c *Core) RekeyConfig(recovery bool) (*SealConfig, logical.HTTPCodedError) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
@@ -200,7 +200,7 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
 
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
@@ -250,7 +250,7 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) logical.HTTPCodedError {
 
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
@@ -299,7 +299,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
@@ -535,7 +535,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
@@ -734,7 +734,7 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
@@ -848,7 +848,7 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 func (c *Core) RekeyCancel(recovery bool) logical.HTTPCodedError {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
@@ -871,7 +871,7 @@ func (c *Core) RekeyCancel(recovery bool) logical.HTTPCodedError {
 func (c *Core) RekeyVerifyRestart(recovery bool) logical.HTTPCodedError {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
@@ -906,7 +906,7 @@ func (c *Core) RekeyVerifyRestart(recovery bool) logical.HTTPCodedError {
 func (c *Core) RekeyRetrieveBackup(ctx context.Context, recovery bool) (*RekeyBackup, logical.HTTPCodedError) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {
@@ -943,7 +943,7 @@ func (c *Core) RekeyRetrieveBackup(ctx context.Context, recovery bool) (*RekeyBa
 func (c *Core) RekeyDeleteBackup(ctx context.Context, recovery bool) logical.HTTPCodedError {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
 	if c.standby {

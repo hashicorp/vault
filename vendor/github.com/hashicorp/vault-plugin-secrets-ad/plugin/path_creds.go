@@ -141,10 +141,7 @@ func (b *backend) credReadOperation(ctx context.Context, req *logical.Request, f
 		}
 	}
 	if respErr != nil {
-		return nil, err
-	}
-	if resp == nil {
-		return nil, nil
+		return nil, respErr
 	}
 	return resp, nil
 }

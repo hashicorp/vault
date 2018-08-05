@@ -220,7 +220,7 @@ To generate a new set of STS federation token credentials, we simply write to
 the role using the aws/sts endpoint:
 
 ```text
-$vault write aws/sts/deploy ttl=60m
+$ vault write aws/sts/deploy ttl=60m
 Key            	Value
 lease_id       	aws/sts/deploy/31d771a6-fb39-f46b-fdc5-945109106422
 lease_duration 	60m0s
@@ -233,7 +233,7 @@ security_token 	AQoDYXdzEEwasAKwQyZUtZaCjVNDiXXXXXXXXgUgBBVUUbSyujLjsw6jYzboOQ89
 ### STS AssumeRole
 
 STS AssumeRole is typically used for cross-account authentication or single sign-on (SSO)
-scenarios.  AssumeRole has additional complexity compared STS federation tokens:
+scenarios.  AssumeRole has additional complexity compared to STS federation tokens:
 
 1. The ARN of a IAM role to assume
 2. IAM inline policies and/or managed policies attached to the IAM role
@@ -289,7 +289,7 @@ To generate a new set of STS assumed role credentials, we again write to
 the role using the aws/sts endpoint:
 
 ```text
-$vault write aws/sts/deploy ttl=60m
+$ vault write aws/sts/deploy ttl=60m
 Key            	Value
 lease_id       	aws/sts/deploy/31d771a6-fb39-f46b-fdc5-945109106422
 lease_duration 	60m0s

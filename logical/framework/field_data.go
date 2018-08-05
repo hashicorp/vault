@@ -226,6 +226,9 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		default:
 			return nil, false, fmt.Errorf("invalid input '%v'", raw)
 		}
+		if result < 0 {
+			return nil, true, fmt.Errorf("cannot provide negative value '%d'", result)
+		}
 		return result, true, nil
 
 	case TypeCommaIntSlice:

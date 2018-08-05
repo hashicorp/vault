@@ -128,6 +128,31 @@ test('it renders all the supported methods and Other tab when methods are presen
   assert.equal(component.tabs.objectAt(1).name, 'Other', 'second tab is the Other tab');
 });
 
+test('it calls authorize with the correct path', function(assert) {
+  this.register('service:auth', workingAuthService);
+  this.inject.service('auth');
+  let authSpy = sinon.spy(this.get('auth'), 'authenticate');
+  let methods = [
+    {
+      type: 'userpass',
+      id: 'foo',
+      path: 'foo/',
+    },
+  ];
+  this.set('methods', methods);
+  this.set('selectedAuth', 'foo/');
+
+  this.render(hbs`{{auth-form cluster=cluster methods=methods selectedAuth=selectedAuth}}`);
+  component.login();
+
+  return wait().then(() => {
+    assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
+    let { data } = authSpy.getCall(0).args[0];
+    assert.equal(data.path, methods[0].id, 'uses the id for the path');
+    authSpy.restore();
+  });
+});
+
 test('it renders all the supported methods when no supported methods are present in passed methods', function(
   assert
 ) {

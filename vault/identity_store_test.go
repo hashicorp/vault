@@ -67,7 +67,7 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 	}
 
 	// Make the request with the above created token
-	resp, err := core.HandleRequest(&logical.Request{
+	resp, err := core.HandleRequest(context.Background(), &logical.Request{
 		ClientToken: "testtokenid",
 		Operation:   logical.ReadOperation,
 		Path:        "test/backend/foo",
@@ -241,7 +241,7 @@ func TestIdentityStore_WrapInfoInheritance(t *testing.T) {
 		},
 	}
 
-	resp, err = core.HandleRequest(wrapReq)
+	resp, err = core.HandleRequest(context.Background(), wrapReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
 	}

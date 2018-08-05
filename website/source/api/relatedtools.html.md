@@ -28,5 +28,6 @@ The following list of tools is maintained by the community of Vault users; Hashi
 * [vaultenv](https://github.com/channable/vaultenv) - A tool that fetches secrets in parallel, puts them into the environment and then `exec`s the process that needs them
 * [vault-migrator](https://github.com/nebtex/vault-migrator) - A tool to migrate data between different Vault storage mechanisms
 * [Cryptr](https://github.com/adobe/cryptr) - a desktop Vault UI for Mac, Windows and Linux
+* [sequelize-vault](https://github.com/linyows/sequelize-vault) - A Sequelize plugin for easily integrating Vault secrets.
 
 Want to add your own project, or one that you use? Additions are welcome via [pull requests](https://github.com/hashicorp/vault/blob/master/website/source/api/relatedtools.html.md).

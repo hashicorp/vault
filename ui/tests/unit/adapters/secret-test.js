@@ -2,7 +2,7 @@ import { moduleFor, test } from 'ember-qunit';
 import Ember from 'ember';
 
 moduleFor('adapter:secret', 'Unit | Adapter | secret', {
-  needs: ['service:auth', 'service:flash-messages'],
+  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
 });
 
 test('secret api urls', function(assert) {

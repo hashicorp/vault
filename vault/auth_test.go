@@ -342,7 +342,7 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Path:      "auth/foo/login",
 	}
-	resp, err := c.HandleRequest(r)
+	resp, err := c.HandleRequest(context.Background(), r)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

@@ -4,6 +4,7 @@ import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 const { inject } = Ember;
 export default Ember.Route.extend(ModelBoundaryRoute, {
   auth: inject.service(),
+  controlGroup: inject.service(),
   flashMessages: inject.service(),
   console: inject.service(),
 
@@ -11,6 +12,7 @@ export default Ember.Route.extend(ModelBoundaryRoute, {
 
   beforeModel() {
     this.get('auth').deleteCurrentToken();
+    this.get('controlGroup').deleteTokens();
     this.get('console').set('isOpen', false);
     this.get('console').clearLog(true);
     this.clearModelCache();

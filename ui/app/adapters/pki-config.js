@@ -65,9 +65,9 @@ export default ApplicationAdapter.extend({
     return Ember.RSVP.hash({
       backend: backendPath,
       id: this.id(backendPath),
-      der: this.rawRequest(derURL, { unauthenticate: true }).then(response => response.blob()),
-      pem: this.rawRequest(pemURL, { unauthenticate: true }).then(response => response.text()),
-      ca_chain: this.rawRequest(chainURL, { unauthenticate: true }).then(response => response.text()),
+      der: this.rawRequest(derURL, { unauthenticated: true }).then(response => response.blob()),
+      pem: this.rawRequest(pemURL, { unauthenticated: true }).then(response => response.text()),
+      ca_chain: this.rawRequest(chainURL, { unauthenticated: true }).then(response => response.text()),
     });
   },
 
