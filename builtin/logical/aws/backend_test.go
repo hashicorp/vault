@@ -36,7 +36,7 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testDynamoPolicy),
-			testAccStepReadUser(t, "test", []credentialTestFunc{listDynamoTablesTest}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest}),
 		},
 	})
 }
@@ -58,11 +58,11 @@ func TestBackend_basicSTS(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigWithCreds(t, accessKey),
 			testAccStepWritePolicy(t, "test", testDynamoPolicy),
-			testAccStepReadSTS(t, "test", []credentialTestFunc{listDynamoTablesTest}),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest}),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
 			testAccStepReadSTSWithArnPolicy(t, "test"),
 			testAccStepWriteArnRoleRef(t, testRoleName),
-			testAccStepReadSTS(t, testRoleName, []credentialTestFunc{describeInstancesTest}),
+			testAccStepRead(t, "sts", testRoleName, []credentialTestFunc{describeInstancesTest}),
 		},
 		Teardown: func() error {
 			return teardown(accessKey)
@@ -368,10 +368,10 @@ func testAccStepConfigWithCreds(t *testing.T, accessKey *awsAccessKey) logicalte
 	}
 }
 
-func testAccStepReadUser(t *testing.T, name string, credentialTests []credentialTestFunc) logicaltest.TestStep {
+func testAccStepRead(t *testing.T, path, name string, credentialTests []credentialTestFunc) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path:      "creds/" + name,
+		Path:      path + "/" + name,
 		Check: func(resp *logical.Response) error {
 			var d struct {
 				AccessKey string `mapstructure:"access_key"`
@@ -475,31 +475,6 @@ func retryUntilSuccess(op func() error) error {
 		retryCount++
 	}
 	return err
-}
-
-func testAccStepReadSTS(t *testing.T, name string, credentialTests []credentialTestFunc) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.ReadOperation,
-		Path:      "sts/" + name,
-		Check: func(resp *logical.Response) error {
-			var d struct {
-				AccessKey string `mapstructure:"access_key"`
-				SecretKey string `mapstructure:"secret_key"`
-				STSToken  string `mapstructure:"security_token"`
-			}
-			if err := mapstructure.Decode(resp.Data, &d); err != nil {
-				return err
-			}
-			log.Printf("[WARN] Generated credentials: %v", d)
-			for _, test := range credentialTests {
-				err := test(d.AccessKey, d.SecretKey, d.STSToken)
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		},
-	}
 }
 
 func testAccStepReadSTSWithArnPolicy(t *testing.T, name string) logicaltest.TestStep {
@@ -626,7 +601,7 @@ func TestBackend_basicPolicyArnRef(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
-			testAccStepReadUser(t, "test", []credentialTestFunc{describeInstancesTest}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest}),
 		},
 	})
 }
@@ -655,8 +630,8 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepReadRole(t, "test", expectedRoleData),
-			testAccStepReadUser(t, "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest}),
-			testAccStepReadSTS(t, "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest}),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest}),
 		},
 	})
 }
@@ -696,8 +671,8 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
-			testAccStepReadSTS(t, "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
-			testAccStepReadUser(t, "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
 		},
 		Teardown: deleteTestRole,
 	})
