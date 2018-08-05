@@ -272,7 +272,7 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 		Scope:  0, // base
 		Filter: "(objectClass=*)",
 		Attributes: []string{
-			cfg.GroupAttr,
+			"tokenGroups",
 		},
 		SizeLimit: 1,
 	})
@@ -285,7 +285,7 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 	}
 
 	userEntry := result.Entries[0]
-	groupAttrValues := userEntry.GetRawAttributeValues(cfg.GroupAttr)
+	groupAttrValues := userEntry.GetRawAttributeValues("tokenGroups")
 
 	groupEntries := make([]*ldap.Entry, 0, len(groupAttrValues))
 	for _, sidBytes := range groupAttrValues {
@@ -322,7 +322,7 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 /*
  * getLdapGroups queries LDAP and returns a slice describing the set of groups the authenticated user is a member of.
  *
- * If the GroupAttr is "tokenGroups" or "tokenGroupsGlobalAndUniversal" then the search is performed directly on the userDN.
+ * If cfg.UseTokenGroups is true then the search is performed directly on the userDN.
  * The values of those attributes are converted to string SIDs, and then looked up to get ldap.Entry objects.
  * Otherwise, the search query is constructed according to cfg.GroupFilter, and run in context of cfg.GroupDN.
  * Groups will be resolved from the query results by following the attribute defined in cfg.GroupAttr.
@@ -342,10 +342,9 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string, username string) ([]string, error) {
 	var entries []*ldap.Entry
 	var err error
-	switch strings.ToLower(cfg.GroupAttr) {
-	case "tokengroups", "tokengroupsglobalanduniversal":
+	if cfg.UseTokenGroups {
 		entries, err = c.performLdapTokenGroupsSearch(cfg, conn, userDN)
-	default:
+	} else {
 		entries, err = c.performLdapFilterGroupsSearch(cfg, conn, userDN, username)
 	}
 	if err != nil {
