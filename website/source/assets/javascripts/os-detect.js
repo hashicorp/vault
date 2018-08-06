@@ -23,8 +23,10 @@ function getCurrentOSBit() {
 
 document.addEventListener("turbolinks:load", function() {
   if (document.querySelector(`[data-os]`)) {
-    var currentOSElement = document.querySelector(`[data-os="${getCurrentOS()}"]`);
-    var currentBitLinkElement = document.querySelector(`[data-os="${getCurrentOS()}"] [data-os-bit="${getCurrentOSBit()}"]`);
+    var osSelector = '[data-os="' + getCurrentOS() + '"]';
+    var bitSelector = '[data-os-bit="' + getCurrentOSBit() + '"]';
+    var currentOSElement = document.querySelector(osSelector);
+    var currentBitLinkElement = document.querySelector(osSelector + ' ' + bitSelector);
     currentOSElement.classList.add("current");
     currentBitLinkElement.classList.add("current");
   }

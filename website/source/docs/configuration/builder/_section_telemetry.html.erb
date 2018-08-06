@@ -120,4 +120,17 @@
       docs_url: "telemetry/#disable_hostname"
     } %>
   </div>
+
+  <div class="config-reveal-container nested-fields" data-if-option="dogstatsd">
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "Address of a DogStatsD instance",
+      name: "dogstatsd_addr",
+      docs_url: "telemetry/#dogstatsd_addr"
+    } %>
+    <%= partial "builder/reveal_text_field", locals: {
+      label: "List of global tags that will be added to all telemetry packets sent to DogStatsD",
+      name: "dogstatsd_tags",
+      docs_url: "telemetry/#dogstatsd_tags"
+    } %>
+  </div>
 </section>
