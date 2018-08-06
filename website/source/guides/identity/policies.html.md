@@ -594,4 +594,4 @@ requirements. Next, the [AppRole Pull Authentication](/guides/identity/authentic
 guide demonstrates how to associate policies to a role.
 
 To learn about Sentinel policies, refer to the [Sentinel
-Policies](/guides/identity/sentinel.html.md) guide.
+Policies](/guides/identity/sentinel.html) guide.
