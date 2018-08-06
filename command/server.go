@@ -50,6 +50,8 @@ import (
 var _ cli.Command = (*ServerCommand)(nil)
 var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
 
+const migrationLock = "sys/migration"
+
 type ServerCommand struct {
 	*BaseCommand
 
@@ -93,6 +95,7 @@ type ServerCommand struct {
 	flagDevTransactional bool
 	flagTestVerifyOnly   bool
 	flagCombineLogs      bool
+	flagIgnoreMigration  bool
 }
 
 type ServerListener struct {
@@ -184,6 +187,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Default: "127.0.0.1:8200",
 		EnvVar:  "VAULT_DEV_LISTEN_ADDRESS",
 		Usage:   "Address to bind to in \"dev\" mode.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "ignore-migration",
+		Target:  &c.flagIgnoreMigration,
+		Default: false,
+		Usage:   "Start server even if storage migration is in progress.",
 	})
 
 	// Internal-only flags to follow.
@@ -457,6 +467,23 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
 		return 1
 	}
+
+	startTime, err := CheckMigration(backend)
+	if err != nil {
+		c.UI.Error("Error checking migration status")
+		return 1
+	}
+
+	if startTime != "" {
+		if !c.flagIgnoreMigration {
+			c.UI.Error(wrapAtLength(fmt.Sprintf("Storage migration in progress (started: %s). "+
+				"Use -ignore-migration to override this check.", startTime)))
+			return 1
+		}
+		c.UI.Warn(fmt.Sprintf("WARNING! Storage migration in progress (started: %s).", startTime))
+	}
+
+	backend.List(context.Background(), "")
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
@@ -1730,6 +1757,36 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
+}
+
+func CheckMigration(b physical.Backend) (string, error) {
+	startTime := ""
+
+	entry, err := b.Get(context.Background(), migrationLock)
+
+	if err != nil {
+		return "", err
+	}
+
+	if entry != nil {
+		startTime = string(entry.Value)
+	}
+
+	return startTime, nil
+}
+
+func SetMigration(b physical.Backend, active bool) error {
+	if !active {
+		return b.Delete(context.Background(), migrationLock)
+	}
+
+	now := time.Now().Format(time.RFC3339)
+
+	entry := &physical.Entry{
+		Key:   migrationLock,
+		Value: []byte(now),
+	}
+	return b.Put(context.Background(), entry)
 }
 
 type grpclogFaker struct {
