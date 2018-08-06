@@ -119,7 +119,7 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 		}
 		result, err := conn.Search(&ldap.SearchRequest{
 			BaseDN:    cfg.UserDN,
-			Scope:     2, // subtree
+			Scope:     ldap.ScopeWholeSubtree,
 			Filter:    filter,
 			SizeLimit: math.MaxInt32,
 		})
@@ -154,7 +154,7 @@ func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN string) (st
 		}
 		result, err := conn.Search(&ldap.SearchRequest{
 			BaseDN:    cfg.UserDN,
-			Scope:     2, // subtree
+			Scope:     ldap.ScopeWholeSubtree,
 			Filter:    filter,
 			SizeLimit: math.MaxInt32,
 		})
@@ -213,7 +213,7 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 
 	result, err := conn.Search(&ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,
-		Scope:  2, // subtree
+		Scope:  ldap.ScopeWholeSubtree,
 		Filter: renderedQuery.String(),
 		Attributes: []string{
 			cfg.GroupAttr,
@@ -232,29 +232,22 @@ func sidBytesToString(b []byte) (string, error) {
 
 	var revision, subAuthorityCount uint8
 	var identifierAuthorityParts [3]uint16
-	var identifierAuthority uint64 // actually, 48bits only
-	var subAuthority []uint32
-	var err error
 
-	err = binary.Read(reader, binary.LittleEndian, &revision)
-	if err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &revision); err != nil {
 		return "", errwrap.Wrapf(fmt.Sprintf("SID %#v convert failed reading Revision: {{err}}", b), err)
 	}
 
-	err = binary.Read(reader, binary.LittleEndian, &subAuthorityCount)
-	if err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &subAuthorityCount); err != nil {
 		return "", errwrap.Wrapf(fmt.Sprintf("SID %#v convert failed reading SubAuthorityCount: {{err}}", b), err)
 	}
 
-	err = binary.Read(reader, binary.BigEndian, &identifierAuthorityParts)
-	if err != nil {
+	if err := binary.Read(reader, binary.BigEndian, &identifierAuthorityParts); err != nil {
 		return "", errwrap.Wrapf(fmt.Sprintf("SID %#v convert failed reading IdentifierAuthority: {{err}}", b), err)
 	}
-	identifierAuthority = (uint64(identifierAuthorityParts[0]) << 32) + (uint64(identifierAuthorityParts[1]) << 16) + uint64(identifierAuthorityParts[2])
+	identifierAuthority := (uint64(identifierAuthorityParts[0]) << 32) + (uint64(identifierAuthorityParts[1]) << 16) + uint64(identifierAuthorityParts[2])
 
-	subAuthority = make([]uint32, subAuthorityCount)
-	err = binary.Read(reader, binary.LittleEndian, &subAuthority)
-	if err != nil {
+	subAuthority := make([]uint32, subAuthorityCount)
+	if err := binary.Read(reader, binary.LittleEndian, &subAuthority); err != nil {
 		return "", errwrap.Wrapf(fmt.Sprintf("SID %#v convert failed reading SubAuthority: {{err}}", b), err)
 	}
 
@@ -269,7 +262,7 @@ func sidBytesToString(b []byte) (string, error) {
 func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection, userDN string) ([]*ldap.Entry, error) {
 	result, err := conn.Search(&ldap.SearchRequest{
 		BaseDN: userDN,
-		Scope:  0, // base
+		Scope:  ldap.ScopeBaseObject,
 		Filter: "(objectClass=*)",
 		Attributes: []string{
 			"tokenGroups",
@@ -297,7 +290,7 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 
 		groupResult, err := conn.Search(&ldap.SearchRequest{
 			BaseDN: fmt.Sprintf("<SID=%s>", sidString),
-			Scope:  0, // base
+			Scope:  ldap.ScopeBaseObject,
 			Filter: "(objectClass=*)",
 			Attributes: []string{
 				"1.1", // RFC no attributes
