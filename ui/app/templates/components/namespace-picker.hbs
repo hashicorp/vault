@@ -35,7 +35,7 @@
         <NamespaceLink @targetNamespace={{namespacePath}} @class="namespace-link" />
         <div class="namespace-list">
           {{#each accessibleNamespaces as |ns|}}
-          <NamespaceLink @targetNamespace={{ns.id}} @class="namespace-link" />
+          <NamespaceLink @targetNamespace={{ns}} @class="namespace-link" />
           {{/each}}
         </div>
       </div>

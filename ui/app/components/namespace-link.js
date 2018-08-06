@@ -13,14 +13,4 @@ export default Component.extend({
   isCurrentNamespace: computed('targetNamespace', 'currentNamespace', function() {
     return this.get('currentNamespace') === this.get('targetNamespace');
   }),
-
-  queryParamValue: computed('targetNamespace', 'currentNamespace', function() {
-    let current = this.get('currentNamespace');
-    let target = this.get('targetNamespace');
-    if (current) {
-      return `${current}/${target}`;
-    }
-
-    return target;
-  }),
 });

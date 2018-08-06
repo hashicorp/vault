@@ -10,6 +10,7 @@ export default ApplicationAdapter.extend({
     }
     return `/${this.urlPrefix()}/namespaces?list=true`;
   },
+
   urlForCreateRecord(modelName, snapshot) {
     let id = snapshot.attr('path');
     return this.buildURL(modelName, id);
@@ -20,5 +21,14 @@ export default ApplicationAdapter.extend({
     return this._super(...arguments).then(() => {
       return { id };
     });
+  },
+
+  findAll(store, type, sinceToken, snapshot) {
+    if (snapshot.adapterOptions && typeof snapshot.adapterOptions.namespace !== 'undefined') {
+      return this.ajax(this.urlForFindAll('namespace', snapshot), 'GET', {
+        namespace: snapshot.adapterOptions.namespace,
+      });
+    }
+    return this._super(...arguments);
   },
 });

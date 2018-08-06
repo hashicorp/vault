@@ -37,7 +37,8 @@ export default DS.RESTAdapter.extend({
         headers['X-Vault-Wrap-TTL'] = options.wrapTTL;
       }
     }
-    let namespace = this.get('namespaceService.path');
+    let namespace =
+      typeof options.namespace === 'undefined' ? this.get('namespaceService.path') : options.namespace;
     if (namespace && !NAMESPACE_ROOT_URLS.some(str => url.includes(str))) {
       headers['X-Vault-Namespace'] = namespace;
     }
