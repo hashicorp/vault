@@ -233,7 +233,7 @@ security_token 	AQoDYXdzEEwasAKwQyZUtZaCjVNDiXXXXXXXXgUgBBVUUbSyujLjsw6jYzboOQ89
 ### STS AssumeRole
 
 STS AssumeRole is typically used for cross-account authentication or single sign-on (SSO)
-scenarios.  AssumeRole has additional complexity compared STS federation tokens:
+scenarios.  AssumeRole has additional complexity compared to STS federation tokens:
 
 1. The ARN of a IAM role to assume
 2. IAM inline policies and/or managed policies attached to the IAM role

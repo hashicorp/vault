@@ -61,6 +61,9 @@ type SystemView interface {
 	// EntityInfo returns a subset of information related to the identity entity
 	// for the given entity id
 	EntityInfo(entityID string) (*Entity, error)
+
+	// PluginEnv returns Vault environment information used by plugins
+	PluginEnv(context.Context) (*PluginEnvironment, error)
 }
 
 type StaticSystemView struct {
@@ -74,6 +77,8 @@ type StaticSystemView struct {
 	LocalMountVal       bool
 	ReplicationStateVal consts.ReplicationState
 	EntityVal           *Entity
+	VaultVersion        string
+	PluginEnvironment   *PluginEnvironment
 }
 
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {
@@ -118,4 +123,8 @@ func (d StaticSystemView) MlockEnabled() bool {
 
 func (d StaticSystemView) EntityInfo(entityID string) (*Entity, error) {
 	return d.EntityVal, nil
+}
+
+func (d StaticSystemView) PluginEnv(_ context.Context) (*PluginEnvironment, error) {
+	return d.PluginEnvironment, nil
 }

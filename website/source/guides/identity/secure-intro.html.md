@@ -90,7 +90,7 @@ can leverage the corresponding auth method to authenticate with Vault.
 
 - [AWS Auth Method](/docs/auth/aws.html)
 - [Azure Auth Method](/docs/auth/azure.html)
-- [GCP Auth Method](/docs/auth/azure.html)
+- [GCP Auth Method](/docs/auth/gcp.html)
 
 
 ### Trusted Orchestrator
@@ -138,6 +138,6 @@ this model can be applied regardless of where the applications are running.
 
 When a [platform integration](#platform-integration) is available that should be
 preferred, as it is generally the simpler solution and works independent of the
-orchestration mechanism. For a [trusted orchestrator](#platform-integration),
+orchestration mechanism. For a [trusted orchestrator](#trusted-orchestrator),
 specific documentation for that orchestrator should be consulted on Vault
 integration.

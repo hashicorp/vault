@@ -118,6 +118,7 @@ path "sys/policy/*" {
 }
 
 # Write test data
+# Set the path to "secret/data/mysql/*" if you are running `kv-v2`
 path "secret/mysql/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
@@ -210,9 +211,11 @@ path "auth/approle/login" {
 }
 
 # Read test data
+# Set the path to "secret/data/mysql/*" if you are running `kv-v2`
 path "secret/mysql/*" {
   capabilities = [ "read" ]
 }
+
 ```
 
 #### CLI command
@@ -551,7 +554,7 @@ found" message.
 `secret/mysql/webapp` path.
 
 ```shell
-$ vault kv put secret/dev/config/mongodb @mysqldb.txt
+$ vault kv put secret/mysql/webapp @mysqldb.txt
 
 $ cat mysqldb.txt
 {
