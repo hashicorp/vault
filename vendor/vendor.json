@@ -301,6 +301,12 @@
 			"revisionTime": "2018-07-11T05:22:29Z"
 		},
 		{
+			"checksumSHA1": "DtuTqKH29YnLjrIJkRYX0HQtXY0=",
+			"path": "github.com/aws/aws-sdk-go/aws/arn",
+			"revision": "c01ebd0d48a4772fd28a0b684db0f36882dc995c",
+			"revisionTime": "2018-07-11T05:22:29Z"
+		},
+		{
 			"checksumSHA1": "Y9W+4GimK4Fuxq+vyIskVYFRnX4=",
 			"path": "github.com/aws/aws-sdk-go/aws/awserr",
 			"revision": "c01ebd0d48a4772fd28a0b684db0f36882dc995c",
