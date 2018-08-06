@@ -592,3 +592,6 @@ $ curl --request POST --header "X-Vault-Token: ..." --data '{"path":"sys/auth/ap
 In this guide, you learned how to write policies based on given policy
 requirements. Next, the [AppRole Pull Authentication](/guides/identity/authentication.html)
 guide demonstrates how to associate policies to a role.
+
+To learn about Sentinel policies, refer to the [Sentinel
+Policies](/guides/identity/sentinel.html.md) guide.
