@@ -60,6 +60,7 @@ func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURL string) {
 		session.SetSocketTimeout(1 * time.Minute)
 		return session.Ping()
 	}); err != nil {
+		cleanup()
 		t.Fatalf("Could not connect to mongo docker container: %s", err)
 	}
 
