@@ -27,7 +27,15 @@ document.addEventListener("turbolinks:load", function() {
     var bitSelector = '[data-os-bit="' + getCurrentOSBit() + '"]';
     var currentOSElement = document.querySelector(osSelector);
     var currentBitLinkElement = document.querySelector(osSelector + ' ' + bitSelector);
+    var currentBitLinkHTML = currentBitLinkElement.cloneNode(true);
+    var bitList = currentBitLinkElement.parentNode;
+
+    // Move current Bit link to the start of the list
+    bitList.removeChild(currentBitLinkElement);
+    bitList.prepend(currentBitLinkHTML);
+
+    // Highlight current OS and Bit link
     currentOSElement.classList.add("current");
-    currentBitLinkElement.classList.add("current");
+    document.querySelector(osSelector + ' ' + bitSelector).classList.add("current")
   }
 });

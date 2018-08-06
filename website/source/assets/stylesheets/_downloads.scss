@@ -6,6 +6,7 @@ body.layout-downloads {
       }
 
       .download {
+        align-items: center;
         border: 1px solid #ddd;
         border-radius: 8px;
         display: flex;
@@ -21,6 +22,7 @@ body.layout-downloads {
           }
 
           ul {
+            align-items: center;
             padding-left: 0px;
             margin: -8px 0 0 0;
           }
@@ -69,10 +71,15 @@ body.layout-downloads {
             width: 100%;
 
             .current {
+              &::after {
+                content: "Other versions:";
+              }
+
               .download-link {
                 @extend .button;
                 @extend .primary;
                 line-height: 1;
+                margin: 0 15px 0 0;
                 order: 0;
                 padding: 10px 15px;
 
