@@ -37,9 +37,14 @@ credentials for those managed by Vault.
 demonstrates a secure method to distribute secrets by wrapping them where only
 the expecting client can unwrap.
 
+- [One-Time SSH Password](/guides/secret-mgmt/ssh-otp.html) guide demonstrates
+the use of SSH secrets engine to generate a one-time password (OTP) every time a
+client wants to SSH into a remote host.
+
 - [Build Your Own Certificate Authority](/guides/secret-mgmt/pki-engine.html)
 guide walks you through the use of the PKI secrets engine to generate dynamic
 X.509 certificates.
+
 - [Direct Application Integration](/guides/secret-mgmt/app-integration.html)
 guide demonstrates the usage of _Consul Template_ and _Envconsul_ tool to
 retrieve secrets from Vault with no or minimum code change to your applications.
