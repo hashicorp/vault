@@ -83,7 +83,7 @@ privileged token such as **`root`**. Required permissions are:
 # To list policies
 path "sys/policies/*"
 {
-  capabilities = ["update"]
+  capabilities = ["list"]
 }
 
 # Create and manage EGPs
