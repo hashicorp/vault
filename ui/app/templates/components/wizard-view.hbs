@@ -1,1 +1,4 @@
-{{stringify currentState}}
+<div class="ui-wizard (if isActive active-wizard)">
+  <p>Current State: {{currentState}}</p>
+  <button type="button" {{action dismissWizard}}>X</button>
+</div>
