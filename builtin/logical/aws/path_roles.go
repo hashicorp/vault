@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -301,16 +301,17 @@ func (b *backend) roleRead(ctx context.Context, s logical.Storage, roleName stri
 func upgradeLegacyPolicyEntry(entry string) *awsRoleEntry {
 	var newRoleEntry *awsRoleEntry
 	if strings.HasPrefix(entry, "arn:") {
-		arnRegex := regexp.MustCompile(`^arn:aws[a-z-]*:iam::(?P<account_num>\d{12}|aws):(?P<entity_type>\w+)/(?P<role_path>.+)$`)
-		parsedArn := arnRegex.FindStringSubmatch(entry)
-		if parsedArn == nil {
+		parsedArn, err := arn.Parse(entry)
+		if err != nil {
 			newRoleEntry = &awsRoleEntry{
 				InvalidData: entry,
 				Version:     1,
 			}
 			return newRoleEntry
 		}
-		switch parsedArn[2] {
+		resourceParts := strings.Split(parsedArn.Resource, "/")
+		resourceType := resourceParts[0]
+		switch resourceType {
 		case "role":
 			newRoleEntry = &awsRoleEntry{
 				CredentialTypes:          []string{assumedRoleCred},
