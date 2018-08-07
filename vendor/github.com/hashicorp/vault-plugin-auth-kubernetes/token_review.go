@@ -90,6 +90,10 @@ func (t *tokenReviewAPI) Review(jwt string) (*tokenReviewResult, error) {
 	// Set the JWT as the Bearer token
 	req.Header.Set("Authorization", bearer)
 
+	// Set the MIME type headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
