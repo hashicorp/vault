@@ -902,10 +902,12 @@ func TestBackend_roleCrud(t *testing.T) {
 	// Test role modification
 	{
 		data = map[string]interface{}{
-			"name":                "plugin-role-test",
-			"rollback_statements": testRole,
-			"renew_statements":    defaultRevocationSQL,
-			"max_ttl":             "7m",
+			"name":                  "plugin-role-test",
+			"creation_statements":   []string{testRole, testRole},
+			"revocation_statements": []string{defaultRevocationSQL, defaultRevocationSQL},
+			"rollback_statements":   testRole,
+			"renew_statements":      defaultRevocationSQL,
+			"max_ttl":               "7m",
 		}
 		req = &logical.Request{
 			Operation: logical.UpdateOperation,
@@ -943,9 +945,9 @@ func TestBackend_roleCrud(t *testing.T) {
 		}
 
 		expected := dbplugin.Statements{
-			Creation:   []string{strings.TrimSpace(testRole)},
+			Creation:   []string{strings.TrimSpace(testRole), strings.TrimSpace(testRole)},
 			Rollback:   []string{strings.TrimSpace(testRole)},
-			Revocation: []string{strings.TrimSpace(defaultRevocationSQL)},
+			Revocation: []string{strings.TrimSpace(defaultRevocationSQL), strings.TrimSpace(defaultRevocationSQL)},
 			Renewal:    []string{strings.TrimSpace(defaultRevocationSQL)},
 		}
 

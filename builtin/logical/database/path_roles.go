@@ -210,6 +210,12 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 			} else if req.Operation == logical.CreateOperation {
 				role.Statements.Renewal = data.Get("renew_statements").([]string)
 			}
+
+			// Do not persist deprecated statements that are populated on role read
+			role.Statements.CreationStatements = ""
+			role.Statements.RevocationStatements = ""
+			role.Statements.RenewStatements = ""
+			role.Statements.RollbackStatements = ""
 		}
 
 		// Store it
