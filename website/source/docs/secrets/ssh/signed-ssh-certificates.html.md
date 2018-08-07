@@ -164,7 +164,7 @@ the contents begin with `ssh-rsa ...`.
 1. Save the resulting signed, public key to disk. Limit permissions as needed.
 
     ```text
-    $ vault write -field=signed_key ssh-client-signer/sign/my-role \
+    $ vault read -field=signed_key ssh-client-signer/sign/my-role \
         public_key=@$HOME/.ssh/id_rsa.pub > signed-cert.pub
     ```
 
