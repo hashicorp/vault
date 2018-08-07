@@ -1,31 +1,25 @@
-{{#splash-page as |s|}}
-  {{#s.header}}
-    <div class="has-text-white-bis">
+<SplashPage as |Page|>
+  <Page.header>
+    <h1 class="title is-3">
       Unseal Vault
-    </div>
-  {{/s.header}}
-  {{#s.content}}
-    <div class="message is-highlight is-marginless">
-      <div class="message-body is-shadowless">
-        <div class="columns is-multiline">
-          <div class="column is-narrow" data-test-cluster-status="true">
-            {{i-con glyph="unlocked" size=20}} {{capitalize model.name}} is {{if model.unsealed 'unsealed' 'sealed'}}
-          </div>
-        </div>
-      </div>
-    </div>
-    {{#shamir-flow
-      action="unseal"
-      onShamirSuccess=(action 'transitionToCluster')
-      buttonText="Unseal"
-      thresholdPath="t"
-      isComplete=(action 'isUnsealed')
-      threshold=model.sealThreshold
-      progress=model.sealProgress
-    }}
-      <p class="has-text-grey">
+    </h1>
+  </Page.header>
+  <Page.content>
+    <MessageInPage data-test-cluster-status @type="warning" @class="unseal-warning">
+      {{capitalize model.name}} is {{if model.unsealed 'unsealed' 'sealed'}}
+    </MessageInPage>
+    <ShamirFlow
+      @action="unseal"
+      @onShamirSuccess={{action 'transitionToCluster'}}
+      @buttonText="Unseal"
+      @thresholdPath="t"
+      @isComplete={{action 'isUnsealed'}}
+      @threshold={{model.sealThreshold}}
+      @progress={{model.sealProgress}}
+      >
+      <p class="has-text-grey-dark">
         Unseal the vault by entering a portion of the master key. Once all portions are entered, the vault will be unsealed.
       </p>
-    {{/shamir-flow}}
-  {{/s.content}}
-{{/splash-page}}
+    </ShamirFlow>
+  </Page.content>
+</SplashPage>

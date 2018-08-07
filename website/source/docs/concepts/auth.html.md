@@ -66,7 +66,7 @@ revoking tokens, and renewing tokens. This is all covered on the
 
 ### Via the CLI
 
-To authenticate with the CLI, `vault auth` is used. This supports many
+To authenticate with the CLI, `vault login` is used. This supports many
 of the built-in auth methods. For example, with GitHub:
 
 ```

@@ -1,4 +1,20 @@
-{{info-table-row label="Name" value=model.name }}
+{{#if model.disabled}}
+  <div class="box is-shadowless is-marginless">
+    {{#message-in-page type="warning" yieldWithoutColumn=true messageClass="message-body is-marginless" data-test-disabled-warning=true}}
+      <div class="column">
+        <strong>Attention</strong> This {{model.identityType}} is disabled. All associated tokens cannot be used, but are not revoked.
+      </div>
+      {{#if model.canEdit}}
+        <div class="column is-flex-v-centered is-narrow">
+          <button type="button" class="button is-orange box" {{action "enable" model}} data-test-enable=true>
+            Enable
+          </button>
+        </div>
+      {{/if}}
+    {{/message-in-page}}
+  </div>
+{{/if}}
+{{info-table-row label="Name" value=model.name data-test-identity-item-name=true}}
 {{info-table-row label="Type" value=model.type }}
 {{info-table-row label="ID" value=model.id }}
 {{#info-table-row label="Merged Ids" value=model.mergedEntityIds }}

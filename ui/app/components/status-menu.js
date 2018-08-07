@@ -7,14 +7,17 @@ export default Ember.Component.extend({
   cluster: computed.alias('currentCluster.cluster'),
   auth: inject.service(),
   type: 'cluster',
+  itemTag: null,
   partialName: computed('type', function() {
-    return `partials/status/${this.get('type')}`;
+    let type = this.get('type');
+    let partial = type === 'replication-status' ? 'replication' : type;
+    return `partials/status/${partial}`;
   }),
   glyphName: computed('type', function() {
     const glyphs = {
       cluster: 'unlocked',
       user: 'android-person',
-      replication: 'replication',
+      'replication-status': 'replication',
     };
     return glyphs[this.get('type')];
   }),

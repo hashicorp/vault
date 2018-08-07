@@ -93,6 +93,10 @@ func (c *TokenCapabilitiesCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error listing capabilities: %s", err))
 		return 2
 	}
+	if capabilities == nil {
+		c.UI.Error(fmt.Sprintf("No capabilities found"))
+		return 1
+	}
 
 	switch Format(c.UI) {
 	case "table":

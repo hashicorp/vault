@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -86,6 +87,11 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	client, err := api.NewClient(config)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create client")
+	}
+
+	// Turn off retries on the CLI
+	if os.Getenv(api.EnvVaultMaxRetries) == "" {
+		client.SetMaxRetries(0)
 	}
 
 	// Set the wrapping function
@@ -284,7 +290,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Usage: "Print only the field with the given name. Specifying " +
 						"this option will take precedence over other formatting " +
 						"directives. The result will not have a trailing newline " +
-						"making it idea for piping to other processes.",
+						"making it ideal for piping to other processes.",
 				})
 			}
 

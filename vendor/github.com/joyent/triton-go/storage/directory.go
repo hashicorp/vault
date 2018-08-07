@@ -55,8 +55,9 @@ func (s *DirectoryClient) List(ctx context.Context, input *ListDirectoryInput) (
 	if input.Limit != 0 {
 		query.Set("limit", strconv.FormatUint(input.Limit, 10))
 	}
+
 	if input.Marker != "" {
-		query.Set("manta_path", input.Marker)
+		query.Set("marker", input.Marker)
 	}
 
 	reqInput := client.RequestInput{

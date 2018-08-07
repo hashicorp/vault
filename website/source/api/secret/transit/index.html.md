@@ -803,9 +803,14 @@ supports signing.
    Required if key derivation is enabled; currently only available with ed25519
    keys.
 
-- `prehashed` `(bool: false)` - Set to `true` when the input is already
-   hashed. If the key type is `rsa-2048` or `rsa-4096`, then the algorithm used
-   to hash the input should be indicated by the `hash_algorithm` parameter.
+- `prehashed` `(bool: false)` - Set to `true` when the input is already hashed.
+  If the key type is `rsa-2048` or `rsa-4096`, then the algorithm used to hash
+  the input should be indicated by the `hash_algorithm` parameter.  Just as the
+  value to sign should be the base64-encoded representation of the exact binary
+  data you want signed, when set, `input` is expected to be base64-encoded
+  binary hashed data, not hex-formatted. (As an example, on the command line,
+  you could generate a suitable input via `openssl dgst -sha256 -binary |
+  base64`.)
 
 - `signature_algorithm` `(string: "pss")` – When using a RSA key, specifies the RSA
   signature algorithm to use for signing. Supported signature types are:

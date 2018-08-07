@@ -1,0 +1,25 @@
+.has-copy-button {
+  position: relative;
+  color: $grey;
+}
+.hover-copy-button,
+.hover-copy-button-static {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+.hover-copy-button {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $speed ease-in-out;
+  will-change: opacity;
+  z-index: 10;
+}
+
+.has-copy-button:hover .hover-copy-button,
+.has-copy-button:focus .hover-copy-button,
+.hover-copy-button .copy-button:focus {
+  opacity: 1;
+  pointer-events: auto;
+}

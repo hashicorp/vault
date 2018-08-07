@@ -75,13 +75,18 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
-	path, err = addPrefixToVKVPath(path, "metadata")
+	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
+	if !v2 {
+		c.UI.Error("Metadata not supported on KV Version 1")
+		return 1
+	}
 
-	secret, err := kvReadRequest(client, path, nil)
+	path = addPrefixToVKVPath(path, mountPath, "metadata")
+	secret, err := client.Logical().Read(path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading %s: %s", path, err))
 		return 2
@@ -100,7 +105,13 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		return OutputSecret(c.UI, secret)
 	}
 
-	versions := secret.Data["versions"].(map[string]interface{})
+	versionsRaw, ok := secret.Data["versions"]
+	if !ok || versionsRaw == nil {
+		c.UI.Error(fmt.Sprintf("No value found at %s", path))
+		OutputSecret(c.UI, secret)
+		return 2
+	}
+	versions := versionsRaw.(map[string]interface{})
 
 	delete(secret.Data, "versions")
 

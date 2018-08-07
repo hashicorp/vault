@@ -5,7 +5,7 @@
     (if (not item.id) "-root")
   )
   item.id
-  class="box is-sideless is-marginless"
+  class="list-item-row"
   data-test-secret-link=item.id
 }}
   <div class="columns is-mobile">
@@ -30,8 +30,7 @@
       {{/link-to}}
     </div>
     <div class="column has-text-right">
-      {{partial 'partials/role-pki/popup-menu'}}
+      {{partial 'partials/role-aws/popup-menu'}}
     </div>
   </div>
 {{/linked-block}}
-

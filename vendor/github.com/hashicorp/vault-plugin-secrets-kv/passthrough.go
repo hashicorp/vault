@@ -36,12 +36,8 @@ func LeasedPassthroughBackendFactory(ctx context.Context, conf *logical.BackendC
 // LeaseSwitchedPassthroughBackend returns a PassthroughBackend
 // with leases switched on or off
 func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendConfig, leases bool) (logical.Backend, error) {
-	passthroughBackend := &PassthroughBackend{
+	b := &PassthroughBackend{
 		generateLeases: leases,
-	}
-
-	var b Passthrough = &PassthroughDowngrader{
-		next: passthroughBackend,
 	}
 
 	backend := &framework.Backend{
@@ -89,9 +85,9 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 		return nil, fmt.Errorf("Configuation passed into backend is nil")
 	}
 	backend.Setup(ctx, conf)
-	passthroughBackend.Backend = backend
+	b.Backend = backend
 
-	return passthroughBackend, nil
+	return b, nil
 }
 
 // PassthroughBackend is used storing secrets directly into the physical

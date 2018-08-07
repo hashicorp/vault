@@ -8,6 +8,7 @@ import (
 
 	"reflect"
 
+	"github.com/gogo/protobuf/proto"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
@@ -161,6 +162,71 @@ func TestSystem_GRPC_mlockEnabled(t *testing.T) {
 	expected := sys.MlockEnabled()
 	actual := testSystemView.MlockEnabled()
 	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("expected: %v, got: %v", expected, actual)
+	}
+}
+
+func TestSystem_GRPC_entityInfo(t *testing.T) {
+	sys := logical.TestSystemView()
+	sys.EntityVal = &logical.Entity{
+		ID:   "id",
+		Name: "name",
+		Metadata: map[string]string{
+			"foo": "bar",
+		},
+		Aliases: []*logical.Alias{
+			&logical.Alias{
+				MountType:     "logical",
+				MountAccessor: "accessor",
+				Name:          "name",
+				Metadata: map[string]string{
+					"zip": "zap",
+				},
+			},
+		},
+	}
+	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
+		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{
+			impl: sys,
+		})
+	})
+	defer client.Close()
+	testSystemView := newGRPCSystemView(client)
+
+	actual, err := testSystemView.EntityInfo("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(sys.EntityVal, actual) {
+		t.Fatalf("expected: %v, got: %v", sys.EntityVal, actual)
+	}
+}
+
+func TestSystem_GRPC_pluginEnv(t *testing.T) {
+	sys := logical.TestSystemView()
+	sys.PluginEnvironment = &logical.PluginEnvironment{
+		VaultVersion: "0.10.42",
+	}
+	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
+		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{
+			impl: sys,
+		})
+	})
+	defer client.Close()
+
+	testSystemView := newGRPCSystemView(client)
+
+	expected, err := sys.PluginEnv(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actual, err := testSystemView.PluginEnv(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !proto.Equal(expected, actual) {
 		t.Fatalf("expected: %v, got: %v", expected, actual)
 	}
 }

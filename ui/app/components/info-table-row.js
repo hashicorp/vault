@@ -1,6 +1,7 @@
 import Ember from 'ember';
 
 export default Ember.Component.extend({
+  'data-test-component': 'info-table-row',
   classNames: ['info-table-row'],
   isVisible: Ember.computed.or('alwaysRender', 'value'),
 

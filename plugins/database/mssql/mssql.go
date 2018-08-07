@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
@@ -129,16 +130,13 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 				continue
 			}
 
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+			m := map[string]string{
 				"name":       username,
 				"password":   password,
 				"expiration": expirationStr,
-			}))
-			if err != nil {
-				return "", "", err
 			}
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
+
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return "", "", err
 			}
 		}
@@ -189,14 +187,10 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 				continue
 			}
 
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+			m := map[string]string{
 				"name": username,
-			}))
-			if err != nil {
-				return err
 			}
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -285,14 +279,7 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revokeStmts {
-		stmt, err := db.PrepareContext(ctx, query)
-		if err != nil {
-			lastStmtError = err
-			continue
-		}
-		defer stmt.Close()
-		_, err = stmt.ExecContext(ctx)
-		if err != nil {
+		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 		}
 	}
@@ -355,16 +342,12 @@ func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) 
 			if len(query) == 0 {
 				continue
 			}
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+
+			m := map[string]string{
 				"username": m.Username,
 				"password": password,
-			}))
-			if err != nil {
-				return nil, err
 			}
-
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return nil, err
 			}
 		}
@@ -404,5 +387,5 @@ END
 `
 
 const rotateRootCredentialsSQL = `
-ALTER LOGIN [%s] WITH PASSWORD = '%s' 
+ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}' 
 `

@@ -77,5 +77,5 @@ func (l *Conn) Compare(dn, attribute, value string) (bool, error) {
 			return false, NewError(resultCode, errors.New(resultDescription))
 		}
 	}
-	return false, fmt.Errorf("Unexpected Response: %d", packet.Children[1].Tag)
+	return false, fmt.Errorf("unexpected Response: %d", packet.Children[1].Tag)
 }

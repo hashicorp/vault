@@ -65,7 +65,7 @@ flags](/docs/commands/index.html) included on all commands.
 
 ### SSH Options
 
-- `-mode` `(string: "")` - Name of the role to use to generate the key.
+- `-mode` `(string: "")` - Name of the authentication mode (ca, dynamic, otp)."
 
 - `-mount-point` `(string: "ssh/")` - Mount point to the SSH secrets engine.
 

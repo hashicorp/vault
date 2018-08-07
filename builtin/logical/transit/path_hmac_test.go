@@ -7,18 +7,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 )
 
 func TestTransit_HMAC(t *testing.T) {
-	var b *backend
-	sysView := logical.TestSystemView()
-	storage := &logical.InmemStorage{}
-
-	b = Backend(&logical.BackendConfig{
-		StorageView: storage,
-		System:      sysView,
-	})
+	b, storage := createBackendWithSysView(t)
 
 	// First create a key
 	req := &logical.Request{
@@ -32,12 +26,14 @@ func TestTransit_HMAC(t *testing.T) {
 	}
 
 	// Now, change the key value to something we control
-	p, lock, err := b.lm.GetPolicyShared(context.Background(), storage, "foo")
+	p, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+		Storage: storage,
+		Name:    "foo",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// We don't care as we're the only one using this
-	lock.RUnlock()
 	latestVersion := strconv.Itoa(p.LatestVersion)
 	keyEntry := p.Keys[latestVersion]
 	keyEntry.HMACKey = []byte("01234567890123456789012345678901")

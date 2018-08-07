@@ -31,7 +31,7 @@ test('top-level not-found', function(assert) {
 test('vault route not-found', function(assert) {
   visit('/vault/404');
   andThen(() => {
-    assert.ok(find('[data-test-not-found]'), 'renders the not found component');
+    assert.dom('[data-test-not-found]').exists('renders the not found component');
     assert.ok(find('[data-test-header-with-nav]').length, 'renders header with nav');
   });
 });
@@ -39,7 +39,7 @@ test('vault route not-found', function(assert) {
 test('cluster route not-found', function(assert) {
   visit('/vault/secrets/secret/404/show');
   andThen(() => {
-    assert.ok(find('[data-test-not-found]'), 'renders the not found component');
+    assert.dom('[data-test-not-found]').exists('renders the not found component');
     assert.ok(find('[data-test-header-with-nav]').length, 'renders header with nav');
   });
 });
@@ -47,6 +47,6 @@ test('cluster route not-found', function(assert) {
 test('secret not-found', function(assert) {
   visit('/vault/secrets/secret/show/404');
   andThen(() => {
-    assert.ok(find('[data-test-secret-not-found]'), 'renders the message about the secret not being found');
+    assert.dom('[data-test-secret-not-found]').exists('renders the message about the secret not being found');
   });
 });

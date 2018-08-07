@@ -17,6 +17,8 @@ that is used to encrypt data written to the storage backend, and is not provided
 to operators. This operation is done online. Future values are encrypted with
 the new key, while old values are decrypted with previous encryption keys.
 
+This path requires `sudo` capability in addition to `update`.
+
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `PUT`    | `/sys/rotate`                | `204 (empty body)`     |

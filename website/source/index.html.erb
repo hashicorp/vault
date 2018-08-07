@@ -125,5 +125,5 @@ description: |-
 
 
 <% content_for(:scripts) do %>
-  <%= javascript_include_tag "demo-app" %>
+  <%= javascript_include_tag "demo-app", defer: true %>
 <% end %>

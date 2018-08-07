@@ -1,0 +1,12 @@
+.radial-progress {
+  transform: rotate(-90deg) translateX(-20%);
+}
+.radial-progress circle {
+  stroke: rgba($grey-light, 0.5);
+  transition: stroke-dashoffset $speed ease-in;
+  will-change: stroke-dashoffset;
+  stroke-linecap: round;
+}
+.radial-progress circle.progress-fill {
+  stroke: $green;
+}

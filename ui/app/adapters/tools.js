@@ -15,9 +15,9 @@ export default ApplicationAdapter.extend({
   },
 
   toolAction(action, data, options = {}) {
-    const { wrapTTL } = options;
+    const { wrapTTL, clientToken } = options;
     const url = this.toolUrlFor(action);
-    const ajaxOptions = wrapTTL ? { data, wrapTTL } : { data };
+    const ajaxOptions = wrapTTL ? { data, wrapTTL, clientToken } : { data, clientToken };
     return this.ajax(url, 'POST', ajaxOptions);
   },
 });

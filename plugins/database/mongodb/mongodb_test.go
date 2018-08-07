@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
@@ -55,6 +55,7 @@ func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURL string) {
 		if err != nil {
 			return err
 		}
+		defer session.Close()
 		session.SetSyncTimeout(1 * time.Minute)
 		session.SetSocketTimeout(1 * time.Minute)
 		return session.Ping()

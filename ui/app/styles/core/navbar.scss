@@ -25,6 +25,12 @@ a.navbar-item {
 
 .navbar-brand {
   margin: 0 0 0 $size-10;
+
+  a {
+    @include from($tablet) {
+      height: 3.25rem;
+    }
+  }
 }
 
 .navbar-sections {

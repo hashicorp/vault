@@ -11,7 +11,6 @@ const (
 
 var (
 	_segmentKind_index_0 = [...]uint8{0, 9, 18, 25}
-	_segmentKind_index_1 = [...]uint8{0, 7}
 )
 
 func (i segmentKind) String() string {

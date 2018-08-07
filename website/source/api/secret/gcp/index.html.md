@@ -1,15 +1,15 @@
 ---
 layout: "api"
-page_title: "GCP - Secrets Engines - HTTP API"
+page_title: "Google Cloud - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-gcp"
 description: |-
-  This is the API documentation for the Vault GCP secrets engine.
+  This is the API documentation for the Vault Google Cloud secrets engine.
 ---
 
-# GCP Secrets Engine (API)
+# Google Cloud Secrets Engine (API)
 
-This is the API documentation for the Vault GCP (Google Cloud Platform) 
-secrets engine. For general information about the usage and operation of 
+This is the API documentation for the Vault Google Cloud Platform (GCP)
+secrets engine. For general information about the usage and operation of
 the GCP secrets engine, please see [these docs](/docs/secrets/gcp/index.html).
 
 This documentation assumes the GCP secrets engine is enabled at the `/gcp` path
@@ -22,21 +22,21 @@ update your API calls accordingly.
 | :------- | :------------------------| :------------------------ |
 | `POST`   | `/gcp/config`            | `204 (empty body)`        |
 
-This endpoint configures shared information for the secrets engine. 
+This endpoint configures shared information for the secrets engine.
 
 ### Parameters
 
 - `credentials` (`string:""`) - JSON credentials (either file contents or '@path/to/file')
-    See docs for [alternative ways](/docs/secrets/gcp/index.html#passing-credentials-to-vault) 
-    to pass in to this parameter, as well as the 
+    See docs for [alternative ways](/docs/secrets/gcp/index.html#passing-credentials-to-vault)
+    to pass in to this parameter, as well as the
     [required permissions](/docs/secrets/gcp/index.html#required-permissions).
 
 - `ttl` (`int: 0 || string:"0s"`) – Specifies default config TTL for long-lived credentials
     (i.e. service account keys). Accepts integer number of seconds or Go duration format string.
 
-- `max_ttl` (`int: 0 || string:"0s"`)– Specifies default config TTL for long-lived credentials
+- `max_ttl` (`int: 0 || string:"0s"`)– Specifies the maximum config TTL for long-lived credentials
     (i.e. service account keys). Accepts integer number of seconds or Go duration format string.**
-    
+
 ### Sample Payload
 
 ```json
@@ -54,7 +54,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/gcp/config
+    https://127.0.0.1:8200/v1/gcp/config
 ```
 
 ## Read Config
@@ -63,7 +63,7 @@ $ curl \
 | :------- | :------------------------| :------------------------ |
 | `GET`    | `/gcp/config`            | `200 application/json`    |
 
-Credentials will be omitted from returned data. 
+Credentials will be omitted from returned data.
 
 ### Sample Request
 
@@ -71,7 +71,7 @@ Credentials will be omitted from returned data.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://vault.rocks/v1/gcp/config
+    https://127.0.0.1:8200/v1/gcp/config
 ```
 
 ### Sample Response
@@ -92,14 +92,17 @@ $ curl \
 | `POST`   | `/gcp/roleset/:name`     | `204 (empty body)`        |
 
 This method allows you to create a roleset or update an existing roleset. See [roleset docs](/docs/secrets/gcp/index.html#rolesets) for the GCP secrets backend
-to learn more about what happens when you create or update a roleset. 
+to learn more about what happens when you create or update a roleset.
 
+
+**If you update a roleset's bindings, this will effectively revoke any secrets
+generated under this roleset.**
 
 ### Parameters
 
 - `name` (`string: <required>`): Required. Name of the role. Cannot be updated.
 - `secret_type` (`string: "access_token"`): Type of secret generated for this role set. Accepted values: `access_token`, `service_account_key`. Cannot be updated.
-- `project` (`string: <required>`): Name of the GCP project that this roleset's service account will belong to. Cannot be updated. 
+- `project` (`string: <required>`): Name of the GCP project that this roleset's service account will belong to. Cannot be updated.
 - `bindings` (`string: <required>`): Bindings configuration string (expects HCL or JSON format in raw or base64-encoded string)
 - `token_scopes` (`array: []`): List of OAuth scopes to assign to `access_token` secrets generated under this role set (`access_token` role sets only)
 
@@ -110,8 +113,8 @@ to learn more about what happens when you create or update a roleset.
   "secret_type": "access_token",
   "project": "mygcpproject",
   "bindings": "...",
-  "token_scopes": [ 
-    "https://www.googleapis.com/auth/cloud-platform", 
+  "token_scopes": [
+    "https://www.googleapis.com/auth/cloud-platform",
     "https://www.googleapis.com/auth/bigquery"
   ]
 }
@@ -124,14 +127,14 @@ See [bindings format docs](/docs/secrets/gcp/index.html#roleset-bindings) for mo
 resource "project/mygcpproject" {
   roles = [
     "roles/viewer"
-  ], 
+  ],
 }
 
 resource "https://selflink/to/my/resource" {
   roles = [
     "project/mygcpproject/roles/projcustomrole",
     "organizations/myorg/roles/orgcustomrole"
-  ], 
+  ],
 }
 ```
 
@@ -142,7 +145,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/gcp/roleset/my-token-roleset
+    https://127.0.0.1:8200/v1/gcp/roleset/my-token-roleset
 ```
 
 ## Rotate Roleset Account
@@ -151,10 +154,10 @@ $ curl \
 | :------- | :--------------------------------| :--------------------- |
 | `POST`    | `/gcp/roleset/:name/rotate`     | `204 (empty body)``    |
 
-This will rotate the service account this roleset uses to generate secrets. 
+This will rotate the service account this roleset uses to generate secrets.
 (this also replaces the key `access_token` roleset). This can be used to invalidate
 old secrets generated by the roleset or fix issues if a roleset's service account
-(and/or keys) was changed outside of Vault (i.e. through GCP APIs/cloud console). 
+(and/or keys) was changed outside of Vault (i.e. through GCP APIs/cloud console).
 
 ### Sample Request
 
@@ -162,7 +165,7 @@ old secrets generated by the roleset or fix issues if a roleset's service accoun
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/consul/gcp/roleset/my-token-roleset/rotate
+    https://127.0.0.1:8200/v1/consul/gcp/roleset/my-token-roleset/rotate
 ```
 
 ## Rotate Roleset Account Key (`access_token` Roleset Only)
@@ -181,7 +184,7 @@ access tokens. This does not recreate the roleset service account.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/consul/gcp/roleset/my-token-roleset/rotate-key
+    https://127.0.0.1:8200/v1/consul/gcp/roleset/my-token-roleset/rotate-key
 ```
 
 ## Read Roleset
@@ -196,7 +199,7 @@ $ curl \
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://vault.rocks/v1/consul/gcp/roleset/my-token-roleset
+    https://127.0.0.1:8200/v1/consul/gcp/roleset/my-token-roleset
 ```
 
 ### Sample Response
@@ -210,7 +213,7 @@ $ curl \
     "bindings": {
       "project/mygcpproject": [
         "roles/viewer"
-      ], 
+      ],
       "https://selflink/to/my/resource": [
         "project/mygcpproject/roles/projcustomrole",
         "organizations/myorg/roles/orgcustomrole"
@@ -240,7 +243,7 @@ $ curl \
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/gcp/rolesets
+    https://127.0.0.1:8200/v1/gcp/rolesets
 ```
 
 ### Sample Response
@@ -264,9 +267,9 @@ $ curl \
 | `GET` | `POST`    | `/gcp/token/:roleset`           | `200 application/json`    |
 
 Generates an OAuth2 token with the scopes defined on the roleset. This OAuth access token can
-be used in GCP API calls, e.g. `curl -H "Authorization: Bearer $TOKEN" ...` 
+be used in GCP API calls, e.g. `curl -H "Authorization: Bearer $TOKEN" ...`
 
-Tokens are non-renewable and have a TTL of an hour by default. 
+Tokens are non-renewable and have a TTL of an hour by default.
 
 ### Parameters
 
@@ -278,7 +281,7 @@ Tokens are non-renewable and have a TTL of an hour by default.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://vault.rocks/v1/consul/gcp/roleset/my-token-roleset
+    https://127.0.0.1:8200/v1/consul/gcp/roleset/my-token-roleset
 ```
 
 ### Sample Response
@@ -309,19 +312,19 @@ If using `GET` ('read'), the  optional parameters will be set to their defaults.
 want to specify different values for these params.
 
 These keys are renewable and have TTL/max TTL as defined by either the backend config
-or the system default if config was not defined. 
+or the system default if config was not defined.
 
 ### Parameters
 
 - `roleset` (`string:<required>`): Name of an roleset with secret type `service_account_key` to generate key under.
-- `key_algorithm` (`string:"KEY_ALG_RSA_2048"`): Key algorithm used to generate key. Defaults to 2k RSA key 
-    You probably should not choose other values (i.e. 1k), but accepted values are 
+- `key_algorithm` (`string:"KEY_ALG_RSA_2048"`): Key algorithm used to generate key. Defaults to 2k RSA key
+    You probably should not choose other values (i.e. 1k), but accepted values are
     `enum(`[`ServiceAccountKeyAlgorithm`](https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts.keys#ServiceAccountKeyAlgorithm)`)`
 - `key_type` (`string:"TYPE_GOOGLE_CREDENTIALS_FILE`): Private key type to generate. Defaults to JSON credentials file.
     Accepted values are `enum(`[`ServiceAccountPrivateKeyType`](https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts.keys#ServiceAccountPrivateKeyType)`)`
 
 
-### Sample Payload 
+### Sample Payload
 ```json
 {
   "key_algorithm": "TYPE_GOOGLE_CREDENTIALS_FILE",
@@ -335,7 +338,7 @@ or the system default if config was not defined.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://vault.rocks/v1/gcp/roleset/my-token-roleset
+    https://127.0.0.1:8200/v1/gcp/roleset/my-token-roleset
 ```
 
 ```sh
@@ -343,7 +346,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/gcp/roleset/my-token-roleset
+    https://127.0.0.1:8200/v1/gcp/roleset/my-token-roleset
 ```
 
 ### Sample Response
@@ -357,7 +360,7 @@ $ curl \
   "data": {
     "private_key_data":"<base64-encoded private key data>",
     "key_algorithm": "TYPE_GOOGLE_CREDENTIALS_FILE",
-    "key_type": "KEY_ALG_RSA_2048" 
+    "key_type": "KEY_ALG_RSA_2048"
   },
   "wrap_info": null,
   "warnings": null,

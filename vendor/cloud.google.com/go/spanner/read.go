@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc. All Rights Reserved.
+Copyright 2017 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -137,7 +137,7 @@ func (r *RowIterator) Do(f func(r *Row) error) error {
 	}
 }
 
-// Stop terminates the iteration. It should be called after every iteration.
+// Stop terminates the iteration. It should be called after you finish using the iterator.
 func (r *RowIterator) Stop() {
 	if r.streamd != nil {
 		defer traceEndSpan(r.streamd.ctx, r.err)
@@ -255,7 +255,7 @@ type resumableStreamDecoder struct {
 	// ctx is the caller's context, used for cancel/timeout Next().
 	ctx context.Context
 	// rpc is a factory of streamingReceiver, which might resume
-	// a pervious stream from the point encoded in restartToken.
+	// a previous stream from the point encoded in restartToken.
 	// rpc is always a wrapper of a Cloud Spanner query which is
 	// resumable.
 	rpc func(ctx context.Context, restartToken []byte) (streamingReceiver, error)

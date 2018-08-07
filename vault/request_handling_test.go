@@ -35,7 +35,7 @@ func TestRequestHandling_Wrapping(t *testing.T) {
 			"zip": "zap",
 		},
 	}
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestRequestHandling_Wrapping(t *testing.T) {
 			TTL: time.Duration(15 * time.Second),
 		},
 	}
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -80,8 +80,9 @@ func TestRequestHandling_LoginWrapping(t *testing.T) {
 		Data: map[string]interface{}{
 			"type": "userpass",
 		},
+		Connection: &logical.Connection{},
 	}
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -94,7 +95,7 @@ func TestRequestHandling_LoginWrapping(t *testing.T) {
 		"password": "foo",
 		"policies": "default",
 	}
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -108,8 +109,9 @@ func TestRequestHandling_LoginWrapping(t *testing.T) {
 		Data: map[string]interface{}{
 			"password": "foo",
 		},
+		Connection: &logical.Connection{},
 	}
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -129,8 +131,9 @@ func TestRequestHandling_LoginWrapping(t *testing.T) {
 		Data: map[string]interface{}{
 			"password": "foo",
 		},
+		Connection: &logical.Connection{},
 	}
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

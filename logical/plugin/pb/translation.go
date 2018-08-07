@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 )
@@ -222,7 +223,7 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 
 	headers := map[string]*Header{}
 	for k, v := range r.Headers {
-		headers[k] = &Header{v}
+		headers[k] = &Header{Header: v}
 	}
 
 	return &Request{
@@ -463,30 +464,6 @@ func LogicalResponseToProtoResponse(r *logical.Response) (*Response, error) {
 	}, nil
 }
 
-func LogicalAliasToProtoAlias(a *logical.Alias) *Alias {
-	if a == nil {
-		return nil
-	}
-
-	return &Alias{
-		MountType:     a.MountType,
-		MountAccessor: a.MountAccessor,
-		Name:          a.Name,
-	}
-}
-
-func ProtoAliasToLogicalAlias(a *Alias) *logical.Alias {
-	if a == nil {
-		return nil
-	}
-
-	return &logical.Alias{
-		MountType:     a.MountType,
-		MountAccessor: a.MountAccessor,
-		Name:          a.Name,
-	}
-}
-
 func LogicalAuthToProtoAuth(a *logical.Auth) (*Auth, error) {
 	if a == nil {
 		return nil, nil
@@ -497,14 +474,14 @@ func LogicalAuthToProtoAuth(a *logical.Auth) (*Auth, error) {
 		return nil, err
 	}
 
-	groupAliases := make([]*Alias, len(a.GroupAliases))
-	for i, al := range a.GroupAliases {
-		groupAliases[i] = LogicalAliasToProtoAlias(al)
-	}
-
 	lo, err := LogicalLeaseOptionsToProtoLeaseOptions(a.LeaseOptions)
 	if err != nil {
 		return nil, err
+	}
+
+	boundCIDRs := make([]string, len(a.BoundCIDRs))
+	for i, cidr := range a.BoundCIDRs {
+		boundCIDRs[i] = cidr.String()
 	}
 
 	return &Auth{
@@ -518,8 +495,9 @@ func LogicalAuthToProtoAuth(a *logical.Auth) (*Auth, error) {
 		Period:       int64(a.Period),
 		NumUses:      int64(a.NumUses),
 		EntityID:     a.EntityID,
-		Alias:        LogicalAliasToProtoAlias(a.Alias),
-		GroupAliases: groupAliases,
+		Alias:        a.Alias,
+		GroupAliases: a.GroupAliases,
+		BoundCidrs:   boundCIDRs,
 	}, nil
 }
 
@@ -534,14 +512,19 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 		return nil, err
 	}
 
-	groupAliases := make([]*logical.Alias, len(a.GroupAliases))
-	for i, al := range a.GroupAliases {
-		groupAliases[i] = ProtoAliasToLogicalAlias(al)
-	}
-
 	lo, err := ProtoLeaseOptionsToLogicalLeaseOptions(a.LeaseOptions)
 	if err != nil {
 		return nil, err
+	}
+
+	boundCIDRs, err := parseutil.ParseAddrs(a.BoundCidrs)
+	if err != nil {
+		return nil, err
+	}
+	if len(boundCIDRs) == 0 {
+		// On inbound auths, if auth.BoundCIDRs is empty, it will be nil.
+		// Let's match that behavior outbound.
+		boundCIDRs = nil
 	}
 
 	return &logical.Auth{
@@ -555,7 +538,8 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 		Period:       time.Duration(a.Period),
 		NumUses:      int(a.NumUses),
 		EntityID:     a.EntityID,
-		Alias:        ProtoAliasToLogicalAlias(a.Alias),
-		GroupAliases: groupAliases,
+		Alias:        a.Alias,
+		GroupAliases: a.GroupAliases,
+		BoundCIDRs:   boundCIDRs,
 	}, nil
 }

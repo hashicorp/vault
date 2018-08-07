@@ -8,7 +8,7 @@
     margin-left: $size-8;
   }
 
-  .confirm-action-text:not('.is-block') {
+  .confirm-action-text:not(.is-block) {
     text-align: right;
 
     @include until($tablet) {

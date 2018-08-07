@@ -48,7 +48,7 @@ The response will contain a token at `auth.client_token`:
       "default"
     ],
     "metadata": {
-      "role": "test",
+      "role": "demo",
       "service_account_name": "vault-auth",
       "service_account_namespace": "default",
       "service_account_secret_name": "vault-auth-token-pd21c",
@@ -104,7 +104,7 @@ list of available configuration options, please see the API documentation.
 This auth method accesses the [Kubernetes TokenReview API][k8s-tokenreview] to
 validate the provided JWT is still valid. Kubernetes should be running with
 `--service-account-lookup`. This is defaulted to true in Kubernetes 1.7, but any
-versions prior should ensure the Kubernetes API server is started with with this
+versions prior should ensure the Kubernetes API server is started with this
 setting. Otherwise deleted tokens in Kubernetes will not be properly revoked and
 will be able to authenticate to this auth method.
 
@@ -134,4 +134,4 @@ subjects:
 The Kubernetes Auth Plugin has a full HTTP API. Please see the
 [API docs](/api/auth/kubernetes/index.html) for more details.
 
-[k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.9/#tokenreview-v1-authentication
+[k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#tokenreview-v1-authentication-k8s-io

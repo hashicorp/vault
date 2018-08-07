@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -75,6 +74,32 @@ taken verbatim from the CSR, except for
 basic constraints.`,
 	}
 
+	ret.Fields["key_usage"] = &framework.FieldSchema{
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+		Description: `A comma-separated string or list of key usages (not extended
+key usages). Valid values can be found at
+https://golang.org/pkg/crypto/x509/#KeyUsage
+-- simply drop the "KeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
+	}
+
+	ret.Fields["ext_key_usage"] = &framework.FieldSchema{
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{},
+		Description: `A comma-separated string or list of extended key usages. Valid values can be found at
+https://golang.org/pkg/crypto/x509/#ExtKeyUsage
+-- simply drop the "ExtKeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
+	}
+
+	ret.Fields["ext_key_usage_oids"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `A comma-separated string or list of extended key usage oids.`,
+	}
+
 	return ret
 }
 
@@ -89,7 +114,11 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 		return nil, err
 	}
 	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", roleName)), nil
+		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
+	}
+
+	if role.KeyType == "any" {
+		return logical.ErrorResponse("role key type \"any\" not allowed for issuing certificates, only signing"), nil
 	}
 
 	return b.pathIssueSignCert(ctx, req, data, role, false, false)
@@ -106,7 +135,7 @@ func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *fram
 		return nil, err
 	}
 	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", roleName)), nil
+		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
 	}
 
 	return b.pathIssueSignCert(ctx, req, data, role, true, false)
@@ -125,46 +154,40 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 	}
 
 	entry := &roleEntry{
-		TTL:              b.System().DefaultLeaseTTL().String(),
-		MaxTTL:           b.System().MaxLeaseTTL().String(),
-		AllowLocalhost:   true,
-		AllowAnyName:     true,
-		AllowIPSANs:      true,
-		EnforceHostnames: false,
-		KeyType:          "any",
-		UseCSRCommonName: true,
-		UseCSRSANs:       true,
-		GenerateLease:    new(bool),
+		TTL:                  b.System().DefaultLeaseTTL(),
+		MaxTTL:               b.System().MaxLeaseTTL(),
+		AllowLocalhost:       true,
+		AllowAnyName:         true,
+		AllowIPSANs:          true,
+		EnforceHostnames:     false,
+		KeyType:              "any",
+		UseCSRCommonName:     true,
+		UseCSRSANs:           true,
+		AllowedURISANs:       []string{"*"},
+		AllowedSerialNumbers: []string{"*"},
+		GenerateLease:        new(bool),
+		KeyUsage:             data.Get("key_usage").([]string),
+		ExtKeyUsage:          data.Get("ext_key_usage").([]string),
+		ExtKeyUsageOIDs:      data.Get("ext_key_usage_oids").([]string),
 	}
 
+	*entry.GenerateLease = false
+
 	if role != nil {
-		if role.TTL != "" {
-			ttl, err := parseutil.ParseDurationSecond(role.TTL)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("could not parse role ttl: %s", err)), nil
-			}
-			if ttl != 0 {
-				entry.TTL = role.TTL
-			}
+		if role.TTL > 0 {
+			entry.TTL = role.TTL
 		}
-		if role.MaxTTL != "" {
-			ttl, err := parseutil.ParseDurationSecond(role.MaxTTL)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("could not parse role max ttl: %s", err)), nil
-			}
-			if ttl != 0 {
-				entry.MaxTTL = role.MaxTTL
-			}
+		if role.MaxTTL > 0 {
+			entry.MaxTTL = role.MaxTTL
 		}
-		if entry.TTL > entry.MaxTTL {
-			return logical.ErrorResponse(fmt.Sprintf("requested ttl of %s is greater than max ttl of %s", entry.TTL, entry.MaxTTL)), nil
+		if role.GenerateLease != nil {
+			*entry.GenerateLease = *role.GenerateLease
 		}
 		entry.NoStore = role.NoStore
 	}
 
-	*entry.GenerateLease = false
-	if role != nil && role.GenerateLease != nil {
-		*entry.GenerateLease = *role.GenerateLease
+	if entry.MaxTTL > 0 && entry.TTL > entry.MaxTTL {
+		return logical.ErrorResponse(fmt.Sprintf("requested ttl of %s is greater than max ttl of %s", entry.TTL, entry.MaxTTL)), nil
 	}
 
 	return b.pathIssueSignCert(ctx, req, data, entry, true, true)

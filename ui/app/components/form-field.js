@@ -97,6 +97,11 @@ export default Ember.Component.extend({
       this.get('onChange')(path, value);
     },
 
+    setAndBroadcastBool(path, trueVal, falseVal, value) {
+      let valueToSet = value === true ? trueVal : falseVal;
+      this.send('setAndBroadcast', path, valueToSet);
+    },
+
     codemirrorUpdated(path, value, codemirror) {
       codemirror.performLint();
       const hasErrors = codemirror.state.lint.marked.length > 0;

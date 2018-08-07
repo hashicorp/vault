@@ -36,6 +36,7 @@ rotating an encryption key in the transit engine in Vault.
 
 ## Reference Material
 
+- [Encryption as a Service](/guides/encryption/transit.html) 
 - [Transit Secret Engine](/docs/secrets/transit/index.html)
 - [Transit Secret Engine API](/api/secret/transit/index.html)
 - [Transparent Data Encryption in the Modern Datacenter](https://www.hashicorp.com/blog/transparent-data-encryption-in-the-modern-datacenter)
@@ -113,7 +114,7 @@ application provided in this guide:
 - [Docker](https://docs.docker.com/install/)
 
 Download the sample application code from
-[vault-guides](https://github.com/hashicorp/vault-guides/tree/master/secrets/transit/vault-transit-rewrap-example)
+[vault-guides](https://github.com/hashicorp/vault-guides/tree/master/encryption/vault-transit-rewrap)
 repository to perform the steps described in this guide.
 
 The `vault-transit-rewrap-example` contains the following:

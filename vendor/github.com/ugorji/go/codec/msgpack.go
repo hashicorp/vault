@@ -945,7 +945,7 @@ type MsgpackHandle struct {
 	binaryEncodingType
 	noElemSeparators
 
-	_ [1]uint64 // padding
+	// _ [1]uint64 // padding
 }
 
 // Name returns the name of the handle: msgpack

@@ -10,11 +10,12 @@ var SecretProxy = Ember.Object.extend(KeyMixin, {
   },
 
   createRecord(backend) {
-    let modelType = 'secret';
-    if (backend === 'cubbyhole') {
-      modelType = modelType + '-cubbyhole';
-    }
-    return this.store.createRecord(modelType, this.toModel());
+    let backendModel = this.store.peekRecord('secret-engine', backend);
+    return this.store.createRecord(backendModel.get('modelTypeForKV'), this.toModel());
+  },
+
+  willDestroy() {
+    this.store = null;
   },
 });
 
@@ -25,7 +26,7 @@ export default EditBase.extend({
     if (modelType === 'role-ssh') {
       return this.store.createRecord(modelType, { keyType: 'ca' });
     }
-    if (modelType !== 'secret' && modelType !== 'secret-cubbyhole') {
+    if (modelType !== 'secret' && modelType !== 'secret-v2') {
       return this.store.createRecord(modelType);
     }
     const key = transition.queryParams.initialKey || '';
@@ -46,7 +47,7 @@ export default EditBase.extend({
     const parentKey = params.secret ? params.secret : '';
     return Ember.RSVP.hash({
       secret: this.createModel(transition, parentKey),
-      capabilities: this.capabilities(parentKey),
+      capabilities: {},
     });
   },
 });

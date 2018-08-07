@@ -138,9 +138,9 @@ func newEtcdV2Client(conf map[string]string) (client.Client, error) {
 	if (hasCert && hasKey) || hasCa {
 		var transportErr error
 		tls := transport.TLSInfo{
-			CAFile:   ca,
-			CertFile: cert,
-			KeyFile:  key,
+			TrustedCAFile: ca,
+			CertFile:      cert,
+			KeyFile:       key,
 		}
 		cTransport, transportErr = transport.NewTransport(tls, 30*time.Second)
 

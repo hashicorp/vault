@@ -18,12 +18,13 @@ var _ cli.CommandAutocomplete = (*SecretsTuneCommand)(nil)
 type SecretsTuneCommand struct {
 	*BaseCommand
 
-	flagOptions                  map[string]string
-	flagDefaultLeaseTTL          time.Duration
-	flagMaxLeaseTTL              time.Duration
 	flagAuditNonHMACRequestKeys  []string
 	flagAuditNonHMACResponseKeys []string
+	flagDefaultLeaseTTL          time.Duration
+	flagDescription              string
 	flagListingVisibility        string
+	flagMaxLeaseTTL              time.Duration
+	flagOptions                  map[string]string
 	flagVersion                  int
 }
 
@@ -53,36 +54,6 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 
 	f := set.NewFlagSet("Command Options")
 
-	f.StringMapVar(&StringMapVar{
-		Name:       "options",
-		Target:     &c.flagOptions,
-		Completion: complete.PredictAnything,
-		Usage: "Key-value pair provided as key=value for the mount options. " +
-			"This can be specified multiple times.",
-	})
-
-	f.DurationVar(&DurationVar{
-		Name:       "default-lease-ttl",
-		Target:     &c.flagDefaultLeaseTTL,
-		Default:    0,
-		EnvVar:     "",
-		Completion: complete.PredictAnything,
-		Usage: "The default lease TTL for this secrets engine. If unspecified, " +
-			"this defaults to the Vault server's globally configured default lease " +
-			"TTL, or a previously configured value for the secrets engine.",
-	})
-
-	f.DurationVar(&DurationVar{
-		Name:       "max-lease-ttl",
-		Target:     &c.flagMaxLeaseTTL,
-		Default:    0,
-		EnvVar:     "",
-		Completion: complete.PredictAnything,
-		Usage: "The maximum lease TTL for this secrets engine. If unspecified, " +
-			"this defaults to the Vault server's globally configured maximum lease " +
-			"TTL, or a previously configured value for the secrets engine.",
-	})
-
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
@@ -97,10 +68,48 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 			"devices in the response data object.",
 	})
 
+	f.DurationVar(&DurationVar{
+		Name:       "default-lease-ttl",
+		Target:     &c.flagDefaultLeaseTTL,
+		Default:    0,
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: "The default lease TTL for this secrets engine. If unspecified, " +
+			"this defaults to the Vault server's globally configured default lease " +
+			"TTL, or a previously configured value for the secrets engine.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:   flagNameDescription,
+		Target: &c.flagDescription,
+		Usage: "Human-friendly description of this secret engine. This overrides the" +
+			"current stored value, if any.",
+	})
+
 	f.StringVar(&StringVar{
 		Name:   flagNameListingVisibility,
 		Target: &c.flagListingVisibility,
-		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
+		Usage: "Determines the visibility of the mount in the UI-specific listing" +
+			"endpoint.",
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       "max-lease-ttl",
+		Target:     &c.flagMaxLeaseTTL,
+		Default:    0,
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: "The maximum lease TTL for this secrets engine. If unspecified, " +
+			"this defaults to the Vault server's globally configured maximum lease " +
+			"TTL, or a previously configured value for the secrets engine.",
+	})
+
+	f.StringMapVar(&StringMapVar{
+		Name:       "options",
+		Target:     &c.flagOptions,
+		Completion: complete.PredictAnything,
+		Usage: "Key-value pair provided as key=value for the mount options. " +
+			"This can be specified multiple times.",
 	})
 
 	f.IntVar(&IntVar{
@@ -156,9 +165,9 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 	mountPath := ensureTrailingSlash(sanitizePath(args[0]))
 
 	mountConfigInput := api.MountConfigInput{
-		Options:         c.flagOptions,
 		DefaultLeaseTTL: ttlToAPI(c.flagDefaultLeaseTTL),
 		MaxLeaseTTL:     ttlToAPI(c.flagMaxLeaseTTL),
+		Options:         c.flagOptions,
 	}
 
 	// Set these values only if they are provided in the CLI
@@ -169,6 +178,10 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameAuditNonHMACResponseKeys {
 			mountConfigInput.AuditNonHMACResponseKeys = c.flagAuditNonHMACResponseKeys
+		}
+
+		if fl.Name == flagNameDescription {
+			mountConfigInput.Description = &c.flagDescription
 		}
 
 		if fl.Name == flagNameListingVisibility {

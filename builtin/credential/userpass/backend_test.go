@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"crypto/tls"
+
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -225,36 +227,6 @@ func testUpdatePolicies(t *testing.T, user, policies string) logicaltest.TestSte
 	}
 }
 
-func testUsersWrite(t *testing.T, user string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "users/" + user,
-		Data:      data,
-		ErrorOk:   true,
-		Check: func(resp *logical.Response) error {
-			if resp == nil && expectError {
-				return fmt.Errorf("expected error but received nil")
-			}
-			return nil
-		},
-	}
-}
-
-func testLoginWrite(t *testing.T, user string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "login/" + user,
-		Data:      data,
-		ErrorOk:   true,
-		Check: func(resp *logical.Response) error {
-			if resp == nil && expectError {
-				return fmt.Errorf("expected error but received nil")
-			}
-			return nil
-		},
-	}
-}
-
 func testAccStepList(t *testing.T, users []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ListOperation,
@@ -282,7 +254,8 @@ func testAccStepLogin(t *testing.T, user string, pass string, policies []string)
 		},
 		Unauthenticated: true,
 
-		Check: logicaltest.TestCheckAuth(policies),
+		Check:     logicaltest.TestCheckAuth(policies),
+		ConnState: &tls.ConnectionState{},
 	}
 }
 

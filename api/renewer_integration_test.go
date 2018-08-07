@@ -13,9 +13,6 @@ func TestRenewer_Renew(t *testing.T) {
 	client, vaultDone := testVaultServer(t)
 	defer vaultDone()
 
-	pgURL, pgDone := testPostgresDB(t)
-	defer pgDone()
-
 	t.Run("group", func(t *testing.T) {
 		t.Run("kv", func(t *testing.T) {
 			t.Parallel()
@@ -92,6 +89,9 @@ func TestRenewer_Renew(t *testing.T) {
 		t.Run("database", func(t *testing.T) {
 			t.Parallel()
 
+			pgURL, pgDone := testPostgresDB(t)
+			defer pgDone()
+
 			if err := client.Sys().Mount("database", &api.MountInput{
 				Type: "database",
 			}); err != nil {
@@ -129,37 +129,41 @@ func TestRenewer_Renew(t *testing.T) {
 			go v.Renew()
 			defer v.Stop()
 
-			select {
-			case err := <-v.DoneCh():
-				t.Errorf("should have renewed once before returning: %s", err)
-			case renew := <-v.RenewCh():
-				if renew == nil {
-					t.Fatal("renew is nil")
-				}
-				if !renew.Secret.Renewable {
-					t.Errorf("expected lease to be renewable: %#v", renew)
-				}
-				if renew.Secret.LeaseDuration > 5 {
-					t.Errorf("expected lease to <= 5s: %#v", renew)
-				}
-			case <-time.After(5 * time.Second):
-				t.Errorf("no renewal")
-			}
-
-		outer:
+			done, renewed := false, false
+			timeout := time.After(5 * time.Second)
 			for {
+
+				if done {
+					break
+				}
 				select {
 				case err := <-v.DoneCh():
-					if err != nil {
-						t.Fatal(err)
+					if renewed {
+						// If we renewed but there's an error, we fail
+						if err != nil {
+							t.Fatalf("renewal failed with an error: %v", err)
+						}
+						// We can break out early here
+						done = true
+					} else {
+						t.Errorf("should have renewed once before returning: %s", err)
 					}
-					break outer
 				case renew := <-v.RenewCh():
-					t.Logf("renew called, remaining lease duration: %d", renew.Secret.LeaseDuration)
-					continue outer
-				case <-time.After(5 * time.Second):
-					t.Errorf("no data")
-					break outer
+					if renew == nil {
+						t.Fatal("renew is nil")
+					}
+					if !renew.Secret.Renewable {
+						t.Errorf("expected lease to be renewable: %#v", renew)
+					}
+					if renew.Secret.LeaseDuration > 5 {
+						t.Errorf("expected lease to <= 5s: %#v", renew)
+					}
+					renewed = true
+				case <-timeout:
+					if !renewed {
+						t.Errorf("no renewal")
+					}
+					done = true
 				}
 			}
 		})
@@ -169,7 +173,7 @@ func TestRenewer_Renew(t *testing.T) {
 
 			secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 				Policies:       []string{"default"},
-				TTL:            "3s",
+				TTL:            "5s",
 				ExplicitMaxTTL: "10s",
 			})
 			if err != nil {
@@ -185,45 +189,50 @@ func TestRenewer_Renew(t *testing.T) {
 			go v.Renew()
 			defer v.Stop()
 
-			select {
-			case err := <-v.DoneCh():
-				t.Errorf("should have renewed once before returning: %s", err)
-			case renew := <-v.RenewCh():
-				if renew == nil {
-					t.Fatal("renew is nil")
-				}
-				if renew.Secret.Auth == nil {
-					t.Fatal("renew auth is nil")
-				}
-				if !renew.Secret.Auth.Renewable {
-					t.Errorf("expected lease to be renewable: %#v", renew)
-				}
-				if renew.Secret.Auth.LeaseDuration > 3 {
-					t.Errorf("expected lease to < 3s: %#v", renew)
-				}
-				if renew.Secret.Auth.ClientToken == "" {
-					t.Error("expected a client token")
-				}
-				if renew.Secret.Auth.Accessor == "" {
-					t.Error("expected an accessor")
-				}
-			case <-time.After(5 * time.Second):
-				t.Errorf("no renewal")
-			}
-
-		outer:
+			renewed, done := false, false
+			timeout := time.After(10 * time.Second)
 			for {
+				if done {
+					break
+				}
 				select {
 				case err := <-v.DoneCh():
-					if err != nil {
-						t.Fatal(err)
+					if renewed {
+						// If we renewed but there's an error, we fail
+						if err != nil {
+							t.Fatalf("renewal failed with an error: %v", err)
+						}
+						// We can break out early here
+						done = true
+					} else {
+						t.Errorf("should have renewed once before returning: %s", err)
 					}
-					break outer
-				case <-v.RenewCh():
-					continue outer
-				case <-time.After(5 * time.Second):
-					t.Errorf("no data")
-					break outer
+					done = true
+				case renew := <-v.RenewCh():
+					if renew == nil {
+						t.Fatal("renew is nil")
+					}
+					if renew.Secret.Auth == nil {
+						t.Fatal("renew auth is nil")
+					}
+					if !renew.Secret.Auth.Renewable {
+						t.Errorf("expected lease to be renewable: %#v", renew)
+					}
+					if renew.Secret.Auth.LeaseDuration > 5 {
+						t.Errorf("expected lease to <= 5s: %#v", renew)
+					}
+					if renew.Secret.Auth.ClientToken == "" {
+						t.Error("expected a client token")
+					}
+					if renew.Secret.Auth.Accessor == "" {
+						t.Error("expected an accessor")
+					}
+					renewed = true
+				case <-timeout:
+					if !renewed {
+						t.Errorf("no renewal")
+					}
+					done = true
 				}
 			}
 		})

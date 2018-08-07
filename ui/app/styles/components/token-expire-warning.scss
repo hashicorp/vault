@@ -1,0 +1,19 @@
+.token-expire-warning {
+  position: absolute;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  box-shadow: $box-shadow-highest;
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+}
+.token-expire-warning .content p {
+  padding-right: $size-6;
+}
+.token-expire-warning .message-in-page {
+  margin: 0;
+}
+.token-expire-warning .message {
+  width: 100%;
+}

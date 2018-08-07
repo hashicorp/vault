@@ -15,6 +15,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -23,7 +24,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -36,10 +36,20 @@ import (
 type certExtKeyUsage int
 
 const (
-	serverExtKeyUsage certExtKeyUsage = 1 << iota
-	clientExtKeyUsage
+	anyExtKeyUsage certExtKeyUsage = 1 << iota
+	serverAuthExtKeyUsage
+	clientAuthExtKeyUsage
 	codeSigningExtKeyUsage
 	emailProtectionExtKeyUsage
+	ipsecEndSystemExtKeyUsage
+	ipsecTunnelExtKeyUsage
+	ipsecUserExtKeyUsage
+	timeStampingExtKeyUsage
+	ocspSigningExtKeyUsage
+	microsoftServerGatedCryptoExtKeyUsage
+	netscapeServerGatedCryptoExtKeyUsage
+	microsoftCommercialCodeSigningExtKeyUsage
+	microsoftKernelCodeSigningExtKeyUsage
 )
 
 type dataBundle struct {
@@ -56,6 +66,7 @@ type creationParameters struct {
 	DNSNames                      []string
 	EmailAddresses                []string
 	IPAddresses                   []net.IP
+	URIs                          []*url.URL
 	OtherSANs                     map[string][]string
 	IsCA                          bool
 	KeyType                       string
@@ -63,6 +74,7 @@ type creationParameters struct {
 	NotAfter                      time.Time
 	KeyUsage                      x509.KeyUsage
 	ExtKeyUsage                   certExtKeyUsage
+	ExtKeyUsageOIDs               []string
 	PolicyIdentifiers             []string
 	BasicConstraintsValidForNonCA bool
 
@@ -154,6 +166,7 @@ func validateKeyTypeLength(keyType string, keyBits int) *logical.Response {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"unsupported bit length for EC key: %d", keyBits))
 		}
+	case "any":
 	default:
 		return logical.ErrorResponse(fmt.Sprintf(
 			"unknown key type %s", keyType))
@@ -497,6 +510,29 @@ func parseOtherSANs(others []string) (map[string][]string, error) {
 	return result, nil
 }
 
+func validateSerialNumber(data *dataBundle, serialNumber string) string {
+	valid := false
+	if len(data.role.AllowedSerialNumbers) > 0 {
+		for _, currSerialNumber := range data.role.AllowedSerialNumbers {
+			if currSerialNumber == "" {
+				continue
+			}
+
+			if (strings.Contains(currSerialNumber, "*") &&
+				glob.Glob(currSerialNumber, serialNumber)) ||
+				currSerialNumber == serialNumber {
+				valid = true
+				break
+			}
+		}
+	}
+	if !valid {
+		return serialNumber
+	} else {
+		return ""
+	}
+}
+
 func generateCert(ctx context.Context,
 	b *backend,
 	data *dataBundle,
@@ -520,7 +556,6 @@ func generateCert(ctx context.Context,
 
 	if isCA {
 		data.params.IsCA = isCA
-
 		data.params.PermittedDNSDomains = data.apiData.Get("permitted_dns_domains").([]string)
 
 		if data.signingBundle == nil {
@@ -690,10 +725,9 @@ func signCert(b *backend,
 // from the various endpoints and generates a creationParameters with the
 // parameters that can be used to issue or sign
 func generateCreationBundle(b *backend, data *dataBundle) error {
-	var ok bool
-
 	// Read in names -- CN, DNS and email addresses
 	var cn string
+	var ridSerialNumber string
 	dnsNames := []string{}
 	emailAddresses := []string{}
 	{
@@ -705,6 +739,13 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 			if cn == "" && data.role.RequireCN {
 				return errutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true, unless "require_cn" is set to false`}
 			}
+		}
+
+		ridSerialNumber = data.apiData.Get("serial_number").(string)
+
+		// only take serial number from CSR if one was not supplied via API
+		if ridSerialNumber == "" && data.csr != nil {
+			ridSerialNumber = data.csr.Subject.SerialNumber
 		}
 
 		if data.csr != nil && data.role.UseCSRSANs {
@@ -773,6 +814,14 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 			}
 		}
 
+		if ridSerialNumber != "" {
+			badName := validateSerialNumber(data, ridSerialNumber)
+			if len(badName) != 0 {
+				return errutil.UserError{Err: fmt.Sprintf(
+					"serial_number %s not allowed by this role", badName)}
+			}
+		}
+
 		// Check for bad email and/or DNS names
 		badName := validateNames(data, dnsNames)
 		if len(badName) != 0 {
@@ -810,7 +859,6 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 
 	// Get and verify any IP SANs
 	ipAddresses := []net.IP{}
-	var ipAltInt interface{}
 	{
 		if data.csr != nil && data.role.UseCSRSANs {
 			if len(data.csr.IPAddresses) > 0 {
@@ -821,22 +869,87 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 				ipAddresses = data.csr.IPAddresses
 			}
 		} else {
-			ipAltInt, ok = data.apiData.GetOk("ip_sans")
-			if ok {
-				ipAlt := ipAltInt.(string)
-				if len(ipAlt) != 0 {
-					if !data.role.AllowIPSANs {
+			ipAlt := data.apiData.Get("ip_sans").([]string)
+			if len(ipAlt) > 0 {
+				if !data.role.AllowIPSANs {
+					return errutil.UserError{Err: fmt.Sprintf(
+						"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
+				}
+				for _, v := range ipAlt {
+					parsedIP := net.ParseIP(v)
+					if parsedIP == nil {
 						return errutil.UserError{Err: fmt.Sprintf(
-							"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
+							"the value '%s' is not a valid IP address", v)}
 					}
-					for _, v := range strings.Split(ipAlt, ",") {
-						parsedIP := net.ParseIP(v)
-						if parsedIP == nil {
-							return errutil.UserError{Err: fmt.Sprintf(
-								"the value '%s' is not a valid IP address", v)}
+					ipAddresses = append(ipAddresses, parsedIP)
+				}
+			}
+		}
+	}
+
+	URIs := []*url.URL{}
+	{
+		if data.csr != nil && data.role.UseCSRSANs {
+			if len(data.csr.URIs) > 0 {
+				if len(data.role.AllowedURISANs) == 0 {
+					return errutil.UserError{Err: fmt.Sprintf(
+						"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
+					}
+				}
+
+				// validate uri sans
+				for _, uri := range data.csr.URIs {
+					valid := false
+					for _, allowed := range data.role.AllowedURISANs {
+						validURI := glob.Glob(allowed, uri.String())
+						if validURI {
+							valid = true
+							break
 						}
-						ipAddresses = append(ipAddresses, parsedIP)
 					}
+
+					if !valid {
+						return errutil.UserError{Err: fmt.Sprintf(
+							"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+						}
+					}
+
+					URIs = append(URIs, uri)
+				}
+			}
+		} else {
+			uriAlt := data.apiData.Get("uri_sans").([]string)
+			if len(uriAlt) > 0 {
+				if len(data.role.AllowedURISANs) == 0 {
+					return errutil.UserError{Err: fmt.Sprintf(
+						"URI Subject Alternative Names are not allowed in this role, but were provided via the API"),
+					}
+				}
+
+				for _, uri := range uriAlt {
+					valid := false
+					for _, allowed := range data.role.AllowedURISANs {
+						validURI := glob.Glob(allowed, uri)
+						if validURI {
+							valid = true
+							break
+						}
+					}
+
+					if !valid {
+						return errutil.UserError{Err: fmt.Sprintf(
+							"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+						}
+					}
+
+					parsedURI, err := url.Parse(uri)
+					if parsedURI == nil || err != nil {
+						return errutil.UserError{Err: fmt.Sprintf(
+							"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
+						}
+					}
+
+					URIs = append(URIs, parsedURI)
 				}
 			}
 		}
@@ -844,6 +957,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 
 	subject := pkix.Name{
 		CommonName:         cn,
+		SerialNumber:       ridSerialNumber,
 		Country:            strutil.RemoveDuplicates(data.role.Country, false),
 		Organization:       strutil.RemoveDuplicates(data.role.Organization, false),
 		OrganizationalUnit: strutil.RemoveDuplicates(data.role.OU, false),
@@ -860,24 +974,12 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 	{
 		ttl = time.Duration(data.apiData.Get("ttl").(int)) * time.Second
 
-		if ttl == 0 {
-			roleTTL, err := parseutil.ParseDurationSecond(data.role.TTL)
-			if err != nil {
-				return errutil.UserError{Err: fmt.Sprintf(
-					"invalid role ttl: %s", err)}
-			}
-			if roleTTL != 0 {
-				ttl = roleTTL
-			}
+		if ttl == 0 && data.role.TTL > 0 {
+			ttl = data.role.TTL
 		}
 
-		roleMaxTTL, err := parseutil.ParseDurationSecond(data.role.MaxTTL)
-		if err != nil {
-			return errutil.UserError{Err: fmt.Sprintf(
-				"invalid role max_ttl: %s", err)}
-		}
-		if roleMaxTTL != 0 {
-			maxTTL = roleMaxTTL
+		if data.role.MaxTTL > 0 {
+			maxTTL = data.role.MaxTTL
 		}
 
 		if ttl == 0 {
@@ -902,34 +1004,19 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		}
 	}
 
-	// Build up usages
-	var extUsage certExtKeyUsage
-	{
-		if data.role.ServerFlag {
-			extUsage = extUsage | serverExtKeyUsage
-		}
-		if data.role.ClientFlag {
-			extUsage = extUsage | clientExtKeyUsage
-		}
-		if data.role.CodeSigningFlag {
-			extUsage = extUsage | codeSigningExtKeyUsage
-		}
-		if data.role.EmailProtectionFlag {
-			extUsage = extUsage | emailProtectionExtKeyUsage
-		}
-	}
-
 	data.params = &creationParameters{
 		Subject:                       subject,
 		DNSNames:                      dnsNames,
 		EmailAddresses:                emailAddresses,
 		IPAddresses:                   ipAddresses,
+		URIs:                          URIs,
 		OtherSANs:                     otherSANs,
 		KeyType:                       data.role.KeyType,
 		KeyBits:                       data.role.KeyBits,
 		NotAfter:                      notAfter,
 		KeyUsage:                      x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
-		ExtKeyUsage:                   extUsage,
+		ExtKeyUsage:                   parseExtKeyUsages(data.role),
+		ExtKeyUsageOIDs:               data.role.ExtKeyUsageOIDs,
 		PolicyIdentifiers:             data.role.PolicyIdentifiers,
 		BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
 	}
@@ -976,17 +1063,60 @@ func addKeyUsages(data *dataBundle, certTemplate *x509.Certificate) {
 
 	certTemplate.KeyUsage = data.params.KeyUsage
 
-	if data.params.ExtKeyUsage&serverExtKeyUsage != 0 {
+	if data.params.ExtKeyUsage&anyExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageAny)
+	}
+
+	if data.params.ExtKeyUsage&serverAuthExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
 	}
-	if data.params.ExtKeyUsage&clientExtKeyUsage != 0 {
+
+	if data.params.ExtKeyUsage&clientAuthExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
 	}
+
 	if data.params.ExtKeyUsage&codeSigningExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
 	}
+
 	if data.params.ExtKeyUsage&emailProtectionExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
+	}
+
+	if data.params.ExtKeyUsage&ipsecEndSystemExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageIPSECEndSystem)
+	}
+
+	if data.params.ExtKeyUsage&ipsecTunnelExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageIPSECTunnel)
+	}
+
+	if data.params.ExtKeyUsage&ipsecUserExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageIPSECUser)
+	}
+
+	if data.params.ExtKeyUsage&timeStampingExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageTimeStamping)
+	}
+
+	if data.params.ExtKeyUsage&ocspSigningExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
+	}
+
+	if data.params.ExtKeyUsage&microsoftServerGatedCryptoExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftServerGatedCrypto)
+	}
+
+	if data.params.ExtKeyUsage&netscapeServerGatedCryptoExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageNetscapeServerGatedCrypto)
+	}
+
+	if data.params.ExtKeyUsage&microsoftCommercialCodeSigningExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftCommercialCodeSigning)
+	}
+
+	if data.params.ExtKeyUsage&microsoftKernelCodeSigningExtKeyUsage != 0 {
+		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftKernelCodeSigning)
 	}
 }
 
@@ -997,6 +1127,16 @@ func addPolicyIdentifiers(data *dataBundle, certTemplate *x509.Certificate) {
 		oid, err := stringToOid(oidstr)
 		if err == nil {
 			certTemplate.PolicyIdentifiers = append(certTemplate.PolicyIdentifiers, oid)
+		}
+	}
+}
+
+// addExtKeyUsageOids adds custom extended key usage OIDs to certificate
+func addExtKeyUsageOids(data *dataBundle, certTemplate *x509.Certificate) {
+	for _, oidstr := range data.params.ExtKeyUsageOIDs {
+		oid, err := stringToOid(oidstr)
+		if err == nil {
+			certTemplate.UnknownExtKeyUsage = append(certTemplate.UnknownExtKeyUsage, oid)
 		}
 	}
 }
@@ -1033,6 +1173,7 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		DNSNames:       data.params.DNSNames,
 		EmailAddresses: data.params.EmailAddresses,
 		IPAddresses:    data.params.IPAddresses,
+		URIs:           data.params.URIs,
 	}
 
 	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {
@@ -1057,6 +1198,8 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 
 	addKeyUsages(data, certTemplate)
 
+	addExtKeyUsageOids(data, certTemplate)
+
 	certTemplate.IssuingCertificateURL = data.params.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = data.params.URLs.CRLDistributionPoints
 	certTemplate.OCSPServer = data.params.URLs.OCSPServers
@@ -1072,11 +1215,6 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 
 		caCert := data.signingBundle.Certificate
 		certTemplate.AuthorityKeyId = caCert.SubjectKeyId
-
-		err = checkPermittedDNSDomains(certTemplate, caCert)
-		if err != nil {
-			return nil, errutil.UserError{Err: err.Error()}
-		}
 
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, result.PrivateKey.Public(), data.signingBundle.PrivateKey)
 	} else {
@@ -1145,6 +1283,7 @@ func createCSR(data *dataBundle) (*certutil.ParsedCSRBundle, error) {
 		DNSNames:       data.params.DNSNames,
 		EmailAddresses: data.params.EmailAddresses,
 		IPAddresses:    data.params.IPAddresses,
+		URIs:           data.params.URIs,
 	}
 
 	if err := handleOtherCSRSANs(csrTemplate, data.params.OtherSANs); err != nil {
@@ -1245,12 +1384,19 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		certTemplate.DNSNames = data.csr.DNSNames
 		certTemplate.EmailAddresses = data.csr.EmailAddresses
 		certTemplate.IPAddresses = data.csr.IPAddresses
+		certTemplate.URIs = data.csr.URIs
 
-		certTemplate.ExtraExtensions = data.csr.Extensions
+		for _, name := range data.csr.Extensions {
+			if !name.Id.Equal(oidExtensionBasicConstraints) {
+				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
+			}
+		}
+
 	} else {
 		certTemplate.DNSNames = data.params.DNSNames
 		certTemplate.EmailAddresses = data.params.EmailAddresses
 		certTemplate.IPAddresses = data.params.IPAddresses
+		certTemplate.URIs = data.csr.URIs
 	}
 
 	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {
@@ -1260,6 +1406,8 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	addPolicyIdentifiers(data, certTemplate)
 
 	addKeyUsages(data, certTemplate)
+
+	addExtKeyUsageOids(data, certTemplate)
 
 	var certBytes []byte
 
@@ -1289,10 +1437,6 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		certTemplate.PermittedDNSDomains = data.params.PermittedDNSDomains
 		certTemplate.PermittedDNSDomainsCritical = true
 	}
-	err = checkPermittedDNSDomains(certTemplate, caCert)
-	if err != nil {
-		return nil, errutil.UserError{Err: err.Error()}
-	}
 
 	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, data.csr.PublicKey, data.signingBundle.PrivateKey)
 
@@ -1309,42 +1453,6 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	result.CAChain = data.signingBundle.GetCAChain()
 
 	return result, nil
-}
-
-func checkPermittedDNSDomains(template, ca *x509.Certificate) error {
-	if len(ca.PermittedDNSDomains) == 0 {
-		return nil
-	}
-
-	namesToCheck := map[string]struct{}{
-		template.Subject.CommonName: struct{}{},
-	}
-	for _, name := range template.DNSNames {
-		namesToCheck[name] = struct{}{}
-	}
-
-	var badName string
-NameCheck:
-	for name := range namesToCheck {
-		for _, perm := range ca.PermittedDNSDomains {
-			switch {
-			case strings.HasPrefix(perm, ".") && strings.HasSuffix(name, perm):
-				// .example.com matches my.host.example.com and
-				// host.example.com but does not match example.com
-				break NameCheck
-			case perm == name:
-				break NameCheck
-			}
-		}
-		badName = name
-		break
-	}
-
-	if badName == "" {
-		return nil
-	}
-
-	return fmt.Errorf("name %q disallowed by CA's permitted DNS domains", badName)
 }
 
 func convertRespToPKCS8(resp *logical.Response) error {
@@ -1415,6 +1523,7 @@ func handleOtherCSRSANs(in *x509.CertificateRequest, sans map[string][]string) e
 		DNSNames:       in.DNSNames,
 		IPAddresses:    in.IPAddresses,
 		EmailAddresses: in.EmailAddresses,
+		URIs:           in.URIs,
 	}
 	if err := handleOtherSANs(certTemplate, sans); err != nil {
 		return err
@@ -1471,7 +1580,7 @@ func handleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
 	}
 
 	// Append any existing SANs, sans marshalling
-	rawValues = append(rawValues, marshalSANs(in.DNSNames, in.EmailAddresses, in.IPAddresses)...)
+	rawValues = append(rawValues, marshalSANs(in.DNSNames, in.EmailAddresses, in.IPAddresses, in.URIs)...)
 
 	// Marshal and add to ExtraExtensions
 	ext := pkix.Extension{
@@ -1488,16 +1597,25 @@ func handleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
 	return nil
 }
 
+// Note: Taken from the Go source code since it's not public, and used in the
+// modified function below (which also uses these consts upstream)
+const (
+	nameTypeEmail = 1
+	nameTypeDNS   = 2
+	nameTypeURI   = 6
+	nameTypeIP    = 7
+)
+
 // Note: Taken from the Go source code since it's not public, plus changed to not marshal
 // marshalSANs marshals a list of addresses into a the contents of an X.509
 // SubjectAlternativeName extension.
-func marshalSANs(dnsNames, emailAddresses []string, ipAddresses []net.IP) []asn1.RawValue {
+func marshalSANs(dnsNames, emailAddresses []string, ipAddresses []net.IP, uris []*url.URL) []asn1.RawValue {
 	var rawValues []asn1.RawValue
 	for _, name := range dnsNames {
-		rawValues = append(rawValues, asn1.RawValue{Tag: 2, Class: 2, Bytes: []byte(name)})
+		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeDNS, Class: 2, Bytes: []byte(name)})
 	}
 	for _, email := range emailAddresses {
-		rawValues = append(rawValues, asn1.RawValue{Tag: 1, Class: 2, Bytes: []byte(email)})
+		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeEmail, Class: 2, Bytes: []byte(email)})
 	}
 	for _, rawIP := range ipAddresses {
 		// If possible, we always want to encode IPv4 addresses in 4 bytes.
@@ -1505,7 +1623,10 @@ func marshalSANs(dnsNames, emailAddresses []string, ipAddresses []net.IP) []asn1
 		if ip == nil {
 			ip = rawIP
 		}
-		rawValues = append(rawValues, asn1.RawValue{Tag: 7, Class: 2, Bytes: ip})
+		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeIP, Class: 2, Bytes: ip})
+	}
+	for _, uri := range uris {
+		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeURI, Class: 2, Bytes: []byte(uri.String())})
 	}
 	return rawValues
 }

@@ -43,7 +43,7 @@ Usage: vault kv get [options] KEY
 }
 
 func (c *KVGetCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
@@ -91,22 +91,34 @@ func (c *KVGetCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
-	path, err = addPrefixToVKVPath(path, "data")
+	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
 	var versionParam map[string]string
-	if c.flagVersion > 0 {
-		versionParam = map[string]string{
-			"version": fmt.Sprintf("%d", c.flagVersion),
+
+	if v2 {
+		path = addPrefixToVKVPath(path, mountPath, "data")
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+
+		if c.flagVersion > 0 {
+			versionParam = map[string]string{
+				"version": fmt.Sprintf("%d", c.flagVersion),
+			}
 		}
 	}
 
 	secret, err := kvReadRequest(client, path, versionParam)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading %s: %s", path, err))
+		if secret != nil {
+			OutputSecret(c.UI, secret)
+		}
 		return 2
 	}
 	if secret == nil {
@@ -115,7 +127,27 @@ func (c *KVGetCommand) Run(args []string) int {
 	}
 
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		if v2 {
+			// This is a v2, pass in the data field
+			if data, ok := secret.Data["data"]; ok && data != nil {
+				// If they requested a literal "data" see if they meant actual
+				// value or the data block itself
+				if c.flagField == "data" {
+					if dataMap, ok := data.(map[string]interface{}); ok {
+						if _, ok := dataMap["data"]; ok {
+							return PrintRawField(c.UI, dataMap, c.flagField)
+						}
+					}
+					return PrintRawField(c.UI, secret, c.flagField)
+				}
+				return PrintRawField(c.UI, data, c.flagField)
+			} else {
+				c.UI.Error(fmt.Sprintf("No data found at %s", path))
+				return 2
+			}
+		} else {
+			return PrintRawField(c.UI, secret, c.flagField)
+		}
 	}
 
 	// If we have wrap info print the secret normally.
@@ -123,13 +155,28 @@ func (c *KVGetCommand) Run(args []string) int {
 		return OutputSecret(c.UI, secret)
 	}
 
+	if len(secret.Warnings) > 0 {
+		tf := TableFormatter{}
+		tf.printWarnings(c.UI, secret)
+	}
+
 	if metadata, ok := secret.Data["metadata"]; ok && metadata != nil {
 		c.UI.Info(getHeaderForMap("Metadata", metadata.(map[string]interface{})))
 		OutputData(c.UI, metadata)
 		c.UI.Info("")
 	}
-	if data, ok := secret.Data["data"]; ok && data != nil {
-		c.UI.Info(getHeaderForMap("Data", data.(map[string]interface{})))
+
+	data := secret.Data
+	if v2 && data != nil {
+		data = nil
+		dataRaw := secret.Data["data"]
+		if dataRaw != nil {
+			data = dataRaw.(map[string]interface{})
+		}
+	}
+
+	if data != nil {
+		c.UI.Info(getHeaderForMap("Data", data))
 		OutputData(c.UI, data)
 	}
 

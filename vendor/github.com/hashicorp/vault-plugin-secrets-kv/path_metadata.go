@@ -105,6 +105,7 @@ func (b *versionedKVBackend) pathMetadataRead() framework.OperationFunc {
 				"created_time":    ptypesTimestampToString(meta.CreatedTime),
 				"updated_time":    ptypesTimestampToString(meta.UpdatedTime),
 				"max_versions":    meta.MaxVersions,
+				"cas_required":    meta.CasRequired,
 			},
 		}, nil
 	}

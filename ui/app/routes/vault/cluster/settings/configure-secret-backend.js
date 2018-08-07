@@ -6,8 +6,8 @@ const CONFIGURABLE_BACKEND_TYPES = ['aws', 'ssh', 'pki'];
 export default Ember.Route.extend({
   model() {
     const { backend } = this.paramsFor(this.routeName);
-    return this.store.query('secret-engine', {}).then(() => {
-      const model = this.store.peekRecord('secret-engine', backend);
+    return this.store.query('secret-engine', { path: backend }).then(modelList => {
+      let model = modelList && modelList.get('firstObject');
       if (!model || !CONFIGURABLE_BACKEND_TYPES.includes(model.get('type'))) {
         const error = new DS.AdapterError();
         Ember.set(error, 'httpStatus', 404);

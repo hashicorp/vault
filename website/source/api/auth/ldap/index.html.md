@@ -27,7 +27,9 @@ This endpoint configures the LDAP auth method.
 ### Parameters
 
 - `url` `(string: <required>)` – The LDAP server to connect to. Examples:
-  `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`
+  `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. Multiple URLs can be
+  specified with commas, e.g. `ldap://ldap.myorg.com,ldap://ldap2.myorg.com`;
+  these will be tried in-order.
 - `case_sensitive_names` `(bool: false)` – If set, user and group names
   assigned to policies within the backend will be case sensitive. Otherwise,
   names will be normalized to lower case. Case will still be preserved when

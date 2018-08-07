@@ -97,10 +97,6 @@ test('aws backend', function(assert) {
   click(`[data-test-confirm-button]`);
 
   andThen(() => {
-    assert.equal(
-      find(`[data-test-secret-link="${roleName}"]`).length,
-      0,
-      `aws: role is no longer in the list`
-    );
+    assert.dom(`[data-test-secret-link="${roleName}"]`).doesNotExist(`aws: role is no longer in the list`);
   });
 });

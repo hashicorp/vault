@@ -165,6 +165,23 @@ func TestTokenCapabilitiesCommand_Run(t *testing.T) {
 		}
 	})
 
+	t.Run("multiple_paths", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		_, cmd := testTokenCapabilitiesCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"secret/foo,secret/bar",
+		})
+		if exp := 1; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+	})
+
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 

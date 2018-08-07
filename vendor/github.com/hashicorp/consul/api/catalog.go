@@ -22,6 +22,7 @@ type CatalogService struct {
 	ServiceName              string
 	ServiceAddress           string
 	ServiceTags              []string
+	ServiceMeta              map[string]string
 	ServicePort              int
 	ServiceEnableTagOverride bool
 	CreateIndex              uint64
@@ -155,7 +156,20 @@ func (c *Catalog) Services(q *QueryOptions) (map[string][]string, *QueryMeta, er
 
 // Service is used to query catalog entries for a given service
 func (c *Catalog) Service(service, tag string, q *QueryOptions) ([]*CatalogService, *QueryMeta, error) {
-	r := c.c.newRequest("GET", "/v1/catalog/service/"+service)
+	return c.service(service, tag, q, false)
+}
+
+// Connect is used to query catalog entries for a given Connect-enabled service
+func (c *Catalog) Connect(service, tag string, q *QueryOptions) ([]*CatalogService, *QueryMeta, error) {
+	return c.service(service, tag, q, true)
+}
+
+func (c *Catalog) service(service, tag string, q *QueryOptions, connect bool) ([]*CatalogService, *QueryMeta, error) {
+	path := "/v1/catalog/service/" + service
+	if connect {
+		path = "/v1/catalog/connect/" + service
+	}
+	r := c.c.newRequest("GET", path)
 	r.setQueryOptions(q)
 	if tag != "" {
 		r.params.Set("tag", tag)

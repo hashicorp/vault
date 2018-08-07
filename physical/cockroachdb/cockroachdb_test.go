@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
@@ -58,6 +58,7 @@ func prepareCockroachDBTestContainer(t *testing.T) (cleanup func(), retURL, tabl
 		if err != nil {
 			return err
 		}
+		defer db.Close()
 		_, err = db.Exec("CREATE DATABASE database")
 		return err
 	}); err != nil {

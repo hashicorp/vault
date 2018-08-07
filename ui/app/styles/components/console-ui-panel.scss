@@ -1,0 +1,165 @@
+.console-ui-panel-scroller {
+  background: linear-gradient(to right, #191a1c, #1b212d);
+  height: 0;
+  left: 0;
+  overflow: auto;
+  position: absolute;
+  min-height: 0;
+  right: 0;
+  transform: translate3d(0, -400px, 0);
+  transition: min-height $speed ease-out, transform $speed ease-in;
+  will-change: transform, min-height;
+  -webkit-overflow-scrolling: touch;
+  z-index: 199;
+}
+
+.console-ui-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: $size-8 $size-8 $size-4;
+  min-height: 100%;
+  color: $white;
+  font-size: $body-size;
+  font-weight: $font-weight-semibold;
+  transition: justify-content $speed ease-in;
+
+  pre,
+  p {
+    background: none;
+    color: inherit;
+    font-size: $body-size;
+    min-height: 2rem;
+
+    &:not(.console-ui-command):not(.CodeMirror-line) {
+      padding-left: $console-spacing;
+    }
+  }
+
+  .cm-s-hashi.CodeMirror {
+    background-color: rgba($black, 0.5) !important;
+    font-weight: $font-weight-normal;
+    margin-left: $console-spacing;
+    padding: $size-8 $size-4;
+  }
+
+  .button {
+    background: transparent;
+    border: none;
+    color: $grey-dark;
+    min-width: 0;
+    padding: 0 $size-8;
+
+    &.active,
+    &:hover {
+      background: $blue;
+      color: $white;
+    }
+  }
+}
+
+.console-ui-panel .hover-copy-button,
+.console-ui-panel .hover-copy-button-static {
+  top: auto;
+  bottom: 0;
+  right: 0;
+}
+
+.console-ui-input {
+  align-items: center;
+  display: flex;
+
+  input {
+    background-color: rgba($black, 0.5);
+    border: 0;
+    caret-color: $white;
+    color: $white;
+    flex: 1;
+    font-family: $family-monospace;
+    font-size: 16px;
+    font-weight: $font-weight-bold;
+    margin-left: -$size-10;
+    outline: none;
+    padding: $size-10;
+    transition: background-color $speed;
+  }
+}
+
+.console-ui-command {
+  line-height: 2;
+}
+
+.console-ui-output {
+  transition: background-color $speed ease-in-out;
+  will-change: background-color;
+  padding-right: $size-2;
+  position: relative;
+  background-color: rgba(#000, 0);
+  &:hover {
+    background-color: rgba(#000, 0.5);
+  }
+}
+
+.console-ui-alert {
+  margin-left: calc(#{$console-spacing} - 0.33rem);
+  position: relative;
+
+  .icon {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+}
+
+.panel-open .console-ui-panel-scroller {
+  box-shadow: $box-shadow-highest;
+  transform: translate3d(0, 0, 0);
+  min-height: 400px;
+}
+
+.panel-open .console-ui-panel-scroller.fullscreen {
+  bottom: 0;
+  top: 0;
+  position: fixed;
+  min-height: 100%;
+}
+
+.panel-open {
+  .navbar,
+  .navbar-sections {
+    transition: transform $speed ease-in;
+  }
+}
+
+.panel-open.panel-fullscreen {
+  .navbar,
+  .navbar-sections {
+    transform: translate3d(0, -100px, 0);
+  }
+}
+
+.page-container > header:not(.page-header) {
+  background: linear-gradient(to right, #191a1c, #1b212d);
+}
+
+header .navbar,
+header .navbar-sections {
+  z-index: 200;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.console-spinner.control {
+  height: 21px;
+  width: 21px;
+  transform: scale(.75);
+  transform-origin: center;
+  &::after {
+    height: auto;
+    width: auto;
+    right: .25rem;
+    left: .25rem;
+    top: .25rem;
+    bottom: .25rem;
+  }
+}

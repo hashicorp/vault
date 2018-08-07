@@ -10,15 +10,8 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-radix"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
-)
-
-var (
-	whitelistedHeaders = []string{
-		consts.VaultKVCLIClientHeader,
-	}
 )
 
 // Router is used to do prefix based routing of a request to a logical backend
@@ -61,6 +54,7 @@ type validateMountResponse struct {
 	MountType     string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
 	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor"`
 	MountPath     string `json:"mount_path" structs:"mount_path" mapstructure:"mount_path"`
+	MountLocal    bool   `json:"mount_local" structs:"mount_local" mapstructure:"mount_local"`
 }
 
 // validateMountByAccessor returns the mount type and ID for a given mount
@@ -84,6 +78,7 @@ func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse
 		MountAccessor: mountEntry.Accessor,
 		MountType:     mountEntry.Type,
 		MountPath:     mountPath,
+		MountLocal:    mountEntry.Local,
 	}
 }
 
@@ -214,13 +209,14 @@ func (r *Router) MatchingMountByUUID(mountID string) *MountEntry {
 	}
 
 	r.l.RLock()
-	defer r.l.RUnlock()
 
 	_, raw, ok := r.mountUUIDCache.LongestPrefix(mountID)
 	if !ok {
+		r.l.RUnlock()
 		return nil
 	}
 
+	r.l.RUnlock()
 	return raw.(*MountEntry)
 }
 
@@ -231,21 +227,22 @@ func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 	}
 
 	r.l.RLock()
-	defer r.l.RUnlock()
 
 	_, raw, ok := r.mountAccessorCache.LongestPrefix(mountAccessor)
 	if !ok {
+		r.l.RUnlock()
 		return nil
 	}
 
+	r.l.RUnlock()
 	return raw.(*MountEntry)
 }
 
 // MatchingMount returns the mount prefix that would be used for a path
 func (r *Router) MatchingMount(path string) string {
 	r.l.RLock()
-	defer r.l.RUnlock()
-	var mount = r.matchingMountInternal(path)
+	mount := r.matchingMountInternal(path)
+	r.l.RUnlock()
 	return mount
 }
 
@@ -442,15 +439,6 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	originalEntityID := req.EntityID
 
-	// Allow EntityID to passthrough to the system backend. This is required to
-	// allow clients to generate MFA credentials in respective entity objects
-	// in identity store via the system backend.
-	switch {
-	case strings.HasPrefix(originalPath, "sys/"):
-	default:
-		req.EntityID = ""
-	}
-
 	// Hash the request token unless the request is being routed to the token
 	// or system backend.
 	clientToken := req.ClientToken
@@ -499,6 +487,9 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		}
 	}
 
+	reqTokenEntry := req.TokenEntry()
+	req.SetTokenEntry(nil)
+
 	// Reset the request before returning
 	defer func() {
 		req.Path = originalPath
@@ -520,6 +511,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.MountAccessor = re.mountEntry.Accessor
 
 		req.EntityID = originalEntityID
+
+		req.SetTokenEntry(reqTokenEntry)
 	}()
 
 	// Invoke the backend
@@ -636,20 +629,6 @@ func pathsToRadix(paths []string) *radix.Tree {
 // origHeaders is done is a case-insensitive manner.
 func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHeaders []string) map[string][]string {
 	retHeaders := make(map[string][]string)
-
-	// Handle whitelisted values
-	for _, header := range whitelistedHeaders {
-		if val, ok := origHeaders[header]; ok {
-			retHeaders[header] = val
-		} else {
-			// Try to check if a lowercased version of the header exists in the
-			// originating request. The header key that gets used is the one from the
-			// whitelist.
-			if val, ok := origHeaders[strings.ToLower(header)]; ok {
-				retHeaders[header] = val
-			}
-		}
-	}
 
 	// Short-circuit if there's nothing to filter
 	if len(passthroughHeaders) == 0 {

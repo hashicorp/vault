@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -59,14 +60,12 @@ func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 	ctx := context.Background()
 
 	storage := &logical.InmemStorage{}
-	p, lock, upserted, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
+	p, upserted, err := lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
 		Storage: storage,
 		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	})
-	if lock != nil {
-		defer lock.RUnlock()
-	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,6 +74,9 @@ func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 	if !upserted {
 		t.Fatal("expected an upsert")
+	}
+	if !lm.useCache {
+		p.Unlock()
 	}
 
 	testBytes := make([]byte, len(p.Keys["1"].Key))
@@ -108,7 +110,8 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
-	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
+	p, _, err := lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
 		Storage: storage,
 		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
@@ -116,10 +119,12 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p == nil || lock == nil {
-		t.Fatal("nil policy or lock")
+	if p == nil {
+		t.Fatal("nil policy")
 	}
-	lock.RUnlock()
+	if !lm.useCache {
+		p.Unlock()
+	}
 
 	// Store the initial key in the archive
 	keysArchive := []KeyEntry{KeyEntry{}, p.Keys["1"]}
@@ -159,27 +164,35 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 
 	// If we're caching, expire from the cache since we modified it
 	// under-the-hood
-	if lm.CacheActive() {
-		delete(lm.cache, "test")
+	if lm.useCache {
+		lm.cache.Delete("test")
 	}
 
 	// Now get the policy again; the upgrade should happen automatically
-	p, lock, err = lm.GetPolicyShared(ctx, storage, "test")
+	p, _, err = lm.GetPolicy(ctx, PolicyRequest{
+		Storage: storage,
+		Name:    "test",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p == nil || lock == nil {
-		t.Fatal("nil policy or lock")
+	if p == nil {
+		t.Fatal("nil policy")
 	}
-	lock.RUnlock()
+	if !lm.useCache {
+		p.Unlock()
+	}
 
 	checkKeys(t, ctx, p, storage, keysArchive, "upgrade", 10, 10, 10)
 
 	// Let's check some deletion logic while we're at it
 
 	// The policy should be in there
-	if lm.CacheActive() && lm.cache["test"] == nil {
-		t.Fatal("nil policy in cache")
+	if lm.useCache {
+		_, ok := lm.cache.Load("test")
+		if !ok {
+			t.Fatal("nil policy in cache")
+		}
 	}
 
 	// First we'll do this wrong, by not setting the deletion flag
@@ -189,18 +202,26 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 
 	// The policy should still be in there
-	if lm.CacheActive() && lm.cache["test"] == nil {
-		t.Fatal("nil policy in cache")
+	if lm.useCache {
+		_, ok := lm.cache.Load("test")
+		if !ok {
+			t.Fatal("nil policy in cache")
+		}
 	}
 
-	p, lock, err = lm.GetPolicyShared(ctx, storage, "test")
+	p, _, err = lm.GetPolicy(ctx, PolicyRequest{
+		Storage: storage,
+		Name:    "test",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p == nil || lock == nil {
-		t.Fatal("policy or lock nil after bad delete")
+	if p == nil {
+		t.Fatal("policy nil after bad delete")
 	}
-	lock.RUnlock()
+	if !lm.useCache {
+		p.Unlock()
+	}
 
 	// Now do it properly
 	p.DeletionAllowed = true
@@ -214,16 +235,22 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 
 	// The policy should *not* be in there
-	if lm.CacheActive() && lm.cache["test"] != nil {
-		t.Fatal("non-nil policy in cache")
+	if lm.useCache {
+		_, ok := lm.cache.Load("test")
+		if ok {
+			t.Fatal("non-nil policy in cache")
+		}
 	}
 
-	p, lock, err = lm.GetPolicyShared(ctx, storage, "test")
+	p, _, err = lm.GetPolicy(ctx, PolicyRequest{
+		Storage: storage,
+		Name:    "test",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p != nil || lock != nil {
-		t.Fatal("policy or lock not nil after delete")
+	if p != nil {
+		t.Fatal("policy not nil after delete")
 	}
 }
 
@@ -241,7 +268,8 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
-	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
+	p, _, err := lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
 		Storage: storage,
 		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
@@ -249,10 +277,12 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p == nil || lock == nil {
-		t.Fatal("nil policy or lock")
+	if p == nil {
+		t.Fatal("nil policy")
 	}
-	lock.RUnlock()
+	if !lm.useCache {
+		p.Unlock()
+	}
 
 	// Store the initial key in the archive
 	keysArchive := []KeyEntry{KeyEntry{}, p.Keys["1"]}
@@ -393,7 +423,8 @@ func Test_StorageErrorSafety(t *testing.T) {
 	lm := NewLockManager(false)
 
 	storage := &logical.InmemStorage{}
-	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
+	p, _, err := lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
 		Storage: storage,
 		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
@@ -401,10 +432,9 @@ func Test_StorageErrorSafety(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p == nil || lock == nil {
-		t.Fatal("nil policy or lock")
+	if p == nil {
+		t.Fatal("nil policy")
 	}
-	lock.RUnlock()
 
 	// Store the initial key in the archive
 	keysArchive := []KeyEntry{KeyEntry{}, p.Keys["1"]}
@@ -440,7 +470,8 @@ func Test_BadUpgrade(t *testing.T) {
 	ctx := context.Background()
 	lm := NewLockManager(false)
 	storage := &logical.InmemStorage{}
-	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
+	p, _, err := lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
 		Storage: storage,
 		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
@@ -448,15 +479,15 @@ func Test_BadUpgrade(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p == nil || lock == nil {
-		t.Fatal("nil policy or lock")
+	if p == nil {
+		t.Fatal("nil policy")
 	}
-	lock.RUnlock()
 
 	orig, err := copystructure.Copy(p)
 	if err != nil {
 		t.Fatal(err)
 	}
+	orig.(*Policy).l = p.l
 
 	p.Key = p.Keys["1"].Key
 	p.Keys = nil
@@ -471,7 +502,7 @@ func Test_BadUpgrade(t *testing.T) {
 	k.CreationTime = o.CreationTime
 	k.HMACKey = o.HMACKey
 	p.Keys["1"] = k
-	p.versionPrefixCache = nil
+	p.versionPrefixCache = sync.Map{}
 
 	if !reflect.DeepEqual(orig, p) {
 		t.Fatalf("not equal:\n%#v\n%#v", orig, p)
@@ -504,7 +535,8 @@ func Test_BadArchive(t *testing.T) {
 	ctx := context.Background()
 	lm := NewLockManager(false)
 	storage := &logical.InmemStorage{}
-	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
+	p, _, err := lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
 		Storage: storage,
 		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
@@ -512,10 +544,9 @@ func Test_BadArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p == nil || lock == nil {
-		t.Fatal("nil policy or lock")
+	if p == nil {
+		t.Fatal("nil policy")
 	}
-	lock.RUnlock()
 
 	for i := 2; i <= 10; i++ {
 		err = p.Rotate(ctx, storage)

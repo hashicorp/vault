@@ -1,6 +1,7 @@
 import Ember from 'ember';
 
 export default Ember.Component.extend({
+  classNames: 'token-expire-warning',
   auth: Ember.inject.service(),
 
   routing: Ember.inject.service('-routing'),

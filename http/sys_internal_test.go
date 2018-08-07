@@ -65,12 +65,14 @@ func TestSysInternal_UIMounts(t *testing.T) {
 				"secret/": map[string]interface{}{
 					"type":        "kv",
 					"description": "key/value secret storage",
+					"options":     map[string]interface{}{"version": "1"},
 				},
 			},
 			"auth": map[string]interface{}{
 				"token/": map[string]interface{}{
 					"type":        "token",
 					"description": "token based credentials",
+					"options":     interface{}(nil),
 				},
 			},
 		},

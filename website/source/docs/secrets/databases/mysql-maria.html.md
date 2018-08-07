@@ -110,6 +110,26 @@ $ vault write database/roles/my-role \
     max_ttl="24h"
 ```
 
+### Rotating root credentials in MySQL 5.6
+
+The default root rotation setup for MySQL uses the `ALTER USER` syntax present
+in MySQL 5.7 and up. For MySQL 5.6, the [root rotation
+statements](/api/secret/databases/index.html#root_rotation_statements)
+must be configured to use the old `SET PASSWORD` syntax. For example:
+
+```text
+$ vault write database/config/my-mysql-database \
+    plugin_name=mysql-database-plugin \
+    connection_url="{{username}}:{{password}}@tcp(127.0.0.1:3306)/" \
+    root_rotation_statements="SET PASSWORD = PASSWORD('{{password}}')" \
+    allowed_roles="my-role" \
+    username="root" \
+    password="mysql"
+```
+
+For a guide in root credential rotation, see [Database Root Credential
+Rotation](/guides/secret-mgmt/db-root-rotation.html).
+
 ## API
 
 The full list of configurable options can be seen in the [MySQL database plugin

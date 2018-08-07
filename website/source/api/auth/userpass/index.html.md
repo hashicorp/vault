@@ -34,13 +34,17 @@ Create a new user or update an existing user. This path honors the distinction b
   string, only the `default` policy will be applicable to the user.
 - `ttl` `(string: "")` - The lease duration which decides login expiration.
 - `max_ttl` `(string: "")` - Maximum duration after which login should expire.
+- `bound_cidrs` `(string: "", or list: [])` – If set, restricts usage of the
+  login and token to client IPs falling within the range of the specified
+  CIDR(s).
 
 ### Sample Payload
 
 ```json
 {
   "password": "superSecretPassword",
-  "policies": "admin,default"
+  "policies": "admin,default",
+  "bound_cidrs": ["127.0.0.1/32", "128.252.0.0/16"]
 }
 ```
 

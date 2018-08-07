@@ -8,7 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault-plugin-auth-gcp/plugin/util"
+	"github.com/SermoDigital/jose/jws"
+	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -51,6 +52,11 @@ GCE identity metadata token ('iam', 'gce' roles).`,
 }
 
 func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Validate we didn't get extraneous fields
+	if err := validateFields(req, data); err != nil {
+		return nil, logical.CodedError(422, err.Error())
+	}
+
 	loginInfo, err := b.parseAndValidateJwt(ctx, req, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -117,7 +123,7 @@ type gcpLoginInfo struct {
 	JWTClaims *jwt.Claims
 
 	// Metadata from a GCE instance identity token.
-	GceMetadata *util.GCEIdentityMetadata
+	GceMetadata *gcputil.GCEIdentityMetadata
 }
 
 func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.Request, data *framework.FieldData) (*gcpLoginInfo, error) {
@@ -156,7 +162,7 @@ func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.R
 
 	// Parse claims and verify signature.
 	baseClaims := &jwt.Claims{}
-	customClaims := &util.CustomJWTClaims{}
+	customClaims := &gcputil.CustomJWTClaims{}
 
 	if err = jwtVal.Claims(key, baseClaims, customClaims); err != nil {
 		return nil, err
@@ -197,12 +203,16 @@ func (b *GcpAuthBackend) getSigningKey(ctx context.Context, token *jwt.JSONWebTo
 			return nil, err
 		}
 
-		serviceAccountId, err := util.ParseServiceAccountFromIAMJWT(rawToken)
+		serviceAccountId, err := parseServiceAccountFromIAMJWT(rawToken)
 		if err != nil {
 			return nil, err
 		}
 
-		accountKey, err := util.ServiceAccountKey(iamClient, keyId, serviceAccountId, role.ProjectId)
+		accountKey, err := gcputil.ServiceAccountKey(iamClient, &gcputil.ServiceAccountKeyId{
+			Project:   role.ProjectId,
+			EmailOrId: serviceAccountId,
+			Key:       keyId,
+		})
 		if err != nil {
 			// Attempt to get a normal Google Oauth cert in case of GCE inferrence.
 			key, err := b.getGoogleOauthCert(ctx, keyId, s)
@@ -211,12 +221,25 @@ func (b *GcpAuthBackend) getSigningKey(ctx context.Context, token *jwt.JSONWebTo
 			}
 			return key, nil
 		}
-		return util.PublicKey(accountKey.PublicKeyData)
+		return gcputil.PublicKey(accountKey.PublicKeyData)
 	case gceRoleType:
 		return b.getGoogleOauthCert(ctx, keyId, s)
 	default:
 		return nil, fmt.Errorf("unexpected role type %s", role.RoleType)
 	}
+}
+
+// ParseServiceAccountFromIAMJWT parses the service account from the 'sub' claim given a serialized signed JWT.
+func parseServiceAccountFromIAMJWT(signedJwt string) (string, error) {
+	jwtVal, err := jws.ParseJWT([]byte(signedJwt))
+	if err != nil {
+		return "", fmt.Errorf("could not parse service account from JWT 'sub' claim: %v", err)
+	}
+	accountId, ok := jwtVal.Claims().Subject()
+	if !ok {
+		return "", errors.New("expected 'sub' claim with service account ID or name")
+	}
+	return accountId, nil
 }
 
 func (b *GcpAuthBackend) getGoogleOauthCert(ctx context.Context, keyId string, s logical.Storage) (interface{}, error) {
@@ -229,7 +252,7 @@ func (b *GcpAuthBackend) getGoogleOauthCert(ctx context.Context, keyId string, s
 		certsEndpoint = conf.GoogleCertsEndpoint
 	}
 
-	key, err := util.OAuth2RSAPublicKey(keyId, certsEndpoint)
+	key, err := gcputil.OAuth2RSAPublicKey(keyId, certsEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +302,11 @@ func (b *GcpAuthBackend) pathIamLogin(ctx context.Context, req *logical.Request,
 	}
 
 	// Get service account and make sure it still exists.
-	serviceAccount, err := util.ServiceAccount(iamClient, loginInfo.ServiceAccountId, role.ProjectId)
+	accountId := &gcputil.ServiceAccountId{
+		Project:   role.ProjectId,
+		EmailOrId: loginInfo.ServiceAccountId,
+	}
+	serviceAccount, err := gcputil.ServiceAccount(iamClient, accountId)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +362,10 @@ func (b *GcpAuthBackend) pathIamRenew(ctx context.Context, req *logical.Request,
 		return errors.New("service account id metadata not associated with auth token, invalid")
 	}
 
-	serviceAccount, err := util.ServiceAccount(iamClient, serviceAccountId, role.ProjectId)
+	serviceAccount, err := gcputil.ServiceAccount(iamClient, &gcputil.ServiceAccountId{
+		Project:   role.ProjectId,
+		EmailOrId: serviceAccountId,
+	})
 	if err != nil {
 		return fmt.Errorf("cannot find service account %s", serviceAccountId)
 	}
@@ -402,7 +432,7 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 			metadata.ProjectId, metadata.Zone, metadata.InstanceName, err)), nil
 	}
 
-	if err := b.authorizeGCEInstance(ctx, instance, req.Storage, role, metadata.Zone, loginInfo.ServiceAccountId); err != nil {
+	if err := b.authorizeGCEInstance(ctx, instance, req.Storage, role, loginInfo.ServiceAccountId); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -411,7 +441,10 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(fmt.Sprintf(clientErrorTemplate, "IAM", err)), nil
 	}
 
-	serviceAccount, err := util.ServiceAccount(iamClient, loginInfo.ServiceAccountId, loginInfo.Role.ProjectId)
+	serviceAccount, err := gcputil.ServiceAccount(iamClient, &gcputil.ServiceAccountId{
+		Project:   loginInfo.Role.ProjectId,
+		EmailOrId: loginInfo.ServiceAccountId,
+	})
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Could not find service account '%s' used for GCE metadata token: %s",
@@ -466,7 +499,7 @@ func (b *GcpAuthBackend) pathGceRenew(ctx context.Context, req *logical.Request,
 		return fmt.Errorf(clientErrorTemplate, "GCE", err)
 	}
 
-	meta, err := util.GetInstanceMetadataFromAuth(req.Auth.Metadata)
+	meta, err := getInstanceMetadataFromAuth(req.Auth.Metadata)
 	if err != nil {
 		return fmt.Errorf("invalid auth metadata: %v", err)
 	}
@@ -480,108 +513,93 @@ func (b *GcpAuthBackend) pathGceRenew(ctx context.Context, req *logical.Request,
 	if !ok {
 		return errors.New("invalid auth metadata: service_account_id not found")
 	}
-	if err := b.authorizeGCEInstance(ctx, instance, req.Storage, role, meta.Zone, serviceAccountId); err != nil {
+	if err := b.authorizeGCEInstance(ctx, instance, req.Storage, role, serviceAccountId); err != nil {
 		return fmt.Errorf("could not renew token for role %s: %v", roleName, err)
 	}
 
 	return nil
 }
 
-// validateGCEInstance returns an error if the given GCE instance is not authorized for the role.
-func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, instance *compute.Instance, s logical.Storage, role *gcpRole, zone, serviceAccountId string) error {
-	gceClient, err := b.GCE(ctx, s)
+func getInstanceMetadataFromAuth(authMetadata map[string]string) (*gcputil.GCEIdentityMetadata, error) {
+	meta := &gcputil.GCEIdentityMetadata{}
+	var ok bool
+	var err error
+
+	meta.ProjectId, ok = authMetadata["project_id"]
+	if !ok {
+		return nil, errors.New("expected 'project_id' field")
+	}
+
+	meta.Zone, ok = authMetadata["zone"]
+	if !ok {
+		return nil, errors.New("expected 'zone' field")
+	}
+
+	meta.InstanceId, ok = authMetadata["instance_id"]
+	if !ok {
+		return nil, errors.New("expected 'instance_id' field")
+	}
+
+	meta.InstanceName, ok = authMetadata["instance_name"]
+	if !ok {
+		return nil, errors.New("expected 'instance_name' field")
+	}
+
+	// Parse numbers back into int values.
+	projectNumber, ok := authMetadata["project_number"]
+	if !ok {
+		return nil, errors.New("expected 'project_number' field, got %v")
+	}
+	meta.ProjectNumber, err = strconv.ParseInt(projectNumber, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("expected 'project_number' value '%s' to be a int64", projectNumber)
+	}
+
+	createdAt, ok := authMetadata["instance_creation_timestamp"]
+	if !ok {
+		return nil, errors.New("expected 'instance_creation_timestamp' field")
+	}
+	meta.CreatedAt, err = strconv.ParseInt(createdAt, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("expected 'instance_creation_timestamp' value '%s' to be int64", createdAt)
+	}
+
+	return meta, nil
+}
+
+// authorizeGCEInstance returns an error if the given GCE instance is not
+// authorized for the role.
+func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, instance *compute.Instance, s logical.Storage, role *gcpRole, serviceAccountId string) error {
+	computeSvc, err := b.GCE(ctx, s)
 	if err != nil {
 		return err
 	}
 
-	// Verify instance has role labels if labels were set on role.
-	for k, expectedV := range role.BoundLabels {
-		actualV, ok := instance.Labels[k]
-		if !ok || actualV != expectedV {
-			return fmt.Errorf("role label '%s:%s' not found on GCE instance", k, expectedV)
-		}
+	iamSvc, err := b.IAM(ctx, s)
+	if err != nil {
+		return err
 	}
 
-	// Verify that instance is in zone or region if given.
-	if len(role.BoundZone) > 0 {
-		var zone string
-		idx := strings.LastIndex(instance.Zone, "zones/")
-		if idx > 0 {
-			// Parse zone name from full zone self-link URL.
-			idx += len("zones/")
-			zone = instance.Zone[idx:len(instance.Zone)]
-		} else {
-			// Expect full zone name to be set as instance zone.
-			zone = instance.Zone
-		}
+	return AuthorizeGCE(ctx, &AuthorizeGCEInput{
+		client: &gcpClient{
+			computeSvc: computeSvc,
+			iamSvc:     iamSvc,
+		},
 
-		if zone != role.BoundZone {
-			return fmt.Errorf("instance is not in role zone '%s'", role.BoundZone)
-		}
-	} else if len(role.BoundRegion) > 0 {
-		zone, err := gceClient.Zones.Get(role.ProjectId, zone).Do()
-		if err != nil {
-			return fmt.Errorf("could not verify instance zone '%s' is available for project '%s': %v", zone.Name, role.ProjectId, err)
-		}
-		if zone.Region != role.BoundRegion {
-			return fmt.Errorf("zone '%s' is not in region '%s'", zone.Name, zone.Region)
-		}
-	}
+		project:        role.ProjectId,
+		serviceAccount: serviceAccountId,
 
-	// If instance group is given, verify group exists and that instance is in group.
-	if len(role.BoundInstanceGroup) > 0 {
-		var group *compute.InstanceGroup
-		var err error
+		instanceLabels:   instance.Labels,
+		instanceSelfLink: instance.SelfLink,
+		instanceZone:     instance.Zone,
 
-		// Check if group should be zonal or regional.
-		if len(role.BoundZone) > 0 {
-			group, err = gceClient.InstanceGroups.Get(role.ProjectId, role.BoundZone, role.BoundInstanceGroup).Do()
-			if err != nil {
-				return fmt.Errorf("could not find role instance group %s (project %s, zone %s)", role.BoundInstanceGroup, role.ProjectId, role.BoundZone)
-			}
-		} else if len(role.BoundRegion) > 0 {
-			group, err = gceClient.RegionInstanceGroups.Get(role.ProjectId, role.BoundRegion, role.BoundInstanceGroup).Do()
-			if err != nil {
-				return fmt.Errorf("could not find role instance group %s (project %s, region %s)", role.BoundInstanceGroup, role.ProjectId, role.BoundRegion)
-			}
-		} else {
-			return errors.New("expected zone or region to be set for GCE role '%s' with instance group")
-		}
+		boundLabels:  role.BoundLabels,
+		boundRegions: role.BoundRegions,
+		boundZones:   role.BoundZones,
 
-		// Verify instance group contains authenticating instance.
-		instanceIdFilter := fmt.Sprintf("instance eq %s", instance.SelfLink)
-		listInstanceReq := &compute.InstanceGroupsListInstancesRequest{}
-		listResp, err := gceClient.InstanceGroups.ListInstances(role.ProjectId, role.BoundZone, group.Name, listInstanceReq).Filter(instanceIdFilter).Do()
-		if err != nil {
-			return fmt.Errorf("could not confirm instance %s is part of instance group %s: %s", instance.Name, role.BoundInstanceGroup, err)
-		}
-
-		if len(listResp.Items) == 0 {
-			return fmt.Errorf("instance %s is not part of instance group %s", instance.Name, role.BoundInstanceGroup)
-		}
-
-	}
-
-	// Verify instance is running under one of the allowed service accounts.
-	if len(role.BoundServiceAccounts) > 0 {
-		iamClient, err := b.IAM(ctx, s)
-		if err != nil {
-			return err
-		}
-
-		serviceAccount, err := util.ServiceAccount(iamClient, serviceAccountId, role.ProjectId)
-		if err != nil {
-			return fmt.Errorf("could not find service account with id '%s': %v", serviceAccountId, err)
-		}
-
-		if !(strutil.StrListContains(role.BoundServiceAccounts, serviceAccount.Email) ||
-			strutil.StrListContains(role.BoundServiceAccounts, serviceAccount.UniqueId)) {
-			return fmt.Errorf("GCE instance's service account email (%s) or id (%s) not found in role service accounts: %v",
-				serviceAccount.Email, serviceAccount.UniqueId, role.BoundServiceAccounts)
-		}
-	}
-
-	return nil
+		boundInstanceGroups:  role.BoundInstanceGroups,
+		boundServiceAccounts: role.BoundServiceAccounts,
+	})
 }
 
 const pathLoginHelpSyn = `Authenticates Google Cloud Platform entities with Vault.`

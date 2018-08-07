@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -147,7 +148,6 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 
 func TestOperatorUnsealCommand_Format(t *testing.T) {
 	defer func() {
-		os.Setenv(EnvVaultFormat, "")
 		os.Setenv(EnvVaultCLINoColor, "")
 	}()
 
@@ -159,21 +159,28 @@ func TestOperatorUnsealCommand_Format(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ui, cmd := testOperatorUnsealCommand(t)
-	cmd.client = client
-	cmd.testOutput = ioutil.Discard
-
-	args := setupEnv([]string{"-format", "json"})
-
-	// Unseal with one key
-	code := cmd.Run(append(args, []string{
-		keys[0],
-	}...))
-	if exp := 0; code != exp {
-		t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
+	stdout := bytes.NewBuffer(nil)
+	stderr := bytes.NewBuffer(nil)
+	runOpts := &RunOptions{
+		Stdout: stdout,
+		Stderr: stderr,
+		Client: client,
 	}
 
-	if !json.Valid(ui.OutputWriter.Bytes()) {
+	args, format := setupEnv([]string{"unseal", "-format", "json"})
+	if format != "json" {
+		t.Fatalf("expected %q, got %q", "json", format)
+	}
+
+	// Unseal with one key
+	code := RunCustom(append(args, []string{
+		keys[0],
+	}...), runOpts)
+	if exp := 0; code != exp {
+		t.Errorf("expected %d to be %d: %s", code, exp, stderr.String())
+	}
+
+	if !json.Valid(stdout.Bytes()) {
 		t.Error("expected output to be valid JSON")
 	}
 }

@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+type HandlerFunc func(context.Context, *logical.Request) (*logical.Response, error)
+
 type NoopBackend struct {
 	sync.Mutex
 
@@ -22,12 +24,23 @@ type NoopBackend struct {
 	Paths           []string
 	Requests        []*logical.Request
 	Response        *logical.Response
+	RequestHandler  HandlerFunc
 	Invalidations   []string
 	DefaultLeaseTTL time.Duration
 	MaxLeaseTTL     time.Duration
 }
 
 func (n *NoopBackend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+	if req.TokenEntry() != nil {
+		panic("got a non-nil TokenEntry")
+	}
+
+	var err error
+	resp := n.Response
+	if n.RequestHandler != nil {
+		resp, err = n.RequestHandler(ctx, req)
+	}
+
 	n.Lock()
 	defer n.Unlock()
 
@@ -38,7 +51,7 @@ func (n *NoopBackend) HandleRequest(ctx context.Context, req *logical.Request) (
 		return nil, fmt.Errorf("missing view")
 	}
 
-	return n.Response, nil
+	return resp, err
 }
 
 func (n *NoopBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
@@ -162,12 +175,18 @@ func TestRouter_Mount(t *testing.T) {
 	req := &logical.Request{
 		Path: "prod/aws/foo",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{
+		ID: "foo",
+	})
 	resp, err := r.Route(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
+	}
+	if req.TokenEntry() == nil || req.TokenEntry().ID != "foo" {
+		t.Fatalf("unexpected value for token entry: %v", req.TokenEntry())
 	}
 
 	// Verify the path

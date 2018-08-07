@@ -5,8 +5,7 @@ export default Ember.Route.extend(UnloadModel, {
   templateName: 'vault/cluster/secrets/backend/sign',
 
   backendModel() {
-    const backend = this.paramsFor('vault.cluster.secrets.backend').backend;
-    return this.store.peekRecord('secret-engine', backend);
+    return this.modelFor('vault.cluster.secrets.backend');
   },
 
   pathQuery(role, backend) {

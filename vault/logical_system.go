@@ -22,7 +22,10 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -92,6 +95,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"wrapping/pubkey",
 				"replication/status",
 				"internal/ui/mounts",
+				"internal/ui/mounts/*",
 			},
 		},
 
@@ -532,6 +536,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
 					},
+					"sync": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Default:     true,
+						Description: strings.TrimSpace(sysHelp["revoke-sync"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -567,6 +576,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 					"prefix": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["revoke-prefix-path"][0]),
+					},
+					"sync": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Default:     true,
+						Description: strings.TrimSpace(sysHelp["revoke-sync"][0]),
 					},
 				},
 
@@ -653,8 +667,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				Pattern: "policy/?$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handlePolicyList,
-					logical.ListOperation: b.handlePolicyList,
+					logical.ReadOperation: b.handlePoliciesList(PolicyTypeACL),
+					logical.ListOperation: b.handlePoliciesList(PolicyTypeACL),
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["policy-list"][0]),
@@ -680,10 +694,13 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handlePolicyRead,
-					logical.UpdateOperation: b.handlePolicySet,
-					logical.DeleteOperation: b.handlePolicyDelete,
+					logical.ReadOperation:   b.handlePoliciesRead(PolicyTypeACL),
+					logical.UpdateOperation: b.handlePoliciesSet(PolicyTypeACL),
+					logical.DeleteOperation: b.handlePoliciesDelete(PolicyTypeACL),
 				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
 			},
 
 			&framework.Path{
@@ -1072,6 +1089,28 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
 			},
+			&framework.Path{
+				Pattern: "internal/ui/mounts/(?P<path>.+)",
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The path of the mount.",
+					},
+				},
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.pathInternalUIMountRead,
+				},
+				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
+			},
+			&framework.Path{
+				Pattern: "internal/ui/resultant-acl",
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.pathInternalUIResultantACL,
+				},
+				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
+			},
 		},
 	}
 
@@ -1096,6 +1135,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				logical.DeleteOperation: b.handleRawDelete,
 				logical.ListOperation:   b.handleRawList,
 			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
 		})
 	}
 
@@ -1151,12 +1192,17 @@ func (b *SystemBackend) handleCORSDelete(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := b.Core.expiration.Tidy()
-	if err != nil {
-		b.Backend.Logger().Error("failed to tidy leases", "error", err)
-		return handleErrorNoReadOnlyForward(err)
-	}
-	return nil, err
+	go func() {
+		err := b.Core.expiration.Tidy()
+		if err != nil {
+			b.Backend.Logger().Error("failed to tidy leases", "error", err)
+			return
+		}
+	}()
+
+	resp := &logical.Response{}
+	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
 func (b *SystemBackend) invalidate(ctx context.Context, key string) {
@@ -1420,6 +1466,9 @@ func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Req
 	for _, path := range paths {
 		pathCap, err := b.Core.Capabilities(ctx, token, path)
 		if err != nil {
+			if !strings.HasSuffix(req.Path, "capabilities-self") && errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+				return nil, &logical.StatusBadRequest{Err: "invalid token"}
+			}
 			return nil, err
 		}
 		ret.Data[path] = pathCap
@@ -1507,6 +1556,41 @@ func (b *SystemBackend) handleRekeyDeleteRecovery(ctx context.Context, req *logi
 	return b.handleRekeyDelete(ctx, req, data, true)
 }
 
+func mountInfo(entry *MountEntry) map[string]interface{} {
+	info := map[string]interface{}{
+		"type":        entry.Type,
+		"description": entry.Description,
+		"accessor":    entry.Accessor,
+		"local":       entry.Local,
+		"seal_wrap":   entry.SealWrap,
+		"options":     entry.Options,
+	}
+	entryConfig := map[string]interface{}{
+		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+		"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+		"force_no_cache":    entry.Config.ForceNoCache,
+		"plugin_name":       entry.Config.PluginName,
+	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
+	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+		entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
+	}
+	// Even though empty value is valid for ListingVisibility, we can ignore
+	// this case during mount since there's nothing to unset/hide.
+	if len(entry.Config.ListingVisibility) > 0 {
+		entryConfig["listing_visibility"] = entry.Config.ListingVisibility
+	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
+		entryConfig["passthrough_request_headers"] = rawVal.([]string)
+	}
+
+	info["config"] = entryConfig
+
+	return info
+}
+
 // handleMountTable handles the "mounts" endpoint to provide the mount table
 func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.Core.mountsLock.RLock()
@@ -1518,36 +1602,7 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 
 	for _, entry := range b.Core.mounts.Entries {
 		// Populate mount info
-		info := map[string]interface{}{
-			"type":        entry.Type,
-			"description": entry.Description,
-			"accessor":    entry.Accessor,
-			"local":       entry.Local,
-			"seal_wrap":   entry.SealWrap,
-			"options":     entry.Options,
-		}
-		entryConfig := map[string]interface{}{
-			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-			"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-			"force_no_cache":    entry.Config.ForceNoCache,
-			"plugin_name":       entry.Config.PluginName,
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-			entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
-			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
-		}
-		// Even though empty value is valid for ListingVisibility, we can ignore
-		// this case during mount since there's nothing to unset/hide.
-		if len(entry.Config.ListingVisibility) > 0 {
-			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
-			entryConfig["passthrough_request_headers"] = rawVal.([]string)
-		}
-
-		info["config"] = entryConfig
+		info := mountInfo(entry)
 		resp.Data[entry.Path] = info
 	}
 
@@ -1979,8 +2034,9 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	description := data.Get("description").(string)
-	if description != "" {
+	if rawVal, ok := data.GetOk("description"); ok {
+		description := rawVal.(string)
+
 		oldDesc := mountEntry.Description
 		mountEntry.Description = description
 
@@ -2055,7 +2111,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 	if rawVal, ok := data.GetOk("listing_visibility"); ok {
 		lvString := rawVal.(string)
-		listingVisibility := ListingVisiblityType(lvString)
+		listingVisibility := ListingVisibilityType(lvString)
 
 		if err := checkListingVisibility(listingVisibility); err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", listingVisibility)), nil
@@ -2179,7 +2235,7 @@ func (b *SystemBackend) handleLeaseLookup(ctx context.Context, req *logical.Requ
 			logical.ErrInvalidRequest
 	}
 
-	leaseTimes, err := b.Core.expiration.FetchLeaseTimes(leaseID)
+	leaseTimes, err := b.Core.expiration.FetchLeaseTimes(ctx, leaseID)
 	if err != nil {
 		b.Backend.Logger().Error("error retrieving lease", "lease_id", leaseID, "error", err)
 		return handleError(err)
@@ -2241,7 +2297,7 @@ func (b *SystemBackend) handleRenew(ctx context.Context, req *logical.Request, d
 	increment := time.Duration(incrementRaw) * time.Second
 
 	// Invoke the expiration manager directly
-	resp, err := b.Core.expiration.Renew(leaseID, increment)
+	resp, err := b.Core.expiration.Renew(ctx, leaseID, increment)
 	if err != nil {
 		b.Backend.Logger().Error("lease renewal failed", "lease_id", leaseID, "error", err)
 		return handleErrorNoReadOnlyForward(err)
@@ -2261,42 +2317,57 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 			logical.ErrInvalidRequest
 	}
 
-	// Invoke the expiration manager directly
-	if err := b.Core.expiration.Revoke(leaseID); err != nil {
+	if data.Get("sync").(bool) {
+		// Invoke the expiration manager directly
+		if err := b.Core.expiration.Revoke(b.Core.activeContext, leaseID); err != nil {
+			b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
+			return handleErrorNoReadOnlyForward(err)
+		}
+
+		return nil, nil
+	}
+
+	if err := b.Core.expiration.LazyRevoke(b.Core.activeContext, leaseID); err != nil {
 		b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
-	return nil, nil
+
+	return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
 }
 
 // handleRevokePrefix is used to revoke a prefix with many LeaseIDs
 func (b *SystemBackend) handleRevokePrefix(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRevokePrefixCommon(req, data, false)
+	return b.handleRevokePrefixCommon(ctx, req, data, false, data.Get("sync").(bool))
 }
 
 // handleRevokeForce is used to revoke a prefix with many LeaseIDs, ignoring errors
 func (b *SystemBackend) handleRevokeForce(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRevokePrefixCommon(req, data, true)
+	return b.handleRevokePrefixCommon(ctx, req, data, true, true)
 }
 
 // handleRevokePrefixCommon is used to revoke a prefix with many LeaseIDs
-func (b *SystemBackend) handleRevokePrefixCommon(
-	req *logical.Request, data *framework.FieldData, force bool) (*logical.Response, error) {
+func (b *SystemBackend) handleRevokePrefixCommon(ctx context.Context,
+	req *logical.Request, data *framework.FieldData, force, sync bool) (*logical.Response, error) {
 	// Get all the options
 	prefix := data.Get("prefix").(string)
 
 	// Invoke the expiration manager directly
 	var err error
 	if force {
-		err = b.Core.expiration.RevokeForce(prefix)
+		err = b.Core.expiration.RevokeForce(b.Core.activeContext, prefix)
 	} else {
-		err = b.Core.expiration.RevokePrefix(prefix)
+		err = b.Core.expiration.RevokePrefix(b.Core.activeContext, prefix, sync)
 	}
 	if err != nil {
 		b.Backend.Logger().Error("revoke prefix failed", "prefix", prefix, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
-	return nil, nil
+
+	if sync {
+		return nil, nil
+	}
+
+	return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
 }
 
 // handleAuthTable handles the "auth" endpoint to provide the auth table
@@ -2500,21 +2571,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 	return nil, nil
 }
 
-// handlePolicyList handles the "policy" endpoint to provide the enabled policies
-func (b *SystemBackend) handlePolicyList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// Get all the configured policies
-	policies, err := b.Core.policyStore.ListPolicies(ctx, PolicyTypeACL)
-
-	// Add the special "root" policy
-	policies = append(policies, "root")
-	resp := logical.ListResponse(policies)
-
-	// Backwords compatibility
-	resp.Data["policies"] = resp.Data["keys"]
-
-	return resp, err
-}
-
+// handlePoliciesList handles /sys/policy/ and /sys/policies/<type> endpoints to provide the enabled policies
 func (b *SystemBackend) handlePoliciesList(policyType PolicyType) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		policies, err := b.Core.policyStore.ListPolicies(ctx, policyType)
@@ -2526,14 +2583,21 @@ func (b *SystemBackend) handlePoliciesList(policyType PolicyType) framework.Oper
 		case PolicyTypeACL:
 			// Add the special "root" policy if not egp
 			policies = append(policies, "root")
-			return logical.ListResponse(policies), nil
+			resp := logical.ListResponse(policies)
 
+			// If the request is from sys/policy/ we handle backwards compatibility
+			if strings.HasPrefix(req.Path, "policy") {
+				resp.Data["policies"] = resp.Data["keys"]
+			}
+
+			return resp, nil
 		}
 
 		return logical.ErrorResponse("unknown policy type"), nil
 	}
 }
 
+// handlePoliciesRead handles the "/sys/policy/<name>" and "/sys/policies/<type>/<name>" endpoints to read a policy
 func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
@@ -2547,10 +2611,18 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 			return nil, nil
 		}
 
+		// If the request is from sys/policy/ we handle backwards compatibility
+		var respDataPolicyName string
+		if policyType == PolicyTypeACL && strings.HasPrefix(req.Path, "policy") {
+			respDataPolicyName = "rules"
+		} else {
+			respDataPolicyName = "policy"
+		}
+
 		resp := &logical.Response{
 			Data: map[string]interface{}{
-				"name":   policy.Name,
-				"policy": policy.Raw,
+				"name":             policy.Name,
+				respDataPolicyName: policy.Raw,
 			},
 		}
 
@@ -2558,31 +2630,11 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 	}
 }
 
-// handlePolicyRead handles the "policy/<name>" endpoint to read a policy
-func (b *SystemBackend) handlePolicyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name := data.Get("name").(string)
-
-	policy, err := b.Core.policyStore.GetPolicy(ctx, name, PolicyTypeACL)
-	if err != nil {
-		return handleError(err)
-	}
-
-	if policy == nil {
-		return nil, nil
-	}
-
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"name":  policy.Name,
-			"rules": policy.Raw,
-		},
-	}
-
-	return resp, nil
-}
-
+// handlePoliciesSet handles the "/sys/policy/<name>" and "/sys/policies/<type>/<name>" endpoints to set a policy
 func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		var resp *logical.Response
+
 		policy := &Policy{
 			Name: strings.ToLower(data.Get("name").(string)),
 			Type: policyType,
@@ -2592,6 +2644,13 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		}
 
 		policy.Raw = data.Get("policy").(string)
+		if policy.Raw == "" && policyType == PolicyTypeACL && strings.HasPrefix(req.Path, "policy") {
+			policy.Raw = data.Get("rules").(string)
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("'rules' is deprecated, please use 'policy' instead")
+		}
 		if policy.Raw == "" {
 			return logical.ErrorResponse("'policy' parameter not supplied or empty"), nil
 		}
@@ -2616,46 +2675,8 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
 			return handleError(err)
 		}
-		return nil, nil
+		return resp, nil
 	}
-}
-
-// handlePolicySet handles the "policy/<name>" endpoint to set a policy
-func (b *SystemBackend) handlePolicySet(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
-	policy := &Policy{
-		Type: PolicyTypeACL,
-		Name: strings.ToLower(data.Get("name").(string)),
-	}
-	if policy.Name == "" {
-		return logical.ErrorResponse("policy name must be provided in the URL"), nil
-	}
-
-	var resp *logical.Response
-
-	policy.Raw = data.Get("policy").(string)
-	if policy.Raw == "" {
-		policy.Raw = data.Get("rules").(string)
-		if resp == nil {
-			resp = &logical.Response{}
-		}
-		resp.AddWarning("'rules' is deprecated, please use 'policy' instead")
-	}
-	if policy.Raw == "" {
-		return logical.ErrorResponse("'policy' parameter not supplied or empty"), nil
-	}
-
-	p, err := ParseACLPolicy(policy.Raw)
-	if err != nil {
-		return handleError(err)
-	}
-	policy.Paths = p.Paths
-
-	// Update the policy
-	if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
-		return handleError(err)
-	}
-	return resp, nil
 }
 
 func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.OperationFunc {
@@ -2667,16 +2688,6 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 		}
 		return nil, nil
 	}
-}
-
-// handlePolicyDelete handles the "policy/<name>" endpoint to delete a policy
-func (b *SystemBackend) handlePolicyDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name := data.Get("name").(string)
-
-	if err := b.Core.policyStore.DeletePolicy(ctx, name, PolicyTypeACL); err != nil {
-		return handleError(err)
-	}
-	return nil, nil
 }
 
 // handleAuditTable handles the "audit" endpoint to provide the audit table
@@ -3080,6 +3091,52 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	resp := &logical.Response{
 		Data: map[string]interface{}{},
 	}
+
+	// Most of the time we want to just send over the marshalled HTTP bytes.
+	// However there is a sad separate case: if the original response was using
+	// bare values we need to use those or else what comes back is garbled.
+	httpResp := &logical.HTTPResponse{}
+	err = jsonutil.DecodeJSON([]byte(response), httpResp)
+	if err != nil {
+		return nil, errwrap.Wrapf("error decoding wrapped response: {{err}}", err)
+	}
+	if httpResp.Data != nil &&
+		(httpResp.Data[logical.HTTPStatusCode] != nil ||
+			httpResp.Data[logical.HTTPRawBody] != nil ||
+			httpResp.Data[logical.HTTPContentType] != nil) {
+		if httpResp.Data[logical.HTTPStatusCode] != nil {
+			resp.Data[logical.HTTPStatusCode] = httpResp.Data[logical.HTTPStatusCode]
+		}
+		if httpResp.Data[logical.HTTPContentType] != nil {
+			resp.Data[logical.HTTPContentType] = httpResp.Data[logical.HTTPContentType]
+		}
+
+		rawBody := httpResp.Data[logical.HTTPRawBody]
+		if rawBody != nil {
+			// Decode here so that we can audit properly
+			switch rawBody.(type) {
+			case string:
+				// Best effort decoding; if this works, the original value was
+				// probably a []byte instead of a string, but was marshaled
+				// when the value was saved, so this restores it as it was
+				decBytes, err := base64.StdEncoding.DecodeString(rawBody.(string))
+				if err == nil {
+					// We end up with []byte, will not be HMAC'd
+					resp.Data[logical.HTTPRawBody] = decBytes
+				} else {
+					// We end up with string, will be HMAC'd
+					resp.Data[logical.HTTPRawBody] = rawBody
+				}
+			default:
+				b.Core.Logger().Error("unexpected type of raw body when decoding wrapped token", "type", fmt.Sprintf("%T", rawBody))
+			}
+
+			resp.Data[logical.HTTPRawBodyAlreadyJSONDecoded] = true
+		}
+
+		return resp, nil
+	}
+
 	if len(response) == 0 {
 		resp.Data[logical.HTTPStatusCode] = 204
 	} else {
@@ -3101,7 +3158,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, token string
 			return "", errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
 		}
 
-		defer b.Core.tokenStore.Revoke(ctx, token)
+		defer b.Core.tokenStore.revokeOrphan(ctx, token)
 	}
 
 	cubbyReq := &logical.Request{
@@ -3211,7 +3268,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		if err != nil {
 			return nil, errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
 		}
-		defer b.Core.tokenStore.Revoke(ctx, token)
+		defer b.Core.tokenStore.revokeOrphan(ctx, token)
 	}
 
 	// Fetch the original TTL
@@ -3389,10 +3446,49 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
-func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.Core.mountsLock.RLock()
-	defer b.Core.mountsLock.RUnlock()
+func hasMountAccess(acl *ACL, path string) bool {
+	// If an ealier policy is giving us access to the mount path then we can do
+	// a fast return.
+	capabilities := acl.Capabilities(path)
+	if !strutil.StrListContains(capabilities, DenyCapability) {
+		return true
+	}
 
+	var aclCapabilitiesGiven bool
+	walkFn := func(s string, v interface{}) bool {
+		if v == nil {
+			return false
+		}
+
+		perms := v.(*ACLPermissions)
+
+		switch {
+		case perms.CapabilitiesBitmap&DenyCapabilityInt > 0:
+			return false
+
+		case perms.CapabilitiesBitmap&CreateCapabilityInt > 0,
+			perms.CapabilitiesBitmap&DeleteCapabilityInt > 0,
+			perms.CapabilitiesBitmap&ListCapabilityInt > 0,
+			perms.CapabilitiesBitmap&ReadCapabilityInt > 0,
+			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
+			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0:
+
+			aclCapabilitiesGiven = true
+			return true
+		}
+
+		return false
+	}
+
+	acl.exactRules.WalkPrefix(path, walkFn)
+	if !aclCapabilitiesGiven {
+		acl.globRules.WalkPrefix(path, walkFn)
+	}
+
+	return aclCapabilitiesGiven
+}
+
+func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{
 		Data: make(map[string]interface{}),
 	}
@@ -3402,25 +3498,225 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	resp.Data["secret"] = secretMounts
 	resp.Data["auth"] = authMounts
 
-	for _, entry := range b.Core.mounts.Entries {
-		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
-			info := map[string]interface{}{
-				"type":        entry.Type,
-				"description": entry.Description,
-			}
-			secretMounts[entry.Path] = info
+	var acl *ACL
+	var isAuthed bool
+	var err error
+	if req.ClientToken != "" {
+		isAuthed = true
+
+		var entity *identity.Entity
+		var te *logical.TokenEntry
+		// Load the ACL policies so we can walk the prefix for this mount
+		acl, te, entity, _, err = b.Core.fetchACLTokenEntryAndEntity(req)
+		if err != nil {
+			return nil, err
+		}
+		if entity != nil && entity.Disabled {
+			b.logger.Warn("permission denied as the entity on the token is disabled")
+			return nil, logical.ErrPermissionDenied
+		}
+		if te != nil && te.EntityID != "" && entity == nil {
+			b.logger.Warn("permission denied as the entity on the token is invalid")
+			return nil, logical.ErrPermissionDenied
 		}
 	}
 
-	for _, entry := range b.Core.auth.Entries {
-		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
-			info := map[string]interface{}{
-				"type":        entry.Type,
-				"description": entry.Description,
+	hasAccess := func(me *MountEntry) bool {
+		if me.Config.ListingVisibility == ListingVisibilityUnauth {
+			return true
+		}
+
+		if isAuthed {
+			return hasMountAccess(acl, me.Path)
+		}
+
+		return false
+	}
+
+	b.Core.mountsLock.RLock()
+	for _, entry := range b.Core.mounts.Entries {
+		if hasAccess(entry) {
+			if isAuthed {
+				// If this is an authed request return all the mount info
+				secretMounts[entry.Path] = mountInfo(entry)
+			} else {
+				secretMounts[entry.Path] = map[string]interface{}{
+					"type":        entry.Type,
+					"description": entry.Description,
+					"options":     entry.Options,
+				}
 			}
-			authMounts[entry.Path] = info
 		}
 	}
+	b.Core.mountsLock.RUnlock()
+
+	b.Core.authLock.RLock()
+	for _, entry := range b.Core.auth.Entries {
+		if hasAccess(entry) {
+			if isAuthed {
+				// If this is an authed request return all the mount info
+				authMounts[entry.Path] = mountInfo(entry)
+			} else {
+				authMounts[entry.Path] = map[string]interface{}{
+					"type":        entry.Type,
+					"description": entry.Description,
+					"options":     entry.Options,
+				}
+			}
+		}
+	}
+	b.Core.authLock.RUnlock()
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	path := d.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("path not set"), logical.ErrInvalidRequest
+	}
+	path = sanitizeMountPath(path)
+
+	errResp := logical.ErrorResponse(fmt.Sprintf("Preflight capability check returned 403, please ensure client's policies grant access to path \"%s\"", path))
+
+	me := b.Core.router.MatchingMountEntry(path)
+	if me == nil {
+		// Return a permission denied error here so this path cannot be used to
+		// brute force a list of mounts.
+		return errResp, logical.ErrPermissionDenied
+	}
+
+	resp := &logical.Response{
+		Data: mountInfo(me),
+	}
+	resp.Data["path"] = me.Path
+
+	// Load the ACL policies so we can walk the prefix for this mount
+	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(req)
+	if err != nil {
+		return nil, err
+	}
+	if entity != nil && entity.Disabled {
+		b.logger.Warn("permission denied as the entity on the token is disabled")
+		return errResp, logical.ErrPermissionDenied
+	}
+	if te != nil && te.EntityID != "" && entity == nil {
+		b.logger.Warn("permission denied as the entity on the token is invalid")
+		return nil, logical.ErrPermissionDenied
+	}
+
+	if !hasMountAccess(acl, me.Path) {
+		return errResp, logical.ErrPermissionDenied
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if req.ClientToken == "" {
+		// 204 -- no ACL
+		return nil, nil
+	}
+
+	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if entity != nil && entity.Disabled {
+		b.logger.Warn("permission denied as the entity on the token is disabled")
+		return logical.ErrorResponse(logical.ErrPermissionDenied.Error()), nil
+	}
+	if te != nil && te.EntityID != "" && entity == nil {
+		b.logger.Warn("permission denied as the entity on the token is invalid")
+		return logical.ErrorResponse(logical.ErrPermissionDenied.Error()), nil
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"root": false,
+		},
+	}
+
+	if acl.root {
+		resp.Data["root"] = true
+		return resp, nil
+	}
+
+	exact := map[string]interface{}{}
+	glob := map[string]interface{}{}
+
+	walkFn := func(pt map[string]interface{}, s string, v interface{}) {
+		if v == nil {
+			return
+		}
+
+		perms := v.(*ACLPermissions)
+		capabilities := []string{}
+
+		if perms.CapabilitiesBitmap&CreateCapabilityInt > 0 {
+			capabilities = append(capabilities, CreateCapability)
+		}
+		if perms.CapabilitiesBitmap&DeleteCapabilityInt > 0 {
+			capabilities = append(capabilities, DeleteCapability)
+		}
+		if perms.CapabilitiesBitmap&ListCapabilityInt > 0 {
+			capabilities = append(capabilities, ListCapability)
+		}
+		if perms.CapabilitiesBitmap&ReadCapabilityInt > 0 {
+			capabilities = append(capabilities, ReadCapability)
+		}
+		if perms.CapabilitiesBitmap&SudoCapabilityInt > 0 {
+			capabilities = append(capabilities, SudoCapability)
+		}
+		if perms.CapabilitiesBitmap&UpdateCapabilityInt > 0 {
+			capabilities = append(capabilities, UpdateCapability)
+		}
+
+		// If "deny" is explicitly set or if the path has no capabilities at all,
+		// set the path capabilities to "deny"
+		if perms.CapabilitiesBitmap&DenyCapabilityInt > 0 || len(capabilities) == 0 {
+			capabilities = []string{DenyCapability}
+		}
+
+		res := map[string]interface{}{}
+		if len(capabilities) > 0 {
+			res["capabilities"] = capabilities
+		}
+		if perms.MinWrappingTTL != 0 {
+			res["min_wrapping_ttl"] = int64(perms.MinWrappingTTL.Seconds())
+		}
+		if perms.MaxWrappingTTL != 0 {
+			res["max_wrapping_ttl"] = int64(perms.MaxWrappingTTL.Seconds())
+		}
+		if len(perms.AllowedParameters) > 0 {
+			res["allowed_parameters"] = perms.AllowedParameters
+		}
+		if len(perms.DeniedParameters) > 0 {
+			res["denied_parameters"] = perms.DeniedParameters
+		}
+		if len(perms.RequiredParameters) > 0 {
+			res["required_parameters"] = perms.RequiredParameters
+		}
+
+		pt[s] = res
+	}
+
+	exactWalkFn := func(s string, v interface{}) bool {
+		walkFn(exact, s, v)
+		return false
+	}
+
+	globWalkFn := func(s string, v interface{}) bool {
+		walkFn(glob, s, v)
+		return false
+	}
+
+	acl.exactRules.Walk(exactWalkFn)
+	acl.globRules.Walk(globWalkFn)
+
+	resp.Data["exact_paths"] = exact
+	resp.Data["glob_paths"] = glob
 
 	return resp, nil
 }
@@ -3437,8 +3733,9 @@ func sanitizeMountPath(path string) string {
 	return path
 }
 
-func checkListingVisibility(visibility ListingVisiblityType) error {
+func checkListingVisibility(visibility ListingVisibilityType) error {
 	switch visibility {
+	case ListingVisibilityDefault:
 	case ListingVisibilityHidden:
 	case ListingVisibilityUnauth:
 	default:
@@ -3687,6 +3984,17 @@ at the end of the lease period if not renewed. However, in some cases
 you may want to force an immediate revocation. This endpoint can be
 used to revoke the secret with the given Lease ID.
 		`,
+	},
+
+	"revoke-sync": {
+		"Whether or not to perform the revocation synchronously",
+		`
+If false, the call will return immediately and revocation will be queued; if it
+fails, Vault will keep trying. If true, if the revocation fails, Vault will not
+automatically try again and will return an error. For revoke-prefix, this
+setting will apply to all leases being revoked. For revoke-force, since errors
+are ignored, this setting is not supported.
+`,
 	},
 
 	"revoke-prefix": {
@@ -4034,9 +4342,23 @@ This path responds to the following HTTP methods.
 		"This function can be used to generate high-entropy random bytes.",
 	},
 	"listing_visibility": {
-		"Determines the visibility of the mount in the UI-specific listing endpoint.",
+		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and ''.",
+		"",
 	},
 	"passthrough_request_headers": {
 		"A list of headers to whitelist and pass from the request to the backend.",
+		"",
+	},
+	"raw": {
+		"Write, Read, and Delete data directly in the Storage backend.",
+		"",
+	},
+	"internal-ui-mounts": {
+		"Information about mounts returned according to their tuned visibility. Internal API; its location, inputs, and outputs may change.",
+		"",
+	},
+	"internal-ui-resultant-acl": {
+		"Information about a token's resultant ACL. Internal API; its location, inputs, and outputs may change.",
+		"",
 	},
 }

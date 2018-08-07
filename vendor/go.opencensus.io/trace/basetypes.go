@@ -22,16 +22,17 @@ import (
 type (
 	// TraceID is a 16-byte identifier for a set of spans.
 	TraceID [16]byte
+
 	// SpanID is an 8-byte identifier for a single span.
 	SpanID [8]byte
 )
 
 func (t TraceID) String() string {
-	return fmt.Sprintf("%02x", [16]byte(t))
+	return fmt.Sprintf("%02x", t[:])
 }
 
 func (s SpanID) String() string {
-	return fmt.Sprintf("%02x", [8]byte(s))
+	return fmt.Sprintf("%02x", s[:])
 }
 
 // Annotation represents a text annotation with a set of attributes and a timestamp.
@@ -41,35 +42,27 @@ type Annotation struct {
 	Attributes map[string]interface{}
 }
 
-// Attribute is an interface for attributes;
-// it is implemented by BoolAttribute, IntAttribute, and StringAttribute.
-type Attribute interface {
-	isAttribute()
+// Attribute represents a key-value pair on a span, link or annotation.
+// Construct with one of: BoolAttribute, Int64Attribute, or StringAttribute.
+type Attribute struct {
+	key   string
+	value interface{}
 }
 
-// BoolAttribute represents a bool-valued attribute.
-type BoolAttribute struct {
-	Key   string
-	Value bool
+// BoolAttribute returns a bool-valued attribute.
+func BoolAttribute(key string, value bool) Attribute {
+	return Attribute{key: key, value: value}
 }
 
-func (b BoolAttribute) isAttribute() {}
-
-// Int64Attribute represents an int64-valued attribute.
-type Int64Attribute struct {
-	Key   string
-	Value int64
+// Int64Attribute returns an int64-valued attribute.
+func Int64Attribute(key string, value int64) Attribute {
+	return Attribute{key: key, value: value}
 }
 
-func (i Int64Attribute) isAttribute() {}
-
-// StringAttribute represents a string-valued attribute.
-type StringAttribute struct {
-	Key   string
-	Value string
+// StringAttribute returns a string-valued attribute.
+func StringAttribute(key string, value string) Attribute {
+	return Attribute{key: key, value: value}
 }
-
-func (s StringAttribute) isAttribute() {}
 
 // LinkType specifies the relationship between the span that had the link
 // added, and the linked span.

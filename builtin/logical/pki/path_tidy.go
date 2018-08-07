@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -19,14 +21,19 @@ func pathTidy(b *backend) *framework.Path {
 				Type: framework.TypeBool,
 				Description: `Set to true to enable tidying up
 the certificate store`,
-				Default: false,
 			},
 
 			"tidy_revocation_list": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `Set to true to enable tidying up
 the revocation list`,
-				Default: false,
+			},
+
+			"tidy_revoked_certs": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `Set to true to expire all revoked
+certificates, even if their duration has not yet passed. This will cause these
+certificates to be removed from the CRL the next time the CRL is generated.`,
 			},
 
 			"safety_buffer": &framework.FieldSchema{
@@ -52,120 +59,143 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	safetyBuffer := d.Get("safety_buffer").(int)
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
 	tidyRevocationList := d.Get("tidy_revocation_list").(bool)
+	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool)
+
+	if safetyBuffer < 1 {
+		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
+	}
 
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
 
-	var resp *logical.Response
-
-	if tidyCertStore {
-		serials, err := req.Storage.List(ctx, "certs/")
-		if err != nil {
-			return nil, errwrap.Wrapf("error fetching list of certs: {{err}}", err)
-		}
-
-		for _, serial := range serials {
-			certEntry, err := req.Storage.Get(ctx, "certs/"+serial)
-			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("error fetching certificate %q: {{err}}", serial), err)
-			}
-
-			if certEntry == nil {
-				if resp == nil {
-					resp = &logical.Response{}
-				}
-				resp.AddWarning(fmt.Sprintf("Certificate entry for serial %s is nil; tidying up since it is no longer useful for any server operations", serial))
-				if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting nil entry with serial %s: {{err}}", serial), err)
-				}
-			}
-
-			if certEntry.Value == nil || len(certEntry.Value) == 0 {
-				if resp == nil {
-					resp = &logical.Response{}
-				}
-				resp.AddWarning(fmt.Sprintf("Certificate entry for serial %s is nil; tidying up since it is no longer useful for any server operations", serial))
-				if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting entry with nil value with serial %s: {{err}}", serial), err)
-				}
-			}
-
-			cert, err := x509.ParseCertificate(certEntry.Value)
-			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("unable to parse stored certificate with serial %q: {{err}}", serial), err)
-			}
-
-			if time.Now().After(cert.NotAfter.Add(bufferDuration)) {
-				if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from storage: {{err}}", serial), err)
-				}
-			}
-		}
+	if !atomic.CompareAndSwapUint32(b.tidyCASGuard, 0, 1) {
+		resp := &logical.Response{}
+		resp.AddWarning("Tidy operation already in progress.")
+		return resp, nil
 	}
 
-	if tidyRevocationList {
-		b.revokeStorageLock.Lock()
-		defer b.revokeStorageLock.Unlock()
-
-		tidiedRevoked := false
-
-		revokedSerials, err := req.Storage.List(ctx, "revoked/")
-		if err != nil {
-			return nil, errwrap.Wrapf("error fetching list of revoked certs: {{err}}", err)
-		}
-
-		var revInfo revocationInfo
-		for _, serial := range revokedSerials {
-			revokedEntry, err := req.Storage.Get(ctx, "revoked/"+serial)
-			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("unable to fetch revoked cert with serial %q: {{err}}", serial), err)
-			}
-
-			if revokedEntry == nil {
-				if resp == nil {
-					resp = &logical.Response{}
-				}
-				resp.AddWarning(fmt.Sprintf("Revoked entry for serial %s is nil; tidying up since it is no longer useful for any server operations", serial))
-				if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting nil revoked entry with serial %s: {{err}}", serial), err)
-				}
-			}
-
-			if revokedEntry.Value == nil || len(revokedEntry.Value) == 0 {
-				if resp == nil {
-					resp = &logical.Response{}
-				}
-				resp.AddWarning(fmt.Sprintf("Revoked entry for serial %s has nil value; tidying up since it is no longer useful for any server operations", serial))
-				if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting revoked entry with nil value with serial %s: {{err}}", serial), err)
-				}
-			}
-
-			err = revokedEntry.DecodeJSON(&revInfo)
-			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("error decoding revocation entry for serial %q: {{err}}", serial), err)
-			}
-
-			revokedCert, err := x509.ParseCertificate(revInfo.CertificateBytes)
-			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("unable to parse stored revoked certificate with serial %q: {{err}}", serial), err)
-			}
-
-			if time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
-				if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from revoked list: {{err}}", serial), err)
-				}
-				tidiedRevoked = true
-			}
-		}
-
-		if tidiedRevoked {
-			if err := buildCRL(ctx, b, req); err != nil {
-				return nil, err
-			}
-		}
+	// Tests using framework will screw up the storage so make a locally
+	// scoped req to hold a reference
+	req = &logical.Request{
+		Storage: req.Storage,
 	}
 
-	return resp, nil
+	go func() {
+		defer atomic.StoreUint32(b.tidyCASGuard, 0)
+
+		// Don't cancel when the original client request goes away
+		ctx = context.Background()
+
+		logger := b.Logger().Named("tidy")
+
+		doTidy := func() error {
+			if tidyCertStore {
+				serials, err := req.Storage.List(ctx, "certs/")
+				if err != nil {
+					return errwrap.Wrapf("error fetching list of certs: {{err}}", err)
+				}
+
+				for _, serial := range serials {
+					certEntry, err := req.Storage.Get(ctx, "certs/"+serial)
+					if err != nil {
+						return errwrap.Wrapf(fmt.Sprintf("error fetching certificate %q: {{err}}", serial), err)
+					}
+
+					if certEntry == nil {
+						logger.Warn("certificate entry is nil; tidying up since it is no longer useful for any server operations", "serial", serial)
+						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
+							return errwrap.Wrapf(fmt.Sprintf("error deleting nil entry with serial %s: {{err}}", serial), err)
+						}
+					}
+
+					if certEntry.Value == nil || len(certEntry.Value) == 0 {
+						logger.Warn("certificate entry has no value; tidying up since it is no longer useful for any server operations", "serial", serial)
+						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
+							return errwrap.Wrapf(fmt.Sprintf("error deleting entry with nil value with serial %s: {{err}}", serial), err)
+						}
+					}
+
+					cert, err := x509.ParseCertificate(certEntry.Value)
+					if err != nil {
+						return errwrap.Wrapf(fmt.Sprintf("unable to parse stored certificate with serial %q: {{err}}", serial), err)
+					}
+
+					if time.Now().After(cert.NotAfter.Add(bufferDuration)) {
+						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
+							return errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from storage: {{err}}", serial), err)
+						}
+					}
+				}
+			}
+
+			if tidyRevocationList {
+				b.revokeStorageLock.Lock()
+				defer b.revokeStorageLock.Unlock()
+
+				tidiedRevoked := false
+
+				revokedSerials, err := req.Storage.List(ctx, "revoked/")
+				if err != nil {
+					return errwrap.Wrapf("error fetching list of revoked certs: {{err}}", err)
+				}
+
+				var revInfo revocationInfo
+				for _, serial := range revokedSerials {
+					revokedEntry, err := req.Storage.Get(ctx, "revoked/"+serial)
+					if err != nil {
+						return errwrap.Wrapf(fmt.Sprintf("unable to fetch revoked cert with serial %q: {{err}}", serial), err)
+					}
+
+					if revokedEntry == nil {
+						logger.Warn("revoked entry is nil; tidying up since it is no longer useful for any server operations", "serial", serial)
+						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
+							return errwrap.Wrapf(fmt.Sprintf("error deleting nil revoked entry with serial %s: {{err}}", serial), err)
+						}
+					}
+
+					if revokedEntry.Value == nil || len(revokedEntry.Value) == 0 {
+						logger.Warn("revoked entry has nil value; tidying up since it is no longer useful for any server operations", "serial", serial)
+						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
+							return errwrap.Wrapf(fmt.Sprintf("error deleting revoked entry with nil value with serial %s: {{err}}", serial), err)
+						}
+					}
+
+					err = revokedEntry.DecodeJSON(&revInfo)
+					if err != nil {
+						return errwrap.Wrapf(fmt.Sprintf("error decoding revocation entry for serial %q: {{err}}", serial), err)
+					}
+
+					revokedCert, err := x509.ParseCertificate(revInfo.CertificateBytes)
+					if err != nil {
+						return errwrap.Wrapf(fmt.Sprintf("unable to parse stored revoked certificate with serial %q: {{err}}", serial), err)
+					}
+
+					if tidyRevokedCerts || time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
+						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
+							return errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from revoked list: {{err}}", serial), err)
+						}
+						tidiedRevoked = true
+					}
+				}
+
+				if tidiedRevoked {
+					if err := buildCRL(ctx, b, req); err != nil {
+						return err
+					}
+				}
+			}
+
+			return nil
+		}
+
+		if err := doTidy(); err != nil {
+			logger.Error("error running tidy", "error", err)
+			return
+		}
+	}()
+
+	resp := &logical.Response{}
+	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
 const pathTidyHelpSyn = `

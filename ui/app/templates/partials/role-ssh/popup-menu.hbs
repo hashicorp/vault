@@ -60,7 +60,7 @@
           <li class="action">
             {{#confirm-action
               confirmButtonClasses="button is-primary"
-              buttonClasses="link"
+              buttonClasses="link is-destroy"
               onConfirmAction=(action "delete" item)
               confirmMessage=(concat "Are you sure you want to delete " item.id "?")
               showConfirm=(get this (concat "shouldDelete-" item.id))

@@ -1,6 +1,7 @@
 package gcs
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -12,12 +13,12 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/physical"
 
 	"cloud.google.com/go/storage"
 	"github.com/armon/go-metrics"
-	"golang.org/x/net/context"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
@@ -85,7 +86,7 @@ type Backend struct {
 // specifying credentials via envvars, credential files, etc. from environment
 // variables or a service account file
 func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error) {
-	logger.Debug("physical/gcs: configuring backend")
+	logger.Debug("configuring backend")
 
 	// Bucket name
 	bucket := os.Getenv(envBucket)
@@ -132,13 +133,13 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		return nil, errwrap.Wrapf("failed to parse max_parallel: {{err}}", err)
 	}
 
-	logger.Debug("physical/gcs: configuration",
+	logger.Debug("configuration",
 		"bucket", bucket,
 		"chunk_size", chunkSize,
 		"ha_enabled", haEnabled,
 		"max_parallel", maxParallel,
 	)
-	logger.Debug("physical/gcs: creating client")
+	logger.Debug("creating client")
 
 	// Client
 	opts := []option.ClientOption{option.WithUserAgent(useragent.String())}
@@ -166,7 +167,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 }
 
 // Put is used to insert or update an entry
-func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
+func (b *Backend) Put(ctx context.Context, entry *physical.Entry) (retErr error) {
 	defer metrics.MeasureSince(metricPut, time.Now())
 
 	// Pooling
@@ -176,7 +177,12 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	// Insert
 	w := b.client.Bucket(b.bucket).Object(entry.Key).NewWriter(ctx)
 	w.ChunkSize = b.chunkSize
-	defer w.Close()
+	defer func() {
+		closeErr := w.Close()
+		if closeErr != nil {
+			retErr = multierror.Append(retErr, errwrap.Wrapf("error closing connection: {{err}}", closeErr))
+		}
+	}()
 
 	if _, err := w.Write(entry.Value); err != nil {
 		return errwrap.Wrapf("failed to put data: {{err}}", err)
@@ -185,7 +191,7 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 }
 
 // Get fetches an entry. If no entry exists, this function returns nil.
-func (b *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) {
+func (b *Backend) Get(ctx context.Context, key string) (retEntry *physical.Entry, retErr error) {
 	defer metrics.MeasureSince(metricGet, time.Now())
 
 	// Pooling
@@ -200,7 +206,13 @@ func (b *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 	if err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read value for %q: {{err}}", key), err)
 	}
-	defer r.Close()
+
+	defer func() {
+		closeErr := r.Close()
+		if closeErr != nil {
+			retErr = multierror.Append(retErr, errwrap.Wrapf("error closing connection: {{err}}", closeErr))
+		}
+	}()
 
 	value, err := ioutil.ReadAll(r)
 	if err != nil {

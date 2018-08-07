@@ -3,16 +3,16 @@ layout: "api"
 page_title: "GitHub - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-github"
 description: |-
-  This is the API documentation for the Vault Github auth method.
+  This is the API documentation for the Vault GitHub auth method.
 ---
 
-# Github Auth Method (API)
+# GitHub Auth Method (API)
 
-This is the API documentation for the Vault Github auth method. For
-general information about the usage and operation of the Github method, please
-see the [Vault Github method documentation](/docs/auth/github.html).
+This is the API documentation for the Vault GitHub auth method. For
+general information about the usage and operation of the GitHub method, please
+see the [Vault GitHub method documentation](/docs/auth/github.html).
 
-This documentation assumes the Github method is enabled at the `/auth/github`
+This documentation assumes the GitHub method is enabled at the `/auth/github`
 path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
@@ -125,7 +125,7 @@ Reads the GitHub team policy mapping.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/github/map/teams:team_name`        | `200 application/json` |
+| `GET`    | `/auth/github/map/teams/:team_name`        | `200 application/json` |
 
 ### Sample Request
 
@@ -194,7 +194,7 @@ Reads the GitHub user policy mapping.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/github/map/users:user_name`        | `200 application/json` |
+| `GET`    | `/auth/github/map/users/:user_name`        | `200 application/json` |
 
 ### Sample Request
 

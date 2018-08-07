@@ -1,18 +1,21 @@
 import Ember from 'ember';
 import config from '../config/environment';
 
+const { computed, inject } = Ember;
 export default Ember.Controller.extend({
   env: config.environment,
-  auth: Ember.inject.service(),
-  vaultVersion: Ember.inject.service('version'),
-  activeCluster: Ember.computed('auth.activeCluster', function() {
+  auth: inject.service(),
+  vaultVersion: inject.service('version'),
+  console: inject.service(),
+  consoleOpen: computed.alias('console.isOpen'),
+  activeCluster: computed('auth.activeCluster', function() {
     return this.store.peekRecord('cluster', this.get('auth.activeCluster'));
   }),
-  activeClusterName: Ember.computed('auth.activeCluster', function() {
+  activeClusterName: computed('auth.activeCluster', function() {
     const activeCluster = this.store.peekRecord('cluster', this.get('auth.activeCluster'));
     return activeCluster ? activeCluster.get('name') : null;
   }),
-  showNav: Ember.computed(
+  showNav: computed(
     'activeClusterName',
     'auth.currentToken',
     'activeCluster.dr.isSecondary',
@@ -30,4 +33,9 @@ export default Ember.Controller.extend({
       }
     }
   ),
+  actions: {
+    toggleConsole() {
+      this.toggleProperty('consoleOpen');
+    },
+  },
 });

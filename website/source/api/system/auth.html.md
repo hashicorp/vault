@@ -222,7 +222,7 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
   object.
 
 - `listing_visibility` `(string: "")` - Speficies whether to show this mount
-    in the UI-specific listing endpoint.
+    in the UI-specific listing endpoint. Valid values are `"unauth"` or `""`.
 
 - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
     to whitelist and pass from the request to the backend.

@@ -268,17 +268,18 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 		// Get the body
 		bodyRaw, ok := resp.Data[logical.HTTPRawBody]
 		if !ok {
-			retErr(w, "no body given")
-			return
+			goto WRITE_RESPONSE
 		}
 
 		switch bodyRaw.(type) {
 		case string:
-			var err error
-			body, err = base64.StdEncoding.DecodeString(bodyRaw.(string))
-			if err != nil {
-				retErr(w, "cannot decode body")
-				return
+			// This is best effort. The value may already be base64-decoded so
+			// if it doesn't work we just use as-is
+			bodyDec, err := base64.StdEncoding.DecodeString(bodyRaw.(string))
+			if err == nil {
+				body = bodyDec
+			} else {
+				body = []byte(bodyRaw.(string))
 			}
 		case []byte:
 			body = bodyRaw.([]byte)
@@ -288,6 +289,7 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 		}
 	}
 
+WRITE_RESPONSE:
 	// Write the response
 	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)

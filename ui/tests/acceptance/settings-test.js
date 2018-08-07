@@ -1,5 +1,6 @@
 import { test } from 'qunit';
 import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import backendListPage from 'vault/tests/pages/secrets/backends';
 
 moduleForAcceptance('Acceptance | settings', {
   beforeEach() {
@@ -36,14 +37,15 @@ test('settings', function(assert) {
       find('[data-test-flash-message]').text().trim(),
       `Successfully mounted '${type}' at '${path}'!`
     );
+    let row = backendListPage.rows().findByPath(path);
+    row.menu();
   });
 
-  //show mount details
-  click(`[data-test-secret-backend-row="${path}"] [data-test-secret-backend-detail]`);
   andThen(() => {
-    assert.ok(
-      find('[data-test-secret-backend-details="default-ttl"]').text().match(/100/),
-      'displays the input ttl'
-    );
+    backendListPage.configLink();
+  });
+
+  andThen(() => {
+    assert.ok(currentURL(), '/vault/secrets/${path}/configuration', 'navigates to the config page');
   });
 });

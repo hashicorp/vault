@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
@@ -139,16 +140,12 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 				continue
 			}
 
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+			m := map[string]string{
 				"name":       username,
 				"password":   password,
 				"expiration": expirationStr,
-			}))
-			if err != nil {
-				return "", "", err
 			}
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return "", "", err
 			}
 		}
@@ -157,7 +154,6 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		return "", "", err
-
 	}
 
 	return username, password, nil
@@ -198,16 +194,12 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 			if len(query) == 0 {
 				continue
 			}
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+
+			m := map[string]string{
 				"name":       username,
 				"expiration": expirationStr,
-			}))
-			if err != nil {
-				return err
 			}
-
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -251,15 +243,10 @@ func (p *PostgreSQL) customRevokeUser(ctx context.Context, username string, revo
 				continue
 			}
 
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+			m := map[string]string{
 				"name": username,
-			}))
-			if err != nil {
-				return err
 			}
-			defer stmt.Close()
-
-			if _, err := stmt.ExecContext(ctx); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -352,14 +339,7 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revocationStmts {
-		stmt, err := db.PrepareContext(ctx, query)
-		if err != nil {
-			lastStmtError = err
-			continue
-		}
-		defer stmt.Close()
-		_, err = stmt.ExecContext(ctx)
-		if err != nil {
+		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 		}
 	}
@@ -423,16 +403,11 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 			if len(query) == 0 {
 				continue
 			}
-			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+			m := map[string]string{
 				"username": p.Username,
 				"password": password,
-			}))
-			if err != nil {
-				return nil, err
 			}
-
-			defer stmt.Close()
-			if _, err := stmt.ExecContext(ctx); err != nil {
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
 				return nil, err
 			}
 		}

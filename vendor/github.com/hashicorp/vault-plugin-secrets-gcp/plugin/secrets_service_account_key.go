@@ -90,10 +90,12 @@ func (b *backend) pathServiceAccountKey(ctx context.Context, req *logical.Reques
 
 func (b *backend) secretKeyRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp, err := b.verifySecretServiceKeyExists(ctx, req)
-	if err != nil || resp != nil {
+	if err != nil {
 		return resp, err
 	}
-
+	if resp == nil {
+		resp = &logical.Response{}
+	}
 	cfg, err := getConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -169,6 +171,9 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 	cfg, err := getConfig(ctx, s)
 	if err != nil {
 		return nil, errwrap.Wrapf("could not read backend config: {{err}}", err)
+	}
+	if cfg == nil {
+		cfg = &config{}
 	}
 
 	iamC, err := newIamAdmin(ctx, s)

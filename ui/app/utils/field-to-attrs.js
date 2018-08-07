@@ -42,11 +42,12 @@ export const expandAttributeMeta = function(modelClass, attributeNames, namePref
   let attributeMap = map || new Map();
   modelClass.eachAttribute((name, meta) => {
     let fieldName = namePrefix ? namePrefix + name : name;
-    if (meta.isFragment) {
+    let maybeFragment = Ember.get(modelClass, fieldName);
+    if (meta.isFragment && maybeFragment) {
       // pass the fragment and all fields that start with
       // the fragment name down to get extracted from the Fragment
       expandAttributeMeta(
-        Ember.get(modelClass, fieldName),
+        maybeFragment,
         fields.filter(f => f.startsWith(fieldName)),
         fieldName + '.',
         attributeMap
@@ -60,13 +61,15 @@ export const expandAttributeMeta = function(modelClass, attributeNames, namePref
   // so we'll replace each key in `fields` with the expanded meta
   fields = fields.map(field => {
     let meta = attributeMap.get(field);
-    const { type, options } = meta;
+    if (meta) {
+      var { type, options } = meta;
+    }
     return {
       // using field name here because it is the full path,
       // name on the attribute meta will be relative to the fragment it's on
       name: field,
-      type,
-      options,
+      type: type,
+      options: options,
     };
   });
   return fields;

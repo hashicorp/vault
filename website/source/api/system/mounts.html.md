@@ -98,7 +98,8 @@ This endpoint enables a new secrets engine at the given path.
      that will not be HMAC'd by audit devices in the response data object.
 
   - `listing_visibility` `(string: "")` - Speficies whether to show this mount
-     in the UI-specific listing endpoint.
+    in the UI-specific listing endpoint. Valid values are `"unauth"` or
+    `"hidden"`.  If not set, behaves like `"hidden"`.
 
   - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
      to whitelist and pass from the request to the backend.
@@ -113,6 +114,13 @@ This endpoint enables a new secrets engine at the given path.
     causes key material for supporting mounts to be wrapped by the seal's
     encryption capability. This is currently only supported for `transit` and
     `pki` backends. This is only available in Vault Enterprise.
+
+- `options` `(map<string|string>: nil)` - Specifies mount type specific options
+  that are passed to the backend. 
+  
+    *Key/Value (KV)*  
+    - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
+      KV v2.
 
 - `plugin_name` `(string: "")` – Specifies the name of the plugin to
   use based from the name in the plugin catalog. Applies only to plugin
@@ -222,8 +230,9 @@ This endpoint tunes configuration parameters for a given mount point.
   list of keys that will not be HMAC'd by audit devices in the response data
   object.
 
-- `listing_visibility` `(string: "")` - Speficies whether to show this mount
-    in the UI-specific listing endpoint.
+- `listing_visibility` `(string: "")` - Speficies whether to show this mount in
+  the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
+  If not set, behaves like `"hidden"`.
 
 - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
     to whitelist and pass from the request to the backend.

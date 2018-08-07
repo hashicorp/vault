@@ -371,6 +371,17 @@ func TestBackend_TidyIdentities(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	expiredIdentityWhitelist := &whitelistIdentity{
+		ExpirationTime: time.Now().Add(-1 * 24 * 365 * time.Hour),
+	}
+	entry, err := logical.StorageEntryJSON("whitelist/identity/id1", expiredIdentityWhitelist)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storage.Put(context.Background(), entry); err != nil {
+		t.Fatal(err)
+	}
+
 	// test update operation
 	_, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -379,6 +390,17 @@ func TestBackend_TidyIdentities(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// let tidy finish in the background
+	time.Sleep(1 * time.Second)
+
+	entry, err = storage.Get(context.Background(), "whitelist/identity/id1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry != nil {
+		t.Fatal("wl tidy did not remove expired entry")
 	}
 }
 
@@ -397,6 +419,17 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	expiredIdentityWhitelist := &roleTagBlacklistEntry{
+		ExpirationTime: time.Now().Add(-1 * 24 * 365 * time.Hour),
+	}
+	entry, err := logical.StorageEntryJSON("blacklist/roletag/id1", expiredIdentityWhitelist)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storage.Put(context.Background(), entry); err != nil {
+		t.Fatal(err)
+	}
+
 	// test update operation
 	_, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -405,6 +438,17 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// let tidy finish in the background
+	time.Sleep(1 * time.Second)
+
+	entry, err = storage.Get(context.Background(), "blacklist/roletag/id1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry != nil {
+		t.Fatal("bl tidy did not remove expired entry")
 	}
 }
 

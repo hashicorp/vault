@@ -55,6 +55,60 @@ func TestFieldDataGet(t *testing.T) {
 			"bar",
 		},
 
+		"lowercase string type, lowercase string value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeLowerCaseString},
+			},
+			map[string]interface{}{
+				"foo": "bar",
+			},
+			"foo",
+			"bar",
+		},
+
+		"lowercase string type, mixed-case string value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeLowerCaseString},
+			},
+			map[string]interface{}{
+				"foo": "BaR",
+			},
+			"foo",
+			"bar",
+		},
+
+		"lowercase string type, int value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeLowerCaseString},
+			},
+			map[string]interface{}{
+				"foo": 42,
+			},
+			"foo",
+			"42",
+		},
+
+		"lowercase string type, unset value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeLowerCaseString},
+			},
+			map[string]interface{}{},
+			"foo",
+			"",
+		},
+
+		"lowercase string type, unset value with lowercase default": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{
+					Type:    TypeLowerCaseString,
+					Default: "bar",
+				},
+			},
+			map[string]interface{}{},
+			"foo",
+			"bar",
+		},
+
 		"int type, int value": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeInt},
@@ -586,5 +640,39 @@ func TestFieldDataGet_Error(t *testing.T) {
 		if err == nil {
 			t.Fatalf("error expected, none received")
 		}
+	}
+}
+
+func TestFieldDataGetFirst(t *testing.T) {
+	data := &FieldData{
+		Raw: map[string]interface{}{
+			"foo":  "bar",
+			"fizz": "buzz",
+		},
+		Schema: map[string]*FieldSchema{
+			"foo":  {Type: TypeNameString},
+			"fizz": {Type: TypeNameString},
+		},
+	}
+
+	result, ok := data.GetFirst("foo", "fizz")
+	if !ok {
+		t.Fatal("should have found value for foo")
+	}
+	if result.(string) != "bar" {
+		t.Fatal("should have gotten bar for foo")
+	}
+
+	result, ok = data.GetFirst("fizz", "foo")
+	if !ok {
+		t.Fatal("should have found value for fizz")
+	}
+	if result.(string) != "buzz" {
+		t.Fatal("should have gotten buzz for fizz")
+	}
+
+	result, ok = data.GetFirst("cats")
+	if ok {
+		t.Fatal("shouldn't have gotten anything for cats")
 	}
 }

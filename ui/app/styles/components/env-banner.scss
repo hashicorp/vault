@@ -1,0 +1,10 @@
+.env-banner {
+  &,
+  &:not(:last-child):not(:last-child) {
+    margin: 0;
+  }
+
+  .level-item {
+    padding: $size-10 $size-8;
+  }
+}

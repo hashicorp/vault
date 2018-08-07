@@ -1,7 +1,7 @@
 import { test } from 'qunit';
 import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
-import listPage from 'vault/tests/pages/secrets/backends';
+import configPage from 'vault/tests/pages/secrets/backend/configuration';
 
 moduleForAcceptance('Acceptance | settings/mount-secret-backend', {
   beforeEach() {
@@ -30,13 +30,9 @@ test('it sets the ttl corrects when mounting', function(assert) {
     .maxTTLUnit('h')
     .submit();
 
-  listPage.visit();
+  configPage.visit({ backend: path });
   andThen(() => {
-    listPage.links().findByPath(path).toggleDetails();
-  });
-  andThen(() => {
-    const details = listPage.links().findByPath(path);
-    assert.equal(details.defaultTTL, defaultTTLSeconds, 'shows the proper TTL');
-    assert.equal(details.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
+    assert.equal(configPage.defaultTTL, defaultTTLSeconds, 'shows the proper TTL');
+    assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
   });
 });

@@ -27,6 +27,25 @@
       </select>
     </div>
   </div>
+{{else if (and (eq attr.type 'string') (eq attr.options.editType 'boolean'))}}
+  <div class="b-checkbox">
+    <input type="checkbox"
+     id="{{attr.name}}"
+     class="styled"
+     checked={{eq (get model valuePath) attr.options.trueValue}}
+     onchange={{action (action "setAndBroadcastBool" valuePath attr.options.trueValue attr.options.falseValue) value="target.checked"}}
+     data-test-input={{attr.name}}
+    />
+    <label for="{{attr.name}}" class="is-label">
+      {{labelString}}
+      {{#if attr.options.helpText}}
+        {{#info-tooltip}}
+          {{attr.options.helpText}}
+        {{/info-tooltip}}
+      {{/if}}
+    </label>
+  </div>
+
 {{else if (eq attr.options.editType 'mountAccessor')}}
   {{mount-accessor-select
     name=attr.name

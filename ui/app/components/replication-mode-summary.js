@@ -34,7 +34,7 @@ export default Ember.Component.extend({
   }),
   isPerformance: computed.equal('mode', 'performance'),
   replicationEnabled: replicationAttr('replicationEnabled'),
-  replicationUnsupported: replicationAttr('replicationUnsupported'),
+  replicationUnsupported: computed.equal('cluster.mode', 'unsupported'),
   replicationDisabled: replicationAttr('replicationDisabled'),
   syncProgressPercent: replicationAttr('syncProgressPercent'),
   syncProgress: replicationAttr('syncProgress'),

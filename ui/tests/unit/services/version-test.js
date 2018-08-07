@@ -16,6 +16,13 @@ test('setting version computes isEnterprise properly', function(assert) {
   assert.equal(service.get('isEnterprise'), true);
 });
 
+test('setting version with hsm ending computes isEnterprise properly', function(assert) {
+  let service = this.subject();
+  service.set('version', '0.9.5+prem.hsm');
+  assert.equal(service.get('isOSS'), false);
+  assert.equal(service.get('isEnterprise'), true);
+});
+
 test('hasPerfReplication', function(assert) {
   let service = this.subject();
   assert.equal(service.get('hasPerfReplication'), false);

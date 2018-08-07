@@ -1,7 +1,7 @@
 import DS from 'ember-data';
-import ApplicationSerializer from '../application';
+import IdentitySerializer from './_base';
 
-export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
+export default IdentitySerializer.extend(DS.EmbeddedRecordsMixin, {
   attrs: {
     aliases: { embedded: 'always' },
   },

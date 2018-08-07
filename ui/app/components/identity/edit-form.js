@@ -2,20 +2,23 @@ import Ember from 'ember';
 import { task } from 'ember-concurrency';
 import { humanize } from 'vault/helpers/humanize';
 
-const { computed } = Ember;
+const { computed, inject } = Ember;
 export default Ember.Component.extend({
+  flashMessages: inject.service(),
+  'data-test-component': 'identity-edit-form',
   model: null,
+
+  // 'create', 'edit', 'merge'
   mode: 'create',
   /*
    * @param Function
    * @public
    *
-   * Optional param to call a function upon successfully mounting a backend
-   *
+   * Optional param to call a function upon successfully saving an entity
    */
   onSave: () => {},
 
-  cancelLink: computed('mode', 'model', function() {
+  cancelLink: computed('mode', 'model.identityType', function() {
     let { model, mode } = this.getProperties('model', 'mode');
     let key = `${mode}-${model.get('identityType')}`;
     let routes = {
@@ -33,16 +36,17 @@ export default Ember.Component.extend({
     return routes[key];
   }),
 
-  getMessage(model) {
+  getMessage(model, isDelete = false) {
     let mode = this.get('mode');
     let typeDisplay = humanize([model.get('identityType')]);
+    let action = isDelete ? 'deleted' : 'saved';
     if (mode === 'merge') {
       return 'Successfully merged entities';
     }
     if (model.get('id')) {
-      return `Successfully saved ${typeDisplay} ${model.id}.`;
+      return `Successfully ${action} ${typeDisplay} ${model.id}.`;
     }
-    return `Successfully saved ${typeDisplay}.`;
+    return `Successfully ${action} ${typeDisplay}.`;
   },
 
   save: task(function*() {
@@ -56,13 +60,24 @@ export default Ember.Component.extend({
       return;
     }
     this.get('flashMessages').success(message);
-    yield this.get('onSave')(model);
+    yield this.get('onSave')({ saveType: 'save', model });
   }).drop(),
 
   willDestroy() {
     let model = this.get('model');
-    if (!model.isDestroyed || !model.isDestroying) {
+    if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {
       model.rollbackAttributes();
     }
+  },
+
+  actions: {
+    deleteItem(model) {
+      let message = this.getMessage(model, true);
+      let flash = this.get('flashMessages');
+      model.destroyRecord().then(() => {
+        flash.success(message);
+        return this.get('onSave')({ saveType: 'delete', model });
+      });
+    },
   },
 });

@@ -16,7 +16,7 @@ You can tell if a data store supports high availability mode ("HA") by starting
 the server and seeing if "(HA available)" is output next to the data store
 information. If it is, then Vault will automatically use HA mode. This
 information is also available on the
-[Configuration](https://www.vaultproject.io/docs/configuration/index.html) page.
+[Configuration](/docs/configuration/index.html) page.
 
 To be highly available, one of the Vault server nodes grabs a lock within the
 data store. The successful server node then becomes the active node; all other

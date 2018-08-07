@@ -1,6 +1,7 @@
 package vault_test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -26,7 +29,7 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 	// Make a request to lazy load the plugin
 	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
 	req.ClientToken = core.Client.Token()
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -46,11 +49,7 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		sealed, err := core.Sealed()
-		if err != nil {
-			t.Fatalf("err checking seal status: %s", err)
-		}
-		if sealed {
+		if core.Sealed() {
 			t.Fatal("should not be sealed")
 		}
 		// Wait for active so post-unseal takes place
@@ -68,7 +67,7 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 	// Make a request to lazy load the plugin
 	req := logical.TestRequest(t, logical.ReadOperation, "auth/mock-0/internal")
 	req.ClientToken = core.Client.Token()
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -88,11 +87,7 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		sealed, err := core.Sealed()
-		if err != nil {
-			t.Fatalf("err checking seal status: %s", err)
-		}
-		if sealed {
+		if core.Sealed() {
 			t.Fatal("should not be sealed")
 		}
 		// Wait for active so post-unseal takes place
@@ -114,7 +109,7 @@ func TestSystemBackend_Plugin_MismatchType(t *testing.T) {
 	// and expect an error
 	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
 	req.ClientToken = core.Client.Token()
-	_, err := core.HandleRequest(req)
+	_, err := core.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Fatalf("expected error due to mismatch on error type: %s", err)
 	}
@@ -150,7 +145,7 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 	// Remove the plugin from the catalog
 	req := logical.TestRequest(t, logical.DeleteOperation, "sys/plugins/catalog/mock-plugin")
 	req.ClientToken = core.Client.Token()
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -167,11 +162,7 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 				t.Fatal(err)
 			}
 		}
-		sealed, err := core.Sealed()
-		if err != nil {
-			t.Fatalf("err checking seal status: %s", err)
-		}
-		if sealed {
+		if core.Sealed() {
 			t.Fatal("should not be sealed")
 		}
 	}
@@ -239,7 +230,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 	// Get the registered plugin
 	req := logical.TestRequest(t, logical.ReadOperation, "sys/plugins/catalog/mock-plugin")
 	req.ClientToken = core.Client.Token()
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil || resp == nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -257,7 +248,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 			"command": filepath.Base(command),
 		}
 		req.ClientToken = core.Client.Token()
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v", err, resp)
 		}
@@ -280,11 +271,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 				t.Fatal(err)
 			}
 		}
-		sealed, err := core.Sealed()
-		if err != nil {
-			t.Fatalf("err checking seal status: %s", err)
-		}
-		if sealed {
+		if core.Sealed() {
 			t.Fatal("should not be sealed")
 		}
 	}
@@ -307,7 +294,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 		"plugin": "mock-plugin",
 	}
 	req.ClientToken = core.Client.Token()
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -323,7 +310,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 
 	req = logical.TestRequest(t, logical.ReadOperation, reqPath)
 	req.ClientToken = core.Client.Token()
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -342,7 +329,7 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "mock-0/internal")
 	req.ClientToken = core.Client.Token()
 	req.Data["value"] = "baz"
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -353,7 +340,7 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 	// Call errors/rpc endpoint to trigger reload
 	req = logical.TestRequest(t, logical.ReadOperation, "mock-0/errors/rpc")
 	req.ClientToken = core.Client.Token()
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Fatalf("expected error from error/rpc request")
 	}
@@ -361,7 +348,7 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 	// Check internal value to make sure it's reset
 	req = logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
 	req.ClientToken = core.Client.Token()
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -389,11 +376,7 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		sealed, err := core.Sealed()
-		if err != nil {
-			t.Fatalf("err checking seal status: %s", err)
-		}
-		if sealed {
+		if core.Sealed() {
 			t.Fatal("should not be sealed")
 		}
 	}
@@ -602,5 +585,144 @@ func TestBackend_PluginMainCredentials(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	resp, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("nil response")
+	}
+	if resp.Auth == nil {
+		t.Fatal("nil auth")
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatal("empty client token")
+	}
+
+	client.SetToken(resp.Auth.ClientToken)
+
+	resp, err = client.Logical().Read("sys/internal/ui/resultant-acl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("nil response")
+	}
+	if resp.Data == nil {
+		t.Fatal("nil data")
+	}
+
+	exp := map[string]interface{}{
+		"exact_paths": map[string]interface{}{
+			"auth/token/lookup-self": map[string]interface{}{
+				"capabilities": []interface{}{
+					"read",
+				},
+			},
+			"auth/token/renew-self": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"auth/token/revoke-self": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/capabilities-self": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/control-group/request": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/internal/ui/resultant-acl": map[string]interface{}{
+				"capabilities": []interface{}{
+					"read",
+				},
+			},
+			"sys/leases/lookup": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/leases/renew": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/renew": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/tools/hash": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/tools/random": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/wrapping/lookup": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/wrapping/unwrap": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/wrapping/wrap": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+		},
+		"glob_paths": map[string]interface{}{
+			"cubbyhole/": map[string]interface{}{
+				"capabilities": []interface{}{
+					"create",
+					"delete",
+					"list",
+					"read",
+					"update",
+				},
+			},
+			"sys/tools/hash/": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+			"sys/tools/random/": map[string]interface{}{
+				"capabilities": []interface{}{
+					"update",
+				},
+			},
+		},
+		"root": false,
+	}
+
+	if diff := deep.Equal(resp.Data, exp); diff != nil {
+		t.Fatal(diff)
 	}
 }

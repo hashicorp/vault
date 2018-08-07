@@ -321,9 +321,10 @@ func (c *ZooKeeperBackend) List(ctx context.Context, prefix string) ([]string, e
 // LockWith is used for mutual exclusion based on the given key.
 func (c *ZooKeeperBackend) LockWith(key, value string) (physical.Lock, error) {
 	l := &ZooKeeperHALock{
-		in:    c,
-		key:   key,
-		value: value,
+		in:     c,
+		key:    key,
+		value:  value,
+		logger: c.logger,
 	}
 	return l, nil
 }
@@ -336,13 +337,15 @@ func (c *ZooKeeperBackend) HAEnabled() bool {
 
 // ZooKeeperHALock is a ZooKeeper Lock implementation for the HABackend
 type ZooKeeperHALock struct {
-	in    *ZooKeeperBackend
-	key   string
-	value string
+	in     *ZooKeeperBackend
+	key    string
+	value  string
+	logger log.Logger
 
 	held      bool
 	localLock sync.Mutex
 	leaderCh  chan struct{}
+	stopCh    <-chan struct{}
 	zkLock    *zk.Lock
 }
 
@@ -384,6 +387,8 @@ func (i *ZooKeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 		return nil, fmt.Errorf("lost HA lock immediately before watch")
 	}
 	go i.monitorLock(lockeventCh, i.leaderCh)
+
+	i.stopCh = stopCh
 
 	return i.leaderCh, nil
 }
@@ -441,16 +446,55 @@ func (i *ZooKeeperHALock) monitorLock(lockeventCh <-chan zk.Event, leaderCh chan
 	}
 }
 
-func (i *ZooKeeperHALock) Unlock() error {
+func (i *ZooKeeperHALock) unlockInternal() error {
 	i.localLock.Lock()
 	defer i.localLock.Unlock()
 	if !i.held {
 		return nil
 	}
 
-	i.held = false
-	i.zkLock.Unlock()
-	return nil
+	err := i.zkLock.Unlock()
+
+	if err == nil {
+		i.held = false
+		return nil
+	}
+
+	return err
+}
+
+func (i *ZooKeeperHALock) Unlock() error {
+	var err error
+
+	if err = i.unlockInternal(); err != nil {
+		i.logger.Error("zookeeper: failed to release distributed lock", "error", err)
+
+		go func(i *ZooKeeperHALock) {
+			attempts := 0
+			i.logger.Info("zookeeper: launching automated distributed lock release")
+
+			for {
+				if err := i.unlockInternal(); err == nil {
+					i.logger.Info("zookeeper: distributed lock released")
+					return
+				}
+
+				select {
+				case <-time.After(time.Second):
+					attempts := attempts + 1
+					if attempts >= 10 {
+						i.logger.Error("zookeeper: release lock max attempts reached. Lock may not be released", "error", err)
+						return
+					}
+					continue
+				case <-i.stopCh:
+					return
+				}
+			}
+		}(i)
+	}
+
+	return err
 }
 
 func (i *ZooKeeperHALock) Value() (bool, string, error) {

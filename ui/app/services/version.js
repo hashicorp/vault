@@ -24,7 +24,7 @@ export default Service.extend({
 
   hasSentinel: hasFeature('Sentinel'),
 
-  isEnterprise: computed.match('version', /\+\w+$/),
+  isEnterprise: computed.match('version', /\+.+$/),
 
   isOSS: computed.not('isEnterprise'),
 
@@ -57,7 +57,7 @@ export default Service.extend({
       this.setFeatures(response);
       return;
     } catch (err) {
-      throw err;
+      // if we fail here, we're likely in DR Secondary mode and don't need to worry about it
     }
   }).keepLatest(),
 

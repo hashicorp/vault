@@ -3,6 +3,7 @@ package kv;
 
 import "google/protobuf/timestamp.proto";
 
+// If values are added to this, be sure to update the config() function
 message Configuration {
 	uint32 max_versions = 1;
 	bool cas_required = 2;

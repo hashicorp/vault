@@ -111,7 +111,6 @@
 /docs/vault-enterprise/hsm/behavior.html        /docs/enterprise/hsm/behavior.html
 /docs/vault-enterprise/hsm/configuration.html   /docs/enterprise/hsm/configuration.html
 /docs/vault-enterprise/hsm/security.html        /docs/enterprise/hsm/security.html
-/docs/vault-enterprise/ui/index.html            /docs/enterprise/ui/index.html
 /docs/vault-enterprise/identity/index.html      /docs/enterprise/identity/index.html
 /docs/vault-enterprise/mfa/index.html           /docs/enterprise/mfa/index.html
 /docs/vault-enterprise/mfa/mfa-duo.html         /docs/enterprise/mfa/mfa-duo.html
@@ -126,3 +125,6 @@
 /docs/enterprise/hsm/configuration.html /docs/configuration/seal/pkcs11.html
 /docs/configuration/storage/google-cloud.html /docs/configuration/storage/google-cloud-storage.html
 /docs/configuration/storage/spanner.html /docs/configuration/storage/google-cloud-spanner.html
+
+/docs/vault-enterprise/ui/index.html  /docs/configuration/ui/index.html
+/docs/enterprise/ui/index.html        /docs/configuration/ui/index.html

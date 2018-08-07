@@ -16,7 +16,10 @@
       <li<%= sidebar_current("docs-http-secret") %>>
         <a href="/api/secret/index.html">Secrets Engines</a>
         <ul class="nav">
-          <li<%= sidebar_current("docs-http-secret-aws") %>>
+          <li<%= sidebar_current("docs-http-secret-ad") %>>
+            <a href="/api/secret/ad/index.html">Active Directory</a>
+         </li>
+         <li<%= sidebar_current("docs-http-secret-aws") %>>
             <a href="/api/secret/aws/index.html">AWS</a>
           </li>
           <li<%= sidebar_current("docs-http-secret-consul") %>>
@@ -139,10 +142,13 @@
             <a href="/api/auth/azure/index.html">Azure</a>
           </li>
           <li<%= sidebar_current("docs-http-auth-github") %>>
-            <a href="/api/auth/github/index.html">Github</a>
+            <a href="/api/auth/github/index.html">GitHub</a>
           </li>
           <li<%= sidebar_current("docs-http-auth-gcp") %>>
             <a href="/api/auth/gcp/index.html">Google Cloud</a>
+          </li>
+          <li<%= sidebar_current("docs-http-auth-jwt") %>>
+            <a href="/api/auth/jwt/index.html">JWT/OIDC</a>
           </li>
           <li<%= sidebar_current("docs-http-auth-kubernetes") %>>
             <a href="/api/auth/kubernetes/index.html">Kubernetes</a>
@@ -218,6 +224,9 @@
           </li>
           <li<%= sidebar_current("docs-http-system-init") %>>
             <a href="/api/system/init.html"><tt>/sys/init</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-internal-ui-mounts") %>>
+            <a href="/api/system/internal-ui-mounts.html"><tt>/sys/internal/ui/mounts</tt></a>
           </li>
           <li<%= sidebar_current("docs-http-system-key-status") %>>
             <a href="/api/system/key-status.html"><tt>/sys/key-status</tt></a>

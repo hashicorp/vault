@@ -23,7 +23,7 @@ import (
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 // testVaultServer creates a test vault cluster and returns a configured API
@@ -152,6 +152,7 @@ func testPostgresDB(t testing.TB) (string, func()) {
 		if err != nil {
 			return err
 		}
+		defer db.Close()
 		return db.Ping()
 	}); err != nil {
 		t.Fatalf("postgresdb: could not connect: %s", err)

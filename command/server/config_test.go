@@ -55,12 +55,14 @@ func TestLoadConfigFile(t *testing.T) {
 			DogStatsDTags:   []string{"tag_1:val_1", "tag_2:val_2"},
 		},
 
-		DisableCache:    true,
-		DisableCacheRaw: true,
-		DisableMlock:    true,
-		DisableMlockRaw: true,
-		EnableUI:        true,
-		EnableUIRaw:     true,
+		DisableCache:             true,
+		DisableCacheRaw:          true,
+		DisableMlock:             true,
+		DisableMlockRaw:          true,
+		DisablePrintableCheckRaw: true,
+		DisablePrintableCheck:    true,
+		EnableUI:                 true,
+		EnableUIRaw:              true,
 
 		EnableRawEndpoint:    true,
 		EnableRawEndpointRaw: true,
@@ -380,74 +382,4 @@ listener "tcp" {
 		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, *expected)
 	}
 
-}
-
-func TestParseConfig_badTopLevel(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	_, err := ParseConfig(strings.TrimSpace(`
-backend {}
-bad  = "one"
-nope = "yes"
-`), logger)
-
-	if err == nil {
-		t.Fatal("expected error")
-	}
-
-	if !strings.Contains(err.Error(), `invalid key "bad" on line 2`) {
-		t.Errorf("bad error: %q", err)
-	}
-
-	if !strings.Contains(err.Error(), `invalid key "nope" on line 3`) {
-		t.Errorf("bad error: %q", err)
-	}
-}
-
-func TestParseConfig_badListener(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	_, err := ParseConfig(strings.TrimSpace(`
-listener "tcp" {
-	address = "1.2.3.3"
-	bad  = "one"
-	nope = "yes"
-}
-`), logger)
-
-	if err == nil {
-		t.Fatal("expected error")
-	}
-
-	if !strings.Contains(err.Error(), `listeners.tcp: invalid key "bad" on line 3`) {
-		t.Errorf("bad error: %q", err)
-	}
-
-	if !strings.Contains(err.Error(), `listeners.tcp: invalid key "nope" on line 4`) {
-		t.Errorf("bad error: %q", err)
-	}
-}
-
-func TestParseConfig_badTelemetry(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Debug)
-
-	_, err := ParseConfig(strings.TrimSpace(`
-telemetry {
-	statsd_address = "1.2.3.3"
-	bad  = "one"
-	nope = "yes"
-}
-`), logger)
-
-	if err == nil {
-		t.Fatal("expected error")
-	}
-
-	if !strings.Contains(err.Error(), `telemetry: invalid key "bad" on line 3`) {
-		t.Errorf("bad error: %q", err)
-	}
-
-	if !strings.Contains(err.Error(), `telemetry: invalid key "nope" on line 4`) {
-		t.Errorf("bad error: %q", err)
-	}
 }

@@ -2,6 +2,7 @@ package ldap
 
 import (
 	"errors"
+	"fmt"
 
 	"gopkg.in/asn1-ber.v1"
 )
@@ -40,10 +41,6 @@ func (bindRequest *SimpleBindRequest) encode() *ber.Packet {
 	request.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, bindRequest.Username, "User Name"))
 	request.AppendChild(ber.NewString(ber.ClassContext, ber.TypePrimitive, 0, bindRequest.Password, "Password"))
 
-	if len(bindRequest.Controls) > 0 {
-		request.AppendChild(encodeControls(bindRequest.Controls))
-	}
-
 	return request
 }
 
@@ -57,6 +54,9 @@ func (l *Conn) SimpleBind(simpleBindRequest *SimpleBindRequest) (*SimpleBindResu
 	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, l.nextMessageID(), "MessageID"))
 	encodedBindRequest := simpleBindRequest.encode()
 	packet.AppendChild(encodedBindRequest)
+	if len(simpleBindRequest.Controls) > 0 {
+		packet.AppendChild(encodeControls(simpleBindRequest.Controls))
+	}
 
 	if l.Debug {
 		ber.PrintPacket(packet)
@@ -91,7 +91,11 @@ func (l *Conn) SimpleBind(simpleBindRequest *SimpleBindRequest) (*SimpleBindResu
 
 	if len(packet.Children) == 3 {
 		for _, child := range packet.Children[2].Children {
-			result.Controls = append(result.Controls, DecodeControl(child))
+			decodedChild, err := DecodeControl(child)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode child control: %s", err)
+			}
+			result.Controls = append(result.Controls, decodedChild)
 		}
 	}
 

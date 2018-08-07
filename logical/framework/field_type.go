@@ -26,6 +26,10 @@ const (
 	// a string field
 	TypeCommaStringSlice
 
+	// TypeLowerCaseString is a helper for TypeString that returns a lowercase
+	// version of the provided string
+	TypeLowerCaseString
+
 	// TypeNameString represents a name that is URI safe and follows specific
 	// rules.  These rules include start and end with an alphanumeric
 	// character and characters in the middle can be alphanumeric or . or -.
@@ -44,6 +48,8 @@ func (t FieldType) String() string {
 	switch t {
 	case TypeString:
 		return "string"
+	case TypeLowerCaseString:
+		return "lowercase string"
 	case TypeNameString:
 		return "name string"
 	case TypeInt:

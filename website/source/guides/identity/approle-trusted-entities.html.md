@@ -326,7 +326,7 @@ $ curl --silent \
        --location \
        --header "X-Vault-Token: $VAULT_TOKEN" \
        --request PUT \
-       --data @app-1-secret-read.hcl \
+       --data @app-1-secret-read.json \
        $VAULT_ADDR/v1/sys/policy/app-1-secret-read
 ```
 

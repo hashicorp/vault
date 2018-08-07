@@ -2,7 +2,7 @@ import { moduleFor, test } from 'ember-qunit';
 import Ember from 'ember';
 
 moduleFor('adapter:capabilities', 'Unit | Adapter | capabilities', {
-  needs: ['service:auth', 'service:flash-messages'],
+  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
 });
 
 test('calls the correct url', function(assert) {
@@ -16,6 +16,6 @@ test('calls the correct url', function(assert) {
 
   adapter.findRecord(null, 'capabilities', 'foo');
   assert.equal('/v1/sys/capabilities-self', url, 'calls the correct URL');
-  assert.deepEqual({ path: 'foo' }, options.data, 'data params OK');
+  assert.deepEqual({ paths: ['foo'] }, options.data, 'data params OK');
   assert.equal('POST', method, 'method OK');
 });

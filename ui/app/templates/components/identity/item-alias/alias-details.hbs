@@ -1,4 +1,4 @@
-{{info-table-row label="Name" value=model.name }}
+{{info-table-row label="Name" value=model.name data-test-alias-name=true}}
 {{info-table-row label="ID" value=model.id }}
 {{#info-table-row label=(if (eq model.identityType "entity-alias") "Entity ID" "Group ID") value=model.canonicalId}}
   <a href={{href-to 'vault.cluster.access.identity.show' (if (eq model.identityType "entity-alias") "entities" "groups") model.canonicalId "details"}}
@@ -12,7 +12,7 @@
   <div>
     {{model.mountPath}}
     <div>
-      <span class="tag"><code>{{model.mountType}}</code></span>
+      <span class="tag">{{model.mountType}}</span>
       <code class="has-text-grey is-size-8">{{model.mountAccessor}}</code>
     </div>
   </div>

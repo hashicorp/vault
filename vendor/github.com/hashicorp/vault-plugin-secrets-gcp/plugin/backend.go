@@ -19,7 +19,7 @@ import (
 type backend struct {
 	*framework.Backend
 
-	enabledIamResources iamutil.EnabledResources
+	iamResources iamutil.IamResourceParser
 
 	rolesetLock sync.Mutex
 }
@@ -34,7 +34,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 func Backend() *backend {
 	var b = backend{
-		enabledIamResources: iamutil.GetEnabledIamResources(),
+		iamResources: iamutil.GetEnabledIamResources(),
 	}
 
 	b.Backend = &framework.Backend{

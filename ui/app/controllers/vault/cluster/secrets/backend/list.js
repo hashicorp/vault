@@ -66,6 +66,7 @@ export default Ember.Controller.extend(BackendCrumbMixin, {
     delete(item) {
       const name = item.id;
       item.destroyRecord().then(() => {
+        this.send('reload');
         this.get('flashMessages').success(`${name} was successfully deleted.`);
       });
     },

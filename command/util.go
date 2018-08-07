@@ -20,7 +20,7 @@ func DefaultTokenHelper() (token.TokenHelper, error) {
 
 // RawField extracts the raw field from the given data and returns it as a
 // string for printing purposes.
-func RawField(secret *api.Secret, field string) (interface{}, bool) {
+func RawField(secret *api.Secret, field string) interface{} {
 	var val interface{}
 	switch {
 	case secret.Auth != nil:
@@ -34,6 +34,10 @@ func RawField(secret *api.Secret, field string) (interface{}, bool) {
 		case "token_renewable":
 			val = secret.Auth.Renewable
 		case "token_policies":
+			val = secret.Auth.TokenPolicies
+		case "identity_policies":
+			val = secret.Auth.IdentityPolicies
+		case "policies":
 			val = secret.Auth.Policies
 		default:
 			val = secret.Data[field]
@@ -59,6 +63,14 @@ func RawField(secret *api.Secret, field string) (interface{}, bool) {
 
 	default:
 		switch field {
+		case "lease_duration":
+			val = secret.LeaseDuration
+		case "lease_id":
+			val = secret.LeaseID
+		case "request_id":
+			val = secret.RequestID
+		case "renewable":
+			val = secret.Renewable
 		case "refresh_interval":
 			val = secret.LeaseDuration
 		case "data":
@@ -72,13 +84,20 @@ func RawField(secret *api.Secret, field string) (interface{}, bool) {
 		}
 	}
 
-	return val, val != nil
+	return val
 }
 
 // PrintRawField prints raw field from the secret.
-func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
-	val, ok := RawField(secret, field)
-	if !ok {
+func PrintRawField(ui cli.Ui, data interface{}, field string) int {
+	var val interface{}
+	switch data.(type) {
+	case *api.Secret:
+		val = RawField(data.(*api.Secret), field)
+	case map[string]interface{}:
+		val = data.(map[string]interface{})[field]
+	}
+
+	if val == nil {
 		ui.Error(fmt.Sprintf("Field %q not present in secret", field))
 		return 1
 	}

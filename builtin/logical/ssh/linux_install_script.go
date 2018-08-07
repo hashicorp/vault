@@ -49,21 +49,23 @@ if [ "$INSTALL_OPTION" != "install" ] && [ "$INSTALL_OPTION" != "uninstall" ]; t
 	exit 1
 fi
 
-# Create the .ssh directory and authorized_keys file if it does not exist
-SSH_DIR=$(dirname $AUTH_KEYS_FILE)
-sudo mkdir -p "$SSH_DIR"
-sudo touch "$AUTH_KEYS_FILE"
-
-# Remove the key from authorized_keys file if it is already present.
-# This step is common for both install and uninstall.  Note that grep's
-# return code is ignored, thus if grep fails all keys will be removed
-# rather than none and it fails secure
-sudo grep -vFf "$PUBLIC_KEY_FILE" "$AUTH_KEYS_FILE" > temp_$PUBLIC_KEY_FILE || true
-cat temp_$PUBLIC_KEY_FILE | sudo tee "$AUTH_KEYS_FILE"
-
-# Append the new public key to authorized_keys file
-if [ "$INSTALL_OPTION" == "install" ]; then
-	cat "$PUBLIC_KEY_FILE" | sudo tee --append "$AUTH_KEYS_FILE"
-fi
+# use locking to avoid parallel script execution
+(
+	flock --timeout 10 200
+	# Create the .ssh directory and authorized_keys file if it does not exist
+	SSH_DIR=$(dirname $AUTH_KEYS_FILE)
+	sudo mkdir -p "$SSH_DIR"
+	sudo touch "$AUTH_KEYS_FILE"
+	# Remove the key from authorized_keys file if it is already present.
+	# This step is common for both install and uninstall.  Note that grep's
+	# return code is ignored, thus if grep fails all keys will be removed
+	# rather than none and it fails secure
+	sudo grep -vFf "$PUBLIC_KEY_FILE" "$AUTH_KEYS_FILE" > temp_$PUBLIC_KEY_FILE || true
+	cat temp_$PUBLIC_KEY_FILE | sudo tee "$AUTH_KEYS_FILE"
+	# Append the new public key to authorized_keys file
+	if [ "$INSTALL_OPTION" == "install" ]; then
+		cat "$PUBLIC_KEY_FILE" | sudo tee --append "$AUTH_KEYS_FILE"
+	fi
+) 200> ${AUTH_KEYS_FILE}.lock
 `
 )

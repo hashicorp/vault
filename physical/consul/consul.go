@@ -99,6 +99,9 @@ type ConsulBackend struct {
 
 	notifyActiveCh chan notifyEvent
 	notifySealedCh chan notifyEvent
+
+	sessionTTL   string
+	lockWaitTime time.Duration
 }
 
 // NewConsulBackend constructs a Consul backend using the given API client
@@ -168,7 +171,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	checkTimeout := defaultCheckTimeout
 	checkTimeoutStr, ok := conf["check_timeout"]
 	if ok {
-		d, err := time.ParseDuration(checkTimeoutStr)
+		d, err := parseutil.ParseDurationSecond(checkTimeoutStr)
 		if err != nil {
 			return nil, err
 		}
@@ -181,6 +184,32 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		checkTimeout = d
 		if logger.IsDebug() {
 			logger.Debug("config check_timeout set", "check_timeout", d)
+		}
+	}
+
+	sessionTTL := api.DefaultLockSessionTTL
+	sessionTTLStr, ok := conf["session_ttl"]
+	if ok {
+		_, err := parseutil.ParseDurationSecond(sessionTTLStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("invalid session_ttl: {{err}}", err)
+		}
+		sessionTTL = sessionTTLStr
+		if logger.IsDebug() {
+			logger.Debug("config session_ttl set", "session_ttl", sessionTTL)
+		}
+	}
+
+	lockWaitTime := api.DefaultLockWaitTime
+	lockWaitTimeRaw, ok := conf["lock_wait_time"]
+	if ok {
+		d, err := parseutil.ParseDurationSecond(lockWaitTimeRaw)
+		if err != nil {
+			return nil, errwrap.Wrapf("invalid lock_wait_time: {{err}}", err)
+		}
+		lockWaitTime = d
+		if logger.IsDebug() {
+			logger.Debug("config lock_wait_time set", "lock_wait_time", d)
 		}
 	}
 
@@ -263,6 +292,8 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		consistencyMode:     consistencyMode,
 		notifyActiveCh:      make(chan notifyEvent),
 		notifySealedCh:      make(chan notifyEvent),
+		sessionTTL:          sessionTTL,
+		lockWaitTime:        lockWaitTime,
 	}
 	return c, nil
 }
@@ -363,7 +394,10 @@ func (c *ConsulBackend) Transaction(ctx context.Context, txns []*physical.TxnEnt
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	ok, resp, _, err := c.kv.Txn(ops, nil)
+	queryOpts := &api.QueryOptions{}
+	queryOpts = queryOpts.WithContext(ctx)
+
+	ok, resp, _, err := c.kv.Txn(ops, queryOpts)
 	if err != nil {
 		return err
 	}
@@ -391,7 +425,10 @@ func (c *ConsulBackend) Put(ctx context.Context, entry *physical.Entry) error {
 		Value: entry.Value,
 	}
 
-	_, err := c.kv.Put(pair, nil)
+	writeOpts := &api.WriteOptions{}
+	writeOpts = writeOpts.WithContext(ctx)
+
+	_, err := c.kv.Put(pair, writeOpts)
 	return err
 }
 
@@ -402,14 +439,14 @@ func (c *ConsulBackend) Get(ctx context.Context, key string) (*physical.Entry, e
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	var queryOptions *api.QueryOptions
+	queryOpts := &api.QueryOptions{}
+	queryOpts = queryOpts.WithContext(ctx)
+
 	if c.consistencyMode == consistencyModeStrong {
-		queryOptions = &api.QueryOptions{
-			RequireConsistent: true,
-		}
+		queryOpts.RequireConsistent = true
 	}
 
-	pair, _, err := c.kv.Get(c.path+key, queryOptions)
+	pair, _, err := c.kv.Get(c.path+key, queryOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -430,7 +467,10 @@ func (c *ConsulBackend) Delete(ctx context.Context, key string) error {
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	_, err := c.kv.Delete(c.path+key, nil)
+	writeOpts := &api.WriteOptions{}
+	writeOpts = writeOpts.WithContext(ctx)
+
+	_, err := c.kv.Delete(c.path+key, writeOpts)
 	return err
 }
 
@@ -450,7 +490,10 @@ func (c *ConsulBackend) List(ctx context.Context, prefix string) ([]string, erro
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	out, _, err := c.kv.Keys(scan, "/", nil)
+	queryOpts := &api.QueryOptions{}
+	queryOpts = queryOpts.WithContext(ctx)
+
+	out, _, err := c.kv.Keys(scan, "/", queryOpts)
 	for idx, val := range out {
 		out[idx] = strings.TrimPrefix(val, scan)
 	}
@@ -466,6 +509,8 @@ func (c *ConsulBackend) LockWith(key, value string) (physical.Lock, error) {
 		Value:          []byte(value),
 		SessionName:    "Vault Lock",
 		MonitorRetries: 5,
+		SessionTTL:     c.sessionTTL,
+		LockWaitTime:   c.lockWaitTime,
 	}
 	lock, err := c.client.LockOpts(opts)
 	if err != nil {
@@ -603,9 +648,9 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 	// and end of a handler's life (or after a handler wakes up from
 	// sleeping during a back-off/retry).
 	var shutdown bool
-	var checkLock int64
 	var registeredServiceID string
-	var serviceRegLock int64
+	checkLock := new(int32)
+	serviceRegLock := new(int32)
 
 	for !shutdown {
 		select {
@@ -621,10 +666,10 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 
 			// Abort if service discovery is disabled or a
 			// reconcile handler is already active
-			if !c.disableRegistration && atomic.CompareAndSwapInt64(&serviceRegLock, 0, 1) {
+			if !c.disableRegistration && atomic.CompareAndSwapInt32(serviceRegLock, 0, 1) {
 				// Enter handler with serviceRegLock held
 				go func() {
-					defer atomic.CompareAndSwapInt64(&serviceRegLock, 1, 0)
+					defer atomic.CompareAndSwapInt32(serviceRegLock, 1, 0)
 					for !shutdown {
 						serviceID, err := c.reconcileConsul(registeredServiceID, activeFunc, sealedFunc)
 						if err != nil {
@@ -647,10 +692,10 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 			checkTimer.Reset(c.checkDuration())
 			// Abort if service discovery is disabled or a
 			// reconcile handler is active
-			if !c.disableRegistration && atomic.CompareAndSwapInt64(&checkLock, 0, 1) {
+			if !c.disableRegistration && atomic.CompareAndSwapInt32(checkLock, 0, 1) {
 				// Enter handler with checkLock held
 				go func() {
-					defer atomic.CompareAndSwapInt64(&checkLock, 1, 0)
+					defer atomic.CompareAndSwapInt32(checkLock, 1, 0)
 					for !shutdown {
 						sealed := sealedFunc()
 						if err := c.runCheck(sealed); err != nil {

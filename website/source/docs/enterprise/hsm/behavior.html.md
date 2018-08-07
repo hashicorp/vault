@@ -37,11 +37,8 @@ to not split the master key, so that the single key share is itself the master
 key. (Vault does not do this automatically as it generally prefers to error
 rather than change parameters set by an operator.)
 
-Vault does not currently support rekeying the master key when protected by an
-HSM; however, it _does_ continue to support rotation of the underlying data
-encryption key that the master key protects via the
-[`/sys/rotate`](/api/system/rotate.html) API
-endpoint.
+Both rekeying the master key and rotation of the underlying data
+encryption key are supported when using an HSM.
 
 ## Recovery Key
 
@@ -77,9 +74,19 @@ generate a key but no key is found. See
 
 ### Rekeying
 
+#### Unseal Key
+
+Vault's unseal key can be rekeyed using a normal `vault operator rekey`
+operation from the CLI or the matching API calls. The rekey operation is
+authorized by meeting the threshold of recovery keys. After rekeying, the new
+barrier key is wrapped by the HSM and stored like the previous key; it is not
+returned to the users that submitted their recovery keys.
+
+#### Recovery Key
+
 The recovery key can be rekeyed to change the number of shares/threshold or to
 target different key holders via different PGP keys. When using the Vault CLI,
-this is performed by using the `-recovery-key=true` flag to `vault rekey`.
+this is performed by using the `-recovery-key=true` flag to `vault operator rekey`.
 
 Via the API, the rekey operation is performed with the same parameters as the
 [normal `/sys/rekey`

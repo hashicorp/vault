@@ -15,49 +15,40 @@
 
 package stats
 
-// Float64Measure is a measure of type float64.
+// Float64Measure is a measure for float64 values.
 type Float64Measure struct {
-	name        string
-	unit        string
-	description string
+	md *measureDescriptor
 }
 
 // Name returns the name of the measure.
 func (m *Float64Measure) Name() string {
-	return m.name
+	return m.md.name
 }
 
 // Description returns the description of the measure.
 func (m *Float64Measure) Description() string {
-	return m.description
+	return m.md.description
 }
 
 // Unit returns the unit of the measure.
 func (m *Float64Measure) Unit() string {
-	return m.unit
+	return m.md.unit
 }
 
 // M creates a new float64 measurement.
 // Use Record to record measurements.
 func (m *Float64Measure) M(v float64) Measurement {
-	return Measurement{Measure: m, Value: v}
+	if !m.md.subscribed() {
+		return Measurement{}
+	}
+	return Measurement{m: m, v: v}
 }
 
-// Float64 creates a new measure of type Float64Measure. It returns
-// an error if a measure with the same name already exists.
-func Float64(name, description, unit string) (*Float64Measure, error) {
-	if err := checkName(name); err != nil {
-		return nil, err
-	}
-	m := &Float64Measure{
-		name:        name,
-		description: description,
-		unit:        unit,
-	}
-	_, err := register(m)
-	if err != nil {
-		return nil, err
-	} else {
-		return m, err
-	}
+// Float64 creates a new measure for float64 values.
+//
+// See the documentation for interface Measure for more guidance on the
+// parameters of this function.
+func Float64(name, description, unit string) *Float64Measure {
+	mi := registerMeasureHandle(name, description, unit)
+	return &Float64Measure{mi}
 }

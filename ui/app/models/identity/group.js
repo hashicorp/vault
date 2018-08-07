@@ -1,6 +1,8 @@
 import Ember from 'ember';
 import IdentityModel from './_base';
 import DS from 'ember-data';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import identityCapabilities from 'vault/macros/identity-capabilities';
 
 const { computed } = Ember;
 const { attr, belongsTo } = DS;
@@ -24,6 +26,12 @@ export default IdentityModel.extend({
   lastUpdateTime: attr('string', {
     readOnly: true,
   }),
+  numMemberEntities: attr('number', {
+    readOnly: true,
+  }),
+  numParentGroups: attr('number', {
+    readOnly: true,
+  }),
   metadata: attr('object', {
     editType: 'kv',
   }),
@@ -32,6 +40,10 @@ export default IdentityModel.extend({
   }),
   memberGroupIds: attr({
     label: 'Member Group IDs',
+    editType: 'stringArray',
+  }),
+  parentGroupIds: attr({
+    label: 'Parent Group IDs',
     editType: 'stringArray',
   }),
   memberEntityIds: attr({
@@ -52,4 +64,18 @@ export default IdentityModel.extend({
   ),
 
   alias: belongsTo('identity/group-alias', { async: false, readOnly: true }),
+  updatePath: identityCapabilities(),
+  canDelete: computed.alias('updatePath.canDelete'),
+  canEdit: computed.alias('updatePath.canUpdate'),
+
+  aliasPath: lazyCapabilities(apiPath`identity/group-alias`),
+  canAddAlias: computed('aliasPath.canCreate', 'type', 'alias', function() {
+    let type = this.get('type');
+    let alias = this.get('alias');
+    // internal groups can't have aliases, and external groups can only have one
+    if (type === 'internal' || alias) {
+      return false;
+    }
+    return this.get('aliasPath.canCreate');
+  }),
 });

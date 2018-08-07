@@ -87,3 +87,12 @@ Vault Seal specific values:
 * `VAULT_SEAL_TYPE`
 * `VAULT_AWSKMS_SEAL_KEY_ID`
 ```
+
+## Key Rotation
+
+This seal supports rotating the master keys defined in AWS KMS 
+[doc](https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html). Both automatic 
+rotation and manual rotation is supported for KMS since the key information is stored with the 
+encrypted data.  Old keys must not be disabled or deleted and are used to decrypt older data. 
+Any new or updated data will be encrypted with the current key defined in the seal configuration
+or set to current under a key alias.

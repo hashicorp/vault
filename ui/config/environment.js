@@ -57,12 +57,16 @@ module.exports = function(environment) {
     ENV.contentSecurityPolicyMeta = true;
     ENV.contentSecurityPolicy = {
       'connect-src': ["'self'"],
+      'img-src': ["'self'", 'data:'],
+      'form-action': ["'none'"],
+      'script-src': ["'self'"],
       'style-src': ["'unsafe-inline'", "'self'"],
     };
   }
 
   if (environment === 'production') {
   }
+  ENV.welcomeMessage = process.env.UI_AUTH_WELCOME;
 
   return ENV;
 };

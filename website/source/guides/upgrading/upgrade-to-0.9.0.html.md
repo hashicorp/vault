@@ -115,7 +115,7 @@ corresponding object containing the `key_type`.
 
 ### More granularity in audit logs (In 0.9)
 
-Audit request and response entires are still in RFC3339 format but now have a
+Audit request and response entries are still in RFC3339 format but now have a
 granularity of nanoseconds.
 
 [generate-root]: https://www.vaultproject.io/api/secret/pki/index.html#generate-root

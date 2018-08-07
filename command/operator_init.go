@@ -125,7 +125,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 			"public GPG keys OR a comma-separated list of Keybase usernames using " +
 			"the format \"keybase:<username>\". When supplied, the generated " +
 			"unseal keys will be encrypted and base64-encoded in the order " +
-			"specified in this list. The number of entires must match -key-shares, " +
+			"specified in this list. The number of entries must match -key-shares, " +
 			"unless -store-shares are used.",
 	})
 
@@ -244,15 +244,25 @@ func (c *OperatorInitCommand) Run(args []string) int {
 	// Deprecations
 	// TODO: remove in 0.9.0
 	if c.flagAuto {
-		c.UI.Warn(wrapAtLength("WARNING! -auto is deprecated. Please use " +
-			"-consul-auto instead. This will be removed in Vault 0.11 " +
-			"(or later)."))
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength("WARNING! -auto is deprecated. Please use " +
+				"-consul-auto instead. This will be removed in Vault 0.11 " +
+				"(or later)."))
+		}
 		c.flagConsulAuto = true
 	}
 	if c.flagCheck {
-		c.UI.Warn(wrapAtLength("WARNING! -check is deprecated. Please use " +
-			"-status instead. This will be removed in Vault 0.11 (or later)."))
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength("WARNING! -check is deprecated. Please use " +
+				"-status instead. This will be removed in Vault 0.11 (or later)."))
+		}
 		c.flagStatus = true
+	}
+
+	args = f.Args()
+	if len(args) > 0 {
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", len(args)))
+		return 1
 	}
 
 	// Build the initial init request
@@ -404,7 +414,7 @@ func (c *OperatorInitCommand) consulAuto(client *api.Client, req *api.InitReques
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"Discovered %d uninitialized Vault servers with Consul service name "+
 				"%q. To initialize these Vaults, set any one of the following "+
-				"environment variables and run \"vault init\":",
+				"environment variables and run \"vault operator init\":",
 			len(uninitedVaults), c.flagConsulService)))
 		c.UI.Output("")
 
@@ -477,8 +487,8 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 		c.UI.Output("")
 		c.UI.Output(wrapAtLength(
 			"It is possible to generate new unseal keys, provided you have a quorum " +
-				"of existing unseal keys shares. See \"vault rekey\" for more " +
-				"information."))
+				"of existing unseal keys shares. See \"vault operator rekey\" for " +
+				"more information."))
 	} else {
 		c.UI.Output("")
 		c.UI.Output("Success! Vault is initialized")

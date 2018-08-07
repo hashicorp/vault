@@ -3,6 +3,7 @@ package file
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -97,6 +98,12 @@ func (b *FileBackend) DeleteInternal(ctx context.Context, path string) error {
 	basePath, key := b.expandPath(path)
 	fullPath := filepath.Join(basePath, key)
 
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	err := os.Remove(fullPath)
 	if err != nil && !os.IsNotExist(err) {
 		return errwrap.Wrapf(fmt.Sprintf("failed to remove %q: {{err}}", fullPath), err)
@@ -162,6 +169,18 @@ func (b *FileBackend) GetInternal(ctx context.Context, k string) (*physical.Entr
 	path, key := b.expandPath(k)
 	path = filepath.Join(path, key)
 
+	// If we stat it and it exists but is size zero, it may be left from some
+	// previous FS error like out-of-space. No Vault entry will ever be zero
+	// length, so simply remove it and return nil.
+	fi, err := os.Stat(path)
+	if err == nil {
+		if fi.Size() == 0 {
+			// Best effort, ignore errors
+			os.Remove(path)
+			return nil, nil
+		}
+	}
+
 	f, err := os.Open(path)
 	if f != nil {
 		defer f.Close()
@@ -177,6 +196,12 @@ func (b *FileBackend) GetInternal(ctx context.Context, k string) (*physical.Entr
 	var entry fileEntry
 	if err := jsonutil.DecodeJSONFromReader(f, &entry); err != nil {
 		return nil, err
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
 	}
 
 	return &physical.Entry{
@@ -208,20 +233,52 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	}
 
 	// JSON encode the entry and write it
+	fullPath := filepath.Join(path, key)
 	f, err := os.OpenFile(
-		filepath.Join(path, key),
+		fullPath,
 		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
 		0600)
-	if f != nil {
-		defer f.Close()
-	}
 	if err != nil {
+		if f != nil {
+			f.Close()
+		}
 		return err
 	}
+	if f == nil {
+		return errors.New("could not successfully get a file handle")
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	enc := json.NewEncoder(f)
-	return enc.Encode(&fileEntry{
+	encErr := enc.Encode(&fileEntry{
 		Value: entry.Value,
 	})
+	f.Close()
+	if encErr == nil {
+		return nil
+	}
+
+	// Everything below is best-effort and will result in encErr being returned
+
+	// See if we ended up with a zero-byte file and if so delete it, might be a
+	// case of disk being full but the file info is in metadata that is
+	// reserved.
+	fi, err := os.Stat(fullPath)
+	if err != nil {
+		return encErr
+	}
+	if fi == nil {
+		return encErr
+	}
+	if fi.Size() == 0 {
+		os.Remove(fullPath)
+	}
+	return encErr
 }
 
 func (b *FileBackend) List(ctx context.Context, prefix string) ([]string, error) {
@@ -231,10 +288,10 @@ func (b *FileBackend) List(ctx context.Context, prefix string) ([]string, error)
 	b.RLock()
 	defer b.RUnlock()
 
-	return b.ListInternal(prefix)
+	return b.ListInternal(ctx, prefix)
 }
 
-func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
+func (b *FileBackend) ListInternal(ctx context.Context, prefix string) ([]string, error) {
 	if err := b.validatePath(prefix); err != nil {
 		return nil, err
 	}
@@ -274,6 +331,12 @@ func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
 				names[i] = name[1:]
 			}
 		}
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
 	}
 
 	return names, nil

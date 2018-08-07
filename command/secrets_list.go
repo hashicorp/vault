@@ -116,10 +116,10 @@ func (c *SecretsListCommand) simpleMounts(mounts map[string]*api.MountOutput) []
 	}
 	sort.Strings(paths)
 
-	out := []string{"Path | Type | Description"}
+	out := []string{"Path | Type | Accessor | Description"}
 	for _, path := range paths {
 		mount := mounts[path]
-		out = append(out, fmt.Sprintf("%s | %s | %s", path, mount.Type, mount.Description))
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s", path, mount.Type, mount.Accessor, mount.Description))
 	}
 
 	return out

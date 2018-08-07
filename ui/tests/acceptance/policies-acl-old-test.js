@@ -31,7 +31,7 @@ test('policies', function(assert) {
   fillIn('[data-test-policy-input="name"]', policyName);
   click('[data-test-policy-save]');
   andThen(function() {
-    assert.equal(find('[data-test-error]').length, 1, 'renders error messages on save');
+    assert.dom('[data-test-error]').exists({ count: 1 }, 'renders error messages on save');
     find('.CodeMirror').get(0).CodeMirror.setValue(policyString);
   });
   click('[data-test-policy-save]');
@@ -41,20 +41,14 @@ test('policies', function(assert) {
       `/vault/policy/acl/${encodeURIComponent(policyLower)}`,
       'navigates to policy show on successful save'
     );
-    assert.equal(
-      find('[data-test-policy-name]').text().trim(),
-      policyLower,
-      'displays the policy name on the show page'
-    );
-    assert.equal(
-      find('[data-test-flash-message].is-info').length,
-      0,
-      'no flash message is displayed on save'
-    );
+    assert.dom('[data-test-policy-name]').hasText(policyLower, 'displays the policy name on the show page');
+    assert.dom('[data-test-flash-message].is-info').doesNotExist('no flash message is displayed on save');
   });
   click('[data-test-policy-list-link]');
   andThen(function() {
-    assert.equal(find(`[data-test-policy-link="${policyLower}"]`).length, 1, 'new policy shown in the list');
+    assert
+      .dom(`[data-test-policy-link="${policyLower}"]`)
+      .exists({ count: 1 }, 'new policy shown in the list');
   });
 
   // policy deletion
@@ -64,10 +58,32 @@ test('policies', function(assert) {
   click('[data-test-confirm-button]');
   andThen(function() {
     assert.equal(currentURL(), `/vault/policies/acl`, 'navigates to policy list on successful deletion');
+    assert
+      .dom(`[data-test-policy-item="${policyLower}"]`)
+      .doesNotExist('deleted policy is not shown in the list');
+  });
+});
+
+// https://github.com/hashicorp/vault/issues/4395
+test('it properly fetches policies when the name ends in a ,', function(assert) {
+  const now = new Date().getTime();
+  const policyString = 'path "*" { capabilities = ["update"]}';
+  const policyName = `${now}-symbol,.`;
+
+  page.visit({ type: 'acl' });
+  // new policy creation
+  click('[data-test-policy-create-link]');
+  fillIn('[data-test-policy-input="name"]', policyName);
+  andThen(function() {
+    find('.CodeMirror').get(0).CodeMirror.setValue(policyString);
+  });
+  click('[data-test-policy-save]');
+  andThen(function() {
     assert.equal(
-      find(`[data-test-policy-item="${policyLower}"]`).length,
-      0,
-      'deleted policy is not shown in the list'
+      currentURL(),
+      `/vault/policy/acl/${policyName}`,
+      'navigates to policy show on successful save'
     );
+    assert.dom('[data-test-policy-edit-toggle]').exists({ count: 1 }, 'shows the edit toggle');
   });
 });

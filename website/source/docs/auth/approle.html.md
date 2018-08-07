@@ -9,7 +9,7 @@ description: |-
 
 # AppRole Auth Method
 
-The `approle` auth method allows machines or _apps_ to authenticate with Vault
+The `approle` auth method allows machines or _apps_ to authenticate with
 Vault-defined _roles_. The open design of `AppRole` enables a varied set of
 workflows and configurations to handle large numbers of apps. This auth method
 is oriented to automated workflows (machines and services), and is less useful
@@ -226,7 +226,7 @@ credentials for login. The `bind_secret_id` constraint requires `secret_id` to
 be presented at the login endpoint.  Going forward, this auth method can support
 more constraint parameters to support varied set of Apps. Some constraints will
 not require a credential, but still enforce constraints for login.  For
-example, `bound_cidr_list` will only allow requests coming from IP addresses
+example, `secret_id_bound_cidrs` will only allow logins coming from IP addresses
 belonging to configured CIDR blocks on the AppRole.
 
 ## API

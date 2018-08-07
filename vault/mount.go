@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -40,14 +41,16 @@ const (
 	mountTableType = "mounts"
 )
 
-// ListingVisiblityType represents the types for listing visilibity
-type ListingVisiblityType string
+// ListingVisibilityType represents the types for listing visibility
+type ListingVisibilityType string
 
 const (
+	// ListingVisibilityDefault is the default value for listing visibility
+	ListingVisibilityDefault ListingVisibilityType = ""
 	// ListingVisibilityHidden is the hidden type for listing visibility
-	ListingVisibilityHidden ListingVisiblityType = ""
+	ListingVisibilityHidden ListingVisibilityType = "hidden"
 	// ListingVisibilityUnauth is the unauth type for listing visibility
-	ListingVisibilityUnauth ListingVisiblityType = "unauth"
+	ListingVisibilityUnauth ListingVisibilityType = "unauth"
 )
 
 var (
@@ -193,26 +196,26 @@ type MountEntry struct {
 
 // MountConfig is used to hold settable options
 type MountConfig struct {
-	DefaultLeaseTTL           time.Duration        `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
-	MaxLeaseTTL               time.Duration        `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
-	ForceNoCache              bool                 `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
-	PluginName                string               `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	AuditNonHMACRequestKeys   []string             `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
-	AuditNonHMACResponseKeys  []string             `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
-	ListingVisibility         ListingVisiblityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
-	PassthroughRequestHeaders []string             `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	DefaultLeaseTTL           time.Duration         `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
+	MaxLeaseTTL               time.Duration         `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
+	ForceNoCache              bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
+	PluginName                string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys   []string              `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
+	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
 type APIMountConfig struct {
-	DefaultLeaseTTL           string               `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL               string               `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	ForceNoCache              bool                 `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginName                string               `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	AuditNonHMACRequestKeys   []string             `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
-	AuditNonHMACResponseKeys  []string             `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
-	ListingVisibility         ListingVisiblityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
-	PassthroughRequestHeaders []string             `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	DefaultLeaseTTL           string                `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL               string                `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache              bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
+	PluginName                string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys   []string              `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
+	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
 }
 
 // Clone returns a deep copy of the mount entry
@@ -311,6 +314,8 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 	// ensure that it is reset after. This ensures that there will be no
 	// writes during the construction of the backend.
 	view.setReadOnlyErr(logical.ErrSetupReadOnly)
+	// We defer this because we're already up and running so we don't need to
+	// time it for after postUnseal
 	defer view.setReadOnlyErr(nil)
 
 	var backend logical.Backend
@@ -403,7 +408,7 @@ func (c *Core) unmountInternal(ctx context.Context, path string) error {
 		}
 
 		// Revoke all the dynamic keys
-		if err := c.expiration.RevokePrefix(path); err != nil {
+		if err := c.expiration.RevokePrefix(c.activeContext, path, true); err != nil {
 			return err
 		}
 
@@ -550,7 +555,7 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	}
 
 	// Revoke all the dynamic keys
-	if err := c.expiration.RevokePrefix(src); err != nil {
+	if err := c.expiration.RevokePrefix(c.activeContext, src, true); err != nil {
 		return err
 	}
 
@@ -628,6 +633,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 
 	var needPersist bool
 	if c.mounts == nil {
+		c.logger.Info("no mounts; adding default mount table")
 		c.mounts = c.defaultMountTable()
 		needPersist = true
 	}
@@ -818,7 +824,13 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
-		defer view.setReadOnlyErr(nil)
+		if strutil.StrListContains(singletonMounts, entry.Type) {
+			defer view.setReadOnlyErr(nil)
+		} else {
+			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				view.setReadOnlyErr(nil)
+			})
+		}
 
 		var backend logical.Backend
 		var err error
@@ -968,6 +980,9 @@ func (c *Core) defaultMountTable() *MountTable {
 		Options: map[string]string{
 			"version": "1",
 		},
+	}
+	if os.Getenv("VAULT_INTERACTIVE_DEMO_SERVER") != "" {
+		kvMount.Options["version"] = "2"
 	}
 	table.Entries = append(table.Entries, kvMount)
 	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)

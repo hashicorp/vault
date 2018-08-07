@@ -27,185 +27,267 @@ import (
 	"golang.org/x/text/transform"
 )
 
-const (
-	bufferSize = 128
-)
-
 // Reader is a bufio.Reader extended by methods needed for hdb protocol.
 type Reader struct {
-	*bufio.Reader
-	b  []byte // scratch buffer (min 8 Bytes)
-	tr transform.Transformer
+	rd  *bufio.Reader
+	err error
+	b   [8]byte // scratch buffer (8 Bytes)
+	tr  transform.Transformer
+	cnt int
 }
 
 // NewReader creates a new Reader instance.
 func NewReader(r io.Reader) *Reader {
 	return &Reader{
-		Reader: bufio.NewReader(r),
-		b:      make([]byte, bufferSize),
-		tr:     unicode.Cesu8ToUtf8Transformer,
+		rd: bufio.NewReader(r),
+		tr: unicode.Cesu8ToUtf8Transformer,
 	}
 }
 
 // NewReaderSize creates a new Reader instance with given size for bufio.Reader.
 func NewReaderSize(r io.Reader, size int) *Reader {
 	return &Reader{
-		Reader: bufio.NewReaderSize(r, size),
-		b:      make([]byte, bufferSize),
-		tr:     unicode.Cesu8ToUtf8Transformer,
+		rd: bufio.NewReaderSize(r, size),
+		tr: unicode.Cesu8ToUtf8Transformer,
 	}
 }
 
-// Skip skips cnt bytes from reading.
-func (r *Reader) Skip(cnt int) error {
-	for i := 0; i < cnt; {
-		j := cnt - i
-		if j > len(r.b) {
-			j = len(r.b)
-		}
-		n, err := io.ReadFull(r.Reader, r.b[:j])
-		i += n
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+// ResetCnt resets the byte read counter.
+func (r *Reader) ResetCnt() {
+	r.cnt = 0
 }
 
-// ReadFull implements io.ReadFull on Reader.
-func (r *Reader) ReadFull(p []byte) error {
-	_, err := io.ReadFull(r.Reader, p)
+// Cnt returns the value of the byte read counter.
+func (r *Reader) Cnt() int {
+	return r.cnt
+}
+
+// GetError returns reader error.
+func (r *Reader) GetError() error {
+	err := r.err
+	r.err = nil
 	return err
 }
 
+// Skip skips cnt bytes from reading.
+func (r *Reader) Skip(cnt int) {
+	if r.err != nil {
+		return
+	}
+	var n int
+	n, r.err = r.rd.Discard(cnt)
+	r.cnt += n
+}
+
+// ReadB reads and returns a byte.
+func (r *Reader) ReadB() byte { // ReadB as sig differs from ReadByte (vet issues)
+	if r.err != nil {
+		return 0
+	}
+	var b byte
+	b, r.err = r.rd.ReadByte()
+	r.cnt++
+	return b
+}
+
+// ReadFull implements io.ReadFull on Reader.
+func (r *Reader) ReadFull(p []byte) {
+	if r.err != nil {
+		return
+	}
+	var n int
+	n, r.err = io.ReadFull(r.rd, p)
+	r.cnt += n
+}
+
 // ReadBool reads and returns a boolean.
-func (r *Reader) ReadBool() (bool, error) {
-	c, err := r.Reader.ReadByte()
-	if err != nil {
-		return false, err
+func (r *Reader) ReadBool() bool {
+	if r.err != nil {
+		return false
 	}
-	if c == 0 {
-		return false, nil
-	}
-	return true, nil
+	return !(r.ReadB() == 0)
 }
 
 // ReadInt8 reads and returns an int8.
-func (r *Reader) ReadInt8() (int8, error) {
-	c, err := r.Reader.ReadByte()
-	if err != nil {
-		return 0, err
-	}
-	return int8(c), nil
+func (r *Reader) ReadInt8() int8 {
+	return int8(r.ReadB())
 }
 
 // ReadInt16 reads and returns an int16.
-func (r *Reader) ReadInt16() (int16, error) {
-	if _, err := io.ReadFull(r.Reader, r.b[:2]); err != nil {
-		return 0, err
+func (r *Reader) ReadInt16() int16 {
+	if r.err != nil {
+		return 0
 	}
-	return int16(binary.LittleEndian.Uint16(r.b[:2])), nil
+	var n int
+	n, r.err = io.ReadFull(r.rd, r.b[:2])
+	r.cnt += n
+	if r.err != nil {
+		return 0
+	}
+	return int16(binary.LittleEndian.Uint16(r.b[:2]))
 }
 
 // ReadUint16 reads and returns an uint16.
-func (r *Reader) ReadUint16() (uint16, error) {
-	if _, err := io.ReadFull(r.Reader, r.b[:2]); err != nil {
-		return 0, err
+func (r *Reader) ReadUint16() uint16 {
+	if r.err != nil {
+		return 0
 	}
-	return binary.LittleEndian.Uint16(r.b[:2]), nil
+	var n int
+	n, r.err = io.ReadFull(r.rd, r.b[:2])
+	r.cnt += n
+	if r.err != nil {
+		return 0
+	}
+	return binary.LittleEndian.Uint16(r.b[:2])
 }
 
 // ReadInt32 reads and returns an int32.
-func (r *Reader) ReadInt32() (int32, error) {
-	if _, err := io.ReadFull(r.Reader, r.b[:4]); err != nil {
-		return 0, err
+func (r *Reader) ReadInt32() int32 {
+	if r.err != nil {
+		return 0
 	}
-	return int32(binary.LittleEndian.Uint32(r.b[:4])), nil
+	var n int
+	n, r.err = io.ReadFull(r.rd, r.b[:4])
+	r.cnt += n
+	if r.err != nil {
+		return 0
+	}
+	return int32(binary.LittleEndian.Uint32(r.b[:4]))
 }
 
 // ReadUint32 reads and returns an uint32.
-func (r *Reader) ReadUint32() (uint32, error) {
-	if _, err := io.ReadFull(r.Reader, r.b[:4]); err != nil {
-		return 0, err
+func (r *Reader) ReadUint32() uint32 {
+	if r.err != nil {
+		return 0
 	}
-	return binary.LittleEndian.Uint32(r.b[:4]), nil
+	var n int
+	n, r.err = io.ReadFull(r.rd, r.b[:4])
+	r.cnt += n
+	if r.err != nil {
+		return 0
+	}
+	return binary.LittleEndian.Uint32(r.b[:4])
 }
 
 // ReadInt64 reads and returns an int64.
-func (r *Reader) ReadInt64() (int64, error) {
-	if _, err := io.ReadFull(r.Reader, r.b[:8]); err != nil {
-		return 0, err
+func (r *Reader) ReadInt64() int64 {
+	if r.err != nil {
+		return 0
 	}
-	return int64(binary.LittleEndian.Uint64(r.b[:8])), nil
+	var n int
+	n, r.err = io.ReadFull(r.rd, r.b[:8])
+	r.cnt += n
+	if r.err != nil {
+		return 0
+	}
+	return int64(binary.LittleEndian.Uint64(r.b[:8]))
 }
 
 // ReadUint64 reads and returns an uint64.
-func (r *Reader) ReadUint64() (uint64, error) {
-	if _, err := io.ReadFull(r.Reader, r.b[:8]); err != nil {
-		return 0, err
+func (r *Reader) ReadUint64() uint64 {
+	if r.err != nil {
+		return 0
 	}
-	return binary.LittleEndian.Uint64(r.b[:8]), nil
+	var n int
+	n, r.err = io.ReadFull(r.rd, r.b[:8])
+	r.cnt += n
+	if r.err != nil {
+		return 0
+	}
+	return binary.LittleEndian.Uint64(r.b[:8])
 }
 
 // ReadFloat32 reads and returns a float32.
-func (r *Reader) ReadFloat32() (float32, error) {
-	if _, err := io.ReadFull(r.Reader, r.b[:4]); err != nil {
-		return 0, err
+func (r *Reader) ReadFloat32() float32 {
+	if r.err != nil {
+		return 0
+	}
+	var n int
+	n, r.err = io.ReadFull(r.rd, r.b[:4])
+	r.cnt += n
+	if r.err != nil {
+		return 0
 	}
 	bits := binary.LittleEndian.Uint32(r.b[:4])
-	return math.Float32frombits(bits), nil
+	return math.Float32frombits(bits)
 }
 
 // ReadFloat64 reads and returns a float64.
-func (r *Reader) ReadFloat64() (float64, error) {
-	if _, err := io.ReadFull(r.Reader, r.b[:8]); err != nil {
-		return 0, err
+func (r *Reader) ReadFloat64() float64 {
+	if r.err != nil {
+		return 0
+	}
+	var n int
+	n, r.err = io.ReadFull(r.rd, r.b[:8])
+	r.cnt += n
+	if r.err != nil {
+		return 0
 	}
 	bits := binary.LittleEndian.Uint64(r.b[:8])
-	return math.Float64frombits(bits), nil
+	return math.Float64frombits(bits)
 }
 
 // ReadCesu8 reads a size CESU-8 encoded byte sequence and returns an UTF-8 byte slice.
-func (r *Reader) ReadCesu8(size int) ([]byte, error) {
+func (r *Reader) ReadCesu8(size int) []byte {
+	if r.err != nil {
+		return nil
+	}
 	p := make([]byte, size)
-	if _, err := io.ReadFull(r.Reader, p); err != nil {
-		return nil, err
+	var n int
+	n, r.err = io.ReadFull(r.rd, p)
+	r.cnt += n
+	if r.err != nil {
+		return nil
 	}
 	r.tr.Reset()
-	n, _, err := r.tr.Transform(p, p, true) // inplace transformation
-	if err != nil {
-		return nil, err
+	if n, _, r.err = r.tr.Transform(p, p, true); r.err != nil { // inplace transformation
+		return nil
 	}
-	return p[:n], nil
+	return p[:n]
 }
+
+const writerBufferSize = 4096
 
 // Writer is a bufio.Writer extended by methods needed for hdb protocol.
 type Writer struct {
-	*bufio.Writer
-	b  []byte // // scratch buffer (min 8 Bytes)
-	tr transform.Transformer
+	wr  *bufio.Writer
+	err error
+	b   []byte // scratch buffer (min 8 Bytes)
+	tr  transform.Transformer
 }
 
 // NewWriter creates a new Writer instance.
 func NewWriter(w io.Writer) *Writer {
 	return &Writer{
-		Writer: bufio.NewWriter(w),
-		b:      make([]byte, bufferSize),
-		tr:     unicode.Utf8ToCesu8Transformer,
+		wr: bufio.NewWriter(w),
+		b:  make([]byte, writerBufferSize),
+		tr: unicode.Utf8ToCesu8Transformer,
 	}
 }
 
 // NewWriterSize creates a new Writer instance with given size for bufio.Writer.
 func NewWriterSize(w io.Writer, size int) *Writer {
 	return &Writer{
-		Writer: bufio.NewWriterSize(w, size),
-		b:      make([]byte, bufferSize),
-		tr:     unicode.Utf8ToCesu8Transformer,
+		wr: bufio.NewWriterSize(w, size),
+		b:  make([]byte, writerBufferSize),
+		tr: unicode.Utf8ToCesu8Transformer,
 	}
 }
 
+// Flush writes any buffered data to the underlying io.Writer.
+func (w *Writer) Flush() error {
+	if w.err != nil {
+		return w.err
+	}
+	return w.wr.Flush()
+}
+
 // WriteZeroes writes cnt zero byte values.
-func (w *Writer) WriteZeroes(cnt int) error {
+func (w *Writer) WriteZeroes(cnt int) {
+	if w.err != nil {
+		return
+	}
+
 	// zero out scratch area
 	l := cnt
 	if l > len(w.b) {
@@ -220,110 +302,155 @@ func (w *Writer) WriteZeroes(cnt int) error {
 		if j > len(w.b) {
 			j = len(w.b)
 		}
-		n, err := w.Writer.Write(w.b[:j])
+		n, _ := w.wr.Write(w.b[:j])
 		i += n
-		if err != nil {
-			return err
-		}
 	}
-	return nil
+}
+
+// Write writes the contents of p.
+func (w *Writer) Write(p []byte) {
+	if w.err != nil {
+		return
+	}
+	w.wr.Write(p)
+}
+
+// WriteB writes a byte.
+func (w *Writer) WriteB(b byte) { // WriteB as sig differs from WriteByte (vet issues)
+	if w.err != nil {
+		return
+	}
+	w.wr.WriteByte(b)
 }
 
 // WriteBool writes a boolean.
-func (w *Writer) WriteBool(v bool) error {
-	if v {
-		return w.Writer.WriteByte(1)
+func (w *Writer) WriteBool(v bool) {
+	if w.err != nil {
+		return
 	}
-	return w.Writer.WriteByte(0)
+	if v {
+		w.wr.WriteByte(1)
+	} else {
+		w.wr.WriteByte(0)
+	}
 }
 
 // WriteInt8 writes an int8.
-func (w *Writer) WriteInt8(i int8) error {
-	return w.Writer.WriteByte(byte(i))
+func (w *Writer) WriteInt8(i int8) {
+	if w.err != nil {
+		return
+	}
+	w.wr.WriteByte(byte(i))
 }
 
 // WriteInt16 writes an int16.
-func (w *Writer) WriteInt16(i int16) error {
+func (w *Writer) WriteInt16(i int16) {
+	if w.err != nil {
+		return
+	}
 	binary.LittleEndian.PutUint16(w.b[:2], uint16(i))
-	_, err := w.Writer.Write(w.b[:2])
-	return err
+	w.wr.Write(w.b[:2])
 }
 
 // WriteUint16 writes an uint16.
-func (w *Writer) WriteUint16(i uint16) error {
+func (w *Writer) WriteUint16(i uint16) {
+	if w.err != nil {
+		return
+	}
 	binary.LittleEndian.PutUint16(w.b[:2], i)
-	_, err := w.Writer.Write(w.b[:2])
-	return err
+	w.wr.Write(w.b[:2])
 }
 
 // WriteInt32 writes an int32.
-func (w *Writer) WriteInt32(i int32) error {
+func (w *Writer) WriteInt32(i int32) {
+	if w.err != nil {
+		return
+	}
 	binary.LittleEndian.PutUint32(w.b[:4], uint32(i))
-	_, err := w.Writer.Write(w.b[:4])
-	return err
+	w.wr.Write(w.b[:4])
 }
 
 // WriteUint32 writes an uint32.
-func (w *Writer) WriteUint32(i uint32) error {
+func (w *Writer) WriteUint32(i uint32) {
+	if w.err != nil {
+		return
+	}
 	binary.LittleEndian.PutUint32(w.b[:4], i)
-	_, err := w.Writer.Write(w.b[:4])
-	return err
+	w.wr.Write(w.b[:4])
 }
 
 // WriteInt64 writes an int64.
-func (w *Writer) WriteInt64(i int64) error {
+func (w *Writer) WriteInt64(i int64) {
+	if w.err != nil {
+		return
+	}
 	binary.LittleEndian.PutUint64(w.b[:8], uint64(i))
-	_, err := w.Writer.Write(w.b[:8])
-	return err
+	w.wr.Write(w.b[:8])
 }
 
 // WriteUint64 writes an uint64.
-func (w *Writer) WriteUint64(i uint64) error {
+func (w *Writer) WriteUint64(i uint64) {
+	if w.err != nil {
+		return
+	}
 	binary.LittleEndian.PutUint64(w.b[:8], i)
-	_, err := w.Writer.Write(w.b[:8])
-	return err
+	w.wr.Write(w.b[:8])
 }
 
 // WriteFloat32 writes a float32.
-func (w *Writer) WriteFloat32(f float32) error {
+func (w *Writer) WriteFloat32(f float32) {
+	if w.err != nil {
+		return
+	}
 	bits := math.Float32bits(f)
 	binary.LittleEndian.PutUint32(w.b[:4], bits)
-	_, err := w.Writer.Write(w.b[:4])
-	return err
+	w.wr.Write(w.b[:4])
 }
 
 // WriteFloat64 writes a float64.
-func (w *Writer) WriteFloat64(f float64) error {
+func (w *Writer) WriteFloat64(f float64) {
+	if w.err != nil {
+		return
+	}
 	bits := math.Float64bits(f)
 	binary.LittleEndian.PutUint64(w.b[:8], bits)
-	_, err := w.Writer.Write(w.b[:8])
-	return err
+	w.wr.Write(w.b[:8])
+}
+
+// WriteString writes a string.
+func (w *Writer) WriteString(s string) {
+	if w.err != nil {
+		return
+	}
+	w.wr.WriteString(s)
 }
 
 // WriteCesu8 writes an UTF-8 byte slice as CESU-8 and returns the CESU-8 bytes written.
-func (w *Writer) WriteCesu8(p []byte) (int, error) {
+func (w *Writer) WriteCesu8(p []byte) int {
+	if w.err != nil {
+		return 0
+	}
 	w.tr.Reset()
 	cnt := 0
 	i := 0
 	for i < len(p) {
 		m, n, err := w.tr.Transform(w.b, p[i:], true)
 		if err != nil && err != transform.ErrShortDst {
-			return cnt, err
+			w.err = err
+			return cnt
 		}
 		if m == 0 {
-			return cnt, transform.ErrShortDst
+			w.err = transform.ErrShortDst
+			return cnt
 		}
-		o, err := w.Writer.Write(w.b[:m])
+		o, _ := w.wr.Write(w.b[:m])
 		cnt += o
-		if err != nil {
-			return cnt, err
-		}
 		i += n
 	}
-	return cnt, nil
+	return cnt
 }
 
 // WriteStringCesu8 is like WriteCesu8 with an UTF-8 string as parameter.
-func (w *Writer) WriteStringCesu8(s string) (int, error) {
+func (w *Writer) WriteStringCesu8(s string) int {
 	return w.WriteCesu8([]byte(s))
 }

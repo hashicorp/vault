@@ -29,13 +29,13 @@ type sqlTrace struct {
 	*log.Logger
 }
 
-func newSqlTrace() *sqlTrace {
+func newSQLTrace() *sqlTrace {
 	return &sqlTrace{
 		Logger: log.New(os.Stdout, "hdb ", log.Ldate|log.Ltime|log.Lshortfile),
 	}
 }
 
-var tracer = newSqlTrace()
+var tracer = newSQLTrace()
 
 func init() {
 	flag.BoolVar(&tracer.on, "hdb.sqlTrace", false, "enabling hdb sql trace")
@@ -63,7 +63,7 @@ func Trace(v ...interface{}) {
 	}
 }
 
-// Trace calls trace logger Printf method to print to the trace logger.
+// Tracef calls trace logger Printf method to print to the trace logger.
 func Tracef(format string, v ...interface{}) {
 	if On() {
 		tracer.Printf(format, v...)

@@ -22,7 +22,7 @@ func FromContext(ctx context.Context) *Map {
 	// The returned tag map shouldn't be mutated.
 	ts := ctx.Value(mapCtxKey)
 	if ts == nil {
-		return newMap(0)
+		return nil
 	}
 	return ts.(*Map)
 }

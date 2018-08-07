@@ -32,7 +32,7 @@ export default DS.JSONSerializer.extend({
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    const responseJSON = this.normalizeItems(payload);
+    const responseJSON = this.normalizeItems(payload, requestType);
     if (id && !responseJSON.id) {
       responseJSON.id = id;
     }

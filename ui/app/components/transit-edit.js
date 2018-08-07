@@ -46,8 +46,8 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
 
   persistKey(method, successCallback) {
     const key = get(this, 'key');
-    return key[method]().then(result => {
-      if (!Ember.get(result, 'didError')) {
+    return key[method]().then(() => {
+      if (!Ember.get(key, 'isError')) {
         successCallback(key);
       }
     });

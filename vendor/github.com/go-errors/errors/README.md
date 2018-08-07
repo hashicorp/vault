@@ -1,3 +1,8 @@
+go-errors/errors
+================
+
+[![Build Status](https://travis-ci.org/go-errors/errors.svg?branch=master)](https://travis-ci.org/go-errors/errors)
+
 Package errors adds stacktrace support to errors in go.
 
 This is particularly useful when you want to understand the state of execution
@@ -8,7 +13,7 @@ interface, so you can use this library interchangably with code that is
 expecting a normal error return.
 
 Usage
-=====
+-----
 
 Full documentation is available on
 [godoc](https://godoc.org/github.com/go-errors/errors), but here's a simple
@@ -50,7 +55,7 @@ func main() {
 ```
 
 Meta-fu
-=======
+-------
 
 This package was original written to allow reporting to
 [Bugsnag](https://bugsnag.com/) from

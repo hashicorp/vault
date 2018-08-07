@@ -108,7 +108,7 @@ func (s UserStats) String() string {
 	return Stringify(s)
 }
 
-//GistStats represents the number of total, private and public gists.
+// GistStats represents the number of total, private and public gists.
 type GistStats struct {
 	TotalGists   *int `json:"total_gists,omitempty"`
 	PrivateGists *int `json:"private_gists,omitempty"`

@@ -1,4 +1,4 @@
-// Copyright 2014 Google Inc. All Rights Reserved.
+// Copyright 2014 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,8 +48,11 @@ type Writer struct {
 	// to the nearest multiple of 256K. If zero, chunking will be disabled and
 	// the object will be uploaded in a single request.
 	//
-	// ChunkSize will default to a reasonable value. Any custom configuration
-	// must be done before the first Write call.
+	// ChunkSize will default to a reasonable value. If you perform many concurrent
+	// writes of small objects, you may wish set ChunkSize to a value that matches
+	// your objects' sizes to avoid consuming large amounts of memory.
+	//
+	// ChunkSize must be set before the first Write call.
 	ChunkSize int
 
 	// ProgressFunc can be used to monitor the progress of a large write.
@@ -85,6 +88,9 @@ func (w *Writer) open() error {
 	if !utf8.ValidString(attrs.Name) {
 		return fmt.Errorf("storage: object name %q is not valid UTF-8", attrs.Name)
 	}
+	if attrs.KMSKeyName != "" && w.o.encryptionKey != nil {
+		return errors.New("storage: cannot use KMSKeyName with a customer-supplied encryption key")
+	}
 	pr, pw := io.Pipe()
 	w.pw = pw
 	w.opened = true
@@ -115,6 +121,9 @@ func (w *Writer) open() error {
 			Context(w.ctx)
 		if w.ProgressFunc != nil {
 			call.ProgressUpdater(func(n, _ int64) { w.ProgressFunc(n) })
+		}
+		if attrs.KMSKeyName != "" {
+			call.KmsKeyName(attrs.KMSKeyName)
 		}
 		if err := setEncryptionHeaders(call.Header(), w.o.encryptionKey, false); err != nil {
 			w.mu.Lock()

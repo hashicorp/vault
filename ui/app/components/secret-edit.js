@@ -1,7 +1,6 @@
 import Ember from 'ember';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
-import autosize from 'autosize';
 import KVObject from 'vault/lib/kv-object';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
@@ -51,13 +50,6 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     }
   },
 
-  didRender() {
-    const textareas = this.$('textarea');
-    if (textareas.length) {
-      autosize(textareas);
-    }
-  },
-
   willDestroyElement() {
     const key = this.get('key');
     if (get(key, 'isError') && !key.isDestroyed) {
@@ -78,7 +70,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   buttonDisabled: computed.or(
     'requestInFlight',
     'key.isFolder',
-    'key.didError',
+    'key.isError',
     'key.flagsIsInvalid',
     'hasLintError'
   ),
@@ -137,7 +129,12 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   // successCallback is called in the context of the component
   persistKey(method, successCallback, isCreate) {
     let model = this.get('key');
-    const key = model.get('id');
+    let key = model.get('id');
+
+    if (key.startsWith('/')) {
+      key = key.replace(/^\/+/g, '');
+      model.set('id', key);
+    }
 
     if (isCreate && typeof model.createRecord === 'function') {
       // create an ember data model from the proxy
@@ -145,8 +142,8 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
       this.set('key', model);
     }
 
-    return model[method]().then(result => {
-      if (!Ember.get(result, 'didError')) {
+    return model[method]().then(() => {
+      if (!Ember.get(model, 'isError')) {
         successCallback(key);
       }
     });
@@ -159,7 +156,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    handleKeyDown(_, e) {
+    handleKeyDown(e) {
       e.stopPropagation();
       if (!(e.keyCode === keys.ENTER && e.metaKey)) {
         return;

@@ -3,7 +3,7 @@ import { moduleFor, test } from 'ember-qunit';
 import { storeMVP } from './_test-cases';
 
 moduleFor('adapter:identity/entity-merge', 'Unit | Adapter | identity/entity-merge', {
-  needs: ['service:auth', 'service:flash-messages'],
+  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
   beforeEach() {
     this.server = new Pretender(function() {
       this.post('/v1/**', response => {

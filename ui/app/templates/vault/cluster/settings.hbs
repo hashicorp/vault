@@ -10,6 +10,20 @@
         Auth Methods
       {{/link-to}}
     </li>
+     <li>
+      {{#link-to "vault.cluster.settings.control-groups" data-test-link=true}}
+        Control Groups
+
+        {{#unless (has-feature "Control Groups")}}
+          {{#if (is-version "OSS")}}
+            {{edition-badge edition="Enterprise"}}
+          {{else}}
+            {{edition-badge edition="Premium"}}
+          {{/if}}
+        {{/unless}}
+      {{/link-to}}
+    </li>
+
     <li>
       {{#link-to "vault.cluster.settings.seal"}}
         Seal

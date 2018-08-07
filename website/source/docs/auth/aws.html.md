@@ -34,7 +34,7 @@ for your use cases.
 ### EC2 auth method
 
 Amazon EC2 instances have access to metadata which describes the instance. The
-Vault EC2 auth method leverages this components of this metadata to
+Vault EC2 auth method leverages the components of this metadata to
 authenticate and distribute an initial Vault token to an EC2 instance. The data
 flow (which is also represented in the graphic below) is as follows:
 

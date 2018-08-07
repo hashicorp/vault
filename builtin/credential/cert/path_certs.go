@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -43,7 +45,33 @@ Must be x509 PEM encoded.`,
 			"allowed_names": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
-At least one must exist in either the Common Name or SANs. Supports globbing.`,
+At least one must exist in either the Common Name or SANs. Supports globbing.  
+This parameter is deprecated, please use allowed_common_names, allowed_dns_sans, 
+allowed_email_sans, allowed_uri_sans.`,
+			},
+
+			"allowed_common_names": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated list of names.
+At least one must exist in the Common Name. Supports globbing.`,
+			},
+
+			"allowed_dns_sans": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated list of DNS names.
+At least one must exist in the SANs. Supports globbing.`,
+			},
+
+			"allowed_email_sans": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated list of Email Addresses.
+At least one must exist in the SANs. Supports globbing.`,
+			},
+
+			"allowed_uri_sans": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated list of URIs.
+At least one must exist in the SANs. Supports globbing.`,
 			},
 
 			"required_extensions": &framework.FieldSchema{
@@ -75,18 +103,25 @@ seconds. Defaults to system/backend default TTL.`,
 				Description: `TTL for tokens issued by this backend.
 Defaults to system/backend default TTL time.`,
 			},
+
 			"max_ttl": &framework.FieldSchema{
 				Type: framework.TypeDurationSecond,
 				Description: `Duration in either an integer number of seconds (3600) or
 an integer time unit (60m) after which the
 issued token can no longer be renewed.`,
 			},
+
 			"period": &framework.FieldSchema{
 				Type: framework.TypeDurationSecond,
 				Description: `If set, indicates that the token generated using this role
 should never expire. The token should be renewed within the
 duration specified by this value. At each renewal, the token's
 TTL will be set to the value of this parameter.`,
+			},
+			"bound_cidrs": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
+IP addresses which can perform the login operation.`,
 			},
 		},
 
@@ -144,13 +179,18 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"certificate":   cert.Certificate,
-			"display_name":  cert.DisplayName,
-			"policies":      cert.Policies,
-			"ttl":           cert.TTL / time.Second,
-			"max_ttl":       cert.MaxTTL / time.Second,
-			"period":        cert.Period / time.Second,
-			"allowed_names": cert.AllowedNames,
+			"certificate":          cert.Certificate,
+			"display_name":         cert.DisplayName,
+			"policies":             cert.Policies,
+			"ttl":                  cert.TTL / time.Second,
+			"max_ttl":              cert.MaxTTL / time.Second,
+			"period":               cert.Period / time.Second,
+			"allowed_names":        cert.AllowedNames,
+			"allowed_common_names": cert.AllowedCommonNames,
+			"allowed_dns_sans":     cert.AllowedDNSSANs,
+			"allowed_email_sans":   cert.AllowedEmailSANs,
+			"allowed_uri_sans":     cert.AllowedURISANs,
+			"required_extensions":  cert.RequiredExtensions,
 		},
 	}, nil
 }
@@ -161,6 +201,10 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	displayName := d.Get("display_name").(string)
 	policies := policyutil.ParsePolicies(d.Get("policies"))
 	allowedNames := d.Get("allowed_names").([]string)
+	allowedCommonNames := d.Get("allowed_common_names").([]string)
+	allowedDNSSANs := d.Get("allowed_dns_sans").([]string)
+	allowedEmailSANs := d.Get("allowed_email_sans").([]string)
+	allowedURISANs := d.Get("allowed_uri_sans").([]string)
 	requiredExtensions := d.Get("required_extensions").([]string)
 
 	var resp logical.Response
@@ -228,16 +272,26 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
+	parsedCIDRs, err := parseutil.ParseAddrs(d.Get("bound_cidrs"))
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
 	certEntry := &CertEntry{
 		Name:               name,
 		Certificate:        certificate,
 		DisplayName:        displayName,
 		Policies:           policies,
 		AllowedNames:       allowedNames,
+		AllowedCommonNames: allowedCommonNames,
+		AllowedDNSSANs:     allowedDNSSANs,
+		AllowedEmailSANs:   allowedEmailSANs,
+		AllowedURISANs:     allowedURISANs,
 		RequiredExtensions: requiredExtensions,
 		TTL:                ttl,
 		MaxTTL:             maxTTL,
 		Period:             period,
+		BoundCIDRs:         parsedCIDRs,
 	}
 
 	// Store it
@@ -265,7 +319,12 @@ type CertEntry struct {
 	MaxTTL             time.Duration
 	Period             time.Duration
 	AllowedNames       []string
+	AllowedCommonNames []string
+	AllowedDNSSANs     []string
+	AllowedEmailSANs   []string
+	AllowedURISANs     []string
 	RequiredExtensions []string
+	BoundCIDRs         []*sockaddr.SockAddrMarshaler
 }
 
 const pathCertHelpSyn = `

@@ -89,6 +89,7 @@ test('store.constructResponse', function(assert) {
 });
 
 test('store.fetchPage', function(assert) {
+  let done = assert.async(4);
   const keys = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
   const data = {
     data: {
@@ -106,11 +107,14 @@ test('store.fetchPage', function(assert) {
 
   let result;
   Ember.run(() => {
-    result = store.fetchPage('transit-key', query);
+    store.fetchPage('transit-key', query).then(r => {
+      result = r;
+      done();
+    });
   });
 
   assert.ok(result.get('length'), pageSize, 'returns the correct number of items');
-  assert.deepEqual(result.toArray().mapBy('id'), keys.slice(0, pageSize), 'returns the first page of items');
+  assert.deepEqual(result.mapBy('id'), keys.slice(0, pageSize), 'returns the first page of items');
   assert.deepEqual(
     result.get('meta'),
     {
@@ -125,44 +129,59 @@ test('store.fetchPage', function(assert) {
   );
 
   Ember.run(() => {
-    result = store.fetchPage('transit-key', {
-      size: pageSize,
-      page: 3,
-      responsePath: 'data.keys',
-    });
+    store
+      .fetchPage('transit-key', {
+        size: pageSize,
+        page: 3,
+        responsePath: 'data.keys',
+      })
+      .then(r => {
+        result = r;
+        done();
+      });
   });
 
   const pageThreeEnd = 3 * pageSize;
   const pageThreeStart = pageThreeEnd - pageSize;
   assert.deepEqual(
-    result.toArray().mapBy('id'),
+    result.mapBy('id'),
     keys.slice(pageThreeStart, pageThreeEnd),
     'returns the third page of items'
   );
 
   Ember.run(() => {
-    result = store.fetchPage('transit-key', {
-      size: pageSize,
-      page: 99,
-      responsePath: 'data.keys',
-    });
+    store
+      .fetchPage('transit-key', {
+        size: pageSize,
+        page: 99,
+        responsePath: 'data.keys',
+      })
+      .then(r => {
+        result = r;
+        done();
+      });
   });
 
   assert.deepEqual(
-    result.toArray().mapBy('id'),
+    result.mapBy('id'),
     keys.slice(keys.length - 1),
     'returns the last page when the page value is beyond the of bounds'
   );
 
   Ember.run(() => {
-    result = store.fetchPage('transit-key', {
-      size: pageSize,
-      page: 0,
-      responsePath: 'data.keys',
-    });
+    store
+      .fetchPage('transit-key', {
+        size: pageSize,
+        page: 0,
+        responsePath: 'data.keys',
+      })
+      .then(r => {
+        result = r;
+        done();
+      });
   });
   assert.deepEqual(
-    result.toArray().mapBy('id'),
+    result.mapBy('id'),
     keys.slice(0, pageSize),
     'returns the first page when page value is under the bounds'
   );

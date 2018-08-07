@@ -94,11 +94,12 @@ func (c *LeaseRenewCommand) Run(args []string) int {
 	case 2:
 		// Deprecation
 		// TODO: remove in 0.9.0
-		c.UI.Warn(wrapAtLength(
-			"WARNING! Specifying INCREMENT as a second argument is deprecated. " +
-				"Please use -increment instead. This will be removed in the next " +
-				"major release of Vault."))
-
+		if Format(c.UI) == "table" {
+			c.UI.Warn(wrapAtLength(
+				"WARNING! Specifying INCREMENT as a second argument is deprecated. " +
+					"Please use -increment instead. This will be removed in the next " +
+					"major release of Vault."))
+		}
 		leaseID = strings.TrimSpace(args[0])
 		parsed, err := time.ParseDuration(appendDurationSuffix(args[1]))
 		if err != nil {

@@ -92,7 +92,7 @@ A single CLI command can be used to create a new OTP and invoke SSH with the
 correct parameters to connect to the host.
 
 ```text
-$ vault ssh -role otp_key_role username@x.x.x.x
+$ vault ssh -role otp_key_role -mode otp username@x.x.x.x
 OTP for the session is `b4d47e1b-4879-5f4e-ce5c-7988d7986f37`
 [Note: Install `sshpass` to automate typing in OTP]
 Password: <Enter OTP>
@@ -101,7 +101,7 @@ Password: <Enter OTP>
 The OTP will be entered automatically using `sshpass` if it is installed.
 
 ```text
-$ vault ssh -role otp_key_role -strict-host-key-checking=no username@x.x.x.x
+$ vault ssh -role otp_key_role -mode otp -strict-host-key-checking=no username@x.x.x.x
 username@<IP of remote host>:~$
 ```
 

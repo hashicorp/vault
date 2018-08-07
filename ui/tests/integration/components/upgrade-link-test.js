@@ -7,20 +7,20 @@ moduleForComponent('upgrade-link', 'Integration | Component | upgrade link', {
 
 test('it renders with overlay', function(assert) {
   this.render(hbs`
-    <div class="upgrade-link-container">
-      {{#upgrade-link data-test-link}}upgrade{{/upgrade-link}}
-    </div>
-    <div id="modal-wormhole"></div>
+     <div id="modal-wormhole"></div>
+     <div class="upgrade-link-container">
+       {{#upgrade-link data-test-link}}upgrade{{/upgrade-link}}
+     </div>
   `);
 
   assert.equal(this.$('.upgrade-link-container button').text().trim(), 'upgrade', 'renders link content');
   assert.equal(
     this.$('#modal-wormhole .upgrade-overlay-title').text().trim(),
-    'Vault Enterprise',
+    'Try Vault Enterprise Free for 30 Days',
     'contains overlay content'
   );
   assert.equal(
-    this.$('#modal-wormhole a[href^="https://www.hashicorp.com/go/vault-enterprise"]').length,
+    this.$('#modal-wormhole a[href^="https://hashicorp.com/products/vault/trial?source=vaultui"]').length,
     1,
     'contains info link'
   );
@@ -28,10 +28,10 @@ test('it renders with overlay', function(assert) {
 
 test('it adds custom classes', function(assert) {
   this.render(hbs`
+    <div id="modal-wormhole"></div>
     <div class="upgrade-link-container">
       {{#upgrade-link linkClass="button upgrade-button"}}upgrade{{/upgrade-link}}
     </div>
-    <div id="modal-wormhole"></div>
   `);
 
   assert.equal(

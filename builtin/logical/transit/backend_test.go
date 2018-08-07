@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path"
 	"reflect"
 	"strconv"
 	"strings"
@@ -38,6 +39,28 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 		t.Fatal(err)
 	}
 	return b, config.StorageView
+}
+
+func createBackendWithSysView(t *testing.T) (*backend, logical.Storage) {
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	conf := &logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	}
+
+	b := Backend(conf)
+	if b == nil {
+		t.Fatal("failed to create backend")
+	}
+
+	err := b.Backend.Setup(context.Background(), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return b, storage
 }
 
 func TestTransit_RSA(t *testing.T) {
@@ -865,12 +888,12 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 		t.Fatalf("bad KDF value by default; counter val is %d, KDF val is %d, policy is %#v", keysutil.Kdf_hmac_sha256_counter, p.KDF, *p)
 	}
 
-	derBytesOld, err := p.DeriveKey(keyContext, 1)
+	derBytesOld, err := p.DeriveKey(keyContext, 1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	derBytesOld2, err := p.DeriveKey(keyContext, 1)
+	derBytesOld2, err := p.DeriveKey(keyContext, 1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -884,12 +907,12 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 		t.Fatal("expected no upgrade needed")
 	}
 
-	derBytesNew, err := p.DeriveKey(keyContext, 1)
+	derBytesNew, err := p.DeriveKey(keyContext, 1, 64)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	derBytesNew2, err := p.DeriveKey(keyContext, 1)
+	derBytesNew2, err := p.DeriveKey(keyContext, 1, 64)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -907,17 +930,12 @@ func TestConvergentEncryption(t *testing.T) {
 	testConvergentEncryptionCommon(t, 0, keysutil.KeyType_AES256_GCM96)
 	testConvergentEncryptionCommon(t, 2, keysutil.KeyType_AES256_GCM96)
 	testConvergentEncryptionCommon(t, 2, keysutil.KeyType_ChaCha20_Poly1305)
+	testConvergentEncryptionCommon(t, 3, keysutil.KeyType_AES256_GCM96)
+	testConvergentEncryptionCommon(t, 3, keysutil.KeyType_ChaCha20_Poly1305)
 }
 
 func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyType) {
-	var b *backend
-	sysView := logical.TestSystemView()
-	storage := &logical.InmemStorage{}
-
-	b = Backend(&logical.BackendConfig{
-		StorageView: storage,
-		System:      sysView,
-	})
+	b, storage := createBackendWithSysView(t)
 
 	req := &logical.Request{
 		Storage:   storage,
@@ -928,7 +946,6 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 			"convergent_encryption": true,
 		},
 	}
-
 	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
@@ -940,17 +957,68 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		t.Fatalf("bad: expected error response, got %#v", *resp)
 	}
 
-	p := &keysutil.Policy{
-		Name:                 "testkey",
-		Type:                 keyType,
-		Derived:              true,
-		ConvergentEncryption: true,
-		ConvergentVersion:    ver,
+	req = &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/testkey",
+		Data: map[string]interface{}{
+			"derived":               true,
+			"convergent_encryption": true,
+		},
 	}
-
-	err = p.Rotate(context.Background(), storage)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatal("expected nil response")
+	}
+
+	p, err := keysutil.LoadPolicy(context.Background(), storage, path.Join("policy", "testkey"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p == nil {
+		t.Fatal("got nil policy")
+	}
+
+	if ver > 2 {
+		p.ConvergentVersion = -1
+	} else {
+		p.ConvergentVersion = ver
+	}
+	err = p.Persist(context.Background(), storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.invalidate(context.Background(), "policy/testkey")
+
+	if ver < 3 {
+		// There will be an embedded key version of 3, so specifically clear it
+		key := p.Keys[strconv.Itoa(p.LatestVersion)]
+		key.ConvergentVersion = 0
+		p.Keys[strconv.Itoa(p.LatestVersion)] = key
+		err = p.Persist(context.Background(), storage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b.invalidate(context.Background(), "policy/testkey")
+
+		// Verify it
+		p, err = keysutil.LoadPolicy(context.Background(), storage, path.Join(p.StoragePrefix, "policy", "testkey"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if p == nil {
+			t.Fatal("got nil policy")
+		}
+		if p.ConvergentVersion != ver {
+			t.Fatalf("bad convergent version %d", p.ConvergentVersion)
+		}
+		key = p.Keys[strconv.Itoa(p.LatestVersion)]
+		if key.ConvergentVersion != 0 {
+			t.Fatalf("bad convergent key version %d", key.ConvergentVersion)
+		}
 	}
 
 	// First, test using an invalid length of nonce -- this is only used for v1 convergent
@@ -963,7 +1031,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		}
 		resp, err = b.HandleRequest(context.Background(), req)
 		if err == nil {
-			t.Fatal("expected error, got nil")
+			t.Fatalf("expected error, got nil, version is %d", ver)
 		}
 		if resp == nil {
 			t.Fatal("expected non-nil response")
@@ -1100,6 +1168,80 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		t.Fatalf("expected different ciphertexts")
 	}
 
+	// If running version 2, check upgrade handling
+	if ver == 2 {
+		curr, err := keysutil.LoadPolicy(context.Background(), storage, path.Join(p.StoragePrefix, "policy", "testkey"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if curr == nil {
+			t.Fatal("got nil policy")
+		}
+		if curr.ConvergentVersion != 2 {
+			t.Fatalf("bad convergent version %d", curr.ConvergentVersion)
+		}
+		key := curr.Keys[strconv.Itoa(curr.LatestVersion)]
+		if key.ConvergentVersion != 0 {
+			t.Fatalf("bad convergent key version %d", key.ConvergentVersion)
+		}
+
+		curr.ConvergentVersion = 3
+		err = curr.Persist(context.Background(), storage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b.invalidate(context.Background(), "policy/testkey")
+
+		// Different algorithm, should be different value
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.IsError() {
+			t.Fatalf("got error response: %#v", *resp)
+		}
+		ciphertext7 := resp.Data["ciphertext"].(string)
+
+		// Now do it via key-specified version
+		if len(curr.Keys) != 1 {
+			t.Fatalf("unexpected length of keys %d", len(curr.Keys))
+		}
+		key = curr.Keys[strconv.Itoa(curr.LatestVersion)]
+		key.ConvergentVersion = 3
+		curr.Keys[strconv.Itoa(curr.LatestVersion)] = key
+		curr.ConvergentVersion = 2
+		err = curr.Persist(context.Background(), storage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b.invalidate(context.Background(), "policy/testkey")
+
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.IsError() {
+			t.Fatalf("got error response: %#v", *resp)
+		}
+		ciphertext8 := resp.Data["ciphertext"].(string)
+
+		if ciphertext7 != ciphertext8 {
+			t.Fatalf("expected the same ciphertext but got %s and %s", ciphertext7, ciphertext8)
+		}
+		if ciphertext6 == ciphertext7 {
+			t.Fatalf("expected different ciphertexts")
+		}
+		if ciphertext3 == ciphertext7 {
+			t.Fatalf("expected different ciphertexts")
+		}
+	}
+
 	// Finally, check operations on empty values
 	// First, check without setting a plaintext at all
 	req.Data = map[string]interface{}{
@@ -1155,16 +1297,17 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 func TestPolicyFuzzing(t *testing.T) {
 	var be *backend
 	sysView := logical.TestSystemView()
-
-	be = Backend(&logical.BackendConfig{
+	conf := &logical.BackendConfig{
 		System: sysView,
-	})
+	}
+
+	be = Backend(conf)
+	be.Setup(context.Background(), conf)
 	testPolicyFuzzingCommon(t, be)
 
 	sysView.CachingDisabledVal = true
-	be = Backend(&logical.BackendConfig{
-		System: sysView,
-	})
+	be = Backend(conf)
+	be.Setup(context.Background(), conf)
 	testPolicyFuzzingCommon(t, be)
 }
 
@@ -1180,9 +1323,6 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 	doFuzzy := func(id int) {
 		// Check for panics, otherwise notify we're done
 		defer func() {
-			if err := recover(); err != nil {
-				t.Fatalf("got a panic: %v", err)
-			}
 			wg.Done()
 		}()
 
@@ -1217,7 +1357,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 			// Try to write the key to make sure it exists
 			_, err := be.pathPolicyWrite(context.Background(), req, fd)
 			if err != nil {
-				t.Fatalf("got an error: %v", err)
+				t.Errorf("got an error: %v", err)
 			}
 
 			switch chosenFunc {
@@ -1228,7 +1368,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				fd.Schema = be.pathEncrypt().Fields
 				resp, err := be.pathEncryptWrite(context.Background(), req, fd)
 				if err != nil {
-					t.Fatalf("got an error: %v, resp is %#v", err, *resp)
+					t.Errorf("got an error: %v, resp is %#v", err, *resp)
 				}
 				latestEncryptedText[chosenKey] = resp.Data["ciphertext"].(string)
 
@@ -1238,7 +1378,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				fd.Schema = be.pathRotate().Fields
 				resp, err := be.pathRotateWrite(context.Background(), req, fd)
 				if err != nil {
-					t.Fatalf("got an error: %v, resp is %#v, chosenKey is %s", err, *resp, chosenKey)
+					t.Errorf("got an error: %v, resp is %#v, chosenKey is %s", err, *resp, chosenKey)
 				}
 
 			// Decrypt the ciphertext and compare the result
@@ -1257,16 +1397,20 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 					if resp.Data["error"].(string) == keysutil.ErrTooOld {
 						continue
 					}
-					t.Fatalf("got an error: %v, resp is %#v, ciphertext was %s, chosenKey is %s, id is %d", err, *resp, ct, chosenKey, id)
+					t.Errorf("got an error: %v, resp is %#v, ciphertext was %s, chosenKey is %s, id is %d", err, *resp, ct, chosenKey, id)
 				}
-				ptb64 := resp.Data["plaintext"].(string)
+				ptb64, ok := resp.Data["plaintext"].(string)
+				if !ok {
+					t.Errorf("no plaintext found, response was %#v", *resp)
+					return
+				}
 				pt, err := base64.StdEncoding.DecodeString(ptb64)
 				if err != nil {
-					t.Fatalf("got an error decoding base64 plaintext: %v", err)
+					t.Errorf("got an error decoding base64 plaintext: %v", err)
 					return
 				}
 				if string(pt) != testPlaintext {
-					t.Fatalf("got bad plaintext back: %s", pt)
+					t.Errorf("got bad plaintext back: %s", pt)
 				}
 
 			// Change the min version, which also tests the archive functionality
@@ -1274,7 +1418,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				resp, err := be.pathPolicyRead(context.Background(), req, fd)
 				if err != nil {
-					t.Fatalf("got an error reading policy %s: %v", chosenKey, err)
+					t.Errorf("got an error reading policy %s: %v", chosenKey, err)
 				}
 				latestVersion := resp.Data["latest_version"].(int)
 
@@ -1284,7 +1428,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				fd.Schema = be.pathConfig().Fields
 				resp, err = be.pathConfigWrite(context.Background(), req, fd)
 				if err != nil {
-					t.Fatalf("got an error setting min decryption version: %v", err)
+					t.Errorf("got an error setting min decryption version: %v", err)
 				}
 			}
 		}
@@ -1301,14 +1445,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 }
 
 func TestBadInput(t *testing.T) {
-	var b *backend
-	sysView := logical.TestSystemView()
-	storage := &logical.InmemStorage{}
-
-	b = Backend(&logical.BackendConfig{
-		StorageView: storage,
-		System:      sysView,
-	})
+	b, storage := createBackendWithSysView(t)
 
 	req := &logical.Request{
 		Storage:   storage,

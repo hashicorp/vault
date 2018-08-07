@@ -5,7 +5,7 @@ import DS from 'ember-data';
 export default AuthConfigComponent.extend({
   saveModel: task(function*() {
     const model = this.get('model');
-    let data = model.get('config').toJSON();
+    let data = model.get('config').serialize();
     data.description = model.get('description');
     try {
       yield model.tune(data);

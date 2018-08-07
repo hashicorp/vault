@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import base64js from 'base64-js';
 
 const { Component, inject, computed, get } = Ember;
 const { camelize } = Ember.String;
@@ -9,6 +10,8 @@ const DEFAULTS = {
   errors: [],
   threshold: null,
   progress: null,
+  pgp_key: null,
+  haveSavedPGPKey: false,
   started: false,
   generateWithPGP: false,
   pgpKeyFile: { value: '' },
@@ -32,7 +35,7 @@ export default Component.extend(DEFAULTS, {
     return this._super(...arguments);
   },
 
-  onShamirSuccess: _ => _,
+  onShamirSuccess() {},
   // can be overridden w/an attr
   isComplete(data) {
     return data.complete === true;
@@ -76,6 +79,28 @@ export default Component.extend(DEFAULTS, {
     }
   },
 
+  generateStep: computed('generateWithPGP', 'haveSavedPGPKey', 'otp', 'pgp_key', function() {
+    let { generateWithPGP, otp, pgp_key, haveSavedPGPKey } = this.getProperties(
+      'generateWithPGP',
+      'otp',
+      'pgp_key',
+      'haveSavedPGPKey'
+    );
+    if (!generateWithPGP && !pgp_key && !otp) {
+      return 'chooseMethod';
+    }
+    if (otp) {
+      return 'beginGenerationWithOTP';
+    }
+    if (generateWithPGP) {
+      if (pgp_key && haveSavedPGPKey) {
+        return 'beginGenerationWithPGP';
+      } else {
+        return 'providePGPKey';
+      }
+    }
+  }),
+
   extractData(data) {
     const isGenerate = this.get('generateAction');
     const hasStarted = this.get('started');
@@ -113,6 +138,12 @@ export default Component.extend(DEFAULTS, {
   },
 
   actions: {
+    reset() {
+      this.reset();
+      this.set('encoded_token', null);
+      this.set('otp', null);
+    },
+
     onSubmit(data) {
       if (!data.key) {
         return;
@@ -135,8 +166,10 @@ export default Component.extend(DEFAULTS, {
       this.set('pgpKeyFile', keyFile);
     },
 
-    clearToken() {
-      this.set('encoded_token', null);
+    savePGPKey() {
+      if (this.get('pgp_key')) {
+        this.set('haveSavedPGPKey', true);
+      }
     },
   },
 });

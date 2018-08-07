@@ -44,7 +44,10 @@ export default DS.Model.extend({
   }),
 
   tuneAttrs: computed(function() {
-    return expandAttributeMeta(this, ['description', 'config.{defaultLeaseTtl,maxLeaseTtl}']);
+    return expandAttributeMeta(this, [
+      'description',
+      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+    ]);
   }),
 
   //sys/mounts/auth/[auth-path]/tune.
@@ -61,12 +64,20 @@ export default DS.Model.extend({
     'accessor',
     'local',
     'sealWrap',
-    'config.{defaultLeaseTtl,maxLeaseTtl}',
+    'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
   ],
 
   formFieldGroups: [
     { default: ['type', 'path'] },
-    { 'Method Options': ['description', 'local', 'sealWrap', 'config.{defaultLeaseTtl,maxLeaseTtl}'] },
+    {
+      'Method Options': [
+        'description',
+        'config.listingVisibility',
+        'local',
+        'sealWrap',
+        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      ],
+    },
   ],
 
   attrs: computed('formFields', function() {

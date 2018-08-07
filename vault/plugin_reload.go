@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -77,6 +78,13 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) erro
 // reloadBackendCommon is a generic method to reload a backend provided a
 // MountEntry.
 func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAuth bool) error {
+	// We don't want to reload the singleton mounts. They often have specific
+	// inmemory elements and we don't want to touch them here.
+	if strutil.StrListContains(singletonMounts, entry.Type) {
+		c.logger.Debug("Skipping reload of singleton mount", "type", entry.Type)
+		return nil
+	}
+
 	path := entry.Path
 
 	if isAuth {

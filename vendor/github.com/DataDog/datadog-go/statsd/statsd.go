@@ -96,7 +96,7 @@ type Client struct {
 	// BufferLength is the length of the buffer in commands.
 	bufferLength int
 	flushTime    time.Duration
-	commands     []string
+	commands     [][]byte
 	buffer       bytes.Buffer
 	stop         chan struct{}
 	sync.Mutex
@@ -134,7 +134,7 @@ func NewBuffered(addr string, buflen int) (*Client, error) {
 		return nil, err
 	}
 	client.bufferLength = buflen
-	client.commands = make([]string, 0, buflen)
+	client.commands = make([][]byte, 0, buflen)
 	client.flushTime = time.Millisecond * 100
 	client.stop = make(chan struct{}, 1)
 	go client.watch()
@@ -143,41 +143,47 @@ func NewBuffered(addr string, buflen int) (*Client, error) {
 
 // format a message from its name, value, tags and rate.  Also adds global
 // namespace and tags.
-func (c *Client) format(name string, value interface{}, suffix []byte, tags []string, rate float64) string {
-	var buf bytes.Buffer
+func (c *Client) format(name string, value interface{}, suffix []byte, tags []string, rate float64) []byte {
+	// preallocated buffer, stack allocated as long as it doesn't escape
+	buf := make([]byte, 0, 200)
+
 	if c.Namespace != "" {
-		buf.WriteString(c.Namespace)
+		buf = append(buf, c.Namespace...)
 	}
-	buf.WriteString(name)
-	buf.WriteString(":")
+	buf = append(buf, name...)
+	buf = append(buf, ':')
 
 	switch val := value.(type) {
 	case float64:
-		buf.Write(strconv.AppendFloat([]byte{}, val, 'f', 6, 64))
+		buf = strconv.AppendFloat(buf, val, 'f', 6, 64)
 
 	case int64:
-		buf.Write(strconv.AppendInt([]byte{}, val, 10))
+		buf = strconv.AppendInt(buf, val, 10)
 
 	case string:
-		buf.WriteString(val)
+		buf = append(buf, val...)
 
 	default:
 		// do nothing
 	}
-	buf.Write(suffix)
+	buf = append(buf, suffix...)
 
 	if rate < 1 {
-		buf.WriteString(`|@`)
-		buf.WriteString(strconv.FormatFloat(rate, 'f', -1, 64))
+		buf = append(buf, "|@"...)
+		buf = strconv.AppendFloat(buf, rate, 'f', -1, 64)
 	}
 
-	writeTagString(&buf, c.Tags, tags)
+	buf = appendTagString(buf, c.Tags, tags)
 
-	return buf.String()
+	// non-zeroing copy to avoid referencing a larger than necessary underlying array
+	return append([]byte(nil), buf...)
 }
 
 // SetWriteTimeout allows the user to set a custom UDS write timeout. Not supported for UDP.
 func (c *Client) SetWriteTimeout(d time.Duration) error {
+	if c == nil {
+		return nil
+	}
 	return c.writer.SetWriteTimeout(d)
 }
 
@@ -200,7 +206,7 @@ func (c *Client) watch() {
 	}
 }
 
-func (c *Client) append(cmd string) error {
+func (c *Client) append(cmd []byte) error {
 	c.Lock()
 	defer c.Unlock()
 	c.commands = append(c.commands, cmd)
@@ -213,7 +219,7 @@ func (c *Client) append(cmd string) error {
 	return nil
 }
 
-func (c *Client) joinMaxSize(cmds []string, sep string, maxSize int) ([][]byte, []int) {
+func (c *Client) joinMaxSize(cmds [][]byte, sep string, maxSize int) ([][]byte, []int) {
 	c.buffer.Reset() //clear buffer
 
 	var frames [][]byte
@@ -233,13 +239,13 @@ func (c *Client) joinMaxSize(cmds []string, sep string, maxSize int) ([][]byte, 
 			if elem != 0 {
 				c.buffer.Write(sepBytes)
 			}
-			c.buffer.WriteString(cmd)
+			c.buffer.Write(cmd)
 			elem++
 		} else {
 			frames = append(frames, copyAndResetBuffer(&c.buffer))
 			ncmds = append(ncmds, elem)
 			// if cmd is bigger than maxSize it will get flushed on next loop
-			c.buffer.WriteString(cmd)
+			c.buffer.Write(cmd)
 			elem = 1
 		}
 	}
@@ -262,6 +268,9 @@ func copyAndResetBuffer(buf *bytes.Buffer) []byte {
 
 // Flush forces a flush of the pending commands in the buffer
 func (c *Client) Flush() error {
+	if c == nil {
+		return nil
+	}
 	c.Lock()
 	defer c.Unlock()
 	return c.flushLocked()
@@ -292,7 +301,7 @@ func (c *Client) flushLocked() error {
 	return err
 }
 
-func (c *Client) sendMsg(msg string) error {
+func (c *Client) sendMsg(msg []byte) error {
 	// return an error if message is bigger than MaxUDPPayloadSize
 	if len(msg) > MaxUDPPayloadSize {
 		return errors.New("message size exceeds MaxUDPPayloadSize")
@@ -303,7 +312,7 @@ func (c *Client) sendMsg(msg string) error {
 		return c.append(msg)
 	}
 
-	_, err := c.writer.Write([]byte(msg))
+	_, err := c.writer.Write(msg)
 
 	if c.SkipErrors {
 		return nil
@@ -378,7 +387,7 @@ func (c *Client) Event(e *Event) error {
 	if err != nil {
 		return err
 	}
-	return c.sendMsg(stat)
+	return c.sendMsg([]byte(stat))
 }
 
 // SimpleEvent sends an event with the provided title and text.
@@ -389,11 +398,14 @@ func (c *Client) SimpleEvent(title, text string) error {
 
 // ServiceCheck sends the provided ServiceCheck.
 func (c *Client) ServiceCheck(sc *ServiceCheck) error {
+	if c == nil {
+		return nil
+	}
 	stat, err := sc.Encode(c.Tags...)
 	if err != nil {
 		return err
 	}
-	return c.sendMsg(stat)
+	return c.sendMsg([]byte(stat))
 }
 
 // SimpleServiceCheck sends an serviceCheck with the provided name and status.
@@ -668,4 +680,40 @@ func writeTagString(w io.Writer, tagList1, tagList2 []string) {
 		io.WriteString(w, ",")
 		io.WriteString(w, removeNewlines(tag))
 	}
+}
+
+func appendTagString(buf []byte, tagList1, tagList2 []string) []byte {
+	if len(tagList1) == 0 {
+		if len(tagList2) == 0 {
+			return buf
+		}
+		tagList1 = tagList2
+		tagList2 = nil
+	}
+
+	buf = append(buf, "|#"...)
+	buf = appendWithoutNewlines(buf, tagList1[0])
+	for _, tag := range tagList1[1:] {
+		buf = append(buf, ',')
+		buf = appendWithoutNewlines(buf, tag)
+	}
+	for _, tag := range tagList2 {
+		buf = append(buf, ',')
+		buf = appendWithoutNewlines(buf, tag)
+	}
+	return buf
+}
+
+func appendWithoutNewlines(buf []byte, s string) []byte {
+	// fastpath for strings without newlines
+	if strings.IndexByte(s, '\n') == -1 {
+		return append(buf, s...)
+	}
+
+	for _, b := range []byte(s) {
+		if b != '\n' {
+			buf = append(buf, b)
+		}
+	}
+	return buf
 }

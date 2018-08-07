@@ -80,11 +80,11 @@
       <div class="field">
         <div class="b-checkbox">
           <input type="checkbox"
+           data-test-transit-key-convergent-encryption
            id="key-convergent"
            class="styled"
            checked={{key.convergentEncryption}}
            onchange={{action "convergentEncryptionChange" value="target.checked"}}
-           data-test-transit-key-convergent-encryption=true
           />
           <label for="key-convergent" class="is-label">
             Enable convergent encryption
@@ -94,18 +94,16 @@
     {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    {{#if capabilities.canCreate}}
-      <div class="control">
-        <button
-          type="submit"
-          disabled={{requestInFlight}}
-          class="button is-primary {{if requestInFlight 'is-loading'}}"
-          data-test-transit-key-create=true
-        >
-          Create encryption key
-        </button>
-      </div>
-    {{/if}}
+    <div class="control">
+      <button
+        data-test-transit-key-create
+        type="submit"
+        disabled={{requestInFlight}}
+        class="button is-primary {{if requestInFlight 'is-loading'}}"
+      >
+        Create encryption key
+      </button>
+    </div>
     <div class="control">
       {{#secret-link
         mode="list"

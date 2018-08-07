@@ -1,0 +1,15 @@
+<header class="page-header">
+  {{#if hasLevel}}
+    {{yield (hash top=(component 'page-header-top'))}}
+    <div class="level">
+      <div class="level-left">
+        {{yield (hash levelLeft=(component 'page-header-level-left'))}}
+      </div>
+      <div class="level-right field is-grouped">
+        {{yield (hash levelRight=(component 'page-header-level-right'))}}
+      </div>
+    </div>
+  {{else}}
+    {{yield (hash top=(component 'page-header-top'))}}
+  {{/if}}
+</header>

@@ -3,9 +3,9 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2017,
     sourceType: 'module',
-    "ecmaFeatures": {
-      "experimentalObjectRestSpread": true
-    }
+    ecmaFeatures: {
+      experimentalObjectRestSpread: true,
+    },
   },
   extends: 'eslint:recommended',
   env: {
@@ -13,12 +13,10 @@ module.exports = {
     es6: true,
   },
   rules: {
-    "no-unused-vars": ["error", { "ignoreRestSiblings": true }]
+    'no-unused-vars': ['error', { ignoreRestSiblings: true }],
   },
   globals: {
-    base64js: true,
     TextEncoderLite: true,
     TextDecoderLite: true,
-    Duration: true
-  }
+  },
 };
