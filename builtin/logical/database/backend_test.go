@@ -899,7 +899,76 @@ func TestBackend_roleCrud(t *testing.T) {
 		}
 	}
 
-	// Test role modification
+	// Test role modification of TTL
+	{
+		data = map[string]interface{}{
+			"name":    "plugin-role-test",
+			"max_ttl": "7m",
+		}
+		req = &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "roles/plugin-role-test",
+			Storage:   config.StorageView,
+			Data:      data,
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v\n", err, resp)
+		}
+
+		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
+			Raw:    data,
+			Schema: pathRoles(b).Fields,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !exists {
+			t.Fatal("expected exists")
+		}
+
+		// Read the role
+		data = map[string]interface{}{}
+		req = &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "roles/plugin-role-test",
+			Storage:   config.StorageView,
+			Data:      data,
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+
+		expected := dbplugin.Statements{
+			Creation:   []string{strings.TrimSpace(testRole)},
+			Revocation: []string{strings.TrimSpace(defaultRevocationSQL)},
+		}
+
+		actual := dbplugin.Statements{
+			Creation:   resp.Data["creation_statements"].([]string),
+			Revocation: resp.Data["revocation_statements"].([]string),
+			Rollback:   resp.Data["rollback_statements"].([]string),
+			Renewal:    resp.Data["renew_statements"].([]string),
+		}
+
+		if !reflect.DeepEqual(expected, actual) {
+			t.Fatalf("Statements did not match, expected %#v, got %#v", expected, actual)
+		}
+
+		if diff := deep.Equal(resp.Data["db_name"], "plugin-test"); diff != nil {
+			t.Fatal(diff)
+		}
+		if diff := deep.Equal(resp.Data["default_ttl"], float64(300)); diff != nil {
+			t.Fatal(diff)
+		}
+		if diff := deep.Equal(resp.Data["max_ttl"], float64(420)); diff != nil {
+			t.Fatal(diff)
+		}
+
+	}
+
+	// Test role modification of statements
 	{
 		data = map[string]interface{}{
 			"name":                  "plugin-role-test",
@@ -907,7 +976,6 @@ func TestBackend_roleCrud(t *testing.T) {
 			"revocation_statements": []string{defaultRevocationSQL, defaultRevocationSQL},
 			"rollback_statements":   testRole,
 			"renew_statements":      defaultRevocationSQL,
-			"max_ttl":               "7m",
 		}
 		req = &logical.Request{
 			Operation: logical.UpdateOperation,
@@ -971,7 +1039,6 @@ func TestBackend_roleCrud(t *testing.T) {
 		if diff := deep.Equal(resp.Data["max_ttl"], float64(420)); diff != nil {
 			t.Fatal(diff)
 		}
-
 	}
 
 	// Delete the role
