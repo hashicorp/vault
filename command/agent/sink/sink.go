@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -34,25 +35,30 @@ type SinkConfig struct {
 }
 
 type SinkServerConfig struct {
-	Logger  hclog.Logger
-	Client  *api.Client
-	Context context.Context
+	Logger        hclog.Logger
+	Client        *api.Client
+	Context       context.Context
+	ExitAfterAuth bool
 }
 
 // SinkServer is responsible for pushing tokens to sinks
 type SinkServer struct {
-	DoneCh chan struct{}
-	logger hclog.Logger
-	client *api.Client
-	random *rand.Rand
+	DoneCh        chan struct{}
+	logger        hclog.Logger
+	client        *api.Client
+	random        *rand.Rand
+	exitAfterAuth bool
+	remaining     *int32
 }
 
 func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 	ss := &SinkServer{
-		DoneCh: make(chan struct{}),
-		logger: conf.Logger,
-		client: conf.Client,
-		random: rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
+		DoneCh:        make(chan struct{}),
+		logger:        conf.Logger,
+		client:        conf.Client,
+		random:        rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
+		exitAfterAuth: conf.ExitAfterAuth,
+		remaining:     new(int32),
 	}
 
 	return ss
@@ -86,6 +92,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 				for {
 					select {
 					case <-sinkCh:
+						atomic.AddInt32(ss.remaining, -1)
 					default:
 						break drainLoop
 					}
@@ -116,11 +123,13 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 							return currSink.WriteToken(currToken)
 						}
 					}
+					atomic.AddInt32(ss.remaining, 1)
 					sinkCh <- sinkFunc(s, token)
 				}
 			}
 
 		case sinkFunc := <-sinkCh:
+			atomic.AddInt32(ss.remaining, -1)
 			select {
 			case <-ctx.Done():
 				return
@@ -134,7 +143,12 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 				case <-ctx.Done():
 					return
 				case <-time.After(backoff):
+					atomic.AddInt32(ss.remaining, 1)
 					sinkCh <- sinkFunc
+				}
+			} else {
+				if atomic.LoadInt32(ss.remaining) == 0 && ss.exitAfterAuth {
+					return
 				}
 			}
 		}
