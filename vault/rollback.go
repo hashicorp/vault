@@ -132,26 +132,26 @@ func (m *RollbackManager) triggerRollbacks() {
 		_, ok := m.inflight[path]
 		m.inflightLock.RUnlock()
 		if !ok {
-			m.startRollback(path)
+			m.startRollback(path, true)
 		}
 	}
 }
 
 // startRollback is used to start an async rollback attempt.
 // This must be called with the inflightLock held.
-func (m *RollbackManager) startRollback(path string) *rollbackState {
+func (m *RollbackManager) startRollback(path string, grabStatelock bool) *rollbackState {
 	rs := &rollbackState{}
 	rs.Add(1)
 	m.inflightAll.Add(1)
 	m.inflightLock.Lock()
 	m.inflight[path] = rs
 	m.inflightLock.Unlock()
-	go m.attemptRollback(m.quitContext, path, rs)
+	go m.attemptRollback(m.quitContext, path, rs, grabStatelock)
 	return rs
 }
 
 // attemptRollback invokes a RollbackOperation for the given path
-func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *rollbackState) (err error) {
+func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *rollbackState, grabStatelock bool) (err error) {
 	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(path, "/", "-", -1)}, time.Now())
 	if m.logger.IsDebug() {
 		m.logger.Debug("attempting rollback", "path", path)
@@ -173,9 +173,13 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *
 	}
 	var cancelFunc context.CancelFunc
 	ctx, cancelFunc = context.WithTimeout(ctx, DefaultMaxRequestDuration)
-	m.core.stateLock.RLock()
+	if grabStatelock {
+		m.core.stateLock.RLock()
+	}
 	_, err = m.router.Route(ctx, req)
-	m.core.stateLock.RUnlock()
+	if grabStatelock {
+		m.core.stateLock.RUnlock()
+	}
 	cancelFunc()
 
 	// If the error is an unsupported operation, then it doesn't
@@ -194,14 +198,15 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *
 }
 
 // Rollback is used to trigger an immediate rollback of the path,
-// or to join an existing rollback operation if in flight.
+// or to join an existing rollback operation if in flight. Caller should have
+// core's statelock held
 func (m *RollbackManager) Rollback(path string) error {
 	// Check for an existing attempt and start one if none
 	m.inflightLock.RLock()
 	rs, ok := m.inflight[path]
 	m.inflightLock.RUnlock()
 	if !ok {
-		rs = m.startRollback(path)
+		rs = m.startRollback(path, false)
 	}
 
 	// Wait for the attempt to finish
