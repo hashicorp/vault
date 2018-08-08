@@ -297,6 +297,11 @@ func (i *IdentityStore) handleGroupReadCommon(group *identity.Group) (*logical.R
 		aliasMap["merged_from_canonical_ids"] = group.Alias.MergedFromCanonicalIDs
 		aliasMap["creation_time"] = ptypes.TimestampString(group.Alias.CreationTime)
 		aliasMap["last_update_time"] = ptypes.TimestampString(group.Alias.LastUpdateTime)
+
+		if mountValidationResp := i.core.router.validateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
+			aliasMap["mount_path"] = mountValidationResp.MountPath
+			aliasMap["mount_type"] = mountValidationResp.MountType
+		}
 	}
 
 	respData["alias"] = aliasMap
