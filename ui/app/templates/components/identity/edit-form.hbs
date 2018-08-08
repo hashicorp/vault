@@ -1,6 +1,7 @@
 <form {{action (perform save) on="submit"}}>
-  {{message-error model=model}}
   <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode={{mode}} @noun={{lowercase (humanize model.identityType)}} />
+    {{message-error model=model}}
     {{#if (eq mode "merge")}}
       {{#message-in-page type="warning"}}
         Metadata on merged entities is not preserved, you will need to recreate it on the entity you merge to.
