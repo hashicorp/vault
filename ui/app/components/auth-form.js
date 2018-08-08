@@ -57,7 +57,6 @@ export default Ember.Component.extend(DEFAULTS, {
     // so we'll just nav -> get new attrs -> re-render
     if (!this.get('selectedAuth') || (this.get('selectedAuth') && !this.get('selectedAuthBackend'))) {
       this.set('selectedAuth', this.firstMethod());
-      //Ember.run.next(() => {
       this.get('router').replaceWith({
         queryParams: {
           with: this.firstMethod(),
@@ -65,7 +64,6 @@ export default Ember.Component.extend(DEFAULTS, {
           namespace: this.get('namespace'),
         },
       });
-      //});
     }
   },
 
