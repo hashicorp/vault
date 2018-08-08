@@ -99,8 +99,8 @@ export default DS.RESTAdapter.extend({
   rawRequest(url, type, options = {}) {
     let opts = this._preRequest(url, options);
     return fetch(url, {
-      method: type | 'GET',
-      headers: opts.headers | {},
+      method: type || 'GET',
+      headers: opts.headers || {},
     }).then(response => {
       if (response.status >= 200 && response.status < 300) {
         return RSVP.resolve(response);
