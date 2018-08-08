@@ -351,10 +351,11 @@ attached.
 
     ```shell
     # Create the API request payload, payload-1.json
-    $ cat payload-1.json
+    $ tee payload-1.json <<EOF
     {
-      "policy": "path \"secret/training_*\" {\n capabilities = [\"create\", \"read\"]\n } "
+      "policy": "path \"secret/training_*\" {\n capabilities = [\"create\", \"read\"]\n}"
     }
+    EOF
 
     # Create base policy
     $ curl --header "X-Vault-Token: ..." \
@@ -363,10 +364,11 @@ attached.
            http://127.0.0.1:8200/v1/sys/policy/base
 
     # Create the API request payload, payload-2.json
-    $ cat payload-2.json
+    $ tee payload-2.json <<EOF
     {
       "policy": "path \"secret/test\" {\n capabilities = [ \"create\", \"read\", \"update\", \"delete\" ]\n }"
     }
+    EOF
 
     # Create base policy
     $ curl --header "X-Vault-Token: ..." \
@@ -375,10 +377,11 @@ attached.
            http://127.0.0.1:8200/v1/sys/policy/test
 
     # Create the API request payload, payload-1.json
-    $ cat payload-3.json
+    $ tee payload-3.json <<EOF
     {
       "policy": "path \"secret/team-qa\" {\n capabilities = [ \"create\", \"read\", \"update\", \"delete\" ]\n }"
     }
+    EOF
 
     # Create base policy
     $ curl --header "X-Vault-Token: ..." \
@@ -486,6 +489,7 @@ In the request body, you need to pass the userpass accessor value as
       "canonical_id": "6ded4d31-481f-040b-11ad-c6db0cb4d211",
       "mount_accessor": "auth_userpass_9b6cd254"
     }
+    EOF
 
     $ curl --header "X-Vault-Token: ..." \
            --request POST \
@@ -505,6 +509,7 @@ In the request body, you need to pass the userpass accessor value as
       "canonical_id": "6ded4d31-481f-040b-11ad-c6db0cb4d211",
       "mount_accessor": "auth_userpass_9b6cd254"
     }
+    EOF
 
     $ curl --header "X-Vault-Token: ..." \
            --request POST \
@@ -832,10 +837,11 @@ in [Step 2](#step2) to verify that.
 
     ```shell
     # API request payload containing stringified policy
-    $ cat payload.json
+    $ tee payload.json <<EOF
     {
       "policy": "path \"secret/team/eng\" {\n capabilities = [\"create\", \"read\", \"delete\", \"update\"]\n }"
     }
+    EOF
 
     # Create base policy
     $ curl --header "X-Vault-Token: ..." \
@@ -850,7 +856,7 @@ group member and attach `team-eng`.
 
     ```shell
     # API request msg payload.  Be sure to replace <ENTITY_ID> with correct value
-    $ tee payload-group.json <<<EOF
+    $ tee payload-group.json <<EOF
     {
       "name": "engineers",
       "policies": ["team-eng"],
@@ -985,10 +991,11 @@ $ vault write identity/group-alias name="training" \
 ```shell
 # API request payload containing stringfied policy
 # If you are running KV v2, set the path to "secret/data/education" instead
-$ cat payload-pol.json
+$ tee payload-pol.json <<EOF
 {
   "policy": "path \"secret/education\" {\n capabilities = [\"create\", \"read\", \"delete\", \"update\", \"list\"]\n }"
 }
+EOF
 
 # Create education policy
 $ curl --header "X-Vault-Token: ..." \
@@ -1021,7 +1028,7 @@ $ curl --header "X-Vault-Token: ..." \
 }
 
 # API request msg payload to create an external group  
-$ tee payload-edu.json <<<EOF
+$ tee payload-edu.json <<EOF
 {
    "name": "education",
    "policies": ["education"],

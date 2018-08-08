@@ -45,3 +45,7 @@ identity.
 - [Sentinel Policies](/guides/identity/sentinel.html) guide
 walks through the creation and usage of _Role Governing Policies_ (RGPs) and
 _Endpoint Governing Policies_ (EGPs) in Vault.
+
+- [Control Groups](/guides/identity/control-groups.html) can be used to enforce
+additional authorization factors before the request can be completed. This
+guide walks through the implementation of a Control Group.
