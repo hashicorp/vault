@@ -229,7 +229,7 @@ func (i *IdentityStore) upsertEntityInTxn(txn *memdb.Txn, entity *identity.Entit
 		}
 
 		if aliasByFactors != nil && aliasByFactors.CanonicalID != entity.ID {
-			return fmt.Errorf("alias %q in already tied to a different entity %q", alias.ID, aliasByFactors.CanonicalID)
+			return fmt.Errorf("alias %q is already tied to a different entity %q", alias.ID, aliasByFactors.CanonicalID)
 		}
 
 		// Insert or update alias in MemDB using the transaction created above
