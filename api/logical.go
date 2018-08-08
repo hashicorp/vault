@@ -141,8 +141,17 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 	return ParseSecret(resp.Body)
 }
 
-func (c *Logical) Delete(path string) (*Secret, error) {
-	r := c.c.NewRequest("DELETE", "/v1/"+path)
+func (c *Logical) Delete(path string, versions ...map[string]interface{}) (*Secret, error) {
+	var r *Request
+
+	if versions == nil {
+		r = c.c.NewRequest("DELETE", "/v1/"+path)
+	} else {
+		r = c.c.NewRequest("POST", "/v1/"+path)
+		if err := r.SetJSONBody(versions[0]); err != nil {
+			return nil, err
+		}
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
