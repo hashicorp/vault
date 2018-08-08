@@ -93,7 +93,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   key. May also be specified by the `VAULT_HSM_HMAC_KEY_LABEL` environment
   variable.
 
-- `default_key_label` `(string: "")`: This is the default HMAC key label for signing
+- `default_hmac_key_label` `(string: "")`: This is the default HMAC key label for signing
   operations.  Prior to 0.10.1, HMAC key labels were not stored with the signature.
   Seal entries now track the label used in signing operations.  The default value
   for this field is the `hmac_key_label`.  If `hmac_key_label` is rotated and this 
