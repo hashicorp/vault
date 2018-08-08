@@ -1,4 +1,22 @@
-<div class="ui-wizard (if isActive active-wizard)">
+<div class="ui-wizard">
+  {{#unless isDismissed}}
+    <button type="button" {{action dismissWizard}}>X</button>
+  {{/unless}}
   <p>Current State: {{currentState}}</p>
-  <button type="button" {{action dismissWizard}}>X</button>
+  <p>Current Feature: {{currentMachine}}</p>
+  <p>Feature State: {{featureState}}</p>
+  {{#unless isActive}}
+    <button type="button" {{action advanceWizard}}>
+      {{#if isDismissed}}
+        Resume
+      {{else}}
+        Get Started!
+      {{/if}}
+    </button>
+  {{/unless}}
+  {{#if isActive}}
+    {{#if isSelecting}}
+      {{wizard/features-selection}}
+    {{/if}}
+  {{/if}}
 </div>

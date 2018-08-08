@@ -1,15 +1,19 @@
 import Ember from 'ember';
 import { Machine } from 'xstate';
 
-const { Service, getOwner } = Ember;
+const { Service } = Ember;
 
 import getStorage from 'vault/lib/token-storage';
-const machinesDir = 'vault/machines/';
 
 import TutorialMachineConfig from 'vault/machines/tutorial-machine';
+import SecretsMachineConfig from 'vault/machines/secrets-machine';
 
 const TutorialMachine = Machine(TutorialMachineConfig);
 let FeatureMachine = null;
+const TUTORIAL_STATE = 'vault-tutorial-state';
+const FEATURE_LIST = 'vault-feature-list';
+const FEATURE_STATE = 'vault-feature-state';
+const MACHINES = { secrets: SecretsMachineConfig };
 
 export default Service.extend({
   currentState: null,
@@ -19,18 +23,19 @@ export default Service.extend({
 
   init() {
     this._super(...arguments);
-    if (!this.storageHasKey('vault-tutorial-state')) {
-      this.saveExtState('vault-tutorial-state', 'idle');
-      this.set('currentState', TutorialMachine.initialState);
+    if (!this.storageHasKey(TUTORIAL_STATE)) {
+      this.saveState('currentState', TutorialMachine.initialState);
+      this.saveExtState(TUTORIAL_STATE, this.get('currentState'));
     } else {
-      this.set('currentState', this.getExtState('vault-tutorial-state'));
-      if (this.storageHasKey('vault-feature-list')) {
-        this.set('featureList', this.getExtState('vault-feature-list'));
-        if (this.storageHasKey('vault-feature-state')) {
-          this.set('featureState', this.getExtState('vault-feature-state'));
+      this.saveState('currentState', this.getExtState(TUTORIAL_STATE));
+      if (this.storageHasKey(FEATURE_LIST)) {
+        this.set('featureList', this.getExtState(FEATURE_LIST));
+        if (this.storageHasKey(FEATURE_STATE)) {
+          this.saveState('featureState', this.getExtState(FEATURE_STATE));
         } else {
           if (FeatureMachine !== null) {
-            this.set('featureState', FeatureMachine.initialState);
+            this.saveState('featureState', FeatureMachine.initialState);
+            this.saveExtState(FEATURE_STATE, this.get('featureState'));
           } else {
             this.buildFeatureMachine();
           }
@@ -39,9 +44,34 @@ export default Service.extend({
     }
   },
 
-  transitionMachine(currentState, event) {
+  saveState(stateType, state) {
+    if (state.value) {
+      state = state.value;
+    }
+
+    let stateKey = '';
+    while (Ember.typeOf(state) === 'object') {
+      let newState = Object.keys(state);
+      stateKey += newState + '.';
+      state = state[newState];
+    }
+    stateKey += state;
+    this.set(stateType, stateKey);
+  },
+
+  transitionTutorialMachine(currentState, event) {
     let { actions, value } = TutorialMachine.transition(currentState, event);
-    this.set('currentState', value);
+    this.saveState('currentState', value);
+    this.saveExtState(TUTORIAL_STATE, this.get('currentState'));
+    for (let action in actions) {
+      this.executeAction(action, event);
+    }
+  },
+
+  transitionFeatureMachine(currentState, event) {
+    let { actions, value } = FeatureMachine.transition(currentState, event);
+    this.saveState('featureState', value);
+    this.saveExtState(FEATURE_STATE, value);
     for (let action in actions) {
       this.executeAction(action, event);
     }
@@ -73,28 +103,32 @@ export default Service.extend({
   },
 
   saveFeatures(features) {
-    this.set('featuresList', features);
-    this.saveExtState('vault-feature-list', this.get('featuresList'));
+    this.set('featureList', features);
+    this.saveExtState(FEATURE_LIST, this.get('featureList'));
     this.buildFeatureMachine();
   },
 
   buildFeatureMachine() {
-    const FeatureMachineConfig = getOwner(this).lookup(
-      `machine:${this.get('featuresList').objectAt(0)}-machine`
-    );
+    if (this.get('featureList') === null) {
+      return;
+    }
+    const FeatureMachineConfig = MACHINES[this.get('featureList').objectAt(0)];
     FeatureMachine = Machine(FeatureMachineConfig);
-    this.set('currentMachine', this.get('featuresList').objectAt(0));
-    this.set('featureState', FeatureMachine.initialState);
+    this.set('currentMachine', this.get('featureList').objectAt(0));
+    this.saveState('featureState', FeatureMachine.initialState);
+    this.saveExtState(FEATURE_STATE, this.get('featureState'));
   },
 
   completeFeature() {
-    let features = this.get('featuresList');
+    let features = this.get('featureList');
     features.pop();
-    this.saveExtState('vault-feature-list', this.get('featuresList'));
+    this.saveExtState(FEATURE_LIST, this.get('featureList'));
     if (features.length > 0) {
-      FeatureMachine = Machine(JSON.loads(`${machinesDir}/${features.objectAt(0)}-machine`));
+      const FeatureMachineConfig = MACHINES[this.get('featureList').objectAt(0)];
+      FeatureMachine = Machine(FeatureMachineConfig);
       this.set('currentMachine', features.objectAt(0));
-      this.set('featureState', FeatureMachine.initialState);
+      this.saveState('featureState', FeatureMachine.initialState);
+      this.saveExtState(FEATURE_STATE, this.get('featureState'));
     } else {
       this.completeTutorial();
       FeatureMachine = null;
