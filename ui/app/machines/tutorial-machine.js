@@ -9,26 +9,25 @@ export default {
       states: {
         select: {
           on: {
-            CONTINUE: {
-              onExit: ['saveFeatures'],
-            },
+            CONTINUE: 'feature',
           },
         },
+        feature: {},
       },
     },
     idle: {
       on: {
         DISMISS: 'dismissed',
-        INTERACTION: 'active',
+        CONTINUE: 'active',
       },
     },
     dismissed: {
-      on: { RESET: 'idle' },
+      on: { CONTINUE: 'idle' },
       onEntry: ['saveState'],
     },
     complete: {
       on: {
-        RESET: 'idle',
+        CONTINUE: 'idle',
         DISMISS: 'dismissed',
       },
     },

@@ -1,0 +1,7 @@
+<form {{action "saveFeatures" on="submit"}}>
+  {{#each allFeatures as |feature|}}
+    <label for="feature-{{feature}}">{{feature}}</label>
+    <input id="feature-{{feature}}" type="checkbox" value={{feature}} onclick={{action "toggleFeature"}}/>
+  {{/each}}
+  <button type="submit">Submit</button>
+</form>
