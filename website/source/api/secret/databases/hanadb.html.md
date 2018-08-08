@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "HANA - Database - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-databases-hana"
+sidebar_current: "docs-http-secret-databases-hanadb"
 description: |-
   The HANA plugin for Vault's database secrets engine generates database credentials to access HANA servers.
 ---
@@ -39,9 +39,9 @@ has a number of parameters to further configure a connection.
 - `max_connection_lifetime` `(string: "0s")` - Specifies the maximum amount of
   time a connection may be reused. If <= 0s connections are reused forever.
 
-- `username` `(string: "")` - The root credential username used in the connection URL. 
+- `username` `(string: "")` - The root credential username used in the connection URL.
 
-- `password` `(string: "")` - The root credential password used in the connection URL. 
+- `password` `(string: "")` - The root credential password used in the connection URL.
 
 ### Sample Payload
 

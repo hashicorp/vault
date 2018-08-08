@@ -267,6 +267,12 @@ path "sys/mounts/*"
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 
+# List existing secret engines.
+path "sys/mounts"
+{
+  capabilities = ["read"]
+}
+
 # Read health checks
 path "sys/health"
 {

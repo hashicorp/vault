@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "Transit Secrets Re-wrapping - Guides"
-sidebar_current: "guides-encryption-rewrap"
+sidebar_current: "guides-encryption-transit-rewrap"
 description: |-
   The goal of this guide is to demonstrate one possible way to re-wrap data after
   rotating an encryption key in the transit engine in Vault.

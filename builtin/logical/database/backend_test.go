@@ -77,6 +77,7 @@ func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Bac
 
 		return nil
 	}); err != nil {
+		cleanup()
 		t.Fatalf("Could not connect to PostgreSQL docker container: %s", err)
 	}
 

@@ -311,6 +311,7 @@ func prepareDynamoDBTestContainer(t *testing.T) (cleanup func(), retAddress stri
 		}
 		return nil
 	}); err != nil {
+		cleanup()
 		t.Fatalf("Could not connect to docker: %s", err)
 	}
 	return cleanup, retAddress, credentials.NewStaticCredentials("fake", "fake", "")
