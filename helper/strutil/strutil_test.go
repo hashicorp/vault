@@ -449,3 +449,13 @@ func TestStrUtil_ParseStringSlice(t *testing.T) {
 		}
 	}
 }
+
+func TestStrUtil_MergeSlices(t *testing.T) {
+	res := MergeSlices([]string{"a", "c", "d"}, []string{}, []string{"c", "f", "a"}, nil, []string{"foo"})
+
+	expect := []string{"a", "c", "d", "f", "foo"}
+
+	if !reflect.DeepEqual(res, expect) {
+		t.Fatalf("expected %v, got %v", expect, res)
+	}
+}
