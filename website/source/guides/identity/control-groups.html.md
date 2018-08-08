@@ -81,19 +81,49 @@ go through the following guides first:
 ### Policy requirements
 
 Since this guide demonstrates the creation of policies, log in with a highly
-privileged token such as **`root`**. Required permissions are:
+privileged token such as **`root`**.  
+Otherwise, required permissions to perform
+the steps in this guide are:
 
 ```shell
-# To list policies
-path "sys/policies/*"
+# Create and manage ACL policies via CLI
+path "sys/policy/*"
 {
-  capabilities = ["list"]
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 
-# Create and manage EGPs
-path "sys/policies/egp/*"
+# Create and manage ACL policies via Web UI
+path "sys/policies/acl/*"
+{
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# To enable secret engines
+path "sys/mounts/*" {
+  capabilities = [ "create", "read", "update", "delete" ]
+}
+
+# Setting up test data
+path "EU_GDPR_data/*"
 {
   capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+# Manage userpass auth method
+path "auth/userpass/*"
+{
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+# List, create, update, and delete auth methods
+path "sys/auth/*"
+{
+  capabilities = ["create", "read", "update", "delete"]
+}
+
+# Create and manage entities and groups
+path "identity/*" {
+  capabilities = [ "create", "read", "update", "delete", "list" ]
 }
 ```
 
