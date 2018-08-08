@@ -174,9 +174,9 @@ export default Ember.Component.extend(DEFAULTS, {
       let targetRoute = this.get('redirectTo') || 'vault.cluster';
       let backend = this.get('selectedAuthBackend') || {};
       let backendMeta = BACKENDS.find(
-        b => get(b, 'type').toLowerCase() === get(backend, 'type').toLowerCase()
+        b => (get(b, 'type') || '').toLowerCase() === (get(backend, 'type') || '').toLowerCase()
       );
-      let attributes = get(backendMeta, 'formAttributes');
+      let attributes = get(backendMeta || {}, 'formAttributes') || {};
 
       data = Ember.assign(data, this.getProperties(...attributes));
       if (this.get('customPath') || get(backend, 'id')) {

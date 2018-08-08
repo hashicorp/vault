@@ -2,8 +2,6 @@ import Ember from 'ember';
 import keys from 'vault/lib/keycodes';
 
 export default Ember.Component.extend({
-  'data-test-component': 'console/command-input',
-  classNames: 'console-ui-input',
   onExecuteCommand() {},
   onFullscreen() {},
   onValueUpdate() {},

@@ -51,7 +51,7 @@ export default DS.Model.extend({
   // namespaces introduced types with a `ns_` prefix for built-in engines
   // so we need to strip that to normalize the type
   engineType: computed('type', function() {
-    return this.get('type').replace(/^ns_/, '');
+    return (this.get('type') || '').replace(/^ns_/, '');
   }),
 
   shouldIncludeInList: computed('engineType', function() {
