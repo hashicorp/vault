@@ -658,7 +658,7 @@ groups.
 
 ## Next steps
 
-To protect your secrets, it may become necessary to write fineer grained
+To protect your secrets, it may become necessary to write finer-grained
 policies to introspect different aspects of incoming requests.  If you have not
 already done so, read [Sentinel](https://docs.hashicorp.com/sentinel/)
 documentation to learn more about what you can accomplish writing policies as a
