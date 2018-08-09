@@ -329,3 +329,20 @@ func AppendIfMissing(slice []string, i string) []string {
 	}
 	return append(slice, i)
 }
+
+// MergeSlices adds an arbitrary number of slices together, uniquely
+func MergeSlices(args ...[]string) []string {
+	all := map[string]struct{}{}
+	for _, slice := range args {
+		for _, v := range slice {
+			all[v] = struct{}{}
+		}
+	}
+
+	result := make([]string, 0, len(all))
+	for k, _ := range all {
+		result = append(result, k)
+	}
+	sort.Strings(result)
+	return result
+}
