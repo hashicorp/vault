@@ -229,7 +229,17 @@ func (i *IdentityStore) upsertEntityInTxn(txn *memdb.Txn, entity *identity.Entit
 		}
 
 		if aliasByFactors != nil && aliasByFactors.CanonicalID != entity.ID {
-			return fmt.Errorf("alias %q in already tied to a different entity %q", alias.ID, aliasByFactors.CanonicalID)
+			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID)
+			respErr, intErr := i.mergeEntity(txn, entity, []string{aliasByFactors.CanonicalID}, true, false, true)
+			switch {
+			case respErr != nil:
+				return respErr
+			case intErr != nil:
+				return intErr
+			}
+			// The entity and aliases will be loaded into memdb and persisted
+			// as a result of the merge so we are done here
+			return nil
 		}
 
 		// Insert or update alias in MemDB using the transaction created above

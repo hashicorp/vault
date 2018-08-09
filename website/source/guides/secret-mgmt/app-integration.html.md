@@ -16,11 +16,11 @@ communication, etc.  Vault steps in to provide a centralized secret management
 system.  The next step is to decide how your applications acquire the secrets
 from Vault.
 
-This guide introduces ***Consult Template*** and ***Envconsul*** to help you
+This guide introduces ***Consul Template*** and ***Envconsul*** to help you
 determine if these tools speed up the integration of your applications once
 secrets are securely managed by Vault.
 
--> **NOTE:** Both [Consult Template](https://github.com/hashicorp/consul-template)
+-> **NOTE:** Both [Consul Template](https://github.com/hashicorp/consul-template)
 and  [Envconsul](https://github.com/hashicorp/consul-template) are open source
 tools.
 
@@ -42,7 +42,7 @@ applications across systems.
 
 ## Reference Material
 
-- [Consult Template](https://github.com/hashicorp/consul-template)
+- [Consul Template](https://github.com/hashicorp/consul-template)
 - [Envconsul](https://github.com/hashicorp/consul-template)
 - [Secret as a Service: Dynamic Secrets](/guides/secret-mgmt/dynamic-secrets.html)
 
@@ -65,7 +65,7 @@ application code or script with secrets as needed?
 
 ## Solution
 
-Both ***Consult Template*** and ***Envconsul*** provide first-class support for
+Both ***Consul Template*** and ***Envconsul*** provide first-class support for
 Vault.  Leveraging these tools can minimize the level of changes introduced to
 your applications. Depending on the current application design, you may not need
 to make minimal to no code change.
