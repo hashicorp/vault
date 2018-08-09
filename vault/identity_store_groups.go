@@ -289,9 +289,7 @@ func (i *IdentityStore) handleGroupReadCommon(group *identity.Group) (*logical.R
 	if group.Alias != nil {
 		aliasMap["id"] = group.Alias.ID
 		aliasMap["canonical_id"] = group.Alias.CanonicalID
-		aliasMap["mount_type"] = group.Alias.MountType
 		aliasMap["mount_accessor"] = group.Alias.MountAccessor
-		aliasMap["mount_path"] = group.Alias.MountPath
 		aliasMap["metadata"] = group.Alias.Metadata
 		aliasMap["name"] = group.Alias.Name
 		aliasMap["merged_from_canonical_ids"] = group.Alias.MergedFromCanonicalIDs
