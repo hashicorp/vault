@@ -11,6 +11,11 @@ IMPROVEMENTS:
  * agent: Add `exit_after_auth` to be able to use the Agent for a single
    authentication [GH-5013]
 
+BUG FIXES:
+
+ * identity: Properly populate `mount_path` and `mount_type` on group lookup
+   [GH-5074]
+
 ## 0.10.4 (July 25th, 2018)
 
 SECURITY:
