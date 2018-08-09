@@ -6,9 +6,9 @@ description: |-
   This guide provides guidance in creating a multi-tenant environment.
 ---
 
-# Multi-Tenant Pattern using ACL Namespaces
+# Multi-Tenant Pattern with ACL Namespaces
 
-~> **Enterprise Only:** ACL Namespace feature is a part of _Vault Enterprise_.
+~> **Enterprise Only:** ACL Namespace feature is a part of _Vault Enterprise Pro_.
 
 Everything in Vault is path-based, and often use the terms `path` and
 `namespace` interchangeably. The application namespace pattern is a useful
@@ -30,17 +30,29 @@ their application's interactions with Vault.
 
 ## Challenge
 
-When Vault is primarily used as a central location to manage secrets, it might
-become necessary to _design_ Vault as a service to serve multiple organizations
-within a company.  
+When Vault is primarily used as a central location to manage secrets, multiple
+organizations within a company need to be able to manage their secrets in Vault
+without interfering each other. This means that a company needs a ***Vault as a
+Service*** model allowing each organization (tenant) to be restricted from
+accessing, editing, or creating policies and secrets engines outside of their
+tenant scope.
 
+![Multi-Tenant](/assets/images/vault-multi-tenant.png)
 
 ## Solution
 
 Create an ACL namespace dedicated to each team, organization, or app where they
-can perform all necessary tasks within their namespace.  Write policies to
-ensure that each tenant works only within their allocated namespace.
+can perform all necessary tasks within their tenant namespace.  
 
+Each namespace has its own:
+
+- Policies
+- Mounts
+- Tokens
+- Identity entities and groups
+
+> Tokens are locked to a namespace or child-namespaces.  Identity groups can
+pull in entities and groups from other namespaces.
 
 ## Prerequisites
 
@@ -90,43 +102,58 @@ In this guide, you are going to perform the following steps:
 
 #### CLI command
 
-1. Execute the following command to create a namespace dedicated to the `finance`
-team:
+To create a new namespace, run: **`vault namespace create <namespace_name>`**
+
+Once a namespace is created, you can do one of the two things:
+
+* Set **`VAULT_NAMESPACE`** so that all subsequent CLI commands will be
+executed against that particular namespace
 
     ```plaintext
-    $ vault namespace create finance
-    ````
-
-1. Similarly, create a top-level namespace for the `education` organization:
-
-    ```plaintext
-    $ vault namespace create education
-    ````
-
-1. Now, create a child namespace called `training` and `certification` under the `education` namespace:
-
-    ```plaintext
-    $ vault namespace create -namespace=education training
-
-    $ vault namespace create -namespace=education certification
-    ````
-
-1. List the created namespaces:
-
-    ```plaintext
-    $ vault namespace list
-    education/
-    finance/
-
-    $ vault namespace list -namespace=education
-    certification/
-    training/
+    $ export VAULT_NAMESPACE=<namespace_name>
     ```
+
+* Specify the target namespace with **`-namespace`** flag
+
+    ```plaintext
+    $ vault policy write -namespace=<namespace_name> <policy_name> <policy_file>
+    ```
+
+<br>
+
+Create a namespace dedicated to the **`finance`** team as well as **`education`** organizations:
+
+```plaintext
+$ vault namespace create finance
+
+$ vault namespace create education
+````
+
+Now, create child namespaces called `training` and `certification` under the
+`education` namespace:
+
+```plaintext
+$ vault namespace create -namespace=education training
+
+$ vault namespace create -namespace=education certification
+````
+
+List the created namespaces:
+
+```plaintext
+$ vault namespace list
+education/
+finance/
+
+$ vault namespace list -namespace=education
+certification/
+training/
+```
 
 
 #### API call using cURL
 
-To create an ACL namespace via API:
+To create a new namespace, invoke **`sys/namespaces`** endpoint:
 
 ```shell
 $ curl --header "X-Vault-Token: <TOKEN>" \
@@ -137,7 +164,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 Where `<TOKEN>` is your valid token, and `<NS_NAME>` is the desired namespace
 name.
 
-1. Create a namespace dedicated to the `finance` team:
+1. Create a namespace dedicated to the **`finance`** team:
 
     ```plaintext
     $ curl --header "X-Vault-Token: ..." \
@@ -145,7 +172,7 @@ name.
            http://127.0.0.1:8200/v1/sys/namespaces/finance
     ```
 
-1. Similarly, create a top-level namespace for the `education` organization:
+1. Similarly, create a top-level namespace for the **`education`** organization:
 
     ```plaintext
     $ curl --header "X-Vault-Token: ..." \
@@ -153,13 +180,15 @@ name.
            http://127.0.0.1:8200/v1/sys/namespaces/education
     ```
 
-1. Now, create a child namespace called `training` and `certification` under the
-`education` namespace:
+1. Now, create a child namespace called **`training`** and **`certification`**
+under `education`. To do so, pass the top-level namespace name in the
+**`X-Vault-Namespace`** header.
 
     ```shell
     # Create a training namespace under education
     # NOTE: Top-level namespace is in the API endpoint
     $ curl --header "X-Vault-Token: ..." \
+           --header "X-Vault-Namespace: education" \
            --request POST \
            http://127.0.0.1:8200/v1/education/sys/namespaces/training
 
@@ -201,7 +230,6 @@ name.
        },
        ...
     ```
-
 
 
 ### <a name="step2"></a>Step 2: Write Policies
