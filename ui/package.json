@@ -92,6 +92,7 @@
     "ember-source": "~2.14.0",
     "ember-test-selectors": "^0.3.6",
     "ember-truth-helpers": "1.2.0",
+    "flat": "^4.1.0",
     "ivy-codemirror": "2.1.0",
     "jsonlint": "1.6.0",
     "loader.js": "^4.2.3",
