@@ -1,6 +1,8 @@
 package framework
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -293,10 +295,27 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		return result, true, nil
 
 	case TypeHeader:
-		// First try to parse this as a map
+		// There are 3 ways a header could be provided:
+		// 1. Marshalled as JSON, and then converted to a b64 string.
+		// 2. As a map[string][]string.
+		// 3. As comma-delimited key-value pairs associated with a colon.
+		// We go through these sequentially below.
+		result := http.Header{}
+
+		// 1.
+		var headerStr string
+		if err := mapstructure.WeakDecode(raw, &headerStr); err == nil {
+			if b, err := base64.StdEncoding.DecodeString(headerStr); err == nil {
+				if err := json.NewDecoder(bytes.NewReader(b)).Decode(&result); err != nil {
+					return nil, true, err
+				}
+				return result, true, nil
+			}
+		}
+
+		// 2.
 		var mapResult map[string][]string
 		if err := mapstructure.WeakDecode(raw, &mapResult); err == nil {
-			result := http.Header{}
 			for k, slice := range mapResult {
 				for _, v := range slice {
 					result.Add(k, v)
@@ -305,21 +324,19 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			return result, true, nil
 		}
 
-		// If map parse fails, parse as a string list of : delimited pairs
+		// 3.
 		var listResult []string
-		if err := mapstructure.WeakDecode(raw, &listResult); err != nil {
-			return nil, true, err
-		}
-
-		result := http.Header{}
-		for _, keyPair := range listResult {
-			keyPairSlice := strings.SplitN(keyPair, ":", 2)
-			if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {
-				return nil, false, fmt.Errorf("invalid key pair %q", keyPair)
+		if err := mapstructure.WeakDecode(raw, &listResult); err == nil {
+			for _, keyPair := range listResult {
+				keyPairSlice := strings.SplitN(keyPair, ":", 2)
+				if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {
+					return nil, true, fmt.Errorf("invalid key pair %q", keyPair)
+				}
+				result.Add(keyPairSlice[0], keyPairSlice[1])
 			}
-			result.Add(keyPairSlice[0], keyPairSlice[1])
+			return result, true, nil
 		}
-		return result, true, nil
+		return nil, true, fmt.Errorf("%s not provided an expected format", raw)
 
 	default:
 		panic(fmt.Sprintf("Unknown type: %s", schema.Type))
