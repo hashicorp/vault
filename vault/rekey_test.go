@@ -226,7 +226,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 				t.Fatalf("err: %v", err)
 			}
 		}
-		if sealed, _ := c.Sealed(); sealed {
+		if c.Sealed() {
 			t.Fatalf("should be unsealed")
 		}
 	}

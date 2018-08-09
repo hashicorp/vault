@@ -17,16 +17,36 @@ package stats
 
 import (
 	"context"
-	"time"
 
 	"go.opencensus.io/stats/internal"
 	"go.opencensus.io/tag"
 )
 
+func init() {
+	internal.SubscriptionReporter = func(measure string) {
+		mu.Lock()
+		measures[measure].subscribe()
+		mu.Unlock()
+	}
+}
+
 // Record records one or multiple measurements with the same tags at once.
 // If there are any tags in the context, measurements will be tagged with them.
 func Record(ctx context.Context, ms ...Measurement) {
+	if len(ms) == 0 {
+		return
+	}
+	var record bool
+	for _, m := range ms {
+		if (m != Measurement{}) {
+			record = true
+			break
+		}
+	}
+	if !record {
+		return
+	}
 	if internal.DefaultRecorder != nil {
-		internal.DefaultRecorder(tag.FromContext(ctx), time.Now(), ms)
+		internal.DefaultRecorder(tag.FromContext(ctx), ms)
 	}
 }

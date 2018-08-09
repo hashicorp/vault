@@ -32,48 +32,74 @@ import (
 // service, configured with the given ClientOptions. It also returns the endpoint
 // for the service as specified in the options.
 func NewClient(ctx context.Context, opts ...option.ClientOption) (*http.Client, string, error) {
+	settings, err := newSettings(opts)
+	if err != nil {
+		return nil, "", err
+	}
+	// TODO(cbro): consider injecting the User-Agent even if an explicit HTTP client is provided?
+	if settings.HTTPClient != nil {
+		return settings.HTTPClient, settings.Endpoint, nil
+	}
+	trans, err := newTransport(ctx, defaultBaseTransport(ctx), settings)
+	if err != nil {
+		return nil, "", err
+	}
+	return &http.Client{Transport: trans}, settings.Endpoint, nil
+}
+
+// NewTransport creates an http.RoundTripper for use communicating with a Google
+// cloud service, configured with the given ClientOptions. Its RoundTrip method delegates to base.
+func NewTransport(ctx context.Context, base http.RoundTripper, opts ...option.ClientOption) (http.RoundTripper, error) {
+	settings, err := newSettings(opts)
+	if err != nil {
+		return nil, err
+	}
+	if settings.HTTPClient != nil {
+		return nil, errors.New("transport/http: WithHTTPClient passed to NewTransport")
+	}
+	return newTransport(ctx, base, settings)
+}
+
+func newTransport(ctx context.Context, base http.RoundTripper, settings *internal.DialSettings) (http.RoundTripper, error) {
+	trans := base
+	trans = userAgentTransport{
+		base:      trans,
+		userAgent: settings.UserAgent,
+	}
+	trans = addOCTransport(trans)
+	switch {
+	case settings.NoAuth:
+		// Do nothing.
+	case settings.APIKey != "":
+		trans = &transport.APIKey{
+			Transport: trans,
+			Key:       settings.APIKey,
+		}
+	default:
+		creds, err := internal.Creds(ctx, settings)
+		if err != nil {
+			return nil, err
+		}
+		trans = &oauth2.Transport{
+			Base:   trans,
+			Source: creds.TokenSource,
+		}
+	}
+	return trans, nil
+}
+
+func newSettings(opts []option.ClientOption) (*internal.DialSettings, error) {
 	var o internal.DialSettings
 	for _, opt := range opts {
 		opt.Apply(&o)
 	}
 	if err := o.Validate(); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	if o.GRPCConn != nil {
-		return nil, "", errors.New("unsupported gRPC connection specified")
+		return nil, errors.New("unsupported gRPC connection specified")
 	}
-	// TODO(cbro): consider injecting the User-Agent even if an explicit HTTP client is provided?
-	if o.HTTPClient != nil {
-		return o.HTTPClient, o.Endpoint, nil
-	}
-	uat := userAgentTransport{
-		base:      baseTransport(ctx),
-		userAgent: o.UserAgent,
-	}
-	var hc *http.Client
-	switch {
-	case o.NoAuth:
-		hc = &http.Client{Transport: uat}
-	case o.APIKey != "":
-		hc = &http.Client{
-			Transport: &transport.APIKey{
-				Key:       o.APIKey,
-				Transport: uat,
-			},
-		}
-	default:
-		creds, err := internal.Creds(ctx, &o)
-		if err != nil {
-			return nil, "", err
-		}
-		hc = &http.Client{
-			Transport: &oauth2.Transport{
-				Source: creds.TokenSource,
-				Base:   uat,
-			},
-		}
-	}
-	return hc, o.Endpoint, nil
+	return &o, nil
 }
 
 type userAgentTransport struct {
@@ -102,9 +128,9 @@ func (t userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error)
 // Set at init time by dial_appengine.go. If nil, we're not on App Engine.
 var appengineUrlfetchHook func(context.Context) http.RoundTripper
 
-// baseTransport returns the base HTTP transport.
+// defaultBaseTransport returns the base HTTP transport.
 // On App Engine, this is urlfetch.Transport, otherwise it's http.DefaultTransport.
-func baseTransport(ctx context.Context) http.RoundTripper {
+func defaultBaseTransport(ctx context.Context) http.RoundTripper {
 	if appengineUrlfetchHook != nil {
 		return appengineUrlfetchHook(ctx)
 	}

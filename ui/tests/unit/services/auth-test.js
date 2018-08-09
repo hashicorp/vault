@@ -118,7 +118,7 @@ let GITHUB_RESPONSE = {
 };
 
 moduleFor('service:auth', 'Unit | Service | auth', {
-  needs: ['service:flash-messages', 'adapter:cluster', 'service:version'],
+  needs: ['service:flash-messages', 'adapter:cluster', 'service:version', 'service:control-group'],
   beforeEach: function() {
     Ember.getOwner(this).lookup('service:flash-messages').registerTypes(['warning']);
     this.store = storage();

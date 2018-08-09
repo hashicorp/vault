@@ -1,29 +1,29 @@
-<header class="page-header">
-  <div class="level">
-    <div class="level-left">
-      <h1 class="title is-3">
-        Authentication Methods
-      </h1>
-    </div>
-    <div class="level-right">
-      {{#link-to 'vault.cluster.settings.auth.enable' class="button has-icon-right is-ghost is-compact"}}
-        Enable new method
-        {{i-con glyph="chevron-right" size=11}}
-      {{/link-to}}
-    </div>
-  </div>
-</header>
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Authentication Methods
+    </h1>
+  </p.levelLeft>
+  <p.levelRight>
+    {{#link-to 'vault.cluster.settings.auth.enable' class="button has-icon-right is-ghost is-compact"}}
+      Enable new method
+      {{i-con glyph="chevron-right" size=11}}
+    {{/link-to}}
+  </p.levelRight>
+</PageHeader>
 
 {{#each (sort-by "path" model) as |method|}}
-  {{#linked-block
-    "vault.cluster.access.methods"
-    class="box is-sideless is-marginless has-pointer "
-    data-test-auth-backend-link=method.id
-  }}
+  <div
+    class="list-item-row"
+    data-test-auth-backend-link={{method.id}}
+    >
     <div class="level is-mobile">
       <div class="level-left">
         <div>
-          {{i-con glyph="folder" size=14 class="has-text-grey-light"}} <span data-test-path data-test-id={{method.id}}>{{method.path}}</span>
+          {{i-con glyph="folder" size=14 class="has-text-grey-light"}}
+          <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-grey">
+            {{method.path}}
+          </span>
           <br />
           <span class="tag">
             {{#if (eq method.type 'plugin')}}
@@ -78,5 +78,5 @@
         </div>
       </div>
     </div>
-  {{/linked-block}}
+  </div>
 {{/each}}

@@ -328,7 +328,7 @@ save it as `cert.pem`.
 The command is basically the same as the Google API key example. Now, the path
 convention for certificates is **`secret/<ENVIRONMENT>/cert/<SYSTEM>`**. To
 store the root certificate for production MySQL, the path becomes
-`secret/staging/cert/postgres`.
+`secret/prod/cert/mysql`.
 
 **Example:**
 
@@ -517,7 +517,7 @@ MIIEowIBAAKCAQEA6E2Uq0XqreZISgVMUu9pnoMsq+OoK1PI54rsA9vtDE6wiRk0GWhf5vD4DGf1
 Use `secret/` endpoint to retrieve secrets from key/value secret engine:
 
 ```plaintext
-$ curl --header "X-Vault-Token: <TOKEN_FROM_STEP3>" \
+$ curl --header "X-Vault-Token: <TOKEN_FROM_STEP4>" \
        --request Get \
        <VAULT_ADDRESS>/v1/secret/data/<PATH>
 ```

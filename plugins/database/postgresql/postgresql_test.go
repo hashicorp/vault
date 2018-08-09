@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 var (
@@ -53,6 +53,7 @@ func preparePostgresTestContainer(t *testing.T) (cleanup func(), retURL string) 
 		defer db.Close()
 		return db.Ping()
 	}); err != nil {
+		cleanup()
 		t.Fatalf("Could not connect to PostgreSQL docker container: %s", err)
 	}
 

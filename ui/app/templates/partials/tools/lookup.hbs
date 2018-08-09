@@ -1,12 +1,10 @@
-<header class="page-header">
-  <div class="level">
-    <div class="level-left">
-      <h3 class="title is-3">
-        Lookup Token
-      </h3>
-    </div>
-  </div>
-</header>
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Lookup Token
+    </h1>
+  </p.levelLeft>
+</PageHeader>
 
 {{#if (or creation_time creation_ttl)}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">

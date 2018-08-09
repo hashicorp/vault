@@ -1,13 +1,11 @@
 <div class="box is-shadowless" data-test-not-found>
-  <header class="page-header">
-    <div class="level">
-      <div class="level-left">
-        <h1 class="title is-3 has-text-grey">
-          404 Not Found
-        </h1>
-      </div>
-    </div>
-  </header>
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3 has-text-grey">
+        404 Not Found
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
   <div class="box is-sideless has-background-white-bis has-text-grey has-text-centered">
     <p>Sorry, we were unable to find any content at <code>{{or model.path path}}</code>.</p>
     <p>Double check the url or go back {{home-link text="home"}}.</p>

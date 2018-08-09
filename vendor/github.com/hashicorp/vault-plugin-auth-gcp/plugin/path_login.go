@@ -52,6 +52,11 @@ GCE identity metadata token ('iam', 'gce' roles).`,
 }
 
 func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Validate we didn't get extraneous fields
+	if err := validateFields(req, data); err != nil {
+		return nil, logical.CodedError(422, err.Error())
+	}
+
 	loginInfo, err := b.parseAndValidateJwt(ctx, req, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -427,7 +432,7 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 			metadata.ProjectId, metadata.Zone, metadata.InstanceName, err)), nil
 	}
 
-	if err := b.authorizeGCEInstance(ctx, instance, req.Storage, role, metadata.Zone, loginInfo.ServiceAccountId); err != nil {
+	if err := b.authorizeGCEInstance(ctx, instance, req.Storage, role, loginInfo.ServiceAccountId); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -508,7 +513,7 @@ func (b *GcpAuthBackend) pathGceRenew(ctx context.Context, req *logical.Request,
 	if !ok {
 		return errors.New("invalid auth metadata: service_account_id not found")
 	}
-	if err := b.authorizeGCEInstance(ctx, instance, req.Storage, role, meta.Zone, serviceAccountId); err != nil {
+	if err := b.authorizeGCEInstance(ctx, instance, req.Storage, role, serviceAccountId); err != nil {
 		return fmt.Errorf("could not renew token for role %s: %v", roleName, err)
 	}
 
@@ -562,104 +567,39 @@ func getInstanceMetadataFromAuth(authMetadata map[string]string) (*gcputil.GCEId
 	return meta, nil
 }
 
-// validateGCEInstance returns an error if the given GCE instance is not authorized for the role.
-func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, instance *compute.Instance, s logical.Storage, role *gcpRole, zone, serviceAccountId string) error {
-	gceClient, err := b.GCE(ctx, s)
+// authorizeGCEInstance returns an error if the given GCE instance is not
+// authorized for the role.
+func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, instance *compute.Instance, s logical.Storage, role *gcpRole, serviceAccountId string) error {
+	computeSvc, err := b.GCE(ctx, s)
 	if err != nil {
 		return err
 	}
 
-	// Verify instance has role labels if labels were set on role.
-	for k, expectedV := range role.BoundLabels {
-		actualV, ok := instance.Labels[k]
-		if !ok || actualV != expectedV {
-			return fmt.Errorf("role label '%s:%s' not found on GCE instance", k, expectedV)
-		}
+	iamSvc, err := b.IAM(ctx, s)
+	if err != nil {
+		return err
 	}
 
-	// Verify that instance is in zone or region if given.
-	if len(role.BoundZone) > 0 {
-		if !compareResourceNameOrSelfLink(role.BoundZone, instance.Zone, "zones") {
-			return fmt.Errorf("instance zone %s is not role zone '%s'", instance.Zone, role.BoundZone)
-		}
-	} else if len(role.BoundRegion) > 0 {
-		zone, err := gceClient.Zones.Get(role.ProjectId, zone).Do()
-		if err != nil {
-			return fmt.Errorf("could not verify instance zone '%s' is available for project '%s': %v", zone.Name, role.ProjectId, err)
-		}
-		if !compareResourceNameOrSelfLink(role.BoundRegion, zone.Region, "regions") {
-			return fmt.Errorf("instance zone %s is not in role region '%s'", zone.Name, role.BoundRegion)
-		}
-	}
+	return AuthorizeGCE(ctx, &AuthorizeGCEInput{
+		client: &gcpClient{
+			computeSvc: computeSvc,
+			iamSvc:     iamSvc,
+		},
 
-	// If instance group is given, verify group exists and that instance is in group.
-	if len(role.BoundInstanceGroup) > 0 {
-		var group *compute.InstanceGroup
-		var err error
+		project:        role.ProjectId,
+		serviceAccount: serviceAccountId,
 
-		// Check if group should be zonal or regional.
-		if len(role.BoundZone) > 0 {
-			group, err = gceClient.InstanceGroups.Get(role.ProjectId, role.BoundZone, role.BoundInstanceGroup).Do()
-			if err != nil {
-				return fmt.Errorf("could not find role instance group %s (project %s, zone %s)", role.BoundInstanceGroup, role.ProjectId, role.BoundZone)
-			}
-		} else if len(role.BoundRegion) > 0 {
-			group, err = gceClient.RegionInstanceGroups.Get(role.ProjectId, role.BoundRegion, role.BoundInstanceGroup).Do()
-			if err != nil {
-				return fmt.Errorf("could not find role instance group %s (project %s, region %s)", role.BoundInstanceGroup, role.ProjectId, role.BoundRegion)
-			}
-		} else {
-			return errors.New("expected zone or region to be set for GCE role '%s' with instance group")
-		}
+		instanceLabels:   instance.Labels,
+		instanceSelfLink: instance.SelfLink,
+		instanceZone:     instance.Zone,
 
-		// Verify instance group contains authenticating instance.
-		instanceIdFilter := fmt.Sprintf("instance eq %s", instance.SelfLink)
-		listInstanceReq := &compute.InstanceGroupsListInstancesRequest{}
-		listResp, err := gceClient.InstanceGroups.ListInstances(role.ProjectId, role.BoundZone, group.Name, listInstanceReq).Filter(instanceIdFilter).Do()
-		if err != nil {
-			return fmt.Errorf("could not confirm instance %s is part of instance group %s: %s", instance.Name, role.BoundInstanceGroup, err)
-		}
+		boundLabels:  role.BoundLabels,
+		boundRegions: role.BoundRegions,
+		boundZones:   role.BoundZones,
 
-		if len(listResp.Items) == 0 {
-			return fmt.Errorf("instance %s is not part of instance group %s", instance.Name, role.BoundInstanceGroup)
-		}
-
-	}
-
-	// Verify instance is running under one of the allowed service accounts.
-	if len(role.BoundServiceAccounts) > 0 {
-		iamClient, err := b.IAM(ctx, s)
-		if err != nil {
-			return err
-		}
-
-		serviceAccount, err := gcputil.ServiceAccount(iamClient, &gcputil.ServiceAccountId{
-			Project:   role.ProjectId,
-			EmailOrId: serviceAccountId,
-		})
-		if err != nil {
-			return fmt.Errorf("could not find service account with id '%s': %v", serviceAccountId, err)
-		}
-
-		if !(strutil.StrListContains(role.BoundServiceAccounts, serviceAccount.Email) ||
-			strutil.StrListContains(role.BoundServiceAccounts, serviceAccount.UniqueId)) {
-			return fmt.Errorf("GCE instance's service account email (%s) or id (%s) not found in role service accounts: %v",
-				serviceAccount.Email, serviceAccount.UniqueId, role.BoundServiceAccounts)
-		}
-	}
-
-	return nil
-}
-
-func compareResourceNameOrSelfLink(expected, actual, collectionId string) bool {
-	sep := fmt.Sprintf("%s/", collectionId)
-	if strings.Contains(expected, sep) {
-		return expected == actual
-	}
-
-	actTkns := strings.SplitAfter(actual, sep)
-	actualName := actTkns[len(actTkns)-1]
-	return expected == actualName
+		boundInstanceGroups:  role.BoundInstanceGroups,
+		boundServiceAccounts: role.BoundServiceAccounts,
+	})
 }
 
 const pathLoginHelpSyn = `Authenticates Google Cloud Platform entities with Vault.`

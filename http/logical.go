@@ -268,8 +268,7 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 		// Get the body
 		bodyRaw, ok := resp.Data[logical.HTTPRawBody]
 		if !ok {
-			retErr(w, "no body given")
-			return
+			goto WRITE_RESPONSE
 		}
 
 		switch bodyRaw.(type) {
@@ -290,6 +289,7 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 		}
 	}
 
+WRITE_RESPONSE:
 	// Write the response
 	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)

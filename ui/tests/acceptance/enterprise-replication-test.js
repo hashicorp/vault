@@ -103,12 +103,11 @@ test('replication', function(assert) {
       `/vault/replication/performance/secondaries`,
       'redirects to the secondaries page'
     );
-    assert
-      .dom('[data-test-flash-message-body]:contains(The performance mount filter)')
-      .hasText(
-        `The performance mount filter config for the secondary ${secondaryName} was successfully deleted.`,
-        'renders success flash upon deletion'
-      );
+    assert.equal(
+      find('[data-test-flash-message-body]:contains(The performance mount filter)').text().trim(),
+      `The performance mount filter config for the secondary ${secondaryName} was successfully deleted.`,
+      'renders success flash upon deletion'
+    );
     click('[data-test-flash-message-body]:contains(The performance mount filter)');
   });
 

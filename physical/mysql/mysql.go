@@ -50,6 +50,7 @@ type MySQLBackend struct {
 // server address and credential for accessing mysql database.
 func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	var err error
+  
 	db, err := NewMySQLClient(conf, logger)
 	if err != nil {
 		return nil, err
@@ -171,14 +172,14 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) {
 	var err error
-
-	// Get the MySQL credentials to perform read/write operations.
+  
+  // Get the MySQL credentials to perform read/write operations.
 	username, ok := conf["username"]
 	if !ok || username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
 	password, ok := conf["password"]
-	if !ok || username == "" {
+	if !ok || password == "" {
 		return nil, fmt.Errorf("missing password")
 	}
 
@@ -186,7 +187,6 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	address, ok := conf["address"]
 	if !ok {
 		address = "127.0.0.1:3306"
-	}
 
 	maxIdleConnStr, ok := conf["max_idle_connections"]
 	var maxIdleConnInt int

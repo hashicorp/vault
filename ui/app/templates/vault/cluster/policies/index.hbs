@@ -1,24 +1,22 @@
 {{#if (or (eq policyType "acl") (has-feature "Sentinel"))}}
-  <header class="page-header">
-    <div class="level">
-      <div class="level-left">
-        <h1 class="title is-3">
-          {{uppercase policyType}} Policies
-          {{#unless (eq policyType "acl")}}
-            <span class="tag" aria-label="Enforcement level: {{model.enforcementLevel}}">
-              Sentinel
-            </span>
-          {{/unless}}
-        </h1>
-      </div>
-      <div class="level-right">
-        <a href="{{href-to 'vault.cluster.policies.create'}}" class="button has-icon-right is-ghost is-compact" data-test-policy-create-link=true>
-          Create {{uppercase policyType}} policy
-          {{i-con glyph="chevron-right" size=11}}
-        </a>
-      </div>
-    </div>
-  </header>
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3">
+        {{uppercase policyType}} Policies
+        {{#unless (eq policyType "acl")}}
+          <span class="tag" aria-label="Enforcement level: {{model.enforcementLevel}}">
+            Sentinel
+          </span>
+        {{/unless}}
+      </h1>
+    </p.levelLeft>
+    <p.levelRight>
+      <a href="{{href-to 'vault.cluster.policies.create'}}" class="button has-icon-right is-ghost is-compact" data-test-policy-create-link=true>
+        Create {{uppercase policyType}} policy
+        {{i-con glyph="chevron-right" size=11}}
+      </a>
+    </p.levelRight>
+  </PageHeader>
   <div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
     <div class="level">
       <div class="level-left">
@@ -50,16 +48,19 @@
   {{#if model.meta.total}}
     {{#each model as |item|}}
       {{#if (eq item.id "root")}}
-        <div class="is-flex box is-sideless is-marginless" data-test-policy-item>
+        <div class="list-item-row is-flex" data-test-policy-item>
           {{i-con
             glyph='file'
             size=14
             class="has-text-grey-light"
           }}
           <div>
-            <span class="has-text-weight-semibold" data-test-policy-name>{{item.id}}</span>
+            <span class="has-text-weight-semibold has-text-grey" data-test-policy-name>
+              {{item.id}}
+            </span>
             <p class="help has-text-grey">
-            The <code>root</code> policy does not contain any rules but can do anything within Vault. It should be used with extreme care.
+              The <code>root</code> policy does not contain any rules but can
+              do anything within Vault. It should be used with extreme care.
             </p>
           </div>
         </div>
@@ -68,7 +69,7 @@
           "vault.cluster.policy.show"
           policyType
           item.id
-          class="box is-sideless is-marginless"
+          class="list-item-row"
           data-test-policy-link=item.id
         }}
           <div class="columns is-mobile">

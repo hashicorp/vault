@@ -16,30 +16,36 @@ GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
 GO_VERSION_MIN=1.10
 
+CGO_ENABLED=0
+ifneq ($(FDB_ENABLED), )
+	CGO_ENABLED=1
+	BUILD_TAGS+=foundationdb
+endif
+
 default: dev
 
 # bin generates the releasable binaries for Vault
 bin: prep
-	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS) ui' sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # dev creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin
 dev: prep
-	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-ui: prep
-	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS) ui' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
-testtravis: BUILD_TAGS=travis
+testtravis: BUILD_TAGS+=travis
 testtravis: test
 
-testracetravis: BUILD_TAGS=travis
+testracetravis: BUILD_TAGS+=travis
 testracetravis: testrace
 
 # test runs the unit tests and vets the code
 test: prep
-	@CGO_ENABLED=0 \
+	@CGO_ENABLED=$(CGO_ENABLED) \
 	VAULT_ADDR= \
 	VAULT_TOKEN= \
 	VAULT_DEV_ROOT_TOKEN_ID= \
@@ -121,16 +127,25 @@ ember-dist:
 	@cd ui && yarn run build
 	@rm -rf ui/if-you-need-to-delete-this-open-an-issue-async-disk-cache
 
+ember-dist-dev:
+	@echo "--> Installing JavaScript assets"
+	@cd ui && yarn
+	@cd ui && npm rebuild node-sass
+	@echo "--> Building Ember application"
+	@cd ui && yarn run build-dev
+
 static-dist: ember-dist static-assets
+static-dist-dev: ember-dist-dev static-assets
 
 proto:
-	protoc -I helper/forwarding -I vault -I ../../.. vault/*.proto --go_out=plugins=grpc:vault
-	protoc -I helper/storagepacker helper/storagepacker/types.proto --go_out=plugins=grpc:helper/storagepacker
-	protoc -I helper/forwarding -I vault -I ../../.. helper/forwarding/types.proto --go_out=plugins=grpc:helper/forwarding
-	protoc -I physical physical/types.proto --go_out=plugins=grpc:physical
-	protoc -I helper/identity -I ../../.. helper/identity/types.proto --go_out=plugins=grpc:helper/identity
-	protoc  builtin/logical/database/dbplugin/*.proto --go_out=plugins=grpc:.
-	protoc  logical/plugin/pb/*.proto --go_out=plugins=grpc:.
+	protoc vault/*.proto --go_out=plugins=grpc:../../..
+	protoc helper/storagepacker/types.proto --go_out=plugins=grpc:../../..
+	protoc helper/forwarding/types.proto --go_out=plugins=grpc:../../..
+	protoc logical/*.proto --go_out=plugins=grpc:../../..
+	protoc physical/types.proto --go_out=plugins=grpc:../../..
+	protoc helper/identity/types.proto --go_out=plugins=grpc:../../..
+	protoc builtin/logical/database/dbplugin/*.proto --go_out=plugins=grpc:../../..
+	protoc logical/plugin/pb/*.proto --go_out=plugins=grpc:../../..
 	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/protobuf:"/sentinel:"" protobuf:"/' helper/identity/types.pb.go helper/storagepacker/types.pb.go logical/plugin/pb/backend.pb.go
 	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' physical/types.pb.go
 
@@ -165,4 +180,4 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist static-dist
+.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev

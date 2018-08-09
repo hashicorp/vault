@@ -52,7 +52,7 @@ func (c *OperatorRekeyCommand) Synopsis() string {
 
 func (c *OperatorRekeyCommand) Help() string {
 	helpText := `
-Usage: vault rekey [options] [KEY]
+Usage: vault operator rekey [options] [KEY]
 
   Generates a new set of unseal keys. This can optionally change the total
   number of key shares or the required threshold of those key shares to
@@ -491,7 +491,7 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 	if !started {
 		c.UI.Error(wrapAtLength(
 			"No rekey is in progress. Start a rekey process by running " +
-				"\"vault rekey -init\"."))
+				"\"vault operator rekey -init\"."))
 		return 1
 	}
 
@@ -758,8 +758,8 @@ func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, status *api.R
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"The encrypted unseal keys are backed up to \"core/unseal-keys-backup\"" +
 				"in the storage backend. Remove these keys at any time using " +
-				"\"vault rekey -delete-backup\". Vault does not automatically remove " +
-				"these keys.",
+				"\"vault operator rekey -delete-backup\". Vault does not automatically " +
+				"remove these keys.",
 		)))
 	}
 

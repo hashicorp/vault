@@ -3,13 +3,18 @@ import hbs from 'htmlbars-inline-precompile';
 
 const { computed } = Ember;
 const GLYPHS_WITH_SVG_TAG = [
+  'download',
   'folder',
   'file',
+  'hidden',
   'perf-replication',
   'role',
+  'visible',
   'information-reversed',
   'true',
   'false',
+  'upload',
+  'control-lock',
 ];
 
 export default Ember.Component.extend({

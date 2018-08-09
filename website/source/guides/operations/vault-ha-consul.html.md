@@ -136,7 +136,7 @@ details.
 Create a configuration file for each Vault server and save it as
 **`/usr/local/etc/consul/client_agent.json`**.
 
-#### `consul_s1.hcl` Example
+#### `consul_s1.json` Example
 
     {
       "server": true,
@@ -154,7 +154,7 @@ Create a configuration file for each Vault server and save it as
       "acl_enforce_version_8": false
     }
 
-#### `consul_s2.hcl` Example
+#### `consul_s2.json` Example
 
     {
       "server": true,
@@ -172,7 +172,7 @@ Create a configuration file for each Vault server and save it as
       "acl_enforce_version_8": false
     }
 
-#### `consul_s3.hcl` Example
+#### `consul_s3.json` Example
 
     {
       "server": true,
@@ -337,7 +337,7 @@ would be `10.1.42.101`, `10.1.42.102`, and `10.1.42.103` respectively.
 Create a configuration file for each Vault server and save it as
 **`/usr/local/etc/consul/client_agent.json`**.
 
-#### `consul_c1.hcl` Example
+#### `consul_c1.json` Example
 
     {
       "server": false,
@@ -352,7 +352,7 @@ Create a configuration file for each Vault server and save it as
       "acl_enforce_version_8": false
     }
 
-#### `consul_c2.hcl` Example
+#### `consul_c2.json` Example
 
     {
       "server": false,

@@ -1,4 +1,7 @@
 syntax = "proto3";
+
+option go_package = "github.com/hashicorp/vault/builtin/logical/database/dbplugin";
+
 package dbplugin;
 
 import "google/protobuf/timestamp.proto";

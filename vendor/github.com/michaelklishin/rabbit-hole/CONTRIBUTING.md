@@ -11,12 +11,24 @@ The workflow is pretty standard:
 
 ## Running Tests
 
+### Required Plugins
+
 The test suite assumes you have a RabbitMQ node running on localhost with `rabbitmq_management` and
 `rabbitmq_shovel_management` plugins enabled and that
 `rabbitmqctl` is available in `PATH` (or `RABBITHOLE_RABBITMQCTL` points to it).
 
+To enable the plugins:
+
+    rabbitmq-plugins enable rabbitmq_management rabbitmq_shovel_management
+
+That will enable `rabbitmq_shovel` as a dependency.
+
+### Setting Up Virtual Hosts and Permissions
+
 Before running the tests, make sure to run `bin/ci/before_build.sh` that will create a vhost and user(s) needed
 by the test suite.
+
+### Running Tests
 
 The project uses [Ginkgo](http://onsi.github.io/ginkgo/) and [Gomega](https://github.com/onsi/gomega).
 

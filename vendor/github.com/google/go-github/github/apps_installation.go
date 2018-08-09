@@ -10,19 +10,6 @@ import (
 	"fmt"
 )
 
-// Installation represents a GitHub Apps installation.
-type Installation struct {
-	ID              *int64  `json:"id,omitempty"`
-	Account         *User   `json:"account,omitempty"`
-	AccessTokensURL *string `json:"access_tokens_url,omitempty"`
-	RepositoriesURL *string `json:"repositories_url,omitempty"`
-	HTMLURL         *string `json:"html_url,omitempty"`
-}
-
-func (i Installation) String() string {
-	return Stringify(i)
-}
-
 // ListRepos lists the repositories that are accessible to the authenticated installation.
 //
 // GitHub API docs: https://developer.github.com/v3/apps/installations/#list-repositories

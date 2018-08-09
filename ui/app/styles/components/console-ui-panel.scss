@@ -1,5 +1,5 @@
 .console-ui-panel-scroller {
-  background: linear-gradient(to right, #191A1C, #1B212D);
+  background: linear-gradient(to right, #191a1c, #1b212d);
   height: 0;
   left: 0;
   overflow: auto;
@@ -24,11 +24,12 @@
   font-weight: $font-weight-semibold;
   transition: justify-content $speed ease-in;
 
-
-  pre, p {
+  pre,
+  p {
     background: none;
     color: inherit;
     font-size: $body-size;
+    min-height: 2rem;
 
     &:not(.console-ui-command):not(.CodeMirror-line) {
       padding-left: $console-spacing;
@@ -42,8 +43,7 @@
     padding: $size-8 $size-4;
   }
 
-  .button,
-  {
+  .button {
     background: transparent;
     border: none;
     color: $grey-dark;
@@ -58,10 +58,16 @@
   }
 }
 
+.console-ui-panel .hover-copy-button,
+.console-ui-panel .hover-copy-button-static {
+  top: auto;
+  bottom: 0;
+  right: 0;
+}
+
 .console-ui-input {
   align-items: center;
   display: flex;
-
 
   input {
     background-color: rgba($black, 0.5);
@@ -84,25 +90,13 @@
 }
 
 .console-ui-output {
-  transition: background-color $speed;
+  transition: background-color $speed ease-in-out;
+  will-change: background-color;
   padding-right: $size-2;
   position: relative;
-
-  .console-ui-output-actions {
-    opacity: 0;
-    position: absolute;
-    right: 0;
-    top: 0;
-    transition: opacity $speed;
-    will-change: opacity;
-  }
-
+  background-color: rgba(#000, 0);
   &:hover {
-    background: rgba($black, 0.25);
-
-    .console-ui-output-actions {
-      opacity: 1;
-    }
+    background-color: rgba(#000, 0.5);
   }
 }
 
@@ -117,13 +111,13 @@
   }
 }
 
-.panel-open .console-ui-panel-scroller  {
+.panel-open .console-ui-panel-scroller {
   box-shadow: $box-shadow-highest;
   transform: translate3d(0, 0, 0);
   min-height: 400px;
 }
 
-.panel-open .console-ui-panel-scroller.fullscreen  {
+.panel-open .console-ui-panel-scroller.fullscreen {
   bottom: 0;
   top: 0;
   position: fixed;
@@ -131,19 +125,21 @@
 }
 
 .panel-open {
-  .navbar, .navbar-sections{
+  .navbar,
+  .navbar-sections {
     transition: transform $speed ease-in;
   }
 }
 
 .panel-open.panel-fullscreen {
-  .navbar, .navbar-sections{
+  .navbar,
+  .navbar-sections {
     transform: translate3d(0, -100px, 0);
   }
 }
 
-.page-container > header {
-  background: linear-gradient(to right, #191A1C, #1B212D);
+.page-container > header:not(.page-header) {
+  background: linear-gradient(to right, #191a1c, #1b212d);
 }
 
 header .navbar,
@@ -151,4 +147,19 @@ header .navbar-sections {
   z-index: 200;
   transform: translate3d(0, 0, 0);
   will-change: transform;
+}
+
+.console-spinner.control {
+  height: 21px;
+  width: 21px;
+  transform: scale(.75);
+  transform-origin: center;
+  &::after {
+    height: auto;
+    width: auto;
+    right: .25rem;
+    left: .25rem;
+    top: .25rem;
+    bottom: .25rem;
+  }
 }

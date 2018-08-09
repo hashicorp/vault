@@ -15,11 +15,11 @@ type packetResponseWriter struct {
 }
 
 func (r *packetResponseWriter) Write(packet *Packet) error {
-	raw, err := packet.Encode()
+	encoded, err := packet.Encode()
 	if err != nil {
 		return err
 	}
-	if _, err := r.conn.WriteTo(raw, r.addr); err != nil {
+	if _, err := r.conn.WriteTo(encoded, r.addr); err != nil {
 		return err
 	}
 	return nil
@@ -30,22 +30,47 @@ func (r *packetResponseWriter) Write(packet *Packet) error {
 type PacketServer struct {
 	// The address on which the server listens. Defaults to :1812.
 	Addr string
+
 	// The network on which the server listens. Defaults to udp.
-	Network      string
+	Network string
+
+	// The source from which the secret is obtained for parsing and validating
+	// the request.
 	SecretSource SecretSource
-	Handler      Handler
+
+	// Handler which is called to process the request.
+	Handler Handler
 
 	// Skip incoming packet authenticity validation.
 	// This should only be set to true for debugging purposes.
 	InsecureSkipVerify bool
 
-	mu           sync.Mutex
-	shuttingDown bool
-	ctx          context.Context
-	ctxDone      context.CancelFunc
-	running      chan struct{}
-	listeners    map[net.PacketConn]int
-	activeCount  int32
+	shutdownRequested int32
+
+	mu          sync.Mutex
+	ctx         context.Context
+	ctxDone     context.CancelFunc
+	listeners   map[net.PacketConn]uint
+	lastActive  chan struct{} // closed when the last active item finishes
+	activeCount int32
+}
+
+func (s *PacketServer) initLocked() {
+	if s.ctx == nil {
+		s.ctx, s.ctxDone = context.WithCancel(context.Background())
+		s.listeners = make(map[net.PacketConn]uint)
+		s.lastActive = make(chan struct{})
+	}
+}
+
+func (s *PacketServer) activeAdd() {
+	atomic.AddInt32(&s.activeCount, 1)
+}
+
+func (s *PacketServer) activeDone() {
+	if atomic.AddInt32(&s.activeCount, -1) == -1 {
+		close(s.lastActive)
+	}
 }
 
 // TODO: logger on PacketServer
@@ -60,35 +85,26 @@ func (s *PacketServer) Serve(conn net.PacketConn) error {
 	}
 
 	s.mu.Lock()
-	if s.shuttingDown {
+	s.initLocked()
+	if atomic.LoadInt32(&s.shutdownRequested) == 1 {
 		s.mu.Unlock()
 		return ErrServerShutdown
 	}
-	var ctx context.Context
-	if s.ctx == nil {
-		s.ctx, s.ctxDone = context.WithCancel(context.Background())
-		ctx = s.ctx
-	}
-	if s.running == nil {
-		s.running = make(chan struct{})
-	}
-	if s.listeners == nil {
-		s.listeners = make(map[net.PacketConn]int)
-	}
+
 	s.listeners[conn]++
 	s.mu.Unlock()
 
-	type activeKey struct {
+	type requestKey struct {
 		IP         string
 		Identifier byte
 	}
 
 	var (
-		activeLock sync.Mutex
-		active     = map[activeKey]struct{}{}
+		requestsLock sync.Mutex
+		requests     = map[requestKey]struct{}{}
 	)
 
-	atomic.AddInt32(&s.activeCount, 1)
+	s.activeAdd()
 	defer func() {
 		s.mu.Lock()
 		s.listeners[conn]--
@@ -96,43 +112,29 @@ func (s *PacketServer) Serve(conn net.PacketConn) error {
 			delete(s.listeners, conn)
 		}
 		s.mu.Unlock()
-
-		if atomic.AddInt32(&s.activeCount, -1) == 0 {
-			s.mu.Lock()
-			s.shuttingDown = false
-			close(s.running)
-			s.running = nil
-			s.ctx = nil
-			s.mu.Unlock()
-		}
+		s.activeDone()
 	}()
 
+	var buff [MaxPacketLength]byte
 	for {
-		var buff [MaxPacketLength]byte
 		n, remoteAddr, err := conn.ReadFrom(buff[:])
 		if err != nil {
-			s.mu.Lock()
-			if s.shuttingDown {
-				s.mu.Unlock()
-				return nil
+			if atomic.LoadInt32(&s.shutdownRequested) == 1 {
+				return ErrServerShutdown
 			}
-			s.mu.Unlock()
 
 			if ne, ok := err.(net.Error); ok && !ne.Temporary() {
 				return err
 			}
-			// TODO: log error?
 			continue
 		}
 
-		buffCopy := make([]byte, n)
-		copy(buffCopy, buff[:n])
-
-		atomic.AddInt32(&s.activeCount, 1)
+		s.activeAdd()
 		go func(buff []byte, remoteAddr net.Addr) {
-			secret, err := s.SecretSource.RADIUSSecret(ctx, remoteAddr)
+			defer s.activeDone()
+
+			secret, err := s.SecretSource.RADIUSSecret(s.ctx, remoteAddr)
 			if err != nil {
-				// TODO: log only if server is not shutting down?
 				return
 			}
 			if len(secret) == 0 {
@@ -140,27 +142,25 @@ func (s *PacketServer) Serve(conn net.PacketConn) error {
 			}
 
 			if !s.InsecureSkipVerify && !IsAuthenticRequest(buff, secret) {
-				// TODO: log?
 				return
 			}
 
 			packet, err := Parse(buff, secret)
 			if err != nil {
-				// TODO: error logger
 				return
 			}
 
-			key := activeKey{
+			key := requestKey{
 				IP:         remoteAddr.String(),
 				Identifier: packet.Identifier,
 			}
-			activeLock.Lock()
-			if _, ok := active[key]; ok {
-				activeLock.Unlock()
+			requestsLock.Lock()
+			if _, ok := requests[key]; ok {
+				requestsLock.Unlock()
 				return
 			}
-			active[key] = struct{}{}
-			activeLock.Unlock()
+			requests[key] = struct{}{}
+			requestsLock.Unlock()
 
 			response := packetResponseWriter{
 				conn: conn,
@@ -168,29 +168,20 @@ func (s *PacketServer) Serve(conn net.PacketConn) error {
 			}
 
 			defer func() {
-				activeLock.Lock()
-				delete(active, key)
-				activeLock.Unlock()
-
-				if atomic.AddInt32(&s.activeCount, -1) == 0 {
-					s.mu.Lock()
-					s.shuttingDown = false
-					close(s.running)
-					s.running = nil
-					s.ctx = nil
-					s.mu.Unlock()
-				}
+				requestsLock.Lock()
+				delete(requests, key)
+				requestsLock.Unlock()
 			}()
 
 			request := Request{
 				LocalAddr:  conn.LocalAddr(),
 				RemoteAddr: remoteAddr,
 				Packet:     packet,
-				ctx:        ctx,
+				ctx:        s.ctx,
 			}
 
 			s.Handler.ServeRADIUS(&response, &request)
-		}(buffCopy, remoteAddr)
+		}(append([]byte(nil), buff[:n]...), remoteAddr)
 	}
 }
 
@@ -221,32 +212,28 @@ func (s *PacketServer) ListenAndServe() error {
 	return s.Serve(pc)
 }
 
-// Shutdown gracefully stops the server. It first closes all listeners (which
-// stops accepting new packets) and then waits for running handlers to complete.
+// Shutdown gracefully stops the server. It first closes all listeners and then
+// waits for any running handlers to complete.
 //
-// Shutdown returns after all handlers have completed, or when ctx is canceled.
-// The PacketServer is ready for re-use once the function returns nil.
+// Shutdown returns after nil all handlers have completed. ctx.Err() is
+// returned if ctx is canceled.
+//
+// Any Serve methods return ErrShutdown after Shutdown is called.
 func (s *PacketServer) Shutdown(ctx context.Context) error {
 	s.mu.Lock()
-
-	if len(s.listeners) == 0 {
-		s.mu.Unlock()
-		return nil
-	}
-
-	if !s.shuttingDown {
-		s.shuttingDown = true
-		s.ctxDone()
+	s.initLocked()
+	if atomic.CompareAndSwapInt32(&s.shutdownRequested, 0, 1) {
 		for listener := range s.listeners {
 			listener.Close()
 		}
-	}
 
-	ch := s.running
+		s.ctxDone()
+		s.activeDone()
+	}
 	s.mu.Unlock()
 
 	select {
-	case <-ch:
+	case <-s.lastActive:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()

@@ -64,7 +64,7 @@ function run_tests() {
 
 	local args="-gocql.timeout=60s -runssl -proto=$proto -rf=3 -clusterSize=$clusterSize -autowait=2000ms -compressor=snappy -gocql.cversion=$version -cluster=$(ccm liveset) ./..."
 
-    go test -v -tags unit
+	go test -v -tags unit -race
 
 	if [ "$auth" = true ]
 	then
@@ -72,13 +72,13 @@ function run_tests() {
 		go test -run=TestAuthentication -tags "integration gocql_debug" -timeout=15s -runauth $args
 	else
 		sleep 1s
-		go test -tags "integration gocql_debug" -timeout=5m $args
+		go test -tags "integration gocql_debug" -timeout=5m -race $args
 
 		ccm clear
 		ccm start
 		sleep 1s
 
-		go test -tags "ccm gocql_debug" -timeout=5m $args
+		go test -tags "ccm gocql_debug" -timeout=5m -race $args
 	fi
 
 	ccm remove

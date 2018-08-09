@@ -19,27 +19,32 @@ export default Ember.Route.extend({
   templateName: 'vault/cluster/secrets/backend/list',
 
   beforeModel() {
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const backendModel = this.store.peekRecord('secret-engine', backend);
-    const type = backendModel && backendModel.get('type');
+    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    let { secret } = this.paramsFor(this.routeName);
+    let backendModel = this.store.peekRecord('secret-engine', backend);
+    let type = backendModel && backendModel.get('type');
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.transitionTo('vault.cluster.secrets');
+    }
+    if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
+      return this.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
   },
 
   getModelType(backend, tab) {
+    let backendModel = this.store.peekRecord('secret-engine', backend);
+    let type = backendModel.get('type');
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
       aws: 'role-aws',
       pki: tab === 'certs' ? 'pki-certificate' : 'role-pki',
+      // secret or secret-v2
+      cubbyhole: 'secret',
+      kv: backendModel.get('modelTypeForKV'),
+      generic: backendModel.get('modelTypeForKV'),
     };
-    let backendModel = this.store.peekRecord('secret-engine', backend);
-    let defaultType = 'secret';
-    if (backendModel.get('type') === 'kv' && backendModel.get('options.version') === 2) {
-      defaultType = 'secret-v2';
-    }
-    return types[backendModel.get('type')] || defaultType;
+    return types[type];
   },
 
   model(params) {

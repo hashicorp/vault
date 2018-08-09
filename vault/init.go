@@ -195,7 +195,9 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		c.logger.Error("cluster setup failed during init", "error", err)
 		return nil, err
 	}
-	if err := c.postUnseal(); err != nil {
+
+	activeCtx, ctxCancel := context.WithCancel(context.Background())
+	if err := c.postUnseal(activeCtx, ctxCancel); err != nil {
 		c.logger.Error("post-unseal setup failed during init", "error", err)
 		return nil, err
 	}
@@ -259,11 +261,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 		return nil
 	}
 
-	sealed, err := c.Sealed()
-	if err != nil {
-		c.logger.Error("error checking sealed status in auto-unseal", "error", err)
-		return errwrap.Wrapf("error checking sealed status in auto-unseal: {{err}}", err)
-	}
+	sealed := c.Sealed()
 	if !sealed {
 		return nil
 	}

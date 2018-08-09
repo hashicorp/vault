@@ -12,7 +12,7 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {

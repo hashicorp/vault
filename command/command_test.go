@@ -93,6 +93,23 @@ func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
 	})
 }
 
+// testVaultServerUnseal creates a test vault cluster and returns a configured
+// API client, list of unseal keys (as strings), and a closer function
+// configured with the given plugin directory.
+func testVaultServerPluginDir(tb testing.TB, pluginDir string) (*api.Client, []string, func()) {
+	tb.Helper()
+
+	return testVaultServerCoreConfig(tb, &vault.CoreConfig{
+		DisableMlock:       true,
+		DisableCache:       true,
+		Logger:             defaultVaultLogger,
+		CredentialBackends: defaultVaultCredentialBackends,
+		AuditBackends:      defaultVaultAuditBackends,
+		LogicalBackends:    defaultVaultLogicalBackends,
+		PluginDirectory:    pluginDir,
+	})
+}
+
 // testVaultServerCoreConfig creates a new vault cluster with the given core
 // configuration. This is a lower-level test helper.
 func testVaultServerCoreConfig(tb testing.TB, coreConfig *vault.CoreConfig) (*api.Client, []string, func()) {

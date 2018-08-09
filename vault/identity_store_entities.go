@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -51,7 +50,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathEntityRegister(),
+				logical.UpdateOperation: i.handleEntityUpdateCommon(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity"][0]),
@@ -86,7 +85,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathEntityIDUpdate(),
+				logical.UpdateOperation: i.handleEntityUpdateCommon(),
 				logical.ReadOperation:   i.pathEntityIDRead(),
 				logical.DeleteOperation: i.pathEntityIDDelete(),
 			},
@@ -144,25 +143,13 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 
 		force := d.Get("force").(bool)
 
-		toEntityForLocking, err := i.MemDBEntityByID(toEntityID, false)
-		if err != nil {
-			return nil, err
-		}
-
-		if toEntityForLocking == nil {
-			return logical.ErrorResponse("entity id to merge to is invalid"), nil
-		}
-
-		// Acquire the lock to modify the entity storage entry to merge to
-		toEntityLock := locksutil.LockForKey(i.entityLocks, toEntityForLocking.ID)
-		toEntityLock.Lock()
-		defer toEntityLock.Unlock()
+		i.lock.Lock()
+		defer i.lock.Unlock()
 
 		// Create a MemDB transaction to merge entities
 		txn := i.db.Txn(true)
 		defer txn.Abort()
 
-		// Re-read post lock acquisition
 		toEntity, err := i.MemDBEntityByID(toEntityID, true)
 		if err != nil {
 			return nil, err
@@ -172,59 +159,19 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 			return logical.ErrorResponse("entity id to merge to is invalid"), nil
 		}
 
-		if toEntity.ID != toEntityForLocking.ID {
-			return logical.ErrorResponse("acquired lock for an undesired entity"), nil
-		}
-
 		var conflictErrors error
 		for _, fromEntityID := range fromEntityIDs {
 			if fromEntityID == toEntityID {
 				return logical.ErrorResponse("to_entity_id should not be present in from_entity_ids"), nil
 			}
 
-			lockFromEntity, err := i.MemDBEntityByID(fromEntityID, false)
-			if err != nil {
-				return nil, err
-			}
-
-			if lockFromEntity == nil {
-				return logical.ErrorResponse("entity id to merge from is invalid"), nil
-			}
-
-			// Acquire the lock to modify the entity storage entry to merge from
-			fromEntityLock := locksutil.LockForKey(i.entityLocks, lockFromEntity.ID)
-
-			fromLockHeld := false
-
-			// There are only 256 lock buckets and the chances of entity ID collision
-			// is fairly high. When we are merging entities belonging to the same
-			// bucket, multiple attempts to acquire the same lock should be avoided.
-			if fromEntityLock != toEntityLock {
-				fromEntityLock.Lock()
-				fromLockHeld = true
-			}
-
-			// Re-read the entities post lock acquisition
 			fromEntity, err := i.MemDBEntityByID(fromEntityID, false)
 			if err != nil {
-				if fromLockHeld {
-					fromEntityLock.Unlock()
-				}
 				return nil, err
 			}
 
 			if fromEntity == nil {
-				if fromLockHeld {
-					fromEntityLock.Unlock()
-				}
 				return logical.ErrorResponse("entity id to merge from is invalid"), nil
-			}
-
-			if fromEntity.ID != lockFromEntity.ID {
-				if fromLockHeld {
-					fromEntityLock.Unlock()
-				}
-				return logical.ErrorResponse("acquired lock for an undesired entity"), nil
 			}
 
 			for _, alias := range fromEntity.Aliases {
@@ -235,9 +182,6 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 
 				err = i.MemDBUpsertAliasInTxn(txn, alias, false)
 				if err != nil {
-					if fromLockHeld {
-						fromEntityLock.Unlock()
-					}
 					return nil, errwrap.Wrapf("failed to update alias during merge: {{err}}", err)
 				}
 
@@ -257,23 +201,13 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 			// Delete the entity which we are merging from in MemDB using the same transaction
 			err = i.MemDBDeleteEntityByIDInTxn(txn, fromEntity.ID)
 			if err != nil {
-				if fromLockHeld {
-					fromEntityLock.Unlock()
-				}
 				return nil, err
 			}
 
 			// Delete the entity which we are merging from in storage
 			err = i.entityPacker.DeleteItem(fromEntity.ID)
 			if err != nil {
-				if fromLockHeld {
-					fromEntityLock.Unlock()
-				}
 				return nil, err
-			}
-
-			if fromLockHeld {
-				fromEntityLock.Unlock()
 			}
 		}
 
@@ -310,114 +244,105 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 	}
 }
 
-// pathEntityRegister is used to register a new entity
-func (i *IdentityStore) pathEntityRegister() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		_, ok := d.GetOk("id")
-		if ok {
-			return i.pathEntityIDUpdate()(ctx, req, d)
-		}
-
-		return i.handleEntityUpdateCommon(req, d, nil)
-	}
-}
-
-// pathEntityIDUpdate is used to update an entity based on the given entity ID
-func (i *IdentityStore) pathEntityIDUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		// Get entity id
-		entityID := d.Get("id").(string)
-
-		if entityID == "" {
-			return logical.ErrorResponse("missing entity id"), nil
-		}
-
-		entity, err := i.MemDBEntityByID(entityID, true)
-		if err != nil {
-			return nil, err
-		}
-		if entity == nil {
-			return nil, fmt.Errorf("invalid entity id")
-		}
-
-		return i.handleEntityUpdateCommon(req, d, entity)
-	}
-}
-
 // handleEntityUpdateCommon is used to update an entity
-func (i *IdentityStore) handleEntityUpdateCommon(req *logical.Request, d *framework.FieldData, entity *identity.Entity) (*logical.Response, error) {
-	var err error
-	var newEntity bool
+func (i *IdentityStore) handleEntityUpdateCommon() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		i.lock.Lock()
+		defer i.lock.Unlock()
 
-	// Entity will be nil when a new entity is being registered; create a new
-	// struct in that case.
-	if entity == nil {
-		entity = &identity.Entity{}
-		newEntity = true
-	}
+		var entity *identity.Entity
+		var err error
 
-	// Update the policies if supplied
-	entityPoliciesRaw, ok := d.GetOk("policies")
-	if ok {
-		entity.Policies = entityPoliciesRaw.([]string)
-	}
+		entityID := d.Get("id").(string)
+		if entityID != "" {
+			entity, err = i.MemDBEntityByID(entityID, true)
+			if err != nil {
+				return nil, err
+			}
+			if entity == nil {
+				return logical.ErrorResponse("entity not found from id"), nil
+			}
+		}
 
-	disabledRaw, ok := d.GetOk("disabled")
-	if ok {
-		entity.Disabled = disabledRaw.(bool)
-	}
+		// Get the name
+		entityName := d.Get("name").(string)
+		if entityName != "" {
+			entityByName, err := i.MemDBEntityByName(entityName, false)
+			if err != nil {
+				return nil, err
+			}
+			switch {
+			case entityByName == nil:
+				// Not found, safe to use this name with an existing or new entity
+			case entity == nil:
+				// We found an entity by name, but we don't currently allow
+				// updating based on name, only ID, so return an error
+				return logical.ErrorResponse("entity name is already in use"), nil
+			case entity.ID == entityByName.ID:
+				// Same exact entity, carry on (this is basically a noop then)
+			default:
+				return logical.ErrorResponse("entity name is already in use"), nil
+			}
+		}
 
-	// Get the name
-	entityName := d.Get("name").(string)
-	if entityName != "" {
-		entityByName, err := i.MemDBEntityByName(entityName, false)
+		// Entity will be nil when a new entity is being registered; create a new
+		// struct in that case.
+		if entity == nil {
+			entity = &identity.Entity{}
+		}
+		if entityName != "" {
+			entity.Name = entityName
+		}
+
+		// Update the policies if supplied
+		entityPoliciesRaw, ok := d.GetOk("policies")
+		if ok {
+			entity.Policies = entityPoliciesRaw.([]string)
+		}
+
+		disabledRaw, ok := d.GetOk("disabled")
+		if ok {
+			entity.Disabled = disabledRaw.(bool)
+		}
+
+		// Get entity metadata
+		metadata, ok, err := d.GetOkErr("metadata")
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
+		}
+		if ok {
+			entity.Metadata = metadata.(map[string]string)
+		}
+		// ID creation and some validations
+		err = i.sanitizeEntity(entity)
 		if err != nil {
 			return nil, err
 		}
-		switch {
-		case (newEntity && entityByName != nil), (entityByName != nil && entity.ID != "" && entityByName.ID != entity.ID):
-			return logical.ErrorResponse("entity name is already in use"), nil
+
+		// Prepare the response
+		respData := map[string]interface{}{
+			"id": entity.ID,
 		}
-		entity.Name = entityName
-	}
 
-	// Get entity metadata
-	metadata, ok, err := d.GetOkErr("metadata")
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
-	}
-	if ok {
-		entity.Metadata = metadata.(map[string]string)
-	}
-	// ID creation and some validations
-	err = i.sanitizeEntity(entity)
-	if err != nil {
-		return nil, err
-	}
+		var aliasIDs []string
+		for _, alias := range entity.Aliases {
+			aliasIDs = append(aliasIDs, alias.ID)
+		}
 
-	// Prepare the response
-	respData := map[string]interface{}{
-		"id": entity.ID,
+		respData["aliases"] = aliasIDs
+
+		// Update MemDB and persist entity object. New entities have not been
+		// looked up yet so we need to take the lock on the entity on upsert
+		if err := i.upsertEntity(entity, nil, true); err != nil {
+			return nil, err
+		}
+
+		// Return ID of the entity that was either created or updated along with
+		// its aliases
+		return &logical.Response{
+			Data: respData,
+		}, nil
 	}
-
-	var aliasIDs []string
-	for _, alias := range entity.Aliases {
-		aliasIDs = append(aliasIDs, alias.ID)
-	}
-
-	respData["aliases"] = aliasIDs
-
-	// Update MemDB and persist entity object
-	err = i.upsertEntity(entity, nil, true)
-	if err != nil {
-		return nil, err
-	}
-
-	// Return ID of the entity that was either created or updated along with
-	// its aliases
-	return &logical.Response{
-		Data: respData,
-	}, nil
 }
 
 // pathEntityIDRead returns the properties of an entity for a given entity ID
@@ -511,7 +436,47 @@ func (i *IdentityStore) pathEntityIDDelete() framework.OperationFunc {
 			return logical.ErrorResponse("missing entity id"), nil
 		}
 
-		return nil, i.deleteEntity(entityID)
+		i.lock.Lock()
+		defer i.lock.Unlock()
+
+		// Create a MemDB transaction to delete entity
+		txn := i.db.Txn(true)
+		defer txn.Abort()
+
+		// Fetch the entity using its ID
+		entity, err := i.MemDBEntityByIDInTxn(txn, entityID, true)
+		if err != nil {
+			return nil, err
+		}
+
+		// If there is no entity for the ID, do nothing
+		if entity == nil {
+			return nil, nil
+		}
+
+		// Delete all the aliases in the entity. This function will also remove
+		// the corresponding alias indexes too.
+		err = i.deleteAliasesInEntityInTxn(txn, entity, entity.Aliases)
+		if err != nil {
+			return nil, err
+		}
+
+		// Delete the entity using the same transaction
+		err = i.MemDBDeleteEntityByIDInTxn(txn, entity.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Delete the entity from storage
+		err = i.entityPacker.DeleteItem(entity.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Committing the transaction *after* successfully deleting entity
+		txn.Commit()
+
+		return nil, nil
 	}
 }
 
@@ -520,10 +485,15 @@ func (i *IdentityStore) pathEntityIDDelete() framework.OperationFunc {
 func (i *IdentityStore) pathEntityIDList() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		ws := memdb.NewWatchSet()
-		iter, err := i.MemDBEntities(ws)
+
+		txn := i.db.Txn(false)
+
+		iter, err := txn.Get(entitiesTable, "id")
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to fetch iterator for entities in memdb: {{err}}", err)
 		}
+
+		ws.Add(iter.WatchCh())
 
 		var entityIDs []string
 		entityInfo := map[string]interface{}{}

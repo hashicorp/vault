@@ -626,6 +626,13 @@ func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err e
 		return
 	}
 
+	// Parameter check, if this is wrong we will make a signature but
+	// not serialize it later.
+	if sig.PubKeyAlgo != priv.PubKeyAlgo {
+		err = errors.InvalidArgumentError("signature pub key algo does not match priv key")
+		return
+	}
+
 	switch priv.PubKeyAlgo {
 	case PubKeyAlgoRSA, PubKeyAlgoRSASignOnly:
 		sig.RSASignature.bytes, err = rsa.SignPKCS1v15(config.Random(), priv.PrivateKey.(*rsa.PrivateKey), sig.Hash, digest)
@@ -639,26 +646,29 @@ func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err e
 			digest = digest[:subgroupSize]
 		}
 		r, s, err := dsa.Sign(config.Random(), dsaPriv, digest)
-		if err == nil {
-			sig.DSASigR.bytes = r.Bytes()
-			sig.DSASigR.bitLength = uint16(8 * len(sig.DSASigR.bytes))
-			sig.DSASigS.bytes = s.Bytes()
-			sig.DSASigS.bitLength = uint16(8 * len(sig.DSASigS.bytes))
+		if err != nil {
+			return err
 		}
+		sig.DSASigR.bytes = r.Bytes()
+		sig.DSASigR.bitLength = uint16(8 * len(sig.DSASigR.bytes))
+		sig.DSASigS.bytes = s.Bytes()
+		sig.DSASigS.bitLength = uint16(8 * len(sig.DSASigS.bytes))
 	case PubKeyAlgoECDSA:
 		r, s, err := ecdsa.Sign(config.Random(), priv.PrivateKey.(*ecdsa.PrivateKey), digest)
-		if err == nil {
-			sig.ECDSASigR = FromBig(r)
-			sig.ECDSASigS = FromBig(s)
+		if err != nil {
+			return err
 		}
+		sig.ECDSASigR = FromBig(r)
+		sig.ECDSASigS = FromBig(s)
 	case PubKeyAlgoEdDSA:
 		r, s, err := priv.PrivateKey.(*EdDSAPrivateKey).Sign(digest)
-		if err == nil {
-			sig.EdDSASigR = FromBytes(r)
-			sig.EdDSASigS = FromBytes(s)
+		if err != nil {
+			return err
 		}
+		sig.EdDSASigR = FromBytes(r)
+		sig.EdDSASigS = FromBytes(s)
 	default:
-		err = errors.UnsupportedError("public key algorithm: " + strconv.Itoa(int(sig.PubKeyAlgo)))
+		err = errors.UnsupportedError("public key algorithm for signing: " + strconv.Itoa(int(priv.PubKeyAlgo)))
 	}
 
 	return

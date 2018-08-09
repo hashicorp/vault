@@ -1,3 +1,5 @@
+<img src="internal/radius.svg" width="250" align="right">
+
 # radius [![GoDoc](https://godoc.org/layeh.com/radius?status.svg)](https://godoc.org/layeh.com/radius)
 
 a Go (golang) [RADIUS](https://tools.ietf.org/html/rfc2865) client and server implementation
@@ -28,11 +30,7 @@ func main() {
 		panic(err)
 	}
 
-	if response.Code == radius.CodeAccessAccept {
-		fmt.Println("Accepted")
-	} else {
-		fmt.Println("Denied")
-	}
+	fmt.Println("Code:", response.Code)
 }
 ```
 
@@ -49,3 +47,7 @@ Included in this repository are sub-packages of generated helpers for commonly u
 ## License
 
 MPL 2.0
+
+## Author
+
+Tim Cooper (<tim.cooper@layeh.com>)

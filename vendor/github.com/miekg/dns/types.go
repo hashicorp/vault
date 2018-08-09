@@ -330,7 +330,7 @@ func (rr *MX) String() string {
 type AFSDB struct {
 	Hdr      RR_Header
 	Subtype  uint16
-	Hostname string `dns:"cdomain-name"`
+	Hostname string `dns:"domain-name"`
 }
 
 func (rr *AFSDB) String() string {

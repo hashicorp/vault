@@ -2,7 +2,7 @@ import { moduleFor, test } from 'ember-qunit';
 import Ember from 'ember';
 
 moduleFor('adapter:cluster', 'Unit | Adapter | cluster', {
-  needs: ['service:auth', 'service:flash-messages', 'service:version'],
+  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
 });
 
 test('cluster api urls', function(assert) {

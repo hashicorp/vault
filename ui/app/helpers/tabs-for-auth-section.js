@@ -33,7 +33,31 @@ const TABS_FOR_SETTINGS = {
       routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
     },
   ],
+  jwt: [
+    {
+      label: 'Configuration',
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+    },
+  ],
   kubernetes: [
+    {
+      label: 'Configuration',
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+    },
+  ],
+  ldap: [
+    {
+      label: 'Configuration',
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+    },
+  ],
+  okta: [
+    {
+      label: 'Configuration',
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+    },
+  ],
+  radius: [
     {
       label: 'Configuration',
       routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],

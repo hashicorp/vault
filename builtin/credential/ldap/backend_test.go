@@ -339,6 +339,39 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
+func TestBackend_basic_noPolicies(t *testing.T) {
+	b := factory(t)
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t),
+			// Create LDAP user
+			testAccStepUser(t, "tesla", ""),
+			// Authenticate
+			testAccStepLoginNoAttachedPolicies(t, "tesla", "password"),
+			testAccStepUserList(t, []string{"tesla"}),
+		},
+	})
+}
+
+func TestBackend_basic_group_noPolicies(t *testing.T) {
+	b := factory(t)
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t),
+			// Create engineers group with no policies
+			testAccStepGroup(t, "engineers", ""),
+			// Map tesla user with local engineers group
+			testAccStepUser(t, "tesla", "engineers"),
+			// Authenticate
+			testAccStepLoginNoAttachedPolicies(t, "tesla", "password"),
+			// Verify group mapping can be listed back
+			testAccStepGroupList(t, []string{"engineers"}),
+		},
+	})
+}
+
 func TestBackend_basic_authbind(t *testing.T) {
 	b := factory(t)
 
@@ -633,6 +666,20 @@ func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestSt
 
 		// Verifies user tesla maps to groups via local group (engineers) as well as remote group (Scientists)
 		Check: logicaltest.TestCheckAuth([]string{"bar", "default", "foo"}),
+	}
+}
+
+func testAccStepLoginNoAttachedPolicies(t *testing.T, user string, pass string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "login/" + user,
+		Data: map[string]interface{}{
+			"password": pass,
+		},
+		Unauthenticated: true,
+
+		// Verifies user tesla maps to groups via local group (engineers) as well as remote group (Scientists)
+		Check: logicaltest.TestCheckAuth([]string{"default"}),
 	}
 }
 

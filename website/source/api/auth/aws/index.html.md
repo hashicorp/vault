@@ -105,7 +105,6 @@ $ curl \
 ```json
 {
   "data": {
-    "secret_key": "vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj",
     "access_key": "VKIAJBRHKH6EVTTNXDHA",
     "endpoint": "",
     "iam_endpoint": "",
@@ -675,7 +674,7 @@ list in order to satisfy that constraint.
 - `disallow_reauthentication` `(bool: false)` - If set, only allows a single
   token to be granted per instance ID. In order to perform a fresh login, the
   entry in whitelist for the instance ID needs to be cleared using
-  'auth/aws/identity-whitelist/<instance_id>' endpoint. Defaults to 'false'.
+  `auth/aws/identity-whitelist/<instance_id>` endpoint. Defaults to 'false'.
   This only applies to authentications via the ec2 auth method. This is mutually
   exclusive with `allow_instance_migration`.
 
@@ -988,8 +987,8 @@ token.
 
 ### Parameters
 
-- `role_tag` `(string: <required>)` - Role tag to be blacklisted. The tag can be
-  supplied as-is. In order to avoid any encoding problems, it can be base64
+- `role_tag` `(string: <required>)` - Role tag to be blacklisted. This is the `tag_value` returned when the role tag is
+  created. The tag can be supplied as-is. In order to avoid any encoding problems, it can be base64
   encoded.
 
 ### Sample Request

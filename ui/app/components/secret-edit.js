@@ -1,7 +1,6 @@
 import Ember from 'ember';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
-import autosize from 'autosize';
 import KVObject from 'vault/lib/kv-object';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
@@ -48,13 +47,6 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     this.checkRows();
     if (this.get('mode') === 'edit') {
       this.send('addRow');
-    }
-  },
-
-  didRender() {
-    const textareas = this.$('textarea');
-    if (textareas.length) {
-      autosize(textareas);
     }
   },
 
@@ -164,7 +156,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    handleKeyDown(_, e) {
+    handleKeyDown(e) {
       e.stopPropagation();
       if (!(e.keyCode === keys.ENTER && e.metaKey)) {
         return;

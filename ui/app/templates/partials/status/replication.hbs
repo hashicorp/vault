@@ -8,7 +8,7 @@
             mode="dr"
             display='menu'
             cluster=cluster
-            tagName='a'
+            tagName=(or itemTag 'a')
             click=(action d.actions.close)
           }}
         </li>
@@ -21,7 +21,7 @@
             mode="performance"
             display='menu'
             cluster=cluster
-            tagName='a'
+            tagName=(or itemTag 'a')
             click=(action d.actions.close)
           }}
         </li>

@@ -19,9 +19,8 @@ export default ApplicationSerializer.extend({
       return model;
     });
     delete payload.data.key_info;
-    return list.sort((a,b) => {
+    return list.sort((a, b) => {
       return a.name.localeCompare(b.name);
     });
   },
-
 });

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	proxyproto "github.com/armon/go-proxyproto"
 	"github.com/hashicorp/errwrap"
@@ -41,12 +42,14 @@ func WrapInProxyProto(listener net.Listener, config *ProxyProtoConfig) (net.List
 	switch config.Behavior {
 	case "use_always":
 		newLn = &proxyproto.Listener{
-			Listener: listener,
+			Listener:           listener,
+			ProxyHeaderTimeout: 10 * time.Second,
 		}
 
 	case "allow_authorized", "deny_unauthorized":
 		newLn = &proxyproto.Listener{
-			Listener: listener,
+			Listener:           listener,
+			ProxyHeaderTimeout: 10 * time.Second,
 			SourceCheck: func(addr net.Addr) (bool, error) {
 				config.RLock()
 				defer config.RUnlock()

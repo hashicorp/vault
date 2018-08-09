@@ -3,6 +3,7 @@ package approle
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -30,7 +31,7 @@ type backend struct {
 	view logical.Storage
 
 	// Guard to clean-up the expired SecretID entries
-	tidySecretIDCASGuard uint32
+	tidySecretIDCASGuard *uint32
 
 	// Locks to make changes to role entries. These will be initialized to a
 	// predefined number of locks when the backend is created, and will be
@@ -56,6 +57,8 @@ type backend struct {
 	// secretIDListingLock is a dedicated lock for listing SecretIDAccessors
 	// for all the SecretIDs issued against an approle
 	secretIDListingLock sync.RWMutex
+
+	testTidyDelay time.Duration
 }
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -85,6 +88,8 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 
 		// Create locks to modify the generated SecretIDAccessors
 		secretIDAccessorLocks: locksutil.CreateLocks(),
+
+		tidySecretIDCASGuard: new(uint32),
 	}
 
 	// Attach the paths and secrets that are to be handled by the backend
@@ -155,7 +160,7 @@ func (b *backend) invalidate(_ context.Context, key string) {
 func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error {
 	// Initiate clean-up of expired SecretID entries
 	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
-		b.tidySecretID(ctx, req.Storage)
+		b.tidySecretID(ctx, req)
 	}
 	return nil
 }

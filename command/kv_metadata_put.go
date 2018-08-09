@@ -26,7 +26,7 @@ func (c *KVMetadataPutCommand) Synopsis() string {
 
 func (c *KVMetadataPutCommand) Help() string {
 	helpText := `
-Usage: vault metadata kv put [options] KEY [DATA]
+Usage: vault metadata kv put [options] KEY
 
   This command can be used to create a blank key in the key-value store or to
   update key configuration for a specified key.
@@ -125,6 +125,9 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 	secret, err := client.Logical().Write(path, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
+		if secret != nil {
+			OutputSecret(c.UI, secret)
+		}
 		return 2
 	}
 	if secret == nil {

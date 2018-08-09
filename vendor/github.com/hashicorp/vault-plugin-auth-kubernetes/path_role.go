@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -65,6 +67,11 @@ be renewed. Defaults to 0, in which case the value will fall back to the system/
 should never expire. The token should be renewed within the
 duration specified by this value. At each renewal, the token's
 TTL will be set to the value of this parameter.`,
+				},
+				"bound_cidrs": &framework.FieldSchema{
+					Type: framework.TypeCommaStringSlice,
+					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
+IP addresses which can perform the login operation.`,
 				},
 			},
 			ExistenceCheck: b.pathRoleExistenceCheck(),
@@ -142,6 +149,7 @@ func (b *kubeAuthBackend) pathRoleRead() framework.OperationFunc {
 				"policies":                         role.Policies,
 				"period":                           role.Period,
 				"ttl":                              role.TTL,
+				"bound_cidrs":                      role.BoundCIDRs,
 			},
 		}
 
@@ -276,6 +284,13 @@ func (b *kubeAuthBackend) pathRoleCreateUpdate() framework.OperationFunc {
 			return logical.ErrorResponse("service_account_names and service_account_namespaces can not both be \"*\""), nil
 		}
 
+		// Parse bound CIDRs.
+		boundCIDRs, err := parseutil.ParseAddrs(data.Get("bound_cidrs"))
+		if err != nil {
+			return logical.ErrorResponse("unable to parse bound_cidrs: " + err.Error()), nil
+		}
+		role.BoundCIDRs = boundCIDRs
+
 		// Store the entry.
 		entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(roleName), role)
 		if err != nil {
@@ -320,6 +335,8 @@ type roleStorageEntry struct {
 	// ServiceAccountNamespaces is the array of namespaces able to access this
 	// role.
 	ServiceAccountNamespaces []string `json:"bound_service_account_namespaces" mapstructure:"bound_service_account_namespaces" structs:"bound_service_account_namespaces"`
+
+	BoundCIDRs []*sockaddr.SockAddrMarshaler
 }
 
 var roleHelp = map[string][2]string{

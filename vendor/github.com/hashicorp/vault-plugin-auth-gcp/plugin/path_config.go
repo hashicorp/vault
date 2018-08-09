@@ -38,6 +38,11 @@ If not specified, will use the OAuth2 library default. Useful for testing.`,
 }
 
 func (b *GcpAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Validate we didn't get extraneous fields
+	if err := validateFields(req, data); err != nil {
+		return nil, logical.CodedError(422, err.Error())
+	}
+
 	config, err := b.config(ctx, req.Storage)
 
 	if err != nil {
@@ -75,17 +80,27 @@ func (b *GcpAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 		return nil, nil
 	}
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"client_email":          config.Credentials.ClientEmail,
-			"client_id":             config.Credentials.ClientId,
-			"private_key_id":        config.Credentials.PrivateKeyId,
-			"project_id":            config.Credentials.ProjectId,
-			"google_certs_endpoint": config.GoogleCertsEndpoint,
-		},
+	resp := make(map[string]interface{})
+
+	if v := config.Credentials.ClientEmail; v != "" {
+		resp["client_email"] = v
+	}
+	if v := config.Credentials.ClientId; v != "" {
+		resp["client_id"] = v
+	}
+	if v := config.Credentials.PrivateKeyId; v != "" {
+		resp["private_key_id"] = v
+	}
+	if v := config.Credentials.ProjectId; v != "" {
+		resp["project_id"] = v
+	}
+	if v := config.GoogleCertsEndpoint; v != "" {
+		resp["google_certs_endpoint"] = v
 	}
 
-	return resp, nil
+	return &logical.Response{
+		Data: resp,
+	}, nil
 }
 
 const confHelpSyn = `Configure credentials used to query the GCP IAM API to verify authenticating service accounts`
@@ -100,8 +115,8 @@ iam AUTH:
 
 // gcpConfig contains all config required for the GCP backend.
 type gcpConfig struct {
-	Credentials         *gcputil.GcpCredentials `json:"credentials" structs:"credentials" mapstructure:"credentials"`
-	GoogleCertsEndpoint string                  `json:"google_certs_endpoint" structs:"google_certs_endpoint" mapstructure:"google_certs_endpoint"`
+	Credentials         *gcputil.GcpCredentials `json:"credentials"`
+	GoogleCertsEndpoint string                  `json:"google_certs_endpoint"`
 }
 
 // Update sets gcpConfig values parsed from the FieldData.

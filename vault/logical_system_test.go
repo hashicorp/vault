@@ -442,7 +442,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 	rootCheckFunc(t, resp)
 
 	// Create a non-root token
-	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
+	testMakeTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
 
 	nonRootCheckFunc := func(t *testing.T, resp *logical.Response) {
 		expected1 := []string{"create", "sudo", "update"}
@@ -544,7 +544,7 @@ func testCapabilities(t *testing.T, endpoint string) {
 		t.Fatalf("err: %v", err)
 	}
 
-	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
+	testMakeTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
 	req = logical.TestRequest(t, logical.UpdateOperation, endpoint)
 	if endpoint == "capabilities-self" {
 		req.ClientToken = "tokenid"
@@ -600,7 +600,7 @@ func TestSystemBackend_CapabilitiesAccessor_BC(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
+	testMakeTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
 
 	te, err = core.tokenStore.Lookup(context.Background(), "tokenid")
 	if err != nil {
@@ -680,7 +680,7 @@ func TestSystemBackend_leases(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.ClientToken = root
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -691,7 +691,7 @@ func TestSystemBackend_leases(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -726,7 +726,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.ClientToken = root
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -737,7 +737,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -785,7 +785,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Generate multiple leases
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -795,7 +795,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -823,7 +823,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	req = logical.TestRequest(t, logical.UpdateOperation, "secret/bar")
 	req.Data["foo"] = "bar"
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -834,7 +834,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/bar")
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -870,7 +870,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.ClientToken = root
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -881,7 +881,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -906,7 +906,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	req.Data["foo"] = "bar"
 	req.Data["ttl"] = "180s"
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -917,7 +917,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1034,7 +1034,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	req.Data["foo"] = "bar"
 	req.Data["lease"] = "1h"
 	req.ClientToken = root
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1045,7 +1045,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1076,7 +1076,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1098,7 +1098,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1176,7 +1176,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	req.Data["foo"] = "bar"
 	req.Data["lease"] = "1h"
 	req.ClientToken = root
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1187,7 +1187,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1224,7 +1224,7 @@ func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
 	req.Data["foo"] = "bar"
 	req.Data["lease"] = "1h"
 	req.ClientToken = root
-	resp, err := core.HandleRequest(req)
+	resp, err := core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1235,7 +1235,7 @@ func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	resp, err = core.HandleRequest(req)
+	resp, err = core.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1264,8 +1264,10 @@ func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_revokePrefixAuth(t *testing.T) {
-	core, ts, _, _ := TestCoreWithTokenStore(t)
+func TestSystemBackend_revokePrefixAuth_newUrl(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+
+	ts := core.tokenStore
 	bc := &logical.BackendConfig{
 		Logger: core.logger,
 		System: logical.StaticSystemView{
@@ -1281,14 +1283,12 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 
 	exp := ts.expiration
 
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		ID:   "foo",
 		Path: "auth/github/login/bar",
+		TTL:  time.Hour,
 	}
-	err = ts.create(context.Background(), te)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testMakeTokenDirectly(t, ts, te)
 
 	te, err = ts.Lookup(context.Background(), "foo")
 	if err != nil {
@@ -1305,7 +1305,7 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 			TTL: time.Hour,
 		},
 	}
-	err = exp.RegisterAuth(te.Path, auth)
+	err = exp.RegisterAuth(context.Background(), te.Path, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1329,7 +1329,8 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 }
 
 func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
-	core, ts, _, _ := TestCoreWithTokenStore(t)
+	core, _, _ := TestCoreUnsealed(t)
+	ts := core.tokenStore
 	bc := &logical.BackendConfig{
 		Logger: core.logger,
 		System: logical.StaticSystemView{
@@ -1345,14 +1346,12 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 
 	exp := ts.expiration
 
-	te := &TokenEntry{
+	te := &logical.TokenEntry{
 		ID:   "foo",
 		Path: "auth/github/login/bar",
+		TTL:  time.Hour,
 	}
-	err = ts.create(context.Background(), te)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testMakeTokenDirectly(t, ts, te)
 
 	te, err = ts.Lookup(context.Background(), "foo")
 	if err != nil {
@@ -1369,7 +1368,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			TTL: time.Hour,
 		},
 	}
-	err = exp.RegisterAuth(te.Path, auth)
+	err = exp.RegisterAuth(context.Background(), te.Path, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2396,7 +2395,7 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
 
-	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"secret"})
+	testMakeTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"secret"})
 
 	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/kv")
 	req.ClientToken = "tokenid"

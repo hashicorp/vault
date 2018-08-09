@@ -435,11 +435,18 @@ can be set in a CSR are supported.
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list.
 
+- `uri_sans` `(string: "")` – Specifies the requested URI Subject Alternative
+  Names, in a comma-delimited list.
+
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
   must match values specified on the role in `allowed_other_sans` (globbing
   allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
   only current valid type is `UTF8`. This can be a comma-delimited list or a
   JSON string slice.
+
+- `ttl` `(string: "")` – Specifies the requested Time To Live (after which the
+  certificate will be expired). This cannot be larger than the engine's max (or,
+  if not set, the system max).
 
 - `format` `(string: "")` – Specifies the format for returned data. This can be
   `pem`, `der`, or `pem_bundle`; defaults to `pem`. If `der`, the output is
@@ -588,6 +595,9 @@ need to request a new certificate.**
 - `ip_sans` `(string: "")` – Specifies requested IP Subject Alternative Names,
   in a comma-delimited list. Only valid if the role allows IP SANs (which is the
   default).
+
+- `uri_sans` `(string: "")` – Specifies the requested URI Subject Alternative
+  Names, in a comma-delimited list.
 
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
   must match values specified on the role in `allowed_other_sans` (globbing
@@ -762,6 +772,12 @@ request is denied.
   Alternative Names. No authorization checking is performed except to verify
   that the given values are valid IP addresses.
 
+- `allowed_uri_sans` `(string: "")` - Defines allowed URI Subject
+  Alternative Names. No authorization checking is performed except to verify
+  that the given values are valid URIs. This can be a comma-delimited list or
+  a JSON string slice. Values can contain glob patterns (e.g. 
+  `spiffe://hostname/*`).
+
 - `allowed_other_sans` `(string: "")` – Defines allowed custom OID/UTF8-string
   SANs. This field supports globbing. The format is the same as OpenSSL:
   `<oid>;<type>:<value>` where the only current valid type is `UTF8`. This can
@@ -794,6 +810,12 @@ request is denied.
   Specifies the allowed key usage constraint on issued certificates. Valid 
   values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage - simply 
   drop the `KeyUsage` part of the value. Values are not case-sensitive. To 
+  specify no key usage constraints, set this to an empty list.
+
+- `ext_key_usage` `(list: [])` –
+  Specifies the allowed extended key usage constraint on issued certificates. Valid 
+  values can be found at https://golang.org/pkg/crypto/x509/#ExtKeyUsage - simply 
+  drop the `ExtKeyUsage` part of the value. Values are not case-sensitive. To 
   specify no key usage constraints, set this to an empty list.
 
 - `use_csr_common_name` `(bool: true)` – When used with the CSR signing
@@ -911,6 +933,7 @@ $ curl \
     "allow_localhost": true,
     "allow_subdomains": false,
     "allowed_domains": ["example.com", "foobar.com"],
+    "allow_uri_sans": ["example.com","spiffe://*"],
     "client_flag": true,
     "code_signing_flag": false,
     "key_bits": 2048,
@@ -1014,6 +1037,9 @@ existing cert/key with new values.
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list.
 
+- `uri_sans` `(string: "")` – Specifies the requested URI Subject Alternative
+  Names, in a comma-delimited list.
+
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
   must match values specified on the role in `allowed_other_sans` (globbing
   allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
@@ -1054,8 +1080,7 @@ existing cert/key with new values.
 
 - `permitted_dns_domains` `(string: "")` – A comma separated string (or, string
   array) containing DNS domains for which certificates are allowed to be issued
-  or signed by this CA certificate. Supports subdomains via a `.` in front of
-  the domain, as per
+  or signed by this CA certificate. Note that subdomains are allowed, as per
   [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
 
 - `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
@@ -1164,6 +1189,9 @@ verbatim.
   they will be parsed into their respective fields.
 
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
+  Names, in a comma-delimited list.
+
+- `uri_sans` `(string: "")` – Specifies the requested URI Subject Alternative
   Names, in a comma-delimited list.
 
 - `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
@@ -1365,6 +1393,10 @@ root CA need be in a client's trust store.
   Names, in a comma-delimited list. Only valid if the role allows IP SANs (which
   is the default).
 
+- `uri_sans` `(string: "")` – Specifies the requested URI Subject Alternative
+  Names, in a comma-delimited list. If any requested URIs do not match role policy, 
+  the entire request will be denied.
+
 - `ttl` `(string: "")` – Specifies the requested Time To Live. Cannot be greater
   than the role's `max_ttl` value. If not provided, the role's `ttl` value will
   be used. Note that the role values default to system values if not explicitly
@@ -1429,6 +1461,18 @@ have access.**
 
 - `csr` `(string: <required>)` – Specifies the PEM-encoded CSR.
 
+- `key_usage` `(list: ["DigitalSignature", "KeyAgreement", "KeyEncipherment"])` –
+  Specifies the allowed key usage constraint on issued certificates. Valid 
+  values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage - simply 
+  drop the `KeyUsage` part of the value. Values are not case-sensitive. To 
+  specify no key usage constraints, set this to an empty list.
+
+- `ext_key_usage` `(list: [])` –
+  Specifies the allowed extended key usage constraint on issued certificates. Valid 
+  values can be found at https://golang.org/pkg/crypto/x509/#ExtKeyUsage - simply 
+  drop the `ExtKeyUsage` part of the value. Values are not case-sensitive. To 
+  specify no key usage constraints, set this to an empty list.
+
 - `ttl` `(string: "")` – Specifies the requested Time To Live. Cannot be greater
   than the engine's `max_ttl` value. If not provided, the engine's `ttl` value
   will be used, which defaults to system values if not explicitly set.
@@ -1491,6 +1535,10 @@ expiration time.
 
 - `tidy_revocation_list` `(bool: false)` Specifies whether to tidy up the
   revocation list (CRL).
+
+- `tidy_revoked_certs` `(bool: false)` Set to true to expire all revoked
+  certificates, even if their duration has not yet passed. This will cause these
+  certificates to be removed from the CRL the next time the CRL is generated.
 
 - `safety_buffer` `(string: "")` Specifies  A duration (given as an integer
   number of seconds or a string; defaults to `72h`) used as a safety buffer to

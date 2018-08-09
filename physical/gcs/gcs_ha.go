@@ -1,6 +1,7 @@
 package gcs
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -12,7 +13,6 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/physical"
 	"github.com/pkg/errors"
-	"golang.org/x/net/context"
 	"google.golang.org/api/googleapi"
 )
 

@@ -41,26 +41,25 @@
     </p>
   {{else}}
     <div class="control is-expanded">
-      <div class="file">
-        <label class="file-label is-fullwidth">
+        <div class="file has-name is-fullwidth">
+        <label class="file-label">
           <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-text-file-input=true>
-          <span class="file-cta is-fullwidth">
-            <span class="file-icon has-text-grey-dark">
-              {{i-con glyph="document" size=16}}
-            </span>
-            <span class="file-label has-text-grey-dark" data-test-text-file-input-label=true>
-              {{#if file.fileName}}
-                {{file.fileName}}
-              {{else}}
-                Choose a file&hellip;
-              {{/if}}
-            </span>
+          <span class="file-cta button">
+            {{i-con glyph="upload" class="has-light-grey-text" size=16}}
+            Choose a file…
+          </span>
+          <span class="file-name has-text-grey-dark" data-test-text-file-input-label=true>
             {{#if file.fileName}}
-              <button type="button" class="file-delete-button" {{action 'clearFile'}} data-test-text-clear=true>
-                {{i-con glyph="close" size=16}}
-              </button>
+              {{file.fileName}}
+            {{else}}
+              No file chosen
             {{/if}}
           </span>
+          {{#if file.fileName}}
+            <button type="button" class="file-delete-button" {{action 'clearFile'}} data-test-text-clear=true>
+              {{i-con glyph="close-circled-border" size=16}}
+            </button>
+          {{/if}}
         </label>
       </div>
     </div>

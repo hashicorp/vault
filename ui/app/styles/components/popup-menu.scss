@@ -28,7 +28,6 @@
       background: transparent;
       box-shadow: none;
       border: none;
-      color: $menu-item-color;
       display: block;
       height: auto;
       font-size: $size-7;
@@ -37,7 +36,11 @@
       text-align: left;
       text-decoration: none;
       width: 100%;
+    }
 
+    button.link,
+    a {
+      color: $menu-item-color;
       &:hover {
         background-color: $menu-item-hover-background-color;
         color: $menu-item-hover-color;
@@ -79,6 +82,15 @@
   }
 }
 
+.popup-menu-content p {
+  box-shadow: none;
+  padding-top: $size-10;
+  font-weight: $font-weight-semibold;
+}
+
+.popup-menu-content .level-left {
+  flex-shrink: 1;
+}
 .popup-menu-trigger {
   height: 2rem;
   min-width: 0;

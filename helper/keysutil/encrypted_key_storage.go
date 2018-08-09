@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math/big"
 	paths "path"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/golang-lru"
@@ -77,10 +78,6 @@ func NewEncryptedKeyStorageWrapper(config EncryptedKeyStorageConfig) (*Encrypted
 
 	if !config.Policy.ConvergentEncryption {
 		return nil, ErrPolicyConvergentEncryption
-	}
-
-	if config.Policy.ConvergentVersion < 2 {
-		return nil, ErrPolicyConvergentVersion
 	}
 
 	if config.Prefix == "" {
@@ -209,6 +206,7 @@ func (s *encryptedKeyStorage) List(ctx context.Context, prefix string) ([]string
 		decryptedKeys[i] = plaintext
 	}
 
+	sort.Strings(decryptedKeys)
 	return decryptedKeys, nil
 }
 

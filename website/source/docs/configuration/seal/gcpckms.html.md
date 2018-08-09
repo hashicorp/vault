@@ -60,7 +60,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 ## Authentication
 
-Authentication-related values must be provided, either as enviroment
+Authentication-related values must be provided, either as environment
 variables or as configuration parameters.
 
 ```text
@@ -93,4 +93,4 @@ This seal supports rotating keys defined in Google Cloud KMS
 [doc](https://cloud.google.com/kms/docs/rotating-keys). Both scheduled rotation and manual 
 rotation is supported for CKMS since the key information. Old keys version must not be 
 disabled or deleted and are used to decrypt older data. Any new or updated data will be 
-encrypted with the primate key version.
+encrypted with the primary key version.

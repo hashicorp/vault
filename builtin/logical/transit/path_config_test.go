@@ -10,14 +10,7 @@ import (
 )
 
 func TestTransit_ConfigSettings(t *testing.T) {
-	var b *backend
-	sysView := logical.TestSystemView()
-	storage := &logical.InmemStorage{}
-
-	b = Backend(&logical.BackendConfig{
-		StorageView: storage,
-		System:      sysView,
-	})
+	b, storage := createBackendWithSysView(t)
 
 	doReq := func(req *logical.Request) *logical.Response {
 		resp, err := b.HandleRequest(context.Background(), req)

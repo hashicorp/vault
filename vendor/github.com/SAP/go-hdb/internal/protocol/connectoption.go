@@ -46,7 +46,7 @@ const (
 	coColumnarResultset            connectOption = 26
 	coScrollablResultSet           connectOption = 27
 	coClientInfoNullValueSupported connectOption = 28
-	coAssociatedConnectionId       connectOption = 29
+	coAssociatedConnectionID       connectOption = 29
 	coNoTransactionalPrepare       connectOption = 30
 	coFDAEnabled                   connectOption = 31
 	coOSUser                       connectOption = 32

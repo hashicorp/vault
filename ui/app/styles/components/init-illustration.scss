@@ -1,5 +1,18 @@
+.init-box {
+  position: relative;
+  z-index: 10;
+}
 .init-illustration {
+  bottom: 0;
+  right: 0;
+  overflow: hidden;
   position: absolute;
-  left: calc(50% - 100px);
-  top: -94px;
+  height: 200px;
+  width: 200px;
+}
+.init-illustration svg {
+  position: absolute;
+  right: -50px;
+  bottom: -50px;
+  opacity: 0.8;
 }

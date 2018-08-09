@@ -129,7 +129,7 @@ func (l *Conn) PasswordModify(passwordModifyRequest *PasswordModifyRequest) (*Pa
 			return nil, NewError(resultCode, errors.New(resultDescription))
 		}
 	} else {
-		return nil, NewError(ErrorUnexpectedResponse, fmt.Errorf("Unexpected Response: %d", packet.Children[1].Tag))
+		return nil, NewError(ErrorUnexpectedResponse, fmt.Errorf("unexpected Response: %d", packet.Children[1].Tag))
 	}
 
 	extendedResponse := packet.Children[1]

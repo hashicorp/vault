@@ -21,7 +21,7 @@ test('auth query params', function(assert) {
   const backends = supportedAuthBackends();
   visit('/vault/auth');
   andThen(() => {
-    assert.equal(currentURL(), '/vault/auth');
+    assert.equal(currentURL(), '/vault/auth?with=token');
   });
   backends.reverse().forEach(backend => {
     click(`[data-test-auth-method-link="${backend.type}"]`);
@@ -38,7 +38,7 @@ test('auth query params', function(assert) {
 test('it clears token when changing selected auth method', function(assert) {
   visit('/vault/auth');
   andThen(() => {
-    assert.equal(currentURL(), '/vault/auth');
+    assert.equal(currentURL(), '/vault/auth?with=token');
   });
   component.token('token').tabs.filterBy('name', 'GitHub')[0].link();
   component.tabs.filterBy('name', 'Token')[0].link();

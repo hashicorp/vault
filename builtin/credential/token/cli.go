@@ -104,7 +104,8 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	if err != nil {
 		return nil, errwrap.Wrapf("error accessing token accessor: {{err}}", err)
 	}
-	policies, err := secret.TokenPolicies()
+	// This populates secret.Auth
+	_, err = secret.TokenPolicies()
 	if err != nil {
 		return nil, errwrap.Wrapf("error accessing token policies: {{err}}", err)
 	}
@@ -122,10 +123,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	}
 	return &api.Secret{
 		Auth: &api.SecretAuth{
-			ClientToken: id,
-			Accessor:    accessor,
-			Policies:    policies,
-			Metadata:    metadata,
+			ClientToken:      id,
+			Accessor:         accessor,
+			Policies:         secret.Auth.Policies,
+			TokenPolicies:    secret.Auth.TokenPolicies,
+			IdentityPolicies: secret.Auth.IdentityPolicies,
+			Metadata:         metadata,
 
 			LeaseDuration: int(dur.Seconds()),
 			Renewable:     renewable,

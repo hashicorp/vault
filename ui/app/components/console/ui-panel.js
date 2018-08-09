@@ -1,4 +1,6 @@
 import Ember from 'ember';
+import { task } from 'ember-concurrency';
+import ControlGroupError from 'vault/lib/control-group-error';
 import {
   parseCommand,
   extractDataAndFlags,
@@ -8,22 +10,34 @@ import {
   executeUICommand,
 } from 'vault/lib/console-helpers';
 
-const { inject, computed } = Ember;
+const { inject, computed, getOwner, run } = Ember;
 
 export default Ember.Component.extend({
+  console: inject.service(),
+  router: inject.service(),
+  controlGroup: inject.service(),
+  store: inject.service(),
+
   classNames: 'console-ui-panel-scroller',
   classNameBindings: ['isFullscreen:fullscreen'],
   isFullscreen: false,
-  console: inject.service(),
   inputValue: null,
   log: computed.alias('console.log'),
 
-  logAndOutput(command, logContent) {
-    this.set('inputValue', '');
-    this.get('console').logAndOutput(command, logContent);
+  didRender() {
+    this._super(...arguments);
+    this.scrollToBottom();
   },
 
-  executeCommand(command, shouldThrow = false) {
+  logAndOutput(command, logContent) {
+    this.get('console').logAndOutput(command, logContent);
+    run.schedule('afterRender', () => this.scrollToBottom());
+  },
+
+  isRunning: computed.or('executeCommand.isRunning', 'refreshRoute.isRunning'),
+
+  executeCommand: task(function*(command, shouldThrow = false) {
+    this.set('inputValue', '');
     let service = this.get('console');
     let serviceArgs;
 
@@ -32,7 +46,8 @@ export default Ember.Component.extend({
         command,
         args => this.logAndOutput(args),
         args => service.clearLog(args),
-        () => this.toggleProperty('isFullscreen')
+        () => this.toggleProperty('isFullscreen'),
+        () => this.get('refreshRoute').perform()
       )
     ) {
       return;
@@ -61,16 +76,30 @@ export default Ember.Component.extend({
       this.logAndOutput(command, inputError);
       return;
     }
-    let serviceFn = service[method];
-    serviceFn
-      .call(service, path, data, flags.wrapTTL)
-      .then(resp => {
-        this.logAndOutput(command, logFromResponse(resp, path, method, flags));
-      })
-      .catch(error => {
-        this.logAndOutput(command, logFromError(error, path, method));
-      });
-  },
+    try {
+      let resp = yield service[method].call(service, path, data, flags.wrapTTL);
+      this.logAndOutput(command, logFromResponse(resp, path, method, flags));
+    } catch (error) {
+      if (error instanceof ControlGroupError) {
+        return this.logAndOutput(command, this.get('controlGroup').logFromError(error));
+      }
+      this.logAndOutput(command, logFromError(error, path, method));
+    }
+  }),
+
+  refreshRoute: task(function*() {
+    let owner = getOwner(this);
+    let routeName = this.get('router.currentRouteName');
+    let route = owner.lookup(`route:${routeName}`);
+
+    try {
+      this.get('store').clearAllDatasets();
+      yield route.refresh();
+      this.logAndOutput(null, { type: 'success', content: 'The current screen has been refreshed!' });
+    } catch (error) {
+      this.logAndOutput(null, { type: 'error', content: 'The was a problem refreshing the current screen.' });
+    }
+  }),
 
   shiftCommandIndex(keyCode) {
     this.get('console').shiftCommandIndex(keyCode, val => {
@@ -78,12 +107,16 @@ export default Ember.Component.extend({
     });
   },
 
+  scrollToBottom() {
+    this.element.scrollTop = this.element.scrollHeight;
+  },
+
   actions: {
     toggleFullscreen() {
       this.toggleProperty('isFullscreen');
     },
     executeCommand(val) {
-      this.executeCommand(val, true);
+      this.get('executeCommand').perform(val, true);
     },
     shiftCommandIndex(direction) {
       this.shiftCommandIndex(direction);

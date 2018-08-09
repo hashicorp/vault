@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -238,6 +239,18 @@ func humanDuration(d time.Duration) string {
 
 // humanDurationInt prints the given int as if it were a time.Duration  number
 // of seconds.
-func humanDurationInt(i int) string {
-	return humanDuration(time.Duration(i) * time.Second)
+func humanDurationInt(i interface{}) interface{} {
+	switch i.(type) {
+	case int:
+		return humanDuration(time.Duration(i.(int)) * time.Second)
+	case int64:
+		return humanDuration(time.Duration(i.(int64)) * time.Second)
+	case json.Number:
+		if i, err := i.(json.Number).Int64(); err == nil {
+			return humanDuration(time.Duration(i) * time.Second)
+		}
+	}
+
+	// If we don't know what type it is, just return the original value
+	return i
 }

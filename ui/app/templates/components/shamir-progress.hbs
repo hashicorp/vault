@@ -1,10 +1,10 @@
 <div class="level">
   <div class="level-left">
     <span class="has-text-grey is-size-8 shamir-progress-progress">
-      {{progress}} / {{threshold}} keys provided
+      {{progress}}/{{threshold}} keys provided
     </span>
   </div>
   <div class="level-right is-marginless">
-    <progress max="100" value="{{progressPercent}}" class="progress is-success is-rounded"></progress>
+    <RadialProgress @progressDecimal={{progressDecimal}} />
   </div>
 </div>

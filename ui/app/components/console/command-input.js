@@ -11,9 +11,6 @@ export default Ember.Component.extend({
   value: null,
   isFullscreen: null,
 
-  didRender() {
-    this.element.scrollIntoView();
-  },
   actions: {
     handleKeyUp(event) {
       const keyCode = event.keyCode;

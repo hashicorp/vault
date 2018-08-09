@@ -33,7 +33,8 @@ export default Ember.ArrayProxy.extend({
       if (!includeBlanks && item.value === '' && item.name === '') {
         return obj;
       }
-      obj[item.name || ''] = item.value || '';
+      let val = typeof item.value === 'undefined' ? '' : item.value;
+      obj[item.name || ''] = val;
       return obj;
     }, {});
   },

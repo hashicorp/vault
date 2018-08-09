@@ -3,7 +3,7 @@ layout: "docs"
 page_title: "Google Cloud - Secrets Engines"
 sidebar_current: "docs-secrets-gcp"
 description: |-
-  The Google Cloud Vault secrets engine dynamically generates Google Cloud
+  The Google Cloud secrets engine for Vault dynamically generates Google Cloud
   service account keys and OAuth tokens based on IAM policies.
 ---
 

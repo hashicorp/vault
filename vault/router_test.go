@@ -31,6 +31,10 @@ type NoopBackend struct {
 }
 
 func (n *NoopBackend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+	if req.TokenEntry() != nil {
+		panic("got a non-nil TokenEntry")
+	}
+
 	var err error
 	resp := n.Response
 	if n.RequestHandler != nil {
@@ -171,12 +175,18 @@ func TestRouter_Mount(t *testing.T) {
 	req := &logical.Request{
 		Path: "prod/aws/foo",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{
+		ID: "foo",
+	})
 	resp, err := r.Route(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
+	}
+	if req.TokenEntry() == nil || req.TokenEntry().ID != "foo" {
+		t.Fatalf("unexpected value for token entry: %v", req.TokenEntry())
 	}
 
 	// Verify the path

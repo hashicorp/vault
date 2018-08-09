@@ -8,6 +8,58 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestAppRole_BoundCIDRLogin(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, s := createBackendWithStorage(t)
+
+	// Create a role with secret ID binding disabled and only bound cidr list
+	// enabled
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"bind_secret_id":  false,
+			"bound_cidr_list": []string{"127.0.0.1/8"},
+		},
+		Storage: s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Read the role ID
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole/role-id",
+		Operation: logical.ReadOperation,
+		Storage:   s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	roleID := resp.Data["role_id"]
+
+	// Fill in the connection information and login with just the role ID
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "login",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"role_id": roleID,
+		},
+		Storage:    s,
+		Connection: &logical.Connection{RemoteAddr: "127.0.0.1"},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Login should pass
+	if resp.Auth == nil {
+		t.Fatalf("expected login to succeed")
+	}
+}
+
 func TestAppRole_RoleLogin(t *testing.T) {
 	var resp *logical.Response
 	var err error

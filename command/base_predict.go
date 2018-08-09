@@ -1,6 +1,7 @@
 package command
 
 import (
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -33,6 +34,11 @@ func (p *Predict) Client() *api.Client {
 					return
 				}
 				client.SetToken(token)
+			}
+
+			// Turn off retries for prediction
+			if os.Getenv(api.EnvVaultMaxRetries) == "" {
+				client.SetMaxRetries(0)
 			}
 
 			p.client = client

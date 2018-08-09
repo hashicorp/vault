@@ -18,7 +18,7 @@ export default Ember.Controller.extend(ListController, {
         })
         .catch(e => {
           this.get('flashMessages').success(
-            `There was a problem deleting ${type}: ${id} - ${e.error.join(' ') || e.message}`
+            `There was a problem deleting ${type}: ${id} - ${e.errors.join(' ') || e.message}`
           );
         });
     },
@@ -36,7 +36,7 @@ export default Ember.Controller.extend(ListController, {
         })
         .catch(e => {
           this.get('flashMessages').success(
-            `There was a problem ${action[1]} ${type}: ${id} - ${e.error.join(' ') || e.message}`
+            `There was a problem ${action[1]} ${type}: ${id} - ${e.errors.join(' ') || e.message}`
           );
         });
     },

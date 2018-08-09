@@ -1,24 +1,22 @@
-<header class="page-header">
-  <div class="level">
-    <div class="level-left">
-      <h1 class="title is-3">
-        {{capitalize (pluralize identityType)}}
-      </h1>
-    </div>
-    <div class="level-right">
-      {{#if (eq identityType "entity")}}
-        <a href="{{href-to 'vault.cluster.access.identity.merge' (pluralize identityType)}}" class="button has-icon-right is-ghost is-compact" data-test-entity-merge-link=true>
-          Merge {{pluralize identityType}}
-          {{i-con glyph="chevron-right" size=11}}
-        </a>
-      {{/if}}
-      <a href="{{href-to 'vault.cluster.access.identity.create' (pluralize identityType)}}" class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true>
-        Create {{identityType}}
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{capitalize (pluralize identityType)}}
+    </h1>
+  </p.levelLeft>
+  <p.levelRight>
+    {{#if (eq identityType "entity")}}
+      <a href="{{href-to 'vault.cluster.access.identity.merge' (pluralize identityType)}}" class="button has-icon-right is-ghost is-compact" data-test-entity-merge-link=true>
+        Merge {{pluralize identityType}}
         {{i-con glyph="chevron-right" size=11}}
       </a>
-    </div>
-  </div>
-</header>
+    {{/if}}
+    <a href="{{href-to 'vault.cluster.access.identity.create' (pluralize identityType)}}" class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true>
+      Create {{identityType}}
+      {{i-con glyph="chevron-right" size=11}}
+    </a>
+  </p.levelRight>
+</PageHeader>
 <div class="box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs sub-nav">
     <ul>

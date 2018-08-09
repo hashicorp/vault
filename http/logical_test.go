@@ -207,6 +207,7 @@ func TestLogical_CreateToken(t *testing.T) {
 		"wrap_info":      nil,
 		"auth": map[string]interface{}{
 			"policies":       []interface{}{"root"},
+			"token_policies": []interface{}{"root"},
 			"metadata":       nil,
 			"lease_duration": json.Number("0"),
 			"renewable":      false,
@@ -260,7 +261,7 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 
 	// Write a very large object, should fail
 	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
-		"data": make([]byte, MaxRequestSize),
+		"data": make([]byte, DefaultMaxRequestSize),
 	})
 	testResponseStatus(t, resp, 413)
 }

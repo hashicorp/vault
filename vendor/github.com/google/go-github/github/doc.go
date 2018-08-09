@@ -30,6 +30,13 @@ The services of a client divide the API into logical chunks and correspond to
 the structure of the GitHub API documentation at
 https://developer.github.com/v3/.
 
+NOTE: Using the https://godoc.org/context package, one can easily
+pass cancelation signals and deadlines to various services of the client for
+handling a request. In case there is no context available, then context.Background()
+can be used as a starting point.
+
+For more sample code snippets, head over to the https://github.com/google/go-github/tree/master/example directory.
+
 Authentication
 
 The go-github library does not directly handle authentication. Instead, when
@@ -175,17 +182,6 @@ github.Response struct.
 		}
 		opt.Page = resp.NextPage
 	}
-
-Google App Engine
-
-Go on App Engine Classic (which as of this writing uses Go 1.6) can not use
-the "context" import and still relies on "golang.org/x/net/context".
-As a result, if you wish to continue to use "go-github" on App Engine Classic,
-you will need to rewrite all the "context" imports using the following command:
-
-	gofmt -w -r '"context" -> "golang.org/x/net/context"' *.go
-
-See "with_appengine.go" for more details.
 
 */
 package github

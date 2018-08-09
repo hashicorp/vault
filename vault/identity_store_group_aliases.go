@@ -253,7 +253,48 @@ func (i *IdentityStore) pathGroupAliasIDDelete() framework.OperationFunc {
 			return logical.ErrorResponse("missing group alias ID"), nil
 		}
 
-		return nil, i.deleteGroupAlias(groupAliasID)
+		i.groupLock.Lock()
+		defer i.groupLock.Unlock()
+
+		txn := i.db.Txn(true)
+		defer txn.Abort()
+
+		alias, err := i.MemDBAliasByIDInTxn(txn, groupAliasID, false, true)
+		if err != nil {
+			return nil, err
+		}
+
+		if alias == nil {
+			return nil, nil
+		}
+
+		group, err := i.MemDBGroupByAliasIDInTxn(txn, alias.ID, true)
+		if err != nil {
+			return nil, err
+		}
+
+		// If there is no group tied to a valid alias, something is wrong
+		if group == nil {
+			return nil, fmt.Errorf("alias not associated to a group")
+		}
+
+		// Delete group alias in memdb
+		err = i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
+		if err != nil {
+			return nil, err
+		}
+
+		// Delete the alias
+		group.Alias = nil
+
+		err = i.UpsertGroupInTxn(txn, group, true)
+		if err != nil {
+			return nil, err
+		}
+
+		txn.Commit()
+
+		return nil, nil
 	}
 }
 

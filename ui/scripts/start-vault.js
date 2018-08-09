@@ -17,7 +17,6 @@ var vault = spawn(
     '-dev',
     '-dev-ha',
     '-dev-transactional',
-    '-dev-leased-kv',
     '-dev-root-token-id=root',
     '-dev-listen-address=127.0.0.1:9200'
   ]

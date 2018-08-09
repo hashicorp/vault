@@ -19,8 +19,21 @@
           <li<%= sidebar_current("guides-operations-production-hardening") %>>
             <a href="/guides/operations/production.html">Production Hardening</a>
           </li>
+          <li<%= sidebar_current("guides-operations-generate-root") %>>
+            <a href="/guides/operations/generate-root.html">Root Token Generation</a>
+          </li>
+          <li<%= sidebar_current("guides-operations-rekeying-and-rotating") %>>
+            <a href="/guides/operations/rekeying-and-rotating.html">Rekeying &amp; Rotating</a>
+          </li>
+          <li<%= sidebar_current("guides-operations-plugin-backends") %>>
+            <a href="/guides/operations/plugin-backends.html">Building Plugin Backends</a>
+          </li>
+          <hr>
           <li<%= sidebar_current("guides-operations-replication") %>>
             <a href="/guides/operations/replication.html">Replication Setup &amp; Guidance</a>
+          </li>
+          <li<%= sidebar_current("guides-operations-dr") %>>
+            <a href="/guides/operations/disaster-recovery.html">Disaster Recovery Setup</a>
           </li>
           <li<%= sidebar_current("guides-operations-mount-filter") %>>
             <a href="/guides/operations/mount-filter.html">Mount Filter</a>
@@ -31,21 +44,15 @@
           <li<%= sidebar_current("guides-operations-seal-wrap") %>>
             <a href="/guides/operations/seal-wrap.html">Seal Wrap / FIPS 140-2</a>
           </li>
-          <li<%= sidebar_current("guides-operations-generate-root") %>>
-            <a href="/guides/operations/generate-root.html">Root Token Generation</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-rekeying-and-rotating") %>>
-            <a href="/guides/operations/rekeying-and-rotating.html">Rekeying &amp; Rotating</a>
-          </li>
-          <li<%= sidebar_current("guides-operations-plugin-backends") %>>
-            <a href="/guides/operations/plugin-backends.html">Building Plugin Backends</a>
-          </li>
         </ul>
       </li>
 
       <li<%= sidebar_current("guides-identity")%>>
         <a href="/guides/identity/index.html">Identity and Access Management</a>
         <ul class="nav">
+          <li<%= sidebar_current("guides-identity-secure-intro") %>>
+            <a href="/guides/identity/secure-intro.html">Secure Introduction of Vault Clients</a>
+          </li>
           <li<%= sidebar_current("guides-identity-policies") %>>
             <a href="/guides/identity/policies.html">Policies</a>
           </li>
@@ -57,6 +64,13 @@
           </li>
           <li<%= sidebar_current("guides-identity-lease") %>>
             <a href="/guides/identity/lease.html">Tokens and Leases</a>
+          </li>
+          <li<%= sidebar_current("guides-identity-identity") %>>
+            <a href="/guides/identity/identity.html">Identity - Entities &amp; Groups</a>
+          </li>
+          <hr>
+          <li<%= sidebar_current("guides-identity-sentinel") %>>
+            <a href="/guides/identity/sentinel.html">Sentinel Policies</a>
           </li>
         </ul>
       </li>
@@ -79,12 +93,24 @@
           <li<%= sidebar_current("guides-secret-mgmt-cubbyhole") %>>
             <a href="/guides/secret-mgmt/cubbyhole.html">Cubbyhole Response Wrapping</a>
           </li>
+          <li<%= sidebar_current("guides-secret-mgmt-ssh-otp") %>>
+            <a href="/guides/secret-mgmt/ssh-otp.html">One-Time SSH Password</a>
+          </li>
+          <li<%= sidebar_current("guides-secret-mgmt-pki") %>>
+            <a href="/guides/secret-mgmt/pki-engine.html">Build Your Own CA</a>
+          </li>
+          <li<%= sidebar_current("guides-secret-mgmt-app-integration") %>>
+            <a href="/guides/secret-mgmt/app-integration.html">Direct Application Integration</a>
+          </li>
         </ul>
       </li>
 
       <li<%= sidebar_current("guides-encryption")%>>
         <a href="/guides/encryption/index.html">Encryption as a Service</a>
         <ul class="nav">
+          <li<%= sidebar_current("guides-encryption-transit") %>>
+            <a href="/guides/encryption/transit.html">Encryption as a Service</a>
+          </li>
           <li<%= sidebar_current("guides-encryption-spring-demo") %>>
             <a href="/guides/encryption/spring-demo.html">Java Application Demo</a>
           </li>
@@ -143,6 +169,12 @@
           </li>
           <li<%= sidebar_current("guides-upgrading-to-0.10.0") %>>
             <a href="/guides/upgrading/upgrade-to-0.10.0.html">Upgrade to 0.10.0</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.10.2") %>>
+            <a href="/guides/upgrading/upgrade-to-0.10.2.html">Upgrade to 0.10.2</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.10.4") %>>
+            <a href="/guides/upgrading/upgrade-to-0.10.4.html">Upgrade to 0.10.4</a>
           </li>
         </ul>
       </li>

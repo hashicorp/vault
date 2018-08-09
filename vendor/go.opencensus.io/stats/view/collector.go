@@ -17,7 +17,6 @@ package view
 
 import (
 	"sort"
-	"time"
 
 	"go.opencensus.io/internal/tagencoding"
 	"go.opencensus.io/tag"
@@ -29,10 +28,10 @@ type collector struct {
 	signatures map[string]AggregationData
 	// Aggregation is the description of the aggregation to perform for this
 	// view.
-	a Aggregation
+	a *Aggregation
 }
 
-func (c *collector) addSample(s string, v interface{}, now time.Time) {
+func (c *collector) addSample(s string, v float64) {
 	aggregator, ok := c.signatures[s]
 	if !ok {
 		aggregator = c.a.newData()
@@ -41,11 +40,12 @@ func (c *collector) addSample(s string, v interface{}, now time.Time) {
 	aggregator.addSample(v)
 }
 
-func (c *collector) collectedRows(keys []tag.Key, now time.Time) []*Row {
-	var rows []*Row
+// collectRows returns a snapshot of the collected Row values.
+func (c *collector) collectedRows(keys []tag.Key) []*Row {
+	rows := make([]*Row, 0, len(c.signatures))
 	for sig, aggregator := range c.signatures {
 		tags := decodeTags([]byte(sig), keys)
-		row := &Row{tags, aggregator}
+		row := &Row{Tags: tags, Data: aggregator.clone()}
 		rows = append(rows, row)
 	}
 	return rows

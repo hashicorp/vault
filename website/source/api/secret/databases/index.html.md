@@ -25,6 +25,8 @@ plugin has additional, database plugin specific,  parameters for this endpoint.
 Please read the HTTP API for the plugin you'd wish to configure to see the full
 list of additional parameters.
 
+~> This endpoint distinguishes between `create` and `update` ACL capabilities.
+
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `POST`   | `/database/config/:name`     | `204 (empty body)` |
@@ -207,6 +209,8 @@ $ curl \
 ## Create Role
 
 This endpoint creates or updates a role definition.
+
+~> This endpoint distinguishes between `create` and `update` ACL capabilities.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |

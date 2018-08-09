@@ -35,7 +35,7 @@ func (d *FieldData) Validate() error {
 		}
 
 		switch schema.Type {
-		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString,
+		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString, TypeLowerCaseString,
 			TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
 			TypeKVPairs, TypeCommaIntSlice:
 			_, _, err := d.getPrimitive(field, schema)
@@ -80,6 +80,19 @@ func (d *FieldData) GetDefaultOrZero(k string) interface{} {
 	return schema.DefaultOrZero()
 }
 
+// GetFirst gets the value for the given field names, in order from first
+// to last. This can be useful for fields with a current name, and one or
+// more deprecated names. The second return value will be false if the keys
+// are invalid or the keys are not set at all.
+func (d *FieldData) GetFirst(k ...string) (interface{}, bool) {
+	for _, v := range k {
+		if result, ok := d.GetOk(v); ok {
+			return result, ok
+		}
+	}
+	return nil, false
+}
+
 // GetOk gets the value for the given field. The second return value
 // will be false if the key is invalid or the key is not set at all.
 func (d *FieldData) GetOk(k string) (interface{}, bool) {
@@ -111,7 +124,7 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	}
 
 	switch schema.Type {
-	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString,
+	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString, TypeLowerCaseString,
 		TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
 		TypeKVPairs, TypeCommaIntSlice:
 		return d.getPrimitive(k, schema)
@@ -148,6 +161,13 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			return nil, true, err
 		}
 		return result, true, nil
+
+	case TypeLowerCaseString:
+		var result string
+		if err := mapstructure.WeakDecode(raw, &result); err != nil {
+			return nil, true, err
+		}
+		return strings.ToLower(result), true, nil
 
 	case TypeNameString:
 		var result string
@@ -205,6 +225,9 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			result = int(valInt64)
 		default:
 			return nil, false, fmt.Errorf("invalid input '%v'", raw)
+		}
+		if result < 0 {
+			return nil, true, fmt.Errorf("cannot provide negative value '%d'", result)
 		}
 		return result, true, nil
 

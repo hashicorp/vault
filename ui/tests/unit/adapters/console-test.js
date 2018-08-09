@@ -1,7 +1,7 @@
 import { moduleFor, test } from 'ember-qunit';
 
 moduleFor('adapter:console', 'Unit | Adapter | console', {
-  needs: ['service:auth', 'service:flash-messages', 'service:version'],
+  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
 });
 
 test('it builds the correct URL', function(assert) {

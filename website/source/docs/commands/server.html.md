@@ -55,7 +55,7 @@ flags](/docs/commands/index.html) included on all commands.
 
 - `-log-level` `(string: "info")` - Log verbosity level. Supported values (in
   order of detail) are "trace", "debug", "info", "warn", and "err". This can
-  also be specified via the VAULT_LOG environment variable.
+  also be specified via the VAULT_LOG_LEVEL environment variable.
 
 ### Dev Options
 

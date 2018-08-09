@@ -568,7 +568,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 			if !strings.HasSuffix(principalARN, "*") {
 				principalID, err := b.resolveArnToUniqueIDFunc(ctx, req.Storage, principalARN)
 				if err != nil {
-					return logical.ErrorResponse(fmt.Sprintf("unable to resolve ARN %#v to internal ID: %#v", principalARN, err)), nil
+					return logical.ErrorResponse(fmt.Sprintf("unable to resolve ARN %#v to internal ID: %s", principalARN, err.Error())), nil
 				}
 				roleEntry.BoundIamPrincipalIDs = append(roleEntry.BoundIamPrincipalIDs, principalID)
 			}
