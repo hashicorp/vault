@@ -485,7 +485,6 @@ func (i *IdentityStore) mergeEntity(txn *memdb.Txn, toEntity *identity.Entity, f
 		return errors.New("entity id to merge to is invalid"), nil
 	}
 
-	var conflictErrors error
 	for _, fromEntityID := range fromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
@@ -540,10 +539,6 @@ func (i *IdentityStore) mergeEntity(txn *memdb.Txn, toEntity *identity.Entity, f
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	if conflictErrors != nil && !force {
-		return conflictErrors, nil
 	}
 
 	// Update MemDB with changes to the entity we are merging to
