@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
@@ -260,12 +261,16 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		Unauth:            unauth,
 		RootPrivsRequired: rootPath,
 	})
-	if authResults.Error.ErrorOrNil() != nil {
-		return auth, te, authResults.Error
-	}
 	if !authResults.Allowed {
+		var retErr error
+		if authResults.DeniedError {
+			retErr = logical.ErrPermissionDenied
+		}
+		if authResults.Error.ErrorOrNil() != nil {
+			return auth, te, multierror.Append(retErr, authResults.Error)
+		}
 		// Return auth for audit logging even if not allowed
-		return auth, te, logical.ErrPermissionDenied
+		return auth, te, retErr
 	}
 
 	return auth, te, nil
@@ -465,10 +470,19 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	if ctErr != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
-		errType := logical.ErrInvalidRequest
-		switch ctErr {
-		case ErrInternalError, logical.ErrPermissionDenied:
-			errType = ctErr
+		switch {
+		case ctErr == ErrInternalError,
+			errwrap.Contains(ctErr, ErrInternalError.Error()),
+			ctErr == logical.ErrPermissionDenied,
+			errwrap.Contains(ctErr, logical.ErrPermissionDenied.Error()):
+			switch ctErr.(type) {
+			case *multierror.Error:
+				retErr = ctErr
+			default:
+				retErr = multierror.Append(retErr, ctErr)
+			}
+		default:
+			retErr = multierror.Append(retErr, logical.ErrInvalidRequest)
 		}
 
 		logInput := &audit.LogInput{
@@ -481,10 +495,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 		}
 
-		if errType != nil {
-			retErr = multierror.Append(retErr, errType)
-		}
-		if ctErr == ErrInternalError {
+		if errwrap.Contains(retErr, ErrInternalError.Error()) {
 			return nil, auth, retErr
 		}
 		return logical.ErrorResponse(ctErr.Error()), auth, retErr
