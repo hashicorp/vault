@@ -10,6 +10,7 @@ IMPROVEMENTS:
 
  * agent: Add `exit_after_auth` to be able to use the Agent for a single
    authentication [GH-5013]
+ * storage/mysql: Support special characters in database and table names.
 
 BUG FIXES:
 
@@ -19,7 +20,7 @@ BUG FIXES:
    could cause Vault not to start up due to two entities referencing the same
    alias. These entities are now merged. [GH-5000]
  * secrets/database: Fix inability to update custom SQL statements on
-   database roles. [GH-5080]  
+   database roles. [GH-5080]
 
 ## 0.10.4 (July 25th, 2018)
 
