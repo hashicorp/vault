@@ -97,6 +97,18 @@
 			"revisionTime": "2018-07-03T19:15:42Z"
 		},
 		{
+			"checksumSHA1": "x9ceW8JE2/FgODRSywClj0fRlh8=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac",
+			"revision": "4e8cbbfb1aeab140cd0fa97fd16b64ee18c3ca6a",
+			"revisionTime": "2018-07-27T22:05:59Z"
+		},
+		{
+			"checksumSHA1": "e4hCajXDSuWNkUvwA35jMHGm20E=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization",
+			"revision": "4e8cbbfb1aeab140cd0fa97fd16b64ee18c3ca6a",
+			"revisionTime": "2018-07-27T22:05:59Z"
+		},
+		{
 			"checksumSHA1": "pbHi9xc373inHdf5me73LGIFV1w=",
 			"path": "github.com/Azure/azure-sdk-for-go/storage",
 			"revision": "fbe7db0e3f9793ba3e5704efbab84f51436c136e",
@@ -1349,6 +1361,12 @@
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/util",
 			"revision": "6afcfbb25eb6f5adec1b9bba1cf8601f95e89d06",
 			"revisionTime": "2018-06-19T16:09:38Z"
+		},
+		{
+			"checksumSHA1": "26Dup/B+rgnWllUqIAqJk6pvwYI=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-azure",
+			"revision": "1750091e609731c70eed455f6de11df8176b1c4a",
+			"revisionTime": "2018-08-16T17:30:18Z"
 		},
 		{
 			"checksumSHA1": "jOsVXVfsxCgGrUCnwmBMid9SM+Q=",
