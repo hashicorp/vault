@@ -4,14 +4,14 @@
     <ICon @glyph="checkmark-circled-outline" @size="16" @class="has-text-success level-right" />
   </div>
 {{else}}
-  {{#link-to "vault.cluster.secrets" (query-params namespace=targetNamespace)
+  {{#link-to "vault.cluster.secrets" (query-params namespace=normalizedNamespace)
     class=(concat "is-block " class)
   }}
     {{#if hasBlock}}
       {{yield}}
     {{else}}
       <div class="level">
-        <span class="level-left">{{targetNamespace}}</span>
+        <span class="level-left">{{normalizedNamespace}}</span>
         <ICon @glyph="chevron-right" @size="12" @class="has-text-grey level-right" />
       </div>
     {{/if}}

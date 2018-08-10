@@ -7,6 +7,10 @@ export default Component.extend({
   //public api
   targetNamespace: null,
 
+  normalizedNamespace: computed('targetNamespace', function() {
+    let ns = this.get('targetNamespace');
+    return (ns || '').replace(/\.+/g, '/').replace('☃', '.');
+  }),
   namespaceService: inject.service('namespace'),
   currentNamespace: computed.alias('namespaceService.path'),
 

@@ -2,7 +2,7 @@
   {{!-- Just yield the logo if they're in the default namespace and only have access to it --}}
   {{yield}}
 {{else}}
-  <BasicDropdownHover @horizontalPosition="auto-left" @verticalPosition="below" as |D|>
+  <BasicDropdown @horizontalPosition="auto-left" @verticalPosition="below" as |D|>
     <D.trigger
       @tagName="button"
       @class="button is-transparent"
@@ -16,13 +16,17 @@
       />
     </D.trigger>
     <D.content @class="namespace-picker-content">
-      <div onclick={{D.actions.close}}>
         <div class="namespace-header-bar level">
           <div class="level-left">
             {{#if (not isUserRootNamespace)}}
-              {{#link-to "vault.cluster.secrets" (query-params namespace=auth.authData.userRootNamespace)}}
-                Back
-              {{/link-to}}
+              <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) menuLeaves) auth.authData.userRootNamespace}} @class="namespace-link">
+                <ICon
+                  @glyph="chevron-left"
+                  @size=12
+                  @class="has-text-info"
+                  aria-hidden="true"
+                />
+              </NamespaceLink>
             {{/if}}
           </div>
           <div class="level-right">
@@ -34,12 +38,20 @@
         <h5 class="namespace-header">Current namespace</h5>
         <NamespaceLink @targetNamespace={{namespacePath}} @class="namespace-link" />
         <div class="namespace-list">
-          {{#each accessibleNamespaces as |ns|}}
-          <NamespaceLink @targetNamespace={{ns}} @class="namespace-link" />
+
+          {{#each rootLeaves as |rootLeaf|}}
+            <div>
+              <NamespaceLink @targetNamespace={{rootLeaf}} @class="namespace-link" />
+            </div>
+          {{/each}}
+          {{#each menuLeaves as |leaf index|}}
+          <div class="leaf-panel {{if (eq leaf currentLeaf) "current-leaf-panel"}}">
+            {{#each-in (get namespaceTree leaf) as |leafName val|}}
+              <NamespaceLink @targetNamespace={{concat leaf "/" leafName}} @class="namespace-link" />
+            {{/each-in}}
+            </div>
           {{/each}}
         </div>
-      </div>
     </D.content>
-  </BasicDropdownHover>
+  </BasicDropdown>
 {{/if}}
-
