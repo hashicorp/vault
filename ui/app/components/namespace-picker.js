@@ -2,11 +2,13 @@ import Ember from 'ember';
 import flat from 'flat';
 import deepmerge from 'deepmerge';
 import keyUtils from 'vault/lib/key-utils';
+import { task, timeout } from 'ember-concurrency';
 
 const { ancestorKeysForKey } = keyUtils;
 const { unflatten } = flat;
 const { Component, computed, inject } = Ember;
 const DOT_REPLACEMENT = '☃';
+const ANIMATION_DURATION = 300;
 
 export default Component.extend({
   namespaceService: inject.service('namespace'),
@@ -17,17 +19,44 @@ export default Component.extend({
     this.get('namespaceService.findNamespacesForUser').perform();
   },
 
+  didRender() {
+    this._super(...arguments);
+    this.get('setForAnimation').perform();
+  },
+
+  setForAnimation: task(function*() {
+    let leaves = this.get('menuLeaves');
+    let lastLeaves = this.get('lastMenuLeaves');
+    if (!lastLeaves) {
+      yield timeout(0);
+      this.set('lastMenuLeaves', leaves);
+      return;
+    }
+    let isAdding = leaves.length > lastLeaves.length;
+    let changedLeaf = (isAdding ? leaves : lastLeaves).get('lastObject');
+    this.set('isAdding', isAdding);
+    this.set('changedLeaf', changedLeaf);
+    // if we're adding we want to render immediately an animate it in
+    // if we're not adding, we need time to move the item out before
+    // a rerender removes it
+    yield timeout(isAdding ? 0 : ANIMATION_DURATION);
+    this.set('lastMenuLeaves', leaves);
+  }),
+
   namespacePath: computed.alias('namespaceService.path'),
 
+  // this is an array of namespace paths that the current user
+  // has access to
   accessibleNamespaces: computed.alias('namespaceService.accessibleNamespaces'),
+
   namespaceTree: computed('accessibleNamespaces', function() {
     let nsList = this.get('accessibleNamespaces');
     if (!nsList) {
       return [];
     }
+    // first sort the list by length, then alphanumeric
     nsList = nsList.slice(0).sort((a, b) => b.length - a.length || b.localeCompare(a));
-    let tree = {};
-    // first we reverse the list, then reduce to an array
+    // then reduce to an array
     // and we remove all of the items that have a string
     // that starts with the same prefix from the list
     // so if we have "foo/bar/baz", both "foo" and "foo/bar"
@@ -67,18 +96,23 @@ export default Component.extend({
         .replace(/\/+/g, '.')
     );
   },
+
   // an array that keeps track of what additional panels to render
   // on the menu stack
+  // if you're in  'foo/bar/baz',
+  // this array will be: ['foo', 'foo.bar', 'foo.bar.baz']
+  // the template then iterates over this, and does  Ember.get(namespaceTree, leaf)
+  // to render the nodes of each leaf
   menuLeaves: computed('namespacePath', 'namespaceTree', function() {
     let ns = this.get('namespacePath');
     let leaves = ancestorKeysForKey(ns) || [];
     leaves.push(ns);
-    console.log(leaves);
     return leaves.map(this.pathToLeaf);
   }),
 
-  rootLeaves: computed('namespacePath', 'namespaceTree', function() {
-    //let ns = this.get('namespacePath');
+  // the nodes at the root of the namespace tree
+  // these will get rendered as the bottom layer
+  rootLeaves: computed('namespaceTree', function() {
     let leaves = Object.keys(this.get('namespaceTree'));
     return leaves.map(this.pathToLeaf);
   }),

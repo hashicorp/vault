@@ -19,7 +19,7 @@
         <div class="namespace-header-bar level">
           <div class="level-left">
             {{#if (not isUserRootNamespace)}}
-              <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) menuLeaves) auth.authData.userRootNamespace}} @class="namespace-link">
+              <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link">
                 <ICon
                   @glyph="chevron-left"
                   @size=12
@@ -38,14 +38,13 @@
         <h5 class="namespace-header">Current namespace</h5>
         <NamespaceLink @targetNamespace={{namespacePath}} @class="namespace-link" />
         <div class="namespace-list">
-
           {{#each rootLeaves as |rootLeaf|}}
             <div>
               <NamespaceLink @targetNamespace={{rootLeaf}} @class="namespace-link" />
             </div>
           {{/each}}
-          {{#each menuLeaves as |leaf index|}}
-          <div class="leaf-panel {{if (eq leaf currentLeaf) "current-leaf-panel"}}">
+          {{#each lastMenuLeaves as |leaf index|}}
+          <div class="leaf-panel {{if (eq leaf currentLeaf) "leaf-panel-current"}} {{if (and (eq isAdding false) (eq leaf changedLeaf)) "leaf-panel-exiting"}}">
             {{#each-in (get namespaceTree leaf) as |leafName val|}}
               <NamespaceLink @targetNamespace={{concat leaf "/" leafName}} @class="namespace-link" />
             {{/each-in}}
