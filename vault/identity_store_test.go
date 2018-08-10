@@ -5,8 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
+	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
+	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -293,6 +297,122 @@ func TestIdentityStore_TokenEntityInheritance(t *testing.T) {
 
 	if resp.Auth.EntityID != "" {
 		t.Fatalf("expected entity ID to be not set")
+	}
+}
+
+func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
+	err := AddTestCredentialBackend("github", credGithub.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	c, unsealKey, root := TestCoreUnsealed(t)
+
+	meGH := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "github/",
+		Type:        "github",
+		Description: "github auth",
+	}
+
+	err = c.enableCredential(context.Background(), meGH)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	alias := &identity.Alias{
+		ID:            "alias1",
+		CanonicalID:   "entity1",
+		MountType:     "github",
+		MountAccessor: meGH.Accessor,
+		Name:          "githubuser",
+	}
+	entity := &identity.Entity{
+		ID:       "entity1",
+		Name:     "name1",
+		Policies: []string{"foo", "bar"},
+		Aliases: []*identity.Alias{
+			alias,
+		},
+	}
+	entity.BucketKeyHash = c.identityStore.entityPacker.BucketKeyHashByItemID(entity.ID)
+	// Now add the alias to two entities, skipping all existing checking by
+	// writing directly
+	entityAny, err := ptypes.MarshalAny(entity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item := &storagepacker.Item{
+		ID:      entity.ID,
+		Message: entityAny,
+	}
+	if err = c.identityStore.entityPacker.PutItem(item); err != nil {
+		t.Fatal(err)
+	}
+
+	entity.ID = "entity2"
+	entity.Name = "name2"
+	entity.Policies = []string{"bar", "baz"}
+	alias.ID = "alias2"
+	alias.CanonicalID = "entity2"
+	entity.BucketKeyHash = c.identityStore.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entityAny, err = ptypes.MarshalAny(entity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item = &storagepacker.Item{
+		ID:      entity.ID,
+		Message: entityAny,
+	}
+	if err = c.identityStore.entityPacker.PutItem(item); err != nil {
+		t.Fatal(err)
+	}
+
+	// Seal and unseal. If things are broken, we will now fail to unseal.
+	if err = c.Seal(root); err != nil {
+		t.Fatal(err)
+	}
+
+	var unsealed bool
+	for i := 0; i < 3; i++ {
+		unsealed, err = c.Unseal(unsealKey[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !unsealed {
+		t.Fatal("still sealed")
+	}
+
+	newEntity, err := c.identityStore.CreateOrFetchEntity(&logical.Alias{
+		MountAccessor: meGH.Accessor,
+		MountType:     "github",
+		Name:          "githubuser",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newEntity == nil {
+		t.Fatal("nil new entity")
+	}
+
+	entityToUse := "entity1"
+	if newEntity.ID == "entity1" {
+		entityToUse = "entity2"
+	}
+	if len(newEntity.MergedEntityIDs) != 1 || newEntity.MergedEntityIDs[0] != entityToUse {
+		t.Fatalf("bad merged entity ids: %v", newEntity.MergedEntityIDs)
+	}
+	if diff := deep.Equal(newEntity.Policies, []string{"bar", "baz", "foo"}); diff != nil {
+		t.Fatal(diff)
+	}
+
+	newEntity, err = c.identityStore.MemDBEntityByID(entityToUse, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newEntity != nil {
+		t.Fatal("got a non-nil entity")
 	}
 }
 

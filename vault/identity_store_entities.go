@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/storagepacker"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -143,9 +145,6 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 
 		force := d.Get("force").(bool)
 
-		i.lock.Lock()
-		defer i.lock.Unlock()
-
 		// Create a MemDB transaction to merge entities
 		txn := i.db.Txn(true)
 		defer txn.Abort()
@@ -155,85 +154,12 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 			return nil, err
 		}
 
-		if toEntity == nil {
-			return logical.ErrorResponse("entity id to merge to is invalid"), nil
+		userErr, intErr := i.mergeEntity(txn, toEntity, fromEntityIDs, force, true, false)
+		if userErr != nil {
+			return logical.ErrorResponse(userErr.Error()), nil
 		}
-
-		var conflictErrors error
-		for _, fromEntityID := range fromEntityIDs {
-			if fromEntityID == toEntityID {
-				return logical.ErrorResponse("to_entity_id should not be present in from_entity_ids"), nil
-			}
-
-			fromEntity, err := i.MemDBEntityByID(fromEntityID, false)
-			if err != nil {
-				return nil, err
-			}
-
-			if fromEntity == nil {
-				return logical.ErrorResponse("entity id to merge from is invalid"), nil
-			}
-
-			for _, alias := range fromEntity.Aliases {
-				// Set the desired canonical ID
-				alias.CanonicalID = toEntity.ID
-
-				alias.MergedFromCanonicalIDs = append(alias.MergedFromCanonicalIDs, fromEntity.ID)
-
-				err = i.MemDBUpsertAliasInTxn(txn, alias, false)
-				if err != nil {
-					return nil, errwrap.Wrapf("failed to update alias during merge: {{err}}", err)
-				}
-
-				// Add the alias to the desired entity
-				toEntity.Aliases = append(toEntity.Aliases, alias)
-			}
-
-			// If the entity from which we are merging from was already a merged
-			// entity, transfer over the Merged set to the entity we are
-			// merging into.
-			toEntity.MergedEntityIDs = append(toEntity.MergedEntityIDs, fromEntity.MergedEntityIDs...)
-
-			// Add the entity from which we are merging from to the list of entities
-			// the entity we are merging into is composed of.
-			toEntity.MergedEntityIDs = append(toEntity.MergedEntityIDs, fromEntity.ID)
-
-			// Delete the entity which we are merging from in MemDB using the same transaction
-			err = i.MemDBDeleteEntityByIDInTxn(txn, fromEntity.ID)
-			if err != nil {
-				return nil, err
-			}
-
-			// Delete the entity which we are merging from in storage
-			err = i.entityPacker.DeleteItem(fromEntity.ID)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if conflictErrors != nil && !force {
-			return logical.ErrorResponse(conflictErrors.Error()), nil
-		}
-
-		// Update MemDB with changes to the entity we are merging to
-		err = i.MemDBUpsertEntityInTxn(txn, toEntity)
-		if err != nil {
-			return nil, err
-		}
-
-		// Persist the entity which we are merging to
-		toEntityAsAny, err := ptypes.MarshalAny(toEntity)
-		if err != nil {
-			return nil, err
-		}
-		item := &storagepacker.Item{
-			ID:      toEntity.ID,
-			Message: toEntityAsAny,
-		}
-
-		err = i.entityPacker.PutItem(item)
-		if err != nil {
-			return nil, err
+		if intErr != nil {
+			return nil, intErr
 		}
 
 		// Committing the transaction *after* successfully performing storage
@@ -547,6 +473,96 @@ func (i *IdentityStore) pathEntityIDList() framework.OperationFunc {
 
 		return logical.ListResponseWithInfo(entityIDs, entityInfo), nil
 	}
+}
+
+func (i *IdentityStore) mergeEntity(txn *memdb.Txn, toEntity *identity.Entity, fromEntityIDs []string, force, grabLock, mergePolicies bool) (error, error) {
+	if grabLock {
+		i.lock.Lock()
+		defer i.lock.Unlock()
+	}
+
+	if toEntity == nil {
+		return errors.New("entity id to merge to is invalid"), nil
+	}
+
+	for _, fromEntityID := range fromEntityIDs {
+		if fromEntityID == toEntity.ID {
+			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
+		}
+
+		fromEntity, err := i.MemDBEntityByID(fromEntityID, false)
+		if err != nil {
+			return nil, err
+		}
+
+		if fromEntity == nil {
+			return errors.New("entity id to merge from is invalid"), nil
+		}
+
+		for _, alias := range fromEntity.Aliases {
+			// Set the desired canonical ID
+			alias.CanonicalID = toEntity.ID
+
+			alias.MergedFromCanonicalIDs = append(alias.MergedFromCanonicalIDs, fromEntity.ID)
+
+			err = i.MemDBUpsertAliasInTxn(txn, alias, false)
+			if err != nil {
+				return nil, errwrap.Wrapf("failed to update alias during merge: {{err}}", err)
+			}
+
+			// Add the alias to the desired entity
+			toEntity.Aliases = append(toEntity.Aliases, alias)
+		}
+
+		// If told to, merge policies
+		if mergePolicies {
+			toEntity.Policies = strutil.MergeSlices(toEntity.Policies, fromEntity.Policies)
+		}
+
+		// If the entity from which we are merging from was already a merged
+		// entity, transfer over the Merged set to the entity we are
+		// merging into.
+		toEntity.MergedEntityIDs = append(toEntity.MergedEntityIDs, fromEntity.MergedEntityIDs...)
+
+		// Add the entity from which we are merging from to the list of entities
+		// the entity we are merging into is composed of.
+		toEntity.MergedEntityIDs = append(toEntity.MergedEntityIDs, fromEntity.ID)
+
+		// Delete the entity which we are merging from in MemDB using the same transaction
+		err = i.MemDBDeleteEntityByIDInTxn(txn, fromEntity.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Delete the entity which we are merging from in storage
+		err = i.entityPacker.DeleteItem(fromEntity.ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Update MemDB with changes to the entity we are merging to
+	err := i.MemDBUpsertEntityInTxn(txn, toEntity)
+	if err != nil {
+		return nil, err
+	}
+
+	// Persist the entity which we are merging to
+	toEntityAsAny, err := ptypes.MarshalAny(toEntity)
+	if err != nil {
+		return nil, err
+	}
+	item := &storagepacker.Item{
+		ID:      toEntity.ID,
+		Message: toEntityAsAny,
+	}
+
+	err = i.entityPacker.PutItem(item)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 var entityHelp = map[string][2]string{
