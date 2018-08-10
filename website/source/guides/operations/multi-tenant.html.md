@@ -89,6 +89,8 @@ If you are not familiar with policies, complete the
 
 **Scenario:**
 
+![Scenario](/assets/images/vault-multi-tenant-2.png)
+
 In this guide, you are going to perform the following steps:
 
 1. [Create ACL Namespaces](#step1)
@@ -103,52 +105,31 @@ In this guide, you are going to perform the following steps:
 
 To create a new namespace, run: **`vault namespace create <namespace_name>`**
 
-Once a namespace is created, you can do one of the two things:
-
-* Set **`VAULT_NAMESPACE`** so that all subsequent CLI commands will be
-executed against that particular namespace
+1. Create a namespace dedicated to the **`education`** organizations:
 
     ```plaintext
-    $ export VAULT_NAMESPACE=<namespace_name>
-    ```
+    $ vault namespace create education
+    ````
 
-* Specify the target namespace with **`-namespace`** flag
-
-    ```plaintext
-    $ vault policy write -namespace=<namespace_name> <policy_name> <policy_file>
-    ```
-
-<br>
-
-Create a namespace dedicated to the **`finance`** team as well as **`education`** organizations:
-
-```plaintext
-$ vault namespace create finance
-
-$ vault namespace create education
-````
-
-Now, create child namespaces called `training` and `certification` under the
+1. Create child namespaces called `training` and `certification` under the
 `education` namespace:
 
-```plaintext
-$ vault namespace create -namespace=education training
+    ```plaintext
+    $ vault namespace create -namespace=education training
 
-$ vault namespace create -namespace=education certification
-````
+    $ vault namespace create -namespace=education certification
+    ````
 
-List the created namespaces:
+1. List the created namespaces:
 
-```plaintext
-$ vault namespace list
-education/
-finance/
+    ```plaintext
+    $ vault namespace list
+    education/
 
-$ vault namespace list -namespace=education
-certification/
-training/
-```
-
+    $ vault namespace list -namespace=education
+    certification/
+    training/
+    ```
 
 #### API call using cURL
 
@@ -163,15 +144,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 Where `<TOKEN>` is your valid token, and `<NS_NAME>` is the desired namespace
 name.
 
-1. Create a namespace dedicated to the **`finance`** team:
-
-    ```plaintext
-    $ curl --header "X-Vault-Token: ..." \
-           --request POST \
-           http://127.0.0.1:8200/v1/sys/namespaces/finance
-    ```
-
-1. Similarly, create a top-level namespace for the **`education`** organization:
+1. Create a namespace for the **`education`** organization:
 
     ```plaintext
     $ curl --header "X-Vault-Token: ..." \
@@ -209,7 +182,6 @@ under `education`. To do so, pass the top-level namespace name in the
        ...
        "data": {
          "keys": [
-           "finance/",
            "education/"
          ]
        },
@@ -251,22 +223,37 @@ under the path, as well as full permissions for namespaced policies.
 
 #### Author a policy file
 
-`finance-admins.hcl`
+`edu-admins.hcl`
 
 ```shell
-# Full permissions on the finance path
-path "finance/*" {
+# Full permissions on the education path
+path "education/*" {
    capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 ```
 
 #### CLI command
 
+To target a specific namespace, you can do one of the following:
+
+* Set **`VAULT_NAMESPACE`** so that all subsequent CLI commands will be
+executed against that particular namespace
+
+    ```plaintext
+    $ export VAULT_NAMESPACE=<namespace_name>
+    ```
+
+* Specify the target namespace with **`-namespace`** flag
+
+    ```plaintext
+    $ vault policy write -namespace=<namespace_name> <policy_name> <policy_file>
+    ```
+
 To create policies:
 
 ```shell
-# Create finance-admins policy
-$ vault policy write finance-admins finance-admins.hcl
+# Create edu-admins policy
+$ vault policy write edu-admins edu-admins.hcl
 ```
 
 #### API call using cURL
@@ -274,13 +261,13 @@ $ vault policy write finance-admins finance-admins.hcl
 To create a policy, use `/sys/policy` endpoint:
 
 ```shell
-# Create finance-admins policy
+# Create edu-admins policy
 $ curl --request PUT --header "X-Vault-Token: ..." --data @payload.json \
-    https://vault.rocks/v1/sys/policy/finance-admins
+    https://vault.rocks/v1/sys/policy/edu-admins
 
 $ cat payload.json
 {
-  "policy": "path \"finance/*\" { capabilities = [\"create\", \"read\", \"update\", ... }"
+  "policy": "path \"education/*\" { capabilities = [\"create\", \"read\", \"update\", ... }"
 }
 ```
 
