@@ -41,6 +41,7 @@ export default Ember.Controller.extend({
   }),
 
   flashMessages: Ember.inject.service(),
+  wizard: Ember.inject.service(),
 
   reset() {
     const defaultBackend = this.get('mountTypes.firstObject.value');
@@ -64,7 +65,9 @@ export default Ember.Controller.extend({
 
   actions: {
     onTypeChange(val) {
+      debugger;
       const { selectedPath, selectedType } = this.getProperties('selectedPath', 'selectedType');
+      this.get('wizard').setPotentialSelection(val);
       this.set('selectedType', val);
       if (selectedPath === selectedType) {
         this.set('selectedPath', val);

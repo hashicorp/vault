@@ -1,0 +1,94 @@
+.ui-wizard {
+  background: #ffffff;
+  color: #000000;
+  width: 300px;
+  padding: 16px;
+  display: block;
+  float: right;
+  margin: 9px;
+}
+
+.ui-wizard.collapsed {
+  background: #000000;
+  color: #ffffff;
+}
+
+.ui-wizard .wizard-header h1 {
+  width: 146px;
+  height: 24px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.ui-wizard h2 {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form-label {
+  color: #677887;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ui-wizard .wizard-header p {
+  margin-top: 9px;
+  margin-bottom: 9px;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 18px;
+}
+
+button {
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: 100%;
+  background: white;
+  color: black;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.feature-row {
+  border-radius: 2px 2px 2px 2px;
+  border: 1px solid #bac1cc;
+  padding: 8px 8px;
+  margin-top: 8px;
+}
+
+.feature-row label {
+  color: #000000;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 12px;
+}
+
+.feature-row input {
+  width: 14px;
+  height: 14px;
+  border: 1px solid #b9c4d2;
+  border-radius: 2px 2px 2px 2px;
+  margin-right: 2px;
+}
+
+ul.feature-steps {
+  margin-left: 25px;
+  list-style-type: disc;
+}
+
+.feature-steps li {
+  color: #6a7786;
+  font-size: 12px;
+  font-weight: normal;
+}
+
+.collapsed button {
+  background: black;
+  color: white;
+}
+
+.ui-wizard button.dismiss-button {
+  float: right;
+}

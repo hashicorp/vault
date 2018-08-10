@@ -1,0 +1,34 @@
+{{#unless isDismissed}}
+  <div class={{if isCollapsed "ui-wizard collapsed" "ui-wizard"}}>
+    <button class="dismiss-button" type="button" {{action dismissWizard}}>X</button>
+    {{#unless isActive}}
+      <div class="wizard-header">
+        {{#if isPaused}}
+          <h1>Vault Web UI Guide</h1>
+          <p>Feel free to explore Vault. Click below to get back to the guide or close this window.</p>
+        {{else}}
+          <h1>Welcome to Vault</h1>
+          <p>Want a tour? Our helpful guide will introduce you to the Vault Web UI.</p>
+        {{/if}}
+      </div>
+      <button type="button" {{action advanceWizard}}>
+        {{#if isPaused}}
+          Resume
+        {{else}}
+          Let's get started
+        {{/if}}
+      </button>
+    {{/unless}}
+    {{#unless isPaused}}
+      {{#if isActive}}
+        {{#if isSelecting}}
+          {{wizard/features-selection}}
+        {{else}}
+          {{#if isFeature}}
+            {{component "wizard/secrets-machine"}}
+          {{/if}}
+        {{/if}}
+      {{/if}}
+    {{/unless}}
+  </div>
+{{/unless}}
