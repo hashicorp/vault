@@ -180,10 +180,30 @@ func (l *Lock) Unlock() error {
 	}
 	l.stopLock.Unlock()
 
-	// Delete
+	// Read the record value before deleting. This needs to be a CAS operation or
+	// else we might be deleting someone else's lock.
 	ctx := context.Background()
-	if err := l.backend.Delete(ctx, l.key); err != nil {
-		return err
+	r, err := l.get(ctx)
+	if err != nil {
+		return errwrap.Wrapf("failed to read lock for deletion: {{err}}", err)
+	}
+	if r != nil && r.Identity == l.identity {
+		ctx := context.Background()
+		conds := storage.Conditions{
+			GenerationMatch:     r.attrs.Generation,
+			MetagenerationMatch: r.attrs.Metageneration,
+		}
+
+		obj := l.backend.client.Bucket(l.backend.bucket).Object(l.key)
+		if err := obj.If(conds).Delete(ctx); err != nil {
+			// If the pre-condition failed, it means that someone else has already
+			// acquired the lock and we don't want to delete it.
+			if terr, ok := err.(*googleapi.Error); ok && terr.Code == 412 {
+				l.backend.logger.Debug("unlock: preconditions failed (lock already taken by someone else?)")
+			} else {
+				return errwrap.Wrapf("failed to delete lock: {{err}}", err)
+			}
+		}
 	}
 
 	// We are no longer holding the lock
