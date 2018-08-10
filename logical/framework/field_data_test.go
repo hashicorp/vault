@@ -494,10 +494,24 @@ func TestFieldDataGet(t *testing.T) {
 			http.Header{
 				"Content-Length":           []string{"43"},
 				"User-Agent":               []string{"aws-sdk-go/1.4.12 (go1.7.1; linux; amd64)"},
-				"X-Vault-AWSIAM-Server-Id": []string{"vault.example.com"},
+				"X-Vault-Awsiam-Server-Id": []string{"vault.example.com"},
 				"X-Amz-Date":               []string{"20160930T043121Z"},
 				"Content-Type":             []string{"application/x-www-form-urlencoded; charset=utf-8"},
 				"Authorization":            []string{"AWS4-HMAC-SHA256 Credential=foo/20160930/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-server, Signature=a69fd750a3445c4e553e1b3e79d3da90eef54047f1eb4efe8ffbc9c428c2655b"},
+			},
+		},
+
+		"type header, json string": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": `{"hello":"world","bonjour":["monde","dieu"]}`,
+			},
+			"foo",
+			http.Header{
+				"Hello":   []string{"world"},
+				"Bonjour": []string{"monde", "dieu"},
 			},
 		},
 
@@ -642,7 +656,7 @@ func TestFieldDataGet(t *testing.T) {
 		}
 
 		if err := data.Validate(); err != nil {
-			t.Fatalf("bad: %#v", err)
+			t.Fatalf("bad: %s", err)
 		}
 
 		actual := data.Get(tc.Key)

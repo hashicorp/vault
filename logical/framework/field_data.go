@@ -295,39 +295,92 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		return result, true, nil
 
 	case TypeHeader:
-		// There are 3 ways a header could be provided:
-		// 1. Marshalled as JSON, and then converted to a b64 string.
-		// 2. As a map[string][]string.
-		// 3. As comma-delimited key-value pairs associated with a colon.
-		// We go through these sequentially below.
+		/*
+
+			There are multiple ways a header could be provided:
+
+			1.	As a map[string]interface{} that resolves to a map[string]string or map[string][]string, or a mix of both
+				because that's permitted for headers.
+				This mainly comes from the API.
+
+			2.	As a string...
+				a. That contains JSON that originally was JSON, but then was base64 encoded.
+				b. That contains JSON, ex. `{"content-type":"text/json","accept":["encoding/json"]}`.
+				This mainly comes from the API and is used to save space while sending in the header.
+
+			3.	As an array of strings that contains comma-delimited key-value pairs associated via a colon,
+				ex: `content-type:text`,`json,accept:encoding/json`.
+				This mainly comes from the CLI.
+
+			We go through these sequentially below.
+
+		*/
 		result := http.Header{}
 
-		// 1.
-		var headerStr string
-		if err := mapstructure.WeakDecode(raw, &headerStr); err == nil {
-			if b, err := base64.StdEncoding.DecodeString(headerStr); err == nil {
-				if err := json.NewDecoder(bytes.NewReader(b)).Decode(&result); err != nil {
-					return nil, true, err
+		toHeader := func(resultMap map[string]interface{}) (http.Header, error) {
+			header := http.Header{}
+			for headerKey, headerValGroup := range resultMap {
+				switch typedHeader := headerValGroup.(type) {
+				case string:
+					header.Add(headerKey, typedHeader)
+				case []string:
+					for _, headerVal := range typedHeader {
+						header.Add(headerKey, headerVal)
+					}
+				case []interface{}:
+					for _, headerVal := range typedHeader {
+						strHeaderVal, ok := headerVal.(string)
+						if !ok {
+							// All header values should already be strings when they're being sent in.
+							// Even numbers and booleans will be treated as strings.
+							return nil, fmt.Errorf("received non-string value for header key:%s, val:%s", headerKey, headerValGroup)
+						}
+						header.Add(headerKey, strHeaderVal)
+					}
+				default:
+					return nil, fmt.Errorf("unrecognized type for %s", headerValGroup)
 				}
-				return result, true, nil
 			}
+			return header, nil
 		}
 
-		// 2.
-		var mapResult map[string][]string
-		if err := mapstructure.WeakDecode(raw, &mapResult); err == nil {
-			for k, slice := range mapResult {
-				for _, v := range slice {
-					result.Add(k, v)
-				}
+		resultMap := make(map[string]interface{})
+
+		// 1. Are we getting a map from the API?
+		if err := mapstructure.WeakDecode(raw, &resultMap); err == nil {
+			result, err = toHeader(resultMap)
+			if err != nil {
+				return nil, true, err
 			}
 			return result, true, nil
 		}
 
-		// 3.
-		var listResult []string
-		if err := mapstructure.WeakDecode(raw, &listResult); err == nil {
-			for _, keyPair := range listResult {
+		// 2. Are we getting a JSON string?
+		if headerStr, ok := raw.(string); ok {
+			// a. Is it base64 encoded?
+			headerBytes, err := base64.StdEncoding.DecodeString(headerStr)
+			if err != nil {
+				// b. It's not base64 encoded, it's a straight-out JSON string.
+				headerBytes = []byte(headerStr)
+			}
+			if err := json.NewDecoder(bytes.NewReader(headerBytes)).Decode(&resultMap); err != nil {
+				return nil, true, err
+			}
+			result, err = toHeader(resultMap)
+			if err != nil {
+				return nil, true, err
+			}
+			return result, true, nil
+		}
+
+		// 3. Are we getting an array of fields like "content-type:encoding/json" from the CLI?
+		var keyPairs []interface{}
+		if err := mapstructure.WeakDecode(raw, &keyPairs); err == nil {
+			for _, keyPairIfc := range keyPairs {
+				keyPair, ok := keyPairIfc.(string)
+				if !ok {
+					return nil, true, fmt.Errorf("invalid key pair %q", keyPair)
+				}
 				keyPairSlice := strings.SplitN(keyPair, ":", 2)
 				if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {
 					return nil, true, fmt.Errorf("invalid key pair %q", keyPair)
