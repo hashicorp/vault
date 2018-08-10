@@ -1,5 +1,6 @@
 import Ember from 'ember';
 import flat from 'flat';
+import deepmerge from 'deepmerge';
 import keyUtils from 'vault/lib/key-utils';
 
 const { ancestorKeysForKey } = keyUtils;
@@ -24,9 +25,13 @@ export default Component.extend({
     if (!nsList) {
       return [];
     }
-    nsList = nsList.slice(0).reverse();
+    nsList = nsList.slice(0).sort((a, b) => b.length - a.length || b.localeCompare(a));
     let tree = {};
-    let maxDepth;
+    // first we reverse the list, then reduce to an array
+    // and we remove all of the items that have a string
+    // that starts with the same prefix from the list
+    // so if we have "foo/bar/baz", both "foo" and "foo/bar"
+    // won't be included in the list
     let nsTree = nsList.reduce((accumulator, ns) => {
       let prefixInList = accumulator.some(nsPath => nsPath.startsWith(ns));
       if (!prefixInList) {
@@ -35,15 +40,16 @@ export default Component.extend({
       return accumulator;
     }, []);
 
-    for (let ns of nsTree) {
-      ns = ns.replace(/\.+/g, DOT_REPLACEMENT);
-      let branch = unflatten({ [ns]: null }, { delimiter: '/' });
-      tree = {
-        ...tree,
-        ...branch,
-      };
-    }
-    return tree;
+    // after the reduction we're left with an array that contains
+    // strings that represent the longest branches
+    // we'll replace the dots in the paths, then expand the path
+    // to a nested object that we can then query with Ember.get
+    return deepmerge.all(
+      nsTree.map(ns => {
+        ns = ns.replace(/\.+/g, DOT_REPLACEMENT);
+        return unflatten({ [ns]: null }, { delimiter: '/' });
+      })
+    );
   }),
 
   pathToLeaf(path) {
@@ -67,6 +73,7 @@ export default Component.extend({
     let ns = this.get('namespacePath');
     let leaves = ancestorKeysForKey(ns) || [];
     leaves.push(ns);
+    console.log(leaves);
     return leaves.map(this.pathToLeaf);
   }),
 
