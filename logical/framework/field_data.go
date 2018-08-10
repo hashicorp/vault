@@ -309,7 +309,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 				This mainly comes from the API and is used to save space while sending in the header.
 
 			3.	As an array of strings that contains comma-delimited key-value pairs associated via a colon,
-				ex: `content-type:text`,`json,accept:encoding/json`.
+				ex: `content-type:text/json`,`accept:encoding/json`.
 				This mainly comes from the CLI.
 
 			We go through these sequentially below.
