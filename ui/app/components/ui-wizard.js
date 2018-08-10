@@ -22,6 +22,16 @@ export default Ember.Component.extend({
   isSelecting: computed('currentState', 'isActive', function() {
     return this.get('isActive') && this.get('currentState').indexOf('select') > 0;
   }),
+  isFeature: computed('currentMachine', function() {
+    return this.get('currentMachine') !== 'None';
+  }),
+  isPaused: computed('currentState', function() {
+    return this.get('currentState') === 'paused';
+  }),
+  isIdle: computed('currentState', function() {
+    return this.get('currentState') === 'idle';
+  }),
+  isCollapsed: computed.or('isPaused', 'isIdle'),
 
   dismissWizard() {
     this.get('wizard').transitionTutorialMachine(this.get('currentState'), 'DISMISS');
@@ -29,5 +39,9 @@ export default Ember.Component.extend({
 
   advanceWizard() {
     this.get('wizard').transitionTutorialMachine(this.get('currentState'), 'CONTINUE');
+  },
+
+  pauseWizard() {
+    this.get('wizard').transitionTutorialMachine(this.get('currentState'), 'PAUSE');
   },
 });

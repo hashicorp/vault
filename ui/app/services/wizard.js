@@ -13,6 +13,7 @@ let FeatureMachine = null;
 const TUTORIAL_STATE = 'vault-tutorial-state';
 const FEATURE_LIST = 'vault-feature-list';
 const FEATURE_STATE = 'vault-feature-state';
+const COMPLETED_FEATURES = 'vault-completed-list';
 const MACHINES = { secrets: SecretsMachineConfig };
 
 export default Service.extend({
@@ -20,6 +21,7 @@ export default Service.extend({
   featureList: null,
   featureState: null,
   currentMachine: null,
+  potentialSelection: null,
 
   init() {
     this._super(...arguments);
@@ -48,7 +50,6 @@ export default Service.extend({
     if (state.value) {
       state = state.value;
     }
-
     let stateKey = '';
     while (Ember.typeOf(state) === 'object') {
       let newState = Object.keys(state);
@@ -97,9 +98,19 @@ export default Service.extend({
       case 'completeFeature':
         this.completeFeature();
         break;
+      case 'handleDismissed':
+        this.handleDismissed();
+        break;
       default:
         break;
     }
+  },
+
+  handleDismissed() {
+    this.storage().removeItem(FEATURE_STATE);
+    this.storage().removeItem(FEATURE_LIST);
+    this.storage().removeItem(MACHINES);
+    this.storage().removeItem(COMPLETED_FEATURES);
   },
 
   saveFeatures(features) {
@@ -121,7 +132,17 @@ export default Service.extend({
 
   completeFeature() {
     let features = this.get('featureList');
-    features.pop();
+    let completed = features.pop();
+
+    if (!this.getExtState(COMPLETED_FEATURES)) {
+      this.saveExtState([completed]);
+    } else {
+      this.saveExtState(
+        COMPLETED_FEATURES,
+        this.getExtState(COMPLETED_FEATURES).toArray().addObject(completed)
+      );
+    }
+
     this.saveExtState(FEATURE_LIST, this.get('featureList'));
     if (features.length > 0) {
       const FeatureMachineConfig = MACHINES[this.get('featureList').objectAt(0)];
@@ -134,6 +155,10 @@ export default Service.extend({
       FeatureMachine = null;
       TutorialMachine.transition(this.get('currentState'), 'DONE');
     }
+  },
+
+  setPotentialSelection(key) {
+    this.set('potentialSelection', key);
   },
 
   storage() {

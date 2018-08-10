@@ -21,6 +21,7 @@ export default {
       on: {
         RESET: 'idle',
         DONE: 'complete',
+        PAUSE: 'paused',
       },
       key: 'aws',
       initial: 'credentials',
@@ -41,6 +42,7 @@ export default {
       on: {
         RESET: 'idle',
         DONE: 'complete',
+        PAUSE: 'paused',
       },
       key: 'ch',
       initial: 'role',
@@ -59,9 +61,9 @@ export default {
       },
     },
     complete: {
-      on: {
-        RESET: 'idle',
-      },
+      onEntry: ['completeFeature'],
+      on: { RESET: 'idle' },
     },
+    paused: {},
   },
 };

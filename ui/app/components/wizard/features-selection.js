@@ -4,17 +4,43 @@ const { inject, computed } = Ember;
 
 export default Ember.Component.extend({
   wizard: inject.service(),
-  allFeatures: ['secrets', 'authentication', 'policies', 'replication', 'tools'],
+  allFeatures: [
+    {
+      key: 'secrets',
+      name: 'Secrets',
+      steps: ['Enabling a secrets engine', 'Entering secrets method details', 'Adding a secret'],
+    },
+    {
+      key: 'authentication',
+      name: 'Authentication',
+      steps: ['Enabling an auth method', 'Entering auth method details', 'Adding a user'],
+    },
+    {
+      key: 'policies',
+      name: 'Policies',
+      steps: [],
+    },
+    {
+      key: 'replication',
+      name: 'Replication',
+      steps: [],
+    },
+    {
+      key: 'tools',
+      name: 'Tools',
+      steps: [],
+    },
+  ],
   selectedFeatures: null,
   hasFeatures: computed('selectedFeatures', function() {
     return this.get('selectedFeatures') !== null && this.get('selectedFeatures').length > 0;
   }),
-  finalFeatures: computed('allFeatures', 'selectedFeatures', function() {
+  finalFeatures: computed('selectedFeatures', function() {
     let features = [];
     let selected = this.get('selectedFeatures');
     this.get('allFeatures').forEach(function(feature) {
-      if (selected.includes(feature)) {
-        features.push(feature);
+      if (selected !== null && selected.includes(feature.key)) {
+        features.push(feature.key);
       }
     });
     return features;

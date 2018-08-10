@@ -23,7 +23,10 @@ export default {
     },
     dismissed: {
       on: { CONTINUE: 'idle' },
-      onEntry: ['saveState'],
+      onEntry: ['handleDismissed'],
+    },
+    paused: {
+      on: { CONTINUE: ['handlePause'] },
     },
     complete: {
       on: {
