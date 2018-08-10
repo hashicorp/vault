@@ -321,6 +321,31 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				Handlers:    loginHandlers,
 			}, nil
 		},
+		"namespace": func() (cli.Command, error) {
+			return &NamespaceCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace list": func() (cli.Command, error) {
+			return &NamespaceListCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace lookup": func() (cli.Command, error) {
+			return &NamespaceLookupCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace create": func() (cli.Command, error) {
+			return &NamespaceCreateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace delete": func() (cli.Command, error) {
+			return &NamespaceDeleteCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator": func() (cli.Command, error) {
 			return &OperatorCommand{
 				BaseCommand: getBaseCommand(),

@@ -123,6 +123,34 @@ username       	v-token-test-tr2t4x9pxvq1z8878s9s-1513446795
 
 When we no longer need the backend, we can unmount it with `vault unmount azuresql`. Now, you can use the MSSQL Database Plugin with your Azure SQL databases.
 
+## Amazon RDS
+The MSSQL plugin supports databases running on [Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_SQLServer.html),
+but there are differences that need to be accomodated. A key limitation is that Amazon RDS doesn't support
+the "sysadmin" role, which is used by default during Vault's revocation process for MSSQL. The workaround
+is to add custom revocation statements to roles, for example:
+
+```
+vault write database/roles/my-role revocation_statements="\
+   USE my_database; \
+   IF EXISTS \
+     (SELECT name \
+      FROM sys.database_principals \
+      WHERE name = N'{{name}}') \
+   BEGIN \
+     DROP USER [{{name}}] \
+   END \
+
+   IF EXISTS \
+     (SELECT name \
+      FROM master.sys.server_principals \
+      WHERE name = N'{{name}}') \
+   BEGIN \
+     DROP LOGIN [{{name}}] \
+   END"
+```
+
+
+
 ## API
 
 The full list of configurable options can be seen in the [MSSQL database
