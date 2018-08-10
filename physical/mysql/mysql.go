@@ -69,7 +69,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if !ok {
 		table = "vault"
 	}
-	dbTable := database + "." + table
+	dbTable := "`" + database + "`" + "." + "`" + table + "`"
 
 	maxIdleConnStr, ok := conf["max_idle_connections"]
 	var maxIdleConnInt int
@@ -153,7 +153,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	// Create the required database if it doesn't exists.
 	if !schemaExist {
-		if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS " + database); err != nil {
+		if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS `" + database + "`"); err != nil {
 			return nil, errwrap.Wrapf("failed to create mysql database: {{err}}", err)
 		}
 	}
