@@ -31,20 +31,20 @@ their application's interactions with Vault.
 ## Challenge
 
 When Vault is primarily used as a central location to manage secrets, multiple
-organizations within a company need to be able to manage their secrets in Vault
-without interfering each other. This means that a company needs a ***Vault as a
-Service*** model allowing each organization (tenant) to be restricted from
-accessing, editing, or creating policies and secrets engines outside of their
-tenant scope.
+organizations within a company need to be able to manage their secrets in
+self-serving manner. This means that a company needs to implement a ***Vault as
+a Service*** model allowing each organization (tenant) to manage their own
+secrets and policies. The most importantly, tenants should be restricted to work
+only within their tenant scope.
 
 ![Multi-Tenant](/assets/images/vault-multi-tenant.png)
 
 ## Solution
 
-Create an ACL namespace dedicated to each team, organization, or app where they
-can perform all necessary tasks within their tenant namespace.  
+Create an **ACL namespace** dedicated to each team, organization, or app where
+they can perform all necessary tasks within their tenant namespace.  
 
-Each namespace has its own:
+Each namespace can have its own:
 
 - Policies
 - Mounts
@@ -94,7 +94,6 @@ In this guide, you are going to perform the following steps:
 1. [Create ACL Namespaces](#step1)
 1. Write Policies
 1. Working in a namespace
-
 
 
 ### <a name="step1"></a>Step 1: Create ACL Namespaces
@@ -234,8 +233,21 @@ under `education`. To do so, pass the top-level namespace name in the
 
 ### <a name="step2"></a>Step 2: Write Policies
 
+In this step, you are going to write policies for the namespace **admin** who
+can:
+
+- Create and manage policies
+- Enable and manage secret engines
+
+
+
+
+
 This is a policy for a namespace administrator which includes full permissions
 under the path, as well as full permissions for namespaced policies.
+
+
+
 
 #### Author a policy file
 
