@@ -25,6 +25,6 @@ The guide walks you through:
 
 ## Reference Materials
 
-- [Vault Deployment Reference Architecture](guides/operations/reference-architecture.html)
+- [Vault Deployment Reference Architecture](/guides/operations/reference-architecture.html)
 - [Vault High Availability](/guides/operations/vault-ha-consul.html)
 - [Production Hardening](/guides/operations/production.html)
