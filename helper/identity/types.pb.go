@@ -66,7 +66,7 @@ func (m *Group) Reset()         { *m = Group{} }
 func (m *Group) String() string { return proto.CompactTextString(m) }
 func (*Group) ProtoMessage()    {}
 func (*Group) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_01b7fd3cfabd028f, []int{0}
+	return fileDescriptor_types_0360db4a8e77dd9b, []int{0}
 }
 func (m *Group) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Group.Unmarshal(m, b)
@@ -223,7 +223,7 @@ func (m *Entity) Reset()         { *m = Entity{} }
 func (m *Entity) String() string { return proto.CompactTextString(m) }
 func (*Entity) ProtoMessage()    {}
 func (*Entity) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_01b7fd3cfabd028f, []int{1}
+	return fileDescriptor_types_0360db4a8e77dd9b, []int{1}
 }
 func (m *Entity) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Entity.Unmarshal(m, b)
@@ -358,7 +358,7 @@ func (m *Alias) Reset()         { *m = Alias{} }
 func (m *Alias) String() string { return proto.CompactTextString(m) }
 func (*Alias) ProtoMessage()    {}
 func (*Alias) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_01b7fd3cfabd028f, []int{2}
+	return fileDescriptor_types_0360db4a8e77dd9b, []int{2}
 }
 func (m *Alias) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Alias.Unmarshal(m, b)
@@ -457,9 +457,9 @@ func init() {
 	proto.RegisterMapType((map[string]string)(nil), "identity.Alias.MetadataEntry")
 }
 
-func init() { proto.RegisterFile("helper/identity/types.proto", fileDescriptor_types_01b7fd3cfabd028f) }
+func init() { proto.RegisterFile("helper/identity/types.proto", fileDescriptor_types_0360db4a8e77dd9b) }
 
-var fileDescriptor_types_01b7fd3cfabd028f = []byte{
+var fileDescriptor_types_0360db4a8e77dd9b = []byte{
 	// 656 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x95, 0x5d, 0x6f, 0xd3, 0x3c,
 	0x14, 0xc7, 0xd5, 0xa6, 0x2f, 0xe9, 0x69, 0xd7, 0xed, 0xb1, 0x1e, 0xa1, 0x50, 0x34, 0xe8, 0x26,

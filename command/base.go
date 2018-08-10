@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
@@ -37,6 +38,7 @@ type BaseCommand struct {
 	flagCAPath        string
 	flagClientCert    string
 	flagClientKey     string
+	flagNamespace     string
 	flagTLSServerName string
 	flagTLSSkipVerify bool
 	flagWrapTTL       time.Duration
@@ -118,6 +120,7 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	}
 
 	client.SetMFACreds(c.flagMFA)
+	client.SetNamespace(namespace.Canonicalize(c.flagNamespace))
 
 	c.client = client
 
@@ -234,6 +237,16 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded private key " +
 					"matching the client certificate from -client-cert.",
+			})
+
+			f.StringVar(&StringVar{
+				Name:       "namespace",
+				Target:     &c.flagNamespace,
+				Default:    "",
+				EnvVar:     "VAULT_NAMESPACE",
+				Completion: complete.PredictAnything,
+				Usage: "The namespace to use for the command. Setting this is not " +
+					"necessary but allows using relative paths.",
 			})
 
 			f.StringVar(&StringVar{

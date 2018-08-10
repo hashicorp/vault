@@ -18,6 +18,8 @@ BUG FIXES:
  * identity: Fix carryover issue from previously fixed race condition that
    could cause Vault not to start up due to two entities referencing the same
    alias. These entities are now merged. [GH-5000]
+ * secrets/database: Fix inability to update custom SQL statements on
+   database roles. [GH-5080]  
 
 ## 0.10.4 (July 25th, 2018)
 
