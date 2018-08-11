@@ -262,10 +262,11 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		RootPrivsRequired: rootPath,
 	})
 	if !authResults.Allowed {
+		retErr := authResults.Error
 		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
-			return auth, te, logical.ErrPermissionDenied
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		}
-		return auth, te, authResults.Error
+		return auth, te, retErr
 	}
 
 	return auth, te, nil
