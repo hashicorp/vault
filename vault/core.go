@@ -1070,6 +1070,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	})
 	if !authResults.Allowed {
 		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
+			c.stateLock.RUnlock()
 			return logical.ErrPermissionDenied
 		}
 		c.stateLock.RUnlock()

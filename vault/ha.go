@@ -235,6 +235,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 	})
 	if !authResults.Allowed {
 		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
+			c.stateLock.RUnlock()
 			return logical.ErrPermissionDenied
 		}
 		c.stateLock.RUnlock()
