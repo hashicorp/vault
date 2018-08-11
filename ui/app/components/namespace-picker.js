@@ -8,28 +8,35 @@ const { ancestorKeysForKey } = keyUtils;
 const { unflatten } = flat;
 const { Component, computed, inject } = Ember;
 const DOT_REPLACEMENT = '☃';
-const ANIMATION_DURATION = 300;
+const ANIMATION_DURATION = 250;
 
 export default Component.extend({
   namespaceService: inject.service('namespace'),
   auth: inject.service(),
+  namespace: null,
 
   init() {
     this._super(...arguments);
     this.get('namespaceService.findNamespacesForUser').perform();
   },
 
-  didRender() {
+  didReceiveAttrs() {
     this._super(...arguments);
-    this.get('setForAnimation').perform();
+
+    let ns = this.get('namespace');
+    let oldNS = this.get('oldNamespace');
+    if (!oldNS || ns !== oldNS) {
+      this.get('setForAnimation').perform();
+    }
+    this.set('oldNamespace', ns);
   },
 
   setForAnimation: task(function*() {
     let leaves = this.get('menuLeaves');
     let lastLeaves = this.get('lastMenuLeaves');
     if (!lastLeaves) {
-      yield timeout(0);
       this.set('lastMenuLeaves', leaves);
+      yield timeout(0);
       return;
     }
     let isAdding = leaves.length > lastLeaves.length;
@@ -39,9 +46,16 @@ export default Component.extend({
     // if we're adding we want to render immediately an animate it in
     // if we're not adding, we need time to move the item out before
     // a rerender removes it
-    yield timeout(isAdding ? 0 : ANIMATION_DURATION);
+    if (isAdding) {
+      this.set('lastMenuLeaves', leaves);
+      yield timeout(0);
+      return;
+    }
+    yield timeout(ANIMATION_DURATION);
     this.set('lastMenuLeaves', leaves);
-  }),
+  }).drop(),
+
+  isAnimating: computed.alias('setForAnimation.isRunning'),
 
   namespacePath: computed.alias('namespaceService.path'),
 
@@ -103,6 +117,8 @@ export default Component.extend({
   // this array will be: ['foo', 'foo.bar', 'foo.bar.baz']
   // the template then iterates over this, and does  Ember.get(namespaceTree, leaf)
   // to render the nodes of each leaf
+
+  // gets set as  'lastMenuLeaves' in the ember concurrency task above
   menuLeaves: computed('namespacePath', 'namespaceTree', function() {
     let ns = this.get('namespacePath');
     let leaves = ancestorKeysForKey(ns) || [];
@@ -113,11 +129,12 @@ export default Component.extend({
   // the nodes at the root of the namespace tree
   // these will get rendered as the bottom layer
   rootLeaves: computed('namespaceTree', function() {
-    let leaves = Object.keys(this.get('namespaceTree'));
-    return leaves.map(this.pathToLeaf);
+    let tree = this.get('namespaceTree');
+    let leaves = Object.keys(tree);
+    return leaves;
   }),
 
-  currentLeaf: computed.alias('menuLeaves.lastObject'),
+  currentLeaf: computed.alias('lastMenuLeaves.lastObject'),
   canAccessMultipleNamespaces: computed.gt('accessibleNamespaces.length', 1),
   isUserRootNamespace: computed('auth.authData.userRootNamespace', 'namespacePath', function() {
     return this.get('auth.authData.userRootNamespace') === this.get('namespacePath');

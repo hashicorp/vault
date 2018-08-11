@@ -1,6 +1,6 @@
 {{#if isCurrentNamespace}}
-  <div class="level {{class}}">
-    <span class="level-left">{{or targetNamespace "default"}}</span>
+  <div class="level is-mobile {{class}}">
+    <span class="level-left">{{or targetNamespace "root"}}</span>
     <ICon @glyph="checkmark-circled-outline" @size="16" @class="has-text-success level-right" />
   </div>
 {{else}}
@@ -10,9 +10,11 @@
     {{#if hasBlock}}
       {{yield}}
     {{else}}
-      <div class="level">
-        <span class="level-left">{{normalizedNamespace}}</span>
-        <ICon @glyph="chevron-right" @size="12" @class="has-text-grey level-right" />
+      <div class="level is-mobile">
+        <span class="level-left">{{namespaceDisplay}}</span>
+        <button type="button" class="button is-ghost icon level-right">
+          <ICon @glyph="chevron-right" @size="12" @class="has-text-grey" />
+        </button>
       </div>
     {{/if}}
   {{/link-to}}

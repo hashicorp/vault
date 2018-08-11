@@ -1,13 +1,13 @@
 {{#if (and (not accessibleNamespaces) inRootNamespace)}}
-  {{!-- Just yield the logo if they're in the default namespace and only have access to it --}}
+  {{!-- Just yield the logo if they're in the root namespace and only have access to it --}}
   {{yield}}
 {{else}}
   <BasicDropdown @horizontalPosition="auto-left" @verticalPosition="below" as |D|>
     <D.trigger
       @tagName="button"
-      @class="button is-transparent"
+      @class="button is-transparent namespace-picker-trigger"
       >
-      {{yield}} {{namespaceDisplay}}
+      {{yield}} {{#if namespaceDisplay}}<span class="namespace-name">{{namespaceDisplay}}</span>{{/if}}
       <ICon
         @glyph="chevron-down"
         @size=8
@@ -16,10 +16,10 @@
       />
     </D.trigger>
     <D.content @class="namespace-picker-content">
-        <div class="namespace-header-bar level">
+        <div class="namespace-header-bar level is-mobile">
           <div class="level-left">
             {{#if (not isUserRootNamespace)}}
-              <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link">
+              <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link button is-ghost icon">
                 <ICon
                   @glyph="chevron-left"
                   @size=12
@@ -30,23 +30,29 @@
             {{/if}}
           </div>
           <div class="level-right">
-            {{#link-to "vault.cluster.access.namespaces"}}
+            {{#link-to "vault.cluster.access.namespaces" class="namespace-manage-link"}}
               Manage
             {{/link-to}}
           </div>
         </div>
-        <h5 class="namespace-header">Current namespace</h5>
-        <NamespaceLink @targetNamespace={{namespacePath}} @class="namespace-link" />
-        <div class="namespace-list">
+        <header class="current-namespace">
+          <h5 class="namespace-header">Current namespace</h5>
+          <NamespaceLink @targetNamespace={{namespacePath}} @class="namespace-link" />
+        </header>
+        <div class="namespace-list {{if isAnimating "animated-list"}}">
           {{#each rootLeaves as |rootLeaf|}}
-            <div>
-              <NamespaceLink @targetNamespace={{rootLeaf}} @class="namespace-link" />
+            <div class="leaf-panel {{if (and (not-eq currentLeaf rootLeaf) (eq lastMenuLeaves.length 1)) "leaf-panel-current" "leaf-panel-left"}}">
+            <NamespaceLink @targetNamespace={{rootLeaf}} @class="namespace-link" @showLastSegment={{true}} />
             </div>
           {{/each}}
           {{#each lastMenuLeaves as |leaf index|}}
-          <div class="leaf-panel {{if (eq leaf currentLeaf) "leaf-panel-current"}} {{if (and (eq isAdding false) (eq leaf changedLeaf)) "leaf-panel-exiting"}}">
-            {{#each-in (get namespaceTree leaf) as |leafName val|}}
-              <NamespaceLink @targetNamespace={{concat leaf "/" leafName}} @class="namespace-link" />
+                 <div class="leaf-panel 
+            {{if (eq leaf currentLeaf) "leaf-panel-current" "leaf-panel-left"}}
+            {{if (and isAdding (eq leaf changedLeaf)) "leaf-panel-adding"}}
+            {{if (and (not isAdding) (eq leaf changedLeaf)) "leaf-panel-exiting"}}
+            ">
+            {{#each-in (get namespaceTree leaf) as |leafName|}}
+              <NamespaceLink @targetNamespace={{concat leaf "/" leafName}} @class="namespace-link" @showLastSegment={{true}} />
             {{/each-in}}
             </div>
           {{/each}}

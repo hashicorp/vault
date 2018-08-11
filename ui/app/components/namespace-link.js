@@ -6,11 +6,22 @@ export default Component.extend({
   tagName: '',
   //public api
   targetNamespace: null,
+  showLastSegment: false,
 
   normalizedNamespace: computed('targetNamespace', function() {
     let ns = this.get('targetNamespace');
     return (ns || '').replace(/\.+/g, '/').replace('☃', '.');
   }),
+  namespaceDisplay: computed('normalizedNamespace', 'showLastSegment', function() {
+    let ns = this.get('normalizedNamespace');
+    let showLastSegment = this.get('showLastSegment');
+    let parts = ns.split('/');
+    if (ns === '') {
+      return 'root';
+    }
+    return showLastSegment ? parts[parts.length - 1] : ns;
+  }),
+
   namespaceService: inject.service('namespace'),
   currentNamespace: computed.alias('namespaceService.path'),
 

@@ -1,6 +1,14 @@
 .namespace-picker {
   border-right: 1px solid $black;
 }
+.namespace-picker-trigger {
+  display: flex;
+  align-items: center;
+}
+.namespace-name {
+  display: inline-block;
+  margin-left: $size-10;
+}
 .namespace-picker-content {
   width: 300px;
   max-height: 300px;
@@ -8,10 +16,23 @@
   border-radius: $radius;
   box-shadow: $box-shadow, $box-shadow-high;
 }
+.namespace-picker-content .level-left {
+  max-width: 210px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  -ms-word-break: break-all;
+  word-break: break-all;
+  word-break: break-word;
+}
 
 .namespace-header-bar {
-  padding: $size-9;
+  padding: $size-11 $size-10;
   box-shadow: $box-shadow;
+  font-weight: $font-weight-semibold;
+  min-height: 32px;
+  .namespace-manage-link {
+    text-decoration: none;
+  }
 }
 
 .namespace-header {
@@ -21,9 +42,13 @@
   font-weight: $font-weight-semibold;
   text-transform: uppercase;
 }
+.current-namespace {
+  border-bottom: 1px solid rgba($black, 0.1);
+}
 
 .namespace-list {
-  padding-left: $size-9;
+  position: relative;
+  overflow: hidden;
 }
 
 .namespace-link {
@@ -31,4 +56,34 @@
   text-decoration: none;
   font-weight: $font-weight-semibold;
   padding: $size-11 $size-9;
+}
+
+.leaf-panel {
+  transition: transform ease-in-out 250ms;
+  will-change: transform;
+  transform: translateX(0);
+  background: $white;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+.leaf-panel-left {
+  transform: translateX(-300px);
+}
+.leaf-panel-adding,
+.leaf-panel-current {
+  position: relative;
+}
+.animated-list {
+  .leaf-panel-exiting,
+  .leaf-panel-adding {
+    transform: translateX(300px);
+    z-index: 20;
+  }
+}
+.leaf-panel-adding {
+  z-index: 100;
 }
