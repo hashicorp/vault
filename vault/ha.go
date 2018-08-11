@@ -234,13 +234,11 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 		RootPrivsRequired: true,
 	})
 	if !authResults.Allowed {
-		if authResults.DeniedError {
-			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		c.stateLock.RUnlock()
+		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
+			return logical.ErrPermissionDenied
 		}
-		if authResults.Error.ErrorOrNil() != nil {
-			retErr = multierror.Append(retErr, authResults.Error)
-		}
-		return retErr
+		return authResults.Error
 	}
 
 	if te != nil && te.NumUses == tokenRevocationPending {

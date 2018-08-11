@@ -1069,14 +1069,11 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		RootPrivsRequired: true,
 	})
 	if !authResults.Allowed {
-		if authResults.DeniedError {
-			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		}
-		if authResults.Error.ErrorOrNil() != nil {
-			retErr = multierror.Append(retErr, authResults.Error)
-		}
 		c.stateLock.RUnlock()
-		return retErr
+		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
+			return logical.ErrPermissionDenied
+		}
+		return authResults.Error
 	}
 
 	if te != nil && te.NumUses == tokenRevocationPending {
