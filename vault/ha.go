@@ -235,10 +235,11 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 	})
 	if !authResults.Allowed {
 		c.stateLock.RUnlock()
+		retErr = multierror.Append(retErr, authResults.Error)
 		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
-			return logical.ErrPermissionDenied
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		}
-		return authResults.Error
+		return retErr
 	}
 
 	if te != nil && te.NumUses == tokenRevocationPending {
