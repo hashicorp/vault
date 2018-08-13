@@ -3,6 +3,7 @@ export default {
   initial: 'idle',
   states: {
     idle: {
+      onEntry: [{ type: 'routeTransition', params: ['vault.cluster.settings.mount-secret-backend'] }],
       on: {
         CONTINUE: {
           aws: {
