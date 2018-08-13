@@ -135,7 +135,7 @@ $ vault kv put secret/password value=@data.txt
 
 ### Reading Data
 
-After data is persisted, read it back using `vault kv read`:
+After data is persisted, read it back using `vault kv get`:
 
 ```
 $ vault kv get secret/password
