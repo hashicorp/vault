@@ -56,7 +56,7 @@ at least two people from the _Security_ group must approve to ensure that the
 user has a valid business reason for requesting the data.
 
 - Anytime a database configuration is updated, it requires that one person from
-the _DBA_ and one person from _Security_ group must approve it
+the _DBA_ and one person from _Security_ group must approve it.
 
 
 ## Solution
