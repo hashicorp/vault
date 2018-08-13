@@ -3,7 +3,10 @@ export default {
   initial: 'idle',
   states: {
     active: {
-      on: { DISMISS: 'dismissed' },
+      on: {
+        DISMISS: 'dismissed',
+        AUTH: 'select',
+      },
       key: 'feature',
       initial: 'select',
       states: {
@@ -13,6 +16,20 @@ export default {
           },
         },
         feature: {},
+        init: {
+          key: 'init',
+          initial: 'setup',
+          on: { DONE: 'select' },
+          states: {
+            setup: {
+              on: { CONTINUE: 'save' },
+            },
+            save: {
+              on: { CONTINUE: 'unseal' },
+            },
+            unseal: {},
+          },
+        },
       },
     },
     idle: {

@@ -38,10 +38,9 @@ export default Service.extend({
           if (FeatureMachine !== null) {
             this.saveState('featureState', FeatureMachine.initialState);
             this.saveExtState(FEATURE_STATE, this.get('featureState'));
-          } else {
-            this.buildFeatureMachine();
           }
         }
+        this.buildFeatureMachine();
       }
     }
   },
@@ -69,8 +68,9 @@ export default Service.extend({
     }
   },
 
-  transitionFeatureMachine(currentState, event) {
-    let { actions, value } = FeatureMachine.transition(currentState, event);
+  transitionFeatureMachine(currentState, event, extendedState) {
+    debugger;
+    let { actions, value } = FeatureMachine.transition(currentState, event, extendedState);
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
     for (let action in actions) {

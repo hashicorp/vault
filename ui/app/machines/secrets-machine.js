@@ -6,13 +6,13 @@ export default {
       on: {
         CONTINUE: {
           aws: {
-            cond: (extState, event) => event.selected === 'aws',
+            cond: type => type === 'aws',
           },
           cubbyhole: {
-            cond: (extState, event) => event.selected === 'ch',
+            cond: type => type === 'cubbyhole',
           },
           kv: {
-            cond: (extState, event) => event.selected === 'kv',
+            cond: type => type === 'kv',
           },
         },
       },
@@ -33,8 +33,11 @@ export default {
         },
         role: {
           on: {
-            REPEAT: 'role',
+            CONTINUE: 'display',
           },
+        },
+        display: {
+          REPEAT: 'role',
         },
       },
     },

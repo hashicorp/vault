@@ -65,7 +65,6 @@ export default Ember.Controller.extend({
 
   actions: {
     onTypeChange(val) {
-      debugger;
       const { selectedPath, selectedType } = this.getProperties('selectedPath', 'selectedType');
       this.get('wizard').setPotentialSelection(val);
       this.set('selectedType', val);
@@ -135,6 +134,7 @@ export default Ember.Controller.extend({
           transition = this.transitionToRoute('vault.cluster.secrets.backends');
         }
         transition.followRedirects().then(() => {
+          this.get('wizard').transitionFeatureMachine(this.get('wizard.featureState'), 'CONTINUE', type);
           this.get('flashMessages').success(`Successfully mounted '${type}' at '${path}'!`);
         });
       });
