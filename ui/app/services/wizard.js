@@ -1,7 +1,7 @@
 import Ember from 'ember';
 import { Machine } from 'xstate';
 
-const { Service } = Ember;
+const { Service, inject } = Ember;
 
 import getStorage from 'vault/lib/token-storage';
 
@@ -17,6 +17,7 @@ const COMPLETED_FEATURES = 'vault-completed-list';
 const MACHINES = { secrets: SecretsMachineConfig };
 
 export default Service.extend({
+  router: inject.service(),
   currentState: null,
   featureList: null,
   featureState: null,
@@ -35,7 +36,7 @@ export default Service.extend({
         if (this.storageHasKey(FEATURE_STATE)) {
           this.saveState('featureState', this.getExtState(FEATURE_STATE));
         } else {
-          if (FeatureMachine !== null) {
+          if (FeatureMachine != null) {
             this.saveState('featureState', FeatureMachine.initialState);
             this.saveExtState(FEATURE_STATE, this.get('featureState'));
           }
@@ -63,7 +64,7 @@ export default Service.extend({
     let { actions, value } = TutorialMachine.transition(currentState, event);
     this.saveState('currentState', value);
     this.saveExtState(TUTORIAL_STATE, this.get('currentState'));
-    for (let action in actions) {
+    for (let action of actions) {
       this.executeAction(action, event);
     }
   },
@@ -73,7 +74,7 @@ export default Service.extend({
     let { actions, value } = FeatureMachine.transition(currentState, event, extendedState);
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
-    for (let action in actions) {
+    for (let action of actions) {
       this.executeAction(action, event);
     }
   },
@@ -87,11 +88,18 @@ export default Service.extend({
   },
 
   storageHasKey(key) {
-    return this.storage().keys().includes(key);
+    return Boolean(this.getExtState(key));
   },
 
   executeAction(action, event) {
-    switch (action) {
+    let type = action;
+    if (action.type) {
+      type = action.type;
+    }
+    switch (type) {
+      case 'routeTransition':
+        this.get('router').transitionTo(...action.params);
+        break;
       case 'saveFeatures':
         this.saveFeatures(event.features);
         break;
@@ -128,6 +136,9 @@ export default Service.extend({
     this.set('currentMachine', this.get('featureList').objectAt(0));
     this.saveState('featureState', FeatureMachine.initialState);
     this.saveExtState(FEATURE_STATE, this.get('featureState'));
+    for (let action of FeatureMachine.initialState.actions) {
+      this.executeAction(action);
+    }
   },
 
   completeFeature() {
