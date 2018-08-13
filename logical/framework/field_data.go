@@ -1,9 +1,12 @@
 package framework
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -37,7 +40,7 @@ func (d *FieldData) Validate() error {
 		switch schema.Type {
 		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString, TypeLowerCaseString,
 			TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
-			TypeKVPairs, TypeCommaIntSlice:
+			TypeKVPairs, TypeCommaIntSlice, TypeHeader:
 			_, _, err := d.getPrimitive(field, schema)
 			if err != nil {
 				return errwrap.Wrapf(fmt.Sprintf("error converting input %v for field %q: {{err}}", value, field), err)
@@ -126,7 +129,7 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	switch schema.Type {
 	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString, TypeLowerCaseString,
 		TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
-		TypeKVPairs, TypeCommaIntSlice:
+		TypeKVPairs, TypeCommaIntSlice, TypeHeader:
 		return d.getPrimitive(k, schema)
 	default:
 		return nil, false,
@@ -290,6 +293,103 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			result[keyPairSlice[0]] = keyPairSlice[1]
 		}
 		return result, true, nil
+
+	case TypeHeader:
+		/*
+
+			There are multiple ways a header could be provided:
+
+			1.	As a map[string]interface{} that resolves to a map[string]string or map[string][]string, or a mix of both
+				because that's permitted for headers.
+				This mainly comes from the API.
+
+			2.	As a string...
+				a. That contains JSON that originally was JSON, but then was base64 encoded.
+				b. That contains JSON, ex. `{"content-type":"text/json","accept":["encoding/json"]}`.
+				This mainly comes from the API and is used to save space while sending in the header.
+
+			3.	As an array of strings that contains comma-delimited key-value pairs associated via a colon,
+				ex: `content-type:text/json`,`accept:encoding/json`.
+				This mainly comes from the CLI.
+
+			We go through these sequentially below.
+
+		*/
+		result := http.Header{}
+
+		toHeader := func(resultMap map[string]interface{}) (http.Header, error) {
+			header := http.Header{}
+			for headerKey, headerValGroup := range resultMap {
+				switch typedHeader := headerValGroup.(type) {
+				case string:
+					header.Add(headerKey, typedHeader)
+				case []string:
+					for _, headerVal := range typedHeader {
+						header.Add(headerKey, headerVal)
+					}
+				case []interface{}:
+					for _, headerVal := range typedHeader {
+						strHeaderVal, ok := headerVal.(string)
+						if !ok {
+							// All header values should already be strings when they're being sent in.
+							// Even numbers and booleans will be treated as strings.
+							return nil, fmt.Errorf("received non-string value for header key:%s, val:%s", headerKey, headerValGroup)
+						}
+						header.Add(headerKey, strHeaderVal)
+					}
+				default:
+					return nil, fmt.Errorf("unrecognized type for %s", headerValGroup)
+				}
+			}
+			return header, nil
+		}
+
+		resultMap := make(map[string]interface{})
+
+		// 1. Are we getting a map from the API?
+		if err := mapstructure.WeakDecode(raw, &resultMap); err == nil {
+			result, err = toHeader(resultMap)
+			if err != nil {
+				return nil, true, err
+			}
+			return result, true, nil
+		}
+
+		// 2. Are we getting a JSON string?
+		if headerStr, ok := raw.(string); ok {
+			// a. Is it base64 encoded?
+			headerBytes, err := base64.StdEncoding.DecodeString(headerStr)
+			if err != nil {
+				// b. It's not base64 encoded, it's a straight-out JSON string.
+				headerBytes = []byte(headerStr)
+			}
+			if err := json.NewDecoder(bytes.NewReader(headerBytes)).Decode(&resultMap); err != nil {
+				return nil, true, err
+			}
+			result, err = toHeader(resultMap)
+			if err != nil {
+				return nil, true, err
+			}
+			return result, true, nil
+		}
+
+		// 3. Are we getting an array of fields like "content-type:encoding/json" from the CLI?
+		var keyPairs []interface{}
+		if err := mapstructure.WeakDecode(raw, &keyPairs); err == nil {
+			for _, keyPairIfc := range keyPairs {
+				keyPair, ok := keyPairIfc.(string)
+				if !ok {
+					return nil, true, fmt.Errorf("invalid key pair %q", keyPair)
+				}
+				keyPairSlice := strings.SplitN(keyPair, ":", 2)
+				if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {
+					return nil, true, fmt.Errorf("invalid key pair %q", keyPair)
+				}
+				result.Add(keyPairSlice[0], keyPairSlice[1])
+			}
+			return result, true, nil
+		}
+		return nil, true, fmt.Errorf("%s not provided an expected format", raw)
 
 	default:
 		panic(fmt.Sprintf("Unknown type: %s", schema.Type))

@@ -444,10 +444,6 @@ can be set in a CSR are supported.
   only current valid type is `UTF8`. This can be a comma-delimited list or a
   JSON string slice.
 
-- `ttl` `(string: "")` – Specifies the requested Time To Live (after which the
-  certificate will be expired). This cannot be larger than the engine's max (or,
-  if not set, the system max).
-
 - `format` `(string: "")` – Specifies the format for returned data. This can be
   `pem`, `der`, or `pem_bundle`; defaults to `pem`. If `der`, the output is
   base64 encoded. If `pem_bundle`, the `csr` field will contain the private key

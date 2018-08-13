@@ -262,14 +262,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		RootPrivsRequired: rootPath,
 	})
 	if !authResults.Allowed {
-		var retErr error
-		if authResults.DeniedError {
-			retErr = logical.ErrPermissionDenied
+		retErr := authResults.Error
+		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		}
-		if authResults.Error.ErrorOrNil() != nil {
-			return auth, te, multierror.Append(retErr, authResults.Error)
-		}
-		// Return auth for audit logging even if not allowed
 		return auth, te, retErr
 	}
 
