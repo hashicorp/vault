@@ -5,6 +5,12 @@ DEPRECATIONS/CHANGES:
  * Request Timeouts: A default request timeout of 90s is now enforced. This
    setting can be overwritten in the config file. If you anticipate requests
    taking longer than 90s this setting should be updated before upgrading.
+ * `sys/` Top Level Injection: For the last two years for backwards
+   compatibility data for various `sys/` routes has been injected into both the
+   Secret's Data map and into the top level of the JSON response object.
+   However, this has some subtle issues that pop up from time to time and is
+   becoming increasingly complicated to maintain, so it's finally being
+   removed.
 
 FEATURES:
 
