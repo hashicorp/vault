@@ -85,8 +85,8 @@ func TestInvalid(t *testing.T) {
 }
 
 func TestRandom(t *testing.T) {
-	a, err1 := Random(16)
-	b, err2 := Random(16)
+	a, err1 := Random(16, true)
+	b, err2 := Random(16, true)
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Unexpected errors: %v, %v", err1, err2)
@@ -96,8 +96,14 @@ func TestRandom(t *testing.T) {
 		t.Fatalf("Expected different random values. Got duplicate: %s", a)
 	}
 
-	c, _ := Random(4738)
+	c, _ := Random(4738, true)
 	if len(c) != 4738 {
 		t.Fatalf("Expected length 4738, got: %d", len(c))
 	}
+
+	d, _ := Random(100, false)
+	if len(d) < 134 || len(d) > 135 {
+		t.Fatalf("Expected length 134 or 135, got: %d", len(d))
+	}
+
 }

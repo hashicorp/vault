@@ -25,12 +25,19 @@ func Decode(input string) []byte {
 	return decoder.Bytes()
 }
 
-// Random generates a random base62-encoded string of the given length.
-func Random(length int) (string, error) {
+// Random generates a random base62-encoded string.
+// If truncate is true, the result will be a string of the requested length.
+// Otherwise, it will be the encoded result of length bytes of random data.
+func Random(length int, truncate bool) (string, error) {
 	buf, err := uuid.GenerateRandomBytes(length)
 	if err != nil {
 		return "", err
 	}
 
-	return Encode(buf)[:length], nil
+	result := Encode(buf)
+	if truncate {
+		result = result[:length]
+	}
+
+	return result, nil
 }
