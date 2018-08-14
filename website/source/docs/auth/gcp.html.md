@@ -48,7 +48,7 @@ $ vault login -method=gcp \
     jwt_exp="15m" \
     credentials=@path/to/credentials.json \
     project="my-project" \
-    service-account="service-account@my-project.iam.gserviceaccounts.com"
+    service_account="service-account@my-project.iam.gserviceaccounts.com"
 ```
 
 This signs a properly formatted service account JWT and authenticates to Vault
