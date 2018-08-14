@@ -57,6 +57,7 @@ Each namespace can have its own:
 - Policies
 - Mounts
 - Tokens
+- Identity entities and groups
 
 > Tokens are locked to a namespace or child-namespaces.  Identity groups can
 pull in entities and groups from other namespaces.
@@ -397,29 +398,43 @@ $ curl --header "X-Vault-Token: ..." \
 ### <a name="step3"></a>Step 3: Setup entities and groups
 (**Persona:** operations)
 
-Create organization-level admin user, `bob`, and team-level admin user, `jenn`.
+In this step, you are going to create an entity, Bob Smith who is an
+organization-level administrator.  Also, you are going to create a group for
+team-level administrator, Team Admin, and add  Bob Smith as a member so that he
+inherits the `training-admin` policy as well.
 
--> **NOTE:** For the purpose of this guide, you are going to use the username &
-password (`userpass`) auth method.
+![Entities and Groups](/assets/images/vault-multi-tenant-3.png)
+
+-> **NOTE:** If you are not familiar with entities and groups, refer to the
+[Identity - Entities and
+Groups](http://localhost:4567/guides/identity/identity.html) guide.
 
 #### CLI Command
 
 ```shell
-# First, you need to enable auth method
+# First, you need to enable userpass auth method
 $ vault auth enable -namespace=education userpass
 
-# Create a user 'bob' with both 'edu-admin' & 'training-admin' policies attached
+# Create a user 'bob'
 $ vault write -namespace=education \
-        auth/userpass/users/bob password="training" \
-         policies="edu-admin, training-admin"
+        auth/userpass/users/bob password="password"
 
-# First, you need to enable auth method
-$ vault auth enable -namespace=training userpass
+# Create an entity for Bob Smith with 'edu-admin' policy attached
+# Save the generated entity ID in entity_id.txt file
+$ vault write -namespace=education -format=json identity/entity name="Bob Smith" \
+        policies="edu-admin" | jq -r ".data.id" > entity_id.txt
 
-# Create a user 'jenn' with 'training-admin' policy attached
-$ vault write -namespace=education/training \
-        auth/userpass/users/jenn password="training" \
-        policies="training-admin"
+# Get the mount accessor for userpass auth method and save it in accessor.txt file
+$ vault auth list -namespace=education -format=json \
+        | jq -r '.["userpass/"].accessor' > accessor.txt
+
+# Create an entity alias for Bob Smith to attach 'bob'
+$ vault write -namespace=education identity/entity-alias name="bob" \
+        canonical_id=$(cat entity_id.txt) mount_accessor=$(cat accessor.txt)
+
+# Create a group, "team-admin" in education/training namespace
+$ vault write -namespace=education/training identity/group name="Training Admin" \
+        policies="training-admin" member_entity_ids=$(cat entity_id.txt)
 ```
 
 
@@ -433,42 +448,80 @@ $ curl --header "X-Vault-Token: ..." \
        --data '{"type": "userpass"}' \
        http://127.0.0.1:8200/v1/sys/auth/userpass
 
-# Create a user 'bob' with both 'edu-admin' & 'training-admin' policies attached
+# Create a user 'bob'
 $ curl --header "X-Vault-Token: ..." \
        --header "X-Vault-Namespace: education" \
        --request POST \
-       --data '{"password": "training", "policies": ["edu-admin", "training-admin"]}' \
+       --data '{"password": "password"}' \
        http://127.0.0.1:8200/v1/auth/userpass/users/bob
 
-# Enable the `userpass` auth method
+# Create an entity for Bob Smith with 'edu-admin' policy attached
+# Copy the generated entity ID
 $ curl --header "X-Vault-Token: ..." \
-      --header "X-Vault-Namespace: education/training" \
-      --request POST \
-      --data '{"type": "userpass"}' \
-      http://127.0.0.1:8200/v1/sys/auth/userpass
+       --header "X-Vault-Namespace: education" \
+       --request POST \
+       --data '{"name": "Bob Smith", "policies": "edu-admin"}' \
+       http://127.0.0.1:8200/v1/identity/entity
+{
+   ...
+   "data": {
+     "aliases": null,
+     "id": "6ded4d31-481f-040b-11ad-c6db0cb4d211"
+   },
+   ...
+}
 
-# Create a user 'jenn' with 'training-admin' policy attached
+# Get the mount accessor for userpass auth method
 $ curl --header "X-Vault-Token: ..." \
-      --header "X-Vault-Namespace: education/training" \
-      --request POST \
-      --data '{"password": "training", "policies": "training-admin"}' \
-      http://127.0.0.1:8200/v1/auth/userpass/users/jenn
+       http://127.0.0.1:8200/v1/sys/auth | jq
+{
+ ...
+ "userpass/": {
+   "accessor": "auth_userpass_9b6cd254",
+  ...
+}
+
+# Create the API request message payload
+$ tee payload-bob.json <<EOF
+{
+  "name": "bob",
+  "canonical_id": "6ded4d31-481f-040b-11ad-c6db0cb4d211",
+  "mount_accessor": "auth_userpass_9b6cd254"
+}
+EOF
+
+# Create an entity alias for Bob Smith to attach 'bob'
+$ curl --header "X-Vault-Token: ..." \
+       --header "X-Vault-Namespace: education" \
+       --request POST \
+       --data @payload-bob.json \
+       http://127.0.0.1:8200/v1/identity/entity-alias
+
+# Create a group, "team-admin" in education/training namespace
+# API request msg payload.  Be sure to enter the correct Bob Smith entity ID
+$ tee payload-group.json <<EOF
+{
+  "name": "Training Admin",
+  "policies": ["training-admin"],
+  "member_entity_ids": ["6ded4d31-481f-040b-11ad-c6db0cb4d211"]
+}
+EOF
+
+# Use identity/group endpoint
+$ curl --header "X-Vault-Token: ..." \
+       --header "X-Vault-Namespace: education/training" \
+       --request PUT \
+       --data @payload-group.json \
+       http://127.0.0.1:8200/v1/identity/group | jq
+{
+   ...
+   "data": {
+     "id": "d62157aa-b5f6-b6fe-aa40-0ffc54defc41",
+     "name": "Training Admin"
+   },
+   ...
+}
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ### <a name="step4"></a>Step 4: Test organization admin user
@@ -479,16 +532,16 @@ $ curl --header "X-Vault-Token: ..." \
 Log in as **`bob`** into the `education` namespace:
 
 ```plaintext
-$ vault login -namespace=education -method=userpass username="bob" password="training"
+$ vault login -namespace=education -method=userpass username="bob" password="password"
 
 Key                    Value
 ---                    -----
-token                  9ed2c0bf-65e2-a713-f0fa-2650b034cacf
-token_accessor         d827c99c-35aa-64a1-78e8-7e3a4fd9741f
+token                  52e6fb8e-7f1f-8cf4-47c5-fff2c932e2ee
+token_accessor         a7d01e20-1bac-98b9-a40d-349ad1868e31
 token_duration         768h
 token_renewable        true
-token_policies         ["default" "edu-admin" "training-admin"]
-identity_policies      []
+token_policies         ["default"]
+identity_policies      ["edu-admin" "training-admin"]
 policies               ["default" "edu-admin" "training-admin"]
 token_meta_username    bob
 ```
@@ -501,89 +554,34 @@ Log in as **`bob`** into the `education` namespace:
 ```plaintext
 $ curl --header "X-Vault-Namespace: education" \
        --request POST \
-       --data '{"password": "training"}' \
+       --data '{"password": "password"}' \
        http://127.0.0.1:8200/v1/auth/userpass/login/bob | jq
 {
-  ...
-  "auth": {
-    "client_token": "e2ddcc38-4955-1b81-e9db-0d1091162172",
-    "accessor": "eaff9242-fac6-f26f-729e-14822acd98f7",
-    "policies": [
-      "default",
-      "edu-admin",
-      "training-admin"
-    ],
-    "token_policies": [
-      "default",
-      "edu-admin",
-      "training-admin"
-    ],
-    "metadata": {
-      "username": "bob"
-    },
-    ...
+   ...
+   "auth": {
+     "client_token": "e639b1ec-a2df-9645-169a-fb50d1a19c01",
+     "accessor": "a462f0f9-dd3d-5f52-de8a-180f23d5cb05",
+     "policies": [
+       "default",
+       "edu-admin",
+       "training-admin"
+     ],
+     "token_policies": [
+       "default"
+     ],
+     "identity_policies": [
+       "edu-admin",
+       "training-admin"
+     ],
+     "metadata": {
+       "username": "bob"
+     },
+     ...
+   }
 }
 ```
 
 
-
-
-
-
-
-
-
-### <a name="step5"></a>Step 5: Test training admin user
-(**Persona:** training-admin)
-
-#### CLI Command
-
-Log in as **`jenn`** into the `education/training` namespace:
-
-```plaintext
-vault login -namespace=education/training -method=userpass username="jenn" password="training"
-
-Key                    Value
----                    -----
-token                  1187670c-aed7-1e5c-3e4e-079a607df5c6
-token_accessor         c10acc61-c737-f0d4-9c97-34c83a4fa1f7
-token_duration         768h
-token_renewable        true
-token_policies         ["default" "training-admin"]
-identity_policies      []
-policies               ["default" "training-admin"]
-token_meta_username    jenn
-```
-
-
-#### API call using cURL
-
-Log in as **`jenn`** into the `education/training` namespace:
-
-```plaintext
-$ curl --header "X-Vault-Namespace: education/training" \
-       --request POST \
-       --data '{"password": "training"}' \
-       http://127.0.0.1:8200/v1/auth/userpass/login/jenn | jq
-{
-  ...
-  "auth": {
-    "client_token": "1187670c-aed7-1e5c-3e4e-079a607df5c6",
-    "accessor": "c10acc61-c737-f0d4-9c97-34c83a4fa1f7",
-    "policies": [
-      "default",
-      "training-admin"
-    ],
-    "token_policies": [
-      "default",
-      "training-admin"
-    ],
-    "metadata": {
-      "username": "jenn"
-    },
-    ...
-}
-```
 
 
 
