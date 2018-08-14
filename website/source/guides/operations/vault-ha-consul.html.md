@@ -25,6 +25,13 @@ redirect requests to the _active_ node.
 
 ![Reference Architecture](/assets/images/vault-ha-consul-3.png)
 
+> **NOTE:** As of version **0.11**, those standby nodes can handle read-only
+requests and behave as read-replica nodes. This **Performance Nodes**
+feature is included in _Vault Enterprise Premium_, and also available for _Vault
+Enterprise Pro_ with additional fee. The performance nodes feature is
+particularly useful for processing high volume Encryption as a Service (Transit
+secrets engine) requests.
+
 
 ~> This guide will walk you through a simple Vault Highly Available (HA) cluster
 implementation. While this is not an exhaustive or prescriptive guide that can
