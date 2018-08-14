@@ -10,21 +10,21 @@ description: |-
 
 # Vault Deployment Guide
 
-This deployment guide covers the steps required to install and configure a single HashiCorp Vault cluster as defined in the [Vault Reference Architecture](https://www.vaultproject.io/guides/operations/reference-architecture.html).
+This deployment guide covers the steps required to install and configure a single HashiCorp Vault cluster as defined in the [Vault Reference Architecture](/guides/operations/reference-architecture.html).
 
 Below are instructions for installing and configuring Vault on Linux hosts running the systemd system and service manager.
 
 ## Reference Material
 
-This deployment guide is designed to work in combination with the [Vault Reference Architecture](https://www.vaultproject.io/guides/operations/reference-architecture.html). Although not a strict requirement to follow the Vault Reference Architecture, please ensure you are familiar with the overall architecture design; for example installing Vault on multiple physical or virtual (with correct anti-affinity) hosts for high-availability and using Consul for the HA and storage backend.
+This deployment guide is designed to work in combination with the [Vault Reference Architecture](/guides/operations/reference-architecture.html). Although not a strict requirement to follow the Vault Reference Architecture, please ensure you are familiar with the overall architecture design; for example installing Vault on multiple physical or virtual (with correct anti-affinity) hosts for high-availability and using Consul for the HA and storage backend.
 
-During the installation of Vault you should also review and apply the recommendations provided in the [Vault Production Hardening](https://www.vaultproject.io/guides/operations/production.html) guide.
+During the installation of Vault you should also review and apply the recommendations provided in the [Vault Production Hardening](/guides/operations/production.html) guide.
 
 ## Overview
 
-To provide a highly-available single cluster architecture, we recommend Vault be deployed to more than one host, as shown in the [Vault Reference Architecture](https://www.vaultproject.io/guides/operations/reference-architecture.html), and connected to a Consul cluster for persistent data storage.
+To provide a highly-available single cluster architecture, we recommend Vault be deployed to more than one host, as shown in the [Vault Reference Architecture](/guides/operations/reference-architecture.html), and connected to a Consul cluster for persistent data storage.
 
-![Reference Diagram](https://www.vaultproject.io/assets/images/vault-ref-arch-2-02305ae7.png "Reference Diagram")
+![Reference Diagram](/assets/images/vault-ref-arch-2-02305ae7.png)
 
 The below setup steps should be completed on all Vault hosts.
 
@@ -93,7 +93,7 @@ Add the below configuration to the Vault service file:
 ```text
 [Unit]
 Description="HashiCorp Vault - A tool for managing secrets"
-Documentation=https://www.vaultproject.io/
+Documentation=https://www.vaultproject.io/docs/
 Requires=network-online.target
 After=network-online.target
 ConditionFileNotEmpty=/etc/vault.d/vault.hcl
@@ -101,11 +101,23 @@ ConditionFileNotEmpty=/etc/vault.d/vault.hcl
 [Service]
 User=vault
 Group=vault
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=yes
+PrivateDevices=yes
+SecureBits=keep-caps
+Capabilities=CAP_IPC_LOCK+ep
+CapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK
+NoNewPrivileges=yes
 ExecStart=/usr/local/bin/vault server -config=/etc/vault.d/vault.hcl
 ExecReload=/bin/kill --signal HUP $MAINPID
 KillMode=process
+KillSignal=SIGINT
 Restart=on-failure
 RestartSec=5
+TimeoutStopSec=30
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Install]
 WantedBy=multi-user.target
@@ -122,11 +134,17 @@ The following parameters are set for the `[Unit]` stanza:
 The following parameters are set for the `[Service]` stanza:
 
 - [`User`, `Group`](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#User=) - Run vault as the vault user
+- [`ProtectSystem`, `ProtectHome`, `PrivateTmp`, `PrivateDevices`](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#Sandboxing) - Sandboxing settings to improve the security of the host by restricting vault privileges and access
+- [`SecureBits`, `Capabilities`, `CapabilityBoundingSet`](http://man7.org/linux/man-pages/man7/capabilities.7.html) - Configure the capabilities of the vault process
+- [`NoNewPrivileges`](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#NoNewPrivileges=) - Prevent vault and any child process from gaining new privileges
 - [`ExecStart`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#ExecStart=) - Start vault with the `server` argument and path to the configuration file  
 - [`ExecReload`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#ExecReload=) - Send vault a HUP signal to trigger a configuration reload in vault
 - [`KillMode`](https://www.freedesktop.org/software/systemd/man/systemd.kill.html#KillMode=) - Treat vault as a single process
-- [`Restart`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#RestartSec=) - Restart vault unless it returned a clean exit code
+- [`KillSignal`](https://www.freedesktop.org/software/systemd/man/systemd.kill.html#KillSignal=) - Send SIGINT signal when shutting down vault
+- [`Restart`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#RestartSec=) - Restart vault ([in a sealed state](/docs/concepts/seal.html)) unless it returned a clean exit code
 - [`RestartSec`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#RestartSec=) - Restart vault after 5 seconds of it being considered 'failed'
+- [`TimeoutStopSec`](test) - Wait 30 seconds for a clean stop before sending a SIGKILL signal
+- [`StartLimitIntervalSec`, `StartLimitBurst`](https://www.freedesktop.org/software/systemd/man/systemd.unit.html#StartLimitIntervalSec=interval) - Limit vault to three start attempts in 60 seconds
 
 The following parameters are set for the `[Install]` stanza:
 
@@ -134,7 +152,7 @@ The following parameters are set for the `[Install]` stanza:
 
 ## Configure Consul
 
-When using Consul as the storage backend for Vault, we recommend using Consul's [ACL system](https://www.consul.io/docs/guides/acl.html) to restrict access to the path where Vault stores data. This access restriction is an added security measure in addition to the [encryption Vault uses to protect data](https://www.vaultproject.io/docs/internals/architecture.html) written to the storage backend.
+When using Consul as the storage backend for Vault, we recommend using Consul's [ACL system](https://www.consul.io/docs/guides/acl.html) to restrict access to the path where Vault stores data. This access restriction is an added security measure in addition to the [encryption Vault uses to protect data](/docs/internals/architecture.html) written to the storage backend.
 
 The Consul website provides documentation on [bootstrapping the ACL system](https://www.consul.io/docs/guides/acl.html#bootstrapping-acls), generating a management token and using that token to add some initial tokens for Consul agents, UI access etc. You should complete the bootstrapping section of the Consul documentation before continuing with this guide.
 
@@ -163,7 +181,7 @@ The response includes the UUID you will use as the `token` parameter value in Va
 
 ## Configure Vault
 
-Vault uses [documented sane defaults](https://www.vaultproject.io/docs/configuration) so only non-default values must be set in the configuration file.
+Vault uses [documented sane defaults](/docs/configuration) so only non-default values must be set in the configuration file.
 
 Create a configuration file at /etc/vault.d/vault.hcl:
 
@@ -190,11 +208,11 @@ listener "tcp" {
 
 The following parameters are set for the `tcp` listener stanza:
 
-- [`address`](https://www.vaultproject.io/docs/configuration/listener/tcp.html#address) `(string: "127.0.0.1:8200")` – Changing from the loopback address to allow external access to the Vault UI
-- [`tls_cert_file`](https://www.vaultproject.io/docs/configuration/listener/tcp.html#tls_cert_file) `(string: <required-if-enabled>, reloads-on-SIGHUP)` - Must be set when using TLS
-- [`tls_key_file`](https://www.vaultproject.io/docs/configuration/listener/tcp.html#tls_key_file) `(string: <required-if-enabled>, reloads-on-SIGHUP)` - Must be set when using TLS
+- [`address`](/docs/configuration/listener/tcp.html#address) `(string: "127.0.0.1:8200")` – Changing from the loopback address to allow external access to the Vault UI
+- [`tls_cert_file`](/docs/configuration/listener/tcp.html#tls_cert_file) `(string: <required-if-enabled>, reloads-on-SIGHUP)` - Must be set when using TLS
+- [`tls_key_file`](/docs/configuration/listener/tcp.html#tls_key_file) `(string: <required-if-enabled>, reloads-on-SIGHUP)` - Must be set when using TLS
 
-[More information about tcp listener configuration](https://www.vaultproject.io/docs/configuration/listener/tcp.html).
+[More information about tcp listener configuration](/docs/configuration/listener/tcp.html).
 
 ~> Vault should always be configured to use TLS to provide secure communication between clients and the Vault cluster. This requires a certificate file and key file be installed on each Linux host running Vault. The certificate file and key file must have permissions allowing the vault user/group to read them.
 
@@ -204,7 +222,7 @@ This is an __ENTERPRISE__ feature.
 
 If you are deploying [Vault Enterprise](https://www.hashicorp.com/products/vault), you can include `seal` stanza configuration to specify the seal type to use for additional data protection, such as using HSM or Cloud KMS solutions to encrypt and decrypt the Vault master key. This stanza is optional, and if this is not configured, Vault will use the Shamir algorithm to cryptographically split the master key.
 
-If you are deploying Vault Enterprise, you should review the [seal configuration section](https://www.vaultproject.io/docs/configuration/seal/index.html) of our documentation.
+If you are deploying Vault Enterprise, you should review the [seal configuration section](/docs/configuration/seal/index.html) of our documentation.
 
 An example PKCS #11 compatible HSM example is:
 
@@ -232,9 +250,9 @@ storage "consul" {
 
 The following parameters are set for the `consul` storage stanza:
 
-- [`token`](https://www.vaultproject.io/docs/configuration/storage/consul.html#token) `(string: "")` - Specify the Consul ACL token with permission to read and write from `/vault` in Consul's key-value store
+- [`token`](/docs/configuration/storage/consul.html#token) `(string: "")` - Specify the Consul ACL token with permission to read and write from `/vault` in Consul's key-value store
 
-[More information about consul storage configuration](https://www.vaultproject.io/docs/configuration/storage/consul.html).
+[More information about consul storage configuration](/docs/configuration/storage/consul.html).
 
 ~> Vault should always be configured to use a Consul token with a restrictive ACL policy to read and write from `/vault` in Consul's key-value store. This follows the principal of least privilege, ensuring Vault is unable to access Consul key-value data stored outside of the `/vault` path.
 
@@ -242,7 +260,7 @@ The following parameters are set for the `consul` storage stanza:
 
 The `telemetry` stanza specifies various configurations for Vault to publish metrics to upstream systems.
 
-If you decide to configure Vault to publish telemtery data, you should review the [telemetry configuration section](https://www.vaultproject.io/docs/configuration/telemetry.html) of our documentation.
+If you decide to configure Vault to publish telemtery data, you should review the [telemetry configuration section](/docs/configuration/telemetry.html) of our documentation.
 
 ### Vault UI
 
@@ -256,7 +274,7 @@ Optionally, add the below configuration to the Vault configuration file to enabl
 ui = true
 ```
 
-[More information about configuring the Vault UI](https://www.vaultproject.io/docs/configuration/ui/index.html).
+[More information about configuring the Vault UI](/docs/configuration/ui/index.html).
 
 ## Start Vault
 
