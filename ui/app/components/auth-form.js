@@ -24,6 +24,8 @@ export default Ember.Component.extend(DEFAULTS, {
   cluster: null,
   redirectTo: null,
   namespace: null,
+  // internal
+  oldNamespace: null,
   didReceiveAttrs() {
     this._super(...arguments);
     let token = this.get('wrappedToken');
@@ -78,19 +80,24 @@ export default Ember.Component.extend(DEFAULTS, {
   },
 
   selectedAuthIsPath: computed.match('selectedAuth', /\/$/),
-  selectedAuthBackend: Ember.computed('methods', 'selectedAuth', 'selectedAuthIsPath', function() {
-    let methods = this.get('methods');
-    let selectedAuth = this.get('selectedAuth');
-    let keyIsPath = this.get('selectedAuthIsPath');
-    if (!methods) {
-      return {};
-    }
-    if (keyIsPath) {
-      return methods.findBy('path', selectedAuth);
-    } else {
+  selectedAuthBackend: Ember.computed(
+    'methods',
+    'methods.[]',
+    'selectedAuth',
+    'selectedAuthIsPath',
+    function() {
+      let methods = this.get('methods');
+      let selectedAuth = this.get('selectedAuth');
+      let keyIsPath = this.get('selectedAuthIsPath');
+      if (!methods) {
+        return {};
+      }
+      if (keyIsPath) {
+        return methods.findBy('path', selectedAuth);
+      }
       return BACKENDS.findBy('type', selectedAuth);
     }
-  }),
+  ),
 
   providerPartialName: computed('selectedAuthBackend', function() {
     let type = this.get('selectedAuthBackend.type') || 'token';

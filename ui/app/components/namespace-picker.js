@@ -11,6 +11,7 @@ const DOT_REPLACEMENT = '☃';
 const ANIMATION_DURATION = 250;
 
 export default Component.extend({
+  tagName: '',
   namespaceService: inject.service('namespace'),
   auth: inject.service(),
   namespace: null,
@@ -144,9 +145,8 @@ export default Component.extend({
     let namespace = this.get('namespacePath');
     if (namespace === '') {
       return '';
-    } else {
-      let parts = namespace.split('/');
-      return parts[parts.length - 1];
     }
+    let parts = namespace.split('/');
+    return parts[parts.length - 1];
   }),
 });
