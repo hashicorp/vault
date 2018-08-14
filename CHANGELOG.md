@@ -6,6 +6,11 @@ DEPRECATIONS/CHANGES:
    setting can be overwritten in the config file. If you anticipate requests
    taking longer than 90s this setting should be updated before upgrading.
 
+FEATURES:
+
+ * **AliCloud OSS Storage**: AliCloud OSS can now be used for Vault storage.
+ * **HA Support for MySQL Storage**: MySQL storage now supports HA.
+
 IMPROVEMENTS:
 
  * agent: Add `exit_after_auth` to be able to use the Agent for a single
