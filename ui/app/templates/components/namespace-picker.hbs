@@ -51,11 +51,9 @@
               {{if (eq leaf currentLeaf) "leaf-panel-current" "leaf-panel-left"}}
               {{if (and isAdding (eq leaf changedLeaf)) "leaf-panel-adding"}}
               {{if (and (not isAdding) (eq leaf changedLeaf)) "leaf-panel-exiting"}}
-            ">
-              {{#each-in (get namespaceTree leaf) as |leafName|}}
+            ">{{~#each-in (get namespaceTree leaf) as |leafName|}}
                 <NamespaceLink @targetNamespace={{concat leaf "/" leafName}} @class="namespace-link" @showLastSegment={{true}} />
-              {{/each-in}}
-            </div>
+              {{/each-in~}}</div>
           {{/each}}
         </div>
       </D.content>

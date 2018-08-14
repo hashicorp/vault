@@ -3,7 +3,7 @@ a.splash-page-logo {
   svg {
     transform: scale(.5);
     transform-origin: left;
-    fill: currentColor;
+    fill: $white;
   }
 }
 a.splash-page-logo.is-active {
