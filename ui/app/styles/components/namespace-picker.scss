@@ -55,8 +55,6 @@
 .namespace-list {
   position: relative;
   overflow: hidden;
-  /*lol move this somewhere*/
-  /*margin-bottom: 4px;*/
 }
 
 .namespace-link {
@@ -84,6 +82,9 @@
 .leaf-panel-adding,
 .leaf-panel-current {
   position: relative;
+  & .namespace-link:last-child {
+    margin-bottom: 4px;
+  }
 }
 .animated-list {
   .leaf-panel-exiting,

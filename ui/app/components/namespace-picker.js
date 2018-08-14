@@ -44,6 +44,7 @@ export default Component.extend({
     let changedLeaf = (isAdding ? leaves : lastLeaves).get('lastObject');
     this.set('isAdding', isAdding);
     this.set('changedLeaf', changedLeaf);
+
     // if we're adding we want to render immediately an animate it in
     // if we're not adding, we need time to move the item out before
     // a rerender removes it
@@ -54,7 +55,7 @@ export default Component.extend({
     }
     yield timeout(ANIMATION_DURATION);
     this.set('lastMenuLeaves', leaves);
-  }).drop(),
+  }).restartable(),
 
   isAnimating: computed.alias('setForAnimation.isRunning'),
 
@@ -65,7 +66,8 @@ export default Component.extend({
   accessibleNamespaces: computed.alias('namespaceService.accessibleNamespaces'),
 
   namespaceTree: computed('accessibleNamespaces', function() {
-    let nsList = this.get('accessibleNamespaces');
+    let nsList = this.maybeAddRoot(this.get('accessibleNamespaces'));
+
     if (!nsList) {
       return [];
     }
@@ -96,6 +98,15 @@ export default Component.extend({
     );
   }),
 
+  maybeAddRoot(leaves) {
+    let userRoot = this.get('auth.authData.userRootNamespace');
+    if (userRoot === '') {
+      leaves.unshift('');
+    }
+
+    return leaves.uniq();
+  },
+
   pathToLeaf(path) {
     // dots are allowed in namespace paths
     // so we need to preserve them, and replace slashes with dots
@@ -124,7 +135,10 @@ export default Component.extend({
     let ns = this.get('namespacePath');
     let leaves = ancestorKeysForKey(ns) || [];
     leaves.push(ns);
-    return leaves.map(this.pathToLeaf);
+    leaves = this.maybeAddRoot(leaves);
+
+    leaves = leaves.map(this.pathToLeaf);
+    return leaves;
   }),
 
   // the nodes at the root of the namespace tree
