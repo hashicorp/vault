@@ -1,11 +1,9 @@
 import Ember from 'ember';
-import flat from 'flat';
-import deepmerge from 'deepmerge';
 import keyUtils from 'vault/lib/key-utils';
+import pathToTree from 'vault/lib/path-to-tree';
 import { task, timeout } from 'ember-concurrency';
 
 const { ancestorKeysForKey } = keyUtils;
-const { unflatten } = flat;
 const { Component, computed, inject } = Ember;
 const DOT_REPLACEMENT = '☃';
 const ANIMATION_DURATION = 250;
@@ -66,36 +64,12 @@ export default Component.extend({
   accessibleNamespaces: computed.alias('namespaceService.accessibleNamespaces'),
 
   namespaceTree: computed('accessibleNamespaces', function() {
-    let nsList = this.maybeAddRoot(this.get('accessibleNamespaces'));
+    let nsList = this.get('accessibleNamespaces');
 
     if (!nsList) {
       return [];
     }
-    // first sort the list by length, then alphanumeric
-    nsList = nsList.slice(0).sort((a, b) => b.length - a.length || b.localeCompare(a));
-    // then reduce to an array
-    // and we remove all of the items that have a string
-    // that starts with the same prefix from the list
-    // so if we have "foo/bar/baz", both "foo" and "foo/bar"
-    // won't be included in the list
-    let nsTree = nsList.reduce((accumulator, ns) => {
-      let prefixInList = accumulator.some(nsPath => nsPath.startsWith(ns));
-      if (!prefixInList) {
-        accumulator.push(ns);
-      }
-      return accumulator;
-    }, []);
-
-    // after the reduction we're left with an array that contains
-    // strings that represent the longest branches
-    // we'll replace the dots in the paths, then expand the path
-    // to a nested object that we can then query with Ember.get
-    return deepmerge.all(
-      nsTree.map(ns => {
-        ns = ns.replace(/\.+/g, DOT_REPLACEMENT);
-        return unflatten({ [ns]: null }, { delimiter: '/' });
-      })
-    );
+    return pathToTree(nsList);
   }),
 
   maybeAddRoot(leaves) {
