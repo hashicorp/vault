@@ -126,7 +126,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	return req, 0, nil
 }
 
-func handleLogical(core *vault.Core, injectDataIntoTopLevel bool, prepareRequestCallback PrepareRequestFunc) http.Handler {
+func handleLogical(core *vault.Core, prepareRequestCallback PrepareRequestFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
@@ -155,11 +155,11 @@ func handleLogical(core *vault.Core, injectDataIntoTopLevel bool, prepareRequest
 		}
 
 		// Build the proper response
-		respondLogical(w, r, req, injectDataIntoTopLevel, resp)
+		respondLogical(w, r, req, resp)
 	})
 }
 
-func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request, injectDataIntoTopLevel bool, resp *logical.Response) {
+func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request, resp *logical.Response) {
 	var httpResp *logical.HTTPResponse
 	var ret interface{}
 
@@ -194,13 +194,6 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 		}
 
 		ret = httpResp
-
-		if injectDataIntoTopLevel {
-			injector := logical.HTTPSysInjector{
-				Response: httpResp,
-			}
-			ret = injector
-		}
 	}
 
 	// Respond

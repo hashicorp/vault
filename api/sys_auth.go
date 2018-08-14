@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/mitchellh/mapstructure"
@@ -18,29 +19,18 @@ func (c *Sys) ListAuth() (map[string]*AuthMount, error) {
 	}
 	defer resp.Body.Close()
 
-	var result map[string]interface{}
-	err = resp.DecodeJSON(&result)
+	secret, err := ParseSecret(resp.Body)
 	if err != nil {
 		return nil, err
 	}
+	if secret == nil || secret.Data == nil {
+		return nil, errors.New("data from server response is empty")
+	}
 
 	mounts := map[string]*AuthMount{}
-	for k, v := range result {
-		switch v.(type) {
-		case map[string]interface{}:
-		default:
-			continue
-		}
-		var res AuthMount
-		err = mapstructure.Decode(v, &res)
-		if err != nil {
-			return nil, err
-		}
-		// Not a mount, some other api.Secret data
-		if res.Type == "" {
-			continue
-		}
-		mounts[k] = &res
+	err = mapstructure.Decode(secret.Data, &mounts)
+	if err != nil {
+		return nil, err
 	}
 
 	return mounts, nil
