@@ -28,75 +28,79 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusNotFound, nil
 	}
 
+	var data map[string]interface{}
+
 	// Determine the operation
 	var op logical.Operation
 	switch r.Method {
 	case "DELETE":
 		op = logical.DeleteOperation
+
 	case "GET":
 		op = logical.ReadOperation
-		// Need to call ParseForm to get query params loaded
 		queryVals := r.URL.Query()
+		var list bool
+		var err error
 		listStr := queryVals.Get("list")
 		if listStr != "" {
-			list, err := strconv.ParseBool(listStr)
+			list, err = strconv.ParseBool(listStr)
 			if err != nil {
 				return nil, http.StatusBadRequest, nil
 			}
 			if list {
 				op = logical.ListOperation
+				if !strings.HasSuffix(path, "/") {
+					path += "/"
+				}
 			}
 		}
+
+		if !list {
+			getData := map[string]interface{}{}
+
+			for k, v := range r.URL.Query() {
+				// Skip the help key as this is a reserved parameter
+				if k == "help" {
+					continue
+				}
+
+				switch {
+				case len(v) == 0:
+				case len(v) == 1:
+					getData[k] = v[0]
+				default:
+					getData[k] = v
+				}
+			}
+
+			if len(getData) > 0 {
+				data = getData
+			}
+		}
+
 	case "POST", "PUT":
 		op = logical.UpdateOperation
+		// Parse the request if we can
+		if op == logical.UpdateOperation {
+			err := parseRequest(r, w, &data)
+			if err == io.EOF {
+				data = nil
+				err = nil
+			}
+			if err != nil {
+				return nil, http.StatusBadRequest, err
+			}
+		}
+
 	case "LIST":
 		op = logical.ListOperation
-	case "OPTIONS":
-	default:
-		return nil, http.StatusMethodNotAllowed, nil
-	}
-
-	if op == logical.ListOperation {
 		if !strings.HasSuffix(path, "/") {
 			path += "/"
 		}
-	}
 
-	// Parse the request if we can
-	var data map[string]interface{}
-	if op == logical.UpdateOperation {
-		err := parseRequest(r, w, &data)
-		if err == io.EOF {
-			data = nil
-			err = nil
-		}
-		if err != nil {
-			return nil, http.StatusBadRequest, err
-		}
-	}
-
-	// If we are a read operation, try and parse any parameters
-	if op == logical.ReadOperation {
-		getData := map[string]interface{}{}
-
-		for k, v := range r.URL.Query() {
-			// Skip the help key as this is a reserved parameter
-			if k == "help" {
-				continue
-			}
-
-			switch {
-			case len(v) == 0:
-			case len(v) == 1:
-				getData[k] = v[0]
-			default:
-				getData[k] = v
-			}
-		}
-
-		if len(getData) > 0 {
-			data = getData
-		}
+	case "OPTIONS":
+	default:
+		return nil, http.StatusMethodNotAllowed, nil
 	}
 
 	var err error
