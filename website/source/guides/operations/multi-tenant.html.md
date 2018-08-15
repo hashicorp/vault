@@ -101,9 +101,9 @@ If you are not familiar with policies, complete the
 ## Steps
 
 **Scenario:** In this guide, you are going to create a namespace dedicated to
-_Education_ organization which has _Training_ and _Certification_ teams.
-Delegate policy management to the team admins so that the cluster operator
-won't have to be involved.
+Education organization which has Training and Certification teams. Delegate
+operational tasks to the team admins so that the Vault cluster operators won't
+have to be involved.
 
 ![Scenario](/assets/images/vault-multi-tenant-2.png)
 
@@ -113,6 +113,7 @@ In this guide, you are going to perform the following steps:
 1. [Write Policies](#step2)
 1. [Setup entities and groups](#step3)
 1. [Test the organization admin user](#step4)
+1. [Test the team admin user](#step5)
 
 
 ### <a name="step1"></a>Step 1: Create ACL Namespaces
@@ -227,21 +228,23 @@ and then login.
 
 1. Select **Access**.
 
-1. Select **Namespaces** and then click **Add a namespace**.
+1. Select **Namespaces** and then click **Create a namespace**.
 
 1. Enter **`education`** in the **Path** field.
 
 1. Click **Save**.
 
-1. Select **Add a namespace** again, and then enter **`education/training`** in
-the **Path** field.
+1. To create child namespaces, select the down-arrow on the upper left corner of
+the UI, and select **education** under **CURRENT NAMESPACE**.
 
-1. Click **Save**.
+    ![NS Selection](/assets/images/vault-multi-tenant-1.png)
 
-1. Select **Add a namespace** again, and then enter
-**`education/certification`** in the **Path** field.
+1. Under the **Access** tab, select **Namespaces** and then click **Create a namespace**.
 
-1. Click **Save**.
+1. Enter **`training`** in the **Path** field, and click **Save**.
+
+1. Select **Create a namespace** again, and then enter **`certification`** in
+the **Path** field, and click **Save**.
 
 
 
@@ -339,7 +342,6 @@ path "sys/policy" {
   capabilities = ["read", "update", "list"]
 }
 
-
 # Enable and manage secrets engines
 path "sys/mounts/*" {
    capabilities = ["create", "read", "update", "delete", "list"]
@@ -430,12 +432,12 @@ $ curl --header "X-Vault-Token: ..." \
 
 #### Web UI
 
-1. In the Web UI, select **education** for the **CURRENT NAMESPACE** in the
-upper left menu.
+1. In the Web UI, make sure that the **CURRENT NAMESPACE** is set to
+**education** in the upper left menu.
 
 1. Click the **Policies** tab, and then select **Create ACL policy**.
 
-1. Toggle **Upload file**, and click **Choose a file** to select your
+1. Toggle **Upload file** sliding switch, and click **Choose a file** to select your
 **`edu-admin.hcl`** file you authored.  This loads the policy and sets the
 **Name** to be `edu-admin`.
 
@@ -443,6 +445,7 @@ upper left menu.
 
 1. Set the **CURRENT NAMESPACE** to be **education/training** in the upper left
 menu.
+    ![Namespace](/assets/images/vault-multi-tenant-6.png)
 
 1. In the **Policies** tab, select **Create ACL policy**.
 
@@ -455,16 +458,19 @@ menu.
 ### <a name="step3"></a>Step 3: Setup entities and groups
 (**Persona:** operations)
 
-In this step, you are going to create an entity, Bob Smith who is an
-organization-level administrator.  Also, you are going to create a group for
-team-level administrator, Team Admin, and add  Bob Smith as a member so that he
-inherits the `training-admin` policy as well.
+Bob who is an organization-level administrator has two accounts: **`bob`** and
+**`bsmith`**. You will create an entity, **Bob Smith** to associate those two
+accounts.
+
+Also, you are going to create a group for team-level administrator, **Team
+Admin**, and add Bob Smith entity as a group member so that Bob can inherit the
+`training-admin` policy to manage the child namespace.
 
 ![Entities and Groups](/assets/images/vault-multi-tenant-3.png)
 
--> **NOTE:** If you are not familiar with entities and groups, refer to the
-[Identity - Entities and
-Groups](http://localhost:4567/guides/identity/identity.html) guide.
+-> This step only demonstrates CLI commands and Web UI to create
+entities and groups.  Refer to the [Identity - Entities and
+Groups](/guides/identity/identity.html) guide if you need the full details.
 
 #### CLI Command
 
@@ -489,102 +495,32 @@ $ vault auth list -namespace=education -format=json \
 $ vault write -namespace=education identity/entity-alias name="bob" \
         canonical_id=$(cat entity_id.txt) mount_accessor=$(cat accessor.txt)
 
-# Create a group, "team-admin" in education/training namespace
-$ vault write -namespace=education/training identity/group name="Training Admin" \
-        policies="training-admin" member_entity_ids=$(cat entity_id.txt)
-```
+# Create a group, "Training Admin" in education/training namespace
+$ vault write -namespace=education/training identity/group \
+        name="Training Admin" policies="training-admin" \
+        member_entity_ids=$(cat entity_id.txt)
 
+# Enable userpass auth method in training namespace
+$ vault auth enable -namespace=education/namespace userpass
 
-#### API call using cURL
+# Create a user 'bsmith'
+$ vault write -namespace=education/training \
+        auth/userpass/users/bsmith password="password"
 
-```shell
-# Enable the `userpass` auth method
-$ curl --header "X-Vault-Token: ..." \
-       --header "X-Vault-Namespace: education" \
-       --request POST \
-       --data '{"type": "userpass"}' \
-       http://127.0.0.1:8200/v1/sys/auth/userpass
+# Get the mount accessor for userpass auth method and save it in accessor2.txt file
+$ vault auth list -namespace=education/training -format=json \
+        | jq -r '.["userpass/"].accessor' > accessor2.txt
 
-# Create a user 'bob'
-$ curl --header "X-Vault-Token: ..." \
-       --header "X-Vault-Namespace: education" \
-       --request POST \
-       --data '{"password": "password"}' \
-       http://127.0.0.1:8200/v1/auth/userpass/users/bob
-
-# Create an entity for Bob Smith with 'edu-admin' policy attached
-# Copy the generated entity ID
-$ curl --header "X-Vault-Token: ..." \
-       --header "X-Vault-Namespace: education" \
-       --request POST \
-       --data '{"name": "Bob Smith", "policies": "edu-admin"}' \
-       http://127.0.0.1:8200/v1/identity/entity
-{
-   ...
-   "data": {
-     "aliases": null,
-     "id": "6ded4d31-481f-040b-11ad-c6db0cb4d211"
-   },
-   ...
-}
-
-# Get the mount accessor for userpass auth method
-$ curl --header "X-Vault-Token: ..." \
-       http://127.0.0.1:8200/v1/sys/auth | jq
-{
- ...
- "userpass/": {
-   "accessor": "auth_userpass_9b6cd254",
-  ...
-}
-
-# Create the API request message payload
-$ tee payload-bob.json <<EOF
-{
-  "name": "bob",
-  "canonical_id": "6ded4d31-481f-040b-11ad-c6db0cb4d211",
-  "mount_accessor": "auth_userpass_9b6cd254"
-}
-EOF
-
-# Create an entity alias for Bob Smith to attach 'bob'
-$ curl --header "X-Vault-Token: ..." \
-       --header "X-Vault-Namespace: education" \
-       --request POST \
-       --data @payload-bob.json \
-       http://127.0.0.1:8200/v1/identity/entity-alias
-
-# Create a group, "team-admin" in education/training namespace
-# API request msg payload.  Be sure to enter the correct Bob Smith entity ID
-$ tee payload-group.json <<EOF
-{
-  "name": "Training Admin",
-  "policies": "training-admin",
-  "member_entity_ids": "6ded4d31-481f-040b-11ad-c6db0cb4d211"
-}
-EOF
-
-# Use identity/group endpoint
-$ curl --header "X-Vault-Token: ..." \
-       --header "X-Vault-Namespace: education/training" \
-       --request PUT \
-       --data @payload-group.json \
-       http://127.0.0.1:8200/v1/identity/group | jq
-{
-   ...
-   "data": {
-     "id": "d62157aa-b5f6-b6fe-aa40-0ffc54defc41",
-     "name": "Training Admin"
-   },
-   ...
-}
+# Add 'bsmith' to Bob Smith entity as its alias
+$ vault write -namespace=education identity/entity-alias name="bsmith" \
+        canonical_id=$(cat entity_id.txt) mount_accessor=$(cat accessor2.txt)        
 ```
 
 
 #### Web UI
 
-1. In the Web UI, select **education** for the **CURRENT NAMESPACE** in the
-upper left menu.
+1. In the Web UI, make sure that the **CURRENT NAMESPACE** is set to
+**education** in the upper left menu.
 
 1. Click the **Access** tab, and select **Enable new method**.
 
@@ -593,10 +529,10 @@ upper left menu.
 1. Click **Enable Method**.
 
 1. Click the Vault CLI shell icon (**`>_`**) to open a command shell.  Enter the
-following command to create a new user, **`bob`**:
+following command to create a new user, **`bob`**.
 
     ```plaintext
-    $ vault write education/auth/userpass/users/bob password="password"
+    vault write auth/userpass/users/bob password="password"
     ```
     ![Create Policy](/assets/images/vault-multi-tenant-4.png)
 
@@ -619,13 +555,40 @@ following command to create a new user, **`bob`**:
 1. Select the **`bob-smith`** entity and copy its **ID** displayed under the
 **Details** tab.
 
-1. Now, click **Groups** from the left navigation, and select **Create group**.
+1. Now, set the **CURRENT NAMESPACE** to **education/training**.
+    ![Namespace](/assets/images/vault-multi-tenant-6.png)
+
+1. In the **Access** tab, select **Groups**, and select **Create group**.
+
+1. Paste in the entity ID in the **Member Entity IDs** field you copied.
 
 1. Enter **`Training Admin`** in the **Name** field, **`training-admin`** in the
-**Policies** field, and finally paste in the entity ID in the **Member Entity
-IDs** field.
+**Policies** field, and click **Create**.
 
-1. Click **Create**.
+1. Click the **Access** tab, and select **Enable new method**.
+
+1. Select **Username & Password** from the **Type** drop-down menu.
+
+1. Click **Enable Method**.  Copy the mount accessor value which you will user later.
+    ![Namespace](/assets/images/vault-multi-tenant-8.png)
+
+1. Click the Vault CLI shell icon (**`>_`**) to open a command shell.  Enter the
+following command to create a new user, **`bsmith`**.
+
+    ```plaintext
+    vault write auth/userpass/users/bsmith password="password"
+    ```
+
+1. Set the **CURRENT NAMESPACE** back to **education**.
+
+1. In the command shell, enter the following command.  Be sure to replace the
+`<Bob_Smith_entity_id>` with the value you copied at step 13, and
+`<mount_accessor>` with the value you copied at step 20.
+
+    ```plaintext
+    vault write identity/entity-alias name="bsmith" \
+            canonical_id=<Bob_Smith_entity_id> mount_accessor=<mount_accessor>
+    ```
 
 
 ### <a name="step4"></a>Step 4: Test the organization admin user
@@ -635,21 +598,29 @@ IDs** field.
 
 Log in as **`bob`** into the `education` namespace:
 
-```shell
-# Login as 'bob'
+```plaintext
 $ vault login -namespace=education -method=userpass username="bob" password="password"
 
 Key                    Value
 ---                    -----
-token                  52e6fb8e-7f1f-8cf4-47c5-fff2c932e2ee
-token_accessor         a7d01e20-1bac-98b9-a40d-349ad1868e31
+token                  5ai0qpQeCdRHALzEY4Q8sW.28dk2
+token_accessor         9xXQmdx6Aq6zw1KX4gpzb.28dk2
 token_duration         768h
 token_renewable        true
 token_policies         ["default"]
-identity_policies      ["edu-admin" "training-admin"]
-policies               ["default" "edu-admin" "training-admin"]
+identity_policies      ["edu-admin"]
+policies               ["default" "edu-admin"]
 token_meta_username    bob
+```
 
+Notice that the user, `bob` only has `default` policy attached to his token
+(`token_policies`); however, he inherited the `edu-admin` policy from the `Bob
+Smith` entity (`identity_policies`).
+
+Test to make sure that `bob` can create a namespace, enable secrets engine, and
+whatever else that you want to verify.
+
+```shell
 # Set the target namespace as an env variable
 $ export VAULT_NAMESPACE="education"
 
@@ -674,8 +645,7 @@ $ unset VAULT_NAMESPACE
 
 Log in as **`bob`** into the `education` namespace:
 
-```shell
-# Log in as bob
+```plaintext
 $ curl --header "X-Vault-Namespace: education" \
        --request POST \
        --data '{"password": "password"}' \
@@ -683,35 +653,49 @@ $ curl --header "X-Vault-Namespace: education" \
 {
    ...
    "auth": {
-     "client_token": "e639b1ec-a2df-9645-169a-fb50d1a19c01",
-     "accessor": "a462f0f9-dd3d-5f52-de8a-180f23d5cb05",
+     "client_token": "5ai0qpQeCdRHALzEY4Q8sW.28dk2",
+     "accessor": "9xXQmdx6Aq6zw1KX4gpzb.28dk2",
      "policies": [
-       "default",
-       "edu-admin",
-       "training-admin"
-     ],
-     "token_policies": [
-       "default"
-     ],
-     "identity_policies": [
-       "edu-admin",
-       "training-admin"
-     ],
+        "default",
+        "edu-admin"
+      ],
+      "token_policies": [
+        "default"
+      ],
+      "identity_policies": [
+        "edu-admin"
+      ],
+      "external_namespace_policies": {
+        "9dKXw": [
+          "training-admin"
+        ]
+      },
      "metadata": {
        "username": "bob"
      },
      ...
    }
 }
+```
 
+Notice that the user, `bob` only has `default` policy attached to his token
+(`token_policies`); however, he inherited the `edu-admin` policy from the `Bob
+Smith` entity (`identity_policies`). Also, `training-admin` policy is listed
+under `external_namespace_policies` due to its membership to the Training Admin
+group in `education/training` namespace.
+
+Verify that `bob` can perform the operations permitted by the `edu-admin`
+policy.
+
+```shell
 # Create a new namespace called 'web-app'
 # Be sure to use generated bob's client token
-$ curl --header "X-Vault-Token: e639b1ec-a2df-9645-169a-fb50d1a19c01" \
+$ curl --header "X-Vault-Token: 5ai0qpQeCdRHALzEY4Q8sW.28dk2" \
        --request POST \
        http://127.0.0.1:8200/v1/education/sys/namespaces/web-app
 
 # Enable key/value v2 secrets engine at edu-secret
-$ curl --header "X-Vault-Token: e639b1ec-a2df-9645-169a-fb50d1a19c01" \
+$ curl --header "X-Vault-Token: 5ai0qpQeCdRHALzEY4Q8sW.28dk2" \
        --request POST \
        --data '{"type": "kv-v2"}' \
        http://127.0.0.1:8200/v1/education/sys/mounts/edu-secret
@@ -721,25 +705,24 @@ $ curl --header "X-Vault-Token: e639b1ec-a2df-9645-169a-fb50d1a19c01" \
 #### Web UI
 
 1. Open a web browser and launch the Vault UI (e.g. http://127.0.01:8200/ui). If
-you are already logged in, log out.
+you are already logged in, sign out.
 
 1. At the **Sign in to Vault**, set the **Namespace** to **`education`**.
 
 1. Select the **Userpass** tab, and enter **`bob`** in the **Username** field,
 and **`password`** in the **Password** field.
+    ![Login](/assets/images/vault-multi-tenant-5.png)
 
 1. Click **Sign in**.  Notice that the CURRENT NAMESPACE is set to **education**
 in the upper left corner of the UI.
 
 1. To add a new namespace, select **Access**.
 
-1. Select **Namespaces** and then click **Add a namespace**.
+1. Select **Namespaces** and then click **Create a namespace**.
 
 1. Enter **`web-app`** in the **Path** field, and then click **Save**.
 
-1. Select **Secrets**.
-
-1. Select **Enable new engine**.
+1. Select **Secrets**, and then **Enable new engine**.
 
 1. Select **KV** from the **Secrets engine type** drop-down list, and enter
 **`edu-secret`** in the **Path** field.
@@ -747,8 +730,116 @@ in the upper left corner of the UI.
 1. Click **Enable Engine** to finish.
 
 
+### <a name="step5"></a>Step 5: Test the team admin user
+(**Persona:** team-admin)
+
+#### CLI Command
+
+Log in as **`bsmith`** into the **`education/training`** namespace:
+
+```plaintext
+$ vault login -namespace=education/training -method=userpass username="bsmith" password="password"
+
+Key                    Value
+---                    -----
+token                  5YNNjDDl6D8iW3eGQIlU0q.9dKXw
+token_accessor         6TVkDhdvEQXO2JaD64TVLv.9dKXw
+token_duration         768h
+token_renewable        true
+token_policies         ["default"]
+identity_policies      ["training-admin"]
+policies               ["default" "training-admin"]
+token_meta_username    bsmith
+```
+
+Notice that the user, `bsmith` inherited the `training-admin` policy from the
+`Training Admin` group (`training_admin`) which `Bob Smith` entity is a member
+of.
+
+Verify that `bsmith` can perform the operations permitted by the
+`training-admin` policy.
+
+```shell
+# Set the target namespace as an env variable
+$ export VAULT_NAMESPACE="education/training"
+
+# Create a new namespace called 'vault-training'
+$ vault namespace create vault-training
+Success! Namespace created at: education/training/vault-training/
+
+# Enable key/value v1 secrets engine at team-secret
+$ vault secrets enable -path=team-secret -version=1 kv
+Success! Enabled the kv secrets engine at: team-secret/
+```
+
+When you are done testing, unset the VAULT_NAMESPACE environment variable.  
+
+```plaintext
+$ unset VAULT_NAMESPACE
+```
+
+#### API call using cURL
+
+Log in as **`bsmith`** into the `education` namespace:
+
+```plaintext
+$ curl --header "X-Vault-Namespace: education/training" \
+       --request POST \
+       --data '{"password": "password"}' \
+       http://127.0.0.1:8200/v1/auth/userpass/login/bsmith | jq
+{
+   ...
+   "auth": {
+     "client_token": "5YNNjDDl6D8iW3eGQIlU0q.9dKXw",
+      "accessor": "6TVkDhdvEQXO2JaD64TVLv.9dKXw",
+      "display_name": "education-training-auth-userpass-bsmith",
+      "policies": [
+        "default",
+        "training-admin"
+      ],
+      "token_policies": [
+        "default"
+      ],
+      "identity_policies": [
+        "training-admin"
+      ],
+      "external_namespace_policies": {
+        "28dk2": [
+          "edu-admin"
+        ]
+      },
+      "metadata": {
+        "username": "bsmith"
+      },
+     ...
+   }
+}
+```
+
+Notice that the user, `bsmith` inherited the `training-admin` policy from the
+`Training Admin` group which `Bob Smith` entity is a member of.  Also,
+`edu-admin` policy is listed under `external_namespace_policies`.
+
+Verify that `bsmith` can perform the operations permitted by the
+`training-admin` policy.
+
+```shell
+# Create a new namespace called 'vault-training'
+# Be sure to use generated bsmith's client token
+$ curl --header "X-Vault-Token: 5YNNjDDl6D8iW3eGQIlU0q.9dKXw" \
+       --request POST \
+       http://127.0.0.1:8200/v1/education/training/sys/namespaces/web-app
+
+# Enable key/value v1 secrets engine at team-secret
+$ curl --header "X-Vault-Token: 5YNNjDDl6D8iW3eGQIlU0q.9dKXw" \
+       --request POST \
+       --data '{"type": "kv"}' \
+       http://127.0.0.1:8200/v1/education/training/sys/mounts/edu-secret
+```
+
+
 ## Next steps
 
 Refer to the [Sentinel Policies](/guides/identity/sentinel.html) guide if you
 need to write policies that allow you to embed finer control over the user
-access across those namespaces. 
+access across those namespaces.
