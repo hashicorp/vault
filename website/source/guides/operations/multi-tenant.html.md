@@ -39,7 +39,7 @@ The scenario described in this guide introduces the following personas:
 ## Challenge
 
 When Vault is primarily used as a central location to manage secrets, multiple
-organizations within a company need to be able to manage their secrets in
+organizations within a company need to be able to manage their secrets in a
 self-serving manner. This means that a company needs to implement a ***Vault as
 a Service*** model allowing each organization (tenant) to manage their own
 secrets and policies. The most importantly, tenants should be restricted to work
@@ -67,35 +67,9 @@ pull in entities and groups from _other_ namespaces.
 To perform the tasks described in this guide, you need to have a **Vault
 Enterprise** environment.  
 
-### <a name="policy"></a>Policy requirements
-
--> **NOTE:** For the purpose of this guide, you can use **`root`** token to work
-with Vault. However, it is recommended that root tokens are only used for just
-enough initial setup or in emergencies. As a best practice, use tokens with
-appropriate set of policies based on your role in the organization.
-
-To perform all tasks demonstrated in this guide, your policy must include the
-following permissions:
-
-```shell
-# Create ACL namespaces
-path "sys/namespaces/*" {
-  capabilities = [ "create", "read", "update", "delete", "list", "sudo" ]
-}
-
-# Write policies
-path "sys/policies/*" {
-  capabilities = [ "create", "read", "update", "delete", "list" ]
-}
-
-# Manage entities and groups
-path "identity/*" {
-  capabilities = [ "create", "read", "update", "delete", "list" ]
-}
-```
-
-If you are not familiar with policies, complete the
-[policies](/guides/identity/policies.html) guide.
+-> **NOTE:** The creation of namespaces should be performed by a user with a
+highly privileged token such as **`root`** to set up isolated environments for
+each organization, team, or application.
 
 
 ## Steps
@@ -251,8 +225,8 @@ the **Path** field, and click **Save**.
 ### <a name="step2"></a>Step 2: Write Policies
 (**Persona:** operations)
 
-In this scenario, there is an organization-level administrator who is a super
-user within the scope of the **`education`** namespace.  Also, there is a
+In this scenario, there is an organization-level administrator who is a
+superuser within the scope of the **`education`** namespace.  Also, there is a
 team-level administrator for **`training`** and **`certification`**.
 
 
@@ -458,13 +432,14 @@ menu.
 ### <a name="step3"></a>Step 3: Setup entities and groups
 (**Persona:** operations)
 
-Bob who is an organization-level administrator has two accounts: **`bob`** and
-**`bsmith`**. You will create an entity, **Bob Smith** to associate those two
-accounts.
+Bob who is an organization-level administrator (superuser) has two accounts:
+**`bob`** and **`bsmith`**. You will create an entity, **Bob Smith** to
+associate those two accounts.
 
-Also, you are going to create a group for team-level administrator, **Team
+Also, you are going to create a group for the team-level administrator, **Team
 Admin**, and add Bob Smith entity as a group member so that Bob can inherit the
-`training-admin` policy to manage the child namespace.
+`training-admin` policy to manage the child namespace if he ever has to take
+over.
 
 ![Entities and Groups](/assets/images/vault-multi-tenant-3.png)
 
@@ -836,6 +811,14 @@ $ curl --header "X-Vault-Token: 5YNNjDDl6D8iW3eGQIlU0q.9dKXw" \
        --data '{"type": "kv"}' \
        http://127.0.0.1:8200/v1/education/training/sys/mounts/edu-secret
 ```
+
+<br>
+
+~> **Summary:** As this guide demonstrated, each namespace you created behaves
+as an **isolated** Vault environment. Once you sign into a namespace, there is
+no visibility into other namespaces regardless of its hierarchical relationship.
+Tokens, policies, and secrets engines are tied to its namespace; therefore, each
+client must acquire a valid token for each namespace to access their secrets.
 
 
 ## Next steps
