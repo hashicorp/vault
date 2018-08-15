@@ -6,10 +6,10 @@ import (
 )
 
 var (
-	UnbalancedTemplatingCharacterErr = errors.New("unbalanced templating characters")
-	NoEntityAttachedToToken          = errors.New("string contains entity template directives but no entity was provided")
-	NoGroupsAttachedToToken          = errors.New("string contains groups template directives but no groups were provided")
-	TemplateValueNotFound            = errors.New("no value could be found for one of the template directives")
+	ErrUnbalancedTemplatingCharacter = errors.New("unbalanced templating characters")
+	ErrNoEntityAttachedToToken       = errors.New("string contains entity template directives but no entity was provided")
+	ErrNoGroupsAttachedToToken       = errors.New("string contains groups template directives but no groups were provided")
+	ErrTemplateValueNotFound         = errors.New("no value could be found for one of the template directives")
 )
 
 type PopulateStringInput struct {
@@ -33,7 +33,7 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 
 	if len(splitStr) >= 1 {
 		if strings.Index(splitStr[0], "}}") != -1 {
-			return false, "", UnbalancedTemplatingCharacterErr
+			return false, "", ErrUnbalancedTemplatingCharacter
 		}
 		if len(splitStr) == 1 {
 			return false, p.String, nil
@@ -65,7 +65,7 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 				b.WriteString(splitPiece[1])
 			}
 		default:
-			return false, "", UnbalancedTemplatingCharacterErr
+			return false, "", ErrUnbalancedTemplatingCharacter
 		}
 	}
 
@@ -79,18 +79,18 @@ func performTemplating(input string, entity *Entity, groups []*Group) (string, e
 			return alias.ID, nil
 		case trimmed == "name":
 			if alias.Name == "" {
-				return "", TemplateValueNotFound
+				return "", ErrTemplateValueNotFound
 			}
 			return alias.Name, nil
 		case strings.HasPrefix(trimmed, "metadata."):
 			val, ok := alias.Metadata[strings.TrimPrefix(trimmed, "metadata.")]
 			if !ok {
-				return "", TemplateValueNotFound
+				return "", ErrTemplateValueNotFound
 			}
 			return val, nil
 		}
 
-		return "", TemplateValueNotFound
+		return "", ErrTemplateValueNotFound
 	}
 
 	performEntityTemplating := func(trimmed string) (string, error) {
@@ -99,13 +99,13 @@ func performTemplating(input string, entity *Entity, groups []*Group) (string, e
 			return entity.ID, nil
 		case trimmed == "name":
 			if entity.Name == "" {
-				return "", TemplateValueNotFound
+				return "", ErrTemplateValueNotFound
 			}
 			return entity.Name, nil
 		case strings.HasPrefix(trimmed, "metadata."):
 			val, ok := entity.Metadata[strings.TrimPrefix(trimmed, "metadata.")]
 			if !ok {
-				return "", TemplateValueNotFound
+				return "", ErrTemplateValueNotFound
 			}
 			return val, nil
 		case strings.HasPrefix(trimmed, "aliases."):
@@ -126,7 +126,7 @@ func performTemplating(input string, entity *Entity, groups []*Group) (string, e
 			return performAliasTemplating(split[1], found)
 		}
 
-		return "", TemplateValueNotFound
+		return "", ErrTemplateValueNotFound
 	}
 
 	performGroupsTemplating := func(trimmed string) (string, error) {
@@ -150,11 +150,12 @@ func performTemplating(input string, entity *Entity, groups []*Group) (string, e
 		}
 		var found *Group
 		for _, group := range groups {
-			if ids && group.ID == accessorSplit[0] {
-				found = group
-				break
+			compare := group.Name
+			if ids {
+				compare = group.ID
 			}
-			if group.Name == accessorSplit[0] {
+
+			if compare == accessorSplit[0] {
 				found = group
 				break
 			}
@@ -171,33 +172,33 @@ func performTemplating(input string, entity *Entity, groups []*Group) (string, e
 			return found.ID, nil
 		case trimmed == "name":
 			if found.Name == "" {
-				return "", TemplateValueNotFound
+				return "", ErrTemplateValueNotFound
 			}
 			return found.Name, nil
 		case strings.HasPrefix(trimmed, "metadata."):
 			val, ok := found.Metadata[strings.TrimPrefix(trimmed, "metadata.")]
 			if !ok {
-				return "", TemplateValueNotFound
+				return "", ErrTemplateValueNotFound
 			}
 			return val, nil
 		}
 
-		return "", TemplateValueNotFound
+		return "", ErrTemplateValueNotFound
 	}
 
 	switch {
 	case strings.HasPrefix(input, "identity.entity."):
 		if entity == nil {
-			return "", NoEntityAttachedToToken
+			return "", ErrNoEntityAttachedToToken
 		}
 		return performEntityTemplating(strings.TrimPrefix(input, "identity.entity."))
 
 	case strings.HasPrefix(input, "identity.groups."):
 		if len(groups) == 0 {
-			return "", NoGroupsAttachedToToken
+			return "", ErrNoGroupsAttachedToToken
 		}
 		return performGroupsTemplating(strings.TrimPrefix(input, "identity.groups."))
 	}
 
-	return "", TemplateValueNotFound
+	return "", ErrTemplateValueNotFound
 }

@@ -30,17 +30,17 @@ func TestPopulate_Basic(t *testing.T) {
 		{
 			name:  "only_closing",
 			input: "path foobar}} {",
-			err:   UnbalancedTemplatingCharacterErr,
+			err:   ErrUnbalancedTemplatingCharacter,
 		},
 		{
 			name:  "closing_in_front",
 			input: "path }} {{foobar}} {",
-			err:   UnbalancedTemplatingCharacterErr,
+			err:   ErrUnbalancedTemplatingCharacter,
 		},
 		{
 			name:  "closing_in_back",
 			input: "path {{foobar}} }}",
-			err:   UnbalancedTemplatingCharacterErr,
+			err:   ErrUnbalancedTemplatingCharacter,
 		},
 		{
 			name:   "basic",
@@ -58,22 +58,22 @@ func TestPopulate_Basic(t *testing.T) {
 			name:     "multiple_bad_name",
 			input:    "path {{identity.entity.name}} {\n\tval = {{identity.entity.metadata.foo}}\n}",
 			metadata: map[string]string{"foo": "bar"},
-			err:      TemplateValueNotFound,
+			err:      ErrTemplateValueNotFound,
 		},
 		{
 			name:  "unbalanced_close",
 			input: "path {{identity.entity.id}} {\n\tval = {{ent}}ity.metadata.foo}}\n}",
-			err:   UnbalancedTemplatingCharacterErr,
+			err:   ErrUnbalancedTemplatingCharacter,
 		},
 		{
 			name:  "unbalanced_open",
 			input: "path {{identity.entity.id}} {\n\tval = {{ent{{ity.metadata.foo}}\n}",
-			err:   UnbalancedTemplatingCharacterErr,
+			err:   ErrUnbalancedTemplatingCharacter,
 		},
 		{
 			name:      "no_entity_no_directives",
 			input:     "path {{identity.entity.id}} {\n\tval = {{ent{{ity.metadata.foo}}\n}",
-			err:       NoEntityAttachedToToken,
+			err:       ErrNoEntityAttachedToToken,
 			nilEntity: true,
 		},
 		{
