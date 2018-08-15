@@ -16,6 +16,8 @@ FEATURES:
 
  * **AliCloud OSS Storage**: AliCloud OSS can now be used for Vault storage.
  * **HA Support for MySQL Storage**: MySQL storage now supports HA.
+ * **ACL Templating**: ACL policies can now be templated using identity Entity,
+   Groups, and Metadata.
 
 IMPROVEMENTS:
 
