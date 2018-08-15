@@ -40,7 +40,7 @@ application would use that token for future communication with Vault.
 
 For the purpose of this guide, we will use the following configuration which
 disables TLS and uses a file-based backend. TLS is disabled here only for
-exemplary purposes; it should never be disabled in production.
+example purposes; it should never be disabled in production.
 
 ```hcl
 backend "file" {
