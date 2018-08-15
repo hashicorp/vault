@@ -53,7 +53,7 @@ export default Component.extend({
     }
     yield timeout(ANIMATION_DURATION);
     this.set('lastMenuLeaves', leaves);
-  }).restartable(),
+  }).drop(),
 
   isAnimating: computed.alias('setForAnimation.isRunning'),
 
