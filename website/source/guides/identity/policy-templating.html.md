@@ -126,8 +126,10 @@ path "auth/userpass/users/{{entity.name}}/password" {
 | Parameter expression    | Description                                        |
 |-------------------------|----------------------------------------------------|
 | `entity.id`               | Identity entity ID                             
+| `entity.name`             | Identity entity name
 | `entity.metadata.<key>`   | Entity metadata value for `<key>`
-| `group.id`                | Identity Group ID
+| `group.id`                | Identity group ID
+| `group.name`              | Identity group name
 | `group.<group_id>.id`     | The group ID of a particular group (`<group_id>`)
 | `group.<group_id>.name`   | The name of a particular group (`<group_id>`)
 | `group.<group_id>.metadata.<key>` | The metadata value for `<key>` for a particular group (`<group_id>`)
