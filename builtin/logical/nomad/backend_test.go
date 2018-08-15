@@ -367,31 +367,21 @@ func TestBackend_max_token_length(t *testing.T) {
 				"address":          connURL,
 				"max_token_length": maxTokenNameLength,
 			}
+
+			expectedTokenNameLength := maxTokenNameLength
+
 			if tc.tokenLength != 0 {
 				connData["max_token_length"] = tc.tokenLength
 				expected["max_token_length"] = tc.tokenLength
-			} else {
-				// Set tc.tokenLength to default, but don't send to config/access unless
-				// it's been explicitly set
-				// Normally this is handled by the Default specified in the schema
-				tc.tokenLength = maxTokenNameLength
-			}
-			if tc.envLengthString != "" {
-				i, _ := strconv.Atoi(tc.envLengthString)
-				expected["max_token_length"] = i
-			} else {
-				// Set tc.tokenLength to default, but don't send to config/access unless
-				// it's been explicitly set
-				// Normally this is handled by the Default specified in the schema
-				tc.tokenLength = maxTokenNameLength
+				expectedTokenNameLength = tc.tokenLength
 			}
 
 			if tc.envLengthString != "" {
 				os.Setenv("NOMAD_MAX_TOKEN_LENGTH", tc.envLengthString)
 				defer os.Unsetenv("NOMAD_MAX_TOKEN_LENGTH")
 				i, _ := strconv.Atoi(tc.envLengthString)
-				tc.tokenLength = i
 				expected["max_token_length"] = i
+				expectedTokenNameLength = i
 			}
 
 			confReq := logical.Request{
@@ -485,8 +475,8 @@ func TestBackend_max_token_length(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if len(token.Name) > tc.tokenLength {
-				t.Fatalf("token name exceeds max length (%d): %s (%d)", tc.tokenLength, token.Name, len(token.Name))
+			if len(token.Name) > expectedTokenNameLength {
+				t.Fatalf("token name exceeds max length (%d): %s (%d)", expectedTokenNameLength, token.Name, len(token.Name))
 			}
 		})
 	}
