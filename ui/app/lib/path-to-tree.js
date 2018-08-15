@@ -29,8 +29,10 @@ export default function(paths) {
   // so if we have "foo/bar/baz", both "foo" and "foo/bar"
   // won't be included in the list
   let tree = list.reduce((accumulator, ns) => {
-    let prefixInList = accumulator.some(path => path.startsWith(ns));
-    if (!prefixInList) {
+    let nsWithPrefix = accumulator.find(path => path.startsWith(ns));
+    // we need to make sure it's a match for the full path part
+    let isFullMatch = nsWithPrefix && nsWithPrefix.charAt(ns.length) === '/';
+    if (!isFullMatch) {
       accumulator.push(ns);
     }
     return accumulator;

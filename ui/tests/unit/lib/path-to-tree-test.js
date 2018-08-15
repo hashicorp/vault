@@ -21,7 +21,7 @@ let tests = [
   ],
   [
     'multiple leaves on a level',
-    ['one/', 'two/', 'three/four/five/', 'three/four/six/', 'three/four/six/one/'],
+    ['one', 'two', 'three/four/five', 'three/four/six', 'three/four/six/one'],
     {
       one: null,
       three: {
@@ -35,7 +35,21 @@ let tests = [
       two: null,
     },
   ],
-  ['leaves with shared prefix', [], {}],
+  [
+    'leaves with shared prefix',
+    ['ns1', 'ns1a', 'ns1a/ns2/ns3', 'ns1a/ns2a/ns3'],
+    {
+      ns1: null,
+      ns1a: {
+        ns2: {
+          ns3: null,
+        },
+        ns2a: {
+          ns3: null,
+        },
+      },
+    },
+  ],
 ];
 
 tests.forEach(function([name, input, expected]) {
