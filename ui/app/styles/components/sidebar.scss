@@ -78,7 +78,9 @@
     }
 
     .tag {
-      float: right;
+      @include from($fullhd) {
+        float: right;
+      }
     }
   }
 }
