@@ -23,7 +23,7 @@
 <form {{action "savePolicy" model on="submit"}}>
   <div class="box is-bottomless is-fullwidth is-marginless">
     {{message-error model=model}}
-    <NamespaceReminder @mode={{"edit"}} @noun={{"policy"}} />
+    <NamespaceReminder @mode="edit" @noun="policy" />
     <div class="level is-mobile">
       <div class="level-left">
         <label for="policy" class="is-label">Policy</label>

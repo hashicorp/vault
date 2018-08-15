@@ -17,7 +17,7 @@
 <form {{ action "savePolicy" model on="submit"}}>
   <div class="box is-bottomless is-fullwidth is-marginless">
     {{message-error model=model}}
-    <NamespaceReminder @mode={{"create"}} @noun={{"policy"}} />
+    <NamespaceReminder @mode="create" @noun="policy" />
     <div class="field">
       <label for="policy-name" class="is-label">Name</label>
       <div class="control">
