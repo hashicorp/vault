@@ -62,6 +62,7 @@ export default Component.extend({
   // this is an array of namespace paths that the current user
   // has access to
   accessibleNamespaces: computed.alias('namespaceService.accessibleNamespaces'),
+  inRootNamespace: computed.alias('namespaceService.inRootNamespace'),
 
   namespaceTree: computed('accessibleNamespaces', function() {
     let nsList = this.get('accessibleNamespaces');

@@ -6,6 +6,10 @@
   color: $white;
   fill: $white;
 }
+.namespace-picker.no-namespaces {
+  border: none;
+  padding-right: 0;
+}
 .namespace-picker-trigger {
   display: flex;
   align-items: center;

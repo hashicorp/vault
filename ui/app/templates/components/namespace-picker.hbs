@@ -1,8 +1,10 @@
-<div class="namespace-picker">
-  {{#if (and (not accessibleNamespaces) inRootNamespace)}}
+{{#if (and (not accessibleNamespaces.length) inRootNamespace)}}
+  <div class="namespace-picker no-namespaces">
     {{!-- Just yield the logo if they're in the root namespace and only have access to it --}}
     {{yield}}
-  {{else}}
+  </div>
+{{else}}
+  <div class="namespace-picker">
     <BasicDropdown @horizontalPosition="auto-left" @verticalPosition="below" as |D|>
       <D.trigger
         @tagName="button"
@@ -64,5 +66,5 @@
         </div>
       </D.content>
     </BasicDropdown>
-  {{/if}}
-</div>
+  </div>
+{{/if}}
