@@ -88,7 +88,7 @@ $ vault kv put kv/my-secret ttl=30m my-value=s3cr3t
 Success! Data written to: kv/my-secret
 ```
 
-Even will a `ttl` set, the secrets engine _never_ removes data on its own. The
+Even with a `ttl` set, the secrets engine _never_ removes data on its own. The
 `ttl` key is merely advisory.
 
 When reading a value with a `ttl`, both the `ttl` key _and_ the refresh interval
