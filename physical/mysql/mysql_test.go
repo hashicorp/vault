@@ -80,11 +80,12 @@ func TestMySQLHABackend(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewMySQLBackend(map[string]string{
-		"address":  address,
-		"database": database,
-		"table":    table,
-		"username": username,
-		"password": password,
+		"address":    address,
+		"database":   database,
+		"table":      table,
+		"username":   username,
+		"password":   password,
+		"ha_enabled": "true",
 	}, logger)
 
 	if err != nil {
