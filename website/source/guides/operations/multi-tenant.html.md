@@ -812,6 +812,32 @@ $ curl --header "X-Vault-Token: 5YNNjDDl6D8iW3eGQIlU0q.9dKXw" \
        http://127.0.0.1:8200/v1/education/training/sys/mounts/edu-secret
 ```
 
+#### Web UI
+
+1. Open a web browser and launch the Vault UI (e.g. http://127.0.01:8200/ui). If
+you are already logged in, sign out.
+
+1. At the **Sign in to Vault**, set the **Namespace** to **`education/training`**.
+
+1. Select the **Userpass** tab, and enter **`bsmith`** in the **Username** field,
+and **`password`** in the **Password** field.
+
+1. Click **Sign in**.  
+
+1. To add a new namespace, select **Access**.
+
+1. Select **Namespaces** and then click **Create a namespace**.
+
+1. Enter **`vault-training`** in the **Path** field, and then click **Save**.
+
+1. Select **Secrets**, and then **Enable new engine**.
+
+1. Select **KV** from the **Secrets engine type** drop-down list, and enter
+**`team-secret`** in the **Path** field.
+
+1. Click **Enable Engine** to finish.
+
+
 <br>
 
 ~> **Summary:** As this guide demonstrated, each namespace you created behaves
