@@ -29,6 +29,12 @@ func pathCredsCreate(b *backend) *framework.Path {
 
 func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+	conf, _ := b.readConfigAccess(ctx, req.Storage)
+	// establish a default
+	tokenNameLength := maxTokenNameLength
+	if conf != nil {
+		tokenNameLength = conf.MaxTokenLength
+	}
 
 	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
@@ -58,9 +64,11 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 
 	// Handling nomad maximum token length
 	// https://github.com/hashicorp/nomad/blob/d9276e22b3b74674996fb548cdb6bc4c70d5b0e4/nomad/structs/structs.go#L115
-	// size increased in https://github.com/hashicorp/nomad/pull/3888
-	if len(tokenName) > 256 {
-		tokenName = tokenName[0:255]
+	// Note: if the given role name is suffeciently long, the UnixNano() portion
+	// of the pseudo randomized token name is the part that gets trimmed off,
+	// weaking it's randomness.
+	if len(tokenName) > tokenNameLength {
+		tokenName = tokenName[0:tokenNameLength]
 	}
 
 	// Create it

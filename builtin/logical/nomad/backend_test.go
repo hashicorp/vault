@@ -3,8 +3,10 @@ package nomad
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -13,6 +15,18 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
 )
+
+// randomWithPrefix is used to generate a unique name with a prefix, for
+// randomizing names in acceptance tests
+func randomWithPrefix(name string) string {
+	reseed()
+	return fmt.Sprintf("%s-%d", name, rand.New(rand.NewSource(time.Now().UnixNano())).Int())
+}
+
+// Seeds random with current timestamp
+func reseed() {
+	rand.Seed(time.Now().UTC().UnixNano())
+}
 
 func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, nomadToken string) {
 	nomadToken = os.Getenv("NOMAD_TOKEN")
@@ -29,8 +43,8 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
 	}
 
 	dockerOptions := &dockertest.RunOptions{
-		Repository: "djenriquez/nomad",
-		Tag:        "latest",
+		Repository: "catsby/nomad",
+		Tag:        "0.8.4",
 		Cmd:        []string{"agent", "-dev"},
 		Env:        []string{`NOMAD_LOCAL_CONFIG=bind_addr = "0.0.0.0" acl { enabled = true }`},
 	}
@@ -142,7 +156,8 @@ func TestBackend_config_access(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"address": connData["address"].(string),
+		"address":          connData["address"].(string),
+		"max_token_length": maxTokenNameLength,
 	}
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
@@ -298,5 +313,181 @@ func TestBackend_CredsCreateEnvVar(t *testing.T) {
 	}
 	if resp.IsError() {
 		t.Fatalf("resp is error: %v", resp.Error())
+	}
+}
+
+func TestBackend_max_token_length(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, connURL, connToken := prepareTestContainer(t)
+	defer cleanup()
+
+	testCases := []struct {
+		title           string
+		roleName        string
+		tokenLength     int
+		envLengthString string
+	}{
+		{
+			title: "Default",
+		},
+		{
+			title:       "ConfigOverride",
+			tokenLength: 64,
+		},
+		{
+			title:       "ConfigOverride-LongName",
+			roleName:    "testlongerrolenametoexceed64charsdddddddddddddddddddddddd",
+			tokenLength: 64,
+		},
+		{
+			title:    "ConfigOverride-LongName-notrim",
+			roleName: "testlongerrolenametoexceed64charsdddddddddddddddddddddddd",
+		},
+		{
+			title:           "ConfigOverride-LongName-envtrim",
+			roleName:        "testlongerrolenametoexceed64charsdddddddddddddddddddddddd",
+			envLengthString: "16",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			// setup config/access
+			connData := map[string]interface{}{
+				"address": connURL,
+				"token":   connToken,
+			}
+			expected := map[string]interface{}{
+				"address":          connURL,
+				"max_token_length": maxTokenNameLength,
+			}
+			if tc.tokenLength != 0 {
+				connData["max_token_length"] = tc.tokenLength
+				expected["max_token_length"] = tc.tokenLength
+			} else {
+				// Set tc.tokenLength to default, but don't send to config/access unless
+				// it's been explicitly set
+				// Normally this is handled by the Default specified in the schema
+				tc.tokenLength = maxTokenNameLength
+			}
+			if tc.envLengthString != "" {
+				i, _ := strconv.Atoi(tc.envLengthString)
+				expected["max_token_length"] = i
+			} else {
+				// Set tc.tokenLength to default, but don't send to config/access unless
+				// it's been explicitly set
+				// Normally this is handled by the Default specified in the schema
+				tc.tokenLength = maxTokenNameLength
+			}
+
+			if tc.envLengthString != "" {
+				os.Setenv("NOMAD_MAX_TOKEN_LENGTH", tc.envLengthString)
+				defer os.Unsetenv("NOMAD_MAX_TOKEN_LENGTH")
+				i, _ := strconv.Atoi(tc.envLengthString)
+				tc.tokenLength = i
+				expected["max_token_length"] = i
+			}
+
+			confReq := logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "config/access",
+				Storage:   config.StorageView,
+				Data:      connData,
+			}
+
+			resp, err := b.HandleRequest(context.Background(), &confReq)
+			if err != nil || (resp != nil && resp.IsError()) || resp != nil {
+				t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
+			}
+			confReq.Operation = logical.ReadOperation
+			resp, err = b.HandleRequest(context.Background(), &confReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
+			}
+
+			// verify token length is returned in the config/access query
+			if !reflect.DeepEqual(expected, resp.Data) {
+				t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
+			}
+			// verify token is not returned
+			if resp.Data["token"] != nil {
+				t.Fatalf("token should not be set in the response")
+			}
+
+			// create a role to create nomad credentials with
+			// Seeds random with current timestamp
+
+			if tc.roleName == "" {
+				tc.roleName = "test"
+			}
+			roleTokenName := randomWithPrefix(tc.roleName)
+
+			confReq.Path = "role/" + roleTokenName
+			confReq.Operation = logical.UpdateOperation
+			confReq.Data = map[string]interface{}{
+				"policies": []string{"policy"},
+				"lease":    "6h",
+			}
+			resp, err = b.HandleRequest(context.Background(), &confReq)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			confReq.Operation = logical.ReadOperation
+			confReq.Path = "creds/" + roleTokenName
+			resp, err = b.HandleRequest(context.Background(), &confReq)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if resp == nil {
+				t.Fatal("resp nil")
+			}
+			if resp.IsError() {
+				t.Fatalf("resp is error: %v", resp.Error())
+			}
+
+			// extract the secret, so we can query nomad directly
+			generatedSecret := resp.Secret
+			generatedSecret.TTL = 6 * time.Hour
+
+			var d struct {
+				Token    string `mapstructure:"secret_id"`
+				Accessor string `mapstructure:"accessor_id"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				t.Fatal(err)
+			}
+
+			// Build a client and verify that the credentials work
+			nomadapiConfig := nomadapi.DefaultConfig()
+			nomadapiConfig.Address = connData["address"].(string)
+			nomadapiConfig.SecretID = d.Token
+			client, err := nomadapi.NewClient(nomadapiConfig)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// default query options for Nomad queries ... not sure if needed
+			qOpts := &nomadapi.QueryOptions{
+				Namespace: "default",
+			}
+
+			// connect to Nomad and verify the token name does not exceed the
+			// max_token_length
+			token, _, err := client.ACLTokens().Self(qOpts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if len(token.Name) > tc.tokenLength {
+				t.Fatalf("token name exceeds max length (%d): %s (%d)", tc.tokenLength, token.Name, len(token.Name))
+			}
+		})
 	}
 }
