@@ -154,8 +154,11 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical
 	allPolicies := append(te.Policies, identityPolicies...)
 
 	// Construct the corresponding ACL object
-	acl, err := c.policyStore.ACL(c.activeContext, allPolicies...)
+	acl, err := c.policyStore.ACL(c.activeContext, entity, allPolicies...)
 	if err != nil {
+		if errwrap.ContainsType(err, new(TemplateError)) {
+			return nil, nil, nil, nil, err
+		}
 		c.logger.Error("failed to construct ACL", "error", err)
 		return nil, nil, nil, nil, ErrInternalError
 	}
@@ -181,6 +184,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		// unauth, we just have no information to attach to the request, so
 		// ignore errors...this was best-effort anyways
 		if err != nil && !unauth {
+			if errwrap.ContainsType(err, new(TemplateError)) {
+				c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor")
+				err = logical.ErrPermissionDenied
+			}
 			return nil, te, err
 		}
 	}

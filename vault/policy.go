@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/hclutil"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/mitchellh/copystructure"
 )
@@ -81,10 +82,11 @@ var (
 // Policy is used to represent the policy specified by
 // an ACL configuration.
 type Policy struct {
-	Name  string       `hcl:"name"`
-	Paths []*PathRules `hcl:"-"`
-	Raw   string
-	Type  PolicyType
+	Name      string       `hcl:"name"`
+	Paths     []*PathRules `hcl:"-"`
+	Raw       string
+	Type      PolicyType
+	Templated bool
 }
 
 // PathRules represents a policy for a path in the namespace.
@@ -152,6 +154,15 @@ func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 // intermediary set of policies, before being compiled into
 // the ACL
 func ParseACLPolicy(rules string) (*Policy, error) {
+	// Check for templating
+	hasTemplating, _, err := identity.PopulateString(&identity.PopulateStringInput{
+		ValidityCheckOnly: true,
+		String:            rules,
+	})
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to validate policy templating: {{err}}", err)
+	}
+
 	// Parse the rules
 	root, err := hcl.Parse(rules)
 	if err != nil {
@@ -177,6 +188,7 @@ func ParseACLPolicy(rules string) (*Policy, error) {
 	var p Policy
 	p.Raw = rules
 	p.Type = PolicyTypeACL
+	p.Templated = hasTemplating
 	if err := hcl.DecodeObject(&p, list); err != nil {
 		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
 	}

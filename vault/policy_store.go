@@ -12,6 +12,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -165,9 +166,10 @@ type PolicyStore struct {
 
 // PolicyEntry is used to store a policy by name
 type PolicyEntry struct {
-	Version int
-	Raw     string
-	Type    PolicyType
+	Version   int
+	Raw       string
+	Templated bool
+	Type      PolicyType
 }
 
 // NewPolicyStore creates a new PolicyStore that is backed
@@ -275,9 +277,10 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 	defer ps.modifyLock.Unlock()
 	// Create the entry
 	entry, err := logical.StorageEntryJSON(p.Name, &PolicyEntry{
-		Version: 2,
-		Raw:     p.Raw,
-		Type:    p.Type,
+		Version:   2,
+		Raw:       p.Raw,
+		Type:      p.Type,
+		Templated: p.Templated,
 	})
 	if err != nil {
 		return errwrap.Wrapf("failed to create entry: {{err}}", err)
@@ -377,6 +380,7 @@ func (ps *PolicyStore) GetPolicy(ctx context.Context, name string, policyType Po
 	policy.Name = name
 	policy.Raw = policyEntry.Raw
 	policy.Type = policyEntry.Type
+	policy.Templated = policyEntry.Templated
 	switch policyEntry.Type {
 	case PolicyTypeACL:
 		// Parse normally
@@ -471,9 +475,21 @@ func (ps *PolicyStore) DeletePolicy(ctx context.Context, name string, policyType
 	return nil
 }
 
+type TemplateError struct {
+	Err error
+}
+
+func (t *TemplateError) WrappedErrors() []error {
+	return []error{t.Err}
+}
+
+func (t *TemplateError) Error() string {
+	return t.Err.Error()
+}
+
 // ACL is used to return an ACL which is built using the
 // named policies.
-func (ps *PolicyStore) ACL(ctx context.Context, names ...string) (*ACL, error) {
+func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, names ...string) (*ACL, error) {
 	// Fetch the policies
 	var policies []*Policy
 	for _, name := range names {
@@ -481,7 +497,42 @@ func (ps *PolicyStore) ACL(ctx context.Context, names ...string) (*ACL, error) {
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to get policy: {{err}}", err)
 		}
-		policies = append(policies, p)
+		if p != nil {
+			policies = append(policies, p)
+		}
+	}
+
+	var fetchedGroups bool
+	var groups []*identity.Group
+	for i, policy := range policies {
+		if policy.Type == PolicyTypeACL && policy.Templated {
+			if !fetchedGroups {
+				fetchedGroups = true
+				if entity != nil {
+					directGroups, inheritedGroups, err := ps.core.identityStore.groupsByEntityID(entity.ID)
+					if err != nil {
+						return nil, errwrap.Wrapf("failed to fetch group memberships: {{err}}", err)
+					}
+					groups = append(directGroups, inheritedGroups...)
+				}
+			}
+			subst, templated, err := identity.PopulateString(&identity.PopulateStringInput{
+				String: policy.Raw,
+				Entity: entity,
+				Groups: groups,
+			})
+			if err != nil {
+				return nil, &TemplateError{Err: errwrap.Wrapf(fmt.Sprintf("error performing templating on policy %q: {{err}}", policy.Name), err)}
+			}
+			if !subst {
+				ps.logger.Warn("found templated policy that reported no substitutions", "policy", policy.Name)
+			}
+			p, err := ParseACLPolicy(templated)
+			if err != nil {
+				return nil, errwrap.Wrapf(fmt.Sprintf("error parsing templated policy %q: {{err}}", policy.Name), err)
+			}
+			policies[i] = p
+		}
 	}
 
 	// Construct the ACL
