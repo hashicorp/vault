@@ -1,20 +1,20 @@
 ---
 layout: "guides"
-page_title: "Multi-Tenant Pattern - Guides"
+page_title: "Secure Multi-Tenancy with Namepaces - Guides"
 sidebar_current: "guides-operations-multi-tenant"
 description: |-
   This guide provides guidance in creating a multi-tenant environment.
 ---
 
-# Multi-Tenant Pattern with ACL Namespaces
+# Secure Multi-Tenancy with Namespaces
 
-~> **Enterprise Only:** ACL Namespace feature is a part of _Vault Enterprise Pro_.
+~> **Enterprise Only:** The namespaces feature is a part of _Vault Enterprise Pro_.
 
-Everything in Vault is path-based, and often use the terms `path` and
+Everything in Vault is path-based, and often uses the terms `path` and
 `namespace` interchangeably. The application namespace pattern is a useful
 construct for providing Vault as a service to internal customers, giving them
-the ability to leverage a multi-tenant Vault implementation with full agency to
-their application's interactions with Vault.
+the ability to implement secure multi-tenancy within Vault in order to provide
+isolation and ensure teams can self-manage their own environments. 
 
 
 ## Reference Material
@@ -39,7 +39,7 @@ The scenario described in this guide introduces the following personas:
 ## Challenge
 
 When Vault is primarily used as a central location to manage secrets, multiple
-organizations within a company need to be able to manage their secrets in a
+organizations within a company may need to be able to manage their secrets in a
 self-serving manner. This means that a company needs to implement a ***Vault as
 a Service*** model allowing each organization (tenant) to manage their own
 secrets and policies. The most importantly, tenants should be restricted to work
@@ -49,7 +49,7 @@ only within their tenant scope.
 
 ## Solution
 
-Create an **ACL namespace** dedicated to each team, organization, or app where
+Create a **namespace** dedicated to each team, organization, or app where
 they can perform all necessary tasks within their tenant namespace.  
 
 Each namespace can have its own:
@@ -75,7 +75,7 @@ each organization, team, or application.
 ## Steps
 
 **Scenario:** In this guide, you are going to create a namespace dedicated to
-Education organization which has Training and Certification teams. Delegate
+the Education organization which has Training and Certification teams. Delegate
 operational tasks to the team admins so that the Vault cluster operators won't
 have to be involved.
 
@@ -83,14 +83,14 @@ have to be involved.
 
 In this guide, you are going to perform the following steps:
 
-1. [Create ACL Namespaces](#step1)
-1. [Write Policies](#step2)
+1. [Create namespaces](#step1)
+1. [Write policies](#step2)
 1. [Setup entities and groups](#step3)
 1. [Test the organization admin user](#step4)
 1. [Test the team admin user](#step5)
 
 
-### <a name="step1"></a>Step 1: Create ACL Namespaces
+### <a name="step1"></a>Step 1: Create namespaces
 (**Persona:** operations)
 
 #### CLI command
