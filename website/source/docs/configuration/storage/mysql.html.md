@@ -56,6 +56,13 @@ Additionally, Vault requires the following authentication information.
 - `password` `(string: <required)` – Specifies the MySQL password to connect to
   the database.
 
+### High Availability Parameters
+
+- `lock_table` `(string: "vault_lock")` – Specifies the name of the table to
+  use for storing high availability information. By default, this is the name
+  of the `table` suffixed with `_lock`. If the table does not exist, Vault will
+  attempt to create it.
+
 ## `mysql` Examples
 
 ### Custom Database and Table

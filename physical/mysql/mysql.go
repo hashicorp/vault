@@ -37,6 +37,7 @@ const mysqlTLSKey = "default"
 // within MySQL database.
 type MySQLBackend struct {
 	dbTable      string
+	dbLockTable  string
 	client       *sql.DB
 	statements   map[string]*sql.Stmt
 	logger       log.Logger
@@ -64,7 +65,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if !ok {
 		table = "vault"
 	}
-	dbTable := "`" + database + "`" + "." + "`" + table + "`"
+	dbTable := "`" + database + "`.`" + table + "`"
 
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
@@ -117,10 +118,10 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	locktable, ok := conf["lock_table"]
 	if !ok {
-		locktable = "vault_lock"
+		locktable = table + "_lock"
 	}
 
-	dbLockTable := database + "." + locktable
+	dbLockTable := "`" + database + "`.`" + locktable + "`"
 
 	// Check table exists
 	var lockTableExist bool
@@ -143,12 +144,13 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	// Setup the backend.
 	m := &MySQLBackend{
-		dbTable:    dbTable,
-		client:     db,
-		statements: make(map[string]*sql.Stmt),
-		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
-		conf:       conf,
+		dbTable:     dbTable,
+		dbLockTable: dbLockTable,
+		client:      db,
+		statements:  make(map[string]*sql.Stmt),
+		logger:      logger,
+		permitPool:  physical.NewPermitPool(maxParInt),
+		conf:        conf,
 	}
 
 	// Prepare all the statements required
@@ -549,18 +551,6 @@ func NewMySQLLock(in *MySQLBackend, l log.Logger, key, value string) (*MySQLLock
 	// the rest of the MySQL backend and any cleanup that might need to be done.
 	conn, _ := NewMySQLClient(in.conf, in.logger)
 
-	table, ok := in.conf["lock_table"]
-	if !ok {
-		table = "vault_lock"
-	}
-
-	database, ok := in.conf["database"]
-	if !ok {
-		database = "vault"
-	}
-
-	dbTable := database + "." + table
-
 	m := &MySQLLock{
 		parentConn: in,
 		in:         conn,
@@ -571,7 +561,7 @@ func NewMySQLLock(in *MySQLBackend, l log.Logger, key, value string) (*MySQLLock
 	}
 
 	statements := map[string]string{
-		"put": "INSERT INTO " + dbTable +
+		"put": "INSERT INTO " + in.dbLockTable +
 			" VALUES( ?, ? ) ON DUPLICATE KEY UPDATE current_leader=VALUES(current_leader)",
 	}
 

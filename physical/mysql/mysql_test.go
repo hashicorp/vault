@@ -47,7 +47,7 @@ func TestMySQLBackend(t *testing.T) {
 
 	defer func() {
 		mysql := b.(*MySQLBackend)
-		_, err := mysql.client.Exec("DROP TABLE " + mysql.dbTable)
+		_, err := mysql.client.Exec("DROP TABLE IF EXISTS " + mysql.dbTable + " ," + mysql.dbLockTable)
 		if err != nil {
 			t.Fatalf("Failed to drop table: %v", err)
 		}
@@ -93,7 +93,7 @@ func TestMySQLHABackend(t *testing.T) {
 
 	defer func() {
 		mysql := b.(*MySQLBackend)
-		_, err := mysql.client.Exec("DROP TABLE " + mysql.dbTable)
+		_, err := mysql.client.Exec("DROP TABLE IF EXISTS " + mysql.dbTable + " ," + mysql.dbLockTable)
 		if err != nil {
 			t.Fatalf("Failed to drop table: %v", err)
 		}
