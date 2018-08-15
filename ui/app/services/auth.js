@@ -122,9 +122,13 @@ export default Service.extend({
       displayName = get(resp, currentBackend.displayNamePath);
     }
 
-    let { entity_id, policies, renewable } = resp;
+    let { entity_id, policies, renewable, namespace_path } = resp;
+    if (namespace_path) {
+      // strip the trailing slash
+      namespace_path = namespace_path.replace(/\/$/, '');
+    }
     let data = {
-      userRootNamespace: userNamespace || '',
+      userRootNamespace: namespace_path || userNamespace || '',
       displayName,
       backend: currentBackend,
       token: resp.client_token || get(resp, currentBackend.tokenPath),
@@ -153,6 +157,7 @@ export default Service.extend({
     this.set('allowExpiration', false);
     this.setTokenData(tokenName, data);
     return Ember.RSVP.resolve({
+      namespace: data.userRootNamespace,
       token: tokenName,
       isRoot: policies.includes('root'),
     });

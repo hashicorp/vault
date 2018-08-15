@@ -189,9 +189,9 @@ export default Ember.Component.extend(DEFAULTS, {
       }
       const clusterId = this.get('cluster.id');
       this.get('auth').authenticate({ clusterId, backend: get(backend, 'type'), data }).then(
-        ({ isRoot }) => {
+        ({ isRoot, namespace }) => {
           this.set('loading', false);
-          const transition = this.get('router').transitionTo(targetRoute);
+          const transition = this.get('router').transitionTo(targetRoute, { queryParams: { namespace } });
           if (isRoot) {
             transition.followRedirects().then(() => {
               this.get('flashMessages').warning(
