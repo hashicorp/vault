@@ -70,20 +70,25 @@ export default Service.extend({
         'X-Vault-Token': this.get('currentToken'),
       },
     };
-    if (this.get('namespace.path')) {
-      defaults.headers['X-Vault-Namespace'] = this.get('namespace.path');
+
+    let namespace =
+      typeof options.namespace === 'undefined' ? this.get('namespaceService.path') : options.namespace;
+    if (namespace) {
+      defaults.headers['X-Vault-Namespace'] = namespace;
     }
     return Ember.$.ajax(Ember.assign(defaults, options));
   },
 
   renewCurrentToken() {
+    let namespace = this.get('authData.userRootNamespace');
     const url = '/v1/auth/token/renew-self';
-    return this.ajax(url, 'POST');
+    return this.ajax(url, 'POST', { namespace });
   },
 
   revokeCurrentToken() {
+    let namespace = this.get('authData.userRootNamespace');
     const url = '/v1/auth/token/revoke-self';
-    return this.ajax(url, 'POST');
+    return this.ajax(url, 'POST', { namespace });
   },
 
   calculateExpiration(resp, creationTime) {
