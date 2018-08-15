@@ -9,11 +9,19 @@ import (
 	"time"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/Azure/go-autorest/autorest/azure"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 )
+
+func environmentForCleanupClient(name string) (azure.Environment, error) {
+	if name == "" {
+		return azure.EnvironmentFromName("AzurePublicCloud")
+	}
+	return azure.EnvironmentFromName(name)
+}
 
 func TestAzureBackend(t *testing.T) {
 	if os.Getenv("AZURE_ACCOUNT_NAME") == "" ||
@@ -23,11 +31,16 @@ func TestAzureBackend(t *testing.T) {
 
 	accountName := os.Getenv("AZURE_ACCOUNT_NAME")
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
+	environmentName := os.Getenv("AZURE_ENVIRONMENT")
 
 	ts := time.Now().UnixNano()
 	name := fmt.Sprintf("vault-test-%d", ts)
 
-	cleanupClient, _ := storage.NewBasicClient(accountName, accountKey)
+	cleanupEnvironment, err := environmentForCleanupClient(environmentName)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	cleanupClient, _ := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, cleanupEnvironment)
 	cleanupClient.HTTPClient = cleanhttp.DefaultPooledClient()
 
 	logger := logging.NewVaultLogger(log.Debug)
@@ -36,6 +49,7 @@ func TestAzureBackend(t *testing.T) {
 		"container":   name,
 		"accountName": accountName,
 		"accountKey":  accountKey,
+		"environment": environmentName,
 	}, logger)
 
 	defer func() {
@@ -60,11 +74,16 @@ func TestAzureBackend_ListPaging(t *testing.T) {
 
 	accountName := os.Getenv("AZURE_ACCOUNT_NAME")
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
+	environmentName := os.Getenv("AZURE_ENVIRONMENT")
 
 	ts := time.Now().UnixNano()
 	name := fmt.Sprintf("vault-test-%d", ts)
 
-	cleanupClient, _ := storage.NewBasicClient(accountName, accountKey)
+	cleanupEnvironment, err := environmentForCleanupClient(environmentName)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	cleanupClient, _ := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, cleanupEnvironment)
 	cleanupClient.HTTPClient = cleanhttp.DefaultPooledClient()
 
 	logger := logging.NewVaultLogger(log.Debug)
@@ -73,6 +92,7 @@ func TestAzureBackend_ListPaging(t *testing.T) {
 		"container":   name,
 		"accountName": accountName,
 		"accountKey":  accountKey,
+		"environment": environmentName,
 	}, logger)
 
 	defer func() {
