@@ -104,8 +104,15 @@
         autocomplete="off"
         value={{or (get model valuePath) attr.options.defaultValue}}
         oninput={{action (action "setAndBroadcast" valuePath) value="target.value"}}
-        class="input" 
+        class="input"
       />
+      {{#if attr.options.validationAttr}}
+        {{#if (and (get model valuePath) (not (get model attr.options.validationAttr)))}}
+          <p class="has-text-danger">
+            {{attr.options.invalidMessage}}
+          </p>
+        {{/if}}
+      {{/if}}
     {{/if}}
   </div>
 {{else if (eq attr.type 'boolean')}}
