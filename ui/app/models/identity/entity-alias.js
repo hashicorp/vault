@@ -7,7 +7,7 @@ const { computed } = Ember;
 
 export default IdentityModel.extend({
   parentType: 'entity',
-  formFields: ['name', 'mountAccessor', 'metadata'],
+  formFields: ['name', 'mountAccessor'],
   entity: belongsTo('identity/entity', { readOnly: true, async: false }),
 
   name: attr('string'),

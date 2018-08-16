@@ -66,3 +66,10 @@ from AWS Key Management Service (KMS).
 - [Seal Wrap / FIPS 140-2](/guides/operations/seal-wrap.html)
 guide demonstrates how Vault's seal wrap feature works to encrypt your secrets
 leveraging FIPS 140-2 certified HSM.
+
+- [Vault Cluster Monitoring Guide](/guides/operations/monitoring.html) walks
+you through Vault cluster monitoring with telemetry collected by
+[Telegraf](https://www.influxdata.com/time-series-platform/telegraf/) and
+forwarded to
+[InfluxDB](https://www.influxdata.com/time-series-platform/influxdb/) and
+[Grafana](https://grafana.com/) for analysis.

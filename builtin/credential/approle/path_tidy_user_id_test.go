@@ -108,7 +108,7 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 	}
 	count := 1
 
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 	now := time.Now()
 	started := false
 	for {
@@ -132,7 +132,7 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 				Path:      "role/role1/secret-id",
 				Storage:   storage,
 			}
-			resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
+			resp, err := b.HandleRequest(context.Background(), roleSecretIDReq)
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("err:%v resp:%#v", err, resp)
 			}

@@ -51,6 +51,7 @@ import (
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
+	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
 	physAzure "github.com/hashicorp/vault/physical/azure"
 	physCassandra "github.com/hashicorp/vault/physical/cassandra"
 	physCockroachDB "github.com/hashicorp/vault/physical/cockroachdb"
@@ -137,6 +138,7 @@ var (
 	}
 
 	physicalBackends = map[string]physical.Factory{
+		"alicloudoss":            physAliCloudOSS.NewAliCloudOSSBackend,
 		"azure":                  physAzure.NewAzureBackend,
 		"cassandra":              physCassandra.NewCassandraBackend,
 		"cockroachdb":            physCockroachDB.NewCockroachDBBackend,
@@ -230,6 +232,14 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 	}
 
 	Commands = map[string]cli.CommandFactory{
+		"agent": func() (cli.Command, error) {
+			return &AgentCommand{
+				BaseCommand: &BaseCommand{
+					UI: serverCmdUi,
+				},
+				ShutdownCh: MakeShutdownCh(),
+			}, nil
+		},
 		"audit": func() (cli.Command, error) {
 			return &AuditCommand{
 				BaseCommand: getBaseCommand(),
@@ -311,6 +321,31 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 			return &LoginCommand{
 				BaseCommand: getBaseCommand(),
 				Handlers:    loginHandlers,
+			}, nil
+		},
+		"namespace": func() (cli.Command, error) {
+			return &NamespaceCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace list": func() (cli.Command, error) {
+			return &NamespaceListCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace lookup": func() (cli.Command, error) {
+			return &NamespaceLookupCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace create": func() (cli.Command, error) {
+			return &NamespaceCreateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace delete": func() (cli.Command, error) {
+			return &NamespaceDeleteCommand{
+				BaseCommand: getBaseCommand(),
 			}, nil
 		},
 		"operator": func() (cli.Command, error) {

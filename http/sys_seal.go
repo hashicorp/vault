@@ -32,7 +32,7 @@ func handleSysSeal(core *vault.Core) http.Handler {
 
 		// Seal with the token above
 		// We use context.Background since there won't be a request context if the node isn't active
-		if err := core.SealWithRequest(req); err != nil {
+		if err := core.SealWithRequest(r.Context(), req); err != nil {
 			if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 				respondError(w, http.StatusForbidden, err)
 				return
@@ -62,7 +62,7 @@ func handleSysStepDown(core *vault.Core) http.Handler {
 		}
 
 		// Seal with the token above
-		if err := core.StepDown(req); err != nil {
+		if err := core.StepDown(r.Context(), req); err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}

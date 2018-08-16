@@ -97,8 +97,9 @@ type ServerCommand struct {
 
 type ServerListener struct {
 	net.Listener
-	config         map[string]interface{}
-	maxRequestSize int64
+	config             map[string]interface{}
+	maxRequestSize     int64
+	maxRequestDuration time.Duration
 }
 
 func (c *ServerCommand) Synopsis() string {
@@ -393,6 +394,10 @@ func (c *ServerCommand) Run(args []string) int {
 	if config.Storage == nil {
 		c.UI.Output("A storage backend must be specified")
 		return 1
+	}
+
+	if config.DefaultMaxRequestDuration != 0 {
+		vault.DefaultMaxRequestDuration = config.DefaultMaxRequestDuration
 	}
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
@@ -738,10 +743,25 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 		props["max_request_size"] = fmt.Sprintf("%d", maxRequestSize)
 
+		var maxRequestDuration time.Duration = vault.DefaultMaxRequestDuration
+		if valRaw, ok := lnConfig.Config["max_request_duration"]; ok {
+			val, err := parseutil.ParseDurationSecond(valRaw)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse max_request_duration value %v", valRaw))
+				return 1
+			}
+
+			if val >= 0 {
+				maxRequestDuration = val
+			}
+		}
+		props["max_request_duration"] = fmt.Sprintf("%s", maxRequestDuration.String())
+
 		lns = append(lns, ServerListener{
-			Listener:       ln,
-			config:         lnConfig.Config,
-			maxRequestSize: maxRequestSize,
+			Listener:           ln,
+			config:             lnConfig.Config,
+			maxRequestSize:     maxRequestSize,
+			maxRequestDuration: maxRequestDuration,
 		})
 
 		// Store the listener props for output later
@@ -939,6 +959,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
 			Core:                  core,
 			MaxRequestSize:        ln.maxRequestSize,
+			MaxRequestDuration:    ln.maxRequestDuration,
 			DisablePrintableCheck: config.DisablePrintableCheck,
 		})
 
@@ -1113,7 +1134,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 				"no_default_policy": true,
 			},
 		}
-		resp, err := core.HandleRequest(req)
+		resp, err := core.HandleRequest(context.Background(), req)
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create root token with ID %q: {{err}}", coreConfig.DevToken), err)
 		}
@@ -1129,7 +1150,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
-		resp, err = core.HandleRequest(req)
+		resp, err = core.HandleRequest(context.Background(), req)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to revoke initial root token: {{err}}", err)
 		}
@@ -1156,7 +1177,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 				},
 			},
 		}
-		resp, err := core.HandleRequest(req)
+		resp, err := core.HandleRequest(context.Background(), req)
 		if err != nil {
 			return nil, errwrap.Wrapf("error upgrading default K/V store: {{err}}", err)
 		}
@@ -1233,7 +1254,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 				"no_default_policy": true,
 			},
 		}
-		resp, err := testCluster.Cores[0].HandleRequest(req)
+		resp, err := testCluster.Cores[0].HandleRequest(context.Background(), req)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("failed to create root token with ID %s: %s", base.DevToken, err))
 			return 1
@@ -1252,7 +1273,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
-		resp, err = testCluster.Cores[0].HandleRequest(req)
+		resp, err = testCluster.Cores[0].HandleRequest(context.Background(), req)
 		if err != nil {
 			c.UI.Output(fmt.Sprintf("failed to revoke initial root token: %s", err))
 			return 1
@@ -1385,7 +1406,7 @@ func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 			"command": name,
 		},
 	}
-	if _, err := core.HandleRequest(req); err != nil {
+	if _, err := core.HandleRequest(context.Background(), req); err != nil {
 		return err
 	}
 

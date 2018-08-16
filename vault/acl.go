@@ -34,10 +34,11 @@ type PolicyCheckOpts struct {
 }
 
 type AuthResults struct {
-	ACLResults *ACLResults
-	Allowed    bool
-	RootPrivs  bool
-	Error      *multierror.Error
+	ACLResults  *ACLResults
+	Allowed     bool
+	RootPrivs   bool
+	DeniedError bool
+	Error       *multierror.Error
 }
 
 type ACLResults struct {

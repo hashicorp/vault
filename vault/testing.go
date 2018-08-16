@@ -1230,7 +1230,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		cores = append(cores, c)
 		if opts != nil && opts.HandlerFunc != nil {
 			handlers[i] = opts.HandlerFunc(&HandlerProperties{
-				Core: c,
+				Core:               c,
+				MaxRequestDuration: DefaultMaxRequestDuration,
 			})
 			servers[i].Handler = handlers[i]
 		}

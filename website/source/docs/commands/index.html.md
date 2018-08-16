@@ -74,13 +74,24 @@ automatically query the Vault server and return helpful argument suggestions.
 ## Reading and Writing Data
 
 The four most common operations in Vault are `read`, `write`, `delete`, and
-`list`. These operations work on almost any path in Vault. Some paths will
+`list`. These operations work on most paths in Vault. Some paths will
 contain secrets, other paths might contain configuration. Whatever it is, the
-primary interface for reading and writing data to Vault is the same.
+primary interface for reading and writing data to Vault is similar.
+
+To demonstrate basic read and write operations, the built-in key/value (K/V)
+secrets engine will be used. This engine is automatically mounted and has no
+external dependencies, making it practical for this introduction. Note that
+K/V uses slightly different commands for reading and writing: `kv get`
+and `kv put`, respectively.
+
+~> The original version of K/V used the common `read` and `write` operations.
+A more advanced K/V Version 2 engine was released in Vault 0.10 and introduced
+the `kv get` and `kv put` commands.
+
 
 ### Writing Data
 
-To write data to Vault, use the `vault write` command:
+To write data to Vault, use the `vault kv put` command:
 
 ```text
 $ vault kv put secret/password value=itsasecret
@@ -99,7 +110,7 @@ is the entire argument, Vault expects to read a JSON object from stdin:
 $ echo -n '{"value":"itsasecret"}' | vault kv put secret/password -
 ```
 
-In addition to reading full JSON objects, Vault can read just a  value from
+In addition to reading full JSON objects, Vault can read just a value from
 stdin:
 
 ```text
@@ -124,10 +135,10 @@ $ vault kv put secret/password value=@data.txt
 
 ### Reading Data
 
-After data is persisted, read it back using `vault read`:
+After data is persisted, read it back using `vault kv get`:
 
 ```
-$ vault kv get  secret/password
+$ vault kv get secret/password
 Key                 Value
 ---                 -----
 refresh_interval    768h0m0s

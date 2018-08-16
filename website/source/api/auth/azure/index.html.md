@@ -31,6 +31,7 @@ virtual machine.
 
 - `tenant_id` `(string: <required>)` - The tenant id for the Azure Active Directory organization.
 - `resource` `(string: <required>)` - The configured URL for the application registered in Azure Active Directory.
+- `environment` `(string: 'AzurePublicCloud')` - The Azure cloud environment. Valid values: AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud, AzureGermanCloud.
 - `client_id` `(string: '')` - The client id for credentials to query the Azure APIs.  Currently read permissions to query compute resources are required.
 - `client_secret` `(string: '')` - The client secret for credentials to query the Azure APIs. 
 

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/version"
 )
 
 type dynamicSystemView struct {
@@ -42,7 +43,13 @@ func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token
 	}
 
 	// Construct the corresponding ACL object
-	acl, err := d.core.policyStore.ACL(ctx, te.Policies...)
+	entity, entityPolicies, err := d.core.fetchEntityAndDerivedPolicies(te.EntityID)
+	if err != nil {
+		d.core.logger.Error("failed to fetch entity information", "error", err)
+		return false
+	}
+
+	acl, err := d.core.policyStore.ACL(ctx, entity, append(entityPolicies, te.Policies...)...)
 	if err != nil {
 		d.core.logger.Error("failed to retrieve ACL for token's policies", "token_policies", te.Policies, "error", err)
 		return false
@@ -205,4 +212,10 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 	ret.Aliases = aliases
 
 	return ret, nil
+}
+
+func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironment, error) {
+	return &logical.PluginEnvironment{
+		VaultVersion: version.GetVersion().Version,
+	}, nil
 }

@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
 )
@@ -467,6 +468,87 @@ func TestFieldDataGet(t *testing.T) {
 			},
 		},
 
+		"type header, keypair string array": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{"key1:value1", "key2:value2", "key3:1"},
+			},
+			"foo",
+			http.Header{
+				"Key1": []string{"value1"},
+				"Key2": []string{"value2"},
+				"Key3": []string{"1"},
+			},
+		},
+
+		"type header, b64 string": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": "eyJDb250ZW50LUxlbmd0aCI6IFsiNDMiXSwgIlVzZXItQWdlbnQiOiBbImF3cy1zZGstZ28vMS40LjEyIChnbzEuNy4xOyBsaW51eDsgYW1kNjQpIl0sICJYLVZhdWx0LUFXU0lBTS1TZXJ2ZXItSWQiOiBbInZhdWx0LmV4YW1wbGUuY29tIl0sICJYLUFtei1EYXRlIjogWyIyMDE2MDkzMFQwNDMxMjFaIl0sICJDb250ZW50LVR5cGUiOiBbImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZDsgY2hhcnNldD11dGYtOCJdLCAiQXV0aG9yaXphdGlvbiI6IFsiQVdTNC1ITUFDLVNIQTI1NiBDcmVkZW50aWFsPWZvby8yMDE2MDkzMC91cy1lYXN0LTEvc3RzL2F3czRfcmVxdWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1kYXRlO3gtdmF1bHQtc2VydmVyLCBTaWduYXR1cmU9YTY5ZmQ3NTBhMzQ0NWM0ZTU1M2UxYjNlNzlkM2RhOTBlZWY1NDA0N2YxZWI0ZWZlOGZmYmM5YzQyOGMyNjU1YiJdfQ==",
+			},
+			"foo",
+			http.Header{
+				"Content-Length":           []string{"43"},
+				"User-Agent":               []string{"aws-sdk-go/1.4.12 (go1.7.1; linux; amd64)"},
+				"X-Vault-Awsiam-Server-Id": []string{"vault.example.com"},
+				"X-Amz-Date":               []string{"20160930T043121Z"},
+				"Content-Type":             []string{"application/x-www-form-urlencoded; charset=utf-8"},
+				"Authorization":            []string{"AWS4-HMAC-SHA256 Credential=foo/20160930/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-server, Signature=a69fd750a3445c4e553e1b3e79d3da90eef54047f1eb4efe8ffbc9c428c2655b"},
+			},
+		},
+
+		"type header, json string": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": `{"hello":"world","bonjour":["monde","dieu"]}`,
+			},
+			"foo",
+			http.Header{
+				"Hello":   []string{"world"},
+				"Bonjour": []string{"monde", "dieu"},
+			},
+		},
+
+		"type header, keypair string array with dupe key": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{"key1:value1", "key2:value2", "key3:1", "key3:true"},
+			},
+			"foo",
+			http.Header{
+				"Key1": []string{"value1"},
+				"Key2": []string{"value2"},
+				"Key3": []string{"1", "true"},
+			},
+		},
+
+		"type header, map string slice": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": map[string][]string{
+					"key1": {"value1"},
+					"key2": {"value2"},
+					"key3": {"1"},
+				},
+			},
+			"foo",
+			http.Header{
+				"Key1": []string{"value1"},
+				"Key2": []string{"value2"},
+				"Key3": []string{"1"},
+			},
+		},
+
 		"name string type, not supplied": {
 			map[string]*FieldSchema{
 				"foo": {Type: TypeNameString},
@@ -556,6 +638,15 @@ func TestFieldDataGet(t *testing.T) {
 			"foo",
 			map[string]string{},
 		},
+
+		"type header, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{},
+			"foo",
+			http.Header{},
+		},
 	}
 
 	for name, tc := range cases {
@@ -565,7 +656,7 @@ func TestFieldDataGet(t *testing.T) {
 		}
 
 		if err := data.Validate(); err != nil {
-			t.Fatalf("bad: %#v", err)
+			t.Fatalf("bad: %s", err)
 		}
 
 		actual := data.Get(tc.Key)
