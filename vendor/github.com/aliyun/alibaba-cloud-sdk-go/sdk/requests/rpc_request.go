@@ -52,7 +52,7 @@ func (request *RpcRequest) GetQueries() string {
 }
 
 func (request *RpcRequest) BuildUrl() string {
-	return strings.ToLower(request.Scheme) + "://" + request.Domain + request.BuildQueries()
+	return strings.ToLower(request.Scheme) + "://" + request.Domain + ":" + request.Port + request.BuildQueries()
 }
 
 func (request *RpcRequest) GetUrl() string {

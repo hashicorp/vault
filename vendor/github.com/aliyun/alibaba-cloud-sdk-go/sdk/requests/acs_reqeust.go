@@ -226,6 +226,7 @@ func defaultBaseRequest() (request *baseRequest) {
 		Headers: map[string]string{
 			"x-sdk-client":      "golang/1.0.0",
 			"x-sdk-invoke-type": "normal",
+			"Accept-Encoding": "identity",
 		},
 		FormParams: make(map[string]string),
 	}

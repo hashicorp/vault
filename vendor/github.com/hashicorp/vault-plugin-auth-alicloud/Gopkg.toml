@@ -27,7 +27,11 @@
 
 [[constraint]]
   name = "github.com/aliyun/alibaba-cloud-sdk-go"
-  version = "1.23.0"
+  version = "1.25.5"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/hashicorp/errwrap"
 
 [[constraint]]
   branch = "master"
@@ -35,11 +39,15 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/hashicorp/go-sockaddr"
+  name = "github.com/hashicorp/go-hclog"
 
 [[constraint]]
   branch = "master"
+  name = "github.com/hashicorp/go-sockaddr"
+
+[[constraint]]
   name = "github.com/hashicorp/vault"
+  branch = "master"
 
 [prune]
   go-tests = true
