@@ -22,6 +22,9 @@ export default Ember.Component.extend({
   isSelecting: computed('currentState', 'isActive', function() {
     return this.get('isActive') && this.get('currentState').indexOf('select') > 0;
   }),
+  isInitializing: computed('currentState', 'isActive', function() {
+    return this.get('isActive') && this.get('currentState').indexOf('init') > 0;
+  }),
   isFeature: computed('currentMachine', function() {
     return this.get('currentMachine') !== 'None';
   }),

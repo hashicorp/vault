@@ -8,7 +8,7 @@ export default {
         AUTH: 'select',
       },
       key: 'feature',
-      initial: 'select',
+      initial: 'init',
       states: {
         select: {
           on: {
@@ -27,7 +27,10 @@ export default {
             save: {
               on: { CONTINUE: 'unseal' },
             },
-            unseal: {},
+            unseal: {
+              on: { CONTINUE: 'login' },
+            },
+            login: {},
           },
         },
       },
