@@ -8,7 +8,7 @@ export default Ember.Component.extend({
     const edition = this.get('edition');
     const entEditions = ['Enterprise', 'Premium', 'Pro'];
 
-    if (entEditions.contains(edition)) {
+    if (entEditions.includes(edition)) {
       return 'edition-enterprise';
     } else {
       return 'edition-oss';
