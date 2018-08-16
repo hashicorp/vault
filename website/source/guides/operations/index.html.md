@@ -59,6 +59,10 @@ guide demonstrates how to selectively filter out secret engines from being
 replicated across clusters. This feature can help organizations to comply with
 ***General Data Protection Regulation (GDPR)***.
 
+- [Multi-Tenant Pattern with ACL
+Namespaces](/guides/operations/multi-tenant.html) guide discuss a pattern to
+isolate secrets using ACL Namespaces.
+
 - [Vault Auto-unseal using AWS Key Management Service (KMS)](/guides/operations/autounseal-aws-kms.html) guide demonstrates an example of
 how to use Terraform to provision an instance that utilizes an encryption key
 from AWS Key Management Service (KMS).
