@@ -91,6 +91,18 @@
 			"revisionTime": "2018-07-04T11:11:30Z"
 		},
 		{
+			"path": "encoding/base64",
+			"revision": ""
+		},
+		{
+			"path": "encoding/json",
+			"revision": ""
+		},
+		{
+			"path": "errors",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "kM2PZfGUZRmE9wFeHAFjHFPepzk=",
 			"path": "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute",
 			"revision": "fbe7db0e3f9793ba3e5704efbab84f51436c136e",
@@ -2013,6 +2025,12 @@
 			"revisionTime": "2018-07-02T05:55:18Z"
 		},
 		{
+			"checksumSHA1": "+aq6vfX37dIMIqeWaE5tgf0v3fE=",
+			"path": "github.com/tidwall/gjson",
+			"revision": "1e3f6aeaa5bad08d777ea7807b279a07885dd8b2",
+			"revisionTime": "2018-08-02T15:58:17Z"
+		},
+		{
 			"checksumSHA1": "2xcr/mhxBFlDjpxe/Mc2Wb4RGR8=",
 			"path": "github.com/tv42/httpunix",
 			"revision": "b75d8614f926c077e48d85f1f8f7885b758c6225",
@@ -3067,7 +3085,39 @@
 			"path": "layeh.com/radius/rfc2865",
 			"revision": "891b47f003f141214f42f961a555a95c9106f47d",
 			"revisionTime": "2018-07-09T21:33:54Z"
+		},
+		{
+			"path": "reflect",
+			"revision": ""
+		},
+		{
+			"path": "strconv",
+			"revision": ""
+		},
+		{
+			"path": "strings",
+			"revision": ""
+		},
+		{
+			"path": "sync",
+			"revision": ""
+		},
+		{
+			"path": "sync/atomic",
+			"revision": ""
+		},
+		{
+			"path": "time",
+			"revision": ""
+		},
+		{
+			"path": "unicode/utf16",
+			"revision": ""
+		},
+		{
+			"path": "unicode/utf8",
+			"revision": ""
 		}
 	],
-	"rootPath": "github.com/hashicorp/vault"
+	"rootPath": "/github.com/vault"
 }
