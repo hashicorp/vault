@@ -1,6 +1,6 @@
-import DS from 'ember-data';
+import ApplicationSerializer from './application';
 
-export default DS.RESTSerializer.extend({
+export default ApplicationSerializer.extend({
   primaryKey: 'path',
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
@@ -8,8 +8,9 @@ export default DS.RESTSerializer.extend({
     if (id) {
       payload.path = id;
     }
-    const response = {
-      [primaryModelClass.modelName]: payload,
+    let response = {
+      ...payload.data,
+      path: payload.path,
     };
     return this._super(store, primaryModelClass, response, id, requestType);
   },

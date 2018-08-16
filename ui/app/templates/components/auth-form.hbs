@@ -11,7 +11,7 @@
         {{else}}
           <li class="{{if (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey) 'is-active' ''}}" data-test-auth-method>
             <a href="{{href-to 'vault.cluster.auth' cluster.name (query-params with=methodKey)}}" data-test-auth-method-link={{method.type}}>
-              {{or method.id (capitalize method.type)}}
+              {{or method.id method.typeDisplay}}
             </a>
           </li>
         {{/if}}
@@ -51,7 +51,7 @@
             >
               {{#each (supported-auth-backends) as |method|}}
                 <option selected={{eq selectedAuthBackend.type method.type}} value={{method.type}}>
-                  {{capitalize method.type}}
+                  {{method.typeDisplay}}
                 </option>
               {{/each}}
             </select>
