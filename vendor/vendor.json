@@ -253,6 +253,76 @@
 			"revisionTime": "2018-01-04T20:38:59Z"
 		},
 		{
+			"checksumSHA1": "HwipxdapJK3MUihU9ELXKlkelnU=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/aliyun/alibaba-cloud-sdk-go/sdk",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
+			"checksumSHA1": "qm1/zNxCCuxyUTOA+j+VUnEtqnI=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
+			"checksumSHA1": "mir9zgkLR7muF4aPQtTV9T91B7E=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
+			"checksumSHA1": "YqjOfGGBOy3whJudMWLpUaHRT1I=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/signers",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/signers",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
+			"checksumSHA1": "/qgQnVuKg8C8p1Wh2KXdTKMBr5c=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/aliyun/alibaba-cloud-sdk-go/sdk/endpoints",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/endpoints",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
+			"checksumSHA1": "9vMkbk4TZWi+UWw2Fv31ZvR13+c=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
+			"checksumSHA1": "63TFW9Mgo3amEM8qErqvoocf0NE=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
+			"checksumSHA1": "+aXjmLlpocfXhE8ev535+hpcGec=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
+			"checksumSHA1": "vY4yDjkvAE26q2Xn3tCPcfZhnoU=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/aliyun/alibaba-cloud-sdk-go/sdk/utils",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/utils",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
+			"checksumSHA1": "N9A+9VmoMs38kijGWNVv0vsgi54=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/aliyun/alibaba-cloud-sdk-go/services/sts",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/services/sts",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
 			"checksumSHA1": "DUX4pOK9NKSAzC6RRXniLviyByA=",
 			"path": "github.com/armon/go-metrics",
 			"revision": "58588f401c2cc130a7308a52ca3bc6c0a76db04b",
@@ -1303,6 +1373,18 @@
 			"revisionTime": "2018-05-30T15:59:58Z"
 		},
 		{
+			"checksumSHA1": "HNDXe2SxlwHBHES//qAakOf7xKo=",
+			"path": "github.com/hashicorp/vault-plugin-auth-alicloud",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
+			"checksumSHA1": "KyRLlVNKvvjYWXqDxi478EBUEMY=",
+			"path": "github.com/hashicorp/vault-plugin-auth-alicloud/tools",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
 			"checksumSHA1": "TBYf7b18sac9sBSaiRHJQXJvnWA=",
 			"path": "github.com/hashicorp/vault-plugin-auth-azure",
 			"revision": "2a679470bdb9aa58ab4d671ec1589a0538190861",
@@ -1421,6 +1503,13 @@
 			"path": "github.com/joyent/triton-go/storage",
 			"revision": "830d2b111e62b15793a2f2db637c073055ab62bb",
 			"revisionTime": "2018-06-28T00:12:55Z"
+		},
+		{
+			"checksumSHA1": "66skRjpx6iDbz6OUSLwmBvPSDUs=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/json-iterator/go",
+			"path": "github.com/json-iterator/go",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
 		},
 		{
 			"checksumSHA1": "VJk3rOWfxEV9Ilig5lgzH1qg8Ss=",
@@ -1601,6 +1690,20 @@
 			"path": "github.com/mitchellh/reflectwalk",
 			"revision": "63d60e9d0dbc60cf9164e6510889b0db6683d98c",
 			"revisionTime": "2017-07-26T20:21:17Z"
+		},
+		{
+			"checksumSHA1": "ZTcgWKWHsrX0RXYVXn5Xeb8Q0go=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/modern-go/concurrent",
+			"path": "github.com/modern-go/concurrent",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
+			"checksumSHA1": "ZMzoxY0Lv/LbDmyJXFjlMOyXZC4=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/github.com/modern-go/reflect2",
+			"path": "github.com/modern-go/reflect2",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
 		},
 		{
 			"checksumSHA1": "9kGYnhsGFu3XUB/Fz9Et7eEFBXY=",
@@ -1995,10 +2098,12 @@
 			"revisionTime": "2018-01-30T19:37:22Z"
 		},
 		{
-			"checksumSHA1": "eDQ6f1EsNf+frcRO/9XukSEchm8=",
+			"checksumSHA1": "+nVM+CEZGAopOrYlLifgWP+X01E=",
 			"path": "github.com/satori/go.uuid",
-			"revision": "36e9d2ebbde5e3f13ab2e25625fd453271d6522e",
-			"revisionTime": "2018-01-03T17:44:51Z"
+			"revision": "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3",
+			"revisionTime": "2018-01-03T03:42:45Z",
+			"version": "=v1.2.0",
+			"versionExact": "v1.2.0"
 		},
 		{
 			"checksumSHA1": "tnMZLo/kR9Kqx6GtmWwowtTLlA8=",
@@ -2341,6 +2446,13 @@
 			"path": "golang.org/x/net/ipv6",
 			"revision": "039a4258aec0ad3c79b905677cceeab13b296a77",
 			"revisionTime": "2018-05-05T01:56:23Z"
+		},
+		{
+			"checksumSHA1": "3xyuaSNmClqG4YWC7g0isQIbUTc=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/golang.org/x/net/lex/httplex",
+			"path": "golang.org/x/net/lex/httplex",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
 		},
 		{
 			"checksumSHA1": "rJn3m/27kO+2IU6KCCZ74Miby+8=",
@@ -2715,6 +2827,13 @@
 			"revisionTime": "2018-07-11T18:22:45Z"
 		},
 		{
+			"checksumSHA1": "H7SuPUqbPcdbNqgl+k3ohuwMAwE=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/google.golang.org/grpc/grpclb/grpc_lb_v1/messages",
+			"path": "google.golang.org/grpc/grpclb/grpc_lb_v1/messages",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
+		},
+		{
 			"checksumSHA1": "ZPPSFisPDz2ANO4FBZIft+fRxyk=",
 			"path": "google.golang.org/grpc/grpclog",
 			"revision": "11b582728a13ef54e14e4fa930d693de2e32420f",
@@ -2827,6 +2946,13 @@
 			"path": "google.golang.org/grpc/tap",
 			"revision": "11b582728a13ef54e14e4fa930d693de2e32420f",
 			"revisionTime": "2018-07-11T18:22:45Z"
+		},
+		{
+			"checksumSHA1": "W1ZMSC6cqz4e7YMQ0ozZoLoidJQ=",
+			"origin": "github.com/hashicorp/vault-plugin-auth-alicloud/vendor/google.golang.org/grpc/transport",
+			"path": "google.golang.org/grpc/transport",
+			"revision": "f2e33baddef91c4b219852d38a68fc6d9b19fc4e",
+			"revisionTime": "2018-08-16T18:50:04Z"
 		},
 		{
 			"checksumSHA1": "xsaHqy6/sonLV6xIxTNh4FfkWbU=",
