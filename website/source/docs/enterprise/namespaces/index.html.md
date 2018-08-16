@@ -18,6 +18,7 @@ organization operate within self-contained environments known as "*tenants*."
 There are two common challenges when implementing this architecture in Vault:
 
 **Tenant Isolation**
+
 Frequently teams within a VaaS environment require strong isolation from other
 users in their policies, secrets, and sometimes even their own identity entities 
 and groups. Frequently tenant isolation is a result of regulations such as [GDPR](https://www.eugdpr.org/),
@@ -25,6 +26,7 @@ though it may be necessitated by corporate or organizational infosec requirement
 well.
 
 **Self-Management**
+
 As new tenants are added, there is an additional human cost in the management 
 overhead for teams. Given that tenants will likely have different policies and
 request changes at a different rate, managing a multi-tenant environment can
