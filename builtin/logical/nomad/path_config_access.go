@@ -83,8 +83,8 @@ func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"address":          conf.Address,
-			"max_token_length": conf.MaxTokenLength,
+			"address":               conf.Address,
+			"max_token_name_length": conf.MaxTokenNameLength,
 		},
 	}, nil
 }

@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
-	"strconv"
 	"testing"
 	"time"
 
@@ -156,8 +155,8 @@ func TestBackend_config_access(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"address":          connData["address"].(string),
-		"max_token_length": maxTokenNameLength,
+		"address":               connData["address"].(string),
+		"max_token_name_length": maxTokenNameLength,
 	}
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
@@ -316,7 +315,7 @@ func TestBackend_CredsCreateEnvVar(t *testing.T) {
 	}
 }
 
-func TestBackend_max_token_length(t *testing.T) {
+func TestBackend_max_token_name_length(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b, err := Factory(context.Background(), config)
@@ -328,10 +327,9 @@ func TestBackend_max_token_length(t *testing.T) {
 	defer cleanup()
 
 	testCases := []struct {
-		title           string
-		roleName        string
-		tokenLength     int
-		envLengthString string
+		title       string
+		roleName    string
+		tokenLength int
 	}{
 		{
 			title: "Default",
@@ -349,11 +347,6 @@ func TestBackend_max_token_length(t *testing.T) {
 			title:    "ConfigOverride-LongName-notrim",
 			roleName: "testlongerrolenametoexceed64charsdddddddddddddddddddddddd",
 		},
-		{
-			title:           "ConfigOverride-LongName-envtrim",
-			roleName:        "testlongerrolenametoexceed64charsdddddddddddddddddddddddd",
-			envLengthString: "16",
-		},
 	}
 
 	for _, tc := range testCases {
@@ -364,24 +357,16 @@ func TestBackend_max_token_length(t *testing.T) {
 				"token":   connToken,
 			}
 			expected := map[string]interface{}{
-				"address":          connURL,
-				"max_token_length": maxTokenNameLength,
+				"address":               connURL,
+				"max_token_name_length": maxTokenNameLength,
 			}
 
 			expectedTokenNameLength := maxTokenNameLength
 
 			if tc.tokenLength != 0 {
-				connData["max_token_length"] = tc.tokenLength
-				expected["max_token_length"] = tc.tokenLength
+				connData["max_token_name_length"] = tc.tokenLength
+				expected["max_token_name_length"] = tc.tokenLength
 				expectedTokenNameLength = tc.tokenLength
-			}
-
-			if tc.envLengthString != "" {
-				os.Setenv("NOMAD_MAX_TOKEN_LENGTH", tc.envLengthString)
-				defer os.Unsetenv("NOMAD_MAX_TOKEN_LENGTH")
-				i, _ := strconv.Atoi(tc.envLengthString)
-				expected["max_token_length"] = i
-				expectedTokenNameLength = i
 			}
 
 			confReq := logical.Request{
@@ -469,7 +454,7 @@ func TestBackend_max_token_length(t *testing.T) {
 			}
 
 			// connect to Nomad and verify the token name does not exceed the
-			// max_token_length
+			// max_token_name_length
 			token, _, err := client.ACLTokens().Self(qOpts)
 			if err != nil {
 				t.Fatal(err)
