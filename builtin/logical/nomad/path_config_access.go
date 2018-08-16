@@ -10,10 +10,6 @@ import (
 
 const configAccessKey = "config/access"
 
-// maxTokenNameLength is the maximum length for the name of a Nomad access
-// token
-const maxTokenNameLength = 256
-
 func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/access",
@@ -31,7 +27,6 @@ func pathConfigAccess(b *backend) *framework.Path {
 			"max_token_name_length": &framework.FieldSchema{
 				Type:        framework.TypeInt,
 				Description: "Max length for name of generated Nomad tokens",
-				Default:     maxTokenNameLength,
 			},
 		},
 
@@ -107,7 +102,6 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 		conf.Token = token.(string)
 	}
 
-	// max_token_name_length has default of 256
 	conf.MaxTokenNameLength = data.Get("max_token_name_length").(int)
 
 	entry, err := logical.StorageEntryJSON("config/access", conf)

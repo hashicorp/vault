@@ -144,7 +144,7 @@ func TestBackend_config_access(t *testing.T) {
 
 	expected := map[string]interface{}{
 		"address":               connData["address"].(string),
-		"max_token_name_length": maxTokenNameLength,
+		"max_token_name_length": 0,
 	}
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
@@ -332,8 +332,8 @@ func TestBackend_max_token_name_length(t *testing.T) {
 			tokenLength: 64,
 		},
 		{
-			title:    "ConfigOverride-LongName-notrim",
-			roleName: "testlongerrolenametoexceed64charsdddddddddddddddddddddddd",
+			title:    "Notrim",
+			roleName: "testlongersubrolenametoexceed64charsdddddddddddddddddddddddd",
 		},
 	}
 
@@ -341,20 +341,18 @@ func TestBackend_max_token_name_length(t *testing.T) {
 		t.Run(tc.title, func(t *testing.T) {
 			// setup config/access
 			connData := map[string]interface{}{
-				"address": connURL,
-				"token":   connToken,
+				"address":               connURL,
+				"token":                 connToken,
+				"max_token_name_length": tc.tokenLength,
 			}
 			expected := map[string]interface{}{
 				"address":               connURL,
-				"max_token_name_length": maxTokenNameLength,
+				"max_token_name_length": tc.tokenLength,
 			}
 
-			expectedTokenNameLength := maxTokenNameLength
-
+			expectedMaxTokenNameLength := maxTokenNameLength
 			if tc.tokenLength != 0 {
-				connData["max_token_name_length"] = tc.tokenLength
-				expected["max_token_name_length"] = tc.tokenLength
-				expectedTokenNameLength = tc.tokenLength
+				expectedMaxTokenNameLength = tc.tokenLength
 			}
 
 			confReq := logical.Request{
@@ -448,8 +446,8 @@ func TestBackend_max_token_name_length(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if len(token.Name) > expectedTokenNameLength {
-				t.Fatalf("token name exceeds max length (%d): %s (%d)", expectedTokenNameLength, token.Name, len(token.Name))
+			if len(token.Name) > expectedMaxTokenNameLength {
+				t.Fatalf("token name exceeds max length (%d): %s (%d)", expectedMaxTokenNameLength, token.Name, len(token.Name))
 			}
 		})
 	}
