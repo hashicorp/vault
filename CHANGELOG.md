@@ -38,6 +38,7 @@ IMPROVEMENTS:
    authentication [GH-5013]
  * cli: Add support for passing parameters to `vault read` operations [GH-5093]
  * secrets/nomad: Support for longer token names [GH-5117]
+ * storage/azure: Add support for different Azure environments [GH-4997]
  * storage/mysql: Support special characters in database and table names.
 
 BUG FIXES:
@@ -49,6 +50,7 @@ BUG FIXES:
    alias. These entities are now merged. [GH-5000]
  * secrets/database: Fix inability to update custom SQL statements on
    database roles. [GH-5080]
+ * storage/gcp,spanner: Fix data races [GH-5081]
 
 ## 0.10.4 (July 25th, 2018)
 
