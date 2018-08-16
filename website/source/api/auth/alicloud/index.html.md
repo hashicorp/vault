@@ -1,18 +1,18 @@
 ---
 layout: "api"
-page_title: "Alibaba - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-alibaba"
+page_title: "AliCloud - Auth Methods - HTTP API"
+sidebar_current: "docs-http-auth-alicloud"
 description: |-
-  This is the API documentation for the Vault Alibaba auth method.
+  This is the API documentation for the Vault AliCloud auth method.
 ---
 
-# Alibaba Auth Method (API)
+# AliCloud Auth Method (API)
 
-This is the API documentation for the Vault Alibaba auth method. For
-general information about the usage and operation of the Alibaba method, please
-see the [Vault Alibaba method documentation](/docs/auth/alibaba.html).
+This is the API documentation for the Vault AliCloud auth method. For
+general information about the usage and operation of the AliCloud method, please
+see the [Vault AliCloud method documentation](/docs/auth/alicloud.html).
 
-This documentation assumes the Alibaba method is mounted at the `/auth/alibaba`
+This documentation assumes the AliCloud method is mounted at the `/auth/alicloud`
 path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
@@ -23,7 +23,7 @@ will be able to perform the login operation.
 
 | Method   | Path                             | Produces               |
 | :------- | :------------------------------- | :--------------------- |
-| `POST`   | `/auth/alibaba/role/:role`       | `204 (empty body)`     |
+| `POST`   | `/auth/alicloud/role/:role`       | `204 (empty body)`     |
 
 ### Parameters
 
@@ -59,7 +59,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/alibaba/role/elk
+    http://127.0.0.1:8200/v1/auth/alicloud/role/elk
 ```
 
 ## Read Role
@@ -68,7 +68,7 @@ Returns the previously registered role configuration.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/alibaba/role/:role`        | `200 application/json` |
+| `GET`   | `/auth/alicloud/role/:role`        | `200 application/json` |
 
 ### Parameters
 
@@ -79,7 +79,7 @@ Returns the previously registered role configuration.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/auth/alibaba/role/elk
+    http://127.0.0.1:8200/v1/auth/alicloud/role/elk
 ```
 
 ### Sample Response
@@ -106,7 +106,7 @@ Lists all the roles that are registered with the method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/alibaba/roles`       | `200 application/json` |
+| `LIST`   | `/auth/alicloud/roles`       | `200 application/json` |
 
 ### Sample Request
 
@@ -114,7 +114,7 @@ Lists all the roles that are registered with the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    http://127.0.0.1:8200/v1/auth/alibaba/roles
+    http://127.0.0.1:8200/v1/auth/alicloud/roles
 ```
 
 ### Sample Response
@@ -137,7 +137,7 @@ Deletes the previously registered role.
 
 | Method   | Path                             | Produces               |
 | :------- | :------------------------------- | :--------------------- |
-| `DELETE` | `/auth/alibaba/role/:role`       | `204 (empty body)`  |
+| `DELETE` | `/auth/alicloud/role/:role`       | `204 (empty body)`  |
 
 ### Parameters
 
@@ -149,7 +149,7 @@ Deletes the previously registered role.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/alibaba/role/dev-role
+    http://127.0.0.1:8200/v1/auth/alicloud/role/dev-role
 ```
 
 ## Login
@@ -159,7 +159,7 @@ GetCallerIdentity request.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/alibaba/login`            | `200 application/json` |
+| `POST`   | `/auth/alicloud/login`            | `200 application/json` |
 
 ### Sample Payload
 
@@ -187,7 +187,7 @@ GetCallerIdentity request.
 $ curl \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/alibaba/login
+    http://127.0.0.1:8200/v1/auth/alicloud/login
 ```
 
 ### Sample Response
