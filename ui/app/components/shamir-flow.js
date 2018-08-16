@@ -21,16 +21,22 @@ const DEFAULTS = {
 export default Component.extend(DEFAULTS, {
   tagName: '',
   store: inject.service(),
+  wizard: inject.service(),
   formText: null,
   fetchOnInit: false,
   buttonText: 'Submit',
   thresholdPath: 'required',
   generateAction: false,
-  encoded_token: null,
 
   init() {
     if (this.get('fetchOnInit')) {
       this.attemptProgress();
+    }
+    if (this.get('action') === 'unseal') {
+      this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'NOOP', {
+        threshold: this.get('threshold'),
+        progress: this.get('progress'),
+      });
     }
     return this._super(...arguments);
   },

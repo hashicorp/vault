@@ -10,6 +10,8 @@ const DEFAULTS = {
 };
 
 export default Ember.Controller.extend(DEFAULTS, {
+  wizard: Ember.inject.service(),
+
   reset() {
     this.setProperties(DEFAULTS);
   },
@@ -17,6 +19,7 @@ export default Ember.Controller.extend(DEFAULTS, {
   initSuccess(resp) {
     this.set('loading', false);
     this.set('keyData', resp);
+    this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'CONTINUE');
   },
 
   initError(e) {

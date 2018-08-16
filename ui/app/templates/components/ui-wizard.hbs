@@ -24,8 +24,12 @@
         {{#if isSelecting}}
           {{wizard/features-selection}}
         {{else}}
-          {{#if isFeature}}
-            {{component "wizard/secrets-machine"}}
+          {{#if isInitializing}}
+            {{component "wizard/init-steps"}}
+          {{else}}
+            {{#if isFeature}}
+              {{component "wizard/secrets-machine"}}
+            {{/if}}
           {{/if}}
         {{/if}}
       {{/if}}

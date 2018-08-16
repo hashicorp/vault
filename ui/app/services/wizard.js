@@ -23,6 +23,7 @@ export default Service.extend({
   featureState: null,
   currentMachine: null,
   potentialSelection: null,
+  componentState: null,
 
   init() {
     this._super(...arguments);
@@ -60,7 +61,11 @@ export default Service.extend({
     this.set(stateType, stateKey);
   },
 
-  transitionTutorialMachine(currentState, event) {
+  transitionTutorialMachine(currentState, event, extendedState) {
+    debugger;
+    if (extendedState) {
+      this.set('componentState', extendedState);
+    }
     let { actions, value } = TutorialMachine.transition(currentState, event);
     this.saveState('currentState', value);
     this.saveExtState(TUTORIAL_STATE, this.get('currentState'));
@@ -70,7 +75,6 @@ export default Service.extend({
   },
 
   transitionFeatureMachine(currentState, event, extendedState) {
-    debugger;
     let { actions, value } = FeatureMachine.transition(currentState, event, extendedState);
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
