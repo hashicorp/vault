@@ -3,29 +3,17 @@ package nomad
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"os"
 	"reflect"
 	"testing"
 	"time"
 
 	nomadapi "github.com/hashicorp/nomad/api"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
 )
-
-// randomWithPrefix is used to generate a unique name with a prefix, for
-// randomizing names in acceptance tests
-func randomWithPrefix(name string) string {
-	reseed()
-	return fmt.Sprintf("%s-%d", name, rand.New(rand.NewSource(time.Now().UnixNano())).Int())
-}
-
-// Seeds random with current timestamp
-func reseed() {
-	rand.Seed(time.Now().UTC().UnixNano())
-}
 
 func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, nomadToken string) {
 	nomadToken = os.Getenv("NOMAD_TOKEN")
@@ -401,7 +389,7 @@ func TestBackend_max_token_name_length(t *testing.T) {
 			if tc.roleName == "" {
 				tc.roleName = "test"
 			}
-			roleTokenName := randomWithPrefix(tc.roleName)
+			roleTokenName := testhelpers.RandomWithPrefix(tc.roleName)
 
 			confReq.Path = "role/" + roleTokenName
 			confReq.Operation = logical.UpdateOperation
