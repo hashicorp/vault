@@ -14,6 +14,11 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * **Namespaces (Enterprise)** is a set of features within Vault Enterprise that allows Vault
+environments to support *Secure Multi-tenancy* within a single Vault Enterprise
+infrastructure. Through namespaces, Vault administrators can support tenant isolation
+for teams and individuals as well as empower those individuals to self-manage their
+own tenant environment. 
  * **AliCloud OSS Storage**: AliCloud OSS can now be used for Vault storage.
  * **AliCloud Auth Plugin**: AliCloud's identity services can now be used to 
  grant access to Vault. See the 
