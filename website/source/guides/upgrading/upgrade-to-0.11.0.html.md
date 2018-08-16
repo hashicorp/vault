@@ -13,7 +13,7 @@ This page contains the list of deprecations and important or breaking changes
 for Vault 0.11.0 Beta compared to 0.10.0. Please read it carefully.
 
 **NOTE** This beta release does not have a forward compatibility guarantee and
-certain functionality may change that will be incompatible the General
+certain functionality may change that will be incompatible with the General 
 Availability release. Please only use the beta releases to test functionality
 and upgrades with clusters that can be lost.
 
