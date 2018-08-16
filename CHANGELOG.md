@@ -51,6 +51,7 @@ BUG FIXES:
  * secrets/database: Fix inability to update custom SQL statements on
    database roles. [GH-5080]
  * storage/gcp,spanner: Fix data races [GH-5081]
+ * replication: Fix issue causing some pages not to flush to storage
 
 ## 0.10.4 (July 25th, 2018)
 
