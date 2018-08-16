@@ -154,7 +154,7 @@ func (c *AuditListCommand) detailedAudits(audits map[string]*api.Audit) []string
 		}
 
 		columns = append(columns, fmt.Sprintf("%s | %s | %s | %s | %s",
-			audit.Path,
+			path,
 			audit.Type,
 			audit.Description,
 			replication,

@@ -6,7 +6,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
   capabilities(secret) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let backendModel = this.modelFor('vault.cluster.secrets.backend');
-    let backendType = backendModel.get('type');
+    let backendType = backendModel.get('engineType');
     let version = backendModel.get('options.version');
     let path;
     if (backendType === 'transit') {
@@ -22,7 +22,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
   },
 
   backendType() {
-    return this.modelFor('vault.cluster.secrets.backend').get('type');
+    return this.modelFor('vault.cluster.secrets.backend').get('engineType');
   },
 
   templateName: 'vault/cluster/secrets/backend/secretEditLayout',
@@ -45,7 +45,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
 
   modelType(backend, secret) {
     let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
-    let type = backendModel.get('type');
+    let type = backendModel.get('engineType');
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',

@@ -12,7 +12,6 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -45,9 +44,6 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 		return errwrap.Wrapf("failed to scan for groups: {{err}}", err)
 	}
 	i.logger.Debug("groups collected", "num_existing", len(existing))
-
-	i.groupLock.Lock()
-	defer i.groupLock.Unlock()
 
 	for _, key := range existing {
 		bucket, err := i.groupPacker.GetBucket(i.groupPacker.BucketPath(key))
@@ -208,18 +204,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	return nil
 }
 
-// LockForEntityID returns the lock used to modify the entity.
-func (i *IdentityStore) LockForEntityID(entityID string) *locksutil.LockEntry {
-	return locksutil.LockForKey(i.entityLocks, entityID)
-}
-
 // upsertEntityInTxn either creates or updates an existing entity. The
 // operations will be updated in both MemDB and storage. If 'persist' is set to
 // false, then storage will not be updated. When an alias is transferred from
 // one entity to another, both the source and destination entities should get
 // updated, in which case, callers should send in both entity and
 // previousEntity.
-func (i *IdentityStore) upsertEntityInTxn(txn *memdb.Txn, entity *identity.Entity, previousEntity *identity.Entity, persist, lockHeld bool) error {
+func (i *IdentityStore) upsertEntityInTxn(txn *memdb.Txn, entity *identity.Entity, previousEntity *identity.Entity, persist bool) error {
 	var err error
 
 	if txn == nil {
@@ -230,13 +221,6 @@ func (i *IdentityStore) upsertEntityInTxn(txn *memdb.Txn, entity *identity.Entit
 		return fmt.Errorf("entity is nil")
 	}
 
-	// Acquire the lock to modify the entity storage entry
-	if !lockHeld {
-		lock := locksutil.LockForKey(i.entityLocks, entity.ID)
-		lock.Lock()
-		defer lock.Unlock()
-	}
-
 	for _, alias := range entity.Aliases {
 		// Verify that alias is not associated to a different one already
 		aliasByFactors, err := i.MemDBAliasByFactors(alias.MountAccessor, alias.Name, false, false)
@@ -245,7 +229,17 @@ func (i *IdentityStore) upsertEntityInTxn(txn *memdb.Txn, entity *identity.Entit
 		}
 
 		if aliasByFactors != nil && aliasByFactors.CanonicalID != entity.ID {
-			return fmt.Errorf("alias %q in already tied to a different entity %q", alias.ID, aliasByFactors.CanonicalID)
+			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID)
+			respErr, intErr := i.mergeEntity(txn, entity, []string{aliasByFactors.CanonicalID}, true, false, true)
+			switch {
+			case respErr != nil:
+				return respErr
+			case intErr != nil:
+				return intErr
+			}
+			// The entity and aliases will be loaded into memdb and persisted
+			// as a result of the merge so we are done here
+			return nil
 		}
 
 		// Insert or update alias in MemDB using the transaction created above
@@ -314,24 +308,7 @@ func (i *IdentityStore) upsertEntity(entity *identity.Entity, previousEntity *id
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
-	err := i.upsertEntityInTxn(txn, entity, previousEntity, persist, false)
-	if err != nil {
-		return err
-	}
-
-	txn.Commit()
-
-	return nil
-}
-
-// upsertEntityNonLocked creates or updates an entity. The lock to modify the
-// entity should be held before calling this function.
-func (i *IdentityStore) upsertEntityNonLocked(entity *identity.Entity, previousEntity *identity.Entity, persist bool) error {
-	// Create a MemDB transaction to update both alias and entity
-	txn := i.db.Txn(true)
-	defer txn.Abort()
-
-	err := i.upsertEntityInTxn(txn, entity, previousEntity, persist, true)
+	err := i.upsertEntityInTxn(txn, entity, previousEntity, persist)
 	if err != nil {
 		return err
 	}

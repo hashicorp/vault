@@ -61,9 +61,6 @@ func TestSysConfigCors(t *testing.T) {
 			"allowed_origins": []interface{}{addr},
 			"allowed_headers": expectedHeaders,
 		},
-		"enabled":         true,
-		"allowed_origins": []interface{}{addr},
-		"allowed_headers": expectedHeaders,
 	}
 
 	testResponseStatus(t, resp, 200)

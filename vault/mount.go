@@ -408,7 +408,7 @@ func (c *Core) unmountInternal(ctx context.Context, path string) error {
 		}
 
 		// Revoke all the dynamic keys
-		if err := c.expiration.RevokePrefix(path, true); err != nil {
+		if err := c.expiration.RevokePrefix(c.activeContext, path, true); err != nil {
 			return err
 		}
 
@@ -555,7 +555,7 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	}
 
 	// Revoke all the dynamic keys
-	if err := c.expiration.RevokePrefix(src, true); err != nil {
+	if err := c.expiration.RevokePrefix(c.activeContext, src, true); err != nil {
 		return err
 	}
 

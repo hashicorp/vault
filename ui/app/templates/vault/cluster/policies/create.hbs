@@ -1,10 +1,10 @@
 <PageHeader as |p|>
   <p.top>
     <div class="breadcrumb">
-      <a href="{{href-to 'vault.cluster.policies' policyType}}" data-test-policy-list-link=true>
+      {{#link-to "vault.cluster.policies" policyType data-test-policy-list-link=true}}
         <span class="sep">&#x0002f;</span>
         {{uppercase policyType}} Policies
-      </a>
+      {{/link-to}}
     </div>
   </p.top>
   <p.levelLeft>
@@ -17,11 +17,12 @@
 <form {{ action "savePolicy" model on="submit"}}>
   <div class="box is-bottomless is-fullwidth is-marginless">
     {{message-error model=model}}
+    <NamespaceReminder @mode="create" @noun="policy" />
     <div class="field">
       <label for="policy-name" class="is-label">Name</label>
       <div class="control">
         <input
-         type="text"
+         type="text"nn
          id="policy-name"
          class="input"
          value={{model.name}}

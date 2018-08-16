@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import base64js from 'base64-js';
 
 const { Component, inject, computed, get } = Ember;
 const { camelize } = Ember.String;

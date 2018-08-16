@@ -97,6 +97,18 @@
 			"revisionTime": "2018-07-03T19:15:42Z"
 		},
 		{
+			"checksumSHA1": "x9ceW8JE2/FgODRSywClj0fRlh8=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac",
+			"revision": "4e8cbbfb1aeab140cd0fa97fd16b64ee18c3ca6a",
+			"revisionTime": "2018-07-27T22:05:59Z"
+		},
+		{
+			"checksumSHA1": "e4hCajXDSuWNkUvwA35jMHGm20E=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization",
+			"revision": "4e8cbbfb1aeab140cd0fa97fd16b64ee18c3ca6a",
+			"revisionTime": "2018-07-27T22:05:59Z"
+		},
+		{
 			"checksumSHA1": "pbHi9xc373inHdf5me73LGIFV1w=",
 			"path": "github.com/Azure/azure-sdk-for-go/storage",
 			"revision": "fbe7db0e3f9793ba3e5704efbab84f51436c136e",
@@ -297,6 +309,12 @@
 		{
 			"checksumSHA1": "ZfB35vNNj+4AXCsW5UbYY8Pogwg=",
 			"path": "github.com/aws/aws-sdk-go/aws",
+			"revision": "c01ebd0d48a4772fd28a0b684db0f36882dc995c",
+			"revisionTime": "2018-07-11T05:22:29Z"
+		},
+		{
+			"checksumSHA1": "DtuTqKH29YnLjrIJkRYX0HQtXY0=",
+			"path": "github.com/aws/aws-sdk-go/aws/arn",
 			"revision": "c01ebd0d48a4772fd28a0b684db0f36882dc995c",
 			"revisionTime": "2018-07-11T05:22:29Z"
 		},
@@ -595,22 +613,26 @@
 			"revisionTime": "2018-05-24T23:10:29Z"
 		},
 		{
-			"checksumSHA1": "l8gIVOjlnOrceuJLONvgA8p4FI4=",
+			"checksumSHA1": "XZGYFHhCogxNxPW12m2isdjzHV8=",
 			"path": "github.com/circonus-labs/circonus-gometrics",
-			"revision": "b5b9c6e8f93c67411193a170108e951e642c453c",
-			"revisionTime": "2018-02-07T19:24:15Z"
+			"revision": "f57cec857aa60ee9ffa19016d5edc822f9b1fea1",
+			"revisionTime": "2018-07-19T04:14:26Z"
 		},
 		{
-			"checksumSHA1": "I6MmriS6eBxiKW9g+p23t0YFDVg=",
+			"checksumSHA1": "z3WEOjH/vGFhybYzw8jrug2EE6s=",
 			"path": "github.com/circonus-labs/circonus-gometrics/api",
-			"revision": "b5b9c6e8f93c67411193a170108e951e642c453c",
-			"revisionTime": "2018-02-07T19:24:15Z"
+			"revision": "f57cec857aa60ee9ffa19016d5edc822f9b1fea1",
+			"revisionTime": "2018-07-19T04:14:26Z"
+		},
+		{
+			"path": "github.com/circonus-labs/circonus-gometrics/api/checkmgr",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "bQhz/fcyZPmuHSH2qwC4ZtATy5c=",
 			"path": "github.com/circonus-labs/circonus-gometrics/api/config",
-			"revision": "b5b9c6e8f93c67411193a170108e951e642c453c",
-			"revisionTime": "2018-02-07T19:24:15Z"
+			"revision": "f57cec857aa60ee9ffa19016d5edc822f9b1fea1",
+			"revisionTime": "2018-07-19T04:14:26Z"
 		},
 		{
 			"checksumSHA1": "YCRBAIvGNWV9L59Wu7GjUVwpK7Q=",
@@ -1113,10 +1135,10 @@
 			"revisionTime": "2018-03-31T00:25:53Z"
 		},
 		{
-			"checksumSHA1": "s6mKR1dSKP04+A3kwSsFr/PvsOU=",
+			"checksumSHA1": "/yKfFSspjuDzyOe/bBslrPzyfYM=",
 			"path": "github.com/hashicorp/go-retryablehttp",
-			"revision": "3b087ef2d313afe6c55b2f511d20db04ca767075",
-			"revisionTime": "2018-05-31T21:13:21Z"
+			"revision": "e651d75abec6fbd4f2c09508f72ae7af8a8b7171",
+			"revisionTime": "2018-07-18T19:50:05Z"
 		},
 		{
 			"checksumSHA1": "A1PcINvF3UiwHRKn8UcgARgvGRs=",
@@ -1293,76 +1315,94 @@
 			"revisionTime": "2018-05-30T15:59:58Z"
 		},
 		{
-			"checksumSHA1": "SQ1DvDihitOt2BxCOXn9mrGXnSA=",
+			"checksumSHA1": "YfqomSqF4w9VSXlE0fIuXHLY1fc=",
+			"path": "github.com/hashicorp/vault-plugin-auth-alicloud",
+			"revision": "aec43c9721368e8a28bfac4ad3b450d4c77efce3",
+			"revisionTime": "2018-08-16T20:09:44Z"
+		},
+		{
+			"checksumSHA1": "KyRLlVNKvvjYWXqDxi478EBUEMY=",
+			"path": "github.com/hashicorp/vault-plugin-auth-alicloud/tools",
+			"revision": "aec43c9721368e8a28bfac4ad3b450d4c77efce3",
+			"revisionTime": "2018-08-16T20:09:44Z"
+		},
+		{
+			"checksumSHA1": "ojr0r/jmutGEhftDXiHthCCwpIA=",
 			"path": "github.com/hashicorp/vault-plugin-auth-azure",
-			"revision": "5bbc3c8a4d777d9655b6009ace708f725d9679f7",
-			"revisionTime": "2018-06-26T21:25:21Z"
+			"revision": "d75e09c45e50144d92d5fa0d711996b4ac98c1e4",
+			"revisionTime": "2018-08-16T20:10:44Z"
 		},
 		{
-			"checksumSHA1": "LI3ZsYvX/mU/o5EL3gE0qwKcSPs=",
+			"checksumSHA1": "4Z/niOo76EcP8KpLdSL5GdDcy78=",
 			"path": "github.com/hashicorp/vault-plugin-auth-centrify",
-			"revision": "938178a6cf7984923db84aba4881913f84de9eea",
-			"revisionTime": "2018-06-06T02:20:31Z"
+			"revision": "66b0a34a58bffb678532d5a5d6d6ae2eb0206563",
+			"revisionTime": "2018-08-16T20:11:31Z"
 		},
 		{
-			"checksumSHA1": "SMQTceFhHRKV9aFfpy7YUdL/BSY=",
+			"checksumSHA1": "JUXORFc1mMn3GR1Jbd/yTbThB1w=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "88de4611ed29dc576719b15cae2c943e6ecc992f",
-			"revisionTime": "2018-07-10T20:29:00Z"
+			"revision": "1d90f74b1b8af3b05b88ee465ea5624a60cd18d9",
+			"revisionTime": "2018-08-16T20:13:19Z"
 		},
 		{
-			"checksumSHA1": "en64nC2RYQjJuHMcWMqwmDBU9bc=",
+			"checksumSHA1": "9xYGzwnImQsjRCHPOHd4/c3rSRU=",
 			"path": "github.com/hashicorp/vault-plugin-auth-jwt",
-			"revision": "31980151e62706c98c1f3a27d7d1e733ad766019",
-			"revisionTime": "2018-07-10T15:13:41Z"
+			"revision": "7f5b553d68478cb0e60a99c384cfb1cb113c3e34",
+			"revisionTime": "2018-08-16T20:14:11Z"
 		},
 		{
-			"checksumSHA1": "L5pDwOw2/MLLUSykrwxXbXQI7zI=",
+			"checksumSHA1": "hrJZzU9iG2ixRu2hOdPgN7wa48c=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "7ca24869a5b9c9e308c475a21c9ce1331734120e",
-			"revisionTime": "2018-06-19T23:09:39Z"
+			"revision": "8bfe988b36157168563f726887da232af94ee87f",
+			"revisionTime": "2018-08-16T20:15:54Z"
 		},
 		{
-			"checksumSHA1": "kGEaf6lxGWkJibW4Dto2wFDXrfY=",
+			"checksumSHA1": "pNERL2s72vwnApekzTLxGsvkyNU=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin",
-			"revision": "6afcfbb25eb6f5adec1b9bba1cf8601f95e89d06",
-			"revisionTime": "2018-06-19T16:09:38Z"
+			"revision": "8c6b5413b569441491d04dcb798a9eb16e28cd22",
+			"revisionTime": "2018-08-16T20:17:55Z"
 		},
 		{
 			"checksumSHA1": "GOxdFElG31lXWgKFG9aqpDcG47M=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/client",
-			"revision": "6afcfbb25eb6f5adec1b9bba1cf8601f95e89d06",
-			"revisionTime": "2018-06-19T16:09:38Z"
+			"revision": "8c6b5413b569441491d04dcb798a9eb16e28cd22",
+			"revisionTime": "2018-08-16T20:17:55Z"
 		},
 		{
 			"checksumSHA1": "RaH2xTkjaToCk+RoPhap7I66ibo=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/util",
-			"revision": "6afcfbb25eb6f5adec1b9bba1cf8601f95e89d06",
-			"revisionTime": "2018-06-19T16:09:38Z"
+			"revision": "8c6b5413b569441491d04dcb798a9eb16e28cd22",
+			"revisionTime": "2018-08-16T20:17:55Z"
 		},
 		{
-			"checksumSHA1": "jOsVXVfsxCgGrUCnwmBMid9SM+Q=",
+			"checksumSHA1": "uq65Yaz1dxt01zXEnMeouhAc/Us=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-azure",
+			"revision": "fbc388a69201d2163e0fc6fe833c0373052f1fda",
+			"revisionTime": "2018-08-16T20:18:46Z"
+		},
+		{
+			"checksumSHA1": "zkmWfxanMFQXWQIAboXj/jqF12g=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin",
-			"revision": "4bb78bc8e0fe2bcff46a1157a6d52f3e3a9cde41",
-			"revisionTime": "2018-07-02T15:42:49Z"
+			"revision": "68d42fd7e379030c1de3b86840fad7950b926eab",
+			"revisionTime": "2018-08-16T20:19:41Z"
 		},
 		{
 			"checksumSHA1": "Dmpy+AguiGWfVg43Me5HB3+eDsk=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil",
-			"revision": "4bb78bc8e0fe2bcff46a1157a6d52f3e3a9cde41",
-			"revisionTime": "2018-07-02T15:42:49Z"
+			"revision": "68d42fd7e379030c1de3b86840fad7950b926eab",
+			"revisionTime": "2018-08-16T20:19:41Z"
 		},
 		{
 			"checksumSHA1": "81kYL49zTBoj1NYczxB2Xbr2d6Y=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util",
-			"revision": "4bb78bc8e0fe2bcff46a1157a6d52f3e3a9cde41",
-			"revisionTime": "2018-07-02T15:42:49Z"
+			"revision": "68d42fd7e379030c1de3b86840fad7950b926eab",
+			"revisionTime": "2018-08-16T20:19:41Z"
 		},
 		{
-			"checksumSHA1": "grTzIH3YAjsrME6m9IBXpS77W14=",
+			"checksumSHA1": "Khi2W3mcc7iM25iEMdDpNgiSZU0=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
-			"revision": "f34be853827f3b0511169188ff1db08adacfd3ac",
-			"revisionTime": "2018-06-08T17:47:30Z"
+			"revision": "f898c71913b3678d45efcc9c769301ba11af1c2e",
+			"revisionTime": "2018-08-16T20:20:37Z"
 		},
 		{
 			"checksumSHA1": "jJouEcBeEAO0ejDRJoT67jL8NjQ=",
@@ -1489,6 +1529,12 @@
 			"path": "github.com/keybase/go-crypto/rsa",
 			"revision": "670ebd3adf7a737d69ffe83a777a8e34eadc1b32",
 			"revisionTime": "2018-06-27T17:25:17Z"
+		},
+		{
+			"checksumSHA1": "3ohk4dFYrERZ6WTdKkIwnTA0HSI=",
+			"path": "github.com/kr/pretty",
+			"revision": "73f6ac0b30a98e433b289500d779f50c1a6f0712",
+			"revisionTime": "2018-05-06T08:33:45Z"
 		},
 		{
 			"checksumSHA1": "SbguDK5lY8uhaHNrmJmNbiWIGM0=",
@@ -1979,10 +2025,12 @@
 			"revisionTime": "2018-01-30T19:37:22Z"
 		},
 		{
-			"checksumSHA1": "eDQ6f1EsNf+frcRO/9XukSEchm8=",
+			"checksumSHA1": "+nVM+CEZGAopOrYlLifgWP+X01E=",
 			"path": "github.com/satori/go.uuid",
-			"revision": "36e9d2ebbde5e3f13ab2e25625fd453271d6522e",
-			"revisionTime": "2018-01-03T17:44:51Z"
+			"revision": "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3",
+			"revisionTime": "2018-01-03T03:42:45Z",
+			"version": "=v1.2.0",
+			"versionExact": "v1.2.0"
 		},
 		{
 			"checksumSHA1": "tnMZLo/kR9Kqx6GtmWwowtTLlA8=",

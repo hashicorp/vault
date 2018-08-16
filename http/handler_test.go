@@ -230,58 +230,6 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"options":   interface{}(nil),
 			},
 		},
-		"secret/": map[string]interface{}{
-			"description": "key/value secret storage",
-			"type":        "kv",
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-				"plugin_name":       "",
-			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]interface{}{"version": "1"},
-		},
-		"sys/": map[string]interface{}{
-			"description": "system endpoints used for control, policy and debugging",
-			"type":        "system",
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-				"plugin_name":       "",
-			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
-		},
-		"cubbyhole/": map[string]interface{}{
-			"description": "per-token private secret storage",
-			"type":        "cubbyhole",
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-				"plugin_name":       "",
-			},
-			"local":     true,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
-		},
-		"identity/": map[string]interface{}{
-			"description": "identity store",
-			"type":        "identity",
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
-				"plugin_name":       "",
-			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
-		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -291,7 +239,6 @@ func TestSysMounts_headerAuth(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
-		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 

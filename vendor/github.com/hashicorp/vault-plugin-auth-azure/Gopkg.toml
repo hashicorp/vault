@@ -27,11 +27,11 @@
 
 [[constraint]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "17.1.0"
+  version = "19.1.0"
 
 [[constraint]]
   name = "github.com/Azure/go-autorest"
-  version = "10.9.2"
+  version = "10.15.2"
 
 [[constraint]]
   name = "github.com/coreos/go-oidc"

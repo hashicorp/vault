@@ -277,20 +277,26 @@ func (l *Lock) watchLock() {
 	retries := 0
 	ticker := time.NewTicker(l.watchRetryInterval)
 
+OUTER:
 	for {
 		// Check if the channel is already closed
 		select {
 		case <-l.stopCh:
+			break OUTER
 		default:
 		}
 
 		// Check if we've exceeded retries
 		if retries >= l.watchRetryMax-1 {
-			break
+			break OUTER
 		}
 
 		// Wait for the timer
-		<-ticker.C
+		select {
+		case <-ticker.C:
+		case <-l.stopCh:
+			break OUTER
+		}
 
 		// Attempt to read the key
 		r, err := l.get(context.Background())
@@ -301,7 +307,7 @@ func (l *Lock) watchLock() {
 
 		// Verify the identity is the same
 		if r == nil || r.Identity != l.identity {
-			break
+			break OUTER
 		}
 	}
 

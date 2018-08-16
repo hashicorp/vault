@@ -1,6 +1,7 @@
-{{message-error model=model}}
 <form onsubmit={{action "createOrUpdate" "create"}} onchange={{action "handleChange"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
+    {{message-error model=model}}
+    <NamespaceReminder @mode={{mode}} @noun="AWS role" />
     {{#if (eq mode 'create')}}
       <div class="field">
         <label for="name" class="is-label">

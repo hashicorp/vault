@@ -32,6 +32,9 @@ _testmain.go
 example.hcl
 example.vault.d
 
+# Without this, the *.[568vq] above ignores this folder.
+!**/graphrbac/1.6
+
 # Ruby
 website/vendor
 website/.bundle
@@ -43,6 +46,8 @@ Vagrantfile
 
 # Configs
 *.hcl
+!command/agent/config/test-fixtures/config.hcl
+!command/agent/config/test-fixtures/config-embedded-type.hcl
 
 .DS_Store
 .idea

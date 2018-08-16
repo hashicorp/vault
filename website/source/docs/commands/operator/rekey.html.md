@@ -100,7 +100,7 @@ flags](/docs/commands/index.html) included on all commands.
 
 - `-pgp-keys` `(string: "...")` - Comma-separated list of paths to files on disk
   containing public GPG keys OR a comma-separated list of Keybase usernames
-  using the format "keybase:<username>". When supplied, the generated unseal
+  using the format `keybase:<username>`. When supplied, the generated unseal
   keys will be encrypted and base64-encoded in the order specified in this list.
 
 - `-status` `(bool: false)` - Print the status of the current attempt without

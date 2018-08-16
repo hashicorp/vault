@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/version"
 )
 
 type dynamicSystemView struct {
@@ -42,7 +43,13 @@ func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token
 	}
 
 	// Construct the corresponding ACL object
-	acl, err := d.core.policyStore.ACL(ctx, te.Policies...)
+	entity, entityPolicies, err := d.core.fetchEntityAndDerivedPolicies(te.EntityID)
+	if err != nil {
+		d.core.logger.Error("failed to fetch entity information", "error", err)
+		return false
+	}
+
+	acl, err := d.core.policyStore.ACL(ctx, entity, append(entityPolicies, te.Policies...)...)
 	if err != nil {
 		d.core.logger.Error("failed to retrieve ACL for token's policies", "token_policies", te.Policies, "error", err)
 		return false
@@ -169,22 +176,46 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 		return nil, nil
 	}
 
-	aliases := make([]*logical.Alias, len(entity.Aliases))
-	for i, alias := range entity.Aliases {
-		aliases[i] = &logical.Alias{
-			MountAccessor: alias.MountAccessor,
-			Name:          alias.Name,
-		}
-		// MountType is not stored with the entity and must be looked up
-		if mount := d.core.router.validateMountByAccessor(alias.MountAccessor); mount != nil {
-			aliases[i].MountType = mount.MountType
+	// Return a subset of the data
+	ret := &logical.Entity{
+		ID:   entity.ID,
+		Name: entity.Name,
+	}
+
+	if entity.Metadata != nil {
+		ret.Metadata = make(map[string]string, len(entity.Metadata))
+		for k, v := range entity.Metadata {
+			ret.Metadata[k] = v
 		}
 	}
 
-	// Only returning a subset of the data
-	return &logical.Entity{
-		ID:      entity.ID,
-		Name:    entity.Name,
-		Aliases: aliases,
+	aliases := make([]*logical.Alias, len(entity.Aliases))
+	for i, a := range entity.Aliases {
+		alias := &logical.Alias{
+			MountAccessor: a.MountAccessor,
+			Name:          a.Name,
+		}
+		// MountType is not stored with the entity and must be looked up
+		if mount := d.core.router.validateMountByAccessor(a.MountAccessor); mount != nil {
+			alias.MountType = mount.MountType
+		}
+
+		if a.Metadata != nil {
+			alias.Metadata = make(map[string]string, len(a.Metadata))
+			for k, v := range a.Metadata {
+				alias.Metadata[k] = v
+			}
+		}
+
+		aliases[i] = alias
+	}
+	ret.Aliases = aliases
+
+	return ret, nil
+}
+
+func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironment, error) {
+	return &logical.PluginEnvironment{
+		VaultVersion: version.GetVersion().Version,
 	}, nil
 }

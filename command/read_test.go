@@ -34,10 +34,10 @@ func TestReadCommand_Run(t *testing.T) {
 			1,
 		},
 		{
-			"too_many_args",
-			[]string{"foo", "bar"},
-			"Too many arguments",
-			1,
+			"proper_args",
+			[]string{"foo", "bar=baz"},
+			"No value found at foo\n",
+			2,
 		},
 		{
 			"not_found",
@@ -99,7 +99,7 @@ func TestReadCommand_Run(t *testing.T) {
 
 				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 				if !strings.Contains(combined, tc.out) {
-					t.Errorf("expected %q to contain %q", combined, tc.out)
+					t.Errorf("%s: expected %q to contain %q", tc.name, combined, tc.out)
 				}
 			})
 		}

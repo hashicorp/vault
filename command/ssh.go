@@ -32,6 +32,7 @@ type SSHCommand struct {
 	flagNoExec                bool
 	flagMountPoint            string
 	flagStrictHostKeyChecking string
+	flagSSHExecutable         string
 	flagUserKnownHostsFile    string
 
 	// SSH CA Mode options
@@ -201,6 +202,15 @@ func (c *SSHCommand) Flags() *FlagSets {
 		Completion: complete.PredictAnything,
 		Usage: "List of valid principal names to include in the generated " +
 			"user certificate. This is specified as a comma-separated list of values.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "ssh-executable",
+		Target:     &c.flagSSHExecutable,
+		Default:    "ssh",
+		EnvVar:     "VAULT_SSH_EXECUTABLE",
+		Completion: complete.PredictAnything,
+		Usage:      "Path to the SSH executable to use when connecting to the host",
 	})
 
 	return set
@@ -473,7 +483,7 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 	// Add extra user defined ssh arguments
 	args = append(args, sshArgs...)
 
-	cmd := exec.Command("ssh", args...)
+	cmd := exec.Command(c.flagSSHExecutable, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -522,7 +532,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip, port string, sshArgs []string) 
 	// only the Go libraries. Feel free to try and remove this dependency.
 	args := make([]string, 0)
 	env := os.Environ()
-	sshCmd := "ssh"
+	sshCmd := c.flagSSHExecutable
 
 	sshpassPath, err := exec.LookPath("sshpass")
 	if err != nil {
@@ -537,7 +547,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip, port string, sshArgs []string) 
 		sshCmd = sshpassPath
 		args = append(args,
 			"-e", // Read password for SSHPASS environment variable
-			"ssh",
+			c.flagSSHExecutable,
 		)
 		env = append(env, fmt.Sprintf("SSHPASS=%s", string(cred.Key)))
 	}
@@ -634,7 +644,7 @@ func (c *SSHCommand) handleTypeDynamic(username, ip, port string, sshArgs []stri
 	// Add extra user defined ssh arguments
 	args = append(args, sshArgs...)
 
-	cmd := exec.Command("ssh", args...)
+	cmd := exec.Command(c.flagSSHExecutable, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

@@ -55,6 +55,12 @@ message Group {
 	// the memberships on the external group --for which a corresponding alias
 	// will be set-- will be managed automatically.
 	string type = 12;
+
+	// **Enterprise only**
+	// NamespaceID is the identifier of the namespace to which this group
+	// belongs to. Do not return this value over the API when reading the
+	// group.
+	//string namespace_id = 13;
 }
 
 
@@ -116,6 +122,12 @@ message Entity {
 	// Disabled indicates whether tokens associated with the account should not
 	// be able to be used
 	bool disabled = 11;
+
+	// **Enterprise only**
+	// NamespaceID is the identifier of the namespace to which this entity
+	// belongs to. Do not return this value over the API when reading the
+	// entity.
+	//string namespace_id = 12;
 }
 
 // Alias represents the alias that gets stored inside of the

@@ -199,6 +199,17 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   }
 }
 
+.button.icon {
+  box-sizing: border-box;
+  padding: 0 $size-11;
+  height: 24px;
+  width: 24px;
+  &,
+  & .icon {
+    min-width: 0;
+  }
+}
+
 .button .icon.auto-width {
   width: auto;
   margin: 0 !important;

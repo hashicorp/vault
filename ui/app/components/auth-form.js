@@ -8,10 +8,10 @@ const DEFAULTS = {
   token: null,
   username: null,
   password: null,
+  customPath: null,
 };
 
 export default Ember.Component.extend(DEFAULTS, {
-  classNames: ['auth-form'],
   router: inject.service(),
   auth: inject.service(),
   flashMessages: inject.service(),
@@ -23,6 +23,30 @@ export default Ember.Component.extend(DEFAULTS, {
   methods: null,
   cluster: null,
   redirectTo: null,
+  namespace: null,
+  // internal
+  oldNamespace: null,
+  didReceiveAttrs() {
+    this._super(...arguments);
+    let token = this.get('wrappedToken');
+    let newMethod = this.get('selectedAuth');
+    let oldMethod = this.get('oldSelectedAuth');
+
+    let ns = this.get('namespace');
+    let oldNS = this.get('oldNamespace');
+    if (oldNS === null || oldNS !== ns) {
+      this.get('fetchMethods').perform();
+    }
+    this.set('oldNamespace', ns);
+    if (oldMethod && oldMethod !== newMethod) {
+      this.resetDefaults();
+    }
+    this.set('oldSelectedAuth', newMethod);
+
+    if (token) {
+      this.get('unwrapToken').perform(token);
+    }
+  },
 
   didRender() {
     this._super(...arguments);
@@ -34,10 +58,12 @@ export default Ember.Component.extend(DEFAULTS, {
     // this is here because we're changing the `with` attr and there's no way to short-circuit rendering,
     // so we'll just nav -> get new attrs -> re-render
     if (!this.get('selectedAuth') || (this.get('selectedAuth') && !this.get('selectedAuthBackend'))) {
-      this.get('router').replaceWith('vault.cluster.auth', this.get('cluster.name'), {
+      this.set('selectedAuth', this.firstMethod());
+      this.get('router').replaceWith({
         queryParams: {
           with: this.firstMethod(),
           wrappedToken: this.get('wrappedToken'),
+          namespace: this.get('namespace'),
         },
       });
     }
@@ -49,36 +75,27 @@ export default Ember.Component.extend(DEFAULTS, {
     return get(firstMethod, 'path') || get(firstMethod, 'type');
   },
 
-  didReceiveAttrs() {
-    this._super(...arguments);
-    let token = this.get('wrappedToken');
-    let newMethod = this.get('selectedAuth');
-    let oldMethod = this.get('oldSelectedAuth');
-
-    if (oldMethod && oldMethod !== newMethod) {
-      this.resetDefaults();
-    }
-    this.set('oldSelectedAuth', newMethod);
-
-    if (token) {
-      this.get('unwrapToken').perform(token);
-    }
-  },
-
   resetDefaults() {
     this.setProperties(DEFAULTS);
   },
 
   selectedAuthIsPath: computed.match('selectedAuth', /\/$/),
   selectedAuthBackend: Ember.computed(
-    'allSupportedMethods',
+    'methods',
+    'methods.[]',
     'selectedAuth',
     'selectedAuthIsPath',
     function() {
-      let methods = this.get('allSupportedMethods');
+      let methods = this.get('methods');
+      let selectedAuth = this.get('selectedAuth');
       let keyIsPath = this.get('selectedAuthIsPath');
-      let findKey = keyIsPath ? 'path' : 'type';
-      return methods.findBy(findKey, this.get('selectedAuth'));
+      if (!methods) {
+        return {};
+      }
+      if (keyIsPath) {
+        return methods.findBy('path', selectedAuth);
+      }
+      return BACKENDS.findBy('type', selectedAuth);
     }
   ),
 
@@ -102,7 +119,7 @@ export default Ember.Component.extend(DEFAULTS, {
   hasMethodsWithPath: computed('methodsToShow', function() {
     return this.get('methodsToShow').isAny('path');
   }),
-  methodsToShow: computed('methods', 'methods.[]', function() {
+  methodsToShow: computed('methods', function() {
     let methods = this.get('methods') || [];
     let shownMethods = methods.filter(m =>
       BACKENDS.find(b => get(b, 'type').toLowerCase() === get(m, 'type').toLowerCase())
@@ -122,6 +139,24 @@ export default Ember.Component.extend(DEFAULTS, {
       this.set('error', `Token unwrap failed: ${e.errors[0]}`);
     }
   }),
+
+  fetchMethods: task(function*() {
+    let store = this.get('store');
+    this.set('methods', null);
+    store.unloadAll('auth-method');
+    try {
+      let methods = yield store.findAll('auth-method', {
+        adapterOptions: {
+          unauthenticated: true,
+        },
+      });
+      this.set('methods', methods);
+    } catch (e) {
+      this.set('error', `There was an error fetching auth methods: ${e.errors[0]}`);
+    }
+  }),
+
+  showLoading: computed.or('fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
   handleError(e) {
     this.set('loading', false);
@@ -143,21 +178,20 @@ export default Ember.Component.extend(DEFAULTS, {
       });
       let targetRoute = this.get('redirectTo') || 'vault.cluster';
       let backend = this.get('selectedAuthBackend') || {};
-      let path = get(backend, 'path') || this.get('customPath');
       let backendMeta = BACKENDS.find(
-        b => get(b, 'type').toLowerCase() === get(backend, 'type').toLowerCase()
+        b => (get(b, 'type') || '').toLowerCase() === (get(backend, 'type') || '').toLowerCase()
       );
-      let attributes = get(backendMeta, 'formAttributes');
+      let attributes = get(backendMeta || {}, 'formAttributes') || {};
 
       data = Ember.assign(data, this.getProperties(...attributes));
-      if (get(backend, 'path') || (this.get('useCustomPath') && path)) {
-        data.path = path;
+      if (this.get('customPath') || get(backend, 'id')) {
+        data.path = this.get('customPath') || get(backend, 'id');
       }
       const clusterId = this.get('cluster.id');
       this.get('auth').authenticate({ clusterId, backend: get(backend, 'type'), data }).then(
-        ({ isRoot }) => {
+        ({ isRoot, namespace }) => {
           this.set('loading', false);
-          const transition = this.get('router').transitionTo(targetRoute);
+          const transition = this.get('router').transitionTo(targetRoute, { queryParams: { namespace } });
           if (isRoot) {
             transition.followRedirects().then(() => {
               this.get('flashMessages').warning(

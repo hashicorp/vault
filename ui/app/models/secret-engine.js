@@ -23,8 +23,8 @@ export default DS.Model.extend({
   local: attr('boolean'),
   sealWrap: attr('boolean'),
 
-  modelTypeForKV: computed('type', 'options.version', function() {
-    let type = this.get('type');
+  modelTypeForKV: computed('engineType', 'options.version', function() {
+    let type = this.get('engineType');
     let version = this.get('options.version');
     let modelType = 'secret';
     if ((type === 'kv' || type === 'generic') && version === 2) {
@@ -48,8 +48,14 @@ export default DS.Model.extend({
     return expandAttributeMeta(this, this.get('formFields'));
   }),
 
-  shouldIncludeInList: computed('type', function() {
-    return !LIST_EXCLUDED_BACKENDS.includes(this.get('type'));
+  // namespaces introduced types with a `ns_` prefix for built-in engines
+  // so we need to strip that to normalize the type
+  engineType: computed('type', function() {
+    return (this.get('type') || '').replace(/^ns_/, '');
+  }),
+
+  shouldIncludeInList: computed('engineType', function() {
+    return !LIST_EXCLUDED_BACKENDS.includes(this.get('engineType'));
   }),
 
   localDisplay: Ember.computed('local', function() {

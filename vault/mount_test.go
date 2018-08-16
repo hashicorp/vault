@@ -290,7 +290,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 		Path:        "test/foo",
 		ClientToken: root,
 	}
-	resp, err := c.HandleRequest(r)
+	resp, err := c.HandleRequest(context.Background(), r)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -410,7 +410,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 		Path:        "test/foo",
 		ClientToken: root,
 	}
-	resp, err := c.HandleRequest(r)
+	resp, err := c.HandleRequest(context.Background(), r)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

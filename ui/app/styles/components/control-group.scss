@@ -1,0 +1,48 @@
+.control-group,
+.control-group-success {
+  @extend .box;
+  box-shadow: $box-shadow-middle, 0 0 1px $grey-dark;
+}
+.control-group-success.is-editor {
+  background: $grey-lighter;
+}
+
+.control-group a {
+  color: currentColor;
+}
+.control-group-header {
+  box-shadow: 0 0 1px currentColor;
+  padding: $size-9 $size-6;
+  background: $grey-lighter;
+  color: $grey-dark;
+  position: relative;
+  strong {
+    color: currentColor;
+  }
+}
+
+.control-group-header.is-success {
+  color: $green-dark;
+  background: $green-lightest;
+}
+
+.control-group .authorizations {
+  margin-top: $size-9;
+}
+
+.control-group .hover-copy-button-static {
+  color: $orange;
+}
+
+.control-group-token-text {
+  color: $grey;
+  position: relative;
+  padding: $size-8 0;
+
+  .hover-copy-button-static {
+    position: relative;
+    top: auto;
+    left: auto;
+    display: inline-block;
+  }
+}

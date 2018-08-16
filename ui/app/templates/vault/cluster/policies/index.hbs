@@ -11,10 +11,10 @@
       </h1>
     </p.levelLeft>
     <p.levelRight>
-      <a href="{{href-to 'vault.cluster.policies.create'}}" class="button has-icon-right is-ghost is-compact" data-test-policy-create-link=true>
+      {{#link-to "vault.cluster.policies.create" class="button has-icon-right is-ghost is-compact" data-test-policy-create-link=true}}
         Create {{uppercase policyType}} policy
         {{i-con glyph="chevron-right" size=11}}
-      </a>
+      {{/link-to}}
     </p.levelRight>
   </PageHeader>
   <div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
@@ -74,16 +74,15 @@
         }}
           <div class="columns is-mobile">
             <div class="column is-10">
-              <a href={{href-to "vault.cluster.policy.show" item.id}}
+              {{#link-to "vault.cluster.policy.show" policyType item.id
                 class="has-text-black has-text-weight-semibold"
-                data-test-policy-item
-                >
-                {{i-con
+                data-test-policy-item=true
+              }}{{i-con
                   glyph='file'
                   size=14
                   class="has-text-grey-light"
                 }}<span class="is-underline" data-test-policy-name>{{item.id}}</span>
-              </a>
+              {{/link-to}}
             </div>
             <div class="column has-text-right">
               {{#popup-menu name="policy-nav"}}
@@ -103,16 +102,16 @@
                     {{else}}
                       {{#if item.canRead}}
                         <li class="action">
-                          <a href={{href-to "vault.cluster.policy.show" policyType item.id}} data-test-policy-link="show">
+                          {{#link-to "vault.cluster.policy.show" policyType item.id data-test-policy-link="show"}}
                             Details
-                          </a>
+                          {{/link-to}}
                         </li>
                       {{/if}}
                       {{#if item.canEdit}}
                         <li class="action">
-                          <a href={{href-to "vault.cluster.policy.edit" policyType item.id}} data-test-policy-link="edit">
+                          {{#link-to "vault.cluster.policy.edit" policyType item.id data-test-policy-link="edit"}}
                             Edit
-                          </a>
+                          {{/link-to}}
                         </li>
                       {{/if}}
                       {{#if item.canDelete}}

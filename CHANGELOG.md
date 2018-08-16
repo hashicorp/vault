@@ -1,4 +1,65 @@
-## Next
+## Next (Unreleased)
+
+DEPRECATIONS/CHANGES:
+
+ * Request Timeouts: A default request timeout of 90s is now enforced. This
+   setting can be overwritten in the config file. If you anticipate requests
+   taking longer than 90s this setting should be updated before upgrading.
+ * `sys/` Top Level Injection: For the last two years for backwards
+   compatibility data for various `sys/` routes has been injected into both the
+   Secret's Data map and into the top level of the JSON response object.
+   However, this has some subtle issues that pop up from time to time and is
+   becoming increasingly complicated to maintain, so it's finally being
+   removed.
+
+FEATURES:
+
+ * **Namespaces (Enterprise)** is a set of features within Vault Enterprise that allows Vault
+environments to support *Secure Multi-tenancy* within a single Vault Enterprise
+infrastructure. Through namespaces, Vault administrators can support tenant isolation
+for teams and individuals as well as empower those individuals to self-manage their
+own tenant environment. 
+ * **AliCloud OSS Storage**: AliCloud OSS can now be used for Vault storage.
+ * **AliCloud Auth Plugin**: AliCloud's identity services can now be used to 
+ grant access to Vault. See the 
+ [plugin repository](https://github.com/hashicorp/vault-plugin-auth-alicloud) 
+ for more information.
+ * **Azure Secrets Plugin**: There is now a plugin (pulled in to Vault) that 
+   allows generating credentials to allow access to Azure. See the [plugin
+   repository](https://github.com/hashicorp/vault-plugin-secrets-azure) for
+   more information.
+ * **HA Support for MySQL Storage**: MySQL storage now supports HA.
+ * **ACL Templating**: ACL policies can now be templated using identity Entity,
+   Groups, and Metadata.
+
+IMPROVEMENTS:
+
+ * agent: Add `exit_after_auth` to be able to use the Agent for a single
+   authentication [GH-5013]
+ * cli: Add support for passing parameters to `vault read` operations [GH-5093]
+ * secrets/nomad: Support for longer token names [GH-5117]
+ * storage/azure: Add support for different Azure environments [GH-4997]
+ * storage/mysql: Support special characters in database and table names.
+
+BUG FIXES:
+
+ * identity: Properly populate `mount_path` and `mount_type` on group lookup
+   [GH-5074]
+ * identity: Fix carryover issue from previously fixed race condition that
+   could cause Vault not to start up due to two entities referencing the same
+   alias. These entities are now merged. [GH-5000]
+ * secrets/database: Fix inability to update custom SQL statements on
+   database roles. [GH-5080]
+ * storage/gcp,spanner: Fix data races [GH-5081]
+ * replication: Fix issue causing some pages not to flush to storage
+
+## 0.10.4 (July 25th, 2018)
+
+SECURITY:
+
+ * Control Groups: The associated Identity entity with a request was not being
+   properly persisted. As a result, the same authorizer could provide more than
+   one authorization.
 
 DEPRECATIONS/CHANGES:
 
@@ -11,6 +72,10 @@ DEPRECATIONS/CHANGES:
  * CLI Retries: The CLI will no longer retry commands on 5xx errors. This was a
    source of confusion to users as to why Vault would "hang" before returning a
    5xx error. The Go API client still defaults to two retries.
+ * Identity Entity Alias metadata: You can no longer manually set metadata on
+   entity aliases. All alias data (except the canonical entity ID it refers to)
+   is intended to be managed by the plugin providing the alias information, so
+   allowing it to be set manually didn't make sense.
 
 FEATURES:
 
@@ -21,31 +86,81 @@ FEATURES:
    optional groups claim can be used to provide Identity information.
  * **FoundationDB Storage**: You can now use FoundationDB for storing Vault
    data.
+ * **UI Control Group Workflow (enterprise)**: The UI will now detect control
+   group responses and provides a workflow to view the status of the request 
+   and to authorize requests.
+ * **Vault Agent (Beta)**: Vault Agent is a daemon that can automatically
+   authenticate for you across a variety of authentication methods, provide
+   tokens to clients, and keep the tokens renewed, reauthenticating as
+   necessary.
 
 IMPROVEMENTS:
 
+ * auth/azure: Add support for virtual machine scale sets
+ * auth/gcp: Support multiple bindings for region, zone, and instance group
+ * cli: Add subcommands for interacting with the plugin catalog [GH-4911]
  * cli: Add a `-description` flag to secrets and auth tune subcommands to allow
    updating an existing secret engine's or auth method's description. This
    change also allows the description to be unset by providing an empty string.
+ * core: Add config flag to disable non-printable character check [GH-4917]
  * core: A `max_request_size` parameter can now be set per-listener to adjust
    the maximum allowed size per request [GH-4824]
  * core: Add control group request endpoint to default policy [GH-4904]
+ * identity: Identity metadata is now passed through to plugins [GH-4967]
+ * replication: Add additional saftey checks and logging when replication is
+   in a bad state
  * secrets/kv: Add support for using `-field=data` to KVv2 when using `vault
    kv` [GH-4895]
  * secrets/pki: Add the ability to tidy revoked but unexpired certificates
    [GH-4916]
  * secrets/ssh: Allow Vault to work with single-argument SSH flags [GH-4825]
+ * secrets/ssh: SSH executable path can now be configured in the CLI [GH-4937]
+ * storage/swift: Add additional configuration options [GH-4901]
+ * ui: Choose which auth methods to show to unauthenticated users via 
+   `listing_visibility` in the auth method edit forms [GH-4854]
+ * ui: Authenticate users automatically by passing a wrapped token to the UI via
+   the new `wrapped_token` query parameter [GH-4854]
 
 BUG FIXES:
 
+ * api: Fix response body being cleared too early [GH-4987]
+ * auth/approle: Fix issue with tidy endpoint that would unnecessarily remove
+   secret accessors [GH-4981]
+ * auth/aws: Fix updating `max_retries` [GH-4980]
+ * auth/kubernetes: Trim trailing whitespace when sending JWT
+ * cli: Fix parsing of environment variables for integer flags [GH-4925]
  * core: Fix returning 500 instead of 503 if a rekey is attempted when Vault is
    sealed [GH-4874]
  * core: Fix issue releasing the leader lock in some circumstances [GH-4915]
  * core: Fix a panic that could happen if the server was shut down while still
    starting up
+ * core: Fix deadlock that would occur if a leadership loss occurs at the same 
+   time as a seal operation [GH-4932]
+ * core: Fix issue with auth mounts failing to renew tokens due to policies 
+   changing [GH-4960]
+ * auth/radius: Fix issue where some radius logins were being canceled too early
+   [GH-4941]
+ * core: Fix accidental seal of vault of we lose leadership during startup 
+   [GH-4924]
+ * core: Fix standby not being able to forward requests larger than 4MB 
+   [GH-4844]
+ * core: Avoid panic while processing group memberships [GH-4841]
+ * identity: Fix a race condition creating aliases [GH-4965]
+ * plugins: Fix being unable to send very large payloads to or from plugins
+   [GH-4958]
+ * physical/azure: Long list responses would sometimes be truncated [GH-4983]
+ * replication: Allow replication status requests to be processed while in 
+   merkle sync
+ * replication: Ensure merkle reindex flushes all changes to storage immediately
+ * replication: Fix a case where a network interruption could cause a secondary
+   to be unable to reconnect to a primary
  * secrets/pki: Fix permitted DNS domains performing improper validation
    [GH-4863]
  * secrets/database: Fix panic during DB creds revocation [GH-4846]
+ * ui: Fix usage of cubbyhole backend in the UI [GH-4851]
+ * ui: Fix toggle state when a secret is JSON-formatted [GH-4913]
+ * ui: Fix coercion of falsey values to empty string when editing secrets as 
+   JSON [GH-4977]
 
 ## 0.10.3 (June 20th, 2018)
 
@@ -120,6 +235,7 @@ BUG FIXES:
  * replication: Fix issue enabling replication when a non-auth mount and auth
    mount have the same name
  * auth/kubernetes: Fix issue verifying ECDSA signed JWTs
+ * ui: add missing edit mode for auth method configs [GH-4770]
 
 ## 0.10.2 (June 6th, 2018)
 

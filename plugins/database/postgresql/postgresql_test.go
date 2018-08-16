@@ -53,6 +53,7 @@ func preparePostgresTestContainer(t *testing.T) (cleanup func(), retURL string) 
 		defer db.Close()
 		return db.Ping()
 	}); err != nil {
+		cleanup()
 		t.Fatalf("Could not connect to PostgreSQL docker container: %s", err)
 	}
 
