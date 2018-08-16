@@ -15,6 +15,10 @@ DEPRECATIONS/CHANGES:
 FEATURES:
 
  * **AliCloud OSS Storage**: AliCloud OSS can now be used for Vault storage.
+ * **Azure Secrets Plugin**: There is now a plugin (pulled in to Vault) that 
+   allows generating credentials to allow access to Azure. See the [plugin
+   repository](https://github.com/hashicorp/vault-plugin-secrets-azure) for
+   more information.
  * **HA Support for MySQL Storage**: MySQL storage now supports HA.
  * **ACL Templating**: ACL policies can now be templated using identity Entity,
    Groups, and Metadata.
