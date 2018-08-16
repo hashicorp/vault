@@ -2,9 +2,6 @@ package nomad
 
 import (
 	"context"
-	"log"
-	"os"
-	"strconv"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
@@ -12,6 +9,10 @@ import (
 )
 
 const configAccessKey = "config/access"
+
+// maxTokenNameLength is the maximum length for the name of a Nomad access
+// token
+const maxTokenNameLength = 256
 
 func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
@@ -27,12 +28,10 @@ func pathConfigAccess(b *backend) *framework.Path {
 				Description: "Token for API calls",
 			},
 
-			"max_token_length": &framework.FieldSchema{
+			"max_token_name_length": &framework.FieldSchema{
 				Type:        framework.TypeInt,
-				Description: "Max length for generated Nomad tokens",
-				// Default length is 256 as of
-				// https://github.com/hashicorp/nomad/blob/21682427f3474f92cc589832efe72850a61c83a7/nomad/structs/structs.go#L116
-				Default: maxTokenNameLength,
+				Description: "Max length for name of generated Nomad tokens",
+				Default:     maxTokenNameLength,
 			},
 		},
 
@@ -108,19 +107,8 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 		conf.Token = token.(string)
 	}
 
-	// max_token_length has default of 256
-	conf.MaxTokenLength = data.Get("max_token_length").(int)
-	envMaxTokenLength := os.Getenv("NOMAD_MAX_TOKEN_LENGTH")
-	if envMaxTokenLength != "" {
-		// if we find NOMAD_MAX_max_token_length in the env and can parse it, override
-		// the default length
-		i, err := strconv.Atoi(envMaxTokenLength)
-		if err != nil {
-			log.Printf("[WARN] error parsing NOMAD_MAX_TOKEN_LENGTH, using default 256")
-		} else {
-			conf.MaxTokenLength = i
-		}
-	}
+	// max_token_name_length has default of 256
+	conf.MaxTokenNameLength = data.Get("max_token_name_length").(int)
 
 	entry, err := logical.StorageEntryJSON("config/access", conf)
 	if err != nil {
@@ -141,7 +129,7 @@ func (b *backend) pathConfigAccessDelete(ctx context.Context, req *logical.Reque
 }
 
 type accessConfig struct {
-	Address        string `json:"address"`
-	Token          string `json:"token"`
-	MaxTokenLength int    `json:"max_token_length"`
+	Address            string `json:"address"`
+	Token              string `json:"token"`
+	MaxTokenNameLength int    `json:"max_token_name_length"`
 }

@@ -8,10 +8,6 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-// maxTokenNameLength is the maximum length for the name of a Nomad access
-// token
-const maxTokenNameLength = 256
-
 // Factory returns a Nomad backend that satisfies the logical.Backend interface
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
