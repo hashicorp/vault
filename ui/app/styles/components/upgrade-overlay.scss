@@ -33,11 +33,14 @@
   .upgrade-overlay-title {
     border-bottom: 1px solid $grey;
     padding-bottom: $size-10;
-  }
 
-  .upgrade-overlay-icon svg {
-    height: 24px;
-    width: auto;
+    .icon {
+      width: 32px;
+
+      #edition-enterprise-hexagon {
+        fill: $white;
+      }
+    }
   }
 
   .columns {

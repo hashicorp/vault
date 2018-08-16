@@ -44,7 +44,7 @@
               <a href="{{href-to "vault.cluster.replication" activeClusterName}}">
                 Replication
                 {{#if (is-version "OSS")}}
-                  {{edition-badge edition="Enterprise"}}
+                  <ICon @glyph="edition-enterprise" @size=16 @class="edition-icon" />
                 {{/if}}
               </a>
             {{/if}}

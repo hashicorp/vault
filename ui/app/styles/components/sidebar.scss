@@ -76,5 +76,11 @@
         border-right: 4px solid $blue;
       }
     }
+
+    .tag {
+      @include from($fullhd) {
+        float: right;
+      }
+    }
   }
 }
