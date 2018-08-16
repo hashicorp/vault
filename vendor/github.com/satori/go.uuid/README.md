@@ -1,8 +1,8 @@
 # UUID package for Go language
 
-[![Build Status](https://travis-ci.org/satori/go.uuid.svg?branch=master)](https://travis-ci.org/satori/go.uuid)
+[![Build Status](https://travis-ci.org/satori/go.uuid.png?branch=master)](https://travis-ci.org/satori/go.uuid)
 [![Coverage Status](https://coveralls.io/repos/github/satori/go.uuid/badge.svg?branch=master)](https://coveralls.io/github/satori/go.uuid)
-[![GoDoc](http://godoc.org/github.com/satori/go.uuid?status.svg)](http://godoc.org/github.com/satori/go.uuid)
+[![GoDoc](http://godoc.org/github.com/satori/go.uuid?status.png)](http://godoc.org/github.com/satori/go.uuid)
 
 This package provides pure Go implementation of Universally Unique Identifier (UUID). Supported both creation and parsing of UUIDs.
 
@@ -37,22 +37,13 @@ import (
 
 func main() {
 	// Creating UUID Version 4
-	// panic on error
-	u1 := uuid.Must(uuid.NewV4())
+	u1 := uuid.NewV4()
 	fmt.Printf("UUIDv4: %s\n", u1)
-
-	// or error handling
-	u2, err := uuid.NewV4()
-	if err != nil {
-		fmt.Printf("Something went wrong: %s", err)
-		return
-	}
-	fmt.Printf("UUIDv4: %s\n", u2)
 
 	// Parsing UUID from string input
 	u2, err := uuid.FromString("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
 	if err != nil {
-		fmt.Printf("Something went wrong: %s", err)
+		fmt.Printf("Something gone wrong: %s", err)
 	}
 	fmt.Printf("Successfully parsed: %s", u2)
 }
