@@ -62,9 +62,9 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	// Generate a name for the token
 	tokenName := fmt.Sprintf("vault-%s-%s-%d", name, req.DisplayName, time.Now().UnixNano())
 
-	// Note: if the given role name is suffeciently long, the UnixNano() portion
+	// Note: if the given role name is sufficiently long, the UnixNano() portion
 	// of the pseudo randomized token name is the part that gets trimmed off,
-	// weaking it's randomness.
+	// weakening it's randomness.
 	if len(tokenName) > tokenNameLength {
 		tokenName = tokenName[:tokenNameLength]
 	}
