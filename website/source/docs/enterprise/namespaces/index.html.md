@@ -11,19 +11,18 @@ description: |-
 
 ## Overview
 
-Many organizations implement *Vault as a Service* (or "VaaS"), providing centralized 
-management to a security or ops team while ensuring that separate teams within that 
-organization operate within self-contained environments known as "*tenants*." 
+Many organizations implement Vault as a "service", providing centralized 
+management for teams within an organization while ensuring that those teams
+operate within isolated environments known as *tenants*. 
 
 There are two common challenges when implementing this architecture in Vault:
 
 **Tenant Isolation**
 
 Frequently teams within a VaaS environment require strong isolation from other
-users in their policies, secrets, and sometimes even their own identity entities 
-and groups. Frequently tenant isolation is a result of regulations such as [GDPR](https://www.eugdpr.org/),
-though it may be necessitated by corporate or organizational infosec requirements as 
-well.
+users in their policies, secrets, and identitys. Tenant isolation is typically a 
+result of compliance regulations such as [GDPR](https://www.eugdpr.org/), though it may 
+be necessitated by corporate or organizational infosec requirements.
 
 **Self-Management**
 
@@ -31,19 +30,19 @@ As new tenants are added, there is an additional human cost in the management
 overhead for teams. Given that tenants will likely have different policies and
 request changes at a different rate, managing a multi-tenant environment can
 become very difficult for a single team as the number of tenants within that
-environment grow.
+organization grow.
 
 'Namespaces' is a set of features within Vault Enterprise that allows Vault
-environments to support *Secure Multi-tenancy* (or *SMT*) within a single Vault Enterprise
+environments to support *Secure Multi-tenancy* (or *SMT*) within a single Vault
 infrastructure. Through namespaces, Vault administrators can support tenant isolation
-for teams and individuals as well as empower those individuals to self-manage their
+for teams and individuals as well as empower delegated administrators to manage their
 own tenant environment. 
 
 ## Architecture
 
 Namespaces are isolated environments that functionally exist as "Vaults within a Vault."
-They have separate login paths and support creating and managing data isolated to a namespace
-including the following:
+They have separate login paths and support creating and managing data isolated to their
+namespace. This data includes the following: 
 
 - Secret Engine Mounts
 - Policies
@@ -52,19 +51,16 @@ including the following:
 
 Namespaces can also be configured to inherit all of this data from a higher *parent* namespace.
 This simplifies the deployment of new namespaces, and can be combined with sentinel policies 
-to prescribe organization-wide infosec policies on tenants. 
+to prescribe organization-wide infosec policies on tenants.
 
-## Example Implementation
-
-
+Rather than rely on Vault system admins, namespaces can be managed by delegated admins who
+can be prescribed administration rights for their namespace. These delegated admins can also
+create their own child namespaces, thereby prescribing admin rights on a subordinate group 
+of delegate admins. 
 
 ## Setup and Best Practices
 
-A [deployment guide](/guides/operations/replication.html) is
-available to help you get started, and contains examples on namespace architecture.
+A [deployment guide](/guides/operations/multi-tenant.html) is available to help guide you
+through the deployment and administration of namespaces, and contains examples on architecture
+for using namespaces to implement SMT across your organization. 
 
-## API
-
-Namespaces supports a full HTTP API. Please see the
-[Vault Namespace API](/api/system/replication.html) for more
-details.
