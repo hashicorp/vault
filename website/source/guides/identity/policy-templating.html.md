@@ -455,21 +455,6 @@ then click **Create**.
     ```
 
 
-#### Web UI
-
-The user, **`ellen`** can approve the data access request via UI.
-
-
-1. Open the Vault sign in page in a web browser (e.g.
-http://127.0.0.1:8200/ui/vault/auth?with=userpass).  In the **Userpass** tab,
-enter **`bob`** in the **Username** field, and **`training`** in the
-**Password** field.
-
-1. Click **Sign in**.
-
-
-
-
 
 ## Next steps
 
