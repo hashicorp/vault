@@ -1,18 +1,19 @@
 package aws
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -34,8 +35,8 @@ func TestBackend_basic(t *testing.T) {
 		Backend:        getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
-			testAccStepWritePolicy(t, "test", testPolicy),
-			testAccStepReadUser(t, "test"),
+			testAccStepWritePolicy(t, "test", testDynamoPolicy),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest}),
 		},
 	})
 }
@@ -56,12 +57,12 @@ func TestBackend_basicSTS(t *testing.T) {
 		Backend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigWithCreds(t, accessKey),
-			testAccStepWritePolicy(t, "test", testPolicy),
-			testAccStepReadSTS(t, "test"),
-			testAccStepWriteArnPolicyRef(t, "test", testPolicyArn),
+			testAccStepWritePolicy(t, "test", testDynamoPolicy),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest}),
+			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
 			testAccStepReadSTSWithArnPolicy(t, "test"),
 			testAccStepWriteArnRoleRef(t, testRoleName),
-			testAccStepReadSTS(t, testRoleName),
+			testAccStepRead(t, "sts", testRoleName, []credentialTestFunc{describeInstancesTest}),
 		},
 		Teardown: func() error {
 			return teardown(accessKey)
@@ -70,8 +71,8 @@ func TestBackend_basicSTS(t *testing.T) {
 }
 
 func TestBackend_policyCrud(t *testing.T) {
-	var compacted bytes.Buffer
-	if err := json.Compact(&compacted, []byte(testPolicy)); err != nil {
+	compacted, err := compactJSON(testDynamoPolicy)
+	if err != nil {
 		t.Fatalf("bad: %s", err)
 	}
 
@@ -80,8 +81,8 @@ func TestBackend_policyCrud(t *testing.T) {
 		Backend:        getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
-			testAccStepWritePolicy(t, "test", testPolicy),
-			testAccStepReadPolicy(t, "test", compacted.String()),
+			testAccStepWritePolicy(t, "test", testDynamoPolicy),
+			testAccStepReadPolicy(t, "test", compacted),
 			testAccStepDeletePolicy(t, "test"),
 			testAccStepReadPolicy(t, "test", ""),
 		},
@@ -162,7 +163,7 @@ func createRole(t *testing.T) {
 	}
 
 	attachment := &iam.AttachRolePolicyInput{
-		PolicyArn: aws.String(testPolicyArn),
+		PolicyArn: aws.String(ec2PolicyArn),
 		RoleName:  aws.String(testRoleName), // Required
 	}
 	_, err = svc.AttachRolePolicy(attachment)
@@ -254,7 +255,7 @@ func createUser(t *testing.T, accessKey *awsAccessKey) {
 	accessKey.SecretAccessKey = *genAccessKey.SecretAccessKey
 }
 
-func teardown(accessKey *awsAccessKey) error {
+func deleteTestRole() error {
 	awsConfig := &aws.Config{
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
@@ -262,7 +263,7 @@ func teardown(accessKey *awsAccessKey) error {
 	svc := iam.New(session.New(awsConfig))
 
 	attachment := &iam.DetachRolePolicyInput{
-		PolicyArn: aws.String(testPolicyArn),
+		PolicyArn: aws.String(ec2PolicyArn),
 		RoleName:  aws.String(testRoleName), // Required
 	}
 	_, err := svc.DetachRolePolicy(attachment)
@@ -282,12 +283,25 @@ func teardown(accessKey *awsAccessKey) error {
 		log.Printf("[WARN] AWS DeleteRole failed: %v", err)
 		return err
 	}
+	return nil
+}
+
+func teardown(accessKey *awsAccessKey) error {
+
+	if err := deleteTestRole(); err != nil {
+		return err
+	}
+	awsConfig := &aws.Config{
+		Region:     aws.String("us-east-1"),
+		HTTPClient: cleanhttp.DefaultClient(),
+	}
+	svc := iam.New(session.New(awsConfig))
 
 	userDetachment := &iam.DetachUserPolicyInput{
 		PolicyArn: aws.String("arn:aws:iam::aws:policy/AdministratorAccess"),
 		UserName:  aws.String(testUserName),
 	}
-	_, err = svc.DetachUserPolicy(userDetachment)
+	_, err := svc.DetachUserPolicy(userDetachment)
 	if err != nil {
 		log.Printf("[WARN] AWS DetachUserPolicy failed: %v", err)
 		return err
@@ -354,51 +368,10 @@ func testAccStepConfigWithCreds(t *testing.T, accessKey *awsAccessKey) logicalte
 	}
 }
 
-func testAccStepReadUser(t *testing.T, name string) logicaltest.TestStep {
+func testAccStepRead(t *testing.T, path, name string, credentialTests []credentialTestFunc) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path:      "creds/" + name,
-		Check: func(resp *logical.Response) error {
-			var d struct {
-				AccessKey string `mapstructure:"access_key"`
-				SecretKey string `mapstructure:"secret_key"`
-			}
-			if err := mapstructure.Decode(resp.Data, &d); err != nil {
-				return err
-			}
-			log.Printf("[WARN] Generated credentials: %v", d)
-
-			// Build a client and verify that the credentials work
-			creds := credentials.NewStaticCredentials(d.AccessKey, d.SecretKey, "")
-			awsConfig := &aws.Config{
-				Credentials: creds,
-				Region:      aws.String("us-east-1"),
-				HTTPClient:  cleanhttp.DefaultClient(),
-			}
-			client := ec2.New(session.New(awsConfig))
-
-			log.Printf("[WARN] Verifying that the generated credentials work...")
-			retryCount := 0
-			success := false
-			var err error
-			for !success && retryCount < 10 {
-				_, err = client.DescribeInstances(&ec2.DescribeInstancesInput{})
-				if err == nil {
-					return nil
-				}
-				time.Sleep(time.Second)
-				retryCount++
-			}
-
-			return err
-		},
-	}
-}
-
-func testAccStepReadSTS(t *testing.T, name string) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.ReadOperation,
-		Path:      "sts/" + name,
+		Path:      path + "/" + name,
 		Check: func(resp *logical.Response) error {
 			var d struct {
 				AccessKey string `mapstructure:"access_key"`
@@ -409,25 +382,99 @@ func testAccStepReadSTS(t *testing.T, name string) logicaltest.TestStep {
 				return err
 			}
 			log.Printf("[WARN] Generated credentials: %v", d)
-
-			// Build a client and verify that the credentials work
-			creds := credentials.NewStaticCredentials(d.AccessKey, d.SecretKey, d.STSToken)
-			awsConfig := &aws.Config{
-				Credentials: creds,
-				Region:      aws.String("us-east-1"),
-				HTTPClient:  cleanhttp.DefaultClient(),
+			for _, test := range credentialTests {
+				err := test(d.AccessKey, d.SecretKey, d.STSToken)
+				if err != nil {
+					return err
+				}
 			}
-			client := ec2.New(session.New(awsConfig))
-
-			log.Printf("[WARN] Verifying that the generated credentials work...")
-			_, err := client.DescribeInstances(&ec2.DescribeInstancesInput{})
-			if err != nil {
-				return err
-			}
-
 			return nil
 		},
 	}
+}
+
+func describeInstancesTest(accessKey, secretKey, token string) error {
+	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
+	awsConfig := &aws.Config{
+		Credentials: creds,
+		Region:      aws.String("us-east-1"),
+		HTTPClient:  cleanhttp.DefaultClient(),
+	}
+	client := ec2.New(session.New(awsConfig))
+	log.Printf("[WARN] Verifying that the generated credentials work with ec2:DescribeInstances...")
+	return retryUntilSuccess(func() error {
+		_, err := client.DescribeInstances(&ec2.DescribeInstancesInput{})
+		return err
+	})
+}
+
+func describeAzsTestUnauthorized(accessKey, secretKey, token string) error {
+	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
+	awsConfig := &aws.Config{
+		Credentials: creds,
+		Region:      aws.String("us-east-1"),
+		HTTPClient:  cleanhttp.DefaultClient(),
+	}
+	client := ec2.New(session.New(awsConfig))
+	log.Printf("[WARN] Verifying that the generated credentials don't work with ec2:DescribeAvailabilityZones...")
+	return retryUntilSuccess(func() error {
+		_, err := client.DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{})
+		// Need to make sure AWS authenticates the generated credentials but does not authorize the operation
+		if err == nil {
+			return fmt.Errorf("operation succeeded when expected failure")
+		}
+		if aerr, ok := err.(awserr.Error); ok {
+			if aerr.Code() == "UnauthorizedOperation" {
+				return nil
+			}
+		}
+		return err
+	})
+}
+
+func listIamUsersTest(accessKey, secretKey, token string) error {
+	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
+	awsConfig := &aws.Config{
+		Credentials: creds,
+		Region:      aws.String("us-east-1"),
+		HTTPClient:  cleanhttp.DefaultClient(),
+	}
+	client := iam.New(session.New(awsConfig))
+	log.Printf("[WARN] Verifying that the generated credentials work with iam:ListUsers...")
+	return retryUntilSuccess(func() error {
+		_, err := client.ListUsers(&iam.ListUsersInput{})
+		return err
+	})
+}
+
+func listDynamoTablesTest(accessKey, secretKey, token string) error {
+	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
+	awsConfig := &aws.Config{
+		Credentials: creds,
+		Region:      aws.String("us-east-1"),
+		HTTPClient:  cleanhttp.DefaultClient(),
+	}
+	client := dynamodb.New(session.New(awsConfig))
+	log.Printf("[WARN] Verifying that the generated credentials work with dynamodb:ListTables...")
+	return retryUntilSuccess(func() error {
+		_, err := client.ListTables(&dynamodb.ListTablesInput{})
+		return err
+	})
+}
+
+func retryUntilSuccess(op func() error) error {
+	retryCount := 0
+	success := false
+	var err error
+	for !success && retryCount < 10 {
+		err = op()
+		if err == nil {
+			return nil
+		}
+		time.Sleep(time.Second)
+		retryCount++
+	}
+	return err
 }
 
 func testAccStepReadSTSWithArnPolicy(t *testing.T, name string) logicaltest.TestStep {
@@ -437,7 +484,7 @@ func testAccStepReadSTSWithArnPolicy(t *testing.T, name string) logicaltest.Test
 		ErrorOk:   true,
 		Check: func(resp *logical.Response) error {
 			if resp.Data["error"] !=
-				"Can't generate STS credentials for a managed policy; use a role to assume or an inline policy instead" {
+				"attempted to retrieve iam_user credentials through the sts path; this is not allowed for legacy roles" {
 				t.Fatalf("bad: %v", resp)
 			}
 			return nil
@@ -450,7 +497,7 @@ func testAccStepWritePolicy(t *testing.T, name string, policy string) logicaltes
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
-			"policy": testPolicy,
+			"policy": policy,
 		},
 	}
 }
@@ -475,31 +522,28 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
-			var d struct {
-				Policy string `mapstructure:"policy"`
+			expected := map[string]interface{}{
+				"policy_arns":      []string(nil),
+				"role_arns":        []string(nil),
+				"policy_document":  value,
+				"credential_types": []string{iamUserCred, federationTokenCred},
 			}
-			if err := mapstructure.Decode(resp.Data, &d); err != nil {
-				return err
+			if !reflect.DeepEqual(resp.Data, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
 			}
-
-			if d.Policy != value {
-				return fmt.Errorf("bad: %#v", resp)
-			}
-
 			return nil
 		},
 	}
 }
 
-const testPolicy = `
-{
+const testDynamoPolicy = `{
     "Version": "2012-10-17",
     "Statement": [
         {
             "Sid": "Stmt1426528957000",
             "Effect": "Allow",
             "Action": [
-                "ec2:*"
+                "dynamodb:List*"
             ],
             "Resource": [
                 "*"
@@ -509,14 +553,42 @@ const testPolicy = `
 }
 `
 
-const testPolicyArn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
+const ec2PolicyArn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
+const iamPolicyArn = "arn:aws:iam::aws:policy/IAMReadOnlyAccess"
+
+func testAccStepWriteRole(t *testing.T, name string, data map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + name,
+		Data:      data,
+	}
+}
+
+func testAccStepReadRole(t *testing.T, name string, expected map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "roles/" + name,
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				if expected == nil {
+					return nil
+				}
+				return fmt.Errorf("bad: nil response")
+			}
+			if !reflect.DeepEqual(resp.Data, expected) {
+				return fmt.Errorf("bad: got %#v\nexpected: %#v", resp.Data, expected)
+			}
+			return nil
+		},
+	}
+}
 
 func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data: map[string]interface{}{
-			"arn": testPolicyArn,
+			"arn": ec2PolicyArn,
 		},
 	}
 }
@@ -528,9 +600,81 @@ func TestBackend_basicPolicyArnRef(t *testing.T) {
 		Backend:        getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
-			testAccStepWriteArnPolicyRef(t, "test", testPolicyArn),
-			testAccStepReadUser(t, "test"),
+			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest}),
 		},
+	})
+}
+
+func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
+	compacted, err := compactJSON(testDynamoPolicy)
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+	roleData := map[string]interface{}{
+		"policy_document": testDynamoPolicy,
+		"policy_arns":     []string{ec2PolicyArn, iamPolicyArn},
+		"credential_type": iamUserCred,
+	}
+	expectedRoleData := map[string]interface{}{
+		"policy_document":  compacted,
+		"policy_arns":      []string{ec2PolicyArn, iamPolicyArn},
+		"credential_types": []string{iamUserCred},
+		"role_arns":        []string(nil),
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepReadRole(t, "test", expectedRoleData),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest}),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest}),
+		},
+	})
+}
+
+func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
+	// This looks a bit curious. The policy document and the role document act
+	// as a logical intersection of policies. The role allows ec2:Describe*
+	// (among other permissions). This policy allows everything BUT
+	// ec2:DescribeAvailabilityZones. Thus, the logical intersection of the two
+	// is all ec2:Describe* EXCEPT ec2:DescribeAvailabilityZones, and so the
+	// describeAZs call should fail
+	allowAllButDescribeAzs := `
+{
+	"Version": "2012-10-17",
+	"Statement": [{
+			"Effect": "Allow",
+			"NotAction": "ec2:DescribeAvailabilityZones",
+			"Resource": "*"
+	}]
+}
+`
+	roleData := map[string]interface{}{
+		"policy_document": allowAllButDescribeAzs,
+		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", os.Getenv("AWS_ACCOUNT_ID"), testRoleName)},
+		"credential_type": assumedRoleCred,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createRole(t)
+			// Sleep sometime because AWS is eventually consistent
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		Backend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+		},
+		Teardown: deleteTestRole,
 	})
 }
 
@@ -540,8 +684,8 @@ func TestBackend_policyArnCrud(t *testing.T) {
 		Backend:        getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
-			testAccStepWriteArnPolicyRef(t, "test", testPolicyArn),
-			testAccStepReadArnPolicy(t, "test", testPolicyArn),
+			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
+			testAccStepReadArnPolicy(t, "test", ec2PolicyArn),
 			testAccStepDeletePolicy(t, "test"),
 			testAccStepReadArnPolicy(t, "test", ""),
 		},
@@ -561,15 +705,14 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
-			var d struct {
-				Policy string `mapstructure:"arn"`
+			expected := map[string]interface{}{
+				"policy_arns":      []string{value},
+				"role_arns":        []string(nil),
+				"policy_document":  "",
+				"credential_types": []string{iamUserCred},
 			}
-			if err := mapstructure.Decode(resp.Data, &d); err != nil {
-				return err
-			}
-
-			if d.Policy != value {
-				return fmt.Errorf("bad: %#v", resp)
+			if !reflect.DeepEqual(resp.Data, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
 			}
 
 			return nil
@@ -591,3 +734,5 @@ type awsAccessKey struct {
 	AccessKeyId     string
 	SecretAccessKey string
 }
+
+type credentialTestFunc func(string, string, string) error
