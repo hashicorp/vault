@@ -9,14 +9,14 @@ import (
 func (c *Sys) GetGithubTeamMap(name string) (string, error) {
 	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/auth/github/map/teams/%s", name))
 	resp, err := c.c.RawRequest(r)
-	
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-	 panic(err.Error())
-   	}
+		panic(err.Error())
+	}
 	bodyString := string(body)
 
-	policy := gjson.Get(bodyString, "data.value")	
+	policy := gjson.Get(bodyString, "data.value")
 	return policy.String(), nil
 }
 
@@ -38,7 +38,6 @@ func (c *Sys) PostGithubTeamMap(name, policies string) error {
 
 	return nil
 }
-
 
 func (c *Sys) DeleteGithubTeamMap(name string) error {
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/auth/github/map/teams/%s", name))
