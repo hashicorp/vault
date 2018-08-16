@@ -15,10 +15,10 @@ DEPRECATIONS/CHANGES:
 FEATURES:
 
  * **AliCloud OSS Storage**: AliCloud OSS can now be used for Vault storage.
-  * **Azure Secrets Plugin**: There is now a plugin (pulled in to Vault) that 
-   allows generating credentials to allow access to Azure. See the [plugin
-   repository](https://github.com/hashicorp/vault-plugin-secrets-azure) for
-   more information.
+ * **AliCloud Auth Plugin**: AliCloud's identity services can now be used to 
+ grant access to Vault. See the 
+ [plugin repository](https://github.com/hashicorp/vault-plugin-auth-alicloud) 
+ for more information.
  * **Azure Secrets Plugin**: There is now a plugin (pulled in to Vault) that 
    allows generating credentials to allow access to Azure. See the [plugin
    repository](https://github.com/hashicorp/vault-plugin-secrets-azure) for
