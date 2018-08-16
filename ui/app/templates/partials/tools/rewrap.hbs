@@ -41,6 +41,8 @@
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode="perform" @noun={{selectedAction}} />
+    {{message-error errors=errors}}
     <div class="field">
       <label for="token" class="is-label">Wrapping token</label>
       <div class="control">

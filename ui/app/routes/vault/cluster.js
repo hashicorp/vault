@@ -3,14 +3,22 @@ import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 
 const POLL_INTERVAL_MS = 10000;
-const { inject } = Ember;
+const { inject, Route, getOwner } = Ember;
 
-export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
+export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
+  namespaceService: inject.service('namespace'),
   version: inject.service(),
   store: inject.service(),
   auth: inject.service(),
-  currentCluster: Ember.inject.service(),
+  currentCluster: inject.service(),
   modelTypes: ['node', 'secret', 'secret-engine'],
+  globalNamespaceModels: ['node', 'cluster'],
+
+  queryParams: {
+    namespaceQueryParam: {
+      refreshModel: true,
+    },
+  },
 
   getClusterId(params) {
     const { cluster_name } = params;
@@ -18,8 +26,24 @@ export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
     return cluster ? cluster.get('id') : null;
   },
 
+  clearNonGlobalModels() {
+    // this method clears all of the ember data cached models except
+    // the model types blacklisted in `globalNamespaceModels`
+    let store = this.store;
+    let modelsToKeep = this.get('globalNamespaceModels');
+    for (let model of getOwner(this).lookup('data-adapter:main').getModelTypes()) {
+      let { name } = model;
+      if (modelsToKeep.includes(name)) {
+        return;
+      }
+      store.unloadAll(name);
+    }
+  },
+
   beforeModel() {
     const params = this.paramsFor(this.routeName);
+    this.clearNonGlobalModels();
+    this.get('namespaceService').setNamespace(params.namespaceQueryParam);
     const id = this.getClusterId(params);
     if (id) {
       this.get('auth').setCluster(id);
@@ -61,6 +85,12 @@ export default Ember.Route.extend(ModelBoundaryRoute, ClusterRoute, {
     this.get('currentCluster').setCluster(model);
     this._super(...arguments);
     this.poll();
+
+    // Check that namespaces is enabled and if not,
+    // clear the namespace by transition to this route w/o it
+    if (this.get('namespaceService.path') && !this.get('version.hasNamespaces')) {
+      return this.transitionTo(this.routeName, { queryParams: { namespace: '' } });
+    }
     return this.transitionToTargetRoute();
   },
 

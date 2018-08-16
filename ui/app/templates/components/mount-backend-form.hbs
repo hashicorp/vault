@@ -11,6 +11,7 @@
 </PageHeader>
 <form {{action (perform mountBackend) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode="enable" @noun={{if (eq mountType "auth") "auth method" "secret engine"}} />
     {{message-error model=mountModel}}
     {{form-field-groups model=mountModel onChange=(action "onTypeChange") renderGroup="default"}}
     {{#if mountModel.authConfigs.firstObject}}

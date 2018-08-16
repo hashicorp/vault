@@ -27,6 +27,7 @@
     </div>
   {{else}}
     <div class="box is-sideless is-fullwidth is-marginless">
+      <NamespaceReminder @mode="perform" @noun="HMAC creation" />
       {{key-version-select
         key=key
         onVersionChange=(action (mut key_version))

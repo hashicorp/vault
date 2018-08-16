@@ -16,9 +16,23 @@
       {{/link-to}}
     </li>
     <li>
+      {{#link-to "vault.cluster.access.leases" data-test-link=true}}
+        Leases
+      {{/link-to}}
+    </li>
+    <li>
+      {{#link-to "vault.cluster.access.namespaces" data-test-link=true }}
+        Namespaces
+        {{#unless (has-feature "Namespaces")}}
+          {{#if (is-version "OSS")}}
+            {{edition-badge edition="Enterprise"}}
+          {{/if}}
+        {{/unless}}
+      {{/link-to}}
+    </li>
+    <li>
       {{#link-to "vault.cluster.access.control-groups" data-test-link=true current-when="vault.cluster.access.control-groups vault.cluster.access.control-group-accessor"}}
         Control Groups
-
         {{#unless (has-feature "Control Groups")}}
           {{#if (is-version "OSS")}}
             {{edition-badge edition="Enterprise"}}
@@ -26,11 +40,6 @@
             {{edition-badge edition="Premium"}}
           {{/if}}
         {{/unless}}
-      {{/link-to}}
-    </li>
-    <li>
-      {{#link-to "vault.cluster.access.leases" data-test-link=true}}
-        Leases
       {{/link-to}}
     </li>
   {{/menu-sidebar}}

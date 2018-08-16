@@ -6,7 +6,7 @@
     <div class="menu-content">
       <p>
         If you suspect your data has been compromised, you can
-        <a href="{{href-to 'vault.cluster.settings.seal' cluster.name}}" onclick={{action d.actions.close}} class="link">seal your vault</a>
+        {{#link-to 'vault.cluster.settings.seal' cluster.name onclick=(action d.actions.close) class="link"}}seal your vault{{/link-to}}
         to prevent access to your secrets.
       </p>
     </div>

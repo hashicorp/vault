@@ -1,0 +1,12 @@
+.namespace-reminder {
+  color: $grey;
+  margin: 0 0 $size-6 0;
+}
+
+.console-reminder p.namespace-reminder {
+  margin-bottom: 0;
+  opacity: 0.7;
+  position: absolute;
+  color: $grey;
+  font-family: $family-monospace;
+}
