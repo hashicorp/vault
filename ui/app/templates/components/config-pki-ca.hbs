@@ -30,6 +30,7 @@
     </div>
   {{else}}
     <form {{action "saveCA" on="submit"}} data-test-generate-root-cert="true">
+      <NamespaceReminder @mode="save" @noun="PKI change" />
       {{#if model.uploadPemBundle}}
         {{#message-in-page type="warning" data-test-warning=true}}
           <em>If you have already set a certificate and key, they will be overridden with the successful saving of a new <code>PEM bundle</code>.</em>
@@ -90,8 +91,9 @@
       </div>
     </div>
   {{else}}
-    {{message-error model=model}}
     <h2 data-test-title class="title is-3">Sign intermediate</h2>
+    <NamespaceReminder @mode="save" @noun="PKI change" />
+    {{message-error model=model}}
     <form {{action "saveCA" on="submit"}} data-test-sign-intermediate-form="true">
       {{partial "partials/form-field-groups-loop"}}
       <div class="field is-grouped box is-fullwidth is-bottomless">
@@ -109,8 +111,9 @@
     </form>
   {{/if}}
 {{else if setSignedIntermediate}}
-  {{message-error model=model}}
   <h2 data-test-title class="title is-3">Set signed intermediate</h2>
+  <NamespaceReminder @mode="save" @noun="PKI change" />
+  {{message-error model=model}}
     <p class="has-text-grey-dark">
       Submit a signed CA certificate corresponding to a generated private key.
     </p>

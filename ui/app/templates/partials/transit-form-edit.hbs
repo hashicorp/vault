@@ -1,6 +1,7 @@
-{{message-error model=key}}
 <form onsubmit={{action "createOrUpdateKey" "create"}} onchange={{action "handleChange"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
+    {{message-error model=key}}
+    <NamespaceReminder @mode="edit" @noun="transit key" />
     <div class="field">
       <div class="b-checkbox">
         <input

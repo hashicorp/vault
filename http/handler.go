@@ -90,14 +90,11 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
 	mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
 	mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
-	mux.Handle("/v1/sys/wrapping/lookup", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
-	mux.Handle("/v1/sys/wrapping/rewrap", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
-	mux.Handle("/v1/sys/wrapping/unwrap", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
-	for _, path := range injectDataIntoTopRoutes {
-		mux.Handle(path, handleRequestForwarding(core, handleLogical(core, true, nil)))
-	}
-	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, false, nil)))
-	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
+	mux.Handle("/v1/sys/wrapping/lookup", handleRequestForwarding(core, handleLogical(core, wrappingVerificationFunc)))
+	mux.Handle("/v1/sys/wrapping/rewrap", handleRequestForwarding(core, handleLogical(core, wrappingVerificationFunc)))
+	mux.Handle("/v1/sys/wrapping/unwrap", handleRequestForwarding(core, handleLogical(core, wrappingVerificationFunc)))
+	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, nil)))
+	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, nil)))
 	if core.UIEnabled() == true {
 		if uiBuiltIn {
 			mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
@@ -591,28 +588,4 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 
 type ErrorResponse struct {
 	Errors []string `json:"errors"`
-}
-
-var injectDataIntoTopRoutes = []string{
-	"/v1/sys/audit",
-	"/v1/sys/audit/",
-	"/v1/sys/audit-hash/",
-	"/v1/sys/auth",
-	"/v1/sys/auth/",
-	"/v1/sys/config/cors",
-	"/v1/sys/config/auditing/request-headers/",
-	"/v1/sys/config/auditing/request-headers",
-	"/v1/sys/capabilities",
-	"/v1/sys/capabilities-accessor",
-	"/v1/sys/capabilities-self",
-	"/v1/sys/key-status",
-	"/v1/sys/mounts",
-	"/v1/sys/mounts/",
-	"/v1/sys/policy",
-	"/v1/sys/policy/",
-	"/v1/sys/rekey/backup",
-	"/v1/sys/rekey/recovery-key-backup",
-	"/v1/sys/remount",
-	"/v1/sys/rotate",
-	"/v1/sys/wrapping/wrap",
 }

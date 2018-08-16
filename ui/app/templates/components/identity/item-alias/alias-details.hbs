@@ -1,11 +1,11 @@
 {{info-table-row label="Name" value=model.name data-test-alias-name=true}}
 {{info-table-row label="ID" value=model.id }}
 {{#info-table-row label=(if (eq model.identityType "entity-alias") "Entity ID" "Group ID") value=model.canonicalId}}
-  <a href={{href-to 'vault.cluster.access.identity.show' (if (eq model.identityType "entity-alias") "entities" "groups") model.canonicalId "details"}}
+  {{#link-to "vault.cluster.access.identity.show" (if (eq model.identityType "entity-alias") "entities" "groups") model.canonicalId "details"
      class="has-text-black is-font-mono"
-  >
+  }}
     {{model.canonicalId}}
-  </a>
+  {{/link-to}}
 {{/info-table-row}}
 {{info-table-row label="Merged from Entity ID" value=model.mergedFromCanonicalIds}}
 {{#info-table-row label="Mount" value=model.mountAccessor }}

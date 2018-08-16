@@ -1,6 +1,5 @@
 import Ember from 'ember';
-import { hrefTo } from 'vault/helpers/href-to';
-const { computed, get, getProperties } = Ember;
+const { computed, get, getProperties, Component, inject } = Ember;
 
 const replicationAttr = function(attr) {
   return computed('mode', `cluster.{dr,performance}.${attr}`, function() {
@@ -8,8 +7,10 @@ const replicationAttr = function(attr) {
     return get(cluster, `${mode}.${attr}`);
   });
 };
-export default Ember.Component.extend({
-  version: Ember.inject.service(),
+export default Component.extend({
+  version: inject.service(),
+  router: inject.service(),
+  namespace: inject.service(),
   classNames: ['level', 'box-label'],
   classNameBindings: ['isMenu:is-mobile'],
   attributeBindings: ['href', 'target'],
@@ -22,7 +23,12 @@ export default Ember.Component.extend({
       return 'https://www.hashicorp.com/products/vault';
     }
     if (this.get('replicationEnabled') || display === 'menu') {
-      return hrefTo(this, 'vault.cluster.replication.mode.index', this.get('cluster.name'), mode);
+      return this.get('router').urlFor(
+        'vault.cluster.replication.mode.index',
+        this.get('cluster.name'),
+        mode,
+        { queryParams: { namespace: this.get('namespace.path') } }
+      );
     }
     return null;
   }),

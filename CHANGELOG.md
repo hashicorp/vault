@@ -5,11 +5,40 @@ DEPRECATIONS/CHANGES:
  * Request Timeouts: A default request timeout of 90s is now enforced. This
    setting can be overwritten in the config file. If you anticipate requests
    taking longer than 90s this setting should be updated before upgrading.
+ * `sys/` Top Level Injection: For the last two years for backwards
+   compatibility data for various `sys/` routes has been injected into both the
+   Secret's Data map and into the top level of the JSON response object.
+   However, this has some subtle issues that pop up from time to time and is
+   becoming increasingly complicated to maintain, so it's finally being
+   removed.
+
+FEATURES:
+
+ * **Namespaces (Enterprise)** is a set of features within Vault Enterprise that allows Vault
+environments to support *Secure Multi-tenancy* within a single Vault Enterprise
+infrastructure. Through namespaces, Vault administrators can support tenant isolation
+for teams and individuals as well as empower those individuals to self-manage their
+own tenant environment. 
+ * **AliCloud OSS Storage**: AliCloud OSS can now be used for Vault storage.
+ * **AliCloud Auth Plugin**: AliCloud's identity services can now be used to 
+ grant access to Vault. See the 
+ [plugin repository](https://github.com/hashicorp/vault-plugin-auth-alicloud) 
+ for more information.
+ * **Azure Secrets Plugin**: There is now a plugin (pulled in to Vault) that 
+   allows generating credentials to allow access to Azure. See the [plugin
+   repository](https://github.com/hashicorp/vault-plugin-secrets-azure) for
+   more information.
+ * **HA Support for MySQL Storage**: MySQL storage now supports HA.
+ * **ACL Templating**: ACL policies can now be templated using identity Entity,
+   Groups, and Metadata.
 
 IMPROVEMENTS:
 
  * agent: Add `exit_after_auth` to be able to use the Agent for a single
    authentication [GH-5013]
+ * cli: Add support for passing parameters to `vault read` operations [GH-5093]
+ * secrets/nomad: Support for longer token names [GH-5117]
+ * storage/azure: Add support for different Azure environments [GH-4997]
  * storage/mysql: Support special characters in database and table names.
 
 BUG FIXES:
@@ -21,6 +50,8 @@ BUG FIXES:
    alias. These entities are now merged. [GH-5000]
  * secrets/database: Fix inability to update custom SQL statements on
    database roles. [GH-5080]
+ * storage/gcp,spanner: Fix data races [GH-5081]
+ * replication: Fix issue causing some pages not to flush to storage
 
 ## 0.10.4 (July 25th, 2018)
 

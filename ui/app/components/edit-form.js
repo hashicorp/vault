@@ -11,12 +11,14 @@ export default Ember.Component.extend({
   successMessage: 'Saved!',
   deleteSuccessMessage: 'Deleted!',
   deleteButtonText: 'Delete',
+  saveButtonText: 'Save',
+  cancelLink: null,
 
   /*
    * @param Function
    * @public
    *
-   * Optional param to call a function upon successfully saving an entity
+   * Optional param to call a function upon successfully saving a model
    */
   onSave: () => {},
 

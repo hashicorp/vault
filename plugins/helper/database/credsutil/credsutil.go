@@ -5,9 +5,8 @@ import (
 
 	"fmt"
 
-	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/keysutil"
+	"github.com/hashicorp/vault/helper/base62"
 )
 
 // CredentialsProducer can be used as an embeded interface in the Database
@@ -38,12 +37,10 @@ func RandomAlphaNumeric(length int, prependA1a bool) (string, error) {
 		prefix = reqStr
 	}
 
-	buf, err := uuid.GenerateRandomBytes(length - len(prefix))
+	randomStr, err := base62.Random(length-len(prefix), true)
 	if err != nil {
 		return "", err
 	}
 
-	output := (prefix + keysutil.Base62Encode(buf))[:length]
-
-	return output, nil
+	return prefix + randomStr, nil
 }

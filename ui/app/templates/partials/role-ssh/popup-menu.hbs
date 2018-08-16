@@ -10,9 +10,9 @@
           </li>
         {{else if item.canGenerate}}
           <li class="action">
-            <a href={{href-to 'vault.cluster.secrets.backend.credentials' item.id}} data-test-role-ssh-link="generate">
+            {{#link-to "vault.cluster.secrets.backend.credentials" item.id data-test-role-ssh-link="generate"}}
               Generate Credentials
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
       {{else if (eq item.keyType 'ca')}}
@@ -24,9 +24,9 @@
           </li>
         {{else if item.canGenerate}}
           <li class="action">
-            <a href={{href-to 'vault.cluster.secrets.backend.sign' item.id}} data-test-role-ssh-link="generate">
+            {{#link-to "vault.cluster.secrets.backend.sign" item.id data-test-role-ssh-link="generate"}}
               Sign Keys
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
       {{/if}}
@@ -44,16 +44,16 @@
       {{else}}
         {{#if item.canRead}}
           <li class="action">
-            <a href={{href-to 'vault.cluster.secrets.backend.show' item.id}} data-test-role-ssh-link="show">
+            {{#link-to "vault.cluster.secrets.backend.show" item.id data-test-role-ssh-link="show"}}
               Details
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
         {{#if item.canEdit}}
           <li class="action">
-            <a href={{href-to 'vault.cluster.secrets.backend.edit' item.id}} data-test-role-ssh-link="edit">
+            {{#link-to "vault.cluster.secrets.backend.edit" item.id data-test-role-ssh-link="edit"}}
               Edit
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
         {{#if item.canDelete}}

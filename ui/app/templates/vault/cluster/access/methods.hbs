@@ -26,10 +26,10 @@
           </span>
           <br />
           <span class="tag">
-            {{#if (eq method.type 'plugin')}}
-              {{method.type}}: {{method.config.plugin_name}}
+            {{#if (eq method.methodType 'plugin')}}
+              {{method.methodType}}: {{method.config.plugin_name}}
             {{else}}
-              {{method.type}}
+              {{method.methodType}}
             {{/if}}
           </span>
           <code class="has-text-grey is-size-8">
@@ -43,19 +43,19 @@
             <nav class="menu">
               <ul class="menu-list">
                 <li>
-                  <a href={{href-to "vault.cluster.access.method.section" method.id "configuration"}}>
-                  View Configuration
-                  </a>
+                  {{#link-to "vault.cluster.access.method.section" method.id "configuration"}}
+                    View Configuration
+                  {{/link-to}}
                 </li>
                 {{#if method.canEdit}}
                   <li>
-                    <a href={{href-to "vault.cluster.settings.auth.configure" method.id}}>
+                    {{#link-to "vault.cluster.settings.auth.configure" method.id}}
                       Edit Configuration
-                    </a>
+                    {{/link-to}}
                   </li>
                 {{/if}}
 
-                {{#if (and (not-eq method.type 'token') method.canDisable)}}
+                {{#if (and (not-eq method.methodType 'token') method.canDisable)}}
                   <li class="action">
                     {{#confirm-action
                       confirmButtonClasses="button is-primary"

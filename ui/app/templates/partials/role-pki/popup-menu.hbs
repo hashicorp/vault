@@ -12,16 +12,16 @@
       <ul class="menu-list">
         {{#if item.canGenerate}}
           <li class="action">
-            <a href={{href-to 'vault.cluster.secrets.backend.credentials' item.id (query-params action="sign")}} data-test-role-pki-link="generate-certificate">
+            {{#link-to "vault.cluster.secrets.backend.credentials" item.id (query-params action="sign") data-test-role-pki-link="generate-certificate"}}
               Generate Certificate
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
         {{#if item.canSign}}
           <li class="action">
-            <a href={{href-to 'vault.cluster.secrets.backend.credentials' item.id (query-params action="sign")}} data-test-role-pki-link="sign-certificate">
+            {{#link-to "vault.cluster.secrets.backend.credentials" item.id (query-params action="sign") data-test-role-pki-link="sign-certificate"}}
               Sign Certificate
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
       </ul>
@@ -41,16 +41,16 @@
       {{else}}
         {{#if item.canRead}}
           <li class="action">
-            <a href={{href-to 'vault.cluster.secrets.backend.show' item.id}} data-test-role-pki-link="show">
+            {{#link-to "vault.cluster.secrets.backend.show" item.id data-test-role-pki-link="show"}}
               Details
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
         {{#if item.canEdit}}
           <li class="action">
-            <a href={{href-to 'vault.cluster.secrets.backend.edit' item.id}} data-test-role-pki-link="edit">
+            {{#link-to "vault.cluster.secrets.backend.edit" item.id data-test-role-pki-link="edit"}}
               Edit
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
         {{#if item.canDelete}}

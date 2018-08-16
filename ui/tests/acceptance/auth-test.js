@@ -52,7 +52,7 @@ test('it sends the right attributes when authenticating', function(assert) {
   visit('/vault/auth');
   backends.reverse().forEach(backend => {
     click(`[data-test-auth-method-link="${backend.type}"]`);
-    if (backend.type === 'GitHub') {
+    if (backend.type === 'github') {
       component.token('token');
     }
     component.login();
@@ -64,7 +64,7 @@ test('it sends the right attributes when authenticating', function(assert) {
           Object.keys(lastRequest.requestHeaders).includes('X-Vault-Token'),
           'token uses vault token header'
         );
-      } else if (backend.type === 'GitHub') {
+      } else if (backend.type === 'github') {
         assert.ok(Object.keys(body).includes('token'), 'GitHub includes token');
       } else {
         assert.ok(Object.keys(body).includes('password'), `${backend.type} includes password`);

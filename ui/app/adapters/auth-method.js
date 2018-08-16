@@ -26,7 +26,9 @@ export default ApplicationAdapter.extend({
           };
         })
         .catch(() => {
-          return [];
+          return {
+            data: {},
+          };
         });
     }
     return this.ajax(this.url(), 'GET').catch(e => {

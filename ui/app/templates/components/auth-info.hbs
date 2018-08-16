@@ -47,9 +47,9 @@
           {{/if}}
         {{/if}}
         <li class="action">
-          <a href="{{href-to "vault.cluster.logout" activeClusterName }}" id="logout">
+          {{#link-to "vault.cluster.logout" activeClusterName id="logout"}}
             Sign out
-          </a>
+          {{/link-to}}
         </li>
       </ul>
     </nav>

@@ -11,6 +11,7 @@ const FEATURES = [
   'GCP CKMS Autounseal',
   'Seal Wrapping',
   'Control Groups',
+  'Namespaces',
 ];
 
 export function hasFeature(featureName, features) {

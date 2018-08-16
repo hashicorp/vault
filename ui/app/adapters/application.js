@@ -1,12 +1,15 @@
 import Ember from 'ember';
 import DS from 'ember-data';
 import fetch from 'fetch';
+import config from '../config/environment';
 
-const POLLING_URL_PATTERNS = ['sys/seal-status', 'sys/health', 'sys/replication/status'];
+const { APP } = config;
+const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
 const { inject, assign, set, RSVP } = Ember;
 
 export default DS.RESTAdapter.extend({
   auth: inject.service(),
+  namespaceService: inject.service('namespace'),
   controlGroup: inject.service(),
 
   flashMessages: inject.service(),
@@ -25,17 +28,26 @@ export default DS.RESTAdapter.extend({
     return false;
   },
 
-  _preRequest(url, options) {
-    const token = options.clientToken || this.get('auth.currentToken');
+  addHeaders(url, options) {
+    let token = options.clientToken || this.get('auth.currentToken');
+    let headers = {};
     if (token && !options.unauthenticated) {
-      options.headers = assign(options.headers || {}, {
-        'X-Vault-Token': token,
-      });
+      headers['X-Vault-Token'] = token;
       if (options.wrapTTL) {
-        assign(options.headers, { 'X-Vault-Wrap-TTL': options.wrapTTL });
+        headers['X-Vault-Wrap-TTL'] = options.wrapTTL;
       }
     }
-    const isPolling = POLLING_URL_PATTERNS.some(str => url.includes(str));
+    let namespace =
+      typeof options.namespace === 'undefined' ? this.get('namespaceService.path') : options.namespace;
+    if (namespace && !NAMESPACE_ROOT_URLS.some(str => url.includes(str))) {
+      headers['X-Vault-Namespace'] = namespace;
+    }
+    options.headers = assign(options.headers || {}, headers);
+  },
+
+  _preRequest(url, options) {
+    this.addHeaders(url, options);
+    const isPolling = POLLING_URLS.some(str => url.includes(str));
     if (!isPolling) {
       this.get('auth').setLastFetch(Date.now());
     }
@@ -87,8 +99,8 @@ export default DS.RESTAdapter.extend({
   rawRequest(url, type, options = {}) {
     let opts = this._preRequest(url, options);
     return fetch(url, {
-      method: type | 'GET',
-      headers: opts.headers | {},
+      method: type || 'GET',
+      headers: opts.headers || {},
     }).then(response => {
       if (response.status >= 200 && response.status < 300) {
         return RSVP.resolve(response);

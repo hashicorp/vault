@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-
 	"errors"
+	"fmt"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -26,7 +28,7 @@ func pathListRoles(b *backend) *framework.Path {
 	}
 }
 
-func pathRoles() *framework.Path {
+func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -35,21 +37,46 @@ func pathRoles() *framework.Path {
 				Description: "Name of the policy",
 			},
 
-			"arn": &framework.FieldSchema{
+			"credential_type": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "ARN Reference to a managed policy",
+				Description: fmt.Sprintf("Type of credential to retrieve. Must be one of %s, %s, or %s", assumedRoleCred, iamUserCred, federationTokenCred),
+			},
+
+			"role_arns": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is " + assumedRoleCred,
+			},
+
+			"policy_arns": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: "ARNs of AWS policies to attach to IAM users. Only valid when credential_type is " + iamUserCred,
+			},
+
+			"policy_document": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `JSON-encoded IAM policy document. Behavior varies by credential_type. When credential_type is
+iam_user, then it will attach the contents of the policy_document to the IAM
+user generated. When credential_type is assumed_role or federation_token, this
+will be passed in as the Policy parameter to the AssumeRole or
+GetFederationToken API call, acting as a filter on permissions available.`,
+			},
+
+			"arn": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Deprecated; use role_arns or policy_arns instead. ARN Reference to a managed policy
+or IAM role to assume`,
 			},
 
 			"policy": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "IAM policy document",
+				Description: "Deprecated; use policy_document instead. IAM policy document",
 			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.DeleteOperation: pathRolesDelete,
-			logical.ReadOperation:   pathRolesRead,
-			logical.UpdateOperation: pathRolesWrite,
+			logical.DeleteOperation: b.pathRolesDelete,
+			logical.ReadOperation:   b.pathRolesRead,
+			logical.UpdateOperation: b.pathRolesWrite,
 		},
 
 		HelpSynopsis:    pathRolesHelpSyn,
@@ -58,24 +85,33 @@ func pathRoles() *framework.Path {
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List(ctx, "policy/")
+	b.roleMutex.RLock()
+	defer b.roleMutex.RUnlock()
+	entries, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
-	return logical.ListResponse(entries), nil
-}
-
-func pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, "policy/"+d.Get("name").(string))
+	legacyEntries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return nil, err
+	}
+
+	return logical.ListResponse(append(entries, legacyEntries...)), nil
+}
+
+func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	for _, prefix := range []string{"policy/", "role/"} {
+		err := req.Storage.Delete(ctx, prefix+d.Get("name").(string))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil
 }
 
-func pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entry, err := req.Storage.Get(ctx, "policy/"+d.Get("name").(string))
+func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entry, err := b.roleRead(ctx, req.Storage, d.Get("name").(string), true)
 	if err != nil {
 		return nil, err
 	}
@@ -83,68 +119,294 @@ func pathRolesRead(ctx context.Context, req *logical.Request, d *framework.Field
 		return nil, nil
 	}
 
-	val := string(entry.Value)
-	if strings.HasPrefix(val, "arn:") {
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"arn": val,
-			},
-		}, nil
-	}
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"policy": val,
-		},
+		Data: entry.toResponseData(),
 	}, nil
 }
 
-func useInlinePolicy(d *framework.FieldData) (bool, error) {
-	bp := d.Get("policy").(string) != ""
-	ba := d.Get("arn").(string) != ""
+func legacyRoleData(d *framework.FieldData) (string, error) {
+	policy := d.Get("policy").(string)
+	arn := d.Get("arn").(string)
 
-	if !bp && !ba {
-		return false, errors.New("either policy or arn must be provided")
+	switch {
+	case policy == "" && arn == "":
+		return "", nil
+	case policy != "" && arn != "":
+		return "", errors.New("only one of policy or arn should be provided")
+	case policy != "":
+		return policy, nil
+	default:
+		return arn, nil
 	}
-	if bp && ba {
-		return false, errors.New("only one of policy or arn should be provided")
-	}
-	return bp, nil
 }
 
-func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var buf bytes.Buffer
+func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var resp logical.Response
 
-	uip, err := useInlinePolicy(d)
+	roleName := d.Get("name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role name"), nil
+	}
+
+	b.roleMutex.Lock()
+	defer b.roleMutex.Unlock()
+	roleEntry, err := b.roleRead(ctx, req.Storage, roleName, false)
+	if err != nil {
+		return nil, err
+	}
+	if roleEntry == nil {
+		roleEntry = &awsRoleEntry{}
+	} else if roleEntry.InvalidData != "" {
+		resp.AddWarning(fmt.Sprintf("Invalid data of %q cleared out of role", roleEntry.InvalidData))
+		roleEntry.InvalidData = ""
+	}
+
+	legacyRole, err := legacyRoleData(d)
 	if err != nil {
 		return nil, err
 	}
 
-	if uip {
-		if err := json.Compact(&buf, []byte(d.Get("policy").(string))); err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"Error compacting policy: %s", err)), nil
+	if credentialTypeRaw, ok := d.GetOk("credential_type"); ok {
+		if legacyRole != "" {
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with an explicit credential_type"), nil
 		}
-		// Write the policy into storage
-		err := req.Storage.Put(ctx, &logical.StorageEntry{
-			Key:   "policy/" + d.Get("name").(string),
-			Value: buf.Bytes(),
-		})
+		credentialType := credentialTypeRaw.(string)
+		allowedCredentialTypes := []string{iamUserCred, assumedRoleCred, federationTokenCred}
+		if !strutil.StrListContains(allowedCredentialTypes, credentialType) {
+			return logical.ErrorResponse(fmt.Sprintf("unrecognized credential_type: %q, not one of %#v", credentialType, allowedCredentialTypes)), nil
+		}
+		roleEntry.CredentialTypes = []string{credentialType}
+	}
+
+	if roleArnsRaw, ok := d.GetOk("role_arns"); ok {
+		if legacyRole != "" {
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with role_arns"), nil
+		}
+		roleEntry.RoleArns = roleArnsRaw.([]string)
+	}
+
+	if policyArnsRaw, ok := d.GetOk("policy_arns"); ok {
+		if legacyRole != "" {
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with policy_arns"), nil
+		}
+		roleEntry.PolicyArns = policyArnsRaw.([]string)
+	}
+
+	if policyDocumentRaw, ok := d.GetOk("policy_document"); ok {
+		if legacyRole != "" {
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with policy_document"), nil
+		}
+		compacted := policyDocumentRaw.(string)
+		if len(compacted) > 0 {
+			compacted, err = compactJSON(policyDocumentRaw.(string))
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("cannot parse policy document: %q", policyDocumentRaw.(string))), nil
+			}
+		}
+		roleEntry.PolicyDocument = compacted
+	}
+
+	if legacyRole != "" {
+		roleEntry = upgradeLegacyPolicyEntry(legacyRole)
+		if roleEntry.InvalidData != "" {
+			return logical.ErrorResponse(fmt.Sprintf("unable to parse supplied data: %q", roleEntry.InvalidData)), nil
+		}
+		resp.AddWarning("Detected use of legacy role or policy paramemter. Please upgrade to use the new parameters.")
+	} else {
+		roleEntry.ProhibitFlexibleCredPath = false
+	}
+
+	if len(roleEntry.CredentialTypes) == 0 {
+		return logical.ErrorResponse("did not supply credential_type"), nil
+	}
+
+	if len(roleEntry.RoleArns) > 0 && !strutil.StrListContains(roleEntry.CredentialTypes, assumedRoleCred) {
+		return logical.ErrorResponse(fmt.Sprintf("cannot supply role_arns when credential_type isn't %s", assumedRoleCred)), nil
+	}
+	if len(roleEntry.PolicyArns) > 0 && !strutil.StrListContains(roleEntry.CredentialTypes, iamUserCred) {
+		return logical.ErrorResponse(fmt.Sprintf("cannot supply policy_arns when credential_type isn't %s", iamUserCred)), nil
+	}
+
+	err = setAwsRole(ctx, req.Storage, roleName, roleEntry)
+	if err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+func (b *backend) roleRead(ctx context.Context, s logical.Storage, roleName string, shouldLock bool) (*awsRoleEntry, error) {
+	if roleName == "" {
+		return nil, fmt.Errorf("missing role name")
+	}
+	if shouldLock {
+		b.roleMutex.RLock()
+	}
+	entry, err := s.Get(ctx, "role/"+roleName)
+	if shouldLock {
+		b.roleMutex.RUnlock()
+	}
+	if err != nil {
+		return nil, err
+	}
+	var roleEntry awsRoleEntry
+	if entry != nil {
+		if err := entry.DecodeJSON(&roleEntry); err != nil {
+			return nil, err
+		}
+		return &roleEntry, nil
+	}
+
+	if shouldLock {
+		b.roleMutex.Lock()
+		defer b.roleMutex.Unlock()
+	}
+	entry, err = s.Get(ctx, "role/"+roleName)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry != nil {
+		if err := entry.DecodeJSON(&roleEntry); err != nil {
+			return nil, err
+		}
+		return &roleEntry, nil
+	}
+
+	legacyEntry, err := s.Get(ctx, "policy/"+roleName)
+	if err != nil {
+		return nil, err
+	}
+	if legacyEntry == nil {
+		return nil, nil
+	}
+
+	newRoleEntry := upgradeLegacyPolicyEntry(string(legacyEntry.Value))
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		err = setAwsRole(ctx, s, roleName, newRoleEntry)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		// Write the arn ref into storage
-		err := req.Storage.Put(ctx, &logical.StorageEntry{
-			Key:   "policy/" + d.Get("name").(string),
-			Value: []byte(d.Get("arn").(string)),
-		})
+		// This can leave legacy data around in the policy/ path if it fails for some reason,
+		// but should be pretty rare for this to fail but prior writes to succeed, so not worrying
+		// about cleaning it up in case of error
+		err = s.Delete(ctx, "policy/"+roleName)
 		if err != nil {
 			return nil, err
 		}
 	}
-
-	return nil, nil
+	return newRoleEntry, nil
 }
+
+func upgradeLegacyPolicyEntry(entry string) *awsRoleEntry {
+	var newRoleEntry *awsRoleEntry
+	if strings.HasPrefix(entry, "arn:") {
+		parsedArn, err := arn.Parse(entry)
+		if err != nil {
+			newRoleEntry = &awsRoleEntry{
+				InvalidData: entry,
+				Version:     1,
+			}
+			return newRoleEntry
+		}
+		resourceParts := strings.Split(parsedArn.Resource, "/")
+		resourceType := resourceParts[0]
+		switch resourceType {
+		case "role":
+			newRoleEntry = &awsRoleEntry{
+				CredentialTypes:          []string{assumedRoleCred},
+				RoleArns:                 []string{entry},
+				ProhibitFlexibleCredPath: true,
+				Version:                  1,
+			}
+		case "policy":
+			newRoleEntry = &awsRoleEntry{
+				CredentialTypes:          []string{iamUserCred},
+				PolicyArns:               []string{entry},
+				ProhibitFlexibleCredPath: true,
+				Version:                  1,
+			}
+		default:
+			newRoleEntry = &awsRoleEntry{
+				InvalidData: entry,
+				Version:     1,
+			}
+		}
+	} else {
+		compacted, err := compactJSON(entry)
+		if err != nil {
+			newRoleEntry = &awsRoleEntry{
+				InvalidData: entry,
+				Version:     1,
+			}
+		} else {
+			// unfortunately, this is ambiguous between the cred types, so allow both
+			newRoleEntry = &awsRoleEntry{
+				CredentialTypes:          []string{iamUserCred, federationTokenCred},
+				PolicyDocument:           compacted,
+				ProhibitFlexibleCredPath: true,
+				Version:                  1,
+			}
+		}
+	}
+
+	return newRoleEntry
+}
+
+func setAwsRole(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry) error {
+	if roleName == "" {
+		return fmt.Errorf("empty role name")
+	}
+	if roleEntry == nil {
+		return fmt.Errorf("nil roleEntry")
+	}
+	entry, err := logical.StorageEntryJSON("role/"+roleName, roleEntry)
+	if err != nil {
+		return err
+	}
+	if entry == nil {
+		return fmt.Errorf("nil result when writing to storage")
+	}
+	if err := s.Put(ctx, entry); err != nil {
+		return err
+	}
+	return nil
+}
+
+type awsRoleEntry struct {
+	CredentialTypes          []string `json:"credential_types"`                      // Entries must all be in the set of ("iam_user", "assumed_role", "federation_token")
+	PolicyArns               []string `json:"policy_arns"`                           // ARNs of managed policies to attach to an IAM user
+	RoleArns                 []string `json:"role_arns"`                             // ARNs of roles to assume for AssumedRole credentials
+	PolicyDocument           string   `json:"policy_document"`                       // JSON-serialized inline policy to attach to IAM users and/or to specify as the Policy parameter in AssumeRole calls
+	InvalidData              string   `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
+	ProhibitFlexibleCredPath bool     `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
+	Version                  int      `json:"version"`                               // Version number of the role format
+}
+
+func (r *awsRoleEntry) toResponseData() map[string]interface{} {
+	respData := map[string]interface{}{
+		"credential_types": r.CredentialTypes,
+		"policy_arns":      r.PolicyArns,
+		"role_arns":        r.RoleArns,
+		"policy_document":  r.PolicyDocument,
+	}
+	if r.InvalidData != "" {
+		respData["invalid_data"] = r.InvalidData
+	}
+	return respData
+}
+
+func compactJSON(input string) (string, error) {
+	var compacted bytes.Buffer
+	err := json.Compact(&compacted, []byte(input))
+	return compacted.String(), err
+}
+
+const (
+	assumedRoleCred     = "assumed_role"
+	iamUserCred         = "iam_user"
+	federationTokenCred = "federation_token"
+)
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`
 

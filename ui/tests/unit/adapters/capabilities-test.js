@@ -1,8 +1,9 @@
 import { moduleFor, test } from 'ember-qunit';
 import Ember from 'ember';
+import needs from 'vault/tests/unit/adapters/_adapter-needs';
 
 moduleFor('adapter:capabilities', 'Unit | Adapter | capabilities', {
-  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
+  needs,
 });
 
 test('calls the correct url', function(assert) {

@@ -15,6 +15,8 @@ const GLYPHS_WITH_SVG_TAG = [
   'false',
   'upload',
   'control-lock',
+  'edition-enterprise',
+  'edition-oss'
 ];
 
 export default Ember.Component.extend({

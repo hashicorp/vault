@@ -2,6 +2,7 @@
   <div class="modal-background"></div>
   <div class="modal-content">
     <h2 class="title upgrade-overlay-title is-2 has-text-white">
+      <ICon @glyph="edition-enterprise" aria-hidden="true" @size=32 />
       Try Vault Enterprise Free for 30 Days
     </h2>
     <h3 class="title is-5 has-text-white">
@@ -27,9 +28,6 @@
                 {{/unless}}
               </h3>
             </div>
-            <div class="level-right upgrade-overlay-icon">
-              {{partial "svg/edition-icon-pro"}}
-            </div>
           </div>
           <ul class="upgrade-features-list">
             <li>All Open Source features</li>
@@ -48,9 +46,6 @@
               <h3 class="title is-4 has-text-white">
                 Premium
               </h3>
-            </div>
-            <div class="level-right upgrade-overlay-icon">
-              {{partial "svg/edition-icon-premium"}}
             </div>
           </div>
           <ul class="upgrade-features-list">
