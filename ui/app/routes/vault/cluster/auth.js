@@ -1,11 +1,14 @@
 import ClusterRouteBase from './cluster-route-base';
 import Ember from 'ember';
+import config from 'vault/config/environment';
 
-const { RSVP } = Ember;
+const { RSVP, inject } = Ember;
 
 export default ClusterRouteBase.extend({
+  flashMessages: inject.service(),
   beforeModel() {
-    return this.store.unloadAll('auth-method');
+    this.store.unloadAll('auth-method');
+    return this._super();
   },
   model() {
     let cluster = this._super(...arguments);
@@ -25,5 +28,11 @@ export default ClusterRouteBase.extend({
   resetController(controller) {
     controller.set('wrappedToken', '');
     controller.set('authMethod', '');
+  },
+
+  afterModel() {
+    if (config.welcomeMessage) {
+      this.get('flashMessages').stickyInfo(config.welcomeMessage);
+    }
   },
 });

@@ -145,6 +145,12 @@ func testPostgresDB(t testing.TB) (string, func()) {
 		t.Fatalf("postgresdb: could not start container: %s", err)
 	}
 
+	cleanup := func() {
+		if err := pool.Purge(resource); err != nil {
+			t.Fatalf("failed to cleanup local container: %s", err)
+		}
+	}
+
 	addr := fmt.Sprintf("postgres://postgres:secret@localhost:%s/database?sslmode=disable", resource.GetPort("5432/tcp"))
 
 	if err := pool.Retry(func() error {
@@ -155,12 +161,9 @@ func testPostgresDB(t testing.TB) (string, func()) {
 		defer db.Close()
 		return db.Ping()
 	}); err != nil {
+		cleanup()
 		t.Fatalf("postgresdb: could not connect: %s", err)
 	}
 
-	return addr, func() {
-		if err := pool.Purge(resource); err != nil {
-			t.Fatalf("postgresdb: failed to cleanup container: %s", err)
-		}
-	}
+	return addr, cleanup
 }

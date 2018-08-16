@@ -159,7 +159,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
-	if !policyutil.EquivalentPolicies(cert.Policies, req.Auth.Policies) {
+	if !policyutil.EquivalentPolicies(cert.Policies, req.Auth.TokenPolicies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 

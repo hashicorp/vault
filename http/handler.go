@@ -90,14 +90,11 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
 	mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
 	mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
-	mux.Handle("/v1/sys/wrapping/lookup", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
-	mux.Handle("/v1/sys/wrapping/rewrap", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
-	mux.Handle("/v1/sys/wrapping/unwrap", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
-	for _, path := range injectDataIntoTopRoutes {
-		mux.Handle(path, handleRequestForwarding(core, handleLogical(core, true, nil)))
-	}
-	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, false, nil)))
-	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
+	mux.Handle("/v1/sys/wrapping/lookup", handleRequestForwarding(core, handleLogical(core, wrappingVerificationFunc)))
+	mux.Handle("/v1/sys/wrapping/rewrap", handleRequestForwarding(core, handleLogical(core, wrappingVerificationFunc)))
+	mux.Handle("/v1/sys/wrapping/unwrap", handleRequestForwarding(core, handleLogical(core, wrappingVerificationFunc)))
+	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, nil)))
+	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, nil)))
 	if core.UIEnabled() == true {
 		if uiBuiltIn {
 			mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
@@ -113,7 +110,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 
 	// Wrap the help wrapped handler with another layer with a generic
 	// handler
-	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler, props.MaxRequestSize)
+	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler, props.MaxRequestSize, props.MaxRequestDuration)
 
 	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
 	// characters in the request path.
@@ -128,20 +125,27 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 // wrapGenericHandler wraps the handler with an extra layer of handler where
 // tasks that should be commonly handled for all the requests and/or responses
 // are performed.
-func wrapGenericHandler(h http.Handler, maxRequestSize int64) http.Handler {
+func wrapGenericHandler(h http.Handler, maxRequestSize int64, maxRequestDuration time.Duration) http.Handler {
+	if maxRequestDuration == 0 {
+		maxRequestDuration = vault.DefaultMaxRequestDuration
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
 		w.Header().Set("Cache-Control", "no-store")
 
-		// Add a context and put the request limit for this handler in it
+		// Start with the request context
+		ctx := r.Context()
+		var cancelFunc context.CancelFunc
+		// Add our timeout
+		ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
+		// Add a size limiter if desired
 		if maxRequestSize > 0 {
-			ctx := context.WithValue(r.Context(), "max_request_size", maxRequestSize)
-			h.ServeHTTP(w, r.WithContext(ctx))
-		} else {
-			h.ServeHTTP(w, r)
+			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
 		}
-
+		r = r.WithContext(ctx)
+		h.ServeHTTP(w, r)
+		cancelFunc()
 		return
 	})
 }
@@ -432,7 +436,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 // request is a helper to perform a request and properly exit in the
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool) {
-	resp, err := core.HandleRequest(r)
+	resp, err := core.HandleRequest(rawReq.Context(), r)
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)
 		return resp, false
@@ -584,28 +588,4 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 
 type ErrorResponse struct {
 	Errors []string `json:"errors"`
-}
-
-var injectDataIntoTopRoutes = []string{
-	"/v1/sys/audit",
-	"/v1/sys/audit/",
-	"/v1/sys/audit-hash/",
-	"/v1/sys/auth",
-	"/v1/sys/auth/",
-	"/v1/sys/config/cors",
-	"/v1/sys/config/auditing/request-headers/",
-	"/v1/sys/config/auditing/request-headers",
-	"/v1/sys/capabilities",
-	"/v1/sys/capabilities-accessor",
-	"/v1/sys/capabilities-self",
-	"/v1/sys/key-status",
-	"/v1/sys/mounts",
-	"/v1/sys/mounts/",
-	"/v1/sys/policy",
-	"/v1/sys/policy/",
-	"/v1/sys/rekey/backup",
-	"/v1/sys/rekey/recovery-key-backup",
-	"/v1/sys/remount",
-	"/v1/sys/rotate",
-	"/v1/sys/wrapping/wrap",
 }

@@ -30,7 +30,6 @@ func TestSysRotate(t *testing.T) {
 		"data": map[string]interface{}{
 			"term": json.Number("2"),
 		},
-		"term": json.Number("2"),
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -41,7 +40,6 @@ func TestSysRotate(t *testing.T) {
 		t.Fatal("install_time missing in data")
 	}
 	expected["data"].(map[string]interface{})["install_time"] = actualInstallTime
-	expected["install_time"] = actualInstallTime
 
 	expected["request_id"] = actual["request_id"]
 

@@ -45,6 +45,12 @@ valid input.
 - [Policy API](/api/system/policy.html) documentation
 - [Getting Started guide](/intro/getting-started/policies.html) on policies
 
+~> **NOTE:** An [interactive
+tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-policies) is
+also available if you do not have a Vault environment to perform the steps
+described in this guide.
+
+
 ## Estimated Time to Complete
 
 10 minutes
@@ -259,6 +265,12 @@ path "secret/*"
 path "sys/mounts/*"
 {
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# List existing secret engines.
+path "sys/mounts"
+{
+  capabilities = ["read"]
 }
 
 # Read health checks
@@ -586,3 +598,6 @@ $ curl --request POST --header "X-Vault-Token: ..." --data '{"path":"sys/auth/ap
 In this guide, you learned how to write policies based on given policy
 requirements. Next, the [AppRole Pull Authentication](/guides/identity/authentication.html)
 guide demonstrates how to associate policies to a role.
+
+To learn about Sentinel policies, refer to the [Sentinel
+Policies](/guides/identity/sentinel.html) guide.

@@ -478,7 +478,7 @@ another certificate authority, in this case the root certificate authority
 generated in the first example.
 
 ```text
-$ vault write pki/root/sign-intermediate csr=@pki_int.csr format=pem_bundle
+$ vault write pki/root/sign-intermediate csr=@pki_int.csr format=pem_bundle ttl=43800h
 Key             Value
 certificate     -----BEGIN CERTIFICATE-----
 MIIDZTCCAk2gAwIBAgIUENxQD7KIJi1zE/jEiYqAG1VC4NwwDQYJKoZIhvcNAQEL

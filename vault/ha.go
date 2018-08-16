@@ -37,13 +37,12 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 		return false, "", "", ErrHANotEnabled
 	}
 
-	c.stateLock.RLock()
-
 	// Check if sealed
-	if c.sealed {
-		c.stateLock.RUnlock()
+	if c.Sealed() {
 		return false, "", "", consts.ErrSealed
 	}
+
+	c.stateLock.RLock()
 
 	// Check if we are the leader
 	if !c.standby {
@@ -143,7 +142,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 }
 
 // StepDown is used to step down from leadership
-func (c *Core) StepDown(req *logical.Request) (retErr error) {
+func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "step_down"}, time.Now())
 
 	if req == nil {
@@ -153,17 +152,30 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil
 	}
 	if c.ha == nil || c.standby {
 		return nil
 	}
 
-	ctx := c.activeContext
+	ctx, cancel := context.WithCancel(c.activeContext)
+	defer cancel()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-httpCtx.Done():
+			cancel()
+		}
+	}()
 
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
+		if errwrap.ContainsType(err, new(TemplateError)) {
+			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
+			err = logical.ErrPermissionDenied
+		}
 		retErr = multierror.Append(retErr, err)
 		return retErr
 	}
@@ -225,21 +237,21 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	authResults := c.performPolicyChecks(ctx, acl, te, req, entity, &PolicyCheckOpts{
 		RootPrivsRequired: true,
 	})
-	if authResults.Error.ErrorOrNil() != nil {
-		retErr = multierror.Append(retErr, authResults.Error)
-		return retErr
-	}
 	if !authResults.Allowed {
-		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		c.stateLock.RUnlock()
+		retErr = multierror.Append(retErr, authResults.Error)
+		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		}
 		return retErr
 	}
 
 	if te != nil && te.NumUses == tokenRevocationPending {
 		// Token needs to be revoked. We do this immediately here because
 		// we won't have a token store after sealing.
-		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(te)
+		leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(c.activeContext, te)
 		if err == nil {
-			err = c.expiration.Revoke(leaseID)
+			err = c.expiration.Revoke(c.activeContext, leaseID)
 		}
 		if err != nil {
 			c.logger.Error("token needed revocation before step-down but failed to revoke", "error", err)
@@ -396,7 +408,7 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			// We now have the lock and can use it
 		}
 
-		if c.sealed {
+		if c.Sealed() {
 			c.logger.Warn("grabbed HA lock but already sealed, exiting")
 			lock.Unlock()
 			c.stateLock.Unlock()
@@ -407,19 +419,21 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 		// Store the lock so that we can manually clear it later if needed
 		c.heldHALock = lock
 
-		// We haven't run postUnseal yet so we have nothing meaningful to use here
-		ctx := context.Background()
+		// Create the active context
+		activeCtx, activeCtxCancel := context.WithCancel(context.Background())
+		c.activeContext = activeCtx
+		c.activeContextCancelFunc.Store(activeCtxCancel)
 
 		// This block is used to wipe barrier/seal state and verify that
 		// everything is sane. If we have no sanity in the barrier, we actually
 		// seal, as there's little we can do.
 		{
-			c.seal.SetBarrierConfig(ctx, nil)
+			c.seal.SetBarrierConfig(activeCtx, nil)
 			if c.seal.RecoveryKeySupported() {
-				c.seal.SetRecoveryConfig(ctx, nil)
+				c.seal.SetRecoveryConfig(activeCtx, nil)
 			}
 
-			if err := c.performKeyUpgrades(ctx); err != nil {
+			if err := c.performKeyUpgrades(activeCtx); err != nil {
 				// We call this in a goroutine so that we can give up the
 				// statelock and have this shut us down; sealInternal has a
 				// workflow where it watches for the stopCh to close so we want
@@ -434,23 +448,24 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			}
 		}
 
-		// Clear previous local cluster cert info so we generate new. Since the
-		// UUID will have changed, standbys will know to look for new info
-		c.localClusterParsedCert.Store((*x509.Certificate)(nil))
-		c.localClusterCert.Store(([]byte)(nil))
-		c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
+		{
+			// Clear previous local cluster cert info so we generate new. Since the
+			// UUID will have changed, standbys will know to look for new info
+			c.localClusterParsedCert.Store((*x509.Certificate)(nil))
+			c.localClusterCert.Store(([]byte)(nil))
+			c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
 
-		if err := c.setupCluster(ctx); err != nil {
-			c.heldHALock = nil
-			lock.Unlock()
-			c.stateLock.Unlock()
-			c.logger.Error("cluster setup failed", "error", err)
-			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
-			continue
+			if err := c.setupCluster(activeCtx); err != nil {
+				c.heldHALock = nil
+				lock.Unlock()
+				c.stateLock.Unlock()
+				c.logger.Error("cluster setup failed", "error", err)
+				metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+				continue
+			}
 		}
-
 		// Advertise as leader
-		if err := c.advertiseLeader(ctx, uuid, leaderLostCh); err != nil {
+		if err := c.advertiseLeader(activeCtx, uuid, leaderLostCh); err != nil {
 			c.heldHALock = nil
 			lock.Unlock()
 			c.stateLock.Unlock()
@@ -460,7 +475,7 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 		}
 
 		// Attempt the post-unseal process
-		err = c.postUnseal()
+		err = c.postUnseal(activeCtx, activeCtxCancel)
 		if err == nil {
 			c.standby = false
 		}
@@ -475,42 +490,36 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			continue
 		}
 
-		// Monitor a loss of leadership
-		releaseHALock := true
-		grabStateLock := true
-		select {
-		case <-leaderLostCh:
-			c.logger.Warn("leadership lost, stopping active operation")
-		case <-stopCh:
-			// This case comes from sealInternal; we will already be having the
-			// state lock held so we do toggle grabStateLock to false
-			if atomic.LoadUint32(c.keepHALockOnStepDown) == 1 {
-				releaseHALock = false
-			}
-			grabStateLock = false
-		case <-manualStepDownCh:
-			c.logger.Warn("stepping down from active operation to standby")
-			manualStepDown = true
-		}
-
-		metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
-
-		// Tell any requests that know about this to stop
-		if c.activeContextCancelFunc != nil {
-			c.activeContextCancelFunc()
-		}
-
-		// Attempt the pre-seal process
-		if grabStateLock {
+		cancelCtxAndLock := func() {
+			go func() {
+				select {
+				case <-activeCtx.Done():
+				// Attempt to drain any inflight requests
+				case <-time.After(DefaultMaxRequestDuration):
+					activeCtxCancel()
+				}
+			}()
 			c.stateLock.Lock()
-		}
-		c.standby = true
-		preSealErr := c.preSeal()
-		if grabStateLock {
-			c.stateLock.Unlock()
+			activeCtxCancel()
 		}
 
-		if releaseHALock {
+		runSealing := func() {
+			metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
+
+			c.standby = true
+
+			if err := c.preSeal(); err != nil {
+				c.logger.Error("pre-seal teardown failed", "error", err)
+			}
+		}
+
+		releaseHALock := func() {
+			// We may hit this from leaderLostCh or manualStepDownCh if they
+			// triggered before stopCh, so we check here instead of only in the
+			// stopCh case so we can try to do the right thing then, too
+			if atomic.LoadUint32(c.keepHALockOnStepDown) == 1 {
+				return
+			}
 			if err := c.clearLeader(uuid); err != nil {
 				c.logger.Error("clearing leader advertisement failed", "error", err)
 			}
@@ -518,9 +527,29 @@ func (c *Core) waitForLeadership(doneCh, manualStepDownCh, stopCh chan struct{})
 			c.heldHALock = nil
 		}
 
-		// Check for a failure to prepare to seal
-		if preSealErr != nil {
-			c.logger.Error("pre-seal teardown failed", "error", err)
+		// Monitor a loss of leadership
+		select {
+		case <-leaderLostCh:
+			c.logger.Warn("leadership lost, stopping active operation")
+			cancelCtxAndLock()
+			runSealing()
+			releaseHALock()
+			c.stateLock.Unlock()
+
+		case <-stopCh:
+			activeCtxCancel()
+			runSealing()
+			releaseHALock()
+			return
+
+		case <-manualStepDownCh:
+			manualStepDown = true
+			c.logger.Warn("stepping down from active operation to standby")
+
+			cancelCtxAndLock()
+			runSealing()
+			releaseHALock()
+			c.stateLock.Unlock()
 		}
 	}
 }

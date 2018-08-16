@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"math/big"
 	paths "path"
 	"sort"
 	"strings"
 
 	"github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/vault/helper/base62"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -174,7 +174,7 @@ func (s *encryptedKeyStorage) List(ctx context.Context, prefix string) ([]string
 			k = strings.TrimSuffix(k, "/")
 		}
 
-		decoded := Base62Decode(k)
+		decoded := base62.Decode(k)
 		if len(decoded) == 0 {
 			return nil, errors.New("could not decode key")
 		}
@@ -268,23 +268,9 @@ func (s *encryptedKeyStorage) encryptPath(path string) (string, error) {
 			return "", err
 		}
 
-		encPath = paths.Join(encPath, Base62Encode([]byte(ciphertext)))
+		encPath = paths.Join(encPath, base62.Encode([]byte(ciphertext)))
 		context = paths.Join(context, p)
 	}
 
 	return encPath, nil
-}
-
-func Base62Encode(buf []byte) string {
-	encoder := &big.Int{}
-
-	encoder.SetBytes(buf)
-	return encoder.Text(62)
-}
-
-func Base62Decode(input string) []byte {
-	decoder := &big.Int{}
-
-	decoder.SetString(input, 62)
-	return decoder.Bytes()
 }

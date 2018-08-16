@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"net"
@@ -118,7 +119,7 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 		}
 		result, err := conn.Search(&ldap.SearchRequest{
 			BaseDN:    cfg.UserDN,
-			Scope:     2, // subtree
+			Scope:     ldap.ScopeWholeSubtree,
 			Filter:    filter,
 			SizeLimit: math.MaxInt32,
 		})
@@ -153,7 +154,7 @@ func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN string) (st
 		}
 		result, err := conn.Search(&ldap.SearchRequest{
 			BaseDN:    cfg.UserDN,
-			Scope:     2, // subtree
+			Scope:     ldap.ScopeWholeSubtree,
 			Filter:    filter,
 			SizeLimit: math.MaxInt32,
 		})
@@ -170,36 +171,15 @@ func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN string) (st
 	return userDN, nil
 }
 
-/*
- * getLdapGroups queries LDAP and returns a slice describing the set of groups the authenticated user is a member of.
- *
- * The search query is constructed according to cfg.GroupFilter, and run in context of cfg.GroupDN.
- * Groups will be resolved from the query results by following the attribute defined in cfg.GroupAttr.
- *
- * cfg.GroupFilter is a go template and is compiled with the following context: [UserDN, Username]
- *    UserDN - The DN of the authenticated user
- *    Username - The Username of the authenticated user
- *
- * Example:
- *   cfg.GroupFilter = "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
- *   cfg.GroupDN     = "OU=Groups,DC=myorg,DC=com"
- *   cfg.GroupAttr   = "cn"
- *
- * NOTE - If cfg.GroupFilter is empty, no query is performed and an empty result slice is returned.
- *
- */
-func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string, username string) ([]string, error) {
-	// retrieve the groups in a string/bool map as a structure to avoid duplicates inside
-	ldapMap := make(map[string]bool)
-
+func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection, userDN string, username string) ([]*ldap.Entry, error) {
 	if cfg.GroupFilter == "" {
 		c.Logger.Warn("groupfilter is empty, will not query server")
-		return make([]string, 0), nil
+		return make([]*ldap.Entry, 0), nil
 	}
 
 	if cfg.GroupDN == "" {
 		c.Logger.Warn("groupdn is empty, will not query server")
-		return make([]string, 0), nil
+		return make([]*ldap.Entry, 0), nil
 	}
 
 	// If groupfilter was defined, resolve it as a Go template and use the query for
@@ -233,7 +213,7 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 
 	result, err := conn.Search(&ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,
-		Scope:  2, // subtree
+		Scope:  ldap.ScopeWholeSubtree,
 		Filter: renderedQuery.String(),
 		Attributes: []string{
 			cfg.GroupAttr,
@@ -244,7 +224,130 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 		return nil, errwrap.Wrapf("LDAP search failed: {{err}}", err)
 	}
 
-	for _, e := range result.Entries {
+	return result.Entries, nil
+}
+
+func sidBytesToString(b []byte) (string, error) {
+	reader := bytes.NewReader(b)
+
+	var revision, subAuthorityCount uint8
+	var identifierAuthorityParts [3]uint16
+
+	if err := binary.Read(reader, binary.LittleEndian, &revision); err != nil {
+		return "", errwrap.Wrapf(fmt.Sprintf("SID %#v convert failed reading Revision: {{err}}", b), err)
+	}
+
+	if err := binary.Read(reader, binary.LittleEndian, &subAuthorityCount); err != nil {
+		return "", errwrap.Wrapf(fmt.Sprintf("SID %#v convert failed reading SubAuthorityCount: {{err}}", b), err)
+	}
+
+	if err := binary.Read(reader, binary.BigEndian, &identifierAuthorityParts); err != nil {
+		return "", errwrap.Wrapf(fmt.Sprintf("SID %#v convert failed reading IdentifierAuthority: {{err}}", b), err)
+	}
+	identifierAuthority := (uint64(identifierAuthorityParts[0]) << 32) + (uint64(identifierAuthorityParts[1]) << 16) + uint64(identifierAuthorityParts[2])
+
+	subAuthority := make([]uint32, subAuthorityCount)
+	if err := binary.Read(reader, binary.LittleEndian, &subAuthority); err != nil {
+		return "", errwrap.Wrapf(fmt.Sprintf("SID %#v convert failed reading SubAuthority: {{err}}", b), err)
+	}
+
+	result := fmt.Sprintf("S-%d-%d", revision, identifierAuthority)
+	for _, subAuthorityPart := range subAuthority {
+		result += fmt.Sprintf("-%d", subAuthorityPart)
+	}
+
+	return result, nil
+}
+
+func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection, userDN string) ([]*ldap.Entry, error) {
+	result, err := conn.Search(&ldap.SearchRequest{
+		BaseDN: userDN,
+		Scope:  ldap.ScopeBaseObject,
+		Filter: "(objectClass=*)",
+		Attributes: []string{
+			"tokenGroups",
+		},
+		SizeLimit: 1,
+	})
+	if err != nil {
+		return nil, errwrap.Wrapf("LDAP search failed: {{err}}", err)
+	}
+	if len(result.Entries) == 0 {
+		c.Logger.Warn("unable to read object for group attributes", "userdn", userDN, "groupattr", cfg.GroupAttr)
+		return make([]*ldap.Entry, 0), nil
+	}
+
+	userEntry := result.Entries[0]
+	groupAttrValues := userEntry.GetRawAttributeValues("tokenGroups")
+
+	groupEntries := make([]*ldap.Entry, 0, len(groupAttrValues))
+	for _, sidBytes := range groupAttrValues {
+		sidString, err := sidBytesToString(sidBytes)
+		if err != nil {
+			c.Logger.Warn("unable to read sid", "err", err)
+			continue
+		}
+
+		groupResult, err := conn.Search(&ldap.SearchRequest{
+			BaseDN: fmt.Sprintf("<SID=%s>", sidString),
+			Scope:  ldap.ScopeBaseObject,
+			Filter: "(objectClass=*)",
+			Attributes: []string{
+				"1.1", // RFC no attributes
+			},
+			SizeLimit: 1,
+		})
+		if err != nil {
+			c.Logger.Warn("unable to read the group sid", "sid", sidString)
+			continue
+		}
+		if len(groupResult.Entries) == 0 {
+			c.Logger.Warn("unable to find the group", "sid", sidString)
+			continue
+		}
+
+		groupEntries = append(groupEntries, groupResult.Entries[0])
+	}
+
+	return groupEntries, nil
+}
+
+/*
+ * getLdapGroups queries LDAP and returns a slice describing the set of groups the authenticated user is a member of.
+ *
+ * If cfg.UseTokenGroups is true then the search is performed directly on the userDN.
+ * The values of those attributes are converted to string SIDs, and then looked up to get ldap.Entry objects.
+ * Otherwise, the search query is constructed according to cfg.GroupFilter, and run in context of cfg.GroupDN.
+ * Groups will be resolved from the query results by following the attribute defined in cfg.GroupAttr.
+ *
+ * cfg.GroupFilter is a go template and is compiled with the following context: [UserDN, Username]
+ *    UserDN - The DN of the authenticated user
+ *    Username - The Username of the authenticated user
+ *
+ * Example:
+ *   cfg.GroupFilter = "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
+ *   cfg.GroupDN     = "OU=Groups,DC=myorg,DC=com"
+ *   cfg.GroupAttr   = "cn"
+ *
+ * NOTE - If cfg.GroupFilter is empty, no query is performed and an empty result slice is returned.
+ *
+ */
+func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string, username string) ([]string, error) {
+	var entries []*ldap.Entry
+	var err error
+	if cfg.UseTokenGroups {
+		entries, err = c.performLdapTokenGroupsSearch(cfg, conn, userDN)
+	} else {
+		entries, err = c.performLdapFilterGroupsSearch(cfg, conn, userDN, username)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// retrieve the groups in a string/bool map as a structure to avoid duplicates inside
+	ldapMap := make(map[string]bool)
+
+	for _, e := range entries {
 		dn, err := ldap.ParseDN(e.DN)
 		if err != nil || len(dn.RDNs) == 0 {
 			continue
@@ -265,7 +368,7 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 	}
 
 	ldapGroups := make([]string, 0, len(ldapMap))
-	for key, _ := range ldapMap {
+	for key := range ldapMap {
 		ldapGroups = append(ldapGroups, key)
 	}
 

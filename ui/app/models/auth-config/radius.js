@@ -34,7 +34,7 @@ export default AuthConfig.extend({
         default: ['host', 'secret'],
       },
       {
-        Options: ['port', 'nasPort', 'dialTimeout', 'unregisteredUserPolicies'],
+        'RADIUS Options': ['port', 'nasPort', 'dialTimeout', 'unregisteredUserPolicies'],
       },
     ];
     return fieldToAttrs(this, groups);

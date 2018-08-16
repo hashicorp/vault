@@ -30,6 +30,7 @@ environment.
 
 ## Reference Material
 
+- [Encryption as a Service](/guides/encryption/transit.html) 
 - [Manage secrets, access, and encryption in
 the public cloud with
 Vault](https://www.hashicorp.com/resources/solutions-engineering-webinar-series-episode-2-vault)
