@@ -28,6 +28,7 @@ IMPROVEMENTS:
  * agent: Add `exit_after_auth` to be able to use the Agent for a single
    authentication [GH-5013]
  * cli: Add support for passing parameters to `vault read` operations [GH-5093]
+ * secrets/nomad: Support for longer token names [GH-5117]
  * storage/mysql: Support special characters in database and table names.
 
 BUG FIXES:
