@@ -9,13 +9,16 @@ description: |-
 # AliCloud Auth Method
 
 The `alicloud` auth method provides an automated mechanism to retrieve
-a Vault token for AliCloud ECS instances using IAM roles. Unlike most Vault
-auth methods, this method does not require manual first-deploying, or
-provisioning security-sensitive credentials (tokens, username/password, client
-certificates, etc), by operators. It treats AliCloud as a Trusted Third Party 
-and uses a special AliCloud request signed with AliCloud RAM credentials. RAM 
-credentials are automatically supplied to AliCloud instances in RAM metadata, 
-and it is this information that Vault can use to authenticate clients.
+a Vault token for AliCloud entities. Unlike most Vault auth methods, this 
+method does not require manual first-deploying, or provisioning 
+security-sensitive credentials (tokens, username/password, client certificates, 
+etc), by operators. It treats AliCloud as a Trusted Third Party and uses a 
+special AliCloud request signed with private credentials. A variety of credentials 
+can be used to construct the request, but AliCloud offers 
+[instance metadata](https://www.alibabacloud.com/help/faq-detail/49122.htm) 
+that's ideally suited for the purpose. By launching an instance with a role,
+the role's STS credentials under instance metadata can be used to securely 
+build the request.
 
 ## Authentication Workflow
 

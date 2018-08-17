@@ -23,7 +23,7 @@ will be able to perform the login operation.
 
 | Method   | Path                             | Produces               |
 | :------- | :------------------------------- | :--------------------- |
-| `POST`   | `/auth/alicloud/role/:role`       | `204 (empty body)`     |
+| `POST`   | `/auth/alicloud/role/:role`      | `204 (empty body)`     |
 
 ### Parameters
 
@@ -39,6 +39,8 @@ will be able to perform the login operation.
   this role should never expire. The token should be renewed within the duration
   specified by this value. At each renewal, the token's TTL will be set to the
   value of this parameter.
+- `bound_cidrs` `(string: "", or list: [])` – If set, restricts usage of the
+  roles to client IPs falling within the range of the specified CIDR(s).
 
 ### Sample Payload
 
@@ -68,7 +70,7 @@ Returns the previously registered role configuration.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/alicloud/role/:role`        | `200 application/json` |
+| `GET`    | `/auth/alicloud/role/:role`  | `200 application/json` |
 
 ### Parameters
 
@@ -137,7 +139,7 @@ Deletes the previously registered role.
 
 | Method   | Path                             | Produces               |
 | :------- | :------------------------------- | :--------------------- |
-| `DELETE` | `/auth/alicloud/role/:role`       | `204 (empty body)`  |
+| `DELETE` | `/auth/alicloud/role/:role`      | `204 (empty body)`     |
 
 ### Parameters
 
@@ -159,7 +161,7 @@ GetCallerIdentity request.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/alicloud/login`            | `200 application/json` |
+| `POST`   | `/auth/alicloud/login`       | `200 application/json` |
 
 ### Sample Payload
 
@@ -176,8 +178,8 @@ GetCallerIdentity request.
 
 ```json
 {
-  "identity_request_url": "aWRlbnRpdHlfcmVxdWVzdF91cmw=",
-  "identity_request_headers": "aWRlbnRpdHlfcmVxdWVzdF9oZWFkZXJz"
+  "identity_request_url": "aWRlbnRpdHlabrVxdWVzdF91cmw=",
+  "identity_request_headers": "aWRlimRpdHlfcmVxdWVzdF9oZWFkZXJz"
 }
 ```
 
@@ -203,7 +205,6 @@ $ curl \
       "ami_id": "ami-fce36983",
       "role": "dev-role",
       "auth_type": "ec2",
-      
       "account_id":    "5138828231865461",
       "user_id":       "216959339000654321",
       "role_id":       "4657-abcd",
