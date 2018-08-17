@@ -1,5 +1,6 @@
 import Ember from 'ember';
 import { task } from 'ember-concurrency';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const { Service, computed, inject } = Ember;
 const ROOT_NAMESPACE = '';
@@ -18,6 +19,8 @@ export default Service.extend({
   setNamespace(path) {
     this.set('path', path);
   },
+  listPath: lazyCapabilities(apiPath`sys/namespaces`, 'path'),
+  canList: computed.alias('listPath.canList'),
 
   findNamespacesForUser: task(function*() {
     // uses the adapter and the raw response here since

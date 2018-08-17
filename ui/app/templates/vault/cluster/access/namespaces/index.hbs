@@ -32,7 +32,16 @@
             @confirmButtonClasses="button is-primary"
             @confirmButtonText="Remove"
             @buttonClasses="link is-destroy"
-            @onConfirmAction={{action (perform Item.callMethod "destroyRecord" list.item (concat "Successfully deleted namespace: " list.item.id) "There was an error deleting this namespace: ") }}
+            @onConfirmAction={{action
+              (perform
+                Item.callMethod
+                "destroyRecord"
+                list.item
+                (concat "Successfully deleted namespace: " list.item.id)
+                "There was an error deleting this namespace: "
+                (action "refreshNamespaceList")
+              )
+            }}
             @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
             @showConfirm={{get this (concat "shouldDelete-" list.item.id)}}
             @class={{if (get this (concat "shouldDelete-" list.item.id)) "message is-block is-warning is-outline"}}
