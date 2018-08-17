@@ -211,6 +211,9 @@ func (c *Core) startForwarding(ctx context.Context) error {
 					go func() {
 						fws.ServeConn(tlsConn, &http2.ServeConnOpts{
 							Handler: fwRPCServer,
+							BaseConfig: &http.Server{
+								ErrorLog: c.logger.StandardLogger(nil),
+							},
 						})
 						// close the quitCh which will close the connection and
 						// the other goroutine.

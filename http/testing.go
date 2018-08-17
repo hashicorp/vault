@@ -33,8 +33,9 @@ func TestServerWithListenerAndProperties(tb testing.TB, ln net.Listener, addr st
 	mux.Handle("/", Handler(props))
 
 	server := &http.Server{
-		Addr:    ln.Addr().String(),
-		Handler: mux,
+		Addr:     ln.Addr().String(),
+		Handler:  mux,
+		ErrorLog: core.Logger().StandardLogger(nil),
 	}
 	go server.Serve(ln)
 }
