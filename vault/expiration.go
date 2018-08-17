@@ -307,7 +307,7 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 
 		switch {
 		case retErr == nil:
-		case errwrap.Contains(retErr, context.Canceled.Error()):
+		case strings.Contains(retErr.Error(), context.Canceled.Error()):
 			// Don't run error func because we lost leadership
 			m.logger.Warn("context cancled while restoring leases, stopping lease loading")
 			retErr = nil
