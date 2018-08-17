@@ -18,6 +18,15 @@
         {{list.item.id}}
       </Item.content>
       <Item.menu>
+        {{#with (concat currentNamespace (if currentNamespace "/") list.item.id) as |targetNamespace|}}
+          {{#if (contains targetNamespace accessibleNamespaces)}}
+            <li class="action">
+              {{#link-to "vault.cluster.secrets" (query-params namespace=targetNamespace) class="is-block"}}
+                Switch to this namespace
+              {{/link-to}}
+            </li>
+          {{/if}}
+        {{/with}}
         <li class="action">
           <ConfirmAction
             @confirmButtonClasses="button is-primary"
