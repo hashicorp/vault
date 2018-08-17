@@ -71,9 +71,6 @@ func NewEtcdBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	case "2", "etcd2", "v2":
 		return newEtcd2Backend(conf, logger)
 	case "3", "etcd3", "v3":
-		if remoteAPIVersion == "2" {
-			return nil, errors.New("etcd3 is required: etcd2 is running")
-		}
 		return newEtcd3Backend(conf, logger)
 	default:
 		return nil, EtcdVersionUnknown
