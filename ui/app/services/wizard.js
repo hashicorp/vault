@@ -30,20 +30,20 @@ export default Service.extend({
     if (!this.storageHasKey(TUTORIAL_STATE)) {
       this.saveState('currentState', TutorialMachine.initialState);
       this.saveExtState(TUTORIAL_STATE, this.get('currentState'));
-    } else {
-      this.saveState('currentState', this.getExtState(TUTORIAL_STATE));
-      if (this.storageHasKey(FEATURE_LIST)) {
-        this.set('featureList', this.getExtState(FEATURE_LIST));
-        if (this.storageHasKey(FEATURE_STATE)) {
-          this.saveState('featureState', this.getExtState(FEATURE_STATE));
-        } else {
-          if (FeatureMachine != null) {
-            this.saveState('featureState', FeatureMachine.initialState);
-            this.saveExtState(FEATURE_STATE, this.get('featureState'));
-          }
+      return;
+    }
+    this.saveState('currentState', this.getExtState(TUTORIAL_STATE));
+    if (this.storageHasKey(FEATURE_LIST)) {
+      this.set('featureList', this.getExtState(FEATURE_LIST));
+      if (this.storageHasKey(FEATURE_STATE)) {
+        this.saveState('featureState', this.getExtState(FEATURE_STATE));
+      } else {
+        if (FeatureMachine != null) {
+          this.saveState('featureState', FeatureMachine.initialState);
+          this.saveExtState(FEATURE_STATE, this.get('featureState'));
         }
-        this.buildFeatureMachine();
       }
+      this.buildFeatureMachine();
     }
   },
 
@@ -62,7 +62,6 @@ export default Service.extend({
   },
 
   transitionTutorialMachine(currentState, event, extendedState) {
-    debugger;
     if (extendedState) {
       this.set('componentState', extendedState);
     }
