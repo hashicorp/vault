@@ -23,13 +23,13 @@
              id="credential-type"
              onchange={{action (mut model.credential_type) value="target.value"}}
           >
-            <option selected={{eq model.credential_type "iam_user"}} value="iam_user">
+            <option selected={{eq model.credential_types "iam_user"}} value="iam_user">
               IAM User
             </option>
-            <option selected={{eq model.credential_type "assumed_role"}} value="assumed_role">
+            <option selected={{eq model.credential_types "assumed_role"}} value="assumed_role">
               Assumed Role
             </option>
-            <option selected={{eq model.credential_type "federation_token"}} value="federation_token">
+            <option selected={{eq model.credential_types "federation_token"}} value="federation_token">
               Federation Token
             </option>
           </select>
@@ -37,14 +37,11 @@
       </div>
     </div>
     {{#if (eq model.credential_type "assumed_role") }}
-      <div class="field">
-        <label for="role_arns" class="is-label">
-          Role ARNs
-        </label>
-        <div class="control">
-          {{input id="role_arns" value=model.role_arns class="input" data-test-input="role_arns"}}
-        </div>
-      </div>
+      {{string-list
+        label="Role ARNs"
+	inputValue=model.role_arns
+	attr=model.role_arns
+      }}
     {{/if}}
     {{#if (eq model.credential_type "iam_user") }}
       <div class="field">
