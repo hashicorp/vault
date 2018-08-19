@@ -527,6 +527,7 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				"role_arns":        []string(nil),
 				"policy_document":  value,
 				"credential_types": []string{iamUserCred, federationTokenCred},
+				"default_ttl":      time.Duration(0),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -621,6 +622,7 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 		"policy_arns":      []string{ec2PolicyArn, iamPolicyArn},
 		"credential_types": []string{iamUserCred},
 		"role_arns":        []string(nil),
+		"default_ttl":      time.Duration(0),
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -710,6 +712,7 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				"role_arns":        []string(nil),
 				"policy_document":  "",
 				"credential_types": []string{iamUserCred},
+				"default_ttl":      time.Duration(0),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
