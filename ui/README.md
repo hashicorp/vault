@@ -8,7 +8,6 @@ A short introduction of this app could easily go here.
 You will need the following things properly installed on your computer.
 
 * [Node.js](https://nodejs.org/) (with NPM)
-* [Bower](https://bower.io/)
 * [Yarn](https://yarnpkg.com/en/)
 * [Ember CLI](https://ember-cli.com/)
 
@@ -16,7 +15,7 @@ You will need the following things properly installed on your computer.
 ## Running / Development
 To get all of the JavaScript dependencies installed, run this in the `ui` directory:
 
-`yarn && bower install`
+`yarn `
 
 If you want to run Vault UI and proxy back to a Vault server running
 on the default port, 8200, run the following in the `ui` directory:
