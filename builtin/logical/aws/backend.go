@@ -34,6 +34,7 @@ func Backend() *backend {
 
 		Paths: []*framework.Path{
 			pathConfigRoot(),
+			pathConfigRotateRoot(),
 			pathConfigLease(&b),
 			pathRoles(&b),
 			pathListRoles(&b),
