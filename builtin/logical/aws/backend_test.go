@@ -393,6 +393,23 @@ func testAccStepRead(t *testing.T, path, name string, credentialTests []credenti
 	}
 }
 
+func testAccStepReadTTL(name string, maximumTTL time.Duration) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "creds/" + name,
+		Check: func(resp *logical.Response) error {
+			if resp.Secret == nil {
+				return fmt.Errorf("bad: nil Secret returned")
+			}
+			ttl := resp.Secret.TTL
+			if ttl > maximumTTL {
+				return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl/time.Second, maximumTTL/time.Second)
+			}
+			return nil
+		},
+	}
+}
+
 func describeInstancesTest(accessKey, secretKey, token string) error {
 	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
 	awsConfig := &aws.Config{
@@ -675,6 +692,31 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
+		},
+		Teardown: deleteTestRole,
+	})
+}
+
+func TestBackend_RoleDefaultTTL(t *testing.T) {
+	minAwsAssumeRoleDuration := 900
+	roleData := map[string]interface{}{
+		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", os.Getenv("AWS_ACCOUNT_ID"), testRoleName)},
+		"credential_type": assumedRoleCred,
+		"default_ttl":     minAwsAssumeRoleDuration,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createRole(t)
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		Backend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepReadTTL("test", time.Duration(minAwsAssumeRoleDuration)*time.Second), // allow a little slack
 		},
 		Teardown: deleteTestRole,
 	})
