@@ -61,8 +61,8 @@ export default Component.extend(DEFAULTS, {
   hasProgress: computed.gt('progress', 0),
 
   actionSuccess(resp) {
-    let { onActionSuccess, isComplete, onShamirSuccess, thresholdPath } = this.getProperties(
-      'onActionSuccess',
+    let { onUpdate, isComplete, onShamirSuccess, thresholdPath } = this.getProperties(
+      'onUpdate',
       'isComplete',
       'onShamirSuccess',
       'thresholdPath'

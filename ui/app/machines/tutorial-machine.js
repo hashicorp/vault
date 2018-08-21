@@ -23,14 +23,19 @@ export default {
           states: {
             setup: {
               on: { CONTINUE: 'save' },
+              onEntry: { type: 'render', component: 'wizard/init-setup' },
             },
             save: {
               on: { CONTINUE: 'unseal' },
+              onEntry: { type: 'render', component: 'wizard/init-save-keys' },
             },
             unseal: {
               on: { CONTINUE: 'login' },
+              onEntry: { type: 'render', component: 'wizard/init-unseal' },
             },
-            login: {},
+            login: {
+              onEntry: { type: 'render', component: 'wizard/init-login' },
+            },
           },
         },
       },

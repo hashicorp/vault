@@ -100,6 +100,10 @@ export default Service.extend({
       type = action.type;
     }
     switch (type) {
+      case 'render':
+        this.set('featureComponent', action.component);
+        break;
+
       case 'routeTransition':
         this.get('router').transitionTo(...action.params);
         break;
