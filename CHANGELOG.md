@@ -14,16 +14,17 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
- * **Namespaces (Enterprise)** is a set of features within Vault Enterprise that allows Vault
-environments to support *Secure Multi-tenancy* within a single Vault Enterprise
-infrastructure. Through namespaces, Vault administrators can support tenant isolation
-for teams and individuals as well as empower those individuals to self-manage their
-own tenant environment. 
+ * **Namespaces (Enterprise)** is a set of features within Vault Enterprise
+   that allows Vault environments to support *Secure Multi-tenancy* within a
+   single Vault Enterprise infrastructure. Through namespaces, Vault
+   administrators can support tenant isolation for teams and individuals as
+   well as empower those individuals to self-manage their own tenant
+   environment. 
  * **AliCloud OSS Storage**: AliCloud OSS can now be used for Vault storage.
- * **AliCloud Auth Plugin**: AliCloud's identity services can now be used to 
- grant access to Vault. See the 
- [plugin repository](https://github.com/hashicorp/vault-plugin-auth-alicloud) 
- for more information.
+ * **AliCloud Auth Plugin**: AliCloud's identity services can now be used to
+   grant access to Vault. See the [plugin
+   repository](https://github.com/hashicorp/vault-plugin-auth-alicloud) for
+   more information.
  * **Azure Secrets Plugin**: There is now a plugin (pulled in to Vault) that 
    allows generating credentials to allow access to Azure. See the [plugin
    repository](https://github.com/hashicorp/vault-plugin-secrets-azure) for
@@ -38,6 +39,7 @@ IMPROVEMENTS:
    authentication [GH-5013]
  * cli: Add support for passing parameters to `vault read` operations [GH-5093]
  * secrets/nomad: Support for longer token names [GH-5117]
+ * secrets/pki: Allow disabling CRL generation [GH-5134]
  * storage/azure: Add support for different Azure environments [GH-4997]
  * storage/mysql: Support special characters in database and table names.
 
@@ -50,6 +52,9 @@ BUG FIXES:
    alias. These entities are now merged. [GH-5000]
  * secrets/database: Fix inability to update custom SQL statements on
    database roles. [GH-5080]
+ * secrets/pki: Disallow putting the CA's serial on its CRL. While technically
+   legal, doing so inherently means the CRL can't be trusted anyways, so it's
+   not useful and easy to footgun. [GH-5134]
  * storage/gcp,spanner: Fix data races [GH-5081]
  * replication: Fix issue causing some pages not to flush to storage
 
