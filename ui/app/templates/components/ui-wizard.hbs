@@ -25,7 +25,7 @@
           {{wizard/features-selection}}
         {{else}}
           {{#if isInitializing}}
-            {{component "wizard/init-steps"}}
+            {{component featureComponent componentState=componentState}}
           {{else}}
             {{#if isFeature}}
               {{component "wizard/secrets-machine"}}

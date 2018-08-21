@@ -14,6 +14,6 @@ export default Component.extend({
 
   path: '/',
   href: computed('path', function() {
-    return `https://www.vaultproject.io/docs${this.get('path')}`;
+    return `https://www.vaultproject.io${this.get('path')}`;
   }),
 });

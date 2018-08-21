@@ -1,0 +1,15 @@
+<div class="wizard-header">
+  <h1>Setting up your master keys</h1>
+  <p>
+    Now we will provide the {{pluralize 'key' componentState.threshold}} that
+    you copied or downloaded to unseal the vault so that we can get started
+    using it. You'll need {{pluralize 'key' componentState.threshold}} total,
+    and {{pluralize 'key has' componentState.progress}} already been provided.
+    Please provide
+    {{pluralize 'more key ' (dec componentState.progress componentState.threshold)}} to unseal.
+  </p>
+  <DocLink @class="step-docs-link" @path="/intro/getting-started/deploy.html#initializing-the-vault">
+    Docs: Initialization
+  </DocLink>
+</div>
+
