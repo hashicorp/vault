@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -169,6 +170,10 @@ func (i *IdentityStore) handleGroupUpdateCommon(req *logical.Request, d *framewo
 	policiesRaw, ok := d.GetOk("policies")
 	if ok {
 		group.Policies = policiesRaw.([]string)
+	}
+
+	if strutil.StrListContains(group.Policies, "root") {
+		return logical.ErrorResponse("policies cannot contain root"), nil
 	}
 
 	groupTypeRaw, ok := d.GetOk("type")
