@@ -19,7 +19,7 @@ export default Service.extend({
   setNamespace(path) {
     this.set('path', path);
   },
-  listPath: lazyCapabilities(apiPath`sys/namespaces`, 'path'),
+  listPath: lazyCapabilities(apiPath`sys/namespaces/`, 'path'),
   canList: computed.alias('listPath.canList'),
 
   findNamespacesForUser: task(function*() {
