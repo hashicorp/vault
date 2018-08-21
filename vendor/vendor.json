@@ -2057,6 +2057,10 @@
 			"revisionTime": "2018-06-28T10:27:55Z"
 		},
 		{
+			"path": "gitub.com/hashicorp/vault-plugin-auth-jwt",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "I7CQfkQXt/QDxO9gutjoqu+ajkI=",
 			"path": "go.opencensus.io",
 			"revision": "cfb8fcdb21f431d1589591005f462b89be6f799d",
