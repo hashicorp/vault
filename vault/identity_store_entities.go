@@ -226,6 +226,10 @@ func (i *IdentityStore) handleEntityUpdateCommon() framework.OperationFunc {
 			entity.Policies = entityPoliciesRaw.([]string)
 		}
 
+		if strutil.StrListContains(entity.Policies, "root") {
+			return logical.ErrorResponse("policies cannot contain root"), nil
+		}
+
 		disabledRaw, ok := d.GetOk("disabled")
 		if ok {
 			entity.Disabled = disabledRaw.(bool)
