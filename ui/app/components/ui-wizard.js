@@ -6,6 +6,9 @@ export default Ember.Component.extend({
   wizard: inject.service(),
   currentState: computed.alias('wizard.currentState'),
   featureState: computed.alias('wizard.featureState'),
+  featureComponent: computed.alias('wizard.featureComponent'),
+  tutorialComponent: computed.alias('wizard.tutorialComponent'),
+  componentState: computed.alias('wizard.componentState'),
   currentMachine: computed('wizard.featureList', function() {
     if (this.get('wizard.featureList') !== null) {
       let machine = this.get('wizard.featureList').toArray().objectAt(0);

@@ -7,6 +7,7 @@ export default {
         DISMISS: 'dismissed',
         AUTH: 'select',
       },
+      onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-active' },
       key: 'feature',
       initial: 'init',
       states: {
@@ -14,6 +15,7 @@ export default {
           on: {
             CONTINUE: 'feature',
           },
+          onEntry: { type: 'render', level: 'feature', component: 'wizard/feature-selection' },
         },
         feature: {},
         init: {
@@ -23,18 +25,18 @@ export default {
           states: {
             setup: {
               on: { CONTINUE: 'save' },
-              onEntry: { type: 'render', component: 'wizard/init-setup' },
+              onEntry: { type: 'render', level: 'feature', component: 'wizard/init-setup' },
             },
             save: {
               on: { CONTINUE: 'unseal' },
-              onEntry: { type: 'render', component: 'wizard/init-save-keys' },
+              onEntry: { type: 'render', level: 'feature', component: 'wizard/init-save-keys' },
             },
             unseal: {
               on: { CONTINUE: 'login' },
-              onEntry: { type: 'render', component: 'wizard/init-unseal' },
+              onEntry: { type: 'render', level: 'feature', component: 'wizard/init-unseal' },
             },
             login: {
-              onEntry: { type: 'render', component: 'wizard/init-login' },
+              onEntry: { type: 'render', level: 'feature', component: 'wizard/init-login' },
             },
           },
         },
@@ -45,13 +47,15 @@ export default {
         DISMISS: 'dismissed',
         CONTINUE: 'active',
       },
+      onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
     },
     dismissed: {
       on: { CONTINUE: 'idle' },
-      onEntry: ['handleDismissed'],
+      onEntry: [{ type: 'render', level: 'tutorial', component: null }, 'handleDismissed'],
     },
     paused: {
       on: { CONTINUE: ['handlePause'] },
+      onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-paused' },
     },
     complete: {
       on: {

@@ -23,13 +23,19 @@ export default Service.extend({
   featureState: null,
   currentMachine: null,
   potentialSelection: null,
+  tutorialComponent: null,
+  featureComponent: null,
   componentState: null,
 
   init() {
     this._super(...arguments);
     if (!this.storageHasKey(TUTORIAL_STATE)) {
-      this.saveState('currentState', TutorialMachine.initialState);
-      this.saveExtState(TUTORIAL_STATE, this.get('currentState'));
+      let state = TutorialMachine.initialState;
+      this.saveState('currentState', state);
+      this.saveExtState(TUTORIAL_STATE, state.value);
+      for (let action of state.actions) {
+        this.executeAction(action, event);
+      }
       return;
     }
     this.saveState('currentState', this.getExtState(TUTORIAL_STATE));
@@ -101,9 +107,8 @@ export default Service.extend({
     }
     switch (type) {
       case 'render':
-        this.set('featureComponent', action.component);
+        this.set(`${action.level}Component`, action.component);
         break;
-
       case 'routeTransition':
         this.get('router').transitionTo(...action.params);
         break;
