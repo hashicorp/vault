@@ -3,19 +3,18 @@ export default {
   initial: 'idle',
   states: {
     active: {
-      on: {
-        DISMISS: 'dismissed',
-        AUTH: 'select',
-      },
-      onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-active' },
       key: 'feature',
       initial: 'init',
+      on: {
+        DISMISS: 'dismissed',
+      },
+      onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-active' },
       states: {
         select: {
           on: {
             CONTINUE: 'feature',
           },
-          onEntry: { type: 'render', level: 'feature', component: 'wizard/feature-selection' },
+          onEntry: { type: 'render', level: 'feature', component: 'wizard/features-selection' },
         },
         feature: {},
         init: {
@@ -46,6 +45,7 @@ export default {
       on: {
         DISMISS: 'dismissed',
         CONTINUE: 'active',
+        AUTH: 'active.select',
       },
       onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
     },
