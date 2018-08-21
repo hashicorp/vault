@@ -31,14 +31,13 @@ export default Service.extend({
     this._super(...arguments);
     if (!this.storageHasKey(TUTORIAL_STATE)) {
       let state = TutorialMachine.initialState;
-      this.saveState('currentState', state);
+      this.saveState('currentState', state.value);
       this.saveExtState(TUTORIAL_STATE, state.value);
-      for (let action of state.actions) {
-        this.executeAction(action, event);
-      }
-      return;
     }
     this.saveState('currentState', this.getExtState(TUTORIAL_STATE));
+
+    let stateNodes = TutorialMachine.getStateNodes(this.get('currentState'));
+    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
     if (this.storageHasKey(FEATURE_LIST)) {
       this.set('featureList', this.getExtState(FEATURE_LIST));
       if (this.storageHasKey(FEATURE_STATE)) {
@@ -74,18 +73,14 @@ export default Service.extend({
     let { actions, value } = TutorialMachine.transition(currentState, event);
     this.saveState('currentState', value);
     this.saveExtState(TUTORIAL_STATE, this.get('currentState'));
-    for (let action of actions) {
-      this.executeAction(action, event);
-    }
+    this.executeActions(actions, event);
   },
 
   transitionFeatureMachine(currentState, event, extendedState) {
     let { actions, value } = FeatureMachine.transition(currentState, event, extendedState);
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
-    for (let action of actions) {
-      this.executeAction(action, event);
-    }
+    this.executeActions(actions, event);
   },
 
   saveExtState(key, value) {
@@ -100,29 +95,31 @@ export default Service.extend({
     return Boolean(this.getExtState(key));
   },
 
-  executeAction(action, event) {
-    let type = action;
-    if (action.type) {
-      type = action.type;
-    }
-    switch (type) {
-      case 'render':
-        this.set(`${action.level}Component`, action.component);
-        break;
-      case 'routeTransition':
-        this.get('router').transitionTo(...action.params);
-        break;
-      case 'saveFeatures':
-        this.saveFeatures(event.features);
-        break;
-      case 'completeFeature':
-        this.completeFeature();
-        break;
-      case 'handleDismissed':
-        this.handleDismissed();
-        break;
-      default:
-        break;
+  executeActions(actions, event) {
+    for (let action of actions) {
+      let type = action;
+      if (action.type) {
+        type = action.type;
+      }
+      switch (type) {
+        case 'render':
+          this.set(`${action.level}Component`, action.component);
+          break;
+        case 'routeTransition':
+          this.get('router').transitionTo(...action.params);
+          break;
+        case 'saveFeatures':
+          this.saveFeatures(event.features);
+          break;
+        case 'completeFeature':
+          this.completeFeature();
+          break;
+        case 'handleDismissed':
+          this.handleDismissed();
+          break;
+        default:
+          break;
+      }
     }
   },
 
@@ -148,9 +145,7 @@ export default Service.extend({
     this.set('currentMachine', this.get('featureList').objectAt(0));
     this.saveState('featureState', FeatureMachine.initialState);
     this.saveExtState(FEATURE_STATE, this.get('featureState'));
-    for (let action of FeatureMachine.initialState.actions) {
-      this.executeAction(action);
-    }
+    this.executeActions(FeatureMachine.initialState.actions);
   },
 
   completeFeature() {
