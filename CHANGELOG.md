@@ -47,6 +47,8 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * auth/jwt: Always validate `aud` claim even if `bound_audiences` isn't set
+   (IOW, error in this case)
  * core: Prevent Go's HTTP library from interspersing logs in a different
    format and/or interleaved [GH-5135]
  * identity: Properly populate `mount_path` and `mount_type` on group lookup
