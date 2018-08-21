@@ -41,7 +41,7 @@ func pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, data 
 	}
 
 	client, err := clientIAM(ctx, req.Storage)
-	if err == nil {
+	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error retrieving IAM client: %v", err)), nil
 	}
 	if client == nil {
@@ -100,7 +100,11 @@ func pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, data 
 		return logical.ErrorResponse(fmt.Sprintf("error deleting old access key: %v", err)), nil
 	}
 
-	return nil, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"access_key": config.AccessKey,
+		},
+	}, nil
 }
 
 const pathConfigRotateRootHelpSyn = `
