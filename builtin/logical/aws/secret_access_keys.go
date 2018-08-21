@@ -37,7 +37,7 @@ func secretAccessKeys(b *backend) *framework.Secret {
 		},
 
 		Renew:  b.secretAccessKeysRenew,
-		Revoke: secretAccessKeysRevoke,
+		Revoke: b.secretAccessKeysRevoke,
 	}
 }
 
@@ -67,7 +67,7 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
-	STSClient, err := clientSTS(ctx, s)
+	STSClient, err := b.clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -112,7 +112,7 @@ func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
-	STSClient, err := clientSTS(ctx, s)
+	STSClient, err := b.clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -161,7 +161,7 @@ func (b *backend) secretAccessKeysCreate(
 	ctx context.Context,
 	s logical.Storage,
 	displayName, policyName string, role *awsRoleEntry) (*logical.Response, error) {
-	client, err := clientIAM(ctx, s)
+	client, err := b.clientIAM(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -281,7 +281,7 @@ func (b *backend) secretAccessKeysRenew(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
-func secretAccessKeysRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretAccessKeysRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
 	// STS cleans up after itself so we can skip this if is_sts internal data
 	// element set to true. If is_sts is not set, assumes old version
@@ -309,7 +309,7 @@ func secretAccessKeysRevoke(ctx context.Context, req *logical.Request, d *framew
 	}
 
 	// Use the user rollback mechanism to delete this user
-	err := pathUserRollback(ctx, req, "user", map[string]interface{}{
+	err := b.pathUserRollback(ctx, req, "user", map[string]interface{}{
 		"username": username,
 	})
 	if err != nil {

@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathConfigRoot() *framework.Path {
+func pathConfigRoot(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/root",
 		Fields: map[string]*framework.FieldSchema{
@@ -42,7 +42,7 @@ func pathConfigRoot() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: pathConfigRootWrite,
+			logical.UpdateOperation: b.pathConfigRootWrite,
 		},
 
 		HelpSynopsis:    pathConfigRootHelpSyn,
@@ -50,11 +50,14 @@ func pathConfigRoot() *framework.Path {
 	}
 }
 
-func pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	region := data.Get("region").(string)
 	iamendpoint := data.Get("iam_endpoint").(string)
 	stsendpoint := data.Get("sts_endpoint").(string)
 	maxretries := data.Get("max_retries").(int)
+
+	b.rootMutex.Lock()
+	defer b.rootMutex.Unlock()
 
 	entry, err := logical.StorageEntryJSON("config/root", rootConfig{
 		AccessKey:   data.Get("access_key").(string),

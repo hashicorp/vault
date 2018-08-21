@@ -10,11 +10,11 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathConfigRotateRoot() *framework.Path {
+func pathConfigRotateRoot(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/rotate-root",
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: pathConfigRotateRootUpdate,
+			logical.UpdateOperation: b.pathConfigRotateRootUpdate,
 		},
 
 		HelpSynopsis:    pathConfigRotateRootHelpSyn,
@@ -22,8 +22,18 @@ func pathConfigRotateRoot() *framework.Path {
 	}
 }
 
-func pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// TODO: Add locking around reading/writing the config path/rootConfig
+func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// have to get the client config first because that takes out a read lock
+	client, err := b.clientIAM(ctx, req.Storage)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("error retrieving IAM client: %v", err)), nil
+	}
+	if client == nil {
+		return logical.ErrorResponse("nil IAM client"), nil
+	}
+
+	b.rootMutex.Lock()
+	defer b.rootMutex.Unlock()
 	rawRootConfig, err := req.Storage.Get(ctx, "config/root")
 	if err != nil {
 		return nil, err
@@ -40,13 +50,6 @@ func pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, data 
 		return logical.ErrorResponse("cannot call config/rotate-root when either access_key or secret_key is empty"), nil
 	}
 
-	client, err := clientIAM(ctx, req.Storage)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error retrieving IAM client: %v", err)), nil
-	}
-	if client == nil {
-		return logical.ErrorResponse("nil IAM client"), nil
-	}
 	var getUserInput iam.GetUserInput // empty input means get current user
 	getUserRes, err := client.GetUser(&getUserInput)
 	if err != nil {

@@ -15,11 +15,13 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func getRootConfig(ctx context.Context, s logical.Storage, clientType string) (*aws.Config, error) {
+func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{}
 	var endpoint string
 	var maxRetries int = aws.UseServiceDefaultRetries
 
+	b.rootMutex.RLock()
+	defer b.rootMutex.RUnlock()
 	entry, err := s.Get(ctx, "config/root")
 	if err != nil {
 		return nil, err
@@ -68,8 +70,8 @@ func getRootConfig(ctx context.Context, s logical.Storage, clientType string) (*
 	}, nil
 }
 
-func clientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error) {
-	awsConfig, err := getRootConfig(ctx, s, "iam")
+func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error) {
+	awsConfig, err := b.getRootConfig(ctx, s, "iam")
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +84,8 @@ func clientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error) {
 	return client, nil
 }
 
-func clientSTS(ctx context.Context, s logical.Storage) (*sts.STS, error) {
-	awsConfig, err := getRootConfig(ctx, s, "sts")
+func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (*sts.STS, error) {
+	awsConfig, err := b.getRootConfig(ctx, s, "sts")
 	if err != nil {
 		return nil, err
 	}

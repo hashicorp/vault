@@ -33,8 +33,8 @@ func Backend() *backend {
 		},
 
 		Paths: []*framework.Path{
-			pathConfigRoot(),
-			pathConfigRotateRoot(),
+			pathConfigRoot(&b),
+			pathConfigRotateRoot(&b),
 			pathConfigLease(&b),
 			pathRoles(&b),
 			pathListRoles(&b),
@@ -58,6 +58,9 @@ type backend struct {
 
 	// Mutex to protect access to reading and writing policies
 	roleMutex sync.RWMutex
+
+	// Mutex to protect access to reading and writing root creds
+	rootMutex sync.RWMutex
 }
 
 const backendHelp = `
