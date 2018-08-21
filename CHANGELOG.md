@@ -45,18 +45,20 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * core: Prevent Go's HTTP library from interspersing logs in a different
+   format and/or interleaved [GH-5135]
  * identity: Properly populate `mount_path` and `mount_type` on group lookup
    [GH-5074]
  * identity: Fix carryover issue from previously fixed race condition that
    could cause Vault not to start up due to two entities referencing the same
    alias. These entities are now merged. [GH-5000]
+ * replication: Fix issue causing some pages not to flush to storage
  * secrets/database: Fix inability to update custom SQL statements on
    database roles. [GH-5080]
  * secrets/pki: Disallow putting the CA's serial on its CRL. While technically
    legal, doing so inherently means the CRL can't be trusted anyways, so it's
    not useful and easy to footgun. [GH-5134]
  * storage/gcp,spanner: Fix data races [GH-5081]
- * replication: Fix issue causing some pages not to flush to storage
 
 ## 0.10.4 (July 25th, 2018)
 
