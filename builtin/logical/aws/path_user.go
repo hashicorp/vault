@@ -62,8 +62,8 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	switch {
 	case ok:
 		ttl = int64(ttlRaw.(int))
-	case role.DefaultTTL > 0:
-		ttl = int64(role.DefaultTTL / time.Second)
+	case role.DefaultSTSTTL > 0:
+		ttl = int64(role.DefaultSTSTTL / time.Second)
 	default:
 		ttl = int64(d.Get("ttl").(int))
 	}

@@ -179,7 +179,7 @@ updated with the new attributes.
   user has. With `assumed_role` and `federation_token`, the policy document will
   act as a filter on what the credentials can do.
 
-- `default_ttl` `(string)` - The default TTL for STS credentials. When a TTL is not
+- `default_sts_ttl` `(string)` - The default TTL for STS credentials. When a TTL is not
   specified when STS credentials are requested, and a default TTL is specified
   on the role, then this default TTL will be used. Valid only when
   `credential_type` is one of `assumed_role` or `federation_token`.
@@ -357,7 +357,7 @@ credentials retrieved through `/aws/creds` must be of the `iam_user` type.
 - `ttl` `(string: "3600s")` – Specifies the TTL for the use of the STS token.
   This is specified as a string with a duration suffix. Valid only when
   `credential_type` is `assumed_role` or `federation_token`. When not specified,
-  the `default_ttl` set for the role will be used. If that is also not set, then
+  the `default_sts_ttl` set for the role will be used. If that is also not set, then
   the default value of `3600s` will be used. AWS places limits
   on the maximum TTL allowed. See the AWS documentation on the `DurationSeconds`
   parameter for

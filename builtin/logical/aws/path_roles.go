@@ -62,7 +62,7 @@ will be passed in as the Policy parameter to the AssumeRole or
 GetFederationToken API call, acting as a filter on permissions available.`,
 			},
 
-			"default_ttl": &framework.FieldSchema{
+			"default_sts_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
 			},
@@ -212,14 +212,14 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		roleEntry.PolicyDocument = compacted
 	}
 
-	if defaultTTLRaw, ok := d.GetOk("default_ttl"); ok {
+	if defaultSTSTTLRaw, ok := d.GetOk("default_sts_ttl"); ok {
 		if legacyRole != "" {
-			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with ttl"), nil
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with default_sts_ttl"), nil
 		}
 		if !strutil.StrListContains(roleEntry.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(roleEntry.CredentialTypes, federationTokenCred) {
-			return logical.ErrorResponse(fmt.Sprintf("default_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred)), nil
+			return logical.ErrorResponse(fmt.Sprintf("default_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred)), nil
 		}
-		roleEntry.DefaultTTL = time.Duration(defaultTTLRaw.(int)) * time.Second
+		roleEntry.DefaultSTSTTL = time.Duration(defaultSTSTTLRaw.(int)) * time.Second
 	}
 
 	if legacyRole != "" {
@@ -397,7 +397,7 @@ type awsRoleEntry struct {
 	InvalidData              string        `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
 	ProhibitFlexibleCredPath bool          `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
 	Version                  int           `json:"version"`                               // Version number of the role format
-	DefaultTTL               time.Duration `json:"default_ttl"`                           // Default TTL for STS credentials
+	DefaultSTSTTL            time.Duration `json:"default_sts_ttl"`                       // Default TTL for STS credentials
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
@@ -406,7 +406,7 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 		"policy_arns":      r.PolicyArns,
 		"role_arns":        r.RoleArns,
 		"policy_document":  r.PolicyDocument,
-		"default_ttl":      r.DefaultTTL / time.Second,
+		"default_sts_ttl":  r.DefaultSTSTTL / time.Second,
 	}
 	if r.InvalidData != "" {
 		respData["invalid_data"] = r.InvalidData
