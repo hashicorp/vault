@@ -64,6 +64,10 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			continue
 		}
 
+		if policy.Name == "root" && len(policies) != 1 {
+			return nil, fmt.Errorf("other policies present along with root")
+		}
+
 		switch policy.Type {
 		case PolicyTypeACL:
 		default:
