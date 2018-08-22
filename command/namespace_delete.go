@@ -90,11 +90,12 @@ func (c *NamespaceDeleteCommand) Run(args []string) int {
 		return OutputSecret(c.UI, secret)
 	}
 
-	if !strings.HasSuffix(namespacePath, "/") {
-		namespacePath = namespacePath + "/"
-	}
 	if c.flagNamespace != notSetNamespace {
 		namespacePath = path.Join(c.flagNamespace, namespacePath)
+	}
+
+	if !strings.HasSuffix(namespacePath, "/") {
+		namespacePath = namespacePath + "/"
 	}
 
 	c.UI.Output(fmt.Sprintf("Success! Namespace deleted at: %s", namespacePath))
