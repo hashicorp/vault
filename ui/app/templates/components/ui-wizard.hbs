@@ -1,3 +1,9 @@
-{{#component tutorialComponent onDismiss=(action "dismissWizard") onAdvance=(action "advanceWizard")}}
+<div class="app-content">
+  {{yield}}
+</div>
+{{#component (if shouldRender tutorialComponent)
+  onDismiss=(action "dismissWizard")
+  onAdvance=(action "advanceWizard")
+}}
   {{component featureComponent componentState=componentState}}
 {{/component}}

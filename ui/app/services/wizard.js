@@ -26,6 +26,7 @@ export default Service.extend({
   tutorialComponent: null,
   featureComponent: null,
   componentState: null,
+  showWhenUnauthenticated: false,
 
   init() {
     this._super(...arguments);
@@ -96,6 +97,7 @@ export default Service.extend({
   },
 
   executeActions(actions, event) {
+    console.log(actions);
     for (let action of actions) {
       let type = action;
       if (action.type) {
@@ -117,6 +119,12 @@ export default Service.extend({
         case 'handleDismissed':
           this.handleDismissed();
           break;
+        case 'showTutorialWhenAuthenticated':
+          this.set('showWhenUnauthenticated', false);
+          break;
+        case 'showTutorialAlways':
+          this.set('showWhenUnauthenticated', true);
+          break;
         default:
           break;
       }
@@ -127,7 +135,6 @@ export default Service.extend({
     this.storage().removeItem(FEATURE_STATE);
     this.storage().removeItem(FEATURE_LIST);
     this.storage().removeItem(MACHINES);
-    this.storage().removeItem(COMPLETED_FEATURES);
   },
 
   saveFeatures(features) {
