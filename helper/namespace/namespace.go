@@ -3,6 +3,7 @@ package namespace
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strings"
 )
 
@@ -16,6 +17,11 @@ type nsContext struct {
 
 type contextValues struct{}
 
+type Namespace struct {
+	ID   string `json:"id"`
+	Path string `json:"path"`
+}
+
 const (
 	RootNamespaceID = "root"
 )
@@ -23,18 +29,14 @@ const (
 var (
 	contextNamespace contextValues = struct{}{}
 	ErrNoNamespace   error         = errors.New("no namespace")
+	RootNamespace    *Namespace    = &Namespace{
+		ID:   RootNamespaceID,
+		Path: "",
+	}
 )
 
-type Namespace struct {
-	ID   string `json:"id"`
-	Path string `json:"path"`
-}
-
-func New(id, path string) *Namespace {
-	return &Namespace{
-		ID:   id,
-		Path: path,
-	}
+var AdjustRequest = func(r *http.Request) (*http.Request, int) {
+	return r.WithContext(ContextWithNamespace(r.Context(), RootNamespace)), 0
 }
 
 func (n *Namespace) HasParent(possibleParent *Namespace) bool {
@@ -60,6 +62,18 @@ func ContextWithNamespace(ctx context.Context, ns *Namespace) context.Context {
 	}
 }
 
+func RootContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return ContextWithNamespace(context.Background(), RootNamespace)
+	}
+	return ContextWithNamespace(ctx, RootNamespace)
+}
+
+// This function caches the ns to avoid doing a .Value lookup over and over,
+// because it's called a *lot* in the request critical path. .Value is
+// concurrency-safe so uses some kind of locking/atomicity, but it should never
+// be read before first write, plus we don't believe this will be called from
+// different goroutines, so it should be safe.
 func FromContext(ctx context.Context) (*Namespace, error) {
 	if ctx == nil {
 		return nil, errors.New("context was nil")
@@ -72,20 +86,28 @@ func FromContext(ctx context.Context) (*Namespace, error) {
 		}
 	}
 
-	ns := ctx.Value(contextNamespace)
+	nsRaw := ctx.Value(contextNamespace)
+	if nsRaw == nil {
+		return nil, ErrNoNamespace
+	}
+
+	ns := nsRaw.(*Namespace)
 	if ns == nil {
 		return nil, ErrNoNamespace
 	}
 
 	if ok {
-		nsCtx.cachedNS = ns.(*Namespace)
+		nsCtx.cachedNS = ns
 	}
-
-	return ns.(*Namespace), nil
+	return ns, nil
 }
 
 func TestContext() context.Context {
-	return ContextWithNamespace(context.Background(), New(RootNamespaceID, ""))
+	return ContextWithNamespace(context.Background(), TestNamespace())
+}
+
+func TestNamespace() *Namespace {
+	return RootNamespace
 }
 
 // Canonicalize trims any prefix '/' and adds a trailing '/' to the

@@ -20,8 +20,13 @@ import (
 	"github.com/posener/complete"
 )
 
-// maxLineLength is the maximum width of any line.
-const maxLineLength int = 78
+const (
+	// maxLineLength is the maximum width of any line.
+	maxLineLength int = 78
+
+	// notSetNamespace is a flag value for a not-set namespace
+	notSetNamespace = "(not set)"
+)
 
 // reRemoveWhitespace is a regular expression for stripping whitespace from
 // a string.
@@ -39,6 +44,7 @@ type BaseCommand struct {
 	flagClientCert    string
 	flagClientKey     string
 	flagNamespace     string
+	flagNS            string
 	flagTLSServerName string
 	flagTLSSkipVerify bool
 	flagWrapTTL       time.Duration
@@ -120,7 +126,12 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	}
 
 	client.SetMFACreds(c.flagMFA)
-	client.SetNamespace(namespace.Canonicalize(c.flagNamespace))
+	switch {
+	case c.flagNS != notSetNamespace:
+		client.SetNamespace(namespace.Canonicalize(c.flagNS))
+	case c.flagNamespace != notSetNamespace:
+		client.SetNamespace(namespace.Canonicalize(c.flagNamespace))
+	}
 
 	c.client = client
 
@@ -242,11 +253,21 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			f.StringVar(&StringVar{
 				Name:       "namespace",
 				Target:     &c.flagNamespace,
-				Default:    "",
+				Default:    notSetNamespace, // this can never be a real value
 				EnvVar:     "VAULT_NAMESPACE",
 				Completion: complete.PredictAnything,
 				Usage: "The namespace to use for the command. Setting this is not " +
-					"necessary but allows using relative paths.",
+					"necessary but allows using relative paths. -ns can be used as " +
+					"shortcut.",
+			})
+
+			f.StringVar(&StringVar{
+				Name:       "ns",
+				Target:     &c.flagNS,
+				Default:    notSetNamespace, // this can never be a real value
+				Completion: complete.PredictAnything,
+				Hidden:     true,
+				Usage:      "Alias for -namespace.",
 			})
 
 			f.StringVar(&StringVar{

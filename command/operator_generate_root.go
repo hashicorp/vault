@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/base62"
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/xor"
@@ -123,8 +124,7 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 		Default:    "",
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
-		Usage: "Decode and output the generated root token. This option requires " +
-			"the \"-otp\" flag be set to the OTP used during initialization.",
+		Usage:      "The value to decode; setting this triggers a decode operation.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -233,9 +233,13 @@ func (c *OperatorGenerateRootCommand) Run(args []string) int {
 
 	switch {
 	case c.flagGenerateOTP:
-		return c.generateOTP()
+		otp, code := c.generateOTP(client, c.flagDRToken)
+		if code == 0 {
+			return PrintRaw(c.UI, otp)
+		}
+		return code
 	case c.flagDecode != "":
-		return c.decode(c.flagDecode, c.flagOTP)
+		return c.decode(client, c.flagDecode, c.flagOTP, c.flagDRToken)
 	case c.flagCancel:
 		return c.cancel(client, c.flagDRToken)
 	case c.flagInit:
@@ -252,41 +256,48 @@ func (c *OperatorGenerateRootCommand) Run(args []string) int {
 	}
 }
 
-// verifyOTP verifies the given OTP code is exactly 16 bytes.
-func (c *OperatorGenerateRootCommand) verifyOTP(otp string) error {
-	if len(otp) == 0 {
-		return fmt.Errorf("no OTP passed in")
-	}
-	otpBytes, err := base64.StdEncoding.DecodeString(otp)
-	if err != nil {
-		return errwrap.Wrapf("error decoding base64 OTP value: {{err}}", err)
-	}
-	if otpBytes == nil || len(otpBytes) != 16 {
-		return fmt.Errorf("decoded OTP value is invalid or wrong length")
-	}
-
-	return nil
-}
-
 // generateOTP generates a suitable OTP code for generating a root token.
-func (c *OperatorGenerateRootCommand) generateOTP() int {
-	buf := make([]byte, 16)
-	readLen, err := rand.Read(buf)
+func (c *OperatorGenerateRootCommand) generateOTP(client *api.Client, drToken bool) (string, int) {
+	f := client.Sys().GenerateRootStatus
+	if drToken {
+		f = client.Sys().GenerateDROperationTokenStatus
+	}
+	status, err := f()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error reading random bytes: %s", err))
-		return 2
+		c.UI.Error(fmt.Sprintf("Error getting root generation status: %s", err))
+		return "", 2
 	}
 
-	if readLen != 16 {
-		c.UI.Error(fmt.Sprintf("Read %d bytes when we should have read 16", readLen))
-		return 2
-	}
+	switch status.OTPLength {
+	case 0:
+		// This is the fallback case
+		buf := make([]byte, 16)
+		readLen, err := rand.Read(buf)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error reading random bytes: %s", err))
+			return "", 2
+		}
 
-	return PrintRaw(c.UI, base64.StdEncoding.EncodeToString(buf))
+		if readLen != 16 {
+			c.UI.Error(fmt.Sprintf("Read %d bytes when we should have read 16", readLen))
+			return "", 2
+		}
+
+		return base64.StdEncoding.EncodeToString(buf), 0
+
+	default:
+		otp, err := base62.Random(status.OTPLength, true)
+		if err != nil {
+			c.UI.Error(errwrap.Wrapf("Error reading random bytes: {{err}}", err).Error())
+			return "", 2
+		}
+
+		return otp, 0
+	}
 }
 
 // decode decodes the given value using the otp.
-func (c *OperatorGenerateRootCommand) decode(encoded, otp string) int {
+func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp string, drToken bool) int {
 	if encoded == "" {
 		c.UI.Error("Missing encoded value: use -decode=<string> to supply it")
 		return 1
@@ -296,38 +307,56 @@ func (c *OperatorGenerateRootCommand) decode(encoded, otp string) int {
 		return 1
 	}
 
-	tokenBytes, err := xor.XORBase64(encoded, otp)
+	f := client.Sys().GenerateRootStatus
+	if drToken {
+		f = client.Sys().GenerateDROperationTokenStatus
+	}
+	status, err := f()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error xoring token: %s", err))
-		return 1
+		c.UI.Error(fmt.Sprintf("Error getting root generation status: %s", err))
+		return 2
 	}
 
-	token, err := uuid.FormatUUID(tokenBytes)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error formatting base64 token value: %s", err))
-		return 1
-	}
+	switch status.OTPLength {
+	case 0:
+		// Backwards compat
+		tokenBytes, err := xor.XORBase64(encoded, otp)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error xoring token: %s", err))
+			return 1
+		}
 
-	return PrintRaw(c.UI, strings.TrimSpace(token))
+		token, err := uuid.FormatUUID(tokenBytes)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error formatting base64 token value: %s", err))
+			return 1
+		}
+
+		return PrintRaw(c.UI, strings.TrimSpace(token))
+
+	default:
+		tokenBytes, err := base64.RawStdEncoding.DecodeString(encoded)
+		if err != nil {
+			c.UI.Error(errwrap.Wrapf("Error decoding base64'd token: {{err}}", err).Error())
+			return 1
+		}
+
+		tokenBytes, err = xor.XORBytes(tokenBytes, []byte(otp))
+		if err != nil {
+			c.UI.Error(errwrap.Wrapf("Error xoring token: {{err}}", err).Error())
+			return 1
+		}
+
+		return PrintRaw(c.UI, string(tokenBytes))
+	}
 }
 
 // init is used to start the generation process
 func (c *OperatorGenerateRootCommand) init(client *api.Client, otp, pgpKey string, drToken bool) int {
 	// Validate incoming fields. Either OTP OR PGP keys must be supplied.
-	switch {
-	case otp == "" && pgpKey == "":
-		c.UI.Error("Error initializing: must specify either -otp or -pgp-key")
-		return 1
-	case otp != "" && pgpKey != "":
+	if otp != "" && pgpKey != "" {
 		c.UI.Error("Error initializing: cannot specify both -otp and -pgp-key")
 		return 1
-	case otp != "":
-		if err := c.verifyOTP(otp); err != nil {
-			c.UI.Error(fmt.Sprintf("Error initializing: invalid OTP: %s", err))
-			return 1
-		}
-	case pgpKey != "":
-		// OK
 	}
 
 	// Start the root generation
@@ -368,6 +397,10 @@ func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string, dr
 		c.UI.Error(wrapAtLength(
 			"No root generation is in progress. Start a root generation by " +
 				"running \"vault operator generate-root -init\"."))
+		c.UI.Warn(wrapAtLength(fmt.Sprintf(
+			"If starting root generation using the OTP method and generating "+
+				"your own OTP, the length of the OTP string needs to be %d "+
+				"characters in length.", status.OTPLength)))
 		return 1
 	}
 
@@ -493,6 +526,13 @@ func (c *OperatorGenerateRootCommand) printStatus(status *api.GenerateRootStatus
 		out = append(out, fmt.Sprintf("Encoded Token | %s", status.EncodedToken))
 	case status.EncodedRootToken != "":
 		out = append(out, fmt.Sprintf("Encoded Root Token | %s", status.EncodedRootToken))
+	}
+	if status.OTP != "" {
+		c.UI.Warn(wrapAtLength("A One-Time-Password has been generated for you and is shown in the OTP field. You will need this value to decode the resulting root token, so keep it safe."))
+		out = append(out, fmt.Sprintf("OTP | %s", status.OTP))
+	}
+	if status.OTPLength != 0 {
+		out = append(out, fmt.Sprintf("OTP Length | %d", status.OTPLength))
 	}
 
 	output := columnOutput(out, nil)

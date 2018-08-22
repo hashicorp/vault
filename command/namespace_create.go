@@ -79,14 +79,19 @@ func (c *NamespaceCreateCommand) Run(args []string) int {
 		return 2
 	}
 
-	err = client.Sys().CreateNamespace(namespacePath)
+	_, err = client.Logical().Write("sys/namespaces/"+namespacePath, nil)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating namespace: %s", err))
 		return 2
 	}
 
+	if !strings.HasSuffix(namespacePath, "/") {
+		namespacePath = namespacePath + "/"
+	}
+	if c.flagNamespace != notSetNamespace {
+		namespacePath = path.Join(c.flagNamespace, namespacePath)
+	}
 	// Output full path
-	fullPath := path.Join(c.flagNamespace, namespacePath) + "/"
-	c.UI.Output(fmt.Sprintf("Success! Namespace created at: %s", fullPath))
+	c.UI.Output(fmt.Sprintf("Success! Namespace created at: %s", namespacePath))
 	return 0
 }

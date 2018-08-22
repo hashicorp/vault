@@ -43,7 +43,7 @@ type BoolVar struct {
 
 func (f *FlagSet) BoolVar(i *BoolVar) {
 	def := i.Default
-	if v := os.Getenv(i.EnvVar); v != "" {
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
 		if b, err := strconv.ParseBool(v); err == nil {
 			def = b
 		}
@@ -104,7 +104,7 @@ type IntVar struct {
 
 func (f *FlagSet) IntVar(i *IntVar) {
 	initial := i.Default
-	if v := os.Getenv(i.EnvVar); v != "" {
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
 		if i, err := strconv.ParseInt(v, 0, 64); err == nil {
 			initial = int(i)
 		}
@@ -168,7 +168,7 @@ type Int64Var struct {
 
 func (f *FlagSet) Int64Var(i *Int64Var) {
 	initial := i.Default
-	if v := os.Getenv(i.EnvVar); v != "" {
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
 		if i, err := strconv.ParseInt(v, 0, 64); err == nil {
 			initial = i
 		}
@@ -232,7 +232,7 @@ type UintVar struct {
 
 func (f *FlagSet) UintVar(i *UintVar) {
 	initial := i.Default
-	if v := os.Getenv(i.EnvVar); v != "" {
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
 		if i, err := strconv.ParseUint(v, 0, 64); err == nil {
 			initial = uint(i)
 		}
@@ -296,7 +296,7 @@ type Uint64Var struct {
 
 func (f *FlagSet) Uint64Var(i *Uint64Var) {
 	initial := i.Default
-	if v := os.Getenv(i.EnvVar); v != "" {
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
 		if i, err := strconv.ParseUint(v, 0, 64); err == nil {
 			initial = i
 		}
@@ -360,7 +360,7 @@ type StringVar struct {
 
 func (f *FlagSet) StringVar(i *StringVar) {
 	initial := i.Default
-	if v := os.Getenv(i.EnvVar); v != "" {
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
 		initial = v
 	}
 
@@ -417,7 +417,7 @@ type Float64Var struct {
 
 func (f *FlagSet) Float64Var(i *Float64Var) {
 	initial := i.Default
-	if v := os.Getenv(i.EnvVar); v != "" {
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
 		if i, err := strconv.ParseFloat(v, 64); err == nil {
 			initial = i
 		}
@@ -481,7 +481,7 @@ type DurationVar struct {
 
 func (f *FlagSet) DurationVar(i *DurationVar) {
 	initial := i.Default
-	if v := os.Getenv(i.EnvVar); v != "" {
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
 		if d, err := time.ParseDuration(appendDurationSuffix(v)); err == nil {
 			initial = d
 		}
@@ -558,7 +558,7 @@ type StringSliceVar struct {
 
 func (f *FlagSet) StringSliceVar(i *StringSliceVar) {
 	initial := i.Default
-	if v := os.Getenv(i.EnvVar); v != "" {
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
 		parts := strings.Split(v, ",")
 		for i := range parts {
 			parts[i] = strings.TrimSpace(parts[i])
@@ -751,14 +751,14 @@ func (f *FlagSet) Var(value flag.Value, name, usage string) {
 
 // -- helpers
 func envDefault(key, def string) string {
-	if v := os.Getenv(key); v != "" {
+	if v, exist := os.LookupEnv(key); exist {
 		return v
 	}
 	return def
 }
 
 func envBoolDefault(key string, def bool) bool {
-	if v := os.Getenv(key); v != "" {
+	if v, exist := os.LookupEnv(key); exist {
 		b, err := strconv.ParseBool(v)
 		if err != nil {
 			panic(err)
@@ -769,7 +769,7 @@ func envBoolDefault(key string, def bool) bool {
 }
 
 func envDurationDefault(key string, def time.Duration) time.Duration {
-	if v := os.Getenv(key); v != "" {
+	if v, exist := os.LookupEnv(key); exist {
 		d, err := time.ParseDuration(v)
 		if err != nil {
 			panic(err)
