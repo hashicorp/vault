@@ -20,7 +20,10 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-const appNamePrefix = "vault-"
+const (
+	appNamePrefix = "vault-"
+	retryTimeout  = 80 * time.Second
+)
 
 // client offers higher level Azure operations that provide a simpler interface
 // for handlers. It in turn relies on a Provider interface to access the lower level
@@ -266,15 +269,15 @@ func (b *azureSecretBackend) getClientSettings(ctx context.Context, config *azur
 }
 
 // retry will repeatedly call f until one of:
+//
 //   * f returns true
 //   * the context is cancelled
-//   * 3 minutes elapse
+//   * 80 seconds elapses. Vault's default request timeout is 90s; we want to expire before then.
 //
-// Delays are random but will average 5 seconds. The hardcoded durations are the same
-// ones used in the Azure CLI tool.
+// Delays are random but will average 5 seconds.
 func retry(ctx context.Context, f func() (interface{}, bool, error)) (interface{}, error) {
 	delayTimer := time.NewTimer(0)
-	endCh := time.NewTimer(3 * time.Minute).C
+	endCh := time.NewTimer(retryTimeout).C
 
 	for {
 		if result, done, err := f(); done {
