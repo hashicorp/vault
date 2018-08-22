@@ -1,4 +1,3 @@
-  <UiWizard />
   {{#if showNav}}
     <NavHeader data-test-header-with-nav @class="{{if consoleOpen 'panel-open'}} {{if consoleFullscreen ' panel-fullscreen'}}" as |Nav|>
       <Nav.home>
@@ -132,11 +131,15 @@
             (is-after (now interval=1000) auth.tokenExpirationDate)
           )
         }}
+          <UiWizard>
           {{outlet}}
+          </UiWizard>
         {{/unless}}
       </div>
     </section>
   {{else}}
+    <UiWizard>
     {{outlet}}
+    </UiWizard>
   {{/if}}
 
