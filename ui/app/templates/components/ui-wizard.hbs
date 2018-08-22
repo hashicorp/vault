@@ -5,5 +5,5 @@
   onDismiss=(action "dismissWizard")
   onAdvance=(action "advanceWizard")
 }}
-  {{component featureComponent componentState=componentState}}
-{{/component}}
+{{component featureComponent componentState=componentState onAdvance=(action "advanceFeature")}}
+

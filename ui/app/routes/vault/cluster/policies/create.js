@@ -7,7 +7,6 @@ export default Ember.Route.extend(UnloadModelRoute, UnsavedModelRoute, {
   version: inject.service(),
   model() {
     let policyType = this.policyType();
-
     if (!this.get('version.hasSentinel') && policyType !== 'acl') {
       return this.transitionTo('vault.cluster.policies', policyType);
     }

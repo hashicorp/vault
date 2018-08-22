@@ -7,6 +7,7 @@ import getStorage from 'vault/lib/token-storage';
 
 import TutorialMachineConfig from 'vault/machines/tutorial-machine';
 import SecretsMachineConfig from 'vault/machines/secrets-machine';
+import PoliciesMachineConfig from 'vault/machines/policies-machine';
 
 const TutorialMachine = Machine(TutorialMachineConfig);
 let FeatureMachine = null;
@@ -14,7 +15,7 @@ const TUTORIAL_STATE = 'vault-tutorial-state';
 const FEATURE_LIST = 'vault-feature-list';
 const FEATURE_STATE = 'vault-feature-state';
 const COMPLETED_FEATURES = 'vault-completed-list';
-const MACHINES = { secrets: SecretsMachineConfig };
+const MACHINES = { secrets: SecretsMachineConfig, policies: PoliciesMachineConfig };
 
 export default Service.extend({
   router: inject.service(),
@@ -36,19 +37,11 @@ export default Service.extend({
       this.saveExtState(TUTORIAL_STATE, state.value);
     }
     this.saveState('currentState', this.getExtState(TUTORIAL_STATE));
-
+    debugger;
     let stateNodes = TutorialMachine.getStateNodes(this.get('currentState'));
     this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
     if (this.storageHasKey(FEATURE_LIST)) {
       this.set('featureList', this.getExtState(FEATURE_LIST));
-      if (this.storageHasKey(FEATURE_STATE)) {
-        this.saveState('featureState', this.getExtState(FEATURE_STATE));
-      } else {
-        if (FeatureMachine != null) {
-          this.saveState('featureState', FeatureMachine.initialState);
-          this.saveExtState(FEATURE_STATE, this.get('featureState'));
-        }
-      }
       this.buildFeatureMachine();
     }
   },
@@ -148,12 +141,19 @@ export default Service.extend({
     if (this.get('featureList') === null) {
       return;
     }
-    const FeatureMachineConfig = MACHINES[this.get('featureList').objectAt(0)];
-    FeatureMachine = Machine(FeatureMachineConfig);
+    if (this.storageHasKey(FEATURE_STATE)) {
+      this.saveState('featureState', this.getExtState(FEATURE_STATE));
+    } else {
+      if (FeatureMachine === null) {
+        this.saveState('featureState', FeatureMachine.initialState);
+        this.saveExtState(FEATURE_STATE, this.get('featureState'));
+      }
+    }
     this.set('currentMachine', this.get('featureList').objectAt(0));
-    this.saveState('featureState', FeatureMachine.initialState);
-    this.saveExtState(FEATURE_STATE, this.get('featureState'));
-    this.executeActions(FeatureMachine.initialState.actions);
+    const FeatureMachineConfig = MACHINES[this.get('currentMachine')];
+    FeatureMachine = Machine(FeatureMachineConfig);
+    let stateNodes = FeatureMachine.getStateNodes(this.get('featureState'));
+    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
   },
 
   completeFeature() {
@@ -161,11 +161,11 @@ export default Service.extend({
     let completed = features.pop();
 
     if (!this.getExtState(COMPLETED_FEATURES)) {
-      this.saveExtState([completed]);
+      this.saveExtState(COMPLETED_FEATURES, JSON.stringify([completed]));
     } else {
       this.saveExtState(
         COMPLETED_FEATURES,
-        this.getExtState(COMPLETED_FEATURES).toArray().addObject(completed)
+        JSON.stringify(this.getExtState(COMPLETED_FEATURES).toArray().addObject(completed))
       );
     }
 
