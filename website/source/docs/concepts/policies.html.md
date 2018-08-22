@@ -240,7 +240,7 @@ injected into policies.
 | `identity.entity.metadata.<<metadata key>>`                            | Metadata associated with the entity for the given key                        |
 | `identity.entity.aliases.<<mount accessor>>.id`                        | Entity alias ID for the given mount                                          |
 | `identity.entity.aliases.<<mount accessor>>.name`                      | Entity alias name for the given mount                                        |
-| `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata assoicated with the alias for the given mount and metadata key      |
+| `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata associated with the alias for the given mount and metadata key      |
 | `identity.groups.ids.<<group id>>.name`                                | The group name for the given group ID                                        |
 | `identity.groups.names.<<group name>>.id`                              | The group ID for the given group name                                        |
 
