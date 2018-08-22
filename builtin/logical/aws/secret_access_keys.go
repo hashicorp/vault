@@ -111,7 +111,7 @@ func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 }
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
-	displayName, roleName, roleArn, policy string,
+	displayName, roleName, roleArn, policy, externalId string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
 	stsClient, err := b.clientSTS(ctx, s)
 	if err != nil {
@@ -127,6 +127,10 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	}
 	if policy != "" {
 		assumeRoleInput.SetPolicy(policy)
+	}
+
+	if externalId != "" {
+		assumeRoleInput.SetExternalId(externalId)
 	}
 	tokenResp, err := stsClient.AssumeRole(assumeRoleInput)
 
