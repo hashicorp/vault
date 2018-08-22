@@ -18,12 +18,30 @@
         {{list.item.id}}
       </Item.content>
       <Item.menu>
+        {{#with (concat currentNamespace (if currentNamespace "/") list.item.id) as |targetNamespace|}}
+          {{#if (contains targetNamespace accessibleNamespaces)}}
+            <li class="action">
+              {{#link-to "vault.cluster.secrets" (query-params namespace=targetNamespace) class="is-block"}}
+                Switch to namespace
+              {{/link-to}}
+            </li>
+          {{/if}}
+        {{/with}}
         <li class="action">
           <ConfirmAction
             @confirmButtonClasses="button is-primary"
             @confirmButtonText="Remove"
             @buttonClasses="link is-destroy"
-            @onConfirmAction={{action (perform Item.callMethod "destroyRecord" list.item (concat "Successfully deleted namespace: " list.item.id) "There was an error deleting this namespace: ") }}
+            @onConfirmAction={{action
+              (perform
+                Item.callMethod
+                "destroyRecord"
+                list.item
+                (concat "Successfully deleted namespace: " list.item.id)
+                "There was an error deleting this namespace: "
+                (action "refreshNamespaceList")
+              )
+            }}
             @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
             @showConfirm={{get this (concat "shouldDelete-" list.item.id)}}
             @class={{if (get this (concat "shouldDelete-" list.item.id)) "message is-block is-warning is-outline"}}

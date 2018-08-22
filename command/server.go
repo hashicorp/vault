@@ -979,6 +979,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			ReadHeaderTimeout: 10 * time.Second,
 			ReadTimeout:       30 * time.Second,
 			IdleTimeout:       5 * time.Minute,
+			ErrorLog:          c.logger.StandardLogger(nil),
 		}
 		go server.Serve(ln.Listener)
 	}

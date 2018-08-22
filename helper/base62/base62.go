@@ -32,8 +32,16 @@ func Decode(input string) []byte {
 // If truncate is true, the result will be a string of the requested length.
 // Otherwise, it will be the encoded result of length bytes of random data.
 func Random(length int, truncate bool) (string, error) {
+	bytesNeeded := length
+
+	// ~0.74 bytes are needed per output character in truncate mode. We'll
+	// ask for just a little more than that.
+	if truncate {
+		bytesNeeded = (bytesNeeded * 3 / 4) + 1
+	}
+
 	for {
-		buf, err := uuid.GenerateRandomBytes(length)
+		buf, err := uuid.GenerateRandomBytes(bytesNeeded)
 		if err != nil {
 			return "", err
 		}

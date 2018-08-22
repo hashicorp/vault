@@ -895,10 +895,10 @@
 			"revisionTime": "2018-07-11T13:03:03Z"
 		},
 		{
-			"checksumSHA1": "LNa/QGlcDDDflNa3srgRR8QLwcc=",
+			"checksumSHA1": "L8Mp7efUUkIGjlhp5iK34H06rl4=",
 			"path": "github.com/go-ldap/ldap",
-			"revision": "c6ce48312dc899d500d77926d9d3c33a0e01259c",
-			"revisionTime": "2018-07-03T15:26:01Z"
+			"revision": "dc997b2033d4b4ab6de47b555eaf76888a81d33d",
+			"revisionTime": "2018-08-10T05:44:51Z"
 		},
 		{
 			"checksumSHA1": "W+IoIME5mgWjwU+dOlh3DZEZEN4=",
@@ -1375,10 +1375,10 @@
 			"revisionTime": "2018-08-16T20:17:55Z"
 		},
 		{
-			"checksumSHA1": "uq65Yaz1dxt01zXEnMeouhAc/Us=",
+			"checksumSHA1": "fTT9z8zhrp0abUWgB326BeEWFbI=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-azure",
-			"revision": "fbc388a69201d2163e0fc6fe833c0373052f1fda",
-			"revisionTime": "2018-08-16T20:18:46Z"
+			"revision": "59fe7c55a83175ca7216eab458ac03b68895b40f",
+			"revisionTime": "2018-08-21T21:57:39Z"
 		},
 		{
 			"checksumSHA1": "zkmWfxanMFQXWQIAboXj/jqF12g=",
@@ -2055,6 +2055,10 @@
 			"path": "github.com/ugorji/go/codec",
 			"revision": "7d51bbe6161dcb8f32a1252c27668ce36e3ef16b",
 			"revisionTime": "2018-06-28T10:27:55Z"
+		},
+		{
+			"path": "gitub.com/hashicorp/vault-plugin-auth-jwt",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "I7CQfkQXt/QDxO9gutjoqu+ajkI=",

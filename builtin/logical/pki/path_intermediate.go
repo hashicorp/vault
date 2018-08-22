@@ -232,7 +232,7 @@ func (b *backend) pathSetSignedIntermediate(ctx context.Context, req *logical.Re
 	}
 
 	// Build a fresh CRL
-	err = buildCRL(ctx, b, req)
+	err = buildCRL(ctx, b, req, true)
 
 	return nil, err
 }

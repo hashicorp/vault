@@ -19,8 +19,9 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 		Path:      "role/testrole",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"bind_secret_id":  false,
-			"bound_cidr_list": []string{"127.0.0.1/8"},
+			"bind_secret_id":    false,
+			"bound_cidr_list":   []string{"127.0.0.1/8"},
+			"token_bound_cidrs": []string{"10.0.0.0/8"},
 		},
 		Storage: s,
 	})
@@ -53,10 +54,69 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
-
-	// Login should pass
 	if resp.Auth == nil {
-		t.Fatalf("expected login to succeed")
+		t.Fatal("expected login to succeed")
+	}
+	if len(resp.Auth.BoundCIDRs) != 1 {
+		t.Fatal("bad token bound cidrs")
+	}
+	if resp.Auth.BoundCIDRs[0].String() != "10.0.0.0/8" {
+		t.Fatalf("bad: %s", resp.Auth.BoundCIDRs[0].String())
+	}
+
+	// Override with a secret-id value, verify it doesn't pass
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"bind_secret_id": true,
+		},
+		Storage: s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	roleSecretIDReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "role/testrole/secret-id",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"token_bound_cidrs": []string{"11.0.0.0/24"},
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
+	if err == nil {
+		t.Fatal("expected error due to mismatching subnet relationship")
+	}
+	roleSecretIDReq.Data["token_bound_cidrs"] = "10.0.0.0/24"
+	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	secretID := resp.Data["secret_id"]
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "login",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"role_id":   roleID,
+			"secret_id": secretID,
+		},
+		Storage:    s,
+		Connection: &logical.Connection{RemoteAddr: "127.0.0.1"},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if resp.Auth == nil {
+		t.Fatal("expected login to succeed")
+	}
+	if len(resp.Auth.BoundCIDRs) != 1 {
+		t.Fatal("bad token bound cidrs")
+	}
+	if resp.Auth.BoundCIDRs[0].String() != "10.0.0.0/24" {
+		t.Fatalf("bad: %s", resp.Auth.BoundCIDRs[0].String())
 	}
 }
 

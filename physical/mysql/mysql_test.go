@@ -102,7 +102,7 @@ func TestMySQLHABackend(t *testing.T) {
 
 	ha, ok := b.(physical.HABackend)
 	if !ok {
-		t.Fatalf("zookeeper does not implement HABackend")
+		t.Fatalf("MySQL does not implement HABackend")
 	}
 	physical.ExerciseHABackend(t, ha, ha)
 }

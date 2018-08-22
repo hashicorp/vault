@@ -83,7 +83,7 @@ The response should be JSON and looks something like this:
 ```
 
 This response contains our initial root token. It also includes the unseal key.
-You can use the unseal key to unseal the Vault and use the root token perform
+You can use the unseal key to unseal the Vault and use the root token to perform
 other requests in Vault that require authentication.
 
 To make this guide easy to copy-and-paste, we will be using the environment
