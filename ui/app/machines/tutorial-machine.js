@@ -46,6 +46,8 @@ export default {
         DISMISS: 'dismissed',
         CONTINUE: 'active',
         AUTH: 'active.select',
+        UNSEAL: 'active.unseal',
+        LOGIN: 'active.login',
       },
       onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
     },
