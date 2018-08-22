@@ -11,7 +11,7 @@ description: |-
 # FoundationDB Storage Backend
 
 The FoundationDB storage backend is used to persist Vault's data in
-[FoundationDB][foundationdb] table.
+[FoundationDB][foundationdb].
 
 The backend needs to be explicitly enabled at build time, and is not available
 in the standard Vault binary distribution. Please refer to the documentation
