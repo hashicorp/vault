@@ -21,6 +21,10 @@ export default Ember.Component.extend({
       this.get('wizard').transitionTutorialMachine(this.get('currentState'), event);
     },
 
+    advanceFeature() {
+      this.get('wizard').transitionFeatureMachine(this.get('featureState'), 'CONTINUE');
+    },
+
     pauseWizard() {
       this.get('wizard').transitionTutorialMachine(this.get('currentState'), 'PAUSE');
     },
