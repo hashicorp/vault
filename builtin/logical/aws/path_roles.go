@@ -406,7 +406,7 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 		"policy_arns":      r.PolicyArns,
 		"role_arns":        r.RoleArns,
 		"policy_document":  r.PolicyDocument,
-		"default_sts_ttl":  r.DefaultSTSTTL / time.Second,
+		"default_sts_ttl":  int64(r.DefaultSTSTTL.Seconds()),
 	}
 	if r.InvalidData != "" {
 		respData["invalid_data"] = r.InvalidData

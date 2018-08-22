@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -63,7 +62,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	case ok:
 		ttl = int64(ttlRaw.(int))
 	case role.DefaultSTSTTL > 0:
-		ttl = int64(role.DefaultSTSTTL / time.Second)
+		ttl = int64(role.DefaultSTSTTL.Seconds())
 	default:
 		ttl = int64(d.Get("ttl").(int))
 	}
