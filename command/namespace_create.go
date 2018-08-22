@@ -85,12 +85,14 @@ func (c *NamespaceCreateCommand) Run(args []string) int {
 		return 2
 	}
 
-	if !strings.HasSuffix(namespacePath, "/") {
-		namespacePath = namespacePath + "/"
-	}
 	if c.flagNamespace != notSetNamespace {
 		namespacePath = path.Join(c.flagNamespace, namespacePath)
 	}
+
+	if !strings.HasSuffix(namespacePath, "/") {
+		namespacePath = namespacePath + "/"
+	}
+
 	// Output full path
 	c.UI.Output(fmt.Sprintf("Success! Namespace created at: %s", namespacePath))
 	return 0
