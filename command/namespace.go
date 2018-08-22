@@ -20,6 +20,8 @@ func (c *NamespaceCommand) Help() string {
 	helpText := `
 Usage: vault namespace <subcommand> [options] [args]
 
+  ** The namespaces feature is part of Vault Enterprise. **
+
   This command groups subcommands for interacting with Vault namespaces.
   These subcommands operate in the context of the namespace that the
   currently logged in token belongs to.
