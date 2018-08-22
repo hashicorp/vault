@@ -74,19 +74,20 @@ $ vault auth enable alicloud
 #### Configure the policies on the role.
 
 ```
-$ vault write auth/alicloud/role/elk arn='acs:ram::5138828231865461:role/elk'
+$ vault write auth/alicloud/role/dev-role arn='acs:ram::5138828231865461:role/dev-role'
 ```
 
 #### Perform the login operation
 
 ```
-$ vault write auth/alicloud/login role=dev-role \
+$ vault write auth/alicloud/login \
+        role=dev-role \
         identity_request_url=$IDENTITY_REQUEST_URL_BASE_64 \
         identity_request_headers=$IDENTITY_REQUEST_HEADERS_BASE_64
 ```
 
 For the RAM auth method, generating the signed request is a non-standard
-operation. The Vault cli supports generating this for you:
+operation. The Vault CLI supports generating this for you:
 
 ```
 $ vault login -method=alicloud access_key=... secret_key=... security_token=... region=...
@@ -102,7 +103,7 @@ on the instance.
 
 An example of how to generate the required request values for the `login` method
 can be found found in the 
-[vault cli source code](https://github.com/hashicorp/vault-plugin-auth-alicloud/blob/master/tools/tools.go).
+[Vault CLI source code](https://github.com/hashicorp/vault-plugin-auth-alicloud/blob/master/tools/tools.go).
 
 ## API
 

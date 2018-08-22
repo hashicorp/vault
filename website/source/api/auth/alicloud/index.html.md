@@ -10,9 +10,9 @@ description: |-
 
 This is the API documentation for the Vault AliCloud auth method. For
 general information about the usage and operation of the AliCloud method, please
-see the [Vault AliCloud method documentation](/docs/auth/alicloud.html).
+see the [Vault AliCloud auth method documentation](/docs/auth/alicloud.html).
 
-This documentation assumes the AliCloud method is mounted at the `/auth/alicloud`
+This documentation assumes the AliCloud auth method is mounted at the `/auth/alicloud`
 path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
@@ -46,7 +46,7 @@ will be able to perform the login operation.
 
 ```json
 {
-  "arn": "acs:ram::5138828231865461:role/elk",
+  "arn": "acs:ram::5138828231865461:role/dev-role",
   "policies": [
     "dev",
     "prod"
@@ -61,7 +61,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/auth/alicloud/role/elk
+    http://127.0.0.1:8200/v1/auth/alicloud/role/dev-role
 ```
 
 ## Read Role
@@ -81,7 +81,7 @@ Returns the previously registered role configuration.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/auth/alicloud/role/elk
+    http://127.0.0.1:8200/v1/auth/alicloud/role/dev-role
 ```
 
 ### Sample Response
@@ -89,7 +89,7 @@ $ curl \
 ```json
 {
   "data": {
-    "arn": "acs:ram::5138828231865461:role/elk",
+    "arn": "acs:ram::5138828231865461:role/dev-role",
     "policies": [
       "default",
       "dev",
@@ -125,7 +125,6 @@ $ curl \
 {
   "data": {
     "keys": [
-      "elk",
       "dev-role",
       "prod-role"
     ]
@@ -163,8 +162,9 @@ GetCallerIdentity request.
 | :------- | :--------------------------- | :--------------------- |
 | `POST`   | `/auth/alicloud/login`       | `200 application/json` |
 
-### Sample Payload
+### Parameters
 
+- `role` `(string: <required>)` - Name of the role.
 - `identity_request_url` `(string: <required>)` - Base64-encoded HTTP URL used in
   the signed request.
 - `identity_request_headers` `(string: <required>)` - Base64-encoded,
@@ -178,6 +178,7 @@ GetCallerIdentity request.
 
 ```json
 {
+  "role": "dev-role",
   "identity_request_url": "aWRlbnRpdHlabrVxdWVzdF91cmw=",
   "identity_request_headers": "aWRlimRpdHlfcmVxdWVzdF9oZWFkZXJz"
 }
@@ -208,11 +209,11 @@ $ curl \
       "account_id":    "5138828231865461",
       "user_id":       "216959339000654321",
       "role_id":       "4657-abcd",
-      "arn":           "acs:ram::5138828231865461:assumed-role/elk/vm-ram-i-rj978rorvlg76urhqh7q",
+      "arn":           "acs:ram::5138828231865461:assumed-role/dev-role/vm-ram-i-rj978rorvlg76urhqh7q",
       "identity_type": "assumed-role",
       "principal_id":  "vm-ram-i-rj978rorvlg76urhqh7q",
       "request_id":    "D6E46F10-F26C-4AA0-BB69-FE2743D9AE62",
-      "role_name":     "elk"
+      "role_name":     "dev-role"
     },
     "policies": [
       "default",
