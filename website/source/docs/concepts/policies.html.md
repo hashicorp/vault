@@ -273,7 +273,7 @@ path "secret/metadata/groups/{{identity.entity.id}}/*" {
 ```
 
 ~> When developing templated policies, use IDs wherever possible.  Each ID is unique to the user and names can change over
-time. This ensure that if a given user or group name is changed, that the policy will be mapped to the intended entity
+time. This ensures that if a given user or group name is changed, the policy will be mapped to the intended entity
 or group.
 
 ## Fine-Grained Control
