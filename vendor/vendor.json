@@ -265,6 +265,36 @@
 			"revisionTime": "2018-01-04T20:38:59Z"
 		},
 		{
+			"checksumSHA1": "YCtIqzuVlzVA7jh1GQF6BWaom6E=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk",
+			"revision": "ef9535c490beb6b59620d93f6c7ba88e9b3b1ad0",
+			"revisionTime": "2018-08-22T15:14:34Z"
+		},
+		{
+			"checksumSHA1": "mir9zgkLR7muF4aPQtTV9T91B7E=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials",
+			"revision": "ef9535c490beb6b59620d93f6c7ba88e9b3b1ad0",
+			"revisionTime": "2018-08-22T15:14:34Z"
+		},
+		{
+			"checksumSHA1": "/qgQnVuKg8C8p1Wh2KXdTKMBr5c=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/endpoints",
+			"revision": "ef9535c490beb6b59620d93f6c7ba88e9b3b1ad0",
+			"revisionTime": "2018-08-22T15:14:34Z"
+		},
+		{
+			"checksumSHA1": "N9A+9VmoMs38kijGWNVv0vsgi54=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/services/sts",
+			"revision": "ef9535c490beb6b59620d93f6c7ba88e9b3b1ad0",
+			"revisionTime": "2018-08-22T15:14:34Z"
+		},
+		{
+			"checksumSHA1": "GhlHTW5NOefmf1THrTLlEnrhOQA=",
+			"path": "github.com/aliyun/aliyun-oss-go-sdk/oss",
+			"revision": "36bf7aa2f916f274137aedd05d1d36f6a3c0f4a6",
+			"revisionTime": "2018-06-15T12:55:16Z"
+		},
+		{
 			"checksumSHA1": "DUX4pOK9NKSAzC6RRXniLviyByA=",
 			"path": "github.com/armon/go-metrics",
 			"revision": "58588f401c2cc130a7308a52ca3bc6c0a76db04b",
