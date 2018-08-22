@@ -22,7 +22,7 @@
           {{#if (contains targetNamespace accessibleNamespaces)}}
             <li class="action">
               {{#link-to "vault.cluster.secrets" (query-params namespace=targetNamespace) class="is-block"}}
-                Switch to this namespace
+                Switch to namespace
               {{/link-to}}
             </li>
           {{/if}}
