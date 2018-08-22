@@ -117,7 +117,7 @@ entities attempting to login. At least one of the bound values must be set.
 - `bound_cidrs` `(array: <optional>)` - If set, a list of CIDRs valid as the
   source address for login requests. This value is also encoded into any
   resulting token.
-- `groups_claim` `(string: <required>)` - The claim to use to uniquely identify
+- `groups_claim` `(string: <optional>)` - The claim to use to uniquely identify
   the set of groups to which the user belongs; this will be used as the names
   for the Identity group aliases created due to a successful login. The claim
   value must be a list of strings.

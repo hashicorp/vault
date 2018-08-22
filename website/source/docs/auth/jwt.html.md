@@ -21,7 +21,7 @@ The default path is `/jwt`. If this auth method was enabled at a
 different path, specify `-path=/my-path` in the CLI.
 
 ```text
-$ vault write auth/jwt/login role=demo token=...
+$ vault write auth/jwt/login role=demo jwt=...
 ```
 
 ### Via the API
