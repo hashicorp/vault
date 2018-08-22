@@ -6,7 +6,7 @@ export default {
       on: {
         CONTINUE: {
           appRole: {
-            cond: (extState, event) => event.selected === 'appRole',
+            cond: type => type === 'appRole',
           },
         },
       },
