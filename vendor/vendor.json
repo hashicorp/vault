@@ -1375,10 +1375,10 @@
 			"revisionTime": "2018-08-16T20:17:55Z"
 		},
 		{
-			"checksumSHA1": "uq65Yaz1dxt01zXEnMeouhAc/Us=",
+			"checksumSHA1": "fTT9z8zhrp0abUWgB326BeEWFbI=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-azure",
-			"revision": "fbc388a69201d2163e0fc6fe833c0373052f1fda",
-			"revisionTime": "2018-08-16T20:18:46Z"
+			"revision": "59fe7c55a83175ca7216eab458ac03b68895b40f",
+			"revisionTime": "2018-08-21T21:57:39Z"
 		},
 		{
 			"checksumSHA1": "zkmWfxanMFQXWQIAboXj/jqF12g=",
@@ -2055,6 +2055,10 @@
 			"path": "github.com/ugorji/go/codec",
 			"revision": "7d51bbe6161dcb8f32a1252c27668ce36e3ef16b",
 			"revisionTime": "2018-06-28T10:27:55Z"
+		},
+		{
+			"path": "gitub.com/hashicorp/vault-plugin-auth-jwt",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "I7CQfkQXt/QDxO9gutjoqu+ajkI=",
