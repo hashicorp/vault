@@ -21,6 +21,8 @@ export default {
           key: 'init',
           initial: 'setup',
           on: { DONE: 'select' },
+          onExit: ['showTutorialWhenAuthenticated'],
+          onEntry: ['showTutorialAlways'],
           states: {
             setup: {
               on: { CONTINUE: 'save' },
@@ -46,8 +48,8 @@ export default {
         DISMISS: 'dismissed',
         CONTINUE: 'active',
         AUTH: 'active.select',
-        UNSEAL: 'active.unseal',
-        LOGIN: 'active.login',
+        UNSEAL: 'active.init.unseal',
+        LOGIN: 'active.init.login',
       },
       onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
     },
