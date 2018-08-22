@@ -267,7 +267,7 @@ path "secret/data/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869
   capabilities = ["create", "update", "read", "delete"]
 }
 
-path "secret/metadata/groups/{{identity.entity.id}}/*" {
+path "secret/metadata/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869741.name}}/*" {
   capabilities = ["list"]
 }
 ```
