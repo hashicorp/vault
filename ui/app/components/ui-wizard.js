@@ -15,6 +15,7 @@ export default Ember.Component.extend({
   featureComponent: computed.alias('wizard.featureComponent'),
   tutorialComponent: computed.alias('wizard.tutorialComponent'),
   componentState: computed.alias('wizard.componentState'),
+  nextFeature: computed.alias('wizard.nextFeature'),
 
   actions: {
     dismissWizard() {
