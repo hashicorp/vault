@@ -2,9 +2,49 @@ export default {
   key: 'tutorial',
   initial: 'idle',
   states: {
+    init: {
+      key: 'init',
+      initial: 'idle',
+      on: { DONE: 'active.select' },
+      onEntry: [
+        'showTutorialAlways',
+        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
+      ],
+      onExit: ['showTutorialWhenAuthenticated'],
+      states: {
+        idle: {
+          on: {
+            START: 'active.setup',
+            SAVE: 'active.save',
+            UNSEAL: 'active.unseal',
+            LOGIN: 'active.login',
+          },
+        },
+        active: {
+          onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-active' },
+          states: {
+            setup: {
+              on: { TOSAVE: 'save' },
+              onEntry: { type: 'render', level: 'feature', component: 'wizard/init-setup' },
+            },
+            save: {
+              on: { TOUNSEAL: 'unseal' },
+              onEntry: { type: 'render', level: 'feature', component: 'wizard/init-save-keys' },
+            },
+            unseal: {
+              on: { TOLOGIN: 'login' },
+              onEntry: { type: 'render', level: 'feature', component: 'wizard/init-unseal' },
+            },
+            login: {
+              onEntry: { type: 'render', level: 'feature', component: 'wizard/init-login' },
+            },
+          },
+        },
+      },
+    },
     active: {
       key: 'feature',
-      initial: 'init',
+      initial: 'select',
       on: {
         DISMISS: 'dismissed',
       },
@@ -17,39 +57,14 @@ export default {
           onEntry: { type: 'render', level: 'feature', component: 'wizard/features-selection' },
         },
         feature: {},
-        init: {
-          key: 'init',
-          initial: 'setup',
-          on: { DONE: 'select' },
-          onExit: ['showTutorialWhenAuthenticated'],
-          onEntry: ['showTutorialAlways'],
-          states: {
-            setup: {
-              on: { CONTINUE: 'save' },
-              onEntry: { type: 'render', level: 'feature', component: 'wizard/init-setup' },
-            },
-            save: {
-              on: { CONTINUE: 'unseal' },
-              onEntry: { type: 'render', level: 'feature', component: 'wizard/init-save-keys' },
-            },
-            unseal: {
-              on: { CONTINUE: 'login' },
-              onEntry: { type: 'render', level: 'feature', component: 'wizard/init-unseal' },
-            },
-            login: {
-              onEntry: { type: 'render', level: 'feature', component: 'wizard/init-login' },
-            },
-          },
-        },
       },
     },
     idle: {
       on: {
+        INIT: 'init.idle',
+        AUTH: 'active.select',
         DISMISS: 'dismissed',
         CONTINUE: 'active',
-        AUTH: 'active.select',
-        UNSEAL: 'active.init.unseal',
-        LOGIN: 'active.init.login',
       },
       onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
     },

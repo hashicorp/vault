@@ -19,7 +19,8 @@ export default Ember.Controller.extend(DEFAULTS, {
   initSuccess(resp) {
     this.set('loading', false);
     this.set('keyData', resp);
-    this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'CONTINUE');
+    this.get('wizard').set('initEvent', 'SAVE');
+    this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'TOSAVE');
   },
 
   initError(e) {
