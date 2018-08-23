@@ -1,0 +1,9 @@
+<div class="wizard-section">
+  <h2 class="title is-6">{{headerText}}</h2>
+  {{yield}}
+  {{#if docText}}
+    <DocLink @path={{docPath}}>
+      <ICon @glyph='learn' @size=16 /> {{docText}}
+    </DocLink>
+  {{/if}}
+</div>

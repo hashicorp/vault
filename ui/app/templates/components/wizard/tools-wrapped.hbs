@@ -1,9 +1,11 @@
 <WizardContent @headerText="Tools" @glyph="tour">
-  <h2 class="title is-6">Copying your wrapped token</h2>
-  <p>
-    Your data is now encrypted. You can recover the data using the token on this page, but be careful because if you lose the token you won't be able to retrieve your data! We will use this token for the next few steps, so copy the token and then click on "Lookup" in the sidebar.
-  </p>
-  <DocLink @path="/api/system/wrapping-wrap.html">
-    <ICon @glyph="learn" @size=16 /> API: Wrap Data
-  </DocLink>
+  <WizardSection 
+    @headerText="Copying your wrapped token" 
+    @docText="API: Wrap Data"
+    @docPath="/api/system/wrapping-wrap.html"
+  >
+    <p>
+      Your data is now encrypted. You can recover the data using the token on this page, but be careful because if you lose the token you won't be able to retrieve your data! We will use this token for the next few steps, so copy the token and then click on "Lookup" in the sidebar.
+    </p>
+  </WizardSection>
 </WizardContent>

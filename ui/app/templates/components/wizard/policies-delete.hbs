@@ -1,9 +1,11 @@
 <WizardContent @headerText="Policies" @glyph="tour">
-  <h2 class="title is-6">Deleting your policy</h2>
-  <p>
-    You can delete your test policy by clicking the "..." icon to the right of the policy name. Click on "Delete" to remove it.
-  </p>
-  <DocLink @path="/docs/concepts/policies.html">
-    <ICon @glyph="document" @size=16 /> Docs: Policies
-  </DocLink>
+  <WizardSection 
+    @headerText="Deleting your policy" 
+    @docText="Docs: Policies"
+    @docPath="/docs/concepts/policies.html"
+  >
+    <p>
+      You can delete your test policy by clicking the "..." icon to the right of the policy name. Click on "Delete" to remove it.
+    </p>
+  </WizardSection>
 </WizardContent>

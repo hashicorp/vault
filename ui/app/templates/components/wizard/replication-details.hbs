@@ -1,11 +1,13 @@
 <WizardContent @headerText="Replication" @glyph="tour">
-  <h2 class="title is-6">Your cluster information</h2>
-  <p>
-    Here you can see the details about your new replication cluster, manage or disable replication, and handle secondary clusters. You can also get a quick status by hovering over the "Replication" link at the top. 
-  </p>
-  <DocLink @path="/docs/internals/replication.html">
-    <ICon @glyph="learn" @size=16 /> Docs: Replication
-  </DocLink>
+  <WizardSection 
+    @headerText="Your cluster information" 
+    @docText="Docs: Replication"
+    @docPath="/docs/internals/replication.html"
+  >
+    <p>
+      Here you can see the details about your new replication cluster, manage or disable replication, and handle secondary clusters. You can also get a quick status by hovering over the "Replication" link at the top. 
+    </p>
+  </WizardSection>
   <button type="button" {{action onAdvance}}>
     {{nextFeature}}
   </button>

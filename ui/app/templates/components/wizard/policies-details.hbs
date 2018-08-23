@@ -1,9 +1,11 @@
 <WizardContent @headerText="Policies" @glyph="tour">
-  <h2 class="title is-6">Your new policy</h2>
-  <p>
-    Good job! Here you can see your new policy, but because of the rules that we wrote in the policy, we won't be able to edit it (try clicking the "Edit" toggle to check). Let's go back to the list of policies by clicking on "ACL Policies" in the sidebar.
-  </p>
-  <DocLink @path="/docs/concepts/policies.html">
-    <ICon @glyph="document" @size=16 /> Docs: Policies
-  </DocLink>
+  <WizardSection 
+    @headerText="Your new policy" 
+    @docText="Docs: Policies"
+    @docPath="/docs/concepts/policies.html"
+  >
+    <p>
+      Good job! Here you can see your new policy, but because of the rules that we wrote in the policy, we won't be able to edit it (try clicking the "Edit" toggle to check). Let's go back to the list of policies by clicking on "ACL Policies" in the sidebar.
+    </p>
+  </WizardSection>
 </WizardContent>

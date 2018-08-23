@@ -1,9 +1,11 @@
 <WizardContent @headerText="Tools" @glyph="tour">
-  <h2 class="title is-6">Unwrapping your data</h2>
-  <p>
-    We saved this step for the end because unwrapping the token will revoke it, so we can only do this once. Paste your token into the input and click "Unwrap Data"
-  </p>
-  <DocLink @path="/api/system/wrapping-unwrap.html">
-    <ICon @glyph="learn" @size=16 /> API: Unwrap Data
-  </DocLink>
+  <WizardSection 
+    @headerText="Unwrapping your data" 
+    @docText="API: Unwrap Data"
+    @docPath="/api/system/wrapping-unwrap.html"
+  >
+    <p>
+      We saved this step for the end because unwrapping the token will revoke it, so we can only do this once. Paste your token into the input and click "Unwrap Data"
+    </p>
+  </WizardSection>
 </WizardContent>

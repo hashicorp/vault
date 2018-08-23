@@ -1,9 +1,11 @@
 <WizardContent @headerText="Tools" @glyph="tour">
-  <h2 class="title is-6">Information about your data</h2>
-  <p>
-    Good job! You can see some basic information about your wrapped data, including the expiration time. Next up, we'll take the token you still have in your clipboard and rewrap it to keep it active and extend that expiration time. Click on "Rewrap" in the sidebar.
-  </p>
-  <DocLink @path="/api/system/wrapping-lookup.html">
-    <ICon @glyph="learn" @size=16 /> API: Lookup Data
-  </DocLink>
+  <WizardSection 
+    @headerText="Information about your data" 
+    @docText="API: Lookup Data"
+    @docPath="/api/system/wrapping-lookup.html"
+  >
+    <p>
+      Good job! You can see some basic information about your wrapped data, including the expiration time. Next up, we'll take the token you still have in your clipboard and rewrap it to keep it active and extend that expiration time. Click on "Rewrap" in the sidebar.
+    </p>
+  </WizardSection>
 </WizardContent>

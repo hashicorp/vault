@@ -1,14 +1,16 @@
 <WizardContent @headerText="Policies" @glyph="tour">
-  <h2 class="title is-6">Creating a policy</h2>
-  <p>
-    Let's use "my-new-policy" for your policy name copy the policy below to try it out:
-  </p>
-  <code>
-    path "secret/foo" {
-      capabilities = ["read"]  
-    }
-  </code>
-  <DocLink @path="/docs/concepts/policies.html">
-    <ICon @glyph="document" @size=16 /> Docs: Policies
-  </DocLink>
+  <WizardSection 
+    @headerText="Creating a policy" 
+    @docText="Docs: Policies"
+    @docPath="/docs/concepts/policies.html"
+  >
+    <p>
+      Let's use "my-new-policy" for your policy name copy the policy below to try it out:
+    </p>
+    <code>
+      path "secret/foo" {
+        capabilities = ["read"]  
+      }
+    </code>
+  </WizardSection>
 </WizardContent>

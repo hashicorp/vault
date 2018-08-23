@@ -1,9 +1,11 @@
 <WizardContent @headerText="Tools" @glyph="tour">
-  <h2 class="title is-6">Rewrapping your data<</h2>
-  <p>
-    Paste your token into the input and click "Rewrap Token" to transform your token into a new one. Don't worry though, it will still have the same data.
-  </p>
-  <DocLink @path="/api/system/wrapping-rewrap.html">
-    <ICon @glyph="learn" @size=16 /> API: Rewrap Data
-  </DocLink>
+  <WizardSection 
+    @headerText="Rewrapping your data" 
+    @docText="API: Rewrap Data"
+    @docPath="/api/system/wrapping-rewrap.html"
+  >
+    <p>
+      Paste your token into the input and click "Rewrap Token" to transform your token into a new one. Don't worry though, it will still have the same data.
+    </p>
+  </WizardSection>
 </WizardContent>

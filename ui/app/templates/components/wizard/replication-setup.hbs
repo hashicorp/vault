@@ -1,13 +1,16 @@
 <WizardContent @headerText="Replication" @glyph="tour">
-  <h2 class="title is-6">Setting up Replication</h2>
-  <p>
-    Here you can see the details about your new replication cluster, manage or disable replication, and handle secondary clusters. You can also get a quick status by hovering over the "Replication" link at the top. 
-  </p>
-  <DocLink @path="/docs/internals/replication.html">
-    <ICon @glyph="learn" @size=16 /> Docs: Replication
-  </DocLink>
-  <h2 class="title is-6">Cluster mode</h2>
-  <p>
-    A cluster is set as either a primary or secondary. The primary cluster is authoritative, and is the only cluster allowed to perform actions that write to the underlying data storage, such as modifying policies or secrets. Secondary clusters can service all other operations and forward any writes to the primary cluster.
-  </p>
+  <WizardSection 
+    @headerText="Setting up Replication" 
+    @docText="Docs: Replication"
+    @docPath="/docs/internals/replication.html"
+  >
+    <p>
+      Here you can see the details about your new replication cluster, manage or disable replication, and handle secondary clusters. You can also get a quick status by hovering over the "Replication" link at the top. 
+    </p>
+  </WizardSection>
+  <WizardSection @headerText="Cluster mode">
+    <p>
+      A cluster is set as either a primary or secondary. The primary cluster is authoritative, and is the only cluster allowed to perform actions that write to the underlying data storage, such as modifying policies or secrets. Secondary clusters can service all other operations and forward any writes to the primary cluster.
+    </p>
+  </WizardSection>
 </WizardContent>

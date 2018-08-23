@@ -1,9 +1,11 @@
 <WizardContent @headerText="Tools" @glyph="tour">
-  <h2 class="title is-6">Lookup wrapped data</h2>
-  <p>
-    Lookup lets you see information about your token without unwrapping it or changing it. Paste your token here and click "Lookup". If you find that your data didn't copy for some reason, you can always go back and do it again.
-  </p>
-  <DocLink @path="/api/system/wrapping-lookup.html">
-    <ICon @glyph="learn" @size=16 /> API: Lookup Data
-  </DocLink>
+  <WizardSection 
+    @headerText="Lookup wrapped data" 
+    @docText="API: Lookup Data"
+    @docPath="/api/system/wrapping-lookup.html"
+  >
+    <p>
+      Lookup lets you see information about your token without unwrapping it or changing it. Paste your token here and click "Lookup". If you find that your data didn't copy for some reason, you can always go back and do it again.
+    </p>
+  </WizardSection>
 </WizardContent>

@@ -1,8 +1,13 @@
 <WizardContent @headerText="Policies" @glyph="tour">
-  <h2 class="title is-6">Other kinds of policies</h2>
-  <p>
-    Good! Now you're ready to go writing your own policies. We only explored ACL policies, but there are two other types of policies available to Enterprise customers that might be what you need. RGP (Role Governing Policies) are policies tied to particular tokens, entities, or groups. EGP (Endpoint Governing Policies) are tied to specific paths instead of tokens.
-  </p>
+  <WizardSection 
+    @headerText="Other kinds of policies" 
+    @docText="Docs: Policies"
+    @docPath="/docs/concepts/policies.html"
+  >
+    <p>
+      Good! Now you're ready to go writing your own policies. We only explored ACL policies, but there are two other types of policies available to Enterprise customers that might be what you need. RGP (Role Governing Policies) are policies tied to particular tokens, entities, or groups. EGP (Endpoint Governing Policies) are tied to specific paths instead of tokens.
+    </p>
+  </WizardSection>
   <button type="button" {{action onAdvance}}>
     {{nextFeature}}
   </button>

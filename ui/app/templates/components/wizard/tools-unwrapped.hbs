@@ -1,11 +1,13 @@
 <WizardContent @headerText="Tools" @glyph="tour">
-  <h2 class="title is-6">Your unwrapped data</h2>
-  <p>
-    Here you can see that your data survived intact. These tools are mostly handy for applications to use, but if you ever do need to wrap data or handle the wrapping token, now you know how.
-  </p>
-  <DocLink @path="/api/system/wrapping-unwrap.html">
-    <ICon @glyph="learn" @size=16 /> API: Unwrap Data
-  </DocLink>
+  <WizardSection 
+    @headerText="Your unwrapped data" 
+    @docText="API: Unwrap Data"
+    @docPath="/api/system/wrapping-unwrap.html"
+  >
+    <p>
+      Here you can see that your data survived intact. These tools are mostly handy for applications to use, but if you ever do need to wrap data or handle the wrapping token, now you know how.
+    </p>
+  </WizardSection>
   <button type="button" {{action onAdvance}}>
     {{nextFeature}}
   </button>

@@ -1,9 +1,11 @@
 <WizardContent @headerText="Policies" @glyph="tour">
-  <h2 class="title is-6">Choosing a policy type</h2>
-  <p>
-    Policies in Vault are a way for you to control what data can be accessed, including things like creating new secrets, listing users, or even entire Vault features. To get started with something simple, click on "Create ACL policy"
-  </p>
-  <DocLink @path="/docs/concepts/policies.html">
-    <ICon @glyph="document" @size=16 /> Docs: Policies
-  </DocLink>
+  <WizardSection 
+    @headerText="Choosing a policy type" 
+    @docText="Docs: Policies"
+    @docPath="/docs/concepts/policies.html"
+  >
+    <p>
+      Policies in Vault are a way for you to control what data can be accessed, including things like creating new secrets, listing users, or even entire Vault features. To get started with something simple, click on "Create ACL policy"
+    </p>
+  </WizardSection>
 </WizardContent>

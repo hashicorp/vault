@@ -10,6 +10,7 @@ import SecretsMachineConfig from 'vault/machines/secrets-machine';
 import PoliciesMachineConfig from 'vault/machines/policies-machine';
 import ReplicationMachineConfig from 'vault/machines/replication-machine';
 import ToolsMachineConfig from 'vault/machines/tools-machine';
+import AuthMachineConfig from 'vault/machines/auth-machine';
 
 const TutorialMachine = Machine(TutorialMachineConfig);
 let FeatureMachine = null;
@@ -22,6 +23,7 @@ const MACHINES = {
   policies: PoliciesMachineConfig,
   replication: ReplicationMachineConfig,
   tools: ToolsMachineConfig,
+  authentication: AuthMachineConfig,
 };
 
 export default Service.extend({

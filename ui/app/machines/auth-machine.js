@@ -3,6 +3,10 @@ export default {
   initial: 'enable',
   states: {
     enable: {
+      onEntry: [
+        { type: 'routeTransition', params: ['vault.cluster.access'] },
+        { type: 'render', level: 'feature', component: 'wizard/auth-enable' },
+      ],
       on: {
         CONTINUE: {
           appRole: {
