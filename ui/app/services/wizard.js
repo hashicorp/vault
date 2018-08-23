@@ -97,7 +97,6 @@ export default Service.extend({
   },
 
   executeActions(actions, event) {
-    console.log(actions);
     for (let action of actions) {
       let type = action;
       if (action.type) {
@@ -108,7 +107,9 @@ export default Service.extend({
           this.set(`${action.level}Component`, action.component);
           break;
         case 'routeTransition':
-          this.get('router').transitionTo(...action.params);
+          Ember.run.next(() => {
+            this.get('router').transitionTo(...action.params);
+          });
           break;
         case 'saveFeatures':
           this.saveFeatures(event.features);
