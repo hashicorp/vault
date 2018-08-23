@@ -35,7 +35,7 @@ token:
     $ curl \
         --header "X-Consul-Token: my-management-token" \
         --request PUT \
-        --data '{"Name": "sample", "Type": "management"}' \
+        --data '{"Name": "vault-mgmt", "Type": "management"}' \
         https://consul.rocks/v1/acl/create
     ```
 
