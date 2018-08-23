@@ -69,8 +69,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 	ah.logger.Info("starting auth handler")
 	defer func() {
 		am.Shutdown()
-		close(ah.DoneCh)
 		close(ah.OutputCh)
+		close(ah.DoneCh)
 		ah.logger.Info("auth handler stopped")
 	}()
 
@@ -148,7 +148,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			select {
 			case <-ctx.Done():
 				ah.logger.Info("shutdown triggered")
-				return
+				continue
 
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")
