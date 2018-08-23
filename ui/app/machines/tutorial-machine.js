@@ -70,7 +70,11 @@ export default {
     },
     dismissed: {
       on: { CONTINUE: 'idle' },
-      onEntry: [{ type: 'render', level: 'tutorial', component: null }, 'handleDismissed'],
+      onEntry: [
+        { type: 'render', level: 'feature', component: null },
+        { type: 'render', level: 'tutorial', component: null },
+        'handleDismissed',
+      ],
     },
     paused: {
       on: { CONTINUE: ['handlePause'] },

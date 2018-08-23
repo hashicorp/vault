@@ -1,9 +1,7 @@
-<<<<<<< HEAD
-<div class="app-content">
+<div class="app-content {{if (and shouldRender featureComponent) "wizard-open"}}">
   {{yield}}
 </div>
 {{#component (if shouldRender tutorialComponent)
-  onDismiss=(action "dismissWizard")
   onAdvance=(action "advanceWizard")
 }}
 {{component featureComponent componentState=componentState nextFeature=nextFeature onAdvance=(action "advanceFeature")}}
