@@ -5,10 +5,12 @@
 }
 
 .ui-wizard-container .app-content {
-  padding-right: 324px;
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+}
+.ui-wizard-container .app-content.wizard-open {
+  padding-right: 324px;
 }
 
 .ui-wizard {
@@ -20,7 +22,7 @@
   position: fixed;
   right: $size-6;
   bottom: $size-6;
-  top: $size-6;
+  top: calc(4.5 * #{$size-6});
   overflow: auto;
   .doc-link {
     margin-top: $size-5;
@@ -30,12 +32,20 @@
 
 .wizard-header {
   margin-bottom: $size-5;
+  position: relative;
+}
+.wizard-dismiss-menu {
+  position: absolute;
+  right: $size-6;
+  top: $size-6;
+  z-index: 10;
 }
 
 .ui-wizard.collapsed {
   position: fixed;
   top: 4rem;
   right: 2rem;
+  bottom: auto;
   height: auto;
   min-height: 0;
   background: $black;
