@@ -635,22 +635,6 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}
 
-	// If the request was to renew a token, and if there are group aliases set
-	// in the auth object, then the group memberships should be refreshed
-	if strings.HasPrefix(req.Path, "auth/token/renew") &&
-		resp != nil &&
-		resp.Auth != nil &&
-		resp.Auth.EntityID != "" &&
-		resp.Auth.GroupAliases != nil &&
-		c.identityStore != nil {
-		err := c.identityStore.refreshExternalGroupMembershipsByEntityID(resp.Auth.EntityID, resp.Auth.GroupAliases)
-		if err != nil {
-			c.logger.Error("failed to refresh external group memberships", "error", err)
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, auth, retErr
-		}
-	}
-
 	// Only the token store is allowed to return an auth block, for any
 	// other request this is an internal error. We exclude renewal of a token,
 	// since it does not need to be re-registered
@@ -814,10 +798,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 			auth.EntityID = entity.ID
 			if auth.GroupAliases != nil {
-				err = c.identityStore.refreshExternalGroupMembershipsByEntityID(auth.EntityID, auth.GroupAliases)
+				validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(auth.EntityID, auth.GroupAliases)
 				if err != nil {
 					return nil, nil, err
 				}
+				auth.GroupAliases = validAliases
 			}
 		}
 
