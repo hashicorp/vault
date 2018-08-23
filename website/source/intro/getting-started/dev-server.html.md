@@ -15,170 +15,104 @@ piece of the Vault architecture that interacts with the data storage and
 backends. All operations done via the Vault CLI interact with the server over a
 TLS connection.
 
-<nav class="tabs">
-  <ul>
-    <li>
-      <a href="#" class="is-active" data-tab-for="cli">
-        Command Line (CLI)
-      </a>
-    </li>
-    <li>
-      <a href="#" data-tab-for="ui">
-        Vault Web UI
-      </a>
-    </li>
-  </ul>
-</nav>
+In this page, we'll start and interact with the Vault server to understand how
+the server is started.
 
-<div id="cli" class="tabs-content is-active">
-  First, we're going to start a Vault _dev server_. The dev server is a built-in,
-  pre-configured server that is not very secure but useful for playing with Vault
-  locally. Later in this guide we'll configure and start a real server.
+## Starting the Dev Server
 
-  To start the Vault dev server, run:
+First, we're going to start a Vault _dev server_. The dev server is a built-in,
+pre-configured server that is not very secure but useful for playing with Vault
+locally. Later in this guide we'll configure and start a real server.
 
-  ```text
-  $ vault server -dev
-  ==> Vault server configuration:
+To start the Vault dev server, run:
 
-                       Cgo: disabled
-           Cluster Address: https://127.0.0.1:8201
-                Listener 1: tcp (addr: "127.0.0.1:8200", cluster address: "127.0.0.1:8201", tls: "disabled")
-                 Log Level: info
-                     Mlock: supported: false, enabled: false
-          Redirect Address: http://127.0.0.1:8200
-                   Storage: inmem
-                   Version: Vault v1.2.3
-               Version Sha: ...
+```text
+$ vault server -dev
+==> Vault server configuration:
 
-  WARNING! dev mode is enabled! In this mode, Vault runs entirely in-memory
-  and starts unsealed with a single unseal key. The root token is already
-  authenticated to the CLI, so you can immediately begin using Vault.
+                     Cgo: disabled
+         Cluster Address: https://127.0.0.1:8201
+              Listener 1: tcp (addr: "127.0.0.1:8200", cluster address: "127.0.0.1:8201", tls: "disabled")
+               Log Level: info
+                   Mlock: supported: false, enabled: false
+        Redirect Address: http://127.0.0.1:8200
+                 Storage: inmem
+                 Version: Vault v1.2.3
+             Version Sha: ...
 
-  You may need to set the following environment variable:
+WARNING! dev mode is enabled! In this mode, Vault runs entirely in-memory
+and starts unsealed with a single unseal key. The root token is already
+authenticated to the CLI, so you can immediately begin using Vault.
 
-      $ export VAULT_ADDR='http://127.0.0.1:8200'
+You may need to set the following environment variable:
 
-  The unseal key and initial root token are displayed below in case you want to
-  seal/unseal the Vault or re-authenticate.
+    $ export VAULT_ADDR='http://127.0.0.1:8200'
 
-  Unseal Key: 1aKM7rNnyW+7Jx1XDAXFswgkRVe+78JB28k/bel90jY=
-  Root Token: root
+The unseal key and initial root token are displayed below in case you want to
+seal/unseal the Vault or re-authenticate.
 
-  Development mode should NOT be used in production installations!
+Unseal Key: 1aKM7rNnyW+7Jx1XDAXFswgkRVe+78JB28k/bel90jY=
+Root Token: root
 
-  ==> Vault server started! Log data will stream in below:
+Development mode should NOT be used in production installations!
 
-  # ...
-  ```
+==> Vault server started! Log data will stream in below:
 
-  You should see output similar to that above. Vault does not fork, so it will
-  continue to run in the foreground. Open another shell or terminal tab to run the
-  remaining commands.
+# ...
+```
 
-  The dev server stores all its data in-memory (but still encrypted), listens on
-  `localhost` without TLS, and automatically unseals and shows you the unseal key
-  and root access key. **Do not run a dev server in production!**
+You should see output similar to that above. Vault does not fork, so it will
+continue to run in the foreground. Open another shell or terminal tab to run the
+remaining commands.
 
-  With the dev server running, do the following three things before anything else:
+The dev server stores all its data in-memory (but still encrypted), listens on
+`localhost` without TLS, and automatically unseals and shows you the unseal key
+and root access key. **Do not run a dev server in production!**
 
-    1. Launch a new terminal session.
+With the dev server running, do the following three things before anything else:
 
-    2. Copy and run the `export VAULT_ADDR ...` command from the terminal
-       output. This will configure the Vault client to talk to our dev server.
+  1. Launch a new terminal session.
 
-    3. Save the unseal key somewhere. Don't worry about _how_ to save this
-       securely. For now, just save it anywhere.
+  2. Copy and run the `export VAULT_ADDR ...` command from the terminal
+     output. This will configure the Vault client to talk to our dev server.
 
-    4. Do the same as step 3, but with the root token. We'll use this later.
+  3. Save the unseal key somewhere. Don't worry about _how_ to save this
+     securely. For now, just save it anywhere.
 
-  ## Verify the Server is Running
-  
-  As instructed, copy and execute `export VAULT_ADDR='http://127.0.0.1:8200'`.
+  4. Do the same as step 3, but with the root token. We'll use this later.
 
-  Verify the server is running by running the `vault status` command. This should
-  succeed and exit with exit code 0.
+## Verify the Server is Running
 
-  If it ran successfully, the output should look like the below:
+As instructed, copy and execute `export VAULT_ADDR='http://127.0.0.1:8200'`.
 
-  ```text
-  $ vault status
-  Key             Value
-  ---             -----
-  Sealed          false
-  Total Shares    1
-  Version         (version unknown)
-  Cluster Name    vault-cluster-81109a1a
-  Cluster ID      f6e0aa8a-700e-38b8-5dc5-4265c880b2a1
-  HA Enabled      false
-  ```
+Verify the server is running by running the `vault status` command. This should
+succeed and exit with exit code 0.
 
-  If the output looks different, especially if the numbers are different or the
-  Vault is sealed, then restart the dev server and try again. The only reason
-  these would ever be different is if you're running a dev server from going
-  through this guide previously.
+If it ran successfully, the output should look like the below:
 
-  We'll cover what this output means later in the guide.
+```text
+$ vault status
+Key             Value
+---             -----
+Sealed          false
+Total Shares    1
+Version         (version unknown)
+Cluster Name    vault-cluster-81109a1a
+Cluster ID      f6e0aa8a-700e-38b8-5dc5-4265c880b2a1
+HA Enabled      false
+```
 
-  ## Next
+If the output looks different, especially if the numbers are different or the
+Vault is sealed, then restart the dev server and try again. The only reason
+these would ever be different is if you're running a dev server from going
+through this guide previously.
 
-  Congratulations! You've started your first Vault server. We haven't stored
-  any secrets yet, but we'll do that in the next section.
+We'll cover what this output means later in the guide.
 
-  Next, we're going to
-  [read and write our first secrets](/intro/getting-started/first-secret.html).
-</div>
+## Next
 
-<div id="ui" class="tabs-content">
-  We're going to start a Vault _server_ with the
-  <a href="/docs/configuration/builder.html">configuration file</a> that you
-  created.
+Congratulations! You've started your first Vault server. We haven't stored
+any secrets yet, but we'll do that in the next section.
 
-  To start the Vault server, run:
-
-  ```text
-  $ vault server -config=vault-config.hcl
-  ==> Vault server configuration:
-
-             Cgo: disabled
-      Listener 1: tcp (addr: "127.0.0.1:8200", cluster address: "127.0.0.1:8201", tls: "disabled")
-       Log Level: info
-           Mlock: supported: false, enabled: false
-         Storage: file
-         Version: Vault v0.1.2
-     Version Sha: ...
-
-  ==> Vault server started! Log data will stream in below:
-
-  # ...
-  ```
-
-  You should see output similar to that above. Vault does not fork, so it will
-  continue to run in the foreground.
-
-  ## Verify the Server is Running
-
-  Verify the server is running by running the `vault status` command. This should
-  succeed and exit with exit code 0.
-
-  If it ran successfully, the output should look like the below:
-
-  ```text
-  $ vault status
-  Key             Value
-  ---             -----
-  Sealed          false
-  Total Shares    1
-  Version         (version unknown)
-  Cluster Name    vault-cluster-81109a1a
-  Cluster ID      f6e0aa8a-700e-38b8-5dc5-4265c880b2a1
-  HA Enabled      false
-  ```
-
-  ## Next
-
-  Congratulations! You've started your first Vault server. You can now view the
-  Vault Web UI (at <a href="http://localhost:4200/ui">http://localhost:4200/ui</a>
-  if you are running Vault locally) to guide you through the rest of getting set up.
-
-</div>
+Next, we're going to
+[read and write our first secrets](/intro/getting-started/first-secret.html).
