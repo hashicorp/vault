@@ -5,6 +5,7 @@ const { Component, computed } = Ember;
 
 export default Component.extend({
   tagName: 'a',
+  classNames: ['doc-link'],
   attributeBindings: ['target', 'rel', 'href'],
 
   layout: hbs`{{yield}}`,
