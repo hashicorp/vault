@@ -516,18 +516,7 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, names .
 					groups = append(directGroups, inheritedGroups...)
 				}
 			}
-			subst, templated, err := identity.PopulateString(&identity.PopulateStringInput{
-				String: policy.Raw,
-				Entity: entity,
-				Groups: groups,
-			})
-			if err != nil {
-				return nil, &TemplateError{Err: errwrap.Wrapf(fmt.Sprintf("error performing templating on policy %q: {{err}}", policy.Name), err)}
-			}
-			if !subst {
-				ps.logger.Warn("found templated policy that reported no substitutions", "policy", policy.Name)
-			}
-			p, err := ParseACLPolicy(templated)
+			p, err := parseACLPolicyWithTemplating(policy.Raw, true, entity, groups)
 			if err != nil {
 				return nil, errwrap.Wrapf(fmt.Sprintf("error parsing templated policy %q: {{err}}", policy.Name), err)
 			}

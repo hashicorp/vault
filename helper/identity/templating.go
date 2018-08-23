@@ -2,6 +2,7 @@ package identity
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -162,7 +163,7 @@ func performTemplating(input string, entity *Entity, groups []*Group) (string, e
 		}
 
 		if found == nil {
-			return "", errors.New("group not found")
+			return "", fmt.Errorf("entity is not a member of group %q", accessorSplit[0])
 		}
 
 		trimmed = accessorSplit[1]

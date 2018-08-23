@@ -227,9 +227,9 @@ credentials, the policy would grant `read` access on the appropriate path.
 
 ## Templated Policies
 
-The policy syntax allows for doing variable replacement in the policy strings
+The policy syntax allows for doing variable replacement in some policy strings
 with values available to the token. Currently `identity` information can be
-injected into policies.
+injected, and currently the `path` keys in policies allow injection.
 
 ### Parameters
 
@@ -243,6 +243,8 @@ injected into policies.
 | `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata associated with the alias for the given mount and metadata key      |
 | `identity.groups.ids.<<group id>>.name`                                | The group name for the given group ID                                        |
 | `identity.groups.names.<<group name>>.id`                              | The group ID for the given group name                                        |
+| `identity.groups.names.<<group id>>.metadata.<<metadata key>>`         | Metadata associated with the group for the given key                                        |
+| `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                                        |
 
 ### Examples
 
@@ -272,9 +274,10 @@ path "secret/metadata/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7
 }
 ```
 
-~> When developing templated policies, use IDs wherever possible.  Each ID is unique to the user and names can change over
-time. This ensures that if a given user or group name is changed, the policy will be mapped to the intended entity
-or group.
+ ~> When developing templated policies, use IDs wherever possible. Each ID is
+ unique to the user, whereas names can change over time and can be reused. This
+ ensures that if a given user or group name is changed, the policy will be
+ mapped to the intended entity or group.
 
 ## Fine-Grained Control
 
