@@ -132,7 +132,7 @@ func (c *Core) setupExpiration() error {
 	view := c.systemBarrierView.SubView(expirationSubPath)
 
 	// Create the manager
-	mgr := NewExpirationManager(c, view, c.logger.ResetNamed("expiration"))
+	mgr := NewExpirationManager(c, view, c.baseLogger.Named("expiration"))
 	c.expiration = mgr
 
 	// Link the token store to this

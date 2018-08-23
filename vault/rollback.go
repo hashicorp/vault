@@ -242,7 +242,7 @@ func (c *Core) startRollback() error {
 		}
 		return ret
 	}
-	c.rollback = NewRollbackManager(c.activeContext, c.logger.ResetNamed("rollback"), backendsFunc, c.router, c)
+	c.rollback = NewRollbackManager(c.activeContext, c.baseLogger.Named("rollback"), backendsFunc, c.router, c)
 	c.rollback.Start()
 	return nil
 }
