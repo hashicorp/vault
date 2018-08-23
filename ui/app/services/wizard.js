@@ -163,45 +163,40 @@ export default Service.extend({
     if (this.get('featureList') === null) {
       return;
     }
+    this.startFeature();
     if (this.storageHasKey(FEATURE_STATE)) {
       this.saveState('featureState', this.getExtState(FEATURE_STATE));
-    } else {
-      if (FeatureMachine === null) {
-        this.saveState('featureState', FeatureMachine.initialState);
-        this.saveExtState(FEATURE_STATE, this.get('featureState'));
-      }
     }
-    this.set('currentMachine', this.get('featureList').objectAt(0));
-    let nextFeature =
-      this.get('featureList').length > 1 ? this.get('featureList').objectAt(1).capitalize() : 'Finish';
-    this.set('nextFeature', nextFeature);
-    const FeatureMachineConfig = MACHINES[this.get('currentMachine')];
-    FeatureMachine = Machine(FeatureMachineConfig);
+    this.saveExtState(FEATURE_STATE, this.get('featureState'));
     let stateNodes = FeatureMachine.getStateNodes(this.get('featureState'));
     this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
   },
 
+  startFeature() {
+    const FeatureMachineConfig = MACHINES[this.get('featureList').objectAt(0)];
+    FeatureMachine = Machine(FeatureMachineConfig);
+    this.set('currentMachine', this.get('featureList').objectAt(0));
+    this.saveState('featureState', FeatureMachine.initialState);
+    let nextFeature =
+      this.get('featureList').length > 1 ? this.get('featureList').objectAt(1).capitalize() : 'Finish';
+    this.set('nextFeature', nextFeature);
+  },
+
   completeFeature() {
     let features = this.get('featureList');
-    let completed = features.pop();
-    let nextFeature = features.length > 1 ? features.objectAt(1).capitalize() : 'Finish';
-    this.set('nextFeature', nextFeature);
+    let done = features.shift();
     if (!this.getExtState(COMPLETED_FEATURES)) {
-      this.saveExtState(COMPLETED_FEATURES, JSON.stringify([completed]));
+      let completed = [];
+      completed.push(done);
+      this.saveExtState(COMPLETED_FEATURES, completed);
     } else {
-      this.saveExtState(
-        COMPLETED_FEATURES,
-        JSON.stringify(this.getExtState(COMPLETED_FEATURES).toArray().addObject(completed))
-      );
+      this.saveExtState(COMPLETED_FEATURES, this.getExtState(COMPLETED_FEATURES).toArray().addObject(done));
     }
 
     this.saveExtState(FEATURE_LIST, this.get('featureList'));
+    this.storage().removeItem(FEATURE_STATE);
     if (features.length > 0) {
-      const FeatureMachineConfig = MACHINES[this.get('featureList').objectAt(0)];
-      FeatureMachine = Machine(FeatureMachineConfig);
-      this.set('currentMachine', features.objectAt(0));
-      this.saveState('featureState', FeatureMachine.initialState);
-      this.saveExtState(FEATURE_STATE, this.get('featureState'));
+      this.buildFeatureMachine();
     } else {
       this.completeTutorial();
       FeatureMachine = null;

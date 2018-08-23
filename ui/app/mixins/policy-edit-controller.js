@@ -4,6 +4,7 @@ let { inject } = Ember;
 
 export default Ember.Mixin.create({
   flashMessages: inject.service(),
+  wizard: inject.service(),
   actions: {
     deletePolicy(model) {
       let policyType = model.get('policyType');

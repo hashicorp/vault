@@ -16,10 +16,12 @@ export default Ember.Route.extend({
   actions: {
     didTransition() {
       const params = this.paramsFor(this.routeName);
-      this.get('wizard').transitionFeatureMachine(
-        this.get('wizard.featureState'),
-        params.selectedAction.toUpperCase()
-      );
+      if (this.get('wizard.currentMachine') === 'tools') {
+        this.get('wizard').transitionFeatureMachine(
+          this.get('wizard.featureState'),
+          params.selectedAction.toUpperCase()
+        );
+      }
       this.controller.setProperties(params);
     },
   },
