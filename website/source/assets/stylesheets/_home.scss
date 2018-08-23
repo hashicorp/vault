@@ -61,6 +61,25 @@
     text-align: center;
     z-index: 1;
 
+    .get-started-links {
+      p {
+        margin-top: 0;
+        text-align: center;
+      }
+
+      a {
+        margin: 0 0.5em;
+      }
+
+      a:not(.button) {
+        border-bottom: 1px dashed #00ABE0;
+        color: #000;
+        font-size: 16px;
+        font-weight: 500;
+        text-decoration: none;
+      }
+    }
+
     #tag-line {
       display: block;
       font-size: 24px;

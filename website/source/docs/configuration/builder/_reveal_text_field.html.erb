@@ -1,0 +1,26 @@
+<fieldset name="<%= name %>">
+  <%= partial "builder/reveal_label", locals: {
+    label: label,
+    name: "include_#{name}",
+    required: (required if defined?(required)),
+    docs_url: (docs_url if defined?(docs_url))
+  } %>
+  <div class="config-reveal-container <%= "active" if (defined?(required) && required) %>">
+    <input
+      type="text"
+      id="<%= name %>"
+      name="<%= name %>"
+      class="input"
+      value="<%= value if defined?(value) %>"
+      placeholder="<%= placeholder if defined?(placeholder) %>"
+      required="<%= defined?(required) %>"
+      <%= "disabled" if (defined?(sensitive_disabled) && sensitive_disabled) %>
+    />
+    <% if (defined?(sensitive_disabled) && sensitive_disabled) %>
+      <div class="form-hint form-input-warning">
+        This is sensitive information, so we will put this placeholder in your
+        config for you to replace.
+      </div>
+    <% end %>
+  </div>
+</fieldset>

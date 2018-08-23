@@ -1,0 +1,21 @@
+<fieldset name="<%= name %>">
+  <%= partial "builder/reveal_label", locals: {
+    label: label,
+    name: "include_#{name}",
+    required: (required if defined?(required)),
+    docs_url: (docs_url if defined?(docs_url))
+  } %>
+  <div class="config-reveal-container <%= "active" if (defined?(required) && required) %>">
+    <input
+      type="number"
+      id="<%= name %>"
+      name="<%= name %>"
+      class="input"
+      value="<%= value if defined?(value) %>"
+      min="<%= min if defined?(min) %>"
+      max="<%= max if defined?(max) %>"
+      placeholder="<%= placeholder if defined?(placeholder) %>"
+      required="<%= required if defined?(required) %>"
+    />
+  </div>
+</fieldset>

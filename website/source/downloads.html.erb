@@ -6,16 +6,68 @@ description: |-
   Download Vault
 ---
 
-<h1>Download Vault</h1>
-
 <section class="downloads">
   <div class="description row">
     <div class="col-md-12">
+      <h1>Download Vault</h1>
       <p>
         Below are the available downloads for the latest version of Vault
         (<%= latest_version %>). Please download the proper package for your
-        operating system and architecture.
+        operating system and architecture. Check out the
+        <a href="https://github.com/hashicorp/vault/blob/v<%= latest_version %>/CHANGELOG.md">
+          v<%= latest_version %> CHANGELOG
+        </a>
+        for information on the latest release.
       </p>
+    </div>
+  </div>
+
+  <div class="download-arches">
+    <% product_versions.each do |os, arches| %>
+      <% next if os == "web" %>
+      <div class="download" data-os="<%= os %>">
+        <div class="icon pull-left"><%= system_icon(os) %></div>
+        <div class="details">
+          <h2 class="os-name"><%= pretty_os(os) %></h2>
+          <ul>
+            <% arches.each do |arch, url| %>
+              <li data-os-bit="<%= pretty_arch(arch) %>">
+                <a href="<%= url %>" class="download-link">
+                  <%= pretty_arch(arch) %>
+                </a>
+              </li>
+            <% end %>
+          </ul>
+          <div class="clearfix"></div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+  <div id="download-confirm" class="download">
+    <div class="icon pull-left"></div>
+    <div class="details">
+      <h2>
+        Vault for
+        <span class="chosen-os-name"></span>
+      </h2>
+      <div class="download-confirm-message">
+        Downloading Vault for <span class="chosen-os-name"></span> <span class="chosen-os-bit"></span>
+      </div>
+      <a href="/docs/configuration/builder.html">
+        <button class="button primary">
+          Next: Configure the server
+        </button>
+      </a>
+      <div class="clearfix"></div>
+    </div>
+  </div>
+  <a href="https://www.fastly.com?utm_source=hashicorp" target="_blank" rel="nofollow noopener noreferrer" class="poweredby">
+    <%= inline_svg "fastly.svg", height: 25 %>
+  </a>
+
+  <div class="row">
+    <div class="col-md-12">
+      <h2>Verify your download</h2>
       <p>
         You can find the
         <a href="https://releases.hashicorp.com/vault/<%= latest_version %>/vault_<%= latest_version %>_SHA256SUMS">
@@ -26,36 +78,21 @@ description: |-
           verify the checksums signature file
         </a>
         which has been signed using <a href="https://hashicorp.com/security.html" target="_blank" rel="nofollow noopener noreferrer">HashiCorp's GPG key</a>.
-        You can also <a href="https://releases.hashicorp.com/vault/" target="_blank" rel="nofollow noopener noreferrer">download older versions of Vault</a> from the releases service.
       </p>
-      <p>Check out the <a href="https://github.com/hashicorp/vault/blob/v<%= latest_version %>/CHANGELOG.md">v<%= latest_version %> CHANGELOG</a> for information on the latest release.</p>
-      <p><a href="/community.html">Community resources</a> are available to learn more about Vault and interact with the community.
     </div>
   </div>
 
-  <% product_versions.each do |os, arches| %>
-    <% next if os == "web" %>
-    <div class="row">
-      <div class="col-md-12 download">
-        <div class="icon pull-left"><%= system_icon(os) %></div>
-        <div class="details">
-          <h2 class="os-name"><%= pretty_os(os) %></h2>
-          <ul>
-            <% arches.each do |arch, url| %>
-              <li><a href="<%= url %>"><%= pretty_arch(arch) %></a></li>
-            <% end %>
-          </ul>
-          <div class="clearfix"></div>
-        </div>
-      </div>
+  <div class="row">
+    <div class="col-md-12">
+      <h2>Older versions</h2>
+      <p>You can <a href="https://releases.hashicorp.com/vault/" target="_blank" rel="nofollow noopener noreferrer">download older versions of Vault</a> from the releases service.</p>
     </div>
-  <% end %>
+  </div>
 
   <div class="row">
-    <div class="col-md-12 poweredby">
-      <a href="https://www.fastly.com?utm_source=hashicorp" target="_blank" rel="nofollow noopener noreferrer">
-        <%= inline_svg "fastly.svg", height: 50 %>
-      </a>
+    <div class="col-md-12">
+      <h2>Welcome to the Vault community</h2>
+      <p><a href="/community.html">Community resources</a> are available to learn more about Vault and interact with the community.</p>
     </div>
   </div>
 </section>

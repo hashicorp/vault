@@ -1,16 +1,16 @@
 body.layout-downloads {
   #inner {
     .downloads {
-      margin-top: 20px;
-
       .description {
         margin-bottom: 20px;
       }
 
       .download {
         align-items: center;
-        border-bottom: 1px solid #b2b2b2;
+        border: 1px solid #ddd;
+        border-radius: 8px;
         display: flex;
+        margin: 6px 0;
         padding: 15px;
 
         .details {
@@ -22,6 +22,7 @@ body.layout-downloads {
           }
 
           ul {
+            align-items: center;
             padding-left: 0px;
             margin: -8px 0 0 0;
           }
@@ -51,10 +52,80 @@ body.layout-downloads {
         }
       }
 
-      .poweredby {
-        margin-top: 20px;
-        text-align: center;
+      .download-arches {
+        @media (min-width: 992px) {
+          display: flex;
+          flex-wrap: wrap;
+        }
+
+        .download {
+          @media (min-width: 992px) {
+            margin: 6px;
+            order: 1;
+            width: calc(50% - 12px);
+          }
+
+          &.current {
+            border: 1px solid #909FA8;
+            order: 0;
+            width: 100%;
+
+            .current {
+              &::after {
+                content: "Other versions:";
+              }
+
+              .download-link {
+                @extend .button;
+                @extend .primary;
+                line-height: 1;
+                margin: 0 15px 0 0;
+                order: 0;
+                padding: 10px 15px;
+
+                &::before {
+                  content: "Download "
+                }
+
+                &:hover {
+                  text-decoration: none;
+                }
+              }
+            }
+          }
+        }
       }
     }
+  }
+
+  .poweredby {
+    float: right;
+    margin-top: 10px;
+    text-align: center;
+  }
+}
+
+#download-confirm,
+body.layout-downloads .downloads #download-confirm.download {
+  border: 1px solid #2EB039;
+  border-radius: 8px;
+  box-shadow: 0 4px 4px rgba($black, 0.09), 0 4px 12px rgba($black, 0.05);
+  display: none;
+  padding: 15px;
+
+  .details {
+    padding-left: 20px;
+
+    h2 {
+      margin: 4px 0 0;
+      border: none;
+    }
+  }
+
+  .download-confirm-message {
+    background: url("/assets/images/icon-checkmark-circle.svg") left center no-repeat;
+    color: #2EB039;
+    margin-bottom: 20px;
+    padding-left: 2rem;
   }
 }

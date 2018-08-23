@@ -1,0 +1,156 @@
+label {
+  cursor: pointer;
+}
+
+.label {
+  color: $gray-darker;
+  display: block;
+  font-size: 13px;
+  margin-bottom: 2px;
+  text-align: left;
+}
+
+fieldset {
+  margin-bottom: 10px;
+}
+
+.checkbox-label {
+  padding-left: 0;
+
+  input[type="checkbox"] {
+    margin-right: 5px;
+  }
+
+  & + .input,
+  & + .textarea,
+  & + .select {
+    margin-left: 20px;
+    max-width: calc(100% - 20px);
+  }
+}
+
+.input,
+.textarea,
+.select select {
+  appearance: none;
+  -webkit-appearance: none;
+  align-items: center;
+  background-color: #fff;
+  border-radius: 2px;
+  border: 1px solid #BAC1CC;
+  color: #000;
+  display: block;
+  height: 36px;
+  justify-content: flex-start;
+  line-height: 1.5;
+  padding: calc(.375em - 1px) 12px;
+  vertical-align: top;
+  max-width: 100%;
+  width: 100%;
+
+  &::placeholder {
+    opacity: 0.5;
+  }
+}
+
+.input,
+.textarea,
+.select {
+  display: block;
+  height: 36px;
+  margin-bottom: 10px;
+  max-width: 100%;
+  position: relative;
+  width: 100%;
+}
+
+.input[disabled],
+.textarea[disabled] {
+  border-color: #E1E5EB;
+  background-color: #FAFAFA;
+  box-shadow: none;
+  color: #8e96a3;
+}
+
+
+.input,
+.textarea {
+  box-shadow: 0 4px 1px rgba($black, 0.06) inset;
+
+  &:focus,
+  &.is-focused,
+  &:active,
+  &.is-active {
+    border-color: #0068FF;
+  }
+}
+
+.select select {
+  background-color: #F7F8FA;
+  box-shadow: 0 3px 1px rgba($black, 0.12);
+
+  .has-background-grey-lighter & {
+    background-color: $white;
+  }
+}
+
+.select::after {
+  border: 1px solid $black;
+  border-right: 0;
+  border-top: 0;
+  border-width: 2px;
+  content: " ";
+  display: block;
+  height: 7px;
+  margin-top: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 1.125em;
+  top: 50%;
+  transform: translateY(20%) rotate(-45deg);
+  width: 7px;
+  z-index: 4;
+}
+
+.select::before {
+  @extend .select::after;
+  transform: translateY(-75%) rotate(135deg);
+  z-index: 5;
+}
+
+.nested-fields {
+  border: 1px solid #E1E5EB;
+  border-radius: 4px;
+  margin: 0 0 20px 20px;
+  padding: 10px 20px 0;
+}
+
+.form-hint {
+  color: #aaa;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: -5px 12px 10px;
+}
+
+.form-input-warning {
+  color: #614903;
+
+  &::before {
+    background: url("/assets/images/icon-warning.svg") left center no-repeat;
+    content: "";
+    display: inline-block;
+    height: 12px;
+    margin-right: 0.25rem;
+    width: 12px;
+    vertical-align: -0.1rem;
+  }
+}
+
+.form-actions {
+  margin-top: 30px;
+
+  .button {
+    line-height: 1;
+    padding: 11px 15px 8px 15px;
+  }
+}
