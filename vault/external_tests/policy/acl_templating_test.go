@@ -1,4 +1,4 @@
-package vault_test
+package policy
 
 import (
 	"fmt"

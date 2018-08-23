@@ -1,4 +1,4 @@
-package vault_test
+package token
 
 import (
 	"encoding/base64"
