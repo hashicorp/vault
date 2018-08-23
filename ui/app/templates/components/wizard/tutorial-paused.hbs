@@ -1,12 +1,9 @@
-<div class="ui-wizard collapsed">
-  <button class="dismiss-button" aria-label="Dismiss the tutorial" type="button" {{action onDismiss}}>
-    <ICon @glyph="close" />
-  </button>
-  <div class="wizard-header">
-    <h1>Vault Web UI Guide</h1>
-    <p>Feel free to explore Vault. Click below to get back to the guide or close this window.</p>
+<WizardContent @headerText="Vault Web UI Guide" @glyph="tour" @class="collapsed">
+  <p>Feel free to explore Vault. Click below to get back to the guide or close this window.</p>
+  <div class="box wizard-divider-box">
+    <button type="button" class="button is-transparent has-icon-left has-text-white" {{action onAdvance}}>
+      <ICon @glyph="chevron-up" />
+      Resume
+    </button>
   </div>
-  <button type="button" {{action onAdvance}}>
-    Resume
-  </button>
-</div>
+</WizardContent>
