@@ -1,104 +1,100 @@
 .ui-wizard-container {
+  flex-grow: 1;
   display: flex;
   flex-direction: row;
 }
+
 .ui-wizard-container .app-content {
   flex-grow: 1;
+  display: flex;
 }
+
 .ui-wizard {
+  padding: $size-5 $size-5 $size-11;
   width: 300px;
-  background: #ffffff;
-  color: #000000;
-  padding: 16px;
-  margin: 9px;
-  height: 80vh;
+  background: $white;
+  min-height: 80vh;
+  box-shadow: $box-shadow, $box-shadow-highest;
+  position: relative;
+  right: $size-6;
+  top: $size-6;
+  .doc-link {
+    margin-top: $size-5;
+    display: block;
+  }
+}
+
+.wizard-header {
+  margin-bottom: $size-5;
 }
 
 .ui-wizard.collapsed {
   position: fixed;
   top: 4rem;
   right: 2rem;
-  height: 11rem;
-  background: #000000;
-  color: #ffffff;
+  height: auto;
+  min-height: 0;
+  background: $black;
+  color: $white;
+  box-shadow: $box-shadow-middle;
+  .title {
+    color: $white;
+  }
+  .wizard-header {
+    margin: 0;
+  }
 }
 
-.ui-wizard .wizard-header h1 {
-  width: 146px;
-  height: 24px;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 24px;
-}
-
-.ui-wizard h2 {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.form-label {
-  color: #677887;
-  font-size: 12px;
-  font-weight: 600;
+.wizard-divider-box {
+  background: none;
+  box-shadow: none;
+  margin: $size-8 0 0;
+  padding: 0 $size-8;
+  border-top: solid 1px $white;
+  border-image: $dark-vault-gradient 1;
+  button {
+    font-size: $size-7;
+    font-weight: $font-weight-semibold;
+  }
 }
 
 .ui-wizard .wizard-header p {
-  margin-top: 9px;
-  margin-bottom: 9px;
-  font-size: 14px;
-  font-weight: normal;
-  line-height: 18px;
+  /*margin-top: 9px;*/
+  /*margin-bottom: 9px;*/
+  /*font-size: 14px;*/
+  /*font-weight: normal;*/
+  /*line-height: 18px;*/
 }
 
-button {
-  border: 0;
-  padding: 0;
-  font-family: inherit;
-  font-size: 100%;
-  background: white;
-  color: black;
-  font-weight: 600;
-  cursor: pointer;
-}
+/*.feature-row {*/
+/*border-radius: 2px 2px 2px 2px;*/
+/*border: 1px solid #bac1cc;*/
+/*padding: 8px 8px;*/
+/*margin-top: 8px;*/
+/*}*/
 
-.feature-row {
-  border-radius: 2px 2px 2px 2px;
-  border: 1px solid #bac1cc;
-  padding: 8px 8px;
-  margin-top: 8px;
-}
+/*.feature-row label {*/
+/*color: #000000;*/
+/*font-size: 12px;*/
+/*font-weight: 600;*/
+/*line-height: 12px;*/
+/*}*/
 
-.feature-row label {
-  color: #000000;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 12px;
-}
+/*.feature-row input {*/
+/*width: 14px;*/
+/*height: 14px;*/
+/*border: 1px solid #b9c4d2;*/
+/*border-radius: 2px 2px 2px 2px;*/
+/*margin-right: 2px;*/
+/*}*/
 
-.feature-row input {
-  width: 14px;
-  height: 14px;
-  border: 1px solid #b9c4d2;
-  border-radius: 2px 2px 2px 2px;
-  margin-right: 2px;
-}
+/*ul.feature-steps {*/
+/*margin-left: 25px;*/
+/*list-style-type: disc;*/
+/*}*/
 
-ul.feature-steps {
-  margin-left: 25px;
-  list-style-type: disc;
-}
-
-.feature-steps li {
-  color: #6a7786;
-  font-size: 12px;
-  font-weight: normal;
-}
-
-.collapsed button {
-  background: black;
-  color: white;
-}
-
-.ui-wizard button.dismiss-button {
-  float: right;
-}
+/*.feature-steps li {*/
+/*color: #6a7786;*/
+/*font-size: 12px;*/
+/*font-weight: normal;*/
+/*}*/
