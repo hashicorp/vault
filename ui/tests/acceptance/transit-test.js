@@ -259,9 +259,8 @@ test('transit backend', function(assert) {
     }
     click('[data-test-transit-key-actions-link]');
     andThen(() => {
-      assert.equal(
-        currentURL(),
-        `/vault/secrets/${transitPath}/actions/${key.name}`,
+      assert.ok(
+        currentURL().startsWith(`/vault/secrets/${transitPath}/actions/${key.name}`),
         `${key.name}: navigates to tranist actions`
       );
       if (index === 0) {

@@ -3,13 +3,19 @@ a.splash-page-logo {
   svg {
     transform: scale(.5);
     transform-origin: left;
-    fill: currentColor;
+    fill: $white;
   }
+}
+a.splash-page-logo.is-active {
+  background: transparent;
 }
 
 .splash-page-container {
   margin: $size-2 0;
 }
 .splash-page-header {
-  padding: .75rem 1.5rem;
+  padding: $size-6 $size-5;
+}
+.splash-page-sub-header {
+  margin: 0 $size-5 $size-6;
 }

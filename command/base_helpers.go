@@ -152,6 +152,22 @@ func parseArgsDataString(stdin io.Reader, args []string) (map[string]string, err
 	return result, nil
 }
 
+// parseArgsDataStringLists parses the args data and returns the values as
+// string lists. If the values cannot be represented as strings, an error is
+// returned.
+func parseArgsDataStringLists(stdin io.Reader, args []string) (map[string][]string, error) {
+	raw, err := parseArgsData(stdin, args)
+	if err != nil {
+		return nil, err
+	}
+
+	var result map[string][]string
+	if err := mapstructure.WeakDecode(raw, &result); err != nil {
+		return nil, errors.Wrap(err, "failed to convert values to strings")
+	}
+	return result, nil
+}
+
 // truncateToSeconds truncates the given duration to the number of seconds. If
 // the duration is less than 1s, it is returned as 0. The integer represents
 // the whole number unit of seconds for the duration.

@@ -16,6 +16,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iam/v1"
+	"strings"
 )
 
 const (
@@ -34,7 +35,7 @@ func secretAccessToken(b *backend) *framework.Secret {
 			},
 		},
 		Renew:  b.secretAccessTokenRenew,
-		Revoke: secretAccessTokenRevoke,
+		Revoke: b.secretAccessTokenRevoke,
 	}
 }
 
@@ -80,17 +81,35 @@ func (b *backend) secretAccessTokenRenew(ctx context.Context, req *logical.Reque
 	return logical.ErrorResponse("short-term access tokens cannot be renewed - request new access token instead"), nil
 }
 
-func secretAccessTokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func isInvalidTokenErr(err error) bool {
+	if gerr, ok := err.(*googleapi.Error); ok {
+		return gerr.Code == 400 && strings.Contains(gerr.Body, "invalid_token")
+	}
+	return false
+}
+
+func (b *backend) secretAccessTokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	tokenRaw, ok := req.Secret.InternalData["access_token"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing token internal data")
 	}
 
 	resp, err := http.Get(revokeAccessTokenEndpoint + fmt.Sprintf("?token=%s", url.QueryEscape(tokenRaw.(string))))
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("revoke returned error: %v", err)), nil
+	if err == nil {
+		err = googleapi.CheckResponse(resp)
 	}
-	if err := googleapi.CheckResponse(resp); err != nil {
+
+	if err != nil {
+		// Token may have already expired on server; ignore if OAuth server returns error.
+		if req.Secret.ExpirationTime().Before(time.Now()) && isInvalidTokenErr(err) {
+			invalidTokenWarn := fmt.Sprintf("manual token revocation failed because token has already been invalidated. ignoring error: '%v'", err)
+			b.Logger().Warn(invalidTokenWarn)
+
+			return &logical.Response{
+				Warnings: []string{invalidTokenWarn},
+			}, nil
+		}
+
 		return logical.ErrorResponse(err.Error()), nil
 	}
 

@@ -1,26 +1,26 @@
 {{#if model.groupIds}}
   {{#each model.directGroupIds as |gid|}}
-    <a href={{href-to "vault.cluster.access.identity.show" "groups" gid "details" }}
+    {{#link-to "vault.cluster.access.identity.show" "groups" gid "details"
       class="list-item-row"
-      >{{i-con
+    }}{{i-con
         glyph='folder'
         size=14
         class="has-text-grey-light"
-        }}{{gid}}</a>
+        }}{{gid}}{{/link-to}}
   {{/each}}
   {{#each model.inheritedGroupIds as |gid|}}
     {{#linked-block
        "vault.cluster.access.identity.show" "groups" gid "details"
         class="list-item-row"
     }}
-      <a href={{href-to "vault.cluster.access.identity.show" "groups" gid "details" }}
+      {{#link-to "vault.cluster.access.identity.show" "groups" gid "details"
          class="has-text-black"
-      >{{i-con
+      }}{{i-con
           glyph='folder'
           size=14
           class="has-text-grey-light"
           }}{{gid}}
-      </a>
+      {{/link-to}}
       <span class="tag has-text-grey is-size-8">inherited</span>
     {{/linked-block}}
   {{/each}}

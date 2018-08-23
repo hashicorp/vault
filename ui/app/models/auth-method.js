@@ -5,6 +5,7 @@ import { queryRecord } from 'ember-computed-query';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { memberAction } from 'ember-api-actions';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const { attr, hasMany } = DS;
 const { computed } = Ember;
@@ -26,6 +27,11 @@ export default DS.Model.extend({
   type: attr('string', {
     defaultValue: METHODS[0].value,
     possibleValues: METHODS,
+  }),
+  // namespaces introduced types with a `ns_` prefix for built-in engines
+  // so we need to strip that to normalize the type
+  methodType: computed('type', function() {
+    return this.get('type').replace(/^ns_/, '');
   }),
   description: attr('string', {
     editType: 'textarea',
@@ -108,17 +114,8 @@ export default DS.Model.extend({
     'id',
     'configPathTmpl'
   ),
-  deletePath: queryRecord(
-    'capabilities',
-    context => {
-      const { id } = context.get('id');
-      return {
-        id: `sys/auth/${id}`,
-      };
-    },
-    'id'
-  ),
-  canDisable: computed.alias('deletePath.canDelete'),
 
+  deletePath: lazyCapabilities(apiPath`sys/auth/${'id'}`, 'id'),
+  canDisable: computed.alias('deletePath.canDelete'),
   canEdit: computed.alias('configPath.canUpdate'),
 });

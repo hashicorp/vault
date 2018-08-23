@@ -2,14 +2,14 @@
   <nav class="menu">
     <ul class="menu-list">
       <li class="action">
-        <a href={{href-to "vault.cluster.policy.show" "acl" policyName }}>
+        {{#link-to "vault.cluster.policy.show" "acl" policyName}}
           View Policy
-        </a>
+        {{/link-to}}
       </li>
       <li class="action">
-        <a href={{href-to "vault.cluster.policy.edit" "acl" policyName }}>
+        {{#link-to "vault.cluster.policy.edit" "acl" policyName}}
           Edit Policy
-        </a>
+        {{/link-to}}
       </li>
       <li class="action">
         {{#confirm-action

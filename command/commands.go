@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	ad "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
+	azure "github.com/hashicorp/vault-plugin-secrets-azure"
 	gcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
@@ -35,6 +36,7 @@ import (
 	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 
+	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
@@ -51,6 +53,7 @@ import (
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
+	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
 	physAzure "github.com/hashicorp/vault/physical/azure"
 	physCassandra "github.com/hashicorp/vault/physical/cassandra"
 	physCockroachDB "github.com/hashicorp/vault/physical/cockroachdb"
@@ -98,6 +101,7 @@ var (
 	}
 
 	credentialBackends = map[string]logical.Factory{
+		"alicloud":   credAliCloud.Factory,
 		"app-id":     credAppId.Factory,
 		"approle":    credAppRole.Factory,
 		"aws":        credAws.Factory,
@@ -118,6 +122,7 @@ var (
 	logicalBackends = map[string]logical.Factory{
 		"ad":         ad.Factory,
 		"aws":        aws.Factory,
+		"azure":      azure.Factory,
 		"cassandra":  cassandra.Factory,
 		"consul":     consul.Factory,
 		"database":   database.Factory,
@@ -137,6 +142,7 @@ var (
 	}
 
 	physicalBackends = map[string]physical.Factory{
+		"alicloudoss":            physAliCloudOSS.NewAliCloudOSSBackend,
 		"azure":                  physAzure.NewAzureBackend,
 		"cassandra":              physCassandra.NewCassandraBackend,
 		"cockroachdb":            physCockroachDB.NewCockroachDBBackend,
@@ -204,6 +210,7 @@ var DeprecatedCommands map[string]cli.CommandFactory
 
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 	loginHandlers := map[string]LoginHandler{
+		"alicloud": &credAliCloud.CLIHandler{},
 		"aws":      &credAws.CLIHandler{},
 		"centrify": &credCentrify.CLIHandler{},
 		"cert":     &credCert.CLIHandler{},
@@ -319,6 +326,31 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 			return &LoginCommand{
 				BaseCommand: getBaseCommand(),
 				Handlers:    loginHandlers,
+			}, nil
+		},
+		"namespace": func() (cli.Command, error) {
+			return &NamespaceCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace list": func() (cli.Command, error) {
+			return &NamespaceListCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace lookup": func() (cli.Command, error) {
+			return &NamespaceLookupCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace create": func() (cli.Command, error) {
+			return &NamespaceCreateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace delete": func() (cli.Command, error) {
+			return &NamespaceDeleteCommand{
+				BaseCommand: getBaseCommand(),
 			}, nil
 		},
 		"operator": func() (cli.Command, error) {

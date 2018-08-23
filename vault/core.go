@@ -274,7 +274,10 @@ type Core struct {
 	defaultLeaseTTL time.Duration
 	maxLeaseTTL     time.Duration
 
-	logger log.Logger
+	// baseLogger is used to avoid ResetNamed as it strips useful prefixes in
+	// e.g. testing
+	baseLogger log.Logger
+	logger     log.Logger
 
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
@@ -482,6 +485,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		router:                           NewRouter(),
 		sealed:                           new(uint32),
 		standby:                          true,
+		baseLogger:                       conf.Logger,
 		logger:                           conf.Logger.Named("core"),
 		defaultLeaseTTL:                  conf.DefaultLeaseTTL,
 		maxLeaseTTL:                      conf.MaxLeaseTTL,
@@ -534,15 +538,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.seal.SetCore(c)
 
-	c.sealUnwrapper = NewSealUnwrapper(phys, conf.Logger.ResetNamed("storage.sealunwrapper"))
+	c.sealUnwrapper = NewSealUnwrapper(phys, c.baseLogger.Named("storage.sealunwrapper"))
 
 	var ok bool
 
 	// Wrap the physical backend in a cache layer if enabled
 	if txnOK {
-		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.ResetNamed("storage.cache"))
+		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, c.baseLogger.Named("storage.cache"))
 	} else {
-		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.ResetNamed("storage.cache"))
+		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, c.baseLogger.Named("storage.cache"))
 	}
 	c.physicalCache = c.physical.(physical.ToggleablePurgemonster)
 
@@ -1003,6 +1007,10 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
+		if errwrap.ContainsType(err, new(TemplateError)) {
+			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
+			err = logical.ErrPermissionDenied
+		}
 		retErr = multierror.Append(retErr, err)
 		c.stateLock.RUnlock()
 		return retErr
@@ -1068,14 +1076,12 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	authResults := c.performPolicyChecks(ctx, acl, te, req, entity, &PolicyCheckOpts{
 		RootPrivsRequired: true,
 	})
-	if authResults.Error.ErrorOrNil() != nil {
-		retErr = multierror.Append(retErr, authResults.Error)
-		c.stateLock.RUnlock()
-		return retErr
-	}
 	if !authResults.Allowed {
-		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		c.stateLock.RUnlock()
+		retErr = multierror.Append(retErr, authResults.Error)
+		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		}
 		return retErr
 	}
 

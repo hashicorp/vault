@@ -39,3 +39,13 @@ procedures and more.
 - [Identity - Entities & Groups](/guides/identity/identity.html) guide
 demonstrates the usage of _Entities_ and _Groups_ to manage Vault clients'
 identity.
+
+## Vault Enterprise
+
+- [Sentinel Policies](/guides/identity/sentinel.html) guide
+walks through the creation and usage of _Role Governing Policies_ (RGPs) and
+_Endpoint Governing Policies_ (EGPs) in Vault.
+
+- [Control Groups](/guides/identity/control-groups.html) can be used to enforce
+additional authorization factors before the request can be completed. This
+guide walks through the implementation of a Control Group.

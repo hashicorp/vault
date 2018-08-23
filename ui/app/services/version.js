@@ -23,6 +23,7 @@ export default Service.extend({
   hasDRReplication: hasFeature('DR Replication'),
 
   hasSentinel: hasFeature('Sentinel'),
+  hasNamespaces: hasFeature('Namespaces'),
 
   isEnterprise: computed.match('version', /\+.+$/),
 

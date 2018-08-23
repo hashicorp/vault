@@ -93,11 +93,11 @@ TLS connection.
     4. Do the same as step 3, but with the root token. We'll use this later.
 
   ## Verify the Server is Running
+  
+  As instructed, copy and execute `export VAULT_ADDR='http://127.0.0.1:8200'`.
 
   Verify the server is running by running the `vault status` command. This should
-  succeed and exit with exit code 0. If you see an error about opening
-  a connection, make sure you copied and executed the `export VAULT_ADDR...`
-  command from above properly.
+  succeed and exit with exit code 0.
 
   If it ran successfully, the output should look like the below:
 
@@ -159,9 +159,7 @@ TLS connection.
   ## Verify the Server is Running
 
   Verify the server is running by running the `vault status` command. This should
-  succeed and exit with exit code 0. If you see an error about opening
-  a connection, make sure you copied and executed the `export VAULT_ADDR...`
-  command from above properly.
+  succeed and exit with exit code 0.
 
   If it ran successfully, the output should look like the below:
 

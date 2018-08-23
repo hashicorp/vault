@@ -178,7 +178,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 				}
 
 				if tidiedRevoked {
-					if err := buildCRL(ctx, b, req); err != nil {
+					if err := buildCRL(ctx, b, req, false); err != nil {
 						return err
 					}
 				}

@@ -52,7 +52,7 @@ via the `X-Vault-Token` header for future requests.
 ## Reading, Writing, and Listing Secrets
 
 Different backends implement different APIs according to their functionality.
-The examples below are created with the `kv` backend, which acts like a
+The examples below are created with the `KVv1` backend, which acts like a
 Key/Value store. Read the documentation for a particular backend for detailed
 information on its API; this simply provides a general overview.
 

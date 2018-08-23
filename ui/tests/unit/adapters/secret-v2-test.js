@@ -1,8 +1,9 @@
 import { moduleFor, test } from 'ember-qunit';
 import Ember from 'ember';
+import needs from 'vault/tests/unit/adapters/_adapter-needs';
 
 moduleFor('adapter:secret-v2', 'Unit | Adapter | secret-v2', {
-  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
+  needs,
 });
 
 test('secret api urls', function(assert) {

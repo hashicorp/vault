@@ -19,7 +19,7 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type PluginEnvironment struct {
-	// vault_version is the version of the Vault server
+	// VaultVersion is the version of the Vault server
 	VaultVersion         string   `protobuf:"bytes,1,opt,name=vault_version,json=vaultVersion,proto3" json:"vault_version,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -30,7 +30,7 @@ func (m *PluginEnvironment) Reset()         { *m = PluginEnvironment{} }
 func (m *PluginEnvironment) String() string { return proto.CompactTextString(m) }
 func (*PluginEnvironment) ProtoMessage()    {}
 func (*PluginEnvironment) Descriptor() ([]byte, []int) {
-	return fileDescriptor_plugin_d09b48a313e4c766, []int{0}
+	return fileDescriptor_plugin_c3e74d5a6c13acf1, []int{0}
 }
 func (m *PluginEnvironment) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PluginEnvironment.Unmarshal(m, b)
@@ -61,9 +61,9 @@ func init() {
 	proto.RegisterType((*PluginEnvironment)(nil), "logical.PluginEnvironment")
 }
 
-func init() { proto.RegisterFile("logical/plugin.proto", fileDescriptor_plugin_d09b48a313e4c766) }
+func init() { proto.RegisterFile("logical/plugin.proto", fileDescriptor_plugin_c3e74d5a6c13acf1) }
 
-var fileDescriptor_plugin_d09b48a313e4c766 = []byte{
+var fileDescriptor_plugin_c3e74d5a6c13acf1 = []byte{
 	// 133 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0xc9, 0xc9, 0x4f, 0xcf,
 	0x4c, 0x4e, 0xcc, 0xd1, 0x2f, 0xc8, 0x29, 0x4d, 0xcf, 0xcc, 0xd3, 0x2b, 0x28, 0xca, 0x2f, 0xc9,

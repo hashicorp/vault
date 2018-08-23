@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
@@ -153,8 +154,11 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical
 	allPolicies := append(te.Policies, identityPolicies...)
 
 	// Construct the corresponding ACL object
-	acl, err := c.policyStore.ACL(c.activeContext, allPolicies...)
+	acl, err := c.policyStore.ACL(c.activeContext, entity, allPolicies...)
 	if err != nil {
+		if errwrap.ContainsType(err, new(TemplateError)) {
+			return nil, nil, nil, nil, err
+		}
 		c.logger.Error("failed to construct ACL", "error", err)
 		return nil, nil, nil, nil, ErrInternalError
 	}
@@ -180,6 +184,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		// unauth, we just have no information to attach to the request, so
 		// ignore errors...this was best-effort anyways
 		if err != nil && !unauth {
+			if errwrap.ContainsType(err, new(TemplateError)) {
+				c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor")
+				err = logical.ErrPermissionDenied
+			}
 			return nil, te, err
 		}
 	}
@@ -260,12 +268,12 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		Unauth:            unauth,
 		RootPrivsRequired: rootPath,
 	})
-	if authResults.Error.ErrorOrNil() != nil {
-		return auth, te, authResults.Error
-	}
 	if !authResults.Allowed {
-		// Return auth for audit logging even if not allowed
-		return auth, te, logical.ErrPermissionDenied
+		retErr := authResults.Error
+		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		}
+		return auth, te, retErr
 	}
 
 	return auth, te, nil
@@ -465,10 +473,19 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	if ctErr != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
-		errType := logical.ErrInvalidRequest
-		switch ctErr {
-		case ErrInternalError, logical.ErrPermissionDenied:
-			errType = ctErr
+		switch {
+		case ctErr == ErrInternalError,
+			errwrap.Contains(ctErr, ErrInternalError.Error()),
+			ctErr == logical.ErrPermissionDenied,
+			errwrap.Contains(ctErr, logical.ErrPermissionDenied.Error()):
+			switch ctErr.(type) {
+			case *multierror.Error:
+				retErr = ctErr
+			default:
+				retErr = multierror.Append(retErr, ctErr)
+			}
+		default:
+			retErr = multierror.Append(retErr, logical.ErrInvalidRequest)
 		}
 
 		logInput := &audit.LogInput{
@@ -481,10 +498,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 		}
 
-		if errType != nil {
-			retErr = multierror.Append(retErr, errType)
-		}
-		if ctErr == ErrInternalError {
+		if errwrap.Contains(retErr, ErrInternalError.Error()) {
 			return nil, auth, retErr
 		}
 		return logical.ErrorResponse(ctErr.Error()), auth, retErr
@@ -618,22 +632,6 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				return nil, auth, retErr
 			}
 			resp.Secret.LeaseID = leaseID
-		}
-	}
-
-	// If the request was to renew a token, and if there are group aliases set
-	// in the auth object, then the group memberships should be refreshed
-	if strings.HasPrefix(req.Path, "auth/token/renew") &&
-		resp != nil &&
-		resp.Auth != nil &&
-		resp.Auth.EntityID != "" &&
-		resp.Auth.GroupAliases != nil &&
-		c.identityStore != nil {
-		err := c.identityStore.refreshExternalGroupMembershipsByEntityID(resp.Auth.EntityID, resp.Auth.GroupAliases)
-		if err != nil {
-			c.logger.Error("failed to refresh external group memberships", "error", err)
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, auth, retErr
 		}
 	}
 
@@ -800,10 +798,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 			auth.EntityID = entity.ID
 			if auth.GroupAliases != nil {
-				err = c.identityStore.refreshExternalGroupMembershipsByEntityID(auth.EntityID, auth.GroupAliases)
+				validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(auth.EntityID, auth.GroupAliases)
 				if err != nil {
 					return nil, nil, err
 				}
+				auth.GroupAliases = validAliases
 			}
 		}
 

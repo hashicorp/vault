@@ -38,18 +38,6 @@ func TestSysAuth(t *testing.T) {
 				"options":   interface{}(nil),
 			},
 		},
-		"token/": map[string]interface{}{
-			"description": "token based credentials",
-			"type":        "token",
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"plugin_name":       "",
-			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
-		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -59,7 +47,6 @@ func TestSysAuth(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
-		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
@@ -116,30 +103,6 @@ func TestSysEnableAuth(t *testing.T) {
 				"options":   interface{}(nil),
 			},
 		},
-		"foo/": map[string]interface{}{
-			"description": "foo",
-			"type":        "noop",
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"plugin_name":       "",
-			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]interface{}{},
-		},
-		"token/": map[string]interface{}{
-			"description": "token based credentials",
-			"type":        "token",
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"plugin_name":       "",
-			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
-		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -149,7 +112,6 @@ func TestSysEnableAuth(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
-		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
@@ -197,18 +159,6 @@ func TestSysDisableAuth(t *testing.T) {
 				"options":     interface{}(nil),
 			},
 		},
-		"token/": map[string]interface{}{
-			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"plugin_name":       "",
-			},
-			"description": "token based credentials",
-			"type":        "token",
-			"local":       false,
-			"seal_wrap":   false,
-			"options":     interface{}(nil),
-		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -218,7 +168,6 @@ func TestSysDisableAuth(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
-		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
@@ -264,11 +213,6 @@ func TestSysTuneAuth_nonHMACKeys(t *testing.T) {
 			"audit_non_hmac_request_keys":  []interface{}{"foo"},
 			"audit_non_hmac_response_keys": []interface{}{"bar"},
 		},
-		"default_lease_ttl":            json.Number("2764800"),
-		"max_lease_ttl":                json.Number("2764800"),
-		"force_no_cache":               false,
-		"audit_non_hmac_request_keys":  []interface{}{"foo"},
-		"audit_non_hmac_response_keys": []interface{}{"bar"},
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
@@ -303,9 +247,6 @@ func TestSysTuneAuth_nonHMACKeys(t *testing.T) {
 			"max_lease_ttl":     json.Number("2764800"),
 			"force_no_cache":    false,
 		},
-		"default_lease_ttl": json.Number("2764800"),
-		"max_lease_ttl":     json.Number("2764800"),
-		"force_no_cache":    false,
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
@@ -337,9 +278,6 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 			"max_lease_ttl":     json.Number("2764800"),
 			"force_no_cache":    false,
 		},
-		"default_lease_ttl": json.Number("2764800"),
-		"max_lease_ttl":     json.Number("2764800"),
-		"force_no_cache":    false,
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
@@ -371,10 +309,6 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 			"force_no_cache":     false,
 			"listing_visibility": "unauth",
 		},
-		"default_lease_ttl":  json.Number("2764800"),
-		"max_lease_ttl":      json.Number("2764800"),
-		"force_no_cache":     false,
-		"listing_visibility": "unauth",
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]

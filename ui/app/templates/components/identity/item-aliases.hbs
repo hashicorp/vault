@@ -7,13 +7,13 @@
   }}
     <div class="columns is-mobile">
       <div class="column is-10">
-        <a href={{href-to "vault.cluster.access.identity.aliases.show" item.id "details"}}
+        {{#link-to "vault.cluster.access.identity.aliases.show" item.id "details"
           class="has-text-black has-text-weight-semibold"
-          >{{i-con
+          }}{{i-con
             glyph='role'
             size=14
             class="has-text-grey-light"
-            }}<span class="has-text-weight-semibold">{{item.name}}</span></a>
+            }}<span class="has-text-weight-semibold">{{item.name}}</span>{{/link-to}}
         <div class="has-text-grey">
           {{item.id}}
         </div>

@@ -7,10 +7,10 @@
   }}
     <div class="columns is-mobile">
       <div class="column is-10">
-        <a href={{href-to "vault.cluster.policy.show" "acl" policyName}}
+        {{#link-to "vault.cluster.policy.show" "acl" policyName
           class="is-block has-text-black has-text-weight-semibold"
-          ><span class="is-underline">{{policyName}}</span>
-        </a>
+          }}<span class="is-underline">{{policyName}}</span>
+        {{/link-to}}
       </div>
       <div class="column has-text-right">
         {{#if model.canEdit}}

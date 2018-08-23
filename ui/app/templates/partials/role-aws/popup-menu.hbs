@@ -9,9 +9,9 @@
         </li>
       {{else if item.canGenerate}}
         <li class="action">
-          <a href={{href-to 'vault.cluster.secrets.backend.credentials' item.id}} data-test-role-aws-link="generate">
+          {{#link-to "vault.cluster.secrets.backend.credentials" item.id data-test-role-aws-link="generate"}}
             Generate IAM Credentials
-          </a>
+          {{/link-to}}
         </li>
       {{/if}}
       {{#if item.stsPath.isPending}}
@@ -22,9 +22,9 @@
         </li>
       {{else if item.canGenerateSTS}}
         <li class="action">
-          <a href={{href-to 'vault.cluster.secrets.backend.credentials' item.id (query-params action="sts")}} data-test-role-aws-link="generate-sts">
+          {{#link-to "vault.cluster.secrets.backend.credentials" item.id (query-params action="sts") data-test-role-aws-link="generate-sts"}}
             Generate STS Credentials
-          </a>
+          {{/link-to}}
         </li>
       {{/if}}
       {{#if item.updatePath.isPending}}
@@ -41,16 +41,16 @@
       {{else}}
         {{#if item.canRead}}
           <li class="action">
-            <a href={{href-to 'vault.cluster.secrets.backend.show' item.id}} data-test-role-ssh-link="show">
+            {{#link-to "vault.cluster.secrets.backend.show" item.id data-test-role-ssh-link="show"}}
               Details
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
         {{#if item.canEdit}}
           <li class="action">
-            <a href={{href-to 'vault.cluster.secrets.backend.edit' item.id}} data-test-role-ssh-link="edit">
+            {{#link-to "vault.cluster.secrets.backend.edit" item.id data-test-role-ssh-link="edit"}}
               Edit
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
         {{#if item.canDelete}}

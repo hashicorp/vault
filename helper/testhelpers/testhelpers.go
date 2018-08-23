@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/xor"
@@ -79,4 +80,10 @@ func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, drToken bool
 		return "", err
 	}
 	return token, nil
+}
+
+// RandomWithPrefix is used to generate a unique name with a prefix, for
+// randomizing names in acceptance tests
+func RandomWithPrefix(name string) string {
+	return fmt.Sprintf("%s-%d", name, rand.New(rand.NewSource(time.Now().UnixNano())).Int())
 }

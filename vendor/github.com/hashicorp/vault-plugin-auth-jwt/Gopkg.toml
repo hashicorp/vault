@@ -30,6 +30,10 @@
   version = "2.0.0"
 
 [[constraint]]
+  name = "github.com/go-test/deep"
+  version = "1.0.1"
+
+[[constraint]]
   branch = "master"
   name = "github.com/hashicorp/errwrap"
 
@@ -39,11 +43,15 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/hashicorp/go-sockaddr"
+  name = "github.com/hashicorp/go-hclog"
 
 [[constraint]]
   branch = "master"
+  name = "github.com/hashicorp/go-sockaddr"
+
+[[constraint]]
   name = "github.com/hashicorp/vault"
+  branch = "master"
 
 [[constraint]]
   branch = "master"
@@ -51,7 +59,7 @@
 
 [[constraint]]
   name = "gopkg.in/square/go-jose.v2"
-  version = "2.1.6"
+  version = "2.1.8"
 
 [prune]
   go-tests = true

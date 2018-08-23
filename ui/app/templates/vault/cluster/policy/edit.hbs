@@ -1,11 +1,13 @@
 <PageHeader as |p|>
   <p.top>
-    <div class="breadcrumb">
-      <a href="{{href-to 'vault.cluster.policies' policyType}}" data-test-policy-list-link=true>
-        <span class="sep">&#x0002f;</span>
-        {{uppercase policyType}} Policies
-      </a>
-    </div>
+    <nav class="breadcrumb">
+      <li>
+        {{#link-to "vault.cluster.policies" policyType data-test-policy-list-link=true}}
+          <span class="sep">&#x0002f;</span>
+          {{uppercase policyType}} Policies
+        {{/link-to}}
+      </li>
+    </nav>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -18,9 +20,10 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-
 <form {{action "savePolicy" model on="submit"}}>
   <div class="box is-bottomless is-fullwidth is-marginless">
+    {{message-error model=model}}
+    <NamespaceReminder @mode="edit" @noun="policy" />
     <div class="level is-mobile">
       <div class="level-left">
         <label for="policy" class="is-label">Policy</label>
@@ -44,7 +47,6 @@
         </div>
       </div>
     </div>
-    {{message-error model=model}}
     <div class="field">
       {{ivy-codemirror
         value=model.policy
@@ -83,9 +85,9 @@
           </div>
         {{/if}}
         <div class="control">
-          <a href="{{href-to "vault.cluster.policy.show" model.id replace=true }}" class="button">
+          {{#link-to "vault.cluster.policy.show" model.id replace=true class="button"}}
             Cancel
-          </a>
+          {{/link-to}}
         </div>
       </div>
       {{#if (and (not-eq model.id "default") capabilities.canDelete)}}

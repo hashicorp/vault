@@ -16,5 +16,5 @@ test('it renders', function(assert) {
     {{edition-badge edition="Enterprise"}}
   `);
 
-  assert.equal(this.$('.edition-badge').text().trim(), 'Ent', 'abbreviates Enterprise');
+  assert.equal(this.$('.edition-badge').text().trim(), 'Enterprise', 'renders edition');
 });

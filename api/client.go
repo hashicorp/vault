@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
@@ -464,6 +465,19 @@ func (c *Client) SetMFACreds(creds []string) {
 	c.mfaCreds = creds
 }
 
+// SetNamespace sets the namespace supplied either via the environment
+// variable or via the command line.
+func (c *Client) SetNamespace(namespace string) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	if c.headers == nil {
+		c.headers = make(http.Header)
+	}
+
+	c.headers.Set(consts.NamespaceHeaderName, namespace)
+}
+
 // Token returns the access token being used by this client. It will
 // return the empty string if there is no token set.
 func (c *Client) Token() string {
@@ -488,6 +502,26 @@ func (c *Client) ClearToken() {
 	defer c.modifyLock.Unlock()
 
 	c.token = ""
+}
+
+// Headers gets the current set of headers used for requests. This returns a
+// copy; to modify it make modifications locally and use SetHeaders.
+func (c *Client) Headers() http.Header {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
+	if c.headers == nil {
+		return nil
+	}
+
+	ret := make(http.Header)
+	for k, v := range c.headers {
+		for _, val := range v {
+			ret[k] = append(ret[k], val)
+		}
+	}
+
+	return ret
 }
 
 // SetHeaders sets the headers to be used for future requests.

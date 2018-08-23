@@ -1,8 +1,9 @@
 import { moduleFor, test } from 'ember-qunit';
 import Ember from 'ember';
+import needs from 'vault/tests/unit/adapters/_adapter-needs';
 
 moduleFor('adapter:transit-key', 'Unit | Adapter | transit key', {
-  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
+  needs,
 });
 
 test('transit api urls', function(assert) {

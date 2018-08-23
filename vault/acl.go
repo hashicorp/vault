@@ -34,10 +34,11 @@ type PolicyCheckOpts struct {
 }
 
 type AuthResults struct {
-	ACLResults *ACLResults
-	Allowed    bool
-	RootPrivs  bool
-	Error      *multierror.Error
+	ACLResults  *ACLResults
+	Allowed     bool
+	RootPrivs   bool
+	DeniedError bool
+	Error       *multierror.Error
 }
 
 type ACLResults struct {
@@ -71,8 +72,12 @@ func NewACL(policies []*Policy) (*ACL, error) {
 
 		// Check if this is root
 		if policy.Name == "root" {
+			if len(policies) != 1 {
+				return nil, fmt.Errorf("other policies present along with root")
+			}
 			a.root = true
 		}
+
 		for _, pc := range policy.Paths {
 			// Check which tree to use
 			tree := a.exactRules

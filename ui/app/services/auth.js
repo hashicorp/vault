@@ -3,7 +3,7 @@ import getStorage from '../lib/token-storage';
 import ENV from 'vault/config/environment';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 
-const { get, isArray, computed, getOwner } = Ember;
+const { get, isArray, computed, getOwner, Service, inject } = Ember;
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
@@ -13,7 +13,8 @@ const BACKENDS = supportedAuthBackends();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
-export default Ember.Service.extend({
+export default Service.extend({
+  namespace: inject.service(),
   expirationCalcTS: null,
   init() {
     this._super(...arguments);
@@ -69,17 +70,25 @@ export default Ember.Service.extend({
         'X-Vault-Token': this.get('currentToken'),
       },
     };
+
+    let namespace =
+      typeof options.namespace === 'undefined' ? this.get('namespaceService.path') : options.namespace;
+    if (namespace) {
+      defaults.headers['X-Vault-Namespace'] = namespace;
+    }
     return Ember.$.ajax(Ember.assign(defaults, options));
   },
 
   renewCurrentToken() {
+    let namespace = this.get('authData.userRootNamespace');
     const url = '/v1/auth/token/renew-self';
-    return this.ajax(url, 'POST');
+    return this.ajax(url, 'POST', { namespace });
   },
 
   revokeCurrentToken() {
+    let namespace = this.get('authData.userRootNamespace');
     const url = '/v1/auth/token/revoke-self';
-    return this.ajax(url, 'POST');
+    return this.ajax(url, 'POST', { namespace });
   },
 
   calculateExpiration(resp, creationTime) {
@@ -97,8 +106,9 @@ export default Ember.Service.extend({
   },
 
   persistAuthData() {
-    const [firstArg, resp] = arguments;
+    let [firstArg, resp] = arguments;
     let tokens = this.get('tokens');
+    let currentNamespace = this.get('namespace.path') || '';
     let tokenName;
     let options;
     let backend;
@@ -110,7 +120,7 @@ export default Ember.Service.extend({
       backend = options.backend;
     }
 
-    const currentBackend = BACKENDS.findBy('type', backend);
+    let currentBackend = BACKENDS.findBy('type', backend);
     let displayName;
     if (isArray(currentBackend.displayNamePath)) {
       displayName = currentBackend.displayNamePath.map(name => get(resp, name)).join('/');
@@ -118,8 +128,26 @@ export default Ember.Service.extend({
       displayName = get(resp, currentBackend.displayNamePath);
     }
 
-    const { entity_id, policies, renewable } = resp;
+    let { entity_id, policies, renewable, namespace_path } = resp;
+    // here we prefer namespace_path if its defined,
+    // else we look and see if there's already a namespace saved
+    // and then finally we'll use the current query param if the others
+    // haven't set a value yet
+    // all of the typeof checks are necessary because the root namespace is ''
+    let userRootNamespace = namespace_path && namespace_path.replace(/\/$/, '');
+    // if we're logging in with token and there's no namespace_path, we can assume
+    // that the token belongs to the root namespace
+    if (backend === 'token' && !userRootNamespace) {
+      userRootNamespace = '';
+    }
+    if (typeof userRootNamespace === 'undefined') {
+      userRootNamespace = this.get('authData.userRootNamespace');
+    }
+    if (typeof userRootNamespace === 'undefined') {
+      userRootNamespace = currentNamespace;
+    }
     let data = {
+      userRootNamespace,
       displayName,
       backend: currentBackend,
       token: resp.client_token || get(resp, currentBackend.tokenPath),
@@ -148,6 +176,7 @@ export default Ember.Service.extend({
     this.set('allowExpiration', false);
     this.setTokenData(tokenName, data);
     return Ember.RSVP.resolve({
+      namespace: currentNamespace || data.userRootNamespace,
       token: tokenName,
       isRoot: policies.includes('root'),
     });
@@ -253,7 +282,7 @@ export default Ember.Service.extend({
     const adapter = this.clusterAdapter();
 
     return adapter.authenticate(options).then(resp => {
-      return this.persistAuthData(options, resp.auth || resp.data);
+      return this.persistAuthData(options, resp.auth || resp.data, this.get('namespace.path'));
     });
   },
 
@@ -269,6 +298,7 @@ export default Ember.Service.extend({
     this.set('tokens', tokenNames);
   },
 
+  // returns the key for the token to use
   currentTokenName: computed('activeCluster', 'tokens', 'tokens.[]', function() {
     const regex = new RegExp(this.get('activeCluster'));
     return this.get('tokens').find(key => regex.test(key));
