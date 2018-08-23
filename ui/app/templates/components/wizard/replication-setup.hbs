@@ -1,16 +1,13 @@
-<div class="wizard-header">
-  <h1>Replication</h1>
-  <h2>Setting up Replication</h2>
+<WizardContent @headerText="Replication" @glyph="tour">
+  <h2 class="title is-6">Setting up Replication</h2>
   <p>
-    Vault has two kinds of replication, each for a different purpose. Do you want to keep your data secure, or are you more interested in speed of access? Choose the one that is right for your needs.
+    Here you can see the details about your new replication cluster, manage or disable replication, and handle secondary clusters. You can also get a quick status by hovering over the "Replication" link at the top. 
   </p>
-  <DocLink @class="step-docs-link" @path="/docs/internals/replication.html">
-    Docs: Replication
+  <DocLink @path="/docs/internals/replication.html">
+    <ICon @glyph="learn" @size=16 /> Docs: Replication
   </DocLink>
-  <div class="wizard-section">
-    <h2>Cluster mode</h2>
-    <p>
-      A cluster is set as either a primary or secondary. The primary cluster is authoritative, and is the only cluster allowed to perform actions that write to the underlying data storage, such as modifying policies or secrets. Secondary clusters can service all other operations and forward any writes to the primary cluster.
-    </p>
-  </div>
-</div>
+  <h2 class="title is-6">Cluster mode</h2>
+  <p>
+    A cluster is set as either a primary or secondary. The primary cluster is authoritative, and is the only cluster allowed to perform actions that write to the underlying data storage, such as modifying policies or secrets. Secondary clusters can service all other operations and forward any writes to the primary cluster.
+  </p>
+</WizardContent>
