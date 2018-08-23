@@ -35,7 +35,6 @@ export default Ember.Component.extend(DEFAULTS, {
   didReceiveAttrs() {
     this._super(...arguments);
     this.checkAction();
-    debugger;
   },
 
   selectedAction: null,
