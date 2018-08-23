@@ -49,6 +49,14 @@ export default Service.extend({
     this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
     if (this.storageHasKey(FEATURE_LIST)) {
       this.set('featureList', this.getExtState(FEATURE_LIST));
+      if (this.storageHasKey(FEATURE_STATE)) {
+        this.saveState('featureState', this.getExtState(FEATURE_STATE));
+      } else {
+        if (FeatureMachine != null) {
+          this.saveState('featureState', FeatureMachine.initialState);
+          this.saveExtState(FEATURE_STATE, this.get('featureState'));
+        }
+      }
       this.buildFeatureMachine();
     }
   },
@@ -84,6 +92,7 @@ export default Service.extend({
     if (extendedState) {
       this.set('componentState', extendedState);
     }
+
     let { actions, value } = FeatureMachine.transition(currentState, event, extendedState);
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
