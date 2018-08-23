@@ -33,7 +33,7 @@ export default ClusterRouteBase.extend({
   actions: {
     willTransition(transition) {
       if (transition.targetName !== this.routeName) {
-        this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'IDLE');
+        this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'DONE');
       }
     },
   },
