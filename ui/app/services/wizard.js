@@ -78,6 +78,9 @@ export default Service.extend({
   },
 
   transitionFeatureMachine(currentState, event, extendedState) {
+    if (!this.get('currentState').includes('active')) {
+      return;
+    }
     if (extendedState) {
       this.set('componentState', extendedState);
     }
