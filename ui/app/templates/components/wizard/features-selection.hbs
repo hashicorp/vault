@@ -1,20 +1,27 @@
-<div class="wizard-header">
-  <h1>Vault Web UI</h1>
-  <h2>Choosing where to go</h2>
+<WizardContent @headerText="Vault Web UI" @glyph="tour">
+  <h2 class="title is-6">
+    Choosing where to go
+  </h2>
   <p>You did it! You now have access to your Vault and can start entering your data. We can help you get started with any of the options below</p>
-</div>
-<label class="form-label" for="features-form">Walk me through setting up:</label>
-<form id="features-form" class="feature-selection" {{action "saveFeatures" on="submit"}}>
-  {{#each allFeatures as |feature|}}
-    <div class="feature-row">
-      <input id="feature-{{feature.key}}" type="checkbox" value={{feature.key}} onclick={{action "toggleFeature"}}/>
-      <label for="feature-{{feature.key}}">{{feature.name}}</label>
-      <ul class="feature-steps">
-        {{#each feature.steps as |step|}}
-          <li>{{step}}</li>
-        {{/each}}
-      </ul>
-    </div>
-  {{/each}}
-  <button type="submit">Start</button>
-</form>
+  <label class="form-label" for="features-form">Walk me through setting up:</label>
+  <form id="features-form" class="feature-selection" {{action "saveFeatures" on="submit"}}>
+    {{#each allFeatures as |feature|}}
+      <div class="b-checkbox">
+        <input
+          id="feature-{{feature.key}}"
+          type="checkbox"
+          class="styled"
+          value={{feature.key}}
+          onchange={{action "toggleFeature"}}
+         />
+        <label for="feature-{{feature.key}}">{{feature.name}}</label>
+        <ul class="feature-steps">
+          {{#each feature.steps as |step|}}
+            <li>{{step}}</li>
+          {{/each}}
+        </ul>
+      </div>
+    {{/each}}
+    <button type="submit" class="button is-primary">Start</button>
+  </form>
+</WizardContent>
