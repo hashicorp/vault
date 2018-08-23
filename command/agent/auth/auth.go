@@ -70,6 +70,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 	defer func() {
 		am.Shutdown()
 		close(ah.DoneCh)
+		close(ah.OutputCh)
 		ah.logger.Info("auth handler stopped")
 	}()
 
