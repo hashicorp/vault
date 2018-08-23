@@ -1,23 +1,27 @@
 .ui-wizard-container {
-  flex-grow: 1;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  flex-grow: 1;
 }
 
 .ui-wizard-container .app-content {
-  flex-grow: 1;
+  padding-right: 324px;
   display: flex;
+  flex-direction: column;
+  flex-grow: 1;
 }
 
 .ui-wizard {
+  z-index: 300;
   padding: $size-5 $size-5 $size-11;
   width: 300px;
   background: $white;
-  min-height: 80vh;
   box-shadow: $box-shadow, $box-shadow-highest;
-  position: relative;
+  position: fixed;
   right: $size-6;
+  bottom: $size-6;
   top: $size-6;
+  overflow: auto;
   .doc-link {
     margin-top: $size-5;
     display: block;
