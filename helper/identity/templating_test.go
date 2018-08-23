@@ -125,7 +125,7 @@ func TestPopulate_Basic(t *testing.T) {
 			input:      "path \"{{identity.groups.ids.hroupID.name}}\" {\n\tval = {{identity.entity.name}}\n}",
 			entityName: "entityName",
 			groupName:  "groupName",
-			err:        errors.New("group not found"),
+			err:        errors.New("entity is not a member of group \"hroupID\""),
 		},
 		{
 			name:       "group_id",
@@ -139,7 +139,7 @@ func TestPopulate_Basic(t *testing.T) {
 			input:      "path \"{{identity.groups.names.hroupName.id}}\" {\n\tval = {{identity.entity.name}}\n}",
 			entityName: "entityName",
 			groupName:  "groupName",
-			err:        errors.New("group not found"),
+			err:        errors.New("entity is not a member of group \"hroupName\""),
 		},
 	}
 

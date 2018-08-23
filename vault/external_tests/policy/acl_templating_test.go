@@ -2,7 +2,6 @@ package policy
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -13,7 +12,6 @@ import (
 )
 
 func TestPolicyTemplating(t *testing.T) {
-
 	goodPolicy1 := `
 path "secret/{{ identity.entity.name}}/*" {
 	capabilities = ["read", "create", "update"]
@@ -32,14 +30,14 @@ path "secret/{{ identity.groups.ids.%s.name}}/*" {
 
 }
 
-path "secret/{{ identity.groups.names.%s.id}}/*" {
+path "secret/{{ identity.groups.names.group_name.id}}/*" {
 	capabilities = ["read", "create", "update"]
 
 }
 `
 
 	badPolicy1 := `
-path "secret/{{ identity.groups.ids.foobar.name}}/*" {
+path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	capabilities = ["read", "create", "update"]
 
 }
@@ -86,6 +84,14 @@ path "secret/{{ identity.groups.ids.foobar.name}}/*" {
 	}
 	groupID := resp.Data["id"]
 
+	resp, err = client.Logical().Write("identity/group", map[string]interface{}{
+		"name": "foobar",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	foobarGroupID := resp.Data["id"]
+
 	// Enable userpass auth
 	err = client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
 		Type: "userpass",
@@ -122,7 +128,7 @@ path "secret/{{ identity.groups.ids.foobar.name}}/*" {
 
 	// Write in policies
 	goodPolicy1 = fmt.Sprintf(goodPolicy1, userpassAccessor)
-	goodPolicy2 = fmt.Sprintf(goodPolicy2, groupID, "group_name")
+	goodPolicy2 = fmt.Sprintf(goodPolicy2, groupID)
 	err = client.Sys().PutPolicy("goodPolicy1", goodPolicy1)
 	if err != nil {
 		t.Fatal(err)
@@ -167,37 +173,55 @@ path "secret/{{ identity.groups.ids.foobar.name}}/*" {
 			name: "alias name",
 			path: "secret/testuser/foo",
 		},
+		{
+			name: "bad group name",
+			path: "secret/foobar/foo",
+		},
+	}
+
+	runTests := func(failGroupName bool) {
+		for _, test := range tests {
+			resp, err := client.Logical().Write(test.path, map[string]interface{}{"zip": "zap"})
+			fail := test.fail
+			if test.name == "bad group name" {
+				fail = failGroupName
+			}
+			if err != nil && !fail {
+				if resp.Data["error"].(string) != "permission denied" {
+					t.Fatalf("unexpected status %v", resp.Data["error"])
+				}
+				t.Fatalf("%s: got unexpected error: %v", test.name, err)
+			}
+			if err == nil && fail {
+				t.Fatalf("%s: expected error", test.name)
+			}
+		}
 	}
 
 	rootToken := client.Token()
 	client.SetToken(clientToken)
-	for _, test := range tests {
-		resp, err := client.Logical().Write(test.path, map[string]interface{}{"zip": "zap"})
-		if err != nil && !test.fail {
-			if resp.Data["error"].(string) != "permission denied" {
-				t.Fatalf("unexpected status %v", resp.Data["error"])
-			}
-			t.Fatalf("%s: got unexpected error: %v", test.name, err)
-		}
-		if err == nil && test.fail {
-			t.Fatalf("%s: expected error", test.name)
-		}
-	}
+	runTests(true)
 
 	client.SetToken(rootToken)
+	// Test that a policy with bad group membership doesn't kill the other paths
 	err = client.Sys().PutPolicy("badPolicy1", badPolicy1)
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	client.SetToken(clientToken)
-	resp, err = client.Logical().Write("secret/entity_name/foo", map[string]interface{}{"zip": "zap"})
-	if err == nil {
-		t.Fatalf("expected error, resp is %#v", *resp)
+	runTests(true)
+
+	// Test that adding group membership now allows access
+	client.SetToken(rootToken)
+	resp, err = client.Logical().Write("identity/group", map[string]interface{}{
+		"id": foobarGroupID,
+		"member_entity_ids": []string{
+			entityID,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(err.Error(), "permission denied") {
-		t.Fatalf("unexpected status: %v", err)
-		//if resp.Data["error"].(string) != "permission denied" {
-		//t.Fatalf("unexpected status %v", resp.Data["error"])
-	}
+	client.SetToken(clientToken)
+	runTests(false)
 }
