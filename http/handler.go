@@ -468,6 +468,7 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 		respondStandby(core, w, rawReq.URL)
 		return resp, false
 	}
+
 	if respondErrorCommon(w, r, resp, err) {
 		return resp, false
 	}

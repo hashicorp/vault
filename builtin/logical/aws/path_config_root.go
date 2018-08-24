@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathConfigRoot() *framework.Path {
+func pathConfigRoot(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/root",
 		Fields: map[string]*framework.FieldSchema{
@@ -42,7 +42,7 @@ func pathConfigRoot() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: pathConfigRootWrite,
+			logical.UpdateOperation: b.pathConfigRootWrite,
 		},
 
 		HelpSynopsis:    pathConfigRootHelpSyn,
@@ -50,7 +50,7 @@ func pathConfigRoot() *framework.Path {
 	}
 }
 
-func pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	region := data.Get("region").(string)
 	iamendpoint := data.Get("iam_endpoint").(string)
 	stsendpoint := data.Get("sts_endpoint").(string)
@@ -71,6 +71,13 @@ func pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framew
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
+
+	// clear possible cached IAM / STS clients after successfully updating
+	// config/root
+	b.clientMutex.Lock()
+	defer b.clientMutex.Unlock()
+	b.iamClient = nil
+	b.stsClient = nil
 
 	return nil, nil
 }

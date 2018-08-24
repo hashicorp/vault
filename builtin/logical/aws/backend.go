@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -33,7 +35,7 @@ func Backend() *backend {
 		},
 
 		Paths: []*framework.Path{
-			pathConfigRoot(),
+			pathConfigRoot(&b),
 			pathConfigLease(&b),
 			pathRoles(&b),
 			pathListRoles(&b),
@@ -57,6 +59,12 @@ type backend struct {
 
 	// Mutex to protect access to reading and writing policies
 	roleMutex sync.RWMutex
+
+	// Mutex to protect access to iam/sts clients
+	clientMutex sync.RWMutex
+
+	iamClient iamiface.IAMAPI
+	stsClient stsiface.STSAPI
 }
 
 const backendHelp = `
