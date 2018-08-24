@@ -11,7 +11,6 @@ export default Component.extend({
   store: inject.service(),
   wizard: inject.service(),
   flashMessages: inject.service(),
-  wizard: inject.service(),
   routing: inject.service('-routing'),
 
   /*
