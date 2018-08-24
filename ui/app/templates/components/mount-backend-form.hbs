@@ -1,10 +1,21 @@
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3" data-test-mount-form-header=true>
-      {{#if (eq mountType "auth")}}
-        Enable an authentication method
+      {{#if showConfig}}
+        {{#with (find-by 'type' mountModel.type mountTypes) as |typeInfo|}}
+          <ICon @size=28 @glyph={{concat "enable/" (or typeInfo.glyph typeInfo.type)}} />
+          {{#if (eq mountType "auth")}}
+            Enable {{typeInfo.displayName}} authentication method
+          {{else}}
+            Enable {{typeInfo.displayName}} secrets engine
+          {{/if}}
+        {{/with}}
       {{else}}
-        Enable a secrets engine
+        {{#if (eq mountType "auth")}}
+          Enable an authentication method
+        {{else}}
+          Enable a secrets engine
+        {{/if}}
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -22,14 +33,15 @@
     {{else}}
       <div class="box-radio-container">
       {{#each mountTypes as |type|}}
-      <label for={{type.type}} class="box-radio {{if (eq mountModel.type type.type) "is-selected" }}">
+      <label for={{type.type}} class="box-radio {{if (eq mountModel.type type.type) "is-selected" }}" >
           <ICon @size=36 @excludeIconClass={{true}} @glyph={{concat "enable/" (or type.glyph type.type)}} />
             {{type.displayName}}
           {{radio-button
             value=type.type
+            radioClass="radio"
             groupValue=mountModel.type
             changed=(queue (action (mut mountModel.type)) (action "onTypeChange" "type"))
-            name="replication-mode"
+            name="mount-type"
             radioId=type.type
           }}
         <label for={{type.type}}></label>
