@@ -3,6 +3,7 @@ package logical
 import (
 	"encoding/json"
 	"errors"
+	"sort"
 
 	"github.com/hashicorp/vault/helper/wrapping"
 )
@@ -113,6 +114,7 @@ func ListResponse(keys []string) *Response {
 		Data: map[string]interface{}{},
 	}
 	if len(keys) != 0 {
+		sort.Strings(keys)
 		resp.Data["keys"] = keys
 	}
 	return resp
