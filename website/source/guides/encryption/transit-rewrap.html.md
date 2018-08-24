@@ -21,7 +21,7 @@ large files such as images, can be protected with the transit engine.  This EaaS
 function can augment or eliminate the need for Transparent Data Encryption (TDE)
 with databases to encrypt the contents of a bucket, volume, and disk, etc.  
 
-![Encryption as a Service](/assets/images/vault-encryption.png)
+![Encryption as a Service](/img/vault-encryption.png)
 
 ## Encryption Key Rotation
 

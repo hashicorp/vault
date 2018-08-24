@@ -17,7 +17,7 @@ the question of how best to deliver the Role ID and Secret ID were brought up,
 and the role of trusted entities (Terraform, Chef, Nomad, Kubernetes, etc.) was
 mentioned.
 
-![AppRole auth method workflow](/assets/images/vault-approle-workflow2.png)
+![AppRole auth method workflow](/img/vault-approle-workflow2.png)
 
 This _intermediate_ Vault guide aims to provide a **simple**, **end-to-end**
 example of how to use Vault's [AppRole authentication
@@ -31,7 +31,7 @@ with Terraform and
 Chef](https://www.hashicorp.com/resources/delivering-secret-zero-vault-approle-terraform-chef)
 webinar.
 
-[![YouTube](/assets/images/vault-approle-youtube.png)](https://youtu.be/OIcIzFWjThM)
+[![YouTube](/img/vault-approle-youtube.png)](https://youtu.be/OIcIzFWjThM)
 
 -> **NOTE:** This is a proof of concept and **NOT SUITABLE FOR PRODUCTION USE**.
 
@@ -119,7 +119,7 @@ appropriate mounts and policies in Vault for this demo.
 The scenario in this guide uses Terraform and Chef as trusted entities to
 deliver `RoleID` and `SecretID`.
 
-![AppRole auth method workflow](/assets/images/vault-approle-tf-chef.png)
+![AppRole auth method workflow](/img/vault-approle-tf-chef.png)
 
 For the simplicity of the demonstration, both Vault and Chef are installed on
 the same node. Terraform provisions the node which contains the `RoleID` as an
@@ -422,7 +422,7 @@ interact with Vault. Remember, the point here is that you are giving each system
 a _limited_ token that is only able to pull either the `RoleID` or `SecretID`,
 _but not both_.
 
-![AppRole auth method workflow](/assets/images/vault-approle-tf-chef-2.png)
+![AppRole auth method workflow](/img/vault-approle-tf-chef-2.png)
 
 #### Task 1: Create a policy and token for Terraform
 Create a token with appropriate policies allowing Terraform to pull
@@ -847,7 +847,7 @@ At this point, Terraform will perform the following actions:
 - Run our Chef recipe which will install NGINX, perform our AppRole login, get
 our secrets, and output them to our `index.html` file
 
-![AppRole auth method workflow](/assets/images/vault-approle-tf-chef-3.png)
+![AppRole auth method workflow](/img/vault-approle-tf-chef-3.png)
 
 The Chef recipe can be found at
 `identity/vault-chef-approle/chef/cookbooks/vault_chef_approle_demo/recipes/default.rb`.

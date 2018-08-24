@@ -109,7 +109,7 @@ Think of a scenario where apps read secrets from Vault. The `apps` need:
 - Policy granting "read" permission on the specific path (`secret/dev`)
 - Valid tokens to interact with Vault
 
-![Response Wrapping Scenario](/assets/images/vault-cubbyhole.png)
+![Response Wrapping Scenario](/img/vault-cubbyhole.png)
 
 Setting the appropriate policies and token generation are done by the `admin`
 persona. For the `admin` to distribute the initial token to the app securely, it

@@ -23,7 +23,7 @@ and ***active***. Within a Vault cluster, only a single instance will be
 _active_ and handles all requests (reads and writes) and all _standby_ nodes
 redirect requests to the _active_ node.
 
-![Reference Architecture](/assets/images/vault-ha-consul-3.png)
+![Reference Architecture](/img/vault-ha-consul-3.png)
 
 > **NOTE:** As of version **0.11**, those standby nodes can handle most
 read-only requests and behave as read-replica nodes. This **Performance Standby
@@ -69,7 +69,7 @@ consisting of the following:
 
 This diagram lays out the simple architecture details for reference:
 
-![Reference Architecture](/assets/images/vault-ha-consul.png)
+![Reference Architecture](/img/vault-ha-consul.png)
 
 You perform the following:
 
@@ -294,7 +294,7 @@ this example.  Now, you are good to move on to the Vault server configuration.
 
 The Vault server nodes require **both** the Consul and Vault binaries on each node. Consul will be configured as a **client** agent and Vault will be configured as a server.
 
-![Reference Architecture](/assets/images/vault-ha-consul-2.png)
+![Reference Architecture](/img/vault-ha-consul-2.png)
 
 
 #### Consul Client Agent Configuration

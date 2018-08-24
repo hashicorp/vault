@@ -19,7 +19,7 @@ decrypt data. Before any operation can be performed on the Vault, it must be
 unsealed. Unsealing is the process of constructing the master key necessary to
 decrypt the data encryption key.
 
-![Unseal with Shamir's Secret Sharing](/assets/images/vault-autounseal.png)
+![Unseal with Shamir's Secret Sharing](/img/vault-autounseal.png)
 
 This guide demonstrates an example of how to use Terraform to provision an
 instance that can utilize an encryption key from [AWS Key Management Services
@@ -56,7 +56,7 @@ delegate the unsealing process to trusted cloud providers to ease operations in
 the event of partial failure and to aid in the creation of new or ephemeral
 clusters.
 
-![Unseal with AWS KMS](/assets/images/vault-autounseal-2.png)
+![Unseal with AWS KMS](/img/vault-autounseal-2.png)
 
 ## Prerequisites
 
@@ -85,7 +85,7 @@ AWS KMS. Included is a Terraform configuration that has the following:
 * Vault configured with access to an AWS KMS key   
 
 
-[![YouTube](/assets/images/vault-autounseal-4.png)](https://youtu.be/iRyqOEDFIiY)
+[![YouTube](/img/vault-autounseal-4.png)](https://youtu.be/iRyqOEDFIiY)
 
 
 You are going to perform the following steps:
@@ -267,7 +267,7 @@ At this point, you should be able to launch the Vault Enterprise UI by entering
 the address provided in the `terraform apply` outputs (e.g. http://192.0.2.1:8200/ui)
 and log in with your initial root token.
 
-![Vault Enterprise UI Login](/assets/images/vault-autounseal-3.png)
+![Vault Enterprise UI Login](/img/vault-autounseal-3.png)
 
 
 ### Step 3: Clean Up

@@ -27,7 +27,7 @@ would take to configure Vault to authenticate using a corporate LDAP or
 ActiveDirectory installation. Even though this example uses LDAP, the concept
 applies to all auth methods.
 
-[![Vault Auth Workflow](/assets/images/vault-policy-workflow.svg)](/assets/images/vault-policy-workflow.svg)
+[![Vault Auth Workflow](/img/vault-policy-workflow.svg)](/img/vault-policy-workflow.svg)
 
 1. The security team configures Vault to connect to an auth method.
 This configuration varies by auth method. In the case of LDAP, Vault
@@ -55,7 +55,7 @@ Now Vault has an internal mapping between a backend authentication system and
 internal policy. When a user authenticates to Vault, the actual authentication
 is delegated to the auth method. As a user, the flow looks like:
 
-[![Vault Auth Workflow](/assets/images/vault-auth-workflow.svg)](/assets/images/vault-auth-workflow.svg)
+[![Vault Auth Workflow](/img/vault-auth-workflow.svg)](/img/vault-auth-workflow.svg)
 
 1. A user attempts to authenticate to Vault using their LDAP credentials,
 providing Vault with their LDAP username and password.

@@ -20,7 +20,7 @@ The guide walks you through:
 - How to configure Vault and Consul to send telemetry to a monitoring agent.
 - Which metrics are important to monitor, and why.
 
-![Dashboard Example](/assets/images/vault_cluster.png)
+![Dashboard Example](/img/vault_cluster.png)
 
 
 ## Reference Materials

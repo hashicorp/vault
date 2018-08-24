@@ -38,7 +38,7 @@ Vault EC2 auth method leverages the components of this metadata to
 authenticate and distribute an initial Vault token to an EC2 instance. The data
 flow (which is also represented in the graphic below) is as follows:
 
-[![Vault AWS EC2 Authentication Flow](/assets/images/vault-aws-ec2-auth-flow.png)](/assets/images/vault-aws-ec2-auth-flow.png)
+[![Vault AWS EC2 Authentication Flow](/img/vault-aws-ec2-auth-flow.png)](/img/vault-aws-ec2-auth-flow.png)
 
 1. An AWS EC2 instance fetches its [AWS Instance Identity Document][aws-iid]
 from the [EC2 Metadata Service][aws-ec2-mds]. In addition to data itself, AWS

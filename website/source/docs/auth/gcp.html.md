@@ -172,7 +172,7 @@ required knowledge for using the auth method.
 IAM login applies only to roles of type `iam`. The Vault authentication workflow
 for IAM service accounts looks like this:
 
-[![Vault Google Cloud IAM Login Workflow](/assets/images/vault-gcp-iam-auth-workflow.svg)](/assets/images/vault-gcp-iam-auth-workflow.svg)
+[![Vault Google Cloud IAM Login Workflow](/img/vault-gcp-iam-auth-workflow.svg)](/img/vault-gcp-iam-auth-workflow.svg)
 
   1. The client generates a signed JWT using the IAM
   [`projects.serviceAccounts.signJwt`][signjwt-method] method. For examples of
@@ -194,7 +194,7 @@ GCE login only applies to roles of type `gce` and **must be completed on an
 instance running in GCE**. These steps will not work from your local laptop or
 another cloud provider.
 
-[![Vault Google Cloud GCE Login Workflow](/assets/images/vault-gcp-gce-auth-workflow.svg)](/assets/images/vault-gcp-gce-auth-workflow.svg)
+[![Vault Google Cloud GCE Login Workflow](/img/vault-gcp-gce-auth-workflow.svg)](/img/vault-gcp-gce-auth-workflow.svg)
 
   1. The client obtains an [instance identity metadata token][instance-identity]
   on a GCE instance.
