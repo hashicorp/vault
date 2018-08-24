@@ -1394,7 +1394,7 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 func validateVaultHeaderValue(headers http.Header, requestUrl *url.URL, requiredHeaderValue string) error {
 	providedValue := ""
 	for k, v := range headers {
-		if strings.ToLower(iamServerIdHeader) == strings.ToLower(k) {
+		if strings.EqualFold(iamServerIdHeader, k) {
 			providedValue = strings.Join(v, ",")
 			break
 		}
