@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"testing"
@@ -147,6 +148,20 @@ func TestFieldDataGet(t *testing.T) {
 			},
 		},
 
+		"map type, string value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeMap},
+			},
+			map[string]interface{}{
+				"foo": `{"child":true, "age": 9}`,
+			},
+			"foo",
+			map[string]interface{}{
+				"child": true,
+				"age":   json.Number("9"),
+			},
+		},
+
 		"duration type, string value": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeDurationSecond},
@@ -222,6 +237,17 @@ func TestFieldDataGet(t *testing.T) {
 			},
 			"foo",
 			[]interface{}{123, "abc"},
+		},
+
+		"slice type, string, filled, mixed slice": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSlice},
+			},
+			map[string]interface{}{
+				"foo": `[123, "abc"]`,
+			},
+			"foo",
+			[]interface{}{json.Number("123"), "abc"},
 		},
 
 		"string slice type, filled slice": {
