@@ -7,6 +7,7 @@ const METHODS = methods();
 
 export default Ember.Component.extend({
   store: inject.service(),
+  wizard: inject.service(),
   flashMessages: inject.service(),
   routing: inject.service('-routing'),
 
@@ -111,6 +112,11 @@ export default Ember.Component.extend({
     try {
       if (config && Object.keys(config.changedAttributes()).length) {
         yield config.save();
+        this.get('wizard').transitionFeatureMachine(
+          this.get('wizard.featureState'),
+          'CONTINUE',
+          this.get('mountModel').get('type')
+        );
         this.get('flashMessages').success(
           `The config for ${type} ${this.get('mountType')} method at ${path} was saved successfully.`
         );

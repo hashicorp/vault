@@ -16,6 +16,7 @@ export default Ember.Component.extend({
   tutorialComponent: computed.alias('wizard.tutorialComponent'),
   componentState: computed.alias('wizard.componentState'),
   nextFeature: computed.alias('wizard.nextFeature'),
+  nextStep: computed.alias('wizard.nextStep'),
 
   actions: {
     dismissWizard() {
@@ -29,6 +30,22 @@ export default Ember.Component.extend({
 
     advanceFeature() {
       this.get('wizard').transitionFeatureMachine(this.get('featureState'), 'CONTINUE');
+    },
+
+    repeatStep() {
+      this.get('wizard').transitionFeatureMachine(
+        this.get('featureState'),
+        'REPEAT',
+        this.get('componentState')
+      );
+    },
+
+    resetFeature() {
+      this.get('wizard').transitionFeatureMachine(
+        this.get('featureState'),
+        'RESET',
+        this.get('componentState')
+      );
     },
 
     pauseWizard() {
