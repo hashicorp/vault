@@ -24,8 +24,8 @@ func (c *NamespaceCreateCommand) Help() string {
 	helpText := `
 Usage: vault namespace create [options] PATH
 
-  Create a child namespace. The namespace created will be relative to the 
-  namespace provided in either VAULT_NAMESPACE environemnt variable or
+  Create a child namespace. The namespace created will be relative to the
+  namespace provided in either the VAULT_NAMESPACE environment variable or
   -namespace CLI flag.
 
   Create a child namespace (e.g. ns1/):
