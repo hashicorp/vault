@@ -32,12 +32,14 @@ export default Service.extend({
   featureList: null,
   featureState: null,
   currentMachine: null,
-  potentialSelection: null,
   tutorialComponent: null,
   featureComponent: null,
+  stepComponent: null,
+  detailsComponent: null,
   componentState: null,
   showWhenUnauthenticated: false,
   nextFeature: null,
+  nextStep: null,
 
   init() {
     this._super(...arguments);
@@ -94,11 +96,15 @@ export default Service.extend({
     if (extendedState) {
       this.set('componentState', extendedState);
     }
+    debugger;
 
     let { actions, value } = FeatureMachine.transition(currentState, event, extendedState);
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
     this.executeActions(actions, event);
+
+    let next = FeatureMachine.transition(value, 'CONTINUE');
+    this.saveState('nextStep', next.value);
   },
 
   saveExtState(key, value) {
@@ -142,6 +148,9 @@ export default Service.extend({
           break;
         case 'showTutorialAlways':
           this.set('showWhenUnauthenticated', true);
+          break;
+        case 'continueFeature':
+          this.transitionFeatureMachine(this.get('featureState'), 'CONTINUE', this.get('componentState'));
           break;
         default:
           break;
@@ -204,10 +213,6 @@ export default Service.extend({
       FeatureMachine = null;
       TutorialMachine.transition(this.get('currentState'), 'DONE');
     }
-  },
-
-  setPotentialSelection(key) {
-    this.set('potentialSelection', key);
   },
 
   storage() {

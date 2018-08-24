@@ -1,73 +1,227 @@
 export default {
   key: 'secrets',
   initial: 'idle',
+  on: {
+    RESET: 'idle',
+    DONE: 'complete',
+  },
   states: {
     idle: {
-      onEntry: [{ type: 'routeTransition', params: ['vault.cluster.settings.mount-secret-backend'] }],
+      onEntry: [
+        { type: 'routeTransition', params: ['vault.cluster.settings.mount-secret-backend'] },
+        { type: 'render', level: 'feature', component: 'wizard/secrets-wizard' },
+        { type: 'render', level: 'step', component: 'wizard/secrets-idle' },
+      ],
       on: {
         CONTINUE: {
+          ad: {
+            cond: type => type === 'ad',
+          },
           aws: {
+            cond: type => type === 'aws',
+          },
+          consul: {
             cond: type => type === 'aws',
           },
           cubbyhole: {
             cond: type => type === 'cubbyhole',
           },
+          gcp: {
+            cond: type => type === 'gcp',
+          },
           kv: {
             cond: type => type === 'kv',
           },
+          nomad: {
+            cond: type => type === 'nomad',
+          },
+          pki: {
+            cond: type => type === 'pki',
+          },
+          rabbitmq: {
+            cond: type => type === 'rabbitmq',
+          },
+          ssh: {
+            cond: type => type === 'ssh',
+          },
+          totp: {
+            cond: type => type === 'totp',
+          },
+          transit: {
+            cond: type => type === 'transit',
+          },
         },
+      },
+    },
+    enable: {
+      onEntry: { type: 'render', level: 'step', component: 'wizard/secrets-enable' },
+      on: {
+        CONTINUE: 'save',
+      },
+    },
+    save: {
+      onEntry: { type: 'render', level: 'step', component: 'wizard/secrets-save' },
+      on: {
+        CONTINUE: 'details',
+      },
+    },
+    details: {
+      onEntry: { type: 'render', level: 'step', component: 'wizard/secrets-details' },
+      on: {
+        CONTINUE: {
+          credentials: {
+            cond: type => type === 'aws',
+          },
+          role: {
+            cond: type => type === 'ad',
+          },
+          secret: {
+            cond: type =>
+              ['cubbyhole', 'gcp', 'kv', 'nomad', 'pki', 'rabbitmq', 'ssh', 'totp', 'transit'].includes(type),
+          },
+        },
+      },
+    },
+    credentials: {
+      onEntry: { type: 'render', level: 'step', component: 'wizard/secret-credentials' },
+      on: {
+        CONTINUE: 'role',
+      },
+    },
+    role: {
+      onEntry: { type: 'render', level: 'step', component: 'wizard/secrets-role' },
+      on: {
+        CONTINUE: 'display',
+      },
+    },
+    secret: {
+      onEntry: [{ type: 'render', level: 'step', component: 'wizard/secrets-secret' }],
+      on: {
+        CONTINUE: 'display',
+      },
+    },
+    display: {
+      onEntry: { type: 'render', level: 'step', component: 'wizard/secrets-display' },
+      REPEAT: {
+        role: {
+          cond: type => type === 'ad',
+        },
+        secret: {
+          cond: type =>
+            ['cubbyhole', 'gcp', 'kv', 'nomad', 'pki', 'rabbitmq', 'ssh', 'totp', 'transit'].includes(type),
+        },
+      },
+    },
+    ad: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/ad-engine' },
+        { type: 'continueFeature' },
+      ],
+      on: {
+        CONTINUE: 'enable',
       },
     },
     aws: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/aws-engine' },
+        { type: 'continueFeature' },
+      ],
       on: {
-        RESET: 'idle',
-        DONE: 'complete',
-        PAUSE: 'paused',
+        CONTINUE: 'enable',
       },
-      key: 'aws',
-      initial: 'credentials',
-      states: {
-        credentials: {
-          on: {
-            CONTINUE: 'role',
-          },
-        },
-        role: {
-          on: {
-            CONTINUE: 'display',
-          },
-        },
-        display: {
-          REPEAT: 'role',
-        },
+    },
+    consul: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/consul-engine' },
+        { type: 'continueFeature' },
+      ],
+      on: {
+        CONTINUE: 'enable',
       },
     },
     cubbyhole: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/ch-engine' },
+        { type: 'continueFeature' },
+      ],
       on: {
-        RESET: 'idle',
-        DONE: 'complete',
-        PAUSE: 'paused',
+        CONTINUE: 'enable',
       },
-      key: 'ch',
-      initial: 'role',
-      states: {
-        role: {
-          on: {
-            REPEAT: 'role',
-          },
-        },
+    },
+    gcp: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/gcp-engine' },
+        { type: 'continueFeature' },
+      ],
+      on: {
+        CONTINUE: 'enable',
       },
     },
     kv: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/kv-engine' },
+        { type: 'continueFeature' },
+      ],
       on: {
-        RESET: 'idle',
-        DONE: 'complete',
+        CONTINUE: 'enable',
+      },
+    },
+    nomad: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/nomad-engine' },
+        { type: 'continueFeature' },
+      ],
+      on: {
+        CONTINUE: 'enable',
+      },
+    },
+    pki: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/pki-engine' },
+        { type: 'continueFeature' },
+      ],
+      on: {
+        CONTINUE: 'enable',
+      },
+    },
+    rabbitmq: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/rabbitmq-engine' },
+        { type: 'continueFeature' },
+      ],
+      on: {
+        CONTINUE: 'enable',
+      },
+    },
+    ssh: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/ssh-engine' },
+        { type: 'continueFeature' },
+      ],
+      on: {
+        CONTINUE: 'enable',
+      },
+    },
+    totp: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/totp-engine' },
+        { type: 'continueFeature' },
+      ],
+      on: {
+        CONTINUE: 'enable',
+      },
+    },
+    transit: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/transit-engine' },
+        { type: 'continueFeature' },
+      ],
+      on: {
+        CONTINUE: 'enable',
       },
     },
     complete: {
       onEntry: ['completeFeature'],
-      on: { RESET: 'idle' },
     },
-    paused: {},
   },
 };

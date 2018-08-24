@@ -66,7 +66,7 @@ export default Ember.Controller.extend({
   actions: {
     onTypeChange(val) {
       const { selectedPath, selectedType } = this.getProperties('selectedPath', 'selectedType');
-      this.get('wizard').setPotentialSelection(val);
+      this.get('wizard').set('componentState', val);
       this.set('selectedType', val);
       if (selectedPath === selectedType) {
         this.set('selectedPath', val);
