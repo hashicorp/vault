@@ -153,7 +153,7 @@ export default Component.extend({
   actions: {
     onTypeChange(path, value) {
       if (path === 'type') {
-        this.get('wizard').setPotentialSelection(value);
+        this.get('wizard').set('componentState', value);
         this.changeConfigModel(value);
         this.checkPathChange(value);
       }
