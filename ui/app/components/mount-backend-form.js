@@ -3,11 +3,11 @@ import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 import { engines } from 'vault/helpers/mountable-secret-engines';
 
-const { inject } = Ember;
+const { inject, computed, Component } = Ember;
 const METHODS = methods();
 const ENGINES = engines();
 
-export default Ember.Component.extend({
+export default Component.extend({
   store: inject.service(),
   wizard: inject.service(),
   flashMessages: inject.service(),
@@ -51,6 +51,10 @@ export default Ember.Component.extend({
     this.changeConfigModel(model.get('type'));
   },
 
+  mountTypes: computed('mountType', function() {
+    return this.get('mountType') === 'secret' ? ENGINES : METHODS;
+  }),
+
   willDestroy() {
     // if unsaved, we want to unload so it doesn't show up in the auth mount list
     this.get('mountModel').rollbackAttributes();
@@ -90,7 +94,7 @@ export default Ember.Component.extend({
   checkPathChange(type) {
     let mount = this.get('mountModel');
     let currentPath = mount.get('path');
-    let list = this.get('mountType') === 'secret' ? ENGINES : METHODS;
+    let list = this.get('mountTypes');
     // if the current path matches a type (meaning the user hasn't altered it),
     // change it here to match the new type
     let isUnchanged = list.findBy('type', currentPath);

@@ -13,6 +13,21 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="enable" @noun={{if (eq mountType "auth") "auth method" "secret engine"}} />
     {{message-error model=mountModel}}
+    {{#each mountTypes as |type|}}
+    <div class="box">
+      <label for={{type.type}}>
+        <ICon @size=48 @excludeIconClass={{true}} @glyph={{concat "enable/" (or type.glyph type.type)}} />
+          {{type.displayName}}
+        {{radio-button
+          value=type.type
+          groupValue=mountModel.type
+          changed=(queue (action (mut mountModel.type)) (action "onTypeChange" "type"))
+          name="replication-mode"
+          radioId=type.type
+        }}
+      </label>
+    </div>
+    {{/each}}
     {{form-field-groups model=mountModel onChange=(action "onTypeChange") renderGroup="default"}}
     {{#if mountModel.authConfigs.firstObject}}
       {{form-field-groups model=mountModel.authConfigs.firstObject}}
