@@ -1,0 +1,72 @@
+*,
+*::after,
+*::before {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  min-height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--open-sans-font);
+  font-size: var(--default-font-size);
+  font-weight: var(--font-weight-reg);
+  line-height: 1.625;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
+  & > header,
+  & > footer {
+    flex: none;
+  }
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  flex-shrink: 0;
+  flex-basis: auto;
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+hr {
+  height: 1px;
+  border: none;
+  color: var(--gray-8);
+  background-color: var(--gray-8);
+}
+
+figure {
+  margin: 0;
+}
+
+strong {
+  font-weight: 600;
+}
+
+/* temporary override; can be removed with normalize.css */
+input {
+  line-height: initial;
+}
+
+// Avoid FOUT
+.wf-loading {
+  visibility: hidden;
+}
+
+.wf-active, .wf-inactive {
+  visibility: visible;
+}

@@ -1,7 +1,43 @@
 <% wrap_layout :inner do %>
   <% content_for :sidebar do %>
-    <ul class="nav docs-sidenav">
+    <ul class="nav docs-nav">
+      <hashi-docs-sidebar
+      category='guides'
+      current_page='<%= current_page.path %>'
+      data="<%= encode(sidebar_data('guides')) %>"
+      order="<%= encode([
+        {
+          category: 'getting-started',
+        }, {
+          category: 'operations',
+          content: [
+            'reference-architecture',
+            'vault-ha-consul',
+            'production',
+            'generate-root',
+            'rekeying-and-rotating',
+            'plugin-backends',
+            '--------------',
+            'replication',
+            'disaster-recovery',
+            'mount-filter',
+            'autounseal-aws-kms',
+            'seal-wrap'
+          ]
+        }, {
+          category: 'identity',
+          content: [
+            'secure-intro',
+            'policies',
+            'authentication',
+            'approle-trusted-entities',
+            'lease'
+          ]
+        }
+      ]) %>")
+    ></hashi-docs-sidebar>
 
+    <p>----------------------------</p>
 
       <li<%= sidebar_current("getting-started")%>>
         <a href="/guides/getting-started/index.html">Getting Started</a>

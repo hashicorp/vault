@@ -1,0 +1,41 @@
+{
+  "name": "middleman-spike-assets",
+  "description": "simple config to use postcss and webpack for asset processing",
+  "version": "0.0.0",
+  "author": "Jeff Escalante",
+  "main": "app.js",
+  "dependencies": {
+    "8fold-marked": "^0.3.8",
+    "@hashicorp-tmp/consent-manager": "^0.0.5",
+    "@hashicorp/hashi-button": "0.2.4",
+    "@hashicorp/hashi-footer": "0.3.2",
+    "@hashicorp/hashi-ga-form-fields": "0.0.7",
+    "@hashicorp/hashi-global-styles": "^0.1.2",
+    "@hashicorp/hashi-image": "0.3.1",
+    "@hashicorp/hashi-logo-grid": "0.4.3",
+    "@hashicorp/hashi-nav": "0.1.18",
+    "@hashicorp/hashi-newsletter-signup-form": "0.2.4",
+    "@hashicorp/hashi-section-header": "0.0.9",
+    "js-cookie": "^2.2.0",
+    "normalize.css": "^8.0.0",
+    "object-assign": "^4.1.1",
+    "object-fit-images": "^3.2.3",
+    "preact": "^8.2.9",
+    "promise-polyfill": "^8.0.0",
+    "query-string": "^6.1.0",
+    "reshape-preact-components": "^0.6.0",
+    "slugify": "^1.3.0",
+    "tippy.js": "^2.0.6",
+    "unfetch": "^3.0.0"
+  },
+  "devDependencies": {
+    "babel-preset-preact": "^1.1.0",
+    "babel-register": "^6.26.0",
+    "node-fetch": "^2.1.2",
+    "nsp": "^3.2.1",
+    "spike": "^2.3.0",
+    "spike-css-standards": "^4.0.0",
+    "spike-js-standards": "^2.0.2",
+    "webpack-bundle-analyzer": "^2.9.0"
+  }
+}

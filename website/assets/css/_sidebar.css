@@ -1,0 +1,127 @@
+#sidebar {
+  border-bottom: 1px solid var(--gray-9);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  z-index: 1;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  overflow: auto;
+
+  @media (--medium) {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 12em;
+    position: static;
+    top: auto;
+    width: auto;
+  }
+
+  @media (--large) {
+    flex: 0 0 18.75em;
+  }
+
+  & .nav-toggle {
+    height: 60px;
+    display: flex;
+    cursor: pointer;
+
+    @media (--medium) {
+      display: none;
+    }
+
+    & svg {
+      margin: auto;
+
+      &:last-child {
+        display: none;
+      }
+    }
+  }
+
+  &.expanded {
+    min-height: 100%;
+
+    @media (--medium) {
+      min-height: 0;
+    }
+    
+    & .nav-toggle svg {
+      &:first-child {
+        display: none;
+      }
+      &:last-child {
+        display: block;
+      }
+    }
+
+    & ul.nav.docs-nav {
+      display: block;
+      box-shadow: 0 6px 6px 0 rgba(0,0,0,0.10);
+
+      @media (--medium) {
+        box-shadow: none;
+      }
+    }
+
+    & .underlay {
+      display: block;
+
+      @media (--medium) {
+        display: none;
+      }
+    }
+  }
+
+  & ul.nav {
+    background: #FFFFFF;
+    list-style: none;
+    display: none;
+    margin: 10px;
+    padding: 0;
+
+    &.docs-nav {
+      margin: 0;
+      padding: var(--small-grid-container-padding);
+      padding-top: 0;
+      
+      @media (--medium) {
+        display: block;
+        padding: 0;
+        margin: 0;
+      }
+    }
+
+    & > li {
+      display: block;
+
+      &.active {
+        & > a {
+          font-weight: 600;
+        }
+
+        & ul.nav {
+          display: block;
+          margin: 0 0 0 24px;
+        }
+      }
+
+      & > a {
+        color: var(--black);
+        display: block;
+        font-size: 0.875em;
+        padding: 6px 0;
+        text-decoration: none;
+      }
+    }
+  }
+
+  & .underlay {
+    display: none;
+    flex: 1;
+    z-index: 1;
+    background: rgba(0, 0, 0, .25);
+  }
+}

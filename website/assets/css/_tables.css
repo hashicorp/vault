@@ -1,0 +1,159 @@
+/**
+ * Extracted from Bootstrap
+ */
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+td,
+th {
+  padding: 0;
+}
+
+table {
+  background-color: transparent;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 20px;
+
+  & > tbody > tr:nth-of-type(odd) {
+    background-color: #f9f9f9;
+  }
+
+  & > thead > tr > th,
+  & > tbody > tr > th,
+  & > tfoot > tr > th,
+  & > thead > tr > td,
+  & > tbody > tr > td,
+  & > tfoot > tr > td {
+    padding: 8px;
+    line-height: 1.42857143;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+  }
+
+  & > thead > tr > th {
+    vertical-align: bottom;
+    border-bottom: 2px solid #ddd;
+  }
+
+  & > caption + thead > tr:first-child > th,
+  & > colgroup + thead > tr:first-child > th,
+  & > thead:first-child > tr:first-child > th,
+  & > caption + thead > tr:first-child > td,
+  & > colgroup + thead > tr:first-child > td,
+  & > thead:first-child > tr:first-child > td {
+    border-top: 0;
+  }
+
+  & > tbody + tbody {
+    border-top: 2px solid #ddd;
+  }
+
+  & table {
+    background-color: #fff;
+  }
+
+  & > thead > tr > td.success,
+  & > tbody > tr > td.success,
+  & > tfoot > tr > td.success,
+  & > thead > tr > th.success,
+  & > tbody > tr > th.success,
+  & > tfoot > tr > th.success,
+  & > thead > tr.success > td,
+  & > tbody > tr.success > td,
+  & > tfoot > tr.success > td,
+  & > thead > tr.success > th,
+  & > tbody > tr.success > th,
+  & > tfoot > tr.success > th {
+    background-color: #dff0d8;
+  }
+
+  & > thead > tr > td.active,
+  & > tbody > tr > td.active,
+  & > tfoot > tr > td.active,
+  & > thead > tr > th.active,
+  & > tbody > tr > th.active,
+  & > tfoot > tr > th.active,
+  & > thead > tr.active > td,
+  & > tbody > tr.active > td,
+  & > tfoot > tr.active > td,
+  & > thead > tr.active > th,
+  & > tbody > tr.active > th,
+  & > tfoot > tr.active > th {
+    background-color: #f5f5f5;
+  }
+
+  & > thead > tr > td.info,
+  & > tbody > tr > td.info,
+  & > tfoot > tr > td.info,
+  & > thead > tr > th.info,
+  & > tbody > tr > th.info,
+  & > tfoot > tr > th.info,
+  & > thead > tr.info > td,
+  & > tbody > tr.info > td,
+  & > tfoot > tr.info > td,
+  & > thead > tr.info > th,
+  & > tbody > tr.info > th,
+  & > tfoot > tr.info > th {
+    background-color: #d9edf7;
+  }
+
+  & > thead > tr > td.warning,
+  & > tbody > tr > td.warning,
+  & > tfoot > tr > td.warning,
+  & > thead > tr > th.warning,
+  & > tbody > tr > th.warning,
+  & > tfoot > tr > th.warning,
+  & > thead > tr.warning > td,
+  & > tbody > tr.warning > td,
+  & > tfoot > tr.warning > td,
+  & > thead > tr.warning > th,
+  & > tbody > tr.warning > th,
+  & > tfoot > tr.warning > th {
+    background-color: #fcf8e3;
+  }
+
+  & > thead > tr > td.danger,
+  & > tbody > tr > td.danger,
+  & > tfoot > tr > td.danger,
+  & > thead > tr > th.danger,
+  & > tbody > tr > th.danger,
+  & > tfoot > tr > th.danger,
+  & > thead > tr.danger > td,
+  & > tbody > tr.danger > td,
+  & > tfoot > tr.danger > td,
+  & > thead > tr.danger > th,
+  & > tbody > tr.danger > th,
+  & > tfoot > tr.danger > th {
+    background-color: #f2dede;
+  }
+
+  & col[class*="col-"] {
+    position: static;
+    float: none;
+    display: table-column;
+  }
+
+  & td[class*="col-"],
+  & th[class*="col-"] {
+    position: static;
+    float: none;
+    display: table-cell;
+  }
+}
+
+
+
+caption {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  color: #777777;
+  text-align: left;
+}
+
+th {
+  text-align: left;
+}
