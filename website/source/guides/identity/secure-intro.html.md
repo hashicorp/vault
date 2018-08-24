@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Secure Introduction of Vault Clients - Guides"
+sidebar_title: "Secure Introduction of Vault Clients"
 sidebar_current: "guides-identity-secure-intro"
 description: |-
   This introductory guide walk through the mechanism of Vault clients to

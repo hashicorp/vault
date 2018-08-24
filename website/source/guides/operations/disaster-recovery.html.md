@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault Disaster Recovery Replication Setup - Guides"
+sidebar_title: "Disaster Recovery Setup"
 sidebar_current: "guides-operations-dr"
 description: |-
   This guide demonstrates step-by-step instruction of setting up a disaster

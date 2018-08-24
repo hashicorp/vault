@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Plugin Backends - Guides"
+sidebar_title: "Building Plugin Backends"
 sidebar_current: "guides-operations-plugin-backends"
 description: |-
   Learn how to build, register, and mount a custom plugin backend.

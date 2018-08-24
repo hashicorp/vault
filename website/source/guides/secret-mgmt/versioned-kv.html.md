@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Versioned KV Secret Engine - Guides"
+sidebar_title: "Versioned KV Secret Engine"
 sidebar_current: "guides-secret-mgmt-versioned-kv"
 description: |-
   Vault 0.10.0 introduced version 2 of key-value secret engine which supports

@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Java Application Demo - Guides"
+sidebar_title: "Java Application Demo"
 sidebar_current: "guides-encryption-spring-demo"
 description: |-
   This guide discusses the concepts necessary to help users
@@ -30,7 +31,7 @@ environment.
 
 ## Reference Material
 
-- [Encryption as a Service](/guides/encryption/transit.html) 
+- [Encryption as a Service](/guides/encryption/transit.html)
 - [Manage secrets, access, and encryption in
 the public cloud with
 Vault](https://www.hashicorp.com/resources/solutions-engineering-webinar-series-episode-2-vault)

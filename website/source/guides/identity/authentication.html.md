@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "AppRole Pull Authentication - Guides"
+sidebar_title: "AppRole Pull Authentication"
 sidebar_current: "guides-identity-authentication"
 description: |-
   Authentication is a process in Vault by which user or machine-supplied

@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Secret as a Service - Guides"
+sidebar_title: "Secret as a Service"
 sidebar_current: "guides-secret-mgmt-dynamic-secrets"
 description: |-
   Vault can dynamically generate secrets on-demand for some systems.

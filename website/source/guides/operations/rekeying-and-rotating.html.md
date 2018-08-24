@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Rekeying & Rotating Vault - Guides"
+sidebar_title: "Rekeying & Rotating"
 sidebar_current: "guides-operations-rekeying-and-rotating"
 description: |-
   Vault supports generating new unseal keys as well as rotating the underlying

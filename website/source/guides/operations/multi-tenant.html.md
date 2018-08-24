@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Secure Multi-Tenancy with Namepaces - Guides"
+sidebar_title: "Multi-Tenant: Namespaces"
 sidebar_current: "guides-operations-multi-tenant"
 description: |-
   This guide provides guidance in creating a multi-tenant environment.

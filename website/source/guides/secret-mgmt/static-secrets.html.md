@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Static Secrets - Guides"
+sidebar_title: "Static Secrets"
 sidebar_current: "guides-secret-mgmt-static-secrets"
 description: |-
   Vault supports generating new unseal keys as well as rotating the underlying

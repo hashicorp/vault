@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Upgrading to Vault 0.5.0 - Guides"
+sidebar_title: "Upgrade to 0.5.0"
 sidebar_current: "guides-upgrading-to-0.5.0"
 description: |-
   This page contains the full list of breaking changes for Vault 0.5, including

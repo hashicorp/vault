@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Cubbyhole Response Wrapping - Guides"
+sidebar_title: "Cubbyhole Response Wrapping"
 sidebar_current: "guides-secret-mgmt-cubbyhole"
 description: |-
   Vault provides a capability to wrap Vault response and store it in a

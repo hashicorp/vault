@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "One-Time SSH Password - Guides"
+sidebar_title: "One-Time SSH Password"
 sidebar_current: "guides-secret-mgmt-ssh-otp"
 description: |-
   The one-time SSH password secrets engine allows Vault to issue a one-time

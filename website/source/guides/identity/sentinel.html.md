@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Sentinel - Guides"
+sidebar_title: "Sentinel Policies"
 sidebar_current: "guides-identity-sentinel"
 description: |-
   Vault Enterprise supports Sentinel to provide a rich set of access control

@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Guides"
+sidebar_title: "Getting Started"
 sidebar_current: "getting-started"
 description: |-
   This section takes you to the Getting Started section.
