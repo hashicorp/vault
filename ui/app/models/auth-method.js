@@ -2,15 +2,12 @@ import Ember from 'ember';
 import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import { queryRecord } from 'ember-computed-query';
-import { methods } from 'vault/helpers/mountable-auth-methods';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { memberAction } from 'ember-api-actions';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const { attr, hasMany } = DS;
 const { computed } = Ember;
-
-const METHODS = methods();
 
 const configPath = function configPath(strings, key) {
   return function(...values) {
@@ -19,15 +16,10 @@ const configPath = function configPath(strings, key) {
 };
 export default DS.Model.extend({
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
-  path: attr('string', {
-    defaultValue: METHODS[0].value,
-  }),
+  path: attr('string'),
   accessor: attr('string'),
   name: attr('string'),
-  type: attr('string', {
-    defaultValue: METHODS[0].value,
-    possibleValues: METHODS,
-  }),
+  type: attr('string'),
   // namespaces introduced types with a `ns_` prefix for built-in engines
   // so we need to strip that to normalize the type
   methodType: computed('type', function() {
@@ -80,7 +72,7 @@ export default DS.Model.extend({
   ],
 
   formFieldGroups: [
-    { default: ['type', 'path'] },
+    { default: ['path'] },
     {
       'Method Options': [
         'description',

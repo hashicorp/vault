@@ -2,28 +2,22 @@ import Ember from 'ember';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { fragment } from 'ember-data-model-fragments/attributes';
-import { engines } from 'vault/helpers/mountable-secret-engines';
 
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
 const { computed } = Ember;
-const ENGINES = engines();
 
 //identity will be managed separately and the inclusion
 //of the system backend is an implementation detail
 const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
 export default DS.Model.extend({
-  path: attr('string', {
-    defaultValue: ENGINES[0].value,
-  }),
+  path: attr('string'),
   accessor: attr('string'),
   name: attr('string'),
   type: attr('string', {
     label: 'Secret engine type',
-    defaultValue: ENGINES[0].value,
-    possibleValues: ENGINES,
   }),
   description: attr('string', {
     editType: 'textarea',
@@ -68,7 +62,7 @@ export default DS.Model.extend({
 
   formFieldGroups: computed('engineType', function() {
     let type = this.get('engineType');
-    let defaultGroup = { default: ['type', 'path'] };
+    let defaultGroup = { default: ['path'] };
     if (type === 'kv' || type === 'generic') {
       defaultGroup.default.push('options.{version}');
     }

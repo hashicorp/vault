@@ -42,13 +42,14 @@ export default Component.extend({
    */
   mountModel: null,
 
+  showConfig: false,
+
   init() {
     this._super(...arguments);
     const type = this.get('mountType');
     const modelType = type === 'secret' ? 'secret-engine' : 'auth-method';
     const model = this.get('store').createRecord(modelType);
     this.set('mountModel', model);
-    this.changeConfigModel(model.get('type'));
   },
 
   mountTypes: computed('mountType', function() {
@@ -98,7 +99,7 @@ export default Component.extend({
     // if the current path matches a type (meaning the user hasn't altered it),
     // change it here to match the new type
     let isUnchanged = list.findBy('type', currentPath);
-    if (isUnchanged) {
+    if (!currentPath || isUnchanged) {
       mount.set('path', type);
     }
   },

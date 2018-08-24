@@ -35,6 +35,7 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'JWT/OIDC',
     value: 'jwt',
     type: 'jwt',
+    glyph: 'auth',
     category: 'generic',
   },
   {
@@ -47,6 +48,7 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'LDAP',
     value: 'ldap',
     type: 'ldap',
+    glyph: 'auth',
     category: 'infra',
   },
   {
@@ -59,6 +61,7 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'RADIUS',
     value: 'radius',
     type: 'radius',
+    glyph: 'auth',
     category: 'infra',
   },
   {
