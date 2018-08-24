@@ -25,7 +25,9 @@ export default DS.Model.extend({
     defaultValue: ENGINES[0].value,
     possibleValues: ENGINES,
   }),
-  description: attr('string'),
+  description: attr('string', {
+    editType: 'textarea',
+  }),
   config: fragment('mount-config', { defaultValue: {} }),
   options: fragment('mount-options', { defaultValue: {} }),
   local: attr('boolean', {
