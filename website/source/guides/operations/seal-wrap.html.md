@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Seal Wrap / FIPS 140-2 - Guides"
+sidebar_title: "Seal Wrap / FIPS 140-2"
 sidebar_current: "guides-operations-seal-wrap"
 description: |-
   In this guide,

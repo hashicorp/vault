@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault Reference Architecture - Guides"
+sidebar_title: "Reference Architecture"
 sidebar_current: "guides-operations-reference-architecture"
 description: |-
   This guide provides guidance in the best practices of Vault

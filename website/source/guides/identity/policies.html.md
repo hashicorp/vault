@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Policies - Guides"
+sidebar_title: "Policies"
 sidebar_current: "guides-identity-policies"
 description: |-
   Policies in Vault control what a user can access.

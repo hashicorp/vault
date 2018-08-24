@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "AppRole With Terraform & Chef - Guides"
+sidebar_title: "AppRole with Terraform and Chef"
 sidebar_current: "guides-identity-approle-tf-chef"
 description: |-
   This guide discusses the concepts necessary to help users

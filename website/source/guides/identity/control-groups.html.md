@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Control Groups - Guides"
+sidebar_title: "Control Groups"
 sidebar_current: "guides-identity-control-groups"
 description: |-
   Vault Enterprise has a support for Control Group Authorization which adds

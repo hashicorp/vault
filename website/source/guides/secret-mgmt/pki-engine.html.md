@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Build Your Own Certificate Authority - Guides"
+sidebar_title: "Build Your Own CA"
 sidebar_current: "guides-secret-mgmt-pki"
 description: |-
   The PKI secrets engine generates dynamic X.509 certificates. With this secrets

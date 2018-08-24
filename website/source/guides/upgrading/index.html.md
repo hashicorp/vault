@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Upgrading Vault - Guides"
+sidebar_title: "Upgrade Guides"
 sidebar_current: "guides-upgrading"
 description: |-
   These are general upgrade instructions for Vault for both non-HA and HA

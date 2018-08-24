@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault Mount Filter - Guides"
+sidebar_title: "Mount Filter"
 sidebar_current: "guides-operations-mount-filter"
 description: |-
   This guide demonstrates how to selectively filter out secret mounts for

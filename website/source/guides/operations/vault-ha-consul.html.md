@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault HA with Consul - Guides"
+sidebar_title: "Vault HA with Consul"
 sidebar_current: "guides-operations-vault-ha"
 description: |-
   This guide will walk you through a simple Vault Highly Available (HA) cluster

@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault Cluster Monitoring - Guides"
+sidebar_title: "Vault Cluster Monitoring"
 sidebar_current: "guides-operations-monitoring"
 description: |-
   Learn how to set up and manage Vault Enterprise Performance Replication.

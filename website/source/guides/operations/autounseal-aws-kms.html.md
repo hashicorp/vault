@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault Auto-unseal using AWS KMS - Guides"
+sidebar_title: "Vault Auto-unseal with AWS KMS"
 sidebar_current: "guides-operations-autounseal-aws-kms"
 description: |-
   In this guide, we'll show an example of how to use Terraform to provision an

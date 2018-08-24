@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Upgrading to Vault 0.9.6 - Guides"
+sidebar_title: "Upgrade to 0.9.6"
 sidebar_current: "guides-upgrading-to-0.9.6"
 description: |-
   This page contains the list of deprecations and important or breaking changes

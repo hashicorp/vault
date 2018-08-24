@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Identity: Entities and Groups - Guides"
+sidebar_title: "Identity - Entities & Groups"
 sidebar_current: "guides-identity-identity"
 description: |-
   This guide demonstrates the commands to create entities, entity aliases, and
