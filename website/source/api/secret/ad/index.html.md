@@ -159,13 +159,16 @@ Performing a `LIST` on the `/ad/roles` endpoint will list the names of all the r
 
 The `creds` endpoint offers the credential information for a given role.
 
+| Method   | Path                   | Produces               |
+| :------- | :--------------------- | :--------------------- |
+| `GET`    | `/ad/creds/:role_name` | `200 application/json` |
+
 ### Sample Get Request
 
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    --data @payload.json \
     http://127.0.0.1:8200/v1/ad/creds/my-application
 ```
 
