@@ -1,0 +1,35 @@
+.g-container {
+  margin: 0 auto;
+  max-width: var(--site-max-width);
+  padding-left: 32px;
+  padding-right: 32px;
+
+  @media (max-width: 768px) {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+.arrow {
+  box-sizing: content-box;
+  border: 3px solid var(--white);
+  border-left: 0;
+  border-bottom: 0;
+  display: inline-block;
+  vertical-align: middle;
+  width: 10px;
+  height: 10px;
+
+  &.arrow-up {
+    transform: rotate(-90deg);
+  }
+  &.arrow-right {
+    transform: rotate(45deg);
+  }
+  &.arrow-down {
+    transform: rotate(135deg);
+  }
+  &.arrow-left {
+    transform: rotate(-135deg);
+  }
+}

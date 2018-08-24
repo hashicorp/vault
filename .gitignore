@@ -92,3 +92,14 @@ ui/vault-ui-integration-server.pid
 # for building static assets
 node_modules
 package-lock.json
+
+# Website
+website/.bundle
+website/build/
+website/npm-debug.log
+website/vendor
+website/.bundle
+website/.cache
+website/assets/node_modules
+website/assets/public
+website/components/node_modules

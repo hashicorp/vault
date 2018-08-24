@@ -13,49 +13,46 @@ description: |-
     <div class="col-md-12">
       <p>
         Below are the available downloads for the latest version of Vault
-        (<%= latest_version %>). Please download the proper package for your
+        (<%= config[:latest_version] %>). Please download the proper package for your
         operating system and architecture.
       </p>
       <p>
         You can find the
-        <a href="https://releases.hashicorp.com/vault/<%= latest_version %>/vault_<%= latest_version %>_SHA256SUMS">
-          SHA256 checksums for Vault <%= latest_version %>
+        <a href="https://releases.hashicorp.com/vault/<%= config[:latest_version] %>/vault_<%= config[:latest_version] %>_SHA256SUMS">
+          SHA256 checksums for Vault <%= config[:latest_version] %>
         </a>
         online and you can
-        <a href="https://releases.hashicorp.com/vault/<%= latest_version %>/vault_<%= latest_version %>_SHA256SUMS.sig">
+        <a href="https://releases.hashicorp.com/vault/<%= config[:latest_version] %>/vault_<%= config[:latest_version] %>_SHA256SUMS.sig">
           verify the checksums signature file
         </a>
         which has been signed using <a href="https://hashicorp.com/security.html" target="_blank" rel="nofollow noopener noreferrer">HashiCorp's GPG key</a>.
         You can also <a href="https://releases.hashicorp.com/vault/" target="_blank" rel="nofollow noopener noreferrer">download older versions of Vault</a> from the releases service.
       </p>
-      <p>Check out the <a href="https://github.com/hashicorp/vault/blob/v<%= latest_version %>/CHANGELOG.md">v<%= latest_version %> CHANGELOG</a> for information on the latest release.</p>
-      <p><a href="/community.html">Community resources</a> are available to learn more about Vault and interact with the community.
+      <p>Check out the <a href="https://github.com/hashicorp/vault/blob/v<%= config[:latest_version] %>/CHANGELOG.md">v<%= config[:latest_version] %> CHANGELOG</a> for information on the latest release.</p>
+      <p><a href="/community.html">Community resources</a> are available to learn more about Vault and interact with the community.</p>
     </div>
   </div>
 
-  <% product_versions.each do |os, arches| %>
-    <% next if os == "web" %>
-    <div class="row">
-      <div class="col-md-12 download">
-        <div class="icon pull-left"><%= system_icon(os) %></div>
-        <div class="details">
-          <h2 class="os-name"><%= pretty_os(os) %></h2>
-          <ul>
-            <% arches.each do |arch, url| %>
-              <li><a href="<%= url %>"><%= pretty_arch(arch) %></a></li>
-            <% end %>
-          </ul>
-          <div class="clearfix"></div>
-        </div>
-      </div>
-    </div>
-  <% end %>
+  <ul class="os-list horizontal-divider">
+		<% config[:product_versions].each do |os, arches| %>
+			<% next if os == "web" %>
+			<li>
+				<div class="os-icon"><%= system_icon(os) %></div>
+				<div class="details">
+					<h2 class="os-name"><%= pretty_os(os) %></h2>
+					<ul class="vertical-divider">
+						<% arches.each do |arch, url| %>
+							<li><a href="<%= url %>"><%= pretty_arch(arch) %></a></li>
+						<% end %>
+					</ul>
+				</div>
+			</li>
+		<% end %>
+	</ul>
 
-  <div class="row">
-    <div class="col-md-12 poweredby">
-      <a href="https://www.fastly.com?utm_source=hashicorp" target="_blank" rel="nofollow noopener noreferrer">
-        <%= inline_svg "fastly.svg", height: 50 %>
-      </a>
-    </div>
-  </div>
+	<div class="poweredby-wrap">
+		<a href="https://www.fastly.com?utm_source=hashicorp" target="_blank" rel="nofollow noopener noreferrer">
+			<%= inline_svg "fastly.svg", height: 50 %>
+		</a>
+	</div>
 </section>

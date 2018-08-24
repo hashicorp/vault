@@ -1,0 +1,25 @@
+.highlight {
+  &.javascript .s2 {
+    color: #E07EAC;
+  }
+  &.shell .s2 {
+    color: #76DBBA;
+  }
+  &.c {
+    & .c1 {
+      color: #656A70;
+    }
+    & .n {
+      color: #E07EAC;
+    }
+  }
+  &.python {
+    & .s {
+      color: #6EC4EB;
+    }
+
+    & .k {
+      color: #E07EAC;
+    }
+  }
+}
