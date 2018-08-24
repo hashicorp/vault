@@ -24,6 +24,7 @@ export default Ember.Component.extend({
     },
 
     advanceWizard() {
+      debugger;
       let event = this.get('wizard.initEvent') || 'CONTINUE';
       this.get('wizard').transitionTutorialMachine(this.get('currentState'), event);
     },

@@ -2,7 +2,7 @@ import Ember from 'ember';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 
-const { get, set, computed } = Ember;
+const { get, set, computed, inject } = Ember;
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
@@ -12,8 +12,9 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   onDataChange: () => {},
   refresh: 'refresh',
   model: null,
-  routing: Ember.inject.service('-routing'),
+  routing: inject.service('-routing'),
   requestInFlight: computed.or('model.isLoading', 'model.isReloading', 'model.isSaving'),
+
   willDestroyElement() {
     const model = this.get('model');
     if (get(model, 'isError')) {
@@ -49,6 +50,9 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     const model = get(this, 'model');
     return model[method]().then(() => {
       if (!Ember.get(model, 'isError')) {
+        if (this.get('wizard.featureState') === 'role') {
+          this.get('wizard').transitionFeatureMachine('role', 'CONTINUE');
+        }
         successCallback(model);
       }
     });

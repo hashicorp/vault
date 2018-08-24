@@ -178,6 +178,10 @@ export default Service.extend({
       this.saveState('featureState', this.getExtState(FEATURE_STATE));
     }
     this.saveExtState(FEATURE_STATE, this.get('featureState'));
+    debugger;
+    let nextFeature =
+      this.get('featureList').length > 1 ? this.get('featureList').objectAt(1).capitalize() : 'Finish';
+    this.set('nextFeature', nextFeature);
     let stateNodes = FeatureMachine.getStateNodes(this.get('featureState'));
     this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
   },
@@ -187,9 +191,6 @@ export default Service.extend({
     FeatureMachine = Machine(FeatureMachineConfig);
     this.set('currentMachine', this.get('featureList').objectAt(0));
     this.saveState('featureState', FeatureMachine.initialState);
-    let nextFeature =
-      this.get('featureList').length > 1 ? this.get('featureList').objectAt(1).capitalize() : 'Finish';
-    this.set('nextFeature', nextFeature);
   },
 
   completeFeature() {

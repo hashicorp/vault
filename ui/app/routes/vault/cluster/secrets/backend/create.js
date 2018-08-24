@@ -44,6 +44,7 @@ export default EditBase.extend({
   },
 
   model(params, transition) {
+    debugger;
     const parentKey = params.secret ? params.secret : '';
     return Ember.RSVP.hash({
       secret: this.createModel(transition, parentKey),
