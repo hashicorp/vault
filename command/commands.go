@@ -198,7 +198,7 @@ func (c *DeprecatedCommand) Run(args []string) int {
 func (c *DeprecatedCommand) warn() {
 	c.UI.Warn(wrapAtLength(fmt.Sprintf(
 		"WARNING! The \"vault %s\" command is deprecated. Please use \"vault %s\" "+
-			"instead. This command will be removed in Vault 0.11 (or later).",
+			"instead. This command will be removed in Vault 0.12.",
 		c.Old,
 		c.New)))
 	c.UI.Warn("")
