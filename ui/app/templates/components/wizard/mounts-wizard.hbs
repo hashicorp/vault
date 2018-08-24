@@ -1,4 +1,4 @@
-<WizardContent @headerText="Secrets" @glyph="tour">
+<WizardContent @headerText={{mountSubtype}} @glyph="tour">
   {{component stepComponent onAdvance=onAdvance onRepeat=onRepeat onReset=onReset}}
   {{component detailsComponent nextFeature=nextFeature nextStep=nextStep onAdvance=onAdvance onRepeat=onRepeat}}
 </WizardContent>
