@@ -96,7 +96,6 @@ export default Service.extend({
     if (extendedState) {
       this.set('componentState', extendedState);
     }
-    debugger;
 
     let { actions, value } = FeatureMachine.transition(currentState, event, extendedState);
     this.saveState('featureState', value);
