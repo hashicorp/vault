@@ -135,7 +135,7 @@ to allow machines or apps to acquire a token to interact with Vault. It uses
 **Role ID** and **Secret ID** for login.
 
 The basic workflow is:
-![AppRole auth method workflow](/assets/images/vault-approle-workflow.png)
+![AppRole auth method workflow](/img/vault-approle-workflow.png)
 
 > For the purpose of introducing the basics of AppRole, this guide walks you
 > through a very simple scenario involving only two personas (admin and app).
@@ -621,7 +621,7 @@ For example, Terraform as a trusted entity can deliver the Role ID onto the
 virtual machine.  When the app runs on the virtual machine, the Role ID already
 exists on the virtual machine.
 
-![AppRole auth method workflow](/assets/images/vault-approle-workflow2.png)
+![AppRole auth method workflow](/img/vault-approle-workflow2.png)
 
 The secret ID can be delivered using [**response
 wrapping**](/docs/concepts/response-wrapping.html) to transmit the _reference_

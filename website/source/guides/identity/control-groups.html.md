@@ -138,7 +138,7 @@ read the data.
 As a member of the **`acct_manager`** group, **`Ellen Wright`** can authorize
 Bob's request.
 
-![Scenario](/assets/images/vault-ctrl-grp-1.png)
+![Scenario](/img/vault-ctrl-grp-1.png)
 
 You are going to perform the following:
 
@@ -275,7 +275,7 @@ then login.
 
 1. Toggle **Upload file**, and click **Choose a file** to select your **`read-gdpr-order.hcl`** file you authored at [Step 1](#step1).
 
-    ![Create Policy](/assets/images/vault-ctrl-grp-2.png)
+    ![Create Policy](/img/vault-ctrl-grp-2.png)
 
     This loads the policy and sets the **Name** to be `read-gdpr-order`.
 
@@ -357,7 +357,7 @@ following command to create a new user, **`bob`**:
     ```plaintext
     $ vault write auth/userpass/users/bob password="training"
     ```
-    ![Create Policy](/assets/images/vault-ctrl-grp-3.png)
+    ![Create Policy](/img/vault-ctrl-grp-3.png)
 
 1. Enter the following command to create a new user, **`ellen`**:
 
@@ -371,7 +371,7 @@ following command to create a new user, **`bob`**:
 
 1. Populate the **Name**, **Policies** and **Metadata** fields as shown below.
 
-    ![Create Entity](/assets/images/vault-ctrl-grp-7.png)
+    ![Create Entity](/img/vault-ctrl-grp-7.png)
 
 1. Click **Create**.
 
@@ -382,7 +382,7 @@ following command to create a new user, **`bob`**:
 
 1. Populate the **Name**, **Policies** and **Metadata** fields as shown below.
 
-    ![Create Entity](/assets/images/vault-ctrl-grp-4.png)
+    ![Create Entity](/img/vault-ctrl-grp-4.png)
 
 1. Click **Create**.
 
@@ -607,10 +607,10 @@ enter **`ellen`** in the **Username** field, and **`training`** in the
 1. Select the **Access** tab, and then **Control Groups**.
 
 1. Enter the **`wrapping_accessor`** value in the **Accessor** field and click
-**Lookup**. ![Control Groups](/assets/images/vault-ctrl-grp-5.png)
+**Lookup**. ![Control Groups](/img/vault-ctrl-grp-5.png)
 
 1. _Awaiting authorization_ message displays. ![Control
-Groups](/assets/images/vault-ctrl-grp-6.png)
+Groups](/img/vault-ctrl-grp-6.png)
 
 1. Click **Authorize**. The message changes to "_Thanks! You have given
 authorization_."

@@ -53,7 +53,7 @@ surrounding that data stored in the database.
 Use the Vault's **`/database/rotate-root/:name`** API endpoint to rotate the
 root credentials stored for the database connection.
 
-![DB Root Credentials](/assets/images/vault-db-root-rotation.png)
+![DB Root Credentials](/img/vault-db-root-rotation.png)
 
 ~> **Best Practice:** Use this feature to rotate the root credentials
 immediately after the initial configuration of each database.
