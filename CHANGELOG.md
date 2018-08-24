@@ -37,6 +37,7 @@ IMPROVEMENTS:
 
  * agent: Add `exit_after_auth` to be able to use the Agent for a single
    authentication [GH-5013]
+ * api: Sort keys in list responses [GH-5141]
  * auth/approle: Add ability to set token bound CIDRs on individual Secret IDs
    [GH-5034]
  * cli: Add support for passing parameters to `vault read` operations [GH-5093]
