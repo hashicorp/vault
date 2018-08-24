@@ -56,12 +56,6 @@ export default {
     enable: {
       onEntry: { type: 'render', level: 'step', component: 'wizard/secrets-enable' },
       on: {
-        CONTINUE: 'save',
-      },
-    },
-    save: {
-      onEntry: { type: 'render', level: 'step', component: 'wizard/secrets-save' },
-      on: {
         CONTINUE: 'details',
       },
     },
