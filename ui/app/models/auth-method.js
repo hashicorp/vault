@@ -37,8 +37,14 @@ export default DS.Model.extend({
     editType: 'textarea',
   }),
   config: fragment('mount-config', { defaultValue: {} }),
-  local: attr('boolean'),
-  sealWrap: attr('boolean'),
+  local: attr('boolean', {
+    helpText:
+      'When replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
+  }),
+  sealWrap: attr('boolean', {
+    helpText:
+      'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For K/V mounts, all values will be seal wrapped.) This can only be specified at mount time.',
+  }),
 
   // used when the `auth` prefix is important,
   // currently only when setting perf mount filtering
