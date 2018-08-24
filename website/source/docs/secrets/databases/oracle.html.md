@@ -26,10 +26,14 @@ information about setting up the Database Backend.
 The Oracle Database Plugin does not live in the core Vault code tree and can be found
 at its own git repository here: [hashicorp/vault-plugin-database-oracle](https://github.com/hashicorp/vault-plugin-database-oracle)
 
+For linux/amd64, pre-built binaries can be found at [the releases page](https://releases.hashicorp.com/vault-plugin-database-oracle)
+
 Before running the plugin you will need to have the the Oracle Instant Client
 library installed. These can be downloaded from Oracle. The libraries will need to
-be placed in the default library search path or somewhere defined in the
-`LD_LIBRARY_PATH` environment variable.
+be placed in the default library search path or defined in the ld.so.conf configuration files.
+
+If you are running Vault with [mlock enabled](/docs/configuration/index.html#disable_mlock), 
+you will need to enable ipc_lock capabilities for the plugin binary.
 
 1. Enable the database secrets engine if it is not already enabled:
 
@@ -46,7 +50,7 @@ be placed in the default library search path or somewhere defined in the
     ```text
     $ vault write sys/plugins/catalog/oracle-database-plugin \
         sha_256="..." \
-        command=oracle-database-plugin
+        command=vault-plugin-database-oracle
     ```
 
 1. Configure Vault with the proper plugin and connection information:
