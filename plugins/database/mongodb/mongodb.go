@@ -218,7 +218,8 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	return nil
 }
 
-// RotateRootCredentials is not currently supported on MongoDB
+// RotateRootCredentials change the password for the root credentials of vault in the mongoDB
+// Currently not support custom statements
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
 	m.Lock()
 	defer m.Unlock()
