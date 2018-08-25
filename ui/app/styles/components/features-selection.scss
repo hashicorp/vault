@@ -1,0 +1,28 @@
+.feature-header {
+  font-size: $size-6;
+  font-weight: $font-weight-semibold;
+  color: $grey;
+}
+.feature-box {
+  box-shadow: $box-shadow;
+  border-radius: $radius;
+  padding: $size-8;
+  margin: $size-8 0;
+}
+
+.feature-box label {
+  font-weight: $font-weight-semibold;
+}
+
+.feature-steps {
+  font-size: 12px;
+  color: $grey;
+  margin-left: $size-3;
+
+  li::before {
+    // bullet
+    content: '\2022';
+    position: relative;
+    right: $size-11;
+  }
+}
