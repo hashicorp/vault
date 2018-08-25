@@ -1,9 +1,12 @@
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+const supportedBackends = supportedSecretBackends();
 export default {
   key: 'secrets',
   initial: 'idle',
   on: {
     RESET: 'idle',
     DONE: 'complete',
+    ERROR: 'error',
   },
   states: {
     idle: {
@@ -63,7 +66,7 @@ export default {
       ],
       on: {
         CONTINUE: {
-          details: { cond: type => type !== null },
+          details: { cond: type => supportedBackends.includes(type) },
           display: {
             cond: type => ['ad', 'consul', 'database', 'gcp', 'nomad', 'rabbitmq', 'totp'].includes(type),
           },
@@ -253,6 +256,15 @@ export default {
       ],
       on: {
         CONTINUE: 'enable',
+      },
+    },
+    error: {
+      onEntry: [
+        { type: 'render', level: 'step', component: 'wizard/tutorial-error' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+      ],
+      on: {
+        CONTINUE: 'idle',
       },
     },
     complete: {

@@ -1,6 +1,6 @@
 import Ember from 'ember';
 
-const { get, computed } = Ember;
+const { get, computed, inject } = Ember;
 
 const MODEL_TYPES = {
   'ssh-sign': {
@@ -35,8 +35,10 @@ const MODEL_TYPES = {
 };
 
 export default Ember.Component.extend({
-  store: Ember.inject.service(),
-  routing: Ember.inject.service('-routing'),
+  store: inject.service(),
+  routing: inject.service('-routing'),
+  wizard: inject.service(),
+
   // set on the component
   backend: null,
   action: null,
@@ -65,6 +67,16 @@ export default Ember.Component.extend({
     this._super(...arguments);
     this.createOrReplaceModel();
     this.maybeGenerate();
+  },
+
+  didReceiveAttrs() {
+    if (this.get('wizard.featureState') === 'displayRole') {
+      this.get('wizard').transitionFeatureMachine(
+        this.get('wizard.featureState'),
+        'CONTINUE',
+        this.get('backend.type')
+      );
+    }
   },
 
   willDestroy() {
@@ -112,9 +124,20 @@ export default Ember.Component.extend({
   actions: {
     create() {
       this.set('loading', true);
-      this.model.save().finally(() => {
-        this.set('loading', false);
-      });
+      this.model
+        .save()
+        .catch(() => {
+          if (this.get('wizard.featureState') === 'credentials') {
+            this.get('wizard').transitionFeatureMachine(
+              this.get('wizard.featureState'),
+              'ERROR',
+              this.get('backend.type')
+            );
+          }
+        })
+        .finally(() => {
+          this.set('loading', false);
+        });
     },
 
     codemirrorUpdated(attr, val, codemirror) {

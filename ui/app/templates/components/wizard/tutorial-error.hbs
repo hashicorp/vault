@@ -1,0 +1,13 @@
+<WizardSection 
+  @headerText="Oops!" 
+>
+  <p>
+    Something went wrong and you can't complete this step.
+  </p>
+  <button type="button" {{action onReset}}>
+    Go Back
+  </button>
+  <button type="button" {{action onDone}}>
+    {{nextFeature}}
+  </button>
+</WizardSection>

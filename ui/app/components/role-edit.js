@@ -24,14 +24,21 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     }
   },
 
-  didRender() {
+  didReceiveAttrs() {
     if (
       (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') ||
-      (this.get('wizard.featureState') === 'displayRole' && this.get('mode') === 'show')
+      (this.get('wizard.featureState') === 'role' && this.get('mode') === 'show')
     ) {
       this.get('wizard').transitionFeatureMachine(
         this.get('wizard.featureState'),
         'CONTINUE',
+        this.get('backendType')
+      );
+    }
+    if (this.get('wizard.featureState') === 'displayRole') {
+      this.get('wizard').transitionFeatureMachine(
+        this.get('wizard.featureState'),
+        'NOOP',
         this.get('backendType')
       );
     }

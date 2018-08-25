@@ -1,5 +1,6 @@
 import Ember from 'ember';
-
+import { engines } from 'vault/helpers/mountable-secret-engines';
+import { methods } from 'vault/helpers/mountable-auth-methods';
 const { inject, computed } = Ember;
 
 export default Ember.Component.extend({
@@ -17,6 +18,36 @@ export default Ember.Component.extend({
   detailsComponent: computed('mountSubtype', function() {
     let suffix = this.get('currentMachine') === 'secrets' ? 'engine' : 'method';
     return this.get('mountSubtype') ? `wizard/${this.get('mountSubtype')}-${suffix}` : null;
+  }),
+  mountName: computed('mountSubtype', function() {
+    if (this.get('currentMachine') === 'secrets') {
+      var secret = engines().find(engine => {
+        return engine.type === this.get('mountSubtype');
+      });
+      if (secret) {
+        return secret.displayName;
+      }
+    } else {
+      var auth = methods().find(method => {
+        return method.type === this.get('mountSubtype');
+      });
+      if (auth) {
+        return auth.displayName;
+      }
+    }
+    return null;
+  }),
+  actionText: computed('mountSubtype', function() {
+    switch (this.get('mountSubtype')) {
+      case 'aws':
+        return 'Generate Credential';
+      case 'ssh':
+        return 'Sign Keys';
+      case 'pki':
+        return 'Generate Certificate';
+      default:
+        return null;
+    }
   }),
 
   onAdvance() {},
