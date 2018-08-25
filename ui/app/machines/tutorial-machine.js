@@ -5,7 +5,7 @@ export default {
     init: {
       key: 'init',
       initial: 'idle',
-      on: { DONE: 'active.select' },
+      on: { INITDONE: 'active.select' },
       onEntry: [
         'showTutorialAlways',
         { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
