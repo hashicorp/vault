@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import { matchesState } from 'xstate';
 
 const { inject, computed } = Ember;
 
@@ -24,7 +25,8 @@ export default Ember.Component.extend({
     },
 
     advanceWizard() {
-      let event = this.get('wizard.initEvent') || 'CONTINUE';
+      let inInit = matchesState('init', this.get('wizard.currentState'));
+      let event = inInit ? this.get('wizard.initEvent') || 'CONTINUE' : 'CONTINUE';
       this.get('wizard').transitionTutorialMachine(this.get('currentState'), event);
     },
 

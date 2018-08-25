@@ -4,6 +4,19 @@ const { inject, computed } = Ember;
 
 export default Ember.Component.extend({
   wizard: inject.service(),
+  version: inject.service(),
+  init() {
+    this._super(...arguments);
+    this.maybeHideFeatures();
+  },
+
+  maybeHideFeatures() {
+    if (this.get('showReplication') === false) {
+      let feature = this.get('allFeatures').findBy('key', 'replication');
+      feature.show = false;
+    }
+  },
+
   allFeatures: computed(function() {
     return [
       {
@@ -11,32 +24,41 @@ export default Ember.Component.extend({
         name: 'Secrets',
         steps: ['Enabling a secrets engine', 'Entering secrets method details', 'Adding a secret'],
         selected: false,
+        show: true,
       },
       {
         key: 'authentication',
         name: 'Authentication',
-        steps: ['Enabling an auth method', 'Entering auth method details', 'Adding a user'],
+        steps: ['Enabling an auth method', 'Entering auth method details'],
         selected: false,
+        show: true,
       },
       {
         key: 'policies',
         name: 'Policies',
         steps: [],
         selected: false,
+        show: true,
       },
       {
         key: 'replication',
         name: 'Replication',
         steps: [],
         selected: false,
+        show: true,
       },
       {
         key: 'tools',
         name: 'Tools',
         steps: [],
         selected: false,
+        show: true,
       },
     ];
+  }),
+
+  showReplication: computed('version.hasPerfReplication', 'version.hasDRReplication', function() {
+    return this.get('version.hasPerfReplication') || this.get('version.hasDRReplication');
   }),
 
   selectedFeatures: computed('allFeatures.@each.selected', function() {
