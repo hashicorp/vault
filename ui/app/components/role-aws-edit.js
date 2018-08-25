@@ -12,6 +12,7 @@ export default RoleEdit.extend({
     if (arn) {
       set(this, 'useARN', true);
     }
+    set(this, 'backendType', 'aws');
   },
 
   actions: {

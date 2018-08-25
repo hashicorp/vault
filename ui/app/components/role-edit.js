@@ -18,12 +18,22 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
 
   init() {
     this._super(...arguments);
-    if (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') {
-      this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', this.get('model.backend'));
-    }
 
     if (this.get('mode') === 'edit') {
       this.send('addRow');
+    }
+  },
+
+  didRender() {
+    if (
+      (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') ||
+      (this.get('wizard.featureState') === 'displayRole' && this.get('mode') === 'show')
+    ) {
+      this.get('wizard').transitionFeatureMachine(
+        this.get('wizard.featureState'),
+        'CONTINUE',
+        this.get('backendType')
+      );
     }
   },
 
@@ -63,7 +73,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     return model[method]().then(() => {
       if (!Ember.get(model, 'isError')) {
         if (this.get('wizard.featureState') === 'role') {
-          this.get('wizard').transitionFeatureMachine('role', 'CONTINUE');
+          this.get('wizard').transitionFeatureMachine('role', 'CONTINUE', this.get('backendType'));
         }
         successCallback(model);
       }

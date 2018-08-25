@@ -151,6 +151,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
 
     return model[method]().then(() => {
       if (!Ember.get(model, 'isError')) {
+        debugger;
         if (this.get('wizard.featureState') === 'secret') {
           this.get('wizard').transitionFeatureMachine('secret', 'CONTINUE');
         }

@@ -41,13 +41,22 @@ export default {
           radius: {
             cond: type => type === 'radius',
           },
-          token: {
-            cond: type => type === 'token',
+          cert: {
+            cond: type => type === 'cert',
           },
           userpass: {
             cond: type => type === 'userpass',
           },
         },
+      },
+    },
+    enable: {
+      onEntry: [
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+        { type: 'render', level: 'step', component: 'wizard/secrets-enable' },
+      ],
+      on: {
+        CONTINUE: 'list',
       },
     },
     list: {
@@ -156,18 +165,9 @@ export default {
         CONTINUE: 'enable',
       },
     },
-    tls: {
+    cert: {
       onEntry: [
-        { type: 'render', level: 'details', component: 'wizard/tls-method' },
-        { type: 'continueFeature' },
-      ],
-      on: {
-        CONTINUE: 'enable',
-      },
-    },
-    token: {
-      onEntry: [
-        { type: 'render', level: 'details', component: 'wizard/token-method' },
+        { type: 'render', level: 'details', component: 'wizard/cert-method' },
         { type: 'continueFeature' },
       ],
       on: {

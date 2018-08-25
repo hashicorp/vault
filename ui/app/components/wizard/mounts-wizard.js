@@ -15,9 +15,10 @@ export default Ember.Component.extend({
   }),
   stepComponent: computed.alias('wizard.stepComponent'),
   detailsComponent: computed('mountSubtype', function() {
-    let suffix = this.get('currentState').includes('secret') ? 'engine' : 'mount';
+    let suffix = this.get('currentMachine') === 'secrets' ? 'engine' : 'method';
     return this.get('mountSubtype') ? `wizard/${this.get('mountSubtype')}-${suffix}` : null;
   }),
+
   onAdvance() {},
   onRepeat() {},
   onReset() {},

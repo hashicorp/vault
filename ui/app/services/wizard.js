@@ -81,7 +81,6 @@ export default Service.extend({
   },
 
   transitionTutorialMachine(currentState, event, extendedState) {
-    debugger;
     if (extendedState) {
       this.set('componentState', extendedState);
     }
@@ -103,7 +102,7 @@ export default Service.extend({
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
     this.executeActions(actions, event);
-    let next = FeatureMachine.transition(value, 'CONTINUE');
+    let next = FeatureMachine.transition(value, 'CONTINUE', extendedState);
     this.saveState('nextStep', next.value);
   },
 
@@ -182,7 +181,7 @@ export default Service.extend({
     let nextFeature =
       this.get('featureList').length > 1 ? this.get('featureList').objectAt(1).capitalize() : 'Finish';
     this.set('nextFeature', nextFeature);
-    let next = FeatureMachine.transition(this.get('featureState'), 'CONTINUE');
+    let next = FeatureMachine.transition(this.get('featureState'), 'CONTINUE', this.get('componentState'));
     this.saveState('nextStep', next.value);
     let stateNodes = FeatureMachine.getStateNodes(this.get('featureState'));
     this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));

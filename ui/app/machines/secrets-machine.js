@@ -26,6 +26,9 @@ export default {
           cubbyhole: {
             cond: type => type === 'cubbyhole',
           },
+          database: {
+            cond: type => type === 'database',
+          },
           gcp: {
             cond: type => type === 'gcp',
           },
@@ -59,7 +62,12 @@ export default {
         { type: 'render', level: 'step', component: 'wizard/secrets-enable' },
       ],
       on: {
-        CONTINUE: 'details',
+        CONTINUE: {
+          details: { cond: type => type !== null },
+          display: {
+            cond: type => ['ad', 'consul', 'database', 'gcp', 'nomad', 'rabbitmq', 'totp'].includes(type),
+          },
+        },
       },
     },
     details: {
@@ -73,14 +81,15 @@ export default {
             cond: type => ['pki', 'aws', 'ssh'].includes(type),
           },
           secret: {
-            cond: type => ['cubbyhole', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp', 'transit'].includes(type),
+            cond: type =>
+              ['cubbyhole', 'database', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp', 'transit'].includes(type),
           },
         },
       },
     },
     credentials: {
       onEntry: [
-        { type: 'render', level: 'step', component: 'wizard/secret-credentials' },
+        { type: 'render', level: 'step', component: 'wizard/secrets-credentials' },
         { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
       ],
       on: {
@@ -124,7 +133,8 @@ export default {
           cond: type => ['pki', 'aws', 'ssh'].includes(type),
         },
         secret: {
-          cond: type => ['cubbyhole', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp', 'transit'].includes(type),
+          cond: type =>
+            ['cubbyhole', 'database', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp', 'transit'].includes(type),
         },
       },
     },
@@ -158,6 +168,15 @@ export default {
     cubbyhole: {
       onEntry: [
         { type: 'render', level: 'details', component: 'wizard/ch-engine' },
+        { type: 'continueFeature' },
+      ],
+      on: {
+        CONTINUE: 'enable',
+      },
+    },
+    database: {
+      onEntry: [
+        { type: 'render', level: 'details', component: 'wizard/database-engine' },
         { type: 'continueFeature' },
       ],
       on: {
