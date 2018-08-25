@@ -19,7 +19,6 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   init() {
     this._super(...arguments);
     if (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') {
-      debugger;
       this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', this.get('model.backend'));
     }
 
