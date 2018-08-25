@@ -52,25 +52,6 @@ const (
 	// information for primaries
 	knownPrimaryAddrsPrefix = "core/primary-addrs/"
 
-	// lockRetryInterval is the interval we re-attempt to acquire the
-	// HA lock if an error is encountered
-	lockRetryInterval = 10 * time.Second
-
-	// leaderCheckInterval is how often a standby checks for a new leader
-	leaderCheckInterval = 2500 * time.Millisecond
-
-	// keyRotateCheckInterval is how often a standby checks for a key
-	// rotation taking place.
-	keyRotateCheckInterval = 30 * time.Second
-
-	// keyRotateGracePeriod is how long we allow an upgrade path
-	// for standby instances before we delete the upgrade keys
-	keyRotateGracePeriod = 2 * time.Minute
-
-	// leaderPrefixCleanDelay is how long to wait between deletions
-	// of orphaned leader keys, to prevent slamming the backend.
-	leaderPrefixCleanDelay = 200 * time.Millisecond
-
 	// coreKeyringCanaryPath is used as a canary to indicate to replicated
 	// clusters that they need to perform a rekey operation synchronously; this
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
