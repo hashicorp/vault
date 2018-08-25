@@ -51,20 +51,29 @@ export default {
       },
     },
     list: {
-      onEntry: { type: 'render', level: 'step', component: 'wizard/auth-list' },
+      onEntry: [
+        { type: 'render', level: 'step', component: 'wizard/auth-list' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+      ],
       on: {
         EDIT: 'edit',
         DETAILS: 'details',
       },
     },
     edit: {
-      onEntry: { type: 'render', level: 'step', component: 'wizard/auth-edit' },
+      onEntry: [
+        { type: 'render', level: 'step', component: 'wizard/auth-edit' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+      ],
       on: {
         CONTINUE: 'details',
       },
     },
     details: {
-      onEntry: { type: 'render', level: 'step', component: 'wizard/auth-details' },
+      onEntry: [
+        { type: 'render', level: 'step', component: 'wizard/auth-details' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+      ],
     },
     approle: {
       onEntry: [

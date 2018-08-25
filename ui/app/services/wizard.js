@@ -101,7 +101,6 @@ export default Service.extend({
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
     this.executeActions(actions, event);
-
     let next = FeatureMachine.transition(value, 'CONTINUE');
     this.saveState('nextStep', next.value);
   },
@@ -178,10 +177,11 @@ export default Service.extend({
       this.saveState('featureState', this.getExtState(FEATURE_STATE));
     }
     this.saveExtState(FEATURE_STATE, this.get('featureState'));
-    debugger;
     let nextFeature =
       this.get('featureList').length > 1 ? this.get('featureList').objectAt(1).capitalize() : 'Finish';
     this.set('nextFeature', nextFeature);
+    let next = FeatureMachine.transition(this.get('featureState'), 'CONTINUE');
+    this.saveState('nextStep', next.value);
     let stateNodes = FeatureMachine.getStateNodes(this.get('featureState'));
     this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
   },

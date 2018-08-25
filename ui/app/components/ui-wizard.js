@@ -24,13 +24,16 @@ export default Ember.Component.extend({
     },
 
     advanceWizard() {
-      debugger;
       let event = this.get('wizard.initEvent') || 'CONTINUE';
       this.get('wizard').transitionTutorialMachine(this.get('currentState'), event);
     },
 
     advanceFeature() {
       this.get('wizard').transitionFeatureMachine(this.get('featureState'), 'CONTINUE');
+    },
+
+    finishFeature() {
+      this.get('wizard').transitionFeatureMachine(this.get('featureState'), 'DONE');
     },
 
     repeatStep() {

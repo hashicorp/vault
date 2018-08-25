@@ -4,5 +4,5 @@
 {{#component (if shouldRender tutorialComponent)
   onAdvance=(action "advanceWizard")
 }}
-  {{component featureComponent componentState=componentState nextFeature=nextFeature nextStep=nextStep onRepeat=(action "repeatStep") onReset=(action "resetFeature") onAdvance=(action "advanceFeature")}}
+  {{component featureComponent componentState=componentState nextFeature=nextFeature nextStep=nextStep onDone=(action "finishFeature") onRepeat=(action "repeatStep") onReset=(action "resetFeature") onAdvance=(action "advanceFeature")}}
 {{/component}}
