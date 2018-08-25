@@ -59,7 +59,7 @@ export default {
         { type: 'render', level: 'step', component: 'wizard/secrets-enable' },
       ],
       on: {
-        CONTINUE: 'save',
+        CONTINUE: 'details',
       },
     },
     details: {
@@ -70,11 +70,10 @@ export default {
       on: {
         CONTINUE: {
           role: {
-            cond: type => type === ['pki', 'aws', 'ssh'],
+            cond: type => ['pki', 'aws', 'ssh'].includes(type),
           },
           secret: {
-            cond: type =>
-              ['cubbyhole', 'gcp', 'kv', 'nomad', 'pki', 'rabbitmq', 'ssh', 'totp', 'transit'].includes(type),
+            cond: type => ['cubbyhole', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp', 'transit'].includes(type),
           },
         },
       },
@@ -91,6 +90,15 @@ export default {
     role: {
       onEntry: [
         { type: 'render', level: 'step', component: 'wizard/secrets-role' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+      ],
+      on: {
+        CONTINUE: 'displayRole',
+      },
+    },
+    displayRole: {
+      onEntry: [
+        { type: 'render', level: 'step', component: 'wizard/secrets-display-role' },
         { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
       ],
       on: {

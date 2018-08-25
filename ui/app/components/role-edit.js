@@ -13,7 +13,20 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   refresh: 'refresh',
   model: null,
   routing: inject.service('-routing'),
+  wizard: inject.service(),
   requestInFlight: computed.or('model.isLoading', 'model.isReloading', 'model.isSaving'),
+
+  init() {
+    this._super(...arguments);
+    if (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') {
+      debugger;
+      this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', this.get('model.backend'));
+    }
+
+    if (this.get('mode') === 'edit') {
+      this.send('addRow');
+    }
+  },
 
   willDestroyElement() {
     const model = this.get('model');
