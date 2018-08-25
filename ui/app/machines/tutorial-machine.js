@@ -9,6 +9,7 @@ export default {
       onEntry: [
         'showTutorialAlways',
         { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
+        { type: 'render', level: 'feature', component: null },
       ],
       onExit: ['showTutorialWhenAuthenticated'],
       states: {
