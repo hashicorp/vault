@@ -43,6 +43,7 @@ export default Service.extend({
 
   init() {
     this._super(...arguments);
+    debugger;
     if (!this.storageHasKey(TUTORIAL_STATE)) {
       let state = TutorialMachine.initialState;
       this.saveState('currentState', state.value);
@@ -101,7 +102,6 @@ export default Service.extend({
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
     this.executeActions(actions, event);
-
     let next = FeatureMachine.transition(value, 'CONTINUE');
     this.saveState('nextStep', next.value);
   },
@@ -178,6 +178,11 @@ export default Service.extend({
       this.saveState('featureState', this.getExtState(FEATURE_STATE));
     }
     this.saveExtState(FEATURE_STATE, this.get('featureState'));
+    let nextFeature =
+      this.get('featureList').length > 1 ? this.get('featureList').objectAt(1).capitalize() : 'Finish';
+    this.set('nextFeature', nextFeature);
+    let next = FeatureMachine.transition(this.get('featureState'), 'CONTINUE');
+    this.saveState('nextStep', next.value);
     let stateNodes = FeatureMachine.getStateNodes(this.get('featureState'));
     this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
   },
@@ -187,9 +192,6 @@ export default Service.extend({
     FeatureMachine = Machine(FeatureMachineConfig);
     this.set('currentMachine', this.get('featureList').objectAt(0));
     this.saveState('featureState', FeatureMachine.initialState);
-    let nextFeature =
-      this.get('featureList').length > 1 ? this.get('featureList').objectAt(1).capitalize() : 'Finish';
-    this.set('nextFeature', nextFeature);
   },
 
   completeFeature() {
@@ -208,7 +210,6 @@ export default Service.extend({
     if (features.length > 0) {
       this.buildFeatureMachine();
     } else {
-      this.completeTutorial();
       FeatureMachine = null;
       TutorialMachine.transition(this.get('currentState'), 'DONE');
     }

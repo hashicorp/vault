@@ -1,0 +1,4 @@
+<WizardContent @headerText={{capitalize currentMachine}} @glyph="tour">
+  {{component stepComponent mountSubtype=mountSubtype nextFeature=nextFeature nextStep=nextStep onDone=onDone onAdvance=onAdvance onRepeat=onRepeat onReset=onReset}}
+  {{component detailsComponent onAdvance=onAdvance onRepeat=onRepeat}}
+</WizardContent>

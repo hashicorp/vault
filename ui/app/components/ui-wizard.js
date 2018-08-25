@@ -32,6 +32,10 @@ export default Ember.Component.extend({
       this.get('wizard').transitionFeatureMachine(this.get('featureState'), 'CONTINUE');
     },
 
+    finishFeature() {
+      this.get('wizard').transitionFeatureMachine(this.get('featureState'), 'DONE');
+    },
+
     repeatStep() {
       this.get('wizard').transitionFeatureMachine(
         this.get('featureState'),
