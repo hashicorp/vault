@@ -9,7 +9,7 @@ export default {
     idle: {
       onEntry: [
         { type: 'routeTransition', params: ['vault.cluster.settings.mount-secret-backend'] },
-        { type: 'render', level: 'feature', component: 'wizard/secrets-wizard' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
         { type: 'render', level: 'step', component: 'wizard/secrets-idle' },
       ],
       on: {
@@ -55,16 +55,16 @@ export default {
     },
     enable: {
       onEntry: [
-        { type: 'render', level: 'feature', component: 'wizard/secrets-wizard' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
         { type: 'render', level: 'step', component: 'wizard/secrets-enable' },
       ],
       on: {
-        CONTINUE: 'details',
+        CONTINUE: 'save',
       },
     },
     details: {
       onEntry: [
-        { type: 'render', level: 'feature', component: 'wizard/secrets-wizard' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
         { type: 'render', level: 'step', component: 'wizard/secrets-details' },
       ],
       on: {
@@ -85,7 +85,7 @@ export default {
     credentials: {
       onEntry: [
         { type: 'render', level: 'step', component: 'wizard/secret-credentials' },
-        { type: 'render', level: 'feature', component: 'wizard/secrets-wizard' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
       ],
       on: {
         CONTINUE: 'role',
@@ -94,7 +94,7 @@ export default {
     role: {
       onEntry: [
         { type: 'render', level: 'step', component: 'wizard/secrets-role' },
-        { type: 'render', level: 'feature', component: 'wizard/secrets-wizard' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
       ],
       on: {
         CONTINUE: 'display',
@@ -103,7 +103,7 @@ export default {
     secret: {
       onEntry: [
         { type: 'render', level: 'step', component: 'wizard/secrets-secret' },
-        { type: 'render', level: 'feature', component: 'wizard/secrets-wizard' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
       ],
       on: {
         CONTINUE: 'display',
@@ -112,7 +112,7 @@ export default {
     display: {
       onEntry: [
         { type: 'render', level: 'step', component: 'wizard/secrets-display' },
-        { type: 'render', level: 'feature', component: 'wizard/secrets-wizard' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
       ],
       REPEAT: {
         role: {
