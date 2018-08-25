@@ -220,5 +220,42 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 // RotateRootCredentials is not currently supported on MongoDB
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	return nil, errors.New("root credentaion rotation is not currently implemented in this database secrets engine")
+	m.Lock()
+	defer m.Unlock()
+
+	if len(m.Username) == 0 || len(m.Password) == 0 {
+		return nil, errors.New("username and password are required to rotate")
+	}
+
+	session, err := m.getConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	password, err := m.GeneratePassword()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create Rotate statement
+	changeUserPasswordCmd := changeUserPasswordCommand{
+		m.Username,
+		password,
+	}
+
+	// Run Rotate Root credential statement
+	err = session.Run(changeUserPasswordCmd, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	m.RawConfig["password"] = password
+
+	// Try create new connection to verify vault still have permissions to DB
+	_, err = m.getConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.RawConfig, nil
 }

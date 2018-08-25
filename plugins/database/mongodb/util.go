@@ -17,6 +17,11 @@ type mongoDBStatement struct {
 	Roles mongodbRoles `json:"roles"`
 }
 
+type changeUserPasswordCommand struct {
+	Username string `bson:"updateUser"`
+	Password string `bson:"pwd"`
+}
+
 // Convert array of role documents like:
 //
 // [ { "role": "readWrite" }, { "role": "readWrite", "db": "test" } ]
