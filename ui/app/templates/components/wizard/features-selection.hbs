@@ -11,8 +11,8 @@
           id="feature-{{feature.key}}"
           type="checkbox"
           class="styled"
-          value={{feature.key}}
-          onchange={{action "toggleFeature"}}
+          checked={{feature.selected}}
+          onchange={{action (mut feature.selected) value="target.checked"}}
          />
         <label for="feature-{{feature.key}}">{{feature.name}}</label>
         <ul class="feature-steps">
