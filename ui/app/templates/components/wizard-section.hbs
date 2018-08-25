@@ -1,5 +1,10 @@
 <div class="wizard-section">
-  <h2 class="title is-6">{{headerText}}</h2>
+  <h2 class="title is-6">
+    {{#if headerIcon}}
+      <ICon @glyph={{headerIcon}} @size=24 />
+    {{/if}}
+    {{headerText}}
+  </h2>
   {{yield}}
   {{#if docText}}
     <DocLink @path={{docPath}}>
