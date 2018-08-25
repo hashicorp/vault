@@ -47,6 +47,7 @@ export default {
       initial: 'select',
       on: {
         DISMISS: 'dismissed',
+        DONE: 'complete',
       },
       onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-active' },
       states: {
@@ -81,8 +82,9 @@ export default {
       onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-paused' },
     },
     complete: {
+      onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-complete' },
       on: {
-        CONTINUE: 'idle',
+        PAUSE: 'idle',
         DISMISS: 'dismissed',
       },
     },
