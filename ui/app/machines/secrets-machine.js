@@ -69,11 +69,8 @@ export default {
       ],
       on: {
         CONTINUE: {
-          credentials: {
-            cond: type => type === 'aws',
-          },
           role: {
-            cond: type => type === 'ad',
+            cond: type => type === ['pki', 'aws', 'ssh'],
           },
           secret: {
             cond: type =>
@@ -88,7 +85,7 @@ export default {
         { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
       ],
       on: {
-        CONTINUE: 'role',
+        CONTINUE: 'display',
       },
     },
     role: {
@@ -97,7 +94,7 @@ export default {
         { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
       ],
       on: {
-        CONTINUE: 'display',
+        CONTINUE: 'credentials',
       },
     },
     secret: {
@@ -116,11 +113,10 @@ export default {
       ],
       REPEAT: {
         role: {
-          cond: type => type === 'ad',
+          cond: type => ['pki', 'aws', 'ssh'].includes(type),
         },
         secret: {
-          cond: type =>
-            ['cubbyhole', 'gcp', 'kv', 'nomad', 'pki', 'rabbitmq', 'ssh', 'totp', 'transit'].includes(type),
+          cond: type => ['cubbyhole', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp', 'transit'].includes(type),
         },
       },
     },

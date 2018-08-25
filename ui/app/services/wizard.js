@@ -43,7 +43,6 @@ export default Service.extend({
 
   init() {
     this._super(...arguments);
-    debugger;
     if (!this.storageHasKey(TUTORIAL_STATE)) {
       let state = TutorialMachine.initialState;
       this.saveState('currentState', state.value);
@@ -81,6 +80,7 @@ export default Service.extend({
   },
 
   transitionTutorialMachine(currentState, event, extendedState) {
+    debugger;
     if (extendedState) {
       this.set('componentState', extendedState);
     }
