@@ -54,6 +54,7 @@ BUG FIXES:
    format and/or interleaved [GH-5135]
  * identity: Properly populate `mount_path` and `mount_type` on group lookup
    [GH-5074]
+ * identity: Fix persisting alias metadata [GH-5188]
  * identity: Fix carryover issue from previously fixed race condition that
    could cause Vault not to start up due to two entities referencing the same
    alias. These entities are now merged. [GH-5000]
