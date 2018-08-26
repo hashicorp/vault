@@ -68,7 +68,12 @@ export default {
         DISMISS: 'dismissed',
         CONTINUE: 'active',
       },
-      onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
+      onEntry: [
+        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
+        { type: 'render', level: 'feature', component: null },
+        { type: 'render', level: 'step', component: null },
+        { type: 'render', level: 'detail', component: null },
+      ],
     },
     dismissed: {
       on: { CONTINUE: 'idle' },

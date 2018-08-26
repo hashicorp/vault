@@ -26,8 +26,7 @@ const MACHINES = {
   authentication: AuthMachineConfig,
 };
 
-export default Service.extend({
-  router: inject.service(),
+const DEFAULTS = {
   currentState: null,
   featureList: null,
   featureState: null,
@@ -37,12 +36,20 @@ export default Service.extend({
   stepComponent: null,
   detailsComponent: null,
   componentState: null,
-  showWhenUnauthenticated: false,
   nextFeature: null,
   nextStep: null,
+};
+
+export default Service.extend(DEFAULTS, {
+  router: inject.service(),
+  showWhenUnauthenticated: false,
 
   init() {
     this._super(...arguments);
+    this.initializeMachines();
+  },
+
+  initializeMachines() {
     if (!this.storageHasKey(TUTORIAL_STATE)) {
       let state = TutorialMachine.initialState;
       this.saveState('currentState', state.value);
@@ -63,6 +70,18 @@ export default Service.extend({
       }
       this.buildFeatureMachine();
     }
+  },
+
+  restartGuide() {
+    let storage = this.storage();
+    // empty storage
+    [TUTORIAL_STATE, FEATURE_LIST, FEATURE_STATE, COMPLETED_FEATURES].forEach(key => storage.removeItem(key));
+    // reset wizard state
+    this.setProperties(DEFAULTS);
+    // restart machines from blank state
+    this.initializeMachines();
+    // progress machine to 'active.select'
+    this.transitionTutorialMachine('idle', 'AUTH');
   },
 
   saveState(stateType, state) {
@@ -159,7 +178,6 @@ export default Service.extend({
   handleDismissed() {
     this.storage().removeItem(FEATURE_STATE);
     this.storage().removeItem(FEATURE_LIST);
-    this.storage().removeItem(MACHINES);
   },
 
   saveFeatures(features) {
