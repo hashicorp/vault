@@ -80,6 +80,8 @@ export default {
       onEntry: [
         { type: 'render', level: 'feature', component: null },
         { type: 'render', level: 'tutorial', component: null },
+        { type: 'render', level: 'step', component: null },
+        { type: 'render', level: 'detail', component: null },
         'handleDismissed',
       ],
     },
@@ -88,7 +90,12 @@ export default {
       onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-paused' },
     },
     complete: {
-      onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-complete' },
+      onEntry: [
+        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-complete' },
+        { type: 'render', level: 'feature', component: null },
+        { type: 'render', level: 'step', component: null },
+        { type: 'render', level: 'detail', component: null },
+      ],
       on: {
         PAUSE: 'idle',
         DISMISS: 'dismissed',

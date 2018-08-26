@@ -215,3 +215,14 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   width: auto;
   margin: 0 !important;
 }
+
+.button.with-grey-outline {
+  width: 100%;
+  text-align: left;
+  background: $white;
+  color: $blue;
+  box-shadow: none;
+  display: block;
+  border: 1px solid $grey-light;
+  border-radius: $radius;
+}

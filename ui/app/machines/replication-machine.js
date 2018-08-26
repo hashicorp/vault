@@ -4,9 +4,12 @@ export default {
   states: {
     setup: {
       on: {
-        CONTINUE: 'details',
+        ENABLEREPLICATION: 'details',
       },
-      onEntry: [{ type: 'render', level: 'feature', component: 'wizard/replication-setup' }],
+      onEntry: [
+        { type: 'routeTransition', params: ['vault.cluster.replication'] },
+        { type: 'render', level: 'feature', component: 'wizard/replication-setup' },
+      ],
     },
     details: {
       on: {

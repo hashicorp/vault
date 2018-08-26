@@ -120,8 +120,12 @@ export default Service.extend(DEFAULTS, {
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
     this.executeActions(actions, event);
-    let next = FeatureMachine.transition(value, 'CONTINUE', extendedState);
-    this.saveState('nextStep', next.value);
+    // if all features were completed, the FeatureMachine gets nulled
+    // out and won't exist here as there is no next step
+    if (FeatureMachine) {
+      let next = FeatureMachine.transition(value, 'CONTINUE', extendedState);
+      this.saveState('nextStep', next.value);
+    }
   },
 
   saveExtState(key, value) {
@@ -222,13 +226,14 @@ export default Service.extend(DEFAULTS, {
       this.saveExtState(COMPLETED_FEATURES, this.getExtState(COMPLETED_FEATURES).toArray().addObject(done));
     }
 
-    this.saveExtState(FEATURE_LIST, this.get('featureList'));
+    this.saveExtState(FEATURE_LIST, features.length ? features : null);
     this.storage().removeItem(FEATURE_STATE);
     if (features.length > 0) {
       this.buildFeatureMachine();
     } else {
+      this.storage().removeItem(FEATURE_LIST);
       FeatureMachine = null;
-      TutorialMachine.transition(this.get('currentState'), 'DONE');
+      this.transitionTutorialMachine(this.get('currentState'), 'DONE');
     }
   },
 
