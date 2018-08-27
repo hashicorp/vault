@@ -5,6 +5,7 @@ const { inject } = Ember;
 export default Ember.Route.extend({
   controlGroup: inject.service(),
   routing: inject.service('router'),
+  wizard: inject.service(),
   namespaceService: inject.service('namespace'),
 
   actions: {
@@ -53,6 +54,36 @@ export default Ember.Route.extend({
         router.get('location').setURL(errorURL);
       }
 
+      return true;
+    },
+    didTransition() {
+      let wizard = this.get('wizard');
+
+      if (wizard.get('currentState') !== 'active.feature') {
+        return true;
+      }
+      Ember.run.next(() => {
+        let applicationURL = this.get('routing.currentURL');
+        let activeRoute = this.get('routing.currentRouteName');
+        let expectedRouteName = this.get('wizard.expectedRouteName');
+        console.log({ expectedRouteName });
+
+        if (this.get('wizard.setURLAfterTransition')) {
+          this.set('wizard.setURLAfterTransition', false);
+          this.set('wizard.expectedURL', applicationURL);
+          this.set('wizard.expectedRouteName', activeRoute);
+          return true;
+        }
+        if (expectedRouteName) {
+          let isActive = this.get('routing').isActive(expectedRouteName);
+          console.log({ applicationURL });
+          console.log({ activeRoute });
+          console.log({ isActive });
+          if (isActive === false) {
+            wizard.transitionTutorialMachine(wizard.get('currentState'), 'PAUSE');
+          }
+        }
+      });
       return true;
     },
   },

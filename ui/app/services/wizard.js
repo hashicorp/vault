@@ -61,7 +61,7 @@ export default Service.extend(DEFAULTS, {
       this.set('componentState', this.getExtState(COMPONENT_STATE));
     }
     let stateNodes = TutorialMachine.getStateNodes(this.get('currentState'));
-    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
+    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []), null, 'tutorial');
     if (this.storageHasKey(FEATURE_LIST)) {
       this.set('featureList', this.getExtState(FEATURE_LIST));
       if (this.storageHasKey(FEATURE_STATE)) {
@@ -112,7 +112,7 @@ export default Service.extend(DEFAULTS, {
     let { actions, value } = TutorialMachine.transition(currentState, event);
     this.saveState('currentState', value);
     this.saveExtState(TUTORIAL_STATE, this.get('currentState'));
-    this.executeActions(actions, event);
+    this.executeActions(actions, event, 'tutorial');
   },
 
   transitionFeatureMachine(currentState, event, extendedState) {
@@ -127,7 +127,7 @@ export default Service.extend(DEFAULTS, {
     let { actions, value } = FeatureMachine.transition(currentState, event, this.get('componentState'));
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
-    this.executeActions(actions, event);
+    this.executeActions(actions, event, 'feature');
     // if all features were completed, the FeatureMachine gets nulled
     // out and won't exist here as there is no next step
     if (FeatureMachine) {
@@ -153,7 +153,11 @@ export default Service.extend(DEFAULTS, {
     return Boolean(this.getExtState(key));
   },
 
-  executeActions(actions, event) {
+  executeActions(actions, event, machineType) {
+    let transitionURL;
+    let router = this.get('router');
+    let expectedRouteName = router.get('currentRouteName');
+
     for (let action of actions) {
       let type = action;
       if (action.type) {
@@ -164,8 +168,13 @@ export default Service.extend(DEFAULTS, {
           this.set(`${action.level}Component`, action.component);
           break;
         case 'routeTransition':
+          expectedRouteName = action.params[0];
+          transitionURL = router.urlFor(...action.params).replace(/^\/ui/, '');
           Ember.run.next(() => {
-            this.get('router').transitionTo(...action.params);
+            router.transitionTo(...action.params).followRedirects().then(() => {
+              this.set('expectedRouteName', expectedRouteName);
+              this.set('expectedURL', transitionURL);
+            });
           });
           break;
         case 'saveFeatures':
@@ -177,6 +186,9 @@ export default Service.extend(DEFAULTS, {
         case 'handleDismissed':
           this.handleDismissed();
           break;
+        case 'handlePaused':
+          this.handlePaused();
+          return;
         case 'showTutorialWhenAuthenticated':
           this.set('showWhenUnauthenticated', false);
           break;
@@ -190,7 +202,26 @@ export default Service.extend(DEFAULTS, {
           break;
       }
     }
+    if (machineType === 'tutorial') {
+      return;
+    }
+    // if we're transitioning in the actions, we want that url,
+    // else we want the URL we land on in didTransition in the
+    // application route - we'll notify the application route to
+    // update the route
+    if (transitionURL) {
+      this.set('expectedURL', transitionURL);
+      this.set('expectedRouteName', expectedRouteName);
+      this.set('setURLAfterTransition', false);
+    } else {
+      this.set('setURLAfterTransition', true);
+    }
   },
+
+  handlePaused() {
+    this.saveExtState(RESUME_URL, this.get('expectedURL'));
+  },
+  handleResume() {},
 
   handleDismissed() {
     this.storage().removeItem(FEATURE_STATE);
@@ -224,7 +255,7 @@ export default Service.extend(DEFAULTS, {
     }
     this.saveState('nextStep', next.value);
     let stateNodes = FeatureMachine.getStateNodes(this.get('featureState'));
-    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
+    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []), null, 'feature');
   },
 
   startFeature() {
