@@ -43,6 +43,11 @@
     margin-top: $size-5;
     display: block;
   }
+
+  pre code {
+    background: $ui-gray-050;
+    margin: $size-8 0;
+  }
 }
 
 .wizard-header {
