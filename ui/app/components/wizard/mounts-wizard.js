@@ -18,6 +18,9 @@ export default Ember.Component.extend({
   nextStep: computed('fullNextStep', function() {
     return this.get('fullNextStep').split('.').lastObject;
   }),
+  needsEncryption: computed('mountSubtype', function() {
+    return this.get('mountSubtype') === 'transit';
+  }),
   stepComponent: computed.alias('wizard.stepComponent'),
   detailsComponent: computed('mountSubtype', function() {
     let suffix = this.get('currentMachine') === 'secrets' ? 'engine' : 'method';

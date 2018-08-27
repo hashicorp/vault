@@ -132,8 +132,12 @@ export default Service.extend(DEFAULTS, {
     // out and won't exist here as there is no next step
     if (FeatureMachine) {
       let next;
-      if (this.get('currentMachine') === 'secrets' && this.value === 'display') {
-        next = FeatureMachine.transition(value, 'REPEAT', extendedState);
+      if (this.get('currentMachine') === 'secrets' && value === 'display') {
+        if (extendedState === 'transit') {
+          next = { value: 'encryption key' };
+        } else {
+          next = FeatureMachine.transition(value, 'REPEAT', extendedState);
+        }
       } else {
         next = FeatureMachine.transition(value, 'CONTINUE', extendedState);
       }
@@ -217,7 +221,11 @@ export default Service.extend(DEFAULTS, {
     this.set('nextFeature', nextFeature);
     let next;
     if (this.get('currentMachine') === 'secrets' && this.get('featureState') === 'display') {
-      next = FeatureMachine.transition(this.get('featureState'), 'REPEAT', this.get('componentState'));
+      if (this.get('componentState') === 'transit') {
+        next = { value: 'encryption key' };
+      } else {
+        next = FeatureMachine.transition(this.get('featureState'), 'REPEAT', this.get('componentState'));
+      }
     } else {
       next = FeatureMachine.transition(this.get('featureState'), 'CONTINUE', this.get('componentState'));
     }

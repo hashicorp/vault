@@ -84,10 +84,21 @@ export default {
             cond: type => ['pki', 'aws', 'ssh'].includes(type),
           },
           secret: {
-            cond: type =>
-              ['cubbyhole', 'database', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp', 'transit'].includes(type),
+            cond: type => ['cubbyhole', 'database', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp'].includes(type),
+          },
+          encryption: {
+            cond: type => type === 'transit',
           },
         },
+      },
+    },
+    encryption: {
+      onEntry: [
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+        { type: 'render', level: 'step', component: 'wizard/secrets-encryption' },
+      ],
+      on: {
+        CONTINUE: 'display',
       },
     },
     credentials: {
@@ -138,8 +149,11 @@ export default {
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
           secret: {
-            cond: type =>
-              ['cubbyhole', 'database', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp', 'transit'].includes(type),
+            cond: type => ['cubbyhole', 'database', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp'].includes(type),
+            actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
+          },
+          encryption: {
+            cond: type => type === 'transit',
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
         },

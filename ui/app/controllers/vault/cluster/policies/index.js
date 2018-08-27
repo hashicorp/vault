@@ -55,7 +55,7 @@ export default Ember.Controller.extend({
         .destroyRecord()
         .then(() => {
           flash.success(`${policyType.toUpperCase()} policy "${name}" was successfully deleted.`);
-          if (this.get('wizard.featureState') === 'delete' && name === 'my-new-policy') {
+          if (this.get('wizard.featureState') === 'delete') {
             this.get('wizard').transitionFeatureMachine('delete', 'CONTINUE', policyType);
           }
           // this will clear the dataset cache on the store
