@@ -8,7 +8,7 @@
       Here you can see that your data survived intact. These tools are mostly handy for applications to use, but if you ever do need to wrap data or handle the wrapping token, now you know how.
     </p>
   </WizardSection>
-  <button type="button" {{action onAdvance}}>
-    {{nextFeature}}
+  <button type="button"  class="button with-grey-outline" {{action onDone}}>
+    {{nextFeature}} <ICon @glyph="chevron-right"  @size=10 @class="is-pulled-right" />
   </button>
 </WizardContent>
