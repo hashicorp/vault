@@ -9,7 +9,7 @@
   <form id="features-form" class="feature-selection" {{action "saveFeatures" on="submit"}}>
     {{#each allFeatures as |feature|}}
     {{#if feature.show}}
-    <div class="feature-box">
+    <div class="feature-box {{if feature.selected 'is-active'}}">
       <div class="b-checkbox">
         <input
           id="feature-{{feature.key}}"
