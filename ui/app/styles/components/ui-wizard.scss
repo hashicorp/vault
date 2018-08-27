@@ -9,6 +9,7 @@
   flex-direction: column;
   flex-grow: 1;
 }
+
 .ui-wizard-container .app-content.wizard-open {
   padding-right: 324px;
 
@@ -19,7 +20,7 @@
 
 .ui-wizard {
   z-index: 300;
-  padding: $size-5 $size-5 $size-11;
+  padding: $size-5;
   width: 300px;
   background: $white;
   box-shadow: $box-shadow, $box-shadow-highest;
@@ -30,7 +31,12 @@
   overflow: auto;
 
   @include until($tablet) {
-    display: none;
+    box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: 50%;
+    width: auto;
   }
 
   .doc-link {
@@ -61,9 +67,20 @@
   background: $black;
   color: $white;
   box-shadow: $box-shadow-middle;
+
+  @include until($tablet) {
+    box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: auto;
+  }
+
   .title {
     color: $white;
   }
+
   .wizard-header {
     margin: 0;
   }
