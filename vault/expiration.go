@@ -1155,6 +1155,8 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 		return nil
 	}
 
+	le.Secret.IssueTime = le.IssueTime
+
 	// Handle standard revocation via backends
 	resp, err := m.router.Route(m.quitContext, logical.RevokeRequest(le.Path, le.Secret, le.Data))
 	if err != nil || (resp != nil && resp.IsError()) {
