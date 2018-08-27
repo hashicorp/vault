@@ -78,7 +78,7 @@ module.exports = class Sidebar extends Component {
         return (
           <li
             class={
-              currentPath[currentPath.length - 1] === fileName ? 'active' : ''
+              this.fileMatch(item.path.split('/'), currentPath) ? 'active' : ''
             }
           >
             <a
@@ -99,7 +99,7 @@ module.exports = class Sidebar extends Component {
         return (
           <li
             class={
-              this.arraysMatch(currentPath, item.indexData.path.split('/'))
+              this.categoryMatch(currentPath, item.indexData.path.split('/'))
                 ? 'active'
                 : ''
             }
@@ -123,9 +123,16 @@ module.exports = class Sidebar extends Component {
     return data.filter(d => d.path.split('/').includes(category))
   }
 
-  arraysMatch(navItemPath, currentPath) {
+  categoryMatch(navItemPath, currentPath) {
     navItemPath = navItemPath.slice(0, navItemPath.length - 1)
     currentPath = currentPath.slice(0, currentPath.length - 1)
+    return currentPath.reduce((result, item, i) => {
+      if (item !== navItemPath[i]) result = false
+      return result
+    }, true)
+  }
+
+  fileMatch(navItemPath, currentPath) {
     return currentPath.reduce((result, item, i) => {
       if (item !== navItemPath[i]) result = false
       return result

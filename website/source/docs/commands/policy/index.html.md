@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "policy - Command"
+sidebar_title: "policy"
 sidebar_current: "docs-commands-policy"
 description: |-
   The "policy" command groups subcommands for interacting with policies. Users

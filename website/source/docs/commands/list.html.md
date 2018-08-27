@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "list - Command"
+sidebar_title: "list"
 sidebar_current: "docs-commands-list"
 description: |-
   The "list" command lists data from Vault at the given path. This can be used

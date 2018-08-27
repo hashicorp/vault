@@ -11,8 +11,7 @@ description: |-
 # lease
 
 The `lease` command groups subcommands for interacting with leases attached to
-secrets. For leases attached to tokens, use the [`vault
-token`](/docs/commands/token.html) subcommand.
+secrets. For leases attached to tokens, use the [`vault token`](/docs/commands/token.html) subcommand.
 
 ## Examples
 

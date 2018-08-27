@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "auth - Command"
+sidebar_title: "auth"
 sidebar_current: "docs-commands-auth"
 description: |-
   The "auth" command groups subcommands for interacting with Vault's auth
@@ -17,8 +18,7 @@ For more information, please see the [auth method
 documentation](/docs/auth/index.html) or the [authentication
 concepts](/docs/concepts/auth.html) page.
 
-To authenticate to Vault as a user or machine, use the [`vault
-login`](/docs/commands/login.html) command instead. This command is for
+To authenticate to Vault as a user or machine, use the [`vault login`](/docs/commands/login.html) command instead. This command is for
 interacting with the auth methods themselves, not authenticating to Vault.
 
 ## Examples
