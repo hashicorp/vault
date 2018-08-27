@@ -70,7 +70,4 @@ export default DS.Model.extend({
 
   generatePath: lazyCapabilities(apiPath`${'backend'}/creds/${'id'}`, 'backend', 'id'),
   canGenerate: computed.alias('generatePath.canUpdate'),
-
-  stsPath: lazyCapabilities(apiPath`${'backend'}/sts/${'id'}`, 'backend', 'id'),
-  canGenerateSTS: computed.alias('stsPath.canUpdate'),
 });
