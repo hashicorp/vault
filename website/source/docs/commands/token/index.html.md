@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "token - Command"
+sidebar_title: "token"
 sidebar_current: "docs-commands-token"
 description: |-
   The "token" command groups subcommands for interacting with tokens. Users can

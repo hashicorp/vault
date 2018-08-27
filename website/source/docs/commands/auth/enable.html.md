@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "auth enable - Command"
+sidebar_title: "enable"
 sidebar_current: "docs-commands-auth-enable"
 description: |-
   The "auth enable" command enables an auth method at a given path. If an auth

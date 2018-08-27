@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "plugin deregister - Command"
+sidebar_title: "deregister"
 sidebar_current: "docs-commands-plugin-deregister"
 description: |-
   The "plugin deregister" command deregisters a new plugin in Vault's plugin

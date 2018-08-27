@@ -73,6 +73,96 @@
               'telemetry',
               { category: 'ui' }
             ]
+          }, {
+            category: 'commands',
+            content: [
+            'agent',
+            {
+              category: 'audit',
+              content: [
+                'disable',
+                'enable',
+                'list'
+              ]
+            }, {
+              category: 'auth',
+              content: [
+                'disable',
+                'enable',
+                'help',
+                'list',
+                'tune'
+              ]
+            },
+            'delete',
+            {
+              category: 'lease',
+              content: ['renew', 'revoke']
+            },
+            'list',
+            'login',
+            {
+              category: 'operator',
+              content: [
+                'generate-root',
+                'init',
+                'key-status',
+                'rekey',
+                'rotate',
+                'seal',
+                'step-down',
+                'unseal'
+              ]
+            },
+            'path-help',
+            'namespace',
+            {
+              category: 'plugin',
+              content: [
+                'deregister',
+                'info',
+                'list',
+                'register'
+              ]
+            },
+            {
+              category: 'policy',
+              content: [
+                'delete',
+                'fmt',
+                'list',
+                'read',
+                'write'
+              ]
+            },
+            'read',
+            {
+              category: 'secrets',
+              content: [
+                'disable',
+                'enable',
+                'list',
+                'move',
+                'tune'
+              ]
+            },
+            'server',
+            'ssh',
+            'status',
+            {
+              category: 'token',
+              content: [
+                'capabilities',
+                'create',
+                'lookup',
+                'renew',
+                'revoke'
+              ]
+            },
+            'unwrap',
+            'write',
+            'token-helper'
+            ]
           }
         ]) %>")
       ></hashi-docs-sidebar>

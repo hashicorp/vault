@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "plugin - Command"
+sidebar_title: "plugin"
 sidebar_current: "docs-commands-plugin"
 description: |-
   The "plugin" command groups subcommands for interacting with

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "audit - Command"
+sidebar_title: "audit"
 sidebar_current: "docs-commands-audit"
 description: |-
   The "audit" command groups subcommands for interacting with Vault's audit
