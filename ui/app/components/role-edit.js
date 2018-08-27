@@ -16,15 +16,8 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   wizard: inject.service(),
   requestInFlight: computed.or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
-  init() {
-    this._super(...arguments);
-
-    if (this.get('mode') === 'edit') {
-      this.send('addRow');
-    }
-  },
-
   didReceiveAttrs() {
+    this._super(...arguments);
     if (
       (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') ||
       (this.get('wizard.featureState') === 'role' && this.get('mode') === 'show')

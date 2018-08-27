@@ -14,10 +14,10 @@ import AuthMachineConfig from 'vault/machines/auth-machine';
 
 const TutorialMachine = Machine(TutorialMachineConfig);
 let FeatureMachine = null;
-const TUTORIAL_STATE = 'vault-tutorial-state';
-const FEATURE_LIST = 'vault-feature-list';
-const FEATURE_STATE = 'vault-feature-state';
-const COMPLETED_FEATURES = 'vault-completed-list';
+const TUTORIAL_STATE = 'vault:ui-tutorial-state';
+const FEATURE_LIST = 'vault:ui-feature-list';
+const FEATURE_STATE = 'vault:ui-feature-state';
+const COMPLETED_FEATURES = 'vault:ui-completed-list';
 const MACHINES = {
   secrets: SecretsMachineConfig,
   policies: PoliciesMachineConfig,
@@ -109,7 +109,7 @@ export default Service.extend(DEFAULTS, {
   },
 
   transitionFeatureMachine(currentState, event, extendedState) {
-    if (!this.get('currentState').includes('active')) {
+    if (!FeatureMachine || !this.get('currentState').includes('active')) {
       return;
     }
     if (extendedState) {
