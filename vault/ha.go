@@ -506,7 +506,20 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			continue
 		}
 
-		cancelCtxAndLock := func() {
+		// Monitor a loss of leadership
+		select {
+		case <-leaderLostCh:
+			c.logger.Warn("leadership lost, stopping active operation")
+		case <-stopCh:
+		case <-manualStepDownCh:
+			manualStepDown = true
+			c.logger.Warn("stepping down from active operation to standby")
+		}
+
+		// Stop Active Duty
+		{
+			// Spawn this in a go routine so we can cancel the context and
+			// unblock any inflight requests that are holding the statelock.
 			go func() {
 				select {
 				case <-activeCtx.Done():
@@ -515,56 +528,37 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 					activeCtxCancel()
 				}
 			}()
-			c.stateLock.Lock()
-			activeCtxCancel()
-		}
 
-		runSealing := func() {
+			// Grab lock if we are not stopped
+			stopped := grabLockOrStop(c.stateLock.Lock, c.stateLock.Unlock, stopCh)
+
+			// Cancel the context incase the above go routine hasn't done it
+			// yet
+			activeCtxCancel()
 			metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
 
+			// Mark as standby
 			c.standby = true
 
+			// Seal
 			if err := c.preSeal(); err != nil {
 				c.logger.Error("pre-seal teardown failed", "error", err)
 			}
-		}
 
-		releaseHALock := func() {
-			// We may hit this from leaderLostCh or manualStepDownCh if they
-			// triggered before stopCh, so we check here instead of only in the
-			// stopCh case so we can try to do the right thing then, too
-			if atomic.LoadUint32(c.keepHALockOnStepDown) == 1 {
+			// If we are not meant to keep the HA lock, clear it
+			if atomic.LoadUint32(c.keepHALockOnStepDown) == 0 {
+				if err := c.clearLeader(uuid); err != nil {
+					c.logger.Error("clearing leader advertisement failed", "error", err)
+				}
+
+				c.heldHALock.Unlock()
+				c.heldHALock = nil
+			}
+
+			// If we are stopped return, otherwise unlock the statelock
+			if stopped {
 				return
 			}
-			if err := c.clearLeader(uuid); err != nil {
-				c.logger.Error("clearing leader advertisement failed", "error", err)
-			}
-			c.heldHALock.Unlock()
-			c.heldHALock = nil
-		}
-
-		// Monitor a loss of leadership
-		select {
-		case <-leaderLostCh:
-			c.logger.Warn("leadership lost, stopping active operation")
-			cancelCtxAndLock()
-			runSealing()
-			releaseHALock()
-			c.stateLock.Unlock()
-
-		case <-stopCh:
-			activeCtxCancel()
-			runSealing()
-			releaseHALock()
-			return
-
-		case <-manualStepDownCh:
-			manualStepDown = true
-			c.logger.Warn("stepping down from active operation to standby")
-
-			cancelCtxAndLock()
-			runSealing()
-			releaseHALock()
 			c.stateLock.Unlock()
 		}
 	}
