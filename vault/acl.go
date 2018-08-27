@@ -218,11 +218,11 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 		capabilities = perm.CapabilitiesBitmap
 		goto CHECK
 	}
-	if op == logical.ListOperation {
+	if strings.HasSuffix(path, "/") {
 		raw, ok = a.exactRules.Get(strings.TrimSuffix(path, "/"))
 		if ok {
-			permissions = raw.(*ACLPermissions)
-			capabilities = permissions.CapabilitiesBitmap
+			perm := raw.(*ACLPermissions)
+			capabilities = perm.CapabilitiesBitmap
 			goto CHECK
 		}
 	}
