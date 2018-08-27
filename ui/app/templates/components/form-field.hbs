@@ -98,6 +98,17 @@
         class="textarea"
         ></textarea>
     {{else if (eq attr.options.editType 'json')}}
+
+      <label for="{{attr.name}}" class="is-label">
+        {{labelString}}
+        {{#if attr.options.helpText}}
+          {{#info-tooltip}}
+          <span data-test-help-text>
+            {{attr.options.helpText}}
+          </span>
+          {{/info-tooltip}}
+        {{/if}}
+      </label>
       {{json-editor
         value=(if (get model valuePath) (stringify (jsonify (get model valuePath))))
         valueUpdated=(action "codemirrorUpdated" attr.name 'string')
