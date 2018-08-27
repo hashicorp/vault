@@ -1,6 +1,10 @@
 import Ember from 'ember';
 import { engines } from 'vault/helpers/mountable-secret-engines';
 import { methods } from 'vault/helpers/mountable-auth-methods';
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+const supportedSecrets = supportedSecretBackends();
+import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+const supportedAuth = supportedAuthBackends();
 const { inject, computed } = Ember;
 
 export default Ember.Component.extend({
@@ -18,6 +22,13 @@ export default Ember.Component.extend({
   detailsComponent: computed('mountSubtype', function() {
     let suffix = this.get('currentMachine') === 'secrets' ? 'engine' : 'method';
     return this.get('mountSubtype') ? `wizard/${this.get('mountSubtype')}-${suffix}` : null;
+  }),
+  isSupported: computed('mountSubtype', function() {
+    if (this.get('currentMachine') === 'secrets') {
+      return supportedSecrets.includes(this.get('mountSubtype'));
+    } else {
+      return supportedAuth.includes(this.get('mountSubtype'));
+    }
   }),
   mountName: computed('mountSubtype', function() {
     if (this.get('currentMachine') === 'secrets') {
@@ -53,4 +64,5 @@ export default Ember.Component.extend({
   onAdvance() {},
   onRepeat() {},
   onReset() {},
+  onDone() {},
 });

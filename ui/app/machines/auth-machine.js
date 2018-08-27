@@ -1,3 +1,5 @@
+import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+const supportedAuth = supportedAuthBackends();
 export default {
   key: 'auth',
   initial: 'idle',
@@ -53,7 +55,7 @@ export default {
     enable: {
       onEntry: [
         { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
-        { type: 'render', level: 'step', component: 'wizard/secrets-enable' },
+        { type: 'render', level: 'step', component: 'wizard/auth-enable' },
       ],
       on: {
         CONTINUE: 'list',
