@@ -30,7 +30,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
       this.get('wizard').transitionFeatureMachine(
         this.get('wizard.featureState'),
         'EDIT',
-        backend.toJSON().type
+        backend.get('type')
       );
       return RSVP.hash({
         model: backend,
@@ -48,7 +48,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
       this.get('wizard').transitionFeatureMachine(
         this.get('wizard.featureState'),
         'EDIT',
-        backend.toJSON().type
+        backend.get('type')
       );
       return RSVP.hash({
         model,
@@ -61,7 +61,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
         this.get('wizard').transitionFeatureMachine(
           this.get('wizard.featureState'),
           'EDIT',
-          backend.toJSON().type
+          backend.get('type')
         );
         config.set('backend', backend);
         return RSVP.hash({

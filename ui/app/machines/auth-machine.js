@@ -1,5 +1,3 @@
-import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-const supportedAuth = supportedAuthBackends();
 export default {
   key: 'auth',
   initial: 'idle',

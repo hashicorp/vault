@@ -14,7 +14,7 @@ export default Ember.Route.extend({
     this.get('wizard').transitionFeatureMachine(
       this.get('wizard.featureState'),
       'DETAILS',
-      backend.toJSON().type
+      backend.get('type')
     );
     return backend;
   },
