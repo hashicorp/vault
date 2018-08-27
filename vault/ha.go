@@ -61,7 +61,7 @@ func (c *Core) Standby() (bool, error) {
 	return standby, nil
 }
 
-// IsPerfStandby checks if the vault is a performance standby
+// PerfStandby checks if the vault is a performance standby
 func (c *Core) PerfStandby() bool {
 	c.stateLock.RLock()
 	perfStandby := c.perfStandby
