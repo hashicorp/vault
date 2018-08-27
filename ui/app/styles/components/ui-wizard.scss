@@ -48,6 +48,11 @@
 .wizard-header {
   margin-bottom: $size-5;
   position: relative;
+
+  .icon {
+    margin-right: $size-11;
+    vertical-align: -0.33rem;
+  }
 }
 
 .wizard-dismiss-menu {
