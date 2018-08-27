@@ -61,6 +61,14 @@ func (c *Core) Standby() (bool, error) {
 	return standby, nil
 }
 
+// IsPerfStandby checks if the vault is a performance standby
+func (c *Core) PerfStandby() bool {
+	c.stateLock.RLock()
+	perfStandby := c.perfStandby
+	c.stateLock.RUnlock()
+	return perfStandby
+}
+
 // Leader is used to get the current active leader
 func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err error) {
 	// Check if HA enabled. We don't need the lock for this check as it's set

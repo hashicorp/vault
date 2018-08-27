@@ -169,6 +169,7 @@ type Core struct {
 	sealed    *uint32
 
 	standby              bool
+	perfStandby          bool
 	standbyDoneCh        chan struct{}
 	standbyStopCh        chan struct{}
 	manualStepDownCh     chan struct{}
