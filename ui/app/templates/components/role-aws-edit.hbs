@@ -13,7 +13,7 @@
       {{#if (eq mode "create") }}
         Create an AWS Role
       {{else if (eq mode 'edit')}}
-        Edit AWS Role
+        Edit AWS Role <code>{{model.id}}</code>
       {{else}}
         AWS Role <code>{{model.id}}</code>
       {{/if}}

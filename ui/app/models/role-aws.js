@@ -6,7 +6,20 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 const { attr } = DS;
 const { computed } = Ember;
 
-const CREATE_FIELDS = ['name', 'credential_type', 'credential_types', 'role_arns', 'policy_arns', 'policy_document'];
+const CREDENTIAL_TYPES = [
+  {
+    value: 'iam_user',
+    displayName: 'IAM User',
+  },
+  {
+    value: 'assumed_role',
+    displayName: 'Assumed Role',
+  },
+  {
+    value: 'federation_token',
+    displayName: 'Federation Token',
+  },
+];
 export default DS.Model.extend({
   backend: attr('string', {
     readOnly: true,
@@ -16,32 +29,37 @@ export default DS.Model.extend({
     fieldValue: 'id',
     readOnly: true,
   }),
-  credential_type: attr('string', {
-    defaultValue: "iam_user",
-  }),
-  credential_types: attr({
-    label: 'Credential Types',
+  // credentialTypes are for backwards compatibility.
+  // we use this to populate "credentialType" in
+  // the serializer. if there is more than one, the
+  // show and edit pages will show a warning
+  credentialTypes: attr('array', {
     readOnly: true,
   }),
-  role_arns: attr({
+  credentialType: attr('string', {
+    defaultValue: 'iam_user',
+    possibleValues: CREDENTIAL_TYPES,
+  }),
+  roleArns: attr({
     editType: 'stringArray',
     label: 'Role ARNs',
   }),
-  policy_arns: attr({
+  policyArns: attr({
     editType: 'stringArray',
+    label: 'Policy ARNs',
   }),
-  policy_document: attr('string', {
-    widget: 'json',
+  policyDocument: attr('string', {
+    editType: 'json',
   }),
-  /*arn: attr('string', {
-    helpText: '',
-  }),
-  policy: attr('string', {
-    helpText: '',
-    widget: 'json',
-  }),*/
-  attrs: computed(function() {
-    let keys = CREATE_FIELDS.slice(0);
+  fields: computed('credentialType', function() {
+    let keys;
+    let credentialType = this.get('credentialType');
+    let keysForType = {
+      iam_user: ['name', 'credentialType', 'policyArns', 'policyDocument'],
+      assumed_role: ['name', 'credentialType', 'roleArns', 'policyDocument'],
+      federation_token: ['name', 'credentialType', 'policyDocument'],
+    };
+    keys = keysForType[credentialType];
     return expandAttributeMeta(this, keys);
   }),
 
