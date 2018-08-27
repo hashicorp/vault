@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Install Vault"
+sidebar_title: "Installing Vault"
 sidebar_current: "docs-install-install"
 description: |-
   Installing Vault is simple. You can download a precompiled binary or compile

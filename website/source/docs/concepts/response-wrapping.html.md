@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Response Wrapping"
+sidebar_title: "Response Wrapping"
 sidebar_current: "docs-concepts-response-wrapping"
 description: |-
   Wrapping responses in cubbyholes for secure distribution.

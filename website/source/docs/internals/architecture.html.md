@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Architecture"
+sidebar_title: "Architecture"
 sidebar_current: "docs-internals-architecture"
 description: |-
   Learn about the internal architecture of Vault.

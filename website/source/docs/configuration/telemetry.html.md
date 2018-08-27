@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Telemetry - Configuration"
+sidebar_title: "telemetry"
 sidebar_current: "docs-configuration-telemetry"
 description: |-
   The telemetry stanza specifies various configurations for Vault to publish
