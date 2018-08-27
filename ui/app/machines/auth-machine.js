@@ -73,6 +73,9 @@ export default {
         { type: 'render', level: 'step', component: 'wizard/auth-details' },
         { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
       ],
+      on: {
+        CONTINUE: 'complete',
+      },
     },
     approle: {
       onEntry: [

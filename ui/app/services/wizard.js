@@ -221,11 +221,7 @@ export default Service.extend(DEFAULTS, {
     this.set('nextFeature', nextFeature);
     let next;
     if (this.get('currentMachine') === 'secrets' && this.get('featureState') === 'display') {
-      if (this.get('componentState') === 'transit') {
-        next = { value: 'encryption key' };
-      } else {
-        next = FeatureMachine.transition(this.get('featureState'), 'REPEAT', this.get('componentState'));
-      }
+      next = FeatureMachine.transition(this.get('featureState'), 'REPEAT', this.get('componentState'));
     } else {
       next = FeatureMachine.transition(this.get('featureState'), 'CONTINUE', this.get('componentState'));
     }
