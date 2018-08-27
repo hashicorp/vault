@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -88,10 +87,6 @@ func (c *NamespaceDeleteCommand) Run(args []string) int {
 	if secret != nil {
 		// Likely, we have warnings
 		return OutputSecret(c.UI, secret)
-	}
-
-	if c.flagNamespace != notSetNamespace {
-		namespacePath = path.Join(c.flagNamespace, namespacePath)
 	}
 
 	if !strings.HasSuffix(namespacePath, "/") {
