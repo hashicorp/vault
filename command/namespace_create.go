@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -83,10 +82,6 @@ func (c *NamespaceCreateCommand) Run(args []string) int {
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating namespace: %s", err))
 		return 2
-	}
-
-	if c.flagNamespace != notSetNamespace {
-		namespacePath = path.Join(c.flagNamespace, namespacePath)
 	}
 
 	if !strings.HasSuffix(namespacePath, "/") {
