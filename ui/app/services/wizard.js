@@ -124,7 +124,7 @@ export default Service.extend(DEFAULTS, {
       this.saveExtState(COMPONENT_STATE, extendedState);
     }
 
-    let { actions, value } = FeatureMachine.transition(currentState, event, extendedState);
+    let { actions, value } = FeatureMachine.transition(currentState, event, this.get('componentState'));
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
     this.executeActions(actions, event);
@@ -133,13 +133,9 @@ export default Service.extend(DEFAULTS, {
     if (FeatureMachine) {
       let next;
       if (this.get('currentMachine') === 'secrets' && value === 'display') {
-        if (extendedState === 'transit') {
-          next = { value: 'encryption key' };
-        } else {
-          next = FeatureMachine.transition(value, 'REPEAT', extendedState);
-        }
+        next = FeatureMachine.transition(value, 'REPEAT', this.get('componentState'));
       } else {
-        next = FeatureMachine.transition(value, 'CONTINUE', extendedState);
+        next = FeatureMachine.transition(value, 'CONTINUE', this.get('componentState'));
       }
       this.saveState('nextStep', next.value);
     }
