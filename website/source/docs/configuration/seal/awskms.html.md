@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "AWS KMS - Seals - Configuration"
+sidebar_title: "AWS KMS <sup>ENT</sup>"
 sidebar_current: "docs-configuration-seal-awskms"
 description: |-
   The AWS KMS seal configures Vault to use AWS KMS as the seal wrapping

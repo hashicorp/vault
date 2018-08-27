@@ -46,9 +46,12 @@ module.exports = class Sidebar extends Component {
         })[0]
       } else {
         // grab the index page, as it can contain data about the top level link
-        item.indexData = pageData.find((page) => {
+        item.indexData = pageData.find(page => {
           const split = page.path.split('/')
-          return split[0] === item.category && split[1] === 'index.html'
+          return (
+            split[split.length - 2] === item.category &&
+            split[split.length - 1] === 'index.html'
+          )
         })
         // otherwise, it's a nested category. if the category has content, we
         // recurse, passing in that category's content, and the matching
@@ -65,7 +68,7 @@ module.exports = class Sidebar extends Component {
   }
 
   // recursive render for a recursive data structure!
-  renderNavTree(category, content, currentPath) {
+  renderNavTree(category, content, currentPath, depth = 0) {
     return content.map(item => {
       // dividers are the only items left as strings
       if (typeof item === 'string') return <hr />
@@ -73,24 +76,41 @@ module.exports = class Sidebar extends Component {
       if (item.path) {
         const fileName = item.path.split('/').pop()
         return (
-          <li class={currentPath[1] === fileName ? 'active' : ''}>
-            <a href={`/${category}/${item.path}`}>
-              {item.data.sidebar_title ||
-                item.data.page_title ||
-                '(!) Page Missing'}
-            </a>
+          <li
+            class={
+              currentPath[currentPath.length - 1] === fileName ? 'active' : ''
+            }
+          >
+            <a
+              href={`/${category}/${item.path}`}
+              dangerouslySetInnerHTML={{
+                __html:
+                  item.data.sidebar_title ||
+                  item.data.page_title ||
+                  '(!) Page Missing'
+              }}
+            />
           </li>
         )
       } else {
-        const current = currentPath[0]
-        currentPath.slice(1)
-        const title = item.indexData ? (item.indexData.data.sidebar_title || item.indexData.data.page_title) : item.category
+        const title = item.indexData
+          ? item.indexData.data.sidebar_title || item.indexData.data.page_title
+          : item.category
         return (
-          <li class={current === item.category ? 'active' : ''}>
-            <a href={`/${category}/${item.category}/index.html`}>{title}</a>
+          <li
+            class={
+              this.arraysMatch(currentPath, item.indexData.path.split('/'))
+                ? 'active'
+                : ''
+            }
+          >
+            <a
+              href={`/${category}/${item.indexData.path}`}
+              dangerouslySetInnerHTML={{ __html: title }}
+            />
             {item.content && (
               <ul class="nav">
-                {this.renderNavTree(category, item.content, currentPath)}
+                {this.renderNavTree(category, item.content, currentPath, depth)}
               </ul>
             )}
           </li>
@@ -101,5 +121,14 @@ module.exports = class Sidebar extends Component {
 
   filterData(data, category) {
     return data.filter(d => d.path.split('/').includes(category))
+  }
+
+  arraysMatch(navItemPath, currentPath) {
+    navItemPath = navItemPath.slice(0, navItemPath.length - 1)
+    currentPath = currentPath.slice(0, currentPath.length - 1)
+    return currentPath.reduce((result, item, i) => {
+      if (item !== navItemPath[i]) result = false
+      return result
+    }, true)
   }
 }

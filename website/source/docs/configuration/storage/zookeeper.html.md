@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Zookeeper - Storage Backends - Configuration"
+sidebar_title: "Zookeeper"
 sidebar_current: "docs-configuration-storage-zookeeper"
 description: |-
   The Zookeeper storage backend is used to persist Vault's data in Zookeeper.

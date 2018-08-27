@@ -33,6 +33,46 @@
               'ha',
               'pgp-gpg-keybase'
             ]
+          }, {
+            category: 'configuration',
+            content: [
+              {
+                category: 'listener',
+                content: ['tcp']
+              }, {
+                category: 'seal',
+                content: [
+                  'awskms',
+                  'azurekeyvault',
+                  'gcpckms',
+                  'pkcs11'
+                ]
+              }, {
+                category: 'storage',
+                content: [
+                  'azure',
+                  'cassandra',
+                  'cockroachdb',
+                  'consul',
+                  'couchdb',
+                  'dynamodb',
+                  'etcd',
+                  'filesystem',
+                  'foundationdb',
+                  'google-cloud-spanner',
+                  'google-cloud-storage',
+                  'in-memory',
+                  'manta',
+                  'mysql',
+                  'postgresql',
+                  's3',
+                  'swift',
+                  'zookeeper'
+                ]
+              },
+              'telemetry',
+              { category: 'ui' }
+            ]
           }
         ]) %>")
       ></hashi-docs-sidebar>
