@@ -25,9 +25,9 @@
   background: $white;
   box-shadow: $box-shadow, $box-shadow-highest;
   position: fixed;
-  right: $size-6;
-  bottom: $size-6;
-  top: calc(4.5 * #{$size-6});
+  right: $size-8;
+  bottom: $size-8;
+  top: calc(3.5rem + #{$size-8});
   overflow: auto;
 
   @include until($tablet) {
@@ -58,15 +58,16 @@
 }
 
 .ui-wizard.collapsed {
-  position: fixed;
-  top: 4rem;
-  right: 2rem;
+  color: $white;
+  background: $black;
   bottom: auto;
+  box-shadow: $box-shadow-middle;
   height: auto;
   min-height: 0;
-  background: $black;
-  color: $white;
-  box-shadow: $box-shadow-middle;
+  padding-bottom: $size-11;
+  position: fixed;
+  right: $size-8;
+  top: calc(3.5rem + #{$size-8});
 
   @include until($tablet) {
     box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
