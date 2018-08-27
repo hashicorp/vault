@@ -133,7 +133,7 @@ export default {
         { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
       ],
       on: {
-        CONTINUE: 'idle',
+        CONTINUE: 'complete',
       },
     },
     complete: {
