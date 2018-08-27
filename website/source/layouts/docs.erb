@@ -1,6 +1,44 @@
 <% wrap_layout :inner do %>
   <% content_for :sidebar do %>
     <ul class="nav docs-nav">
+      <hashi-docs-sidebar
+        category='docs'
+        current_page='<%= current_page.path %>'
+        data="<%= encode(sidebar_data('docs')) %>"
+        order="<%= encode([
+          {
+            category: 'install',
+          }, {
+            category: 'internals',
+            content: [
+              'architecture',
+              'high-availability',
+              'security',
+              'telemetry',
+              'token',
+              'rotation',
+              'replication',
+              'plugins'
+            ]
+          }, {
+            category: 'concepts',
+            content: [
+              'dev-server',
+              'seal',
+              'lease',
+              'auth',
+              'tokens',
+              'response-wrapping',
+              'policies',
+              'ha',
+              'pgp-gpg-keybase'
+            ]
+          }
+        ]) %>")
+      ></hashi-docs-sidebar>
+
+      <p>----------------------------</p>
+
       <li<%= sidebar_current("docs-install") %>>
         <a href="/docs/install/index.html">Installing Vault</a>
       </li>

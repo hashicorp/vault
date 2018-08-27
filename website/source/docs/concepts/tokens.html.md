@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Tokens"
+sidebar_title: "Tokens"
 sidebar_current: "docs-concepts-tokens"
 description: |-
   Tokens are a core auth method in Vault. Concepts and important features.

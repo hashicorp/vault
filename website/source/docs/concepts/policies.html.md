@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Policies"
+sidebar_title: "Policies"
 sidebar_current: "docs-concepts-policies"
 description: |-
   Policies are how authorization is done in Vault, allowing you to restrict which parts of Vault a user can access.

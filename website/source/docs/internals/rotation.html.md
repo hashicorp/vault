@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Key Rotation"
+sidebar_title: "Key Rotation"
 sidebar_current: "docs-internals-rotation"
 description: |-
   Learn about the details of key rotation within Vault.
