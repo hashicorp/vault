@@ -11,6 +11,10 @@
 }
 .ui-wizard-container .app-content.wizard-open {
   padding-right: 324px;
+
+  @include until($tablet) {
+    padding-right: 0;
+  }
 }
 
 .ui-wizard {
@@ -24,6 +28,11 @@
   bottom: $size-6;
   top: calc(4.5 * #{$size-6});
   overflow: auto;
+
+  @include until($tablet) {
+    display: none;
+  }
+
   .doc-link {
     margin-top: $size-5;
     display: block;
@@ -34,6 +43,7 @@
   margin-bottom: $size-5;
   position: relative;
 }
+
 .wizard-dismiss-menu {
   position: absolute;
   right: $size-6;
