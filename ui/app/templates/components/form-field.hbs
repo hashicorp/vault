@@ -97,6 +97,11 @@
         oninput={{action (action "setAndBroadcast" valuePath) value="target.value"}}
         class="textarea"
         ></textarea>
+    {{else if (eq attr.options.editType 'json')}}
+      {{json-editor
+        value=(if (get model valuePath) (stringify (jsonify (get model valuePath))))
+        valueUpdated=(action "codemirrorUpdated" attr.name 'string')
+      }}
     {{else}}
       <input
         data-test-input={{attr.name}}
