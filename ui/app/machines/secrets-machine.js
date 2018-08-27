@@ -67,7 +67,7 @@ export default {
       on: {
         CONTINUE: {
           details: { cond: type => supportedBackends.includes(type) },
-          display: {
+          list: {
             cond: type => ['ad', 'consul', 'database', 'gcp', 'nomad', 'rabbitmq', 'totp'].includes(type),
           },
         },
@@ -131,14 +131,27 @@ export default {
         { type: 'render', level: 'step', component: 'wizard/secrets-display' },
         { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
       ],
-      REPEAT: {
-        role: {
-          cond: type => ['pki', 'aws', 'ssh'].includes(type),
+      on: {
+        REPEAT: {
+          role: {
+            cond: type => ['pki', 'aws', 'ssh'].includes(type),
+            actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
+          },
+          secret: {
+            cond: type =>
+              ['cubbyhole', 'database', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp', 'transit'].includes(type),
+            actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
+          },
         },
-        secret: {
-          cond: type =>
-            ['cubbyhole', 'database', 'gcp', 'kv', 'nomad', 'rabbitmq', 'totp', 'transit'].includes(type),
-        },
+      },
+    },
+    list: {
+      onEntry: [
+        { type: 'render', level: 'step', component: 'wizard/secrets-list' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+      ],
+      on: {
+        CONTINUE: 'display',
       },
     },
     ad: {

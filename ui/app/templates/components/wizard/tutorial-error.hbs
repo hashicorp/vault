@@ -4,10 +4,12 @@
   <p>
     Something went wrong and you can't complete this step.
   </p>
-  <button type="button" {{action onReset}}>
-    Go Back
+</WizardSection>
+<WizardSection>
+  <button type="button" class="button with-grey-outline" {{action onReset}}>
+    Go Back <ICon @glyph="reply"  @size=12 @class="is-pulled-right" />
   </button>
-  <button type="button" {{action onDone}}>
-    {{nextFeature}}
+  <button type="button"  class="button with-grey-outline" {{action onDone}}>
+    {{nextFeature}} <ICon @glyph="chevron-right"  @size=10 @class="is-pulled-right" />
   </button>
 </WizardSection>

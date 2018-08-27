@@ -77,6 +77,14 @@
   width: auto;
 }
 
+.wizard-section:last-of-type {
+  margin-bottom: $size-5;
+}
+
+.wizard-section button:not(:last-of-type) {
+  margin-bottom: $size-10;
+}
+
 .wizard-details {
   padding-top: $size-4;
   margin-top: $size-4;

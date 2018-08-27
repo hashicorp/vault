@@ -18,6 +18,7 @@ const TUTORIAL_STATE = 'vault:ui-tutorial-state';
 const FEATURE_LIST = 'vault:ui-feature-list';
 const FEATURE_STATE = 'vault:ui-feature-state';
 const COMPLETED_FEATURES = 'vault:ui-completed-list';
+const COMPONENT_STATE = 'vault:ui-component-state';
 const MACHINES = {
   secrets: SecretsMachineConfig,
   policies: PoliciesMachineConfig,
@@ -56,6 +57,9 @@ export default Service.extend(DEFAULTS, {
       this.saveExtState(TUTORIAL_STATE, state.value);
     }
     this.saveState('currentState', this.getExtState(TUTORIAL_STATE));
+    if (this.storageHasKey(COMPONENT_STATE)) {
+      this.set('componentState', this.getExtState(COMPONENT_STATE));
+    }
     let stateNodes = TutorialMachine.getStateNodes(this.get('currentState'));
     this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
     if (this.storageHasKey(FEATURE_LIST)) {
@@ -75,7 +79,9 @@ export default Service.extend(DEFAULTS, {
   restartGuide() {
     let storage = this.storage();
     // empty storage
-    [TUTORIAL_STATE, FEATURE_LIST, FEATURE_STATE, COMPLETED_FEATURES].forEach(key => storage.removeItem(key));
+    [TUTORIAL_STATE, FEATURE_LIST, FEATURE_STATE, COMPLETED_FEATURES, COMPONENT_STATE].forEach(key =>
+      storage.removeItem(key)
+    );
     // reset wizard state
     this.setProperties(DEFAULTS);
     // restart machines from blank state
@@ -101,6 +107,7 @@ export default Service.extend(DEFAULTS, {
   transitionTutorialMachine(currentState, event, extendedState) {
     if (extendedState) {
       this.set('componentState', extendedState);
+      this.saveExtState(COMPONENT_STATE, extendedState);
     }
     let { actions, value } = TutorialMachine.transition(currentState, event);
     this.saveState('currentState', value);
@@ -114,6 +121,7 @@ export default Service.extend(DEFAULTS, {
     }
     if (extendedState) {
       this.set('componentState', extendedState);
+      this.saveExtState(COMPONENT_STATE, extendedState);
     }
 
     let { actions, value } = FeatureMachine.transition(currentState, event, extendedState);
@@ -123,7 +131,12 @@ export default Service.extend(DEFAULTS, {
     // if all features were completed, the FeatureMachine gets nulled
     // out and won't exist here as there is no next step
     if (FeatureMachine) {
-      let next = FeatureMachine.transition(value, 'CONTINUE', extendedState);
+      let next;
+      if (this.get('currentMachine') === 'secrets' && this.value === 'display') {
+        next = FeatureMachine.transition(value, 'REPEAT', extendedState);
+      } else {
+        next = FeatureMachine.transition(value, 'CONTINUE', extendedState);
+      }
       this.saveState('nextStep', next.value);
     }
   },
@@ -202,7 +215,12 @@ export default Service.extend(DEFAULTS, {
     let nextFeature =
       this.get('featureList').length > 1 ? this.get('featureList').objectAt(1).capitalize() : 'Finish';
     this.set('nextFeature', nextFeature);
-    let next = FeatureMachine.transition(this.get('featureState'), 'CONTINUE', this.get('componentState'));
+    let next;
+    if (this.get('currentMachine') === 'secrets' && this.get('featureState') === 'display') {
+      next = FeatureMachine.transition(this.get('featureState'), 'REPEAT', this.get('componentState'));
+    } else {
+      next = FeatureMachine.transition(this.get('featureState'), 'CONTINUE', this.get('componentState'));
+    }
     this.saveState('nextStep', next.value);
     let stateNodes = FeatureMachine.getStateNodes(this.get('featureState'));
     this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));

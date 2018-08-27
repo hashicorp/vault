@@ -65,17 +65,7 @@ export default {
         { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
       ],
       on: {
-        EDIT: 'edit',
         DETAILS: 'details',
-      },
-    },
-    edit: {
-      onEntry: [
-        { type: 'render', level: 'step', component: 'wizard/auth-edit' },
-        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
-      ],
-      on: {
-        CONTINUE: 'details',
       },
     },
     details: {

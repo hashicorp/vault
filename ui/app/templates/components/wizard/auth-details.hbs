@@ -8,12 +8,13 @@
   </p>
 </WizardSection>
 <WizardSection 
-  @headerText="Want to start again or move on?" 
+  @headerText="Want to start again or move on?"
+  @class="wizard-details"
 >
-  <button type="button" {{action onReset}}>
-    Try Another
+  <button type="button"  class="button with-grey-outline" {{action onReset}}>
+    Enable another auth method <ICon @glyph="loop"  @size=13 @class="is-pulled-right" />
   </button>
-  <button type="button" {{action onDone}}>
-    {{nextFeature}}
+  <button type="button"  class="button with-grey-outline" {{action onDone}}>
+    {{nextFeature}} <ICon @glyph="chevron-right"  @size=10 @class="is-pulled-right" />
   </button>
 </WizardSection>
