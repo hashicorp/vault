@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "UI - Configuration"
+sidebar_title: "<tt>ui</tt>"
 sidebar_current: "docs-configuration-ui"
 description: |-
   Vault features a user interface (web interface) for interacting with Vault.

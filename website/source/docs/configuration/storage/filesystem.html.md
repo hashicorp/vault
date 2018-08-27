@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Filesystem - Storage Backends - Configuration"
+sidebar_title: "Filesystem"
 sidebar_current: "docs-configuration-storage-filesystem"
 description: |-
   The Filesystem storage backend stores Vault's data on the filesystem using a

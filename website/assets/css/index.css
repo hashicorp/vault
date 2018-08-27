@@ -7,7 +7,6 @@
 @import '_tables';
 @import '_alerts';
 @import '_code-highlighting';
-@import '_sidebar';
 @import '_inner';
 @import '_secondary-nav';
 
@@ -20,3 +19,4 @@
 @import '@hashicorp/hashi-nav/dist/style.css';
 @import '@hashicorp/hashi-newsletter-signup-form/dist/style.css';
 @import '@hashicorp/hashi-button/dist/style.css';
+@import '../js/components/docs-sidebar/style.css';

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "DynamoDB - Storage Backends - Configuration"
+sidebar_title: "DynamoDB"
 sidebar_current: "docs-configuration-storage-dynamodb"
 description: |-
   The DynamoDB storage backend is used to persist Vault's data in DynamoDB
