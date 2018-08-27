@@ -25,11 +25,11 @@
   line-height: 1;
   margin: $size-6 $size-3 $size-6 0;
   font-size: 12px;
-  transition: box-shadow ease-in-out 250ms;
+  transition: box-shadow ease-in-out $speed;
   will-change: box-shadow;
 
   &.is-selected {
-    box-shadow: $box-shadow, $box-shadow-high;
+    box-shadow: 0 0 0 1px $grey-light, $box-shadow-middle;
   }
 
   input[type=radio].radio {
