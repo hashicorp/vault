@@ -141,6 +141,6 @@
 {{else if (eq attr.type 'object')}}
   {{json-editor
     value=(if (get model valuePath) (stringify (get model valuePath)) emptyData)
-    valueUpdated=(action "codemirrorUpdated" attr.name)
+    valueUpdated=(action "codemirrorUpdated" attr.name false)
   }}
 {{/if}}

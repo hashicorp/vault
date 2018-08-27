@@ -14,7 +14,7 @@ export default ApplicationSerializer.extend({
     return ret;
   },
 
-  normalizeItems(payload) {
+  normalizeItems() {
     let normalized = this._super(...arguments);
     // most roles will only have one in this array,
     // we'll default to the first, and keep the array on the
