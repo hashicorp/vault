@@ -195,6 +195,7 @@ export default Service.extend(DEFAULTS, {
   handleDismissed() {
     this.storage().removeItem(FEATURE_STATE);
     this.storage().removeItem(FEATURE_LIST);
+    this.storage().removeItem(COMPONENT_STATE);
   },
 
   saveFeatures(features) {
