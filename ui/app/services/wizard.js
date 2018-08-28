@@ -156,8 +156,8 @@ export default Service.extend(DEFAULTS, {
 
   executeActions(actions, event, machineType) {
     let transitionURL;
+    let expectedRouteName;
     let router = this.get('router');
-    let expectedRouteName = router.get('currentRouteName');
 
     for (let action of actions) {
       let type = action;
