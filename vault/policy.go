@@ -236,6 +236,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		}
 
 		valid := []string{
+			"comment",
 			"policy",
 			"capabilities",
 			"allowed_parameters",

@@ -367,6 +367,11 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 			if showLeaderAddr {
 				out = append(out, fmt.Sprintf("Active Node Address | %s", leaderStatus.LeaderAddress))
 			}
+
+			if leaderStatus.PerfStandby {
+				out = append(out, fmt.Sprintf("Performance Standby Node | %t", leaderStatus.PerfStandby))
+				out = append(out, fmt.Sprintf("Performance Standby Last Remote WAL | %d", leaderStatus.PerfStandbyLastRemoteWAL))
+			}
 		}
 	}
 

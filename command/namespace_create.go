@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -24,8 +23,8 @@ func (c *NamespaceCreateCommand) Help() string {
 	helpText := `
 Usage: vault namespace create [options] PATH
 
-  Create a child namespace. The namespace created will be relative to the 
-  namespace provided in either VAULT_NAMESPACE environemnt variable or
+  Create a child namespace. The namespace created will be relative to the
+  namespace provided in either the VAULT_NAMESPACE environment variable or
   -namespace CLI flag.
 
   Create a child namespace (e.g. ns1/):
@@ -42,7 +41,7 @@ Usage: vault namespace create [options] PATH
 }
 
 func (c *NamespaceCreateCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 }
 
 func (c *NamespaceCreateCommand) AutocompleteArgs() complete.Predictor {
@@ -79,21 +78,16 @@ func (c *NamespaceCreateCommand) Run(args []string) int {
 		return 2
 	}
 
-	_, err = client.Logical().Write("sys/namespaces/"+namespacePath, nil)
+	secret, err := client.Logical().Write("sys/namespaces/"+namespacePath, nil)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating namespace: %s", err))
 		return 2
 	}
 
-	if c.flagNamespace != notSetNamespace {
-		namespacePath = path.Join(c.flagNamespace, namespacePath)
+	// Handle single field output
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
 	}
 
-	if !strings.HasSuffix(namespacePath, "/") {
-		namespacePath = namespacePath + "/"
-	}
-
-	// Output full path
-	c.UI.Output(fmt.Sprintf("Success! Namespace created at: %s", namespacePath))
-	return 0
+	return OutputSecret(c.UI, secret)
 }

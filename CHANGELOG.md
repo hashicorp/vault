@@ -11,6 +11,18 @@ DEPRECATIONS/CHANGES:
    However, this has some subtle issues that pop up from time to time and is
    becoming increasingly complicated to maintain, so it's finally being
    removed.
+ * Path Fallback for List Operations: For a very long time Vault has
+   automatically adjusted `list` operations to always end in a `/`, as list
+   operations operates on prefixes, so all list operations by definition end
+   with `/`. This was done server-side so affects all clients. However, this
+   has also led to a lot of confusion for users writing policies that assume
+   that the path that they use in the CLI is the path used internally. Starting
+   in 0.11, ACL policies gain a new fallback rule for listing: they will use a
+   matching path ending in `/` if available, but if not found, they will look
+   for the same path without a trailing `/`. This allows putting `list`
+   capabilities in the same path block as most other capabilities for that
+   path, while not providing any extra access if `list` wasn't actually
+   provided there.
 
 FEATURES:
 
@@ -43,6 +55,7 @@ IMPROVEMENTS:
  * secrets/nomad: Support for longer token names [GH-5117]
  * secrets/pki: Allow disabling CRL generation [GH-5134]
  * storage/azure: Add support for different Azure environments [GH-4997]
+ * storage/file: Sort keys in list responses [GH-5141]
  * storage/mysql: Support special characters in database and table names.
 
 BUG FIXES:
@@ -53,6 +66,7 @@ BUG FIXES:
    format and/or interleaved [GH-5135]
  * identity: Properly populate `mount_path` and `mount_type` on group lookup
    [GH-5074]
+ * identity: Fix persisting alias metadata [GH-5188]
  * identity: Fix carryover issue from previously fixed race condition that
    could cause Vault not to start up due to two entities referencing the same
    alias. These entities are now merged. [GH-5000]

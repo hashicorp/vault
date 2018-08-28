@@ -423,7 +423,7 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-	backend, err := factory(config.Storage.Config, c.logger.ResetNamed("storage."+config.Storage.Type))
+	backend, err := factory(config.Storage.Config, c.logger.Named("storage."+config.Storage.Type))
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
 		return 1

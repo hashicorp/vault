@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -24,8 +23,8 @@ func (c *NamespaceDeleteCommand) Help() string {
 	helpText := `
 Usage: vault namespace delete [options] PATH
 
-  Delete an existing namespace. The namespace deleted will be relative to the 
-  namespace provided in either VAULT_NAMESPACE environemnt variable or
+  Delete an existing namespace. The namespace deleted will be relative to the
+  namespace provided in either the VAULT_NAMESPACE environment variable or
   -namespace CLI flag.
 
   Delete a namespace (e.g. ns1/):
@@ -88,10 +87,6 @@ func (c *NamespaceDeleteCommand) Run(args []string) int {
 	if secret != nil {
 		// Likely, we have warnings
 		return OutputSecret(c.UI, secret)
-	}
-
-	if c.flagNamespace != notSetNamespace {
-		namespacePath = path.Join(c.flagNamespace, namespacePath)
 	}
 
 	if !strings.HasSuffix(namespacePath, "/") {

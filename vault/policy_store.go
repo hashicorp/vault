@@ -204,7 +204,7 @@ func NewPolicyStore(ctx context.Context, core *Core, baseView *BarrierView, syst
 func (c *Core) setupPolicyStore(ctx context.Context) error {
 	// Create the policy store
 	sysView := &dynamicSystemView{core: c}
-	c.policyStore = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, c.logger.ResetNamed("policy"))
+	c.policyStore = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, c.baseLogger.Named("policy"))
 
 	if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
 		// Policies will sync from the primary

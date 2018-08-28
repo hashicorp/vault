@@ -126,10 +126,13 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	}
 
 	client.SetMFACreds(c.flagMFA)
-	switch {
-	case c.flagNS != notSetNamespace:
-		client.SetNamespace(namespace.Canonicalize(c.flagNS))
-	case c.flagNamespace != notSetNamespace:
+
+	// flagNS takes precedence over flagNamespace. After resolution, point both
+	// flags to the same value to be able to use them interchangeably anywhere.
+	if c.flagNS != notSetNamespace {
+		c.flagNamespace = c.flagNS
+	}
+	if c.flagNamespace != notSetNamespace {
 		client.SetNamespace(namespace.Canonicalize(c.flagNamespace))
 	}
 
@@ -267,7 +270,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Default:    notSetNamespace, // this can never be a real value
 				Completion: complete.PredictAnything,
 				Hidden:     true,
-				Usage:      "Alias for -namespace.",
+				Usage:      "Alias for -namespace. This takes precedence over -namespace.",
 			})
 
 			f.StringVar(&StringVar{
