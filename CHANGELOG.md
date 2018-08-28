@@ -23,6 +23,14 @@ DEPRECATIONS/CHANGES:
    capabilities in the same path block as most other capabilities for that
    path, while not providing any extra access if `list` wasn't actually
    provided there.
+ * AWS Secret Engine Roles: The AWS Secret Engine roles are now explicit about
+   the type of AWS credential they are generating; this reduces reduce ambiguity
+   that existed previously as well as enables new features for specific
+   credential types. Writing role data and generating credentials remain
+   backwards compatible; however, the data returned when reading a role's
+   configuration has changed in backwards-incompatible ways. Anything that
+   depended on reading role data from the AWS secret engine will break until it
+   is updated to work with the new format.
 
 FEATURES:
 
@@ -52,6 +60,7 @@ IMPROVEMENTS:
  * auth/approle: Add ability to set token bound CIDRs on individual Secret IDs
    [GH-5034]
  * cli: Add support for passing parameters to `vault read` operations [GH-5093]
+ * secrets/aws: Make credential types more explicit [GH-4360]
  * secrets/nomad: Support for longer token names [GH-5117]
  * secrets/pki: Allow disabling CRL generation [GH-5134]
  * storage/azure: Add support for different Azure environments [GH-4997]
