@@ -293,13 +293,13 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 	ctx, cancel := context.WithCancel(c.activeContext)
 	defer cancel()
 
-	go func() {
+	go func(ctx context.Context, httpCtx context.Context) {
 		select {
 		case <-ctx.Done():
 		case <-httpCtx.Done():
 			cancel()
 		}
-	}()
+	}(ctx, httpCtx)
 
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
