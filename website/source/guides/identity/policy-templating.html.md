@@ -19,7 +19,7 @@ all existing paths as well as paths to be created.
 The [Policies](/guides/identity/policies.html) guide walks you through the
 creation of ACL policies in Vault.
 
-~> This guide highlights the use of ACL templating which was introduced in
+> This guide highlights the use of ACL templating which was introduced in
 **Vault 0.11**.
 
 ## Reference Material
