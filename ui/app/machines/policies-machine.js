@@ -4,7 +4,7 @@ export default {
   states: {
     idle: {
       onEntry: [
-        { type: 'routeTransition', params: ['vault.cluster.policy'] },
+        { type: 'routeTransition', params: ['vault.cluster.policies.index', 'acl'] },
         { type: 'render', level: 'feature', component: 'wizard/policies-intro' },
       ],
       on: {
@@ -37,7 +37,6 @@ export default {
     },
     complete: {
       onEntry: ['completeFeature'],
-      on: { RESET: 'idle' },
     },
   },
 };

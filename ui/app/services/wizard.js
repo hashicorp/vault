@@ -196,6 +196,7 @@ export default Service.extend(DEFAULTS, {
           return;
         case 'handleResume':
           this.handleResume();
+          break;
         case 'showTutorialWhenAuthenticated':
           this.set('showWhenUnauthenticated', false);
           break;
