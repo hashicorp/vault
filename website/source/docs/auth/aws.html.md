@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "AWS - Auth Methods"
+sidebar_title: "AWS"
 sidebar_current: "docs-auth-aws"
 description: |-
   The aws auth method allows automated authentication of AWS entities.

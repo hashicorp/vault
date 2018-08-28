@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Google Cloud - Auth Methods"
+sidebar_title: "Google Cloud"
 sidebar_current: "docs-auth-gcp"
 description: |-
   The "gcp" auth method allows users and machines to authenticate to Vault using

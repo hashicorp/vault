@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Kubernetes - Auth Methods"
+sidebar_title: "Kubernetes"
 sidebar_current: "docs-auth-kubernetes"
 description: |-
   The Kubernetes auth method allows automated authentication of Kubernetes
