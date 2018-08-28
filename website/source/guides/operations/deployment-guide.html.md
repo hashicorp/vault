@@ -143,7 +143,7 @@ The following parameters are set for the `[Service]` stanza:
 - [`KillSignal`](https://www.freedesktop.org/software/systemd/man/systemd.kill.html#KillSignal=) - Send SIGINT signal when shutting down vault
 - [`Restart`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#RestartSec=) - Restart vault ([in a sealed state](/docs/concepts/seal.html)) unless it returned a clean exit code
 - [`RestartSec`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#RestartSec=) - Restart vault after 5 seconds of it being considered 'failed'
-- [`TimeoutStopSec`](test) - Wait 30 seconds for a clean stop before sending a SIGKILL signal
+- [`TimeoutStopSec`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#TimeoutStopSec=) - Wait 30 seconds for a clean stop before sending a SIGKILL signal
 - [`StartLimitIntervalSec`, `StartLimitBurst`](https://www.freedesktop.org/software/systemd/man/systemd.unit.html#StartLimitIntervalSec=interval) - Limit vault to three start attempts in 60 seconds
 
 The following parameters are set for the `[Install]` stanza:
