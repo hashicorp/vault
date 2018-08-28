@@ -62,6 +62,7 @@ type pendingInfo struct {
 // If a secret is not renewed in timely manner, it may be expired, and
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
+	core       *Core
 	router     *Router
 	idView     *BarrierView
 	tokenView  *BarrierView
@@ -91,6 +92,7 @@ type ExpirationManager struct {
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, logger log.Logger) *ExpirationManager {
 	exp := &ExpirationManager{
+		core:       c,
 		router:     c.router,
 		idView:     view.SubView(leaseViewPrefix),
 		tokenView:  view.SubView(tokenViewPrefix),
@@ -130,7 +132,7 @@ func (c *Core) setupExpiration() error {
 	view := c.systemBarrierView.SubView(expirationSubPath)
 
 	// Create the manager
-	mgr := NewExpirationManager(c, view, c.logger.ResetNamed("expiration"))
+	mgr := NewExpirationManager(c, view, c.baseLogger.Named("expiration"))
 	c.expiration = mgr
 
 	// Link the token store to this
@@ -844,6 +846,17 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 
 	// Attach the ClientToken
 	resp.Auth.ClientToken = token
+
+	// Refresh groups
+	if resp.Auth.EntityID != "" &&
+		resp.Auth.GroupAliases != nil &&
+		m.core.identityStore != nil {
+		validAliases, err := m.core.identityStore.refreshExternalGroupMembershipsByEntityID(resp.Auth.EntityID, resp.Auth.GroupAliases)
+		if err != nil {
+			return nil, err
+		}
+		resp.Auth.GroupAliases = validAliases
+	}
 
 	// Update the lease entry
 	le.Auth = resp.Auth

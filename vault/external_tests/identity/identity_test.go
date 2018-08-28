@@ -1,4 +1,4 @@
-package vault_test
+package identity
 
 import (
 	"testing"

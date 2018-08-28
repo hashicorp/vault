@@ -308,7 +308,7 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 // setupAudit is invoked after we've loaded the audit able to
 // initialize the audit backends
 func (c *Core) setupAudits(ctx context.Context) error {
-	broker := NewAuditBroker(c.logger.ResetNamed("audit"))
+	broker := NewAuditBroker(c.baseLogger.Named("audit"))
 
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
@@ -379,7 +379,7 @@ func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 		c.reloadFuncsLock.Lock()
 
 		if c.logger.IsDebug() {
-			c.logger.ResetNamed("audit").Debug("removing reload function", "path", entry.Path)
+			c.baseLogger.Named("audit").Debug("removing reload function", "path", entry.Path)
 		}
 
 		delete(c.reloadFuncs, key)
@@ -412,7 +412,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)
 	}
 
-	auditLogger := c.logger.ResetNamed("audit")
+	auditLogger := c.baseLogger.Named("audit")
 
 	switch entry.Type {
 	case "file":

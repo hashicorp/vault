@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
@@ -474,7 +475,7 @@ func (c *Client) SetNamespace(namespace string) {
 		c.headers = make(http.Header)
 	}
 
-	c.headers.Set("X-Vault-Namespace", namespace)
+	c.headers.Set(consts.NamespaceHeaderName, namespace)
 }
 
 // Token returns the access token being used by this client. It will

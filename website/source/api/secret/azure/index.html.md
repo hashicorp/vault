@@ -122,7 +122,6 @@ for more information about roles.
 
 ### Parameters
 
-- `name` (`string: <required>`) - Required. Name of the role. Cannot be updated.
 - `azure_roles` (`array: <required>`) - List of Azure roles to be assigned to the generated service
    principal. See [roles docs][roles] for details on role definition.
 - `ttl` (`string: ""`) – Specifies the default TTL for service principals generated using this role.

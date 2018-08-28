@@ -17,7 +17,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
@@ -98,7 +97,6 @@ type ParsedCertBundle struct {
 	CertificateBytes []byte
 	Certificate      *x509.Certificate
 	CAChain          []*CertBlock
-	SerialNumber     *big.Int
 }
 
 // CSRBundle contains a key type, a PEM-encoded private key,
@@ -223,8 +221,6 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 		if err != nil {
 			return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle via issuing CA: %v", err)}
 		}
-
-		result.SerialNumber = result.Certificate.SerialNumber
 
 		certBlock := &CertBlock{
 			Bytes:       pemBlock.Bytes,

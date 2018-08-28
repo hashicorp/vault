@@ -1,4 +1,4 @@
-package vault_test
+package token
 
 import (
 	"encoding/base64"
@@ -84,6 +84,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		CredentialBackends: map[string]logical.Factory{
 			"ldap": credLdap.Factory,
 		},
+		EnableRaw: true,
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
@@ -123,10 +124,11 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create user in LDAP auth
+	// Create user in LDAP auth. We add two groups, but we should filter out
+	// the ones that don't match aliases later (we will check for this)
 	_, err = client.Logical().Write("auth/ldap/users/tesla", map[string]interface{}{
 		"policies": "default",
-		"groups":   "testgroup1",
+		"groups":   "testgroup1,testgroup2",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -292,14 +294,39 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatalf("bad: identity policies; expected: %#v\nactual: %#v", expectedPolicies, actualPolicies)
 	}
 
-	// Log in and get a new token, then renew it. See issue #4829
+	// Log in and get a new token, then renew it. See issue #4829. The logic is
+	// continued after the next block.
 	secret, err = client.Logical().Write("auth/ldap/login/tesla", map[string]interface{}{
 		"password": "password",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	secret, err = client.Auth().Token().Renew(secret.Auth.ClientToken, 10)
+	token4829 := secret.Auth.ClientToken
+
+	// Check that the lease for the token contains only the single group; this
+	// should be true for both as one was fresh and the other was a renew
+	// (which is why we do the renew check on the 4839 token after this block)
+	secret, err = client.Logical().List("sys/raw/sys/expire/id/auth/ldap/login/tesla/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range secret.Data["keys"].([]interface{}) {
+		secret, err := client.Logical().Read("sys/raw/sys/expire/id/auth/ldap/login/tesla/" + key.(string))
+		if err != nil {
+			t.Fatal(err)
+		}
+		//t.Logf("%#v", *secret)
+		var resp logical.Response
+		if err := jsonutil.DecodeJSON([]byte(secret.Data["value"].(string)), &resp); err != nil {
+			t.Fatal(err)
+		}
+		if len(resp.Auth.GroupAliases) != 1 || resp.Auth.GroupAliases[0].Name != "testgroup1" {
+			t.Fatalf("bad: %#v", resp.Auth.GroupAliases)
+		}
+	}
+
+	secret, err = client.Auth().Token().Renew(token4829, 10)
 	if err != nil {
 		t.Fatal(err)
 	}

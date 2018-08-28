@@ -476,7 +476,7 @@ $ vault write -namespace=education/training identity/group \
         member_entity_ids=$(cat entity_id.txt)
 
 # Enable userpass auth method in training namespace
-$ vault auth enable -namespace=education/namespace userpass
+$ vault auth enable -namespace=education/training userpass
 
 # Create a user 'bsmith'
 $ vault write -namespace=education/training \

@@ -66,19 +66,29 @@ func (c *NamespaceListCommand) Run(args []string) int {
 		return 2
 	}
 
-	namespaces, err := client.Sys().ListNamespaces()
+	secret, err := client.Logical().List("sys/namespaces")
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing namespaces: %s", err))
 		return 2
 	}
-
-	switch Format(c.UI) {
-	case "table":
-		for _, ns := range namespaces.NamespacePaths {
-			c.UI.Output(ns)
-		}
-		return 0
-	default:
-		return OutputData(c.UI, namespaces)
+	if secret == nil {
+		c.UI.Error(fmt.Sprintf("No namespaces found"))
+		return 2
 	}
+
+	// There could be e.g. warnings
+	if secret.Data == nil {
+		return OutputSecret(c.UI, secret)
+	}
+
+	if secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
+		return OutputSecret(c.UI, secret)
+	}
+
+	if _, ok := extractListData(secret); !ok {
+		c.UI.Error(fmt.Sprintf("No entries found"))
+		return 2
+	}
+
+	return OutputList(c.UI, secret)
 }

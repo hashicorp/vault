@@ -62,6 +62,9 @@ type Config struct {
 	DisableClustering    bool        `hcl:"-"`
 	DisableClusteringRaw interface{} `hcl:"disable_clustering"`
 
+	DisablePerformanceStandby    bool        `hcl:"-"`
+	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby"`
+
 	DisableSealWrap    bool        `hcl:"-"`
 	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
 }
@@ -326,6 +329,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PidFile = c2.PidFile
 	}
 
+	result.DisablePerformanceStandby = c.DisablePerformanceStandby
+	if c2.DisablePerformanceStandby {
+		result.DisablePerformanceStandby = c2.DisablePerformanceStandby
+	}
+
 	result.DisableSealWrap = c.DisableSealWrap
 	if c2.DisableSealWrap {
 		result.DisableSealWrap = c2.DisableSealWrap
@@ -420,6 +428,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 
 	if result.DisableClusteringRaw != nil {
 		if result.DisableClustering, err = parseutil.ParseBool(result.DisableClusteringRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisablePerformanceStandbyRaw != nil {
+		if result.DisablePerformanceStandby, err = parseutil.ParseBool(result.DisablePerformanceStandbyRaw); err != nil {
 			return nil, err
 		}
 	}

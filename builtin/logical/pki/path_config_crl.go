@@ -5,13 +5,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 // CRLConfig holds basic CRL configuration information
 type crlConfig struct {
-	Expiry string `json:"expiry" mapstructure:"expiry" structs:"expiry"`
+	Expiry  string `json:"expiry" mapstructure:"expiry"`
+	Disable bool   `json:"disable"`
 }
 
 func pathConfigCRL(b *backend) *framework.Path {
@@ -23,6 +26,10 @@ func pathConfigCRL(b *backend) *framework.Path {
 				Description: `The amount of time the generated CRL should be
 valid; defaults to 72 hours`,
 				Default: "72h",
+			},
+			"disable": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: `If set to true, disables generating the CRL entirely.`,
 			},
 		},
 
@@ -64,21 +71,34 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, data *f
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"expiry": config.Expiry,
+			"expiry":  config.Expiry,
+			"disable": config.Disable,
 		},
 	}, nil
 }
 
 func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	expiry := d.Get("expiry").(string)
-
-	_, err := time.ParseDuration(expiry)
+	config, err := b.CRL(ctx, req.Storage)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Given expiry could not be decoded: %s", err)), nil
+		return nil, err
+	}
+	if config == nil {
+		config = &crlConfig{}
 	}
 
-	config := &crlConfig{
-		Expiry: expiry,
+	if expiryRaw, ok := d.GetOk("expiry"); ok {
+		expiry := expiryRaw.(string)
+		_, err := time.ParseDuration(expiry)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("given expiry could not be decoded: %s", err)), nil
+		}
+		config.Expiry = expiry
+	}
+
+	var oldDisable bool
+	if disableRaw, ok := d.GetOk("disable"); ok {
+		oldDisable = config.Disable
+		config.Disable = disableRaw.(bool)
 	}
 
 	entry, err := logical.StorageEntryJSON("config/crl", config)
@@ -88,6 +108,17 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
+	}
+
+	if oldDisable != config.Disable {
+		// It wasn't disabled but now it is, rotate
+		crlErr := buildCRL(ctx, b, req, true)
+		switch crlErr.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
+		case errutil.InternalError:
+			return nil, errwrap.Wrapf("error encountered during CRL building: {{err}}", crlErr)
+		}
 	}
 
 	return nil, nil

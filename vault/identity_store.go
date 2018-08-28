@@ -360,8 +360,6 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 		return entity, nil
 	}
 
-	i.logger.Debug("creating a new entity", "alias", alias)
-
 	entity = &identity.Entity{}
 
 	err = i.sanitizeEntity(entity)
@@ -374,6 +372,7 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 		CanonicalID:   entity.ID,
 		Name:          alias.Name,
 		MountAccessor: alias.MountAccessor,
+		Metadata:      alias.Metadata,
 		MountPath:     mountValidationResp.MountPath,
 		MountType:     mountValidationResp.MountType,
 	}
@@ -382,6 +381,8 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 	if err != nil {
 		return nil, err
 	}
+
+	i.logger.Debug("creating a new entity", "alias", newAlias)
 
 	// Append the new alias to the new entity
 	entity.Aliases = []*identity.Alias{
