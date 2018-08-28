@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "One-Time SSH Passwords (OTP) - SSH - Secrets Engines"
+sidebar_title: "SSH OTP"
 sidebar_current: "docs-secrets-ssh-one-time-ssh-passwords"
 description: |-
   The One-Time SSH Password (OTP) SSH secrets engine type allows a Vault server

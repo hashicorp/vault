@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "RabbitMQ - Secrets Engines"
+sidebar_title: "RabbitMQ"
 sidebar_current: "docs-secrets-rabbitmq"
 description: |-
   The RabbitMQ secrets engine for Vault generates user credentials to access RabbitMQ.

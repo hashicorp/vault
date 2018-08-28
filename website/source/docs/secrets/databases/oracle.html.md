@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Oracle - Database - Secrets Engines"
+sidebar_title: "Oracle"
 sidebar_current: "docs-secrets-databases-oracle"
 description: |-
   Oracle is one of the supported plugins for the database secrets engine. This

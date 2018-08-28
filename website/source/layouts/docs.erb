@@ -163,6 +163,52 @@
             'write',
             'token-helper'
             ]
+          }, {
+            category: 'secrets',
+            content: [
+              { category: 'ad' },
+              { category: 'aws' },
+              { category: 'azure' },
+              { category: 'consul' },
+              { category: 'cubbyhole' },
+              {
+                category: 'databases',
+                content: [
+                  'cassandra',
+                  'hanadb',
+                  'mongodb',
+                  'mssql',
+                  'mysql-maria',
+                  'postgresql',
+                  'oracle',
+                  'custom'
+                ]
+              },
+              { category: 'gcp' },
+              {
+                category: 'kv',
+                content: ['kv-v1','kv-v2']
+              },
+              { category: 'identity' },
+              { category: 'nomad' },
+              { category: 'pki' },
+              { category: 'rabbitmq' },
+              {
+                category: 'ssh',
+                content: [
+                  'signed-ssh-certificates',
+                  'one-time-ssh-passwords',
+                  'dynamic-ssh-keys'
+                ]
+              },
+              { category: 'totp' },
+              { category: 'transit' },
+              { category: 'cassandra' },
+              { category: 'mongodb' },
+              { category: 'mssql' },
+              { category: 'mysql' },
+              { category: 'postgresql' }
+            ]
           }
         ]) %>")
       ></hashi-docs-sidebar>
