@@ -97,6 +97,18 @@
 			"revisionTime": "2018-07-03T19:15:42Z"
 		},
 		{
+			"checksumSHA1": "x9ceW8JE2/FgODRSywClj0fRlh8=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac",
+			"revision": "4e8cbbfb1aeab140cd0fa97fd16b64ee18c3ca6a",
+			"revisionTime": "2018-07-27T22:05:59Z"
+		},
+		{
+			"checksumSHA1": "e4hCajXDSuWNkUvwA35jMHGm20E=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization",
+			"revision": "4e8cbbfb1aeab140cd0fa97fd16b64ee18c3ca6a",
+			"revisionTime": "2018-07-27T22:05:59Z"
+		},
+		{
 			"checksumSHA1": "pbHi9xc373inHdf5me73LGIFV1w=",
 			"path": "github.com/Azure/azure-sdk-for-go/storage",
 			"revision": "fbe7db0e3f9793ba3e5704efbab84f51436c136e",
@@ -251,6 +263,42 @@
 			"path": "github.com/SermoDigital/jose/jwt",
 			"revision": "803625baeddc3526d01d321b5066029f53eafc81",
 			"revisionTime": "2018-01-04T20:38:59Z"
+		},
+		{
+			"checksumSHA1": "YCtIqzuVlzVA7jh1GQF6BWaom6E=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk",
+			"revision": "ef9535c490beb6b59620d93f6c7ba88e9b3b1ad0",
+			"revisionTime": "2018-08-22T15:14:34Z"
+		},
+		{
+			"checksumSHA1": "mir9zgkLR7muF4aPQtTV9T91B7E=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials",
+			"revision": "ef9535c490beb6b59620d93f6c7ba88e9b3b1ad0",
+			"revisionTime": "2018-08-22T15:14:34Z"
+		},
+		{
+			"checksumSHA1": "Lbc1eCpbtMykOp4hEFoER5XU8Ds=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers",
+			"revision": "e63e5962c8d71461c87a9236319569cda2237d98",
+			"revisionTime": "2018-08-27T12:30:37Z"
+		},
+		{
+			"checksumSHA1": "/qgQnVuKg8C8p1Wh2KXdTKMBr5c=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/endpoints",
+			"revision": "ef9535c490beb6b59620d93f6c7ba88e9b3b1ad0",
+			"revisionTime": "2018-08-22T15:14:34Z"
+		},
+		{
+			"checksumSHA1": "N9A+9VmoMs38kijGWNVv0vsgi54=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/services/sts",
+			"revision": "ef9535c490beb6b59620d93f6c7ba88e9b3b1ad0",
+			"revisionTime": "2018-08-22T15:14:34Z"
+		},
+		{
+			"checksumSHA1": "GhlHTW5NOefmf1THrTLlEnrhOQA=",
+			"path": "github.com/aliyun/aliyun-oss-go-sdk/oss",
+			"revision": "36bf7aa2f916f274137aedd05d1d36f6a3c0f4a6",
+			"revisionTime": "2018-06-15T12:55:16Z"
 		},
 		{
 			"checksumSHA1": "DUX4pOK9NKSAzC6RRXniLviyByA=",
@@ -883,10 +931,10 @@
 			"revisionTime": "2018-07-11T13:03:03Z"
 		},
 		{
-			"checksumSHA1": "LNa/QGlcDDDflNa3srgRR8QLwcc=",
+			"checksumSHA1": "L8Mp7efUUkIGjlhp5iK34H06rl4=",
 			"path": "github.com/go-ldap/ldap",
-			"revision": "c6ce48312dc899d500d77926d9d3c33a0e01259c",
-			"revisionTime": "2018-07-03T15:26:01Z"
+			"revision": "dc997b2033d4b4ab6de47b555eaf76888a81d33d",
+			"revisionTime": "2018-08-10T05:44:51Z"
 		},
 		{
 			"checksumSHA1": "W+IoIME5mgWjwU+dOlh3DZEZEN4=",
@@ -1303,76 +1351,94 @@
 			"revisionTime": "2018-05-30T15:59:58Z"
 		},
 		{
-			"checksumSHA1": "TBYf7b18sac9sBSaiRHJQXJvnWA=",
+			"checksumSHA1": "76udfjuAEmd4JFZP8LhTLTKZ6gk=",
+			"path": "github.com/hashicorp/vault-plugin-auth-alicloud",
+			"revision": "90acf238c385792939aade0286fcb941d9899435",
+			"revisionTime": "2018-08-22T21:26:04Z"
+		},
+		{
+			"checksumSHA1": "xdrSQoX7B7Hr4iWm9T2+5wHVpHQ=",
+			"path": "github.com/hashicorp/vault-plugin-auth-alicloud/tools",
+			"revision": "90acf238c385792939aade0286fcb941d9899435",
+			"revisionTime": "2018-08-22T21:26:04Z"
+		},
+		{
+			"checksumSHA1": "ojr0r/jmutGEhftDXiHthCCwpIA=",
 			"path": "github.com/hashicorp/vault-plugin-auth-azure",
-			"revision": "2a679470bdb9aa58ab4d671ec1589a0538190861",
-			"revisionTime": "2018-07-25T02:07:40Z"
+			"revision": "d75e09c45e50144d92d5fa0d711996b4ac98c1e4",
+			"revisionTime": "2018-08-16T20:10:44Z"
 		},
 		{
-			"checksumSHA1": "LI3ZsYvX/mU/o5EL3gE0qwKcSPs=",
+			"checksumSHA1": "4Z/niOo76EcP8KpLdSL5GdDcy78=",
 			"path": "github.com/hashicorp/vault-plugin-auth-centrify",
-			"revision": "938178a6cf7984923db84aba4881913f84de9eea",
-			"revisionTime": "2018-06-06T02:20:31Z"
+			"revision": "66b0a34a58bffb678532d5a5d6d6ae2eb0206563",
+			"revisionTime": "2018-08-16T20:11:31Z"
 		},
 		{
-			"checksumSHA1": "SjXo3W6G8ippBVEZpYe63C2/KJo=",
+			"checksumSHA1": "DezgN3BHtzu7NO6tiTHaWc3YTkg=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "ce466e5ee54ee8b93ab3b15ac5b7df564f3412dc",
-			"revisionTime": "2018-08-03T20:34:32Z"
+			"revision": "a00186a9031fc8db194e9b6002eed76db0ded90c",
+			"revisionTime": "2018-08-27T19:24:31Z"
 		},
 		{
-			"checksumSHA1": "en64nC2RYQjJuHMcWMqwmDBU9bc=",
+			"checksumSHA1": "YFH1mRVe/J2zVQ0myuWRDrv5BxQ=",
 			"path": "github.com/hashicorp/vault-plugin-auth-jwt",
-			"revision": "31980151e62706c98c1f3a27d7d1e733ad766019",
-			"revisionTime": "2018-07-10T15:13:41Z"
+			"revision": "fb9c940ad0ebccbd4dcaeed816bc1e6e6a4744f3",
+			"revisionTime": "2018-08-21T19:10:38Z"
 		},
 		{
-			"checksumSHA1": "Bl5W8JoUnhKayJb5TYCzi9P6ZJA=",
+			"checksumSHA1": "hrJZzU9iG2ixRu2hOdPgN7wa48c=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "71e1b5a5d5a7e5e8a9c6a385ca7994baf6e6fc48",
-			"revisionTime": "2018-08-07T17:39:52Z"
+			"revision": "8bfe988b36157168563f726887da232af94ee87f",
+			"revisionTime": "2018-08-16T20:15:54Z"
 		},
 		{
 			"checksumSHA1": "pNERL2s72vwnApekzTLxGsvkyNU=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin",
-			"revision": "bef8c4ed4d9125ee372abd4d5d43408523ae7a35",
-			"revisionTime": "2018-07-27T20:22:23Z"
+			"revision": "d8a0991deac4006068826a99b82d8274aa119161",
+			"revisionTime": "2018-08-20T22:27:10Z"
 		},
 		{
 			"checksumSHA1": "GOxdFElG31lXWgKFG9aqpDcG47M=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/client",
-			"revision": "6afcfbb25eb6f5adec1b9bba1cf8601f95e89d06",
-			"revisionTime": "2018-06-19T16:09:38Z"
+			"revision": "d8a0991deac4006068826a99b82d8274aa119161",
+			"revisionTime": "2018-08-20T22:27:10Z"
 		},
 		{
 			"checksumSHA1": "RaH2xTkjaToCk+RoPhap7I66ibo=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/util",
-			"revision": "6afcfbb25eb6f5adec1b9bba1cf8601f95e89d06",
-			"revisionTime": "2018-06-19T16:09:38Z"
+			"revision": "d8a0991deac4006068826a99b82d8274aa119161",
+			"revisionTime": "2018-08-20T22:27:10Z"
 		},
 		{
-			"checksumSHA1": "jOsVXVfsxCgGrUCnwmBMid9SM+Q=",
+			"checksumSHA1": "fTT9z8zhrp0abUWgB326BeEWFbI=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-azure",
+			"revision": "59fe7c55a83175ca7216eab458ac03b68895b40f",
+			"revisionTime": "2018-08-21T21:57:39Z"
+		},
+		{
+			"checksumSHA1": "zkmWfxanMFQXWQIAboXj/jqF12g=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin",
-			"revision": "4bb78bc8e0fe2bcff46a1157a6d52f3e3a9cde41",
-			"revisionTime": "2018-07-02T15:42:49Z"
+			"revision": "ba74744a1fcfcd9c5f3635571a0734e6a13ce349",
+			"revisionTime": "2018-08-17T20:56:55Z"
 		},
 		{
-			"checksumSHA1": "Dmpy+AguiGWfVg43Me5HB3+eDsk=",
+			"checksumSHA1": "zwKMP2eBB2fKeOXMf0afsbw1bS0=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil",
-			"revision": "4bb78bc8e0fe2bcff46a1157a6d52f3e3a9cde41",
-			"revisionTime": "2018-07-02T15:42:49Z"
+			"revision": "ba74744a1fcfcd9c5f3635571a0734e6a13ce349",
+			"revisionTime": "2018-08-17T20:56:55Z"
 		},
 		{
 			"checksumSHA1": "81kYL49zTBoj1NYczxB2Xbr2d6Y=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util",
-			"revision": "4bb78bc8e0fe2bcff46a1157a6d52f3e3a9cde41",
-			"revisionTime": "2018-07-02T15:42:49Z"
+			"revision": "ba74744a1fcfcd9c5f3635571a0734e6a13ce349",
+			"revisionTime": "2018-08-17T20:56:55Z"
 		},
 		{
-			"checksumSHA1": "grTzIH3YAjsrME6m9IBXpS77W14=",
+			"checksumSHA1": "FkppDRdkWTF4Ry+olqZT8L0Stb8=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
-			"revision": "f34be853827f3b0511169188ff1db08adacfd3ac",
-			"revisionTime": "2018-06-08T17:47:30Z"
+			"revision": "5a464a61f7def5e5688e5c77b60d1a655d11a633",
+			"revisionTime": "2018-08-25T21:53:24Z"
 		},
 		{
 			"checksumSHA1": "jJouEcBeEAO0ejDRJoT67jL8NjQ=",
@@ -1421,6 +1487,12 @@
 			"path": "github.com/joyent/triton-go/storage",
 			"revision": "830d2b111e62b15793a2f2db637c073055ab62bb",
 			"revisionTime": "2018-06-28T00:12:55Z"
+		},
+		{
+			"checksumSHA1": "WqeEgS7pqqkwK8mlrAZmDgtWJMY=",
+			"path": "github.com/json-iterator/go",
+			"revision": "1624edc4454b8682399def8740d46db5e4362ba4",
+			"revisionTime": "2018-08-06T06:07:27Z"
 		},
 		{
 			"checksumSHA1": "VJk3rOWfxEV9Ilig5lgzH1qg8Ss=",
@@ -1601,6 +1673,18 @@
 			"path": "github.com/mitchellh/reflectwalk",
 			"revision": "63d60e9d0dbc60cf9164e6510889b0db6683d98c",
 			"revisionTime": "2017-07-26T20:21:17Z"
+		},
+		{
+			"checksumSHA1": "ZTcgWKWHsrX0RXYVXn5Xeb8Q0go=",
+			"path": "github.com/modern-go/concurrent",
+			"revision": "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94",
+			"revisionTime": "2018-03-06T01:26:44Z"
+		},
+		{
+			"checksumSHA1": "qvH48wzTIV3QKSDqI0dLFtVjaDI=",
+			"path": "github.com/modern-go/reflect2",
+			"revision": "94122c33edd36123c84d5368cfb2b69df93a0ec8",
+			"revisionTime": "2018-07-18T01:23:57Z"
 		},
 		{
 			"checksumSHA1": "9kGYnhsGFu3XUB/Fz9Et7eEFBXY=",
@@ -1995,10 +2079,12 @@
 			"revisionTime": "2018-01-30T19:37:22Z"
 		},
 		{
-			"checksumSHA1": "eDQ6f1EsNf+frcRO/9XukSEchm8=",
+			"checksumSHA1": "+nVM+CEZGAopOrYlLifgWP+X01E=",
 			"path": "github.com/satori/go.uuid",
-			"revision": "36e9d2ebbde5e3f13ab2e25625fd453271d6522e",
-			"revisionTime": "2018-01-03T17:44:51Z"
+			"revision": "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3",
+			"revisionTime": "2018-01-03T03:42:45Z",
+			"version": "=v1.2.0",
+			"versionExact": "v1.2.0"
 		},
 		{
 			"checksumSHA1": "tnMZLo/kR9Kqx6GtmWwowtTLlA8=",
@@ -2023,6 +2109,10 @@
 			"path": "github.com/ugorji/go/codec",
 			"revision": "7d51bbe6161dcb8f32a1252c27668ce36e3ef16b",
 			"revisionTime": "2018-06-28T10:27:55Z"
+		},
+		{
+			"path": "gitub.com/hashicorp/vault-plugin-auth-jwt",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "I7CQfkQXt/QDxO9gutjoqu+ajkI=",

@@ -1,4 +1,4 @@
-## Next (Unreleased)
+## 0.11.0 (August 28th, 2018)
 
 DEPRECATIONS/CHANGES:
 
@@ -11,28 +11,90 @@ DEPRECATIONS/CHANGES:
    However, this has some subtle issues that pop up from time to time and is
    becoming increasingly complicated to maintain, so it's finally being
    removed.
+ * Path Fallback for List Operations: For a very long time Vault has
+   automatically adjusted `list` operations to always end in a `/`, as list
+   operations operates on prefixes, so all list operations by definition end
+   with `/`. This was done server-side so affects all clients. However, this
+   has also led to a lot of confusion for users writing policies that assume
+   that the path that they use in the CLI is the path used internally. Starting
+   in 0.11, ACL policies gain a new fallback rule for listing: they will use a
+   matching path ending in `/` if available, but if not found, they will look
+   for the same path without a trailing `/`. This allows putting `list`
+   capabilities in the same path block as most other capabilities for that
+   path, while not providing any extra access if `list` wasn't actually
+   provided there.
+ * Performance Standbys On By Default: If you flavor/license of Vault
+   Enterprise supports Performance Standbys, they are on by default. You can
+   disable this behavior per-node with the `disable_performance_standby`
+   configuration flag.
+ * AWS Secret Engine Roles: The AWS Secret Engine roles are now explicit about
+   the type of AWS credential they are generating; this reduces reduce
+   ambiguity that existed previously as well as enables new features for
+   specific credential types. Writing role data and generating credentials
+   remain backwards compatible; however, the data returned when reading a
+   role's configuration has changed in backwards-incompatible ways. Anything
+   that depended on reading role data from the AWS secret engine will break
+   until it is updated to work with the new format.
 
 FEATURES:
 
+ * **Namespaces (Enterprise)**: A set of features within Vault Enterprise
+   that allows Vault environments to support *Secure Multi-tenancy* within a
+   single Vault Enterprise infrastructure. Through namespaces, Vault
+   administrators can support tenant isolation for teams and individuals as
+   well as empower those individuals to self-manage their own tenant
+   environment. 
+ * **Performance Standbys (Enterprise)**: Standby nodes can now service
+   requests that do not modify storage. This provides near-horizontal scaling
+   of a cluster in some workloads, and is the intra-cluster analogue of
+   the existing Performance Replication feature, which replicates to distinct
+   clusters in other datacenters, geos, etc.
  * **AliCloud OSS Storage**: AliCloud OSS can now be used for Vault storage.
+ * **AliCloud Auth Plugin**: AliCloud's identity services can now be used to
+   grant access to Vault. See the [plugin
+   repository](https://github.com/hashicorp/vault-plugin-auth-alicloud) for
+   more information.
+ * **Azure Secrets Plugin**: There is now a plugin (pulled in to Vault) that 
+   allows generating credentials to allow access to Azure. See the [plugin
+   repository](https://github.com/hashicorp/vault-plugin-secrets-azure) for
+   more information.
  * **HA Support for MySQL Storage**: MySQL storage now supports HA.
+ * **ACL Templating**: ACL policies can now be templated using identity Entity,
+   Groups, and Metadata.
 
 IMPROVEMENTS:
 
  * agent: Add `exit_after_auth` to be able to use the Agent for a single
    authentication [GH-5013]
+ * auth/approle: Add ability to set token bound CIDRs on individual Secret IDs
+   [GH-5034]
  * cli: Add support for passing parameters to `vault read` operations [GH-5093]
+ * secrets/aws: Make credential types more explicit [GH-4360]
+ * secrets/nomad: Support for longer token names [GH-5117]
+ * secrets/pki: Allow disabling CRL generation [GH-5134]
+ * storage/azure: Add support for different Azure environments [GH-4997]
+ * storage/file: Sort keys in list responses [GH-5141]
  * storage/mysql: Support special characters in database and table names.
 
 BUG FIXES:
 
+ * auth/jwt: Always validate `aud` claim even if `bound_audiences` isn't set
+   (IOW, error in this case)
+ * core: Prevent Go's HTTP library from interspersing logs in a different
+   format and/or interleaved [GH-5135]
  * identity: Properly populate `mount_path` and `mount_type` on group lookup
    [GH-5074]
+ * identity: Fix persisting alias metadata [GH-5188]
  * identity: Fix carryover issue from previously fixed race condition that
    could cause Vault not to start up due to two entities referencing the same
    alias. These entities are now merged. [GH-5000]
+ * replication: Fix issue causing some pages not to flush to storage
  * secrets/database: Fix inability to update custom SQL statements on
    database roles. [GH-5080]
+ * secrets/pki: Disallow putting the CA's serial on its CRL. While technically
+   legal, doing so inherently means the CRL can't be trusted anyways, so it's
+   not useful and easy to footgun. [GH-5134]
+ * storage/gcp,spanner: Fix data races [GH-5081]
 
 ## 0.10.4 (July 25th, 2018)
 

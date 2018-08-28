@@ -41,6 +41,8 @@
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode="perform" @noun={{selectedAction}} />
+    {{message-error errors=errors}}
     <div class="field">
       <label for="data" class="is-label">Data to wrap <span class="is-size-9 is-lowercase has-text-grey">(json-formatted)</span></label>
       <div class="control">

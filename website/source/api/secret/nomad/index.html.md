@@ -37,12 +37,20 @@ Nomad tokens.
   This value can also be provided on individual calls with the NOMAD_TOKEN 
   environment variable.
 
+- `max_token_name_length` `(int: <optional>)` – Specifies the maximum length to
+  use for the name of the Nomad token generated with [Generate
+  Credential](#generate-credential). If omitted, `0` is used and ignored,
+  defaulting to the max value allowed by the Nomad version. For Nomad versions
+  0.8.3 and earlier, the default is `64`. For Nomad version 0.8.4 and later, the default is
+  `256`.
+
 ### Sample Payload
 
 ```json
 {
   "address": "http://127.0.0.1:4646",
-  "token": "adha..."
+  "token": "adha...",
+  "max_token_name_length": 256
 }
 ```
 

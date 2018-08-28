@@ -7,7 +7,7 @@ export default Ember.Component.extend({
   mounts: null,
 
   // singleton mounts are not eligible for per-mount-filtering
-  singletonMountTypes: ['cubbyhole', 'system', 'token', 'identity'],
+  singletonMountTypes: ['cubbyhole', 'system', 'token', 'identity', 'ns_system', 'ns_identity'],
 
   actions: {
     addOrRemovePath(path, e) {

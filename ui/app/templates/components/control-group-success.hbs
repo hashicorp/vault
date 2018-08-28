@@ -25,9 +25,9 @@
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      <a href={{href-to 'vault.cluster.access.control-groups'}} class="button" >
+      {{#link-to 'vault.cluster.access.control-groups' class="button"}}
         <ICon @glyph="chevron-left" @size=10 /> Back
-      </a>
+      {{/link-to}}
     </div>
   {{else}}
     <div class="control-group-success" data-test-unwrap-form>

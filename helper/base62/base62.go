@@ -9,6 +9,9 @@ import (
 )
 
 // Encode converts buf into a base62 string
+//
+// Note: this should only be used for reducing a string's character set range.
+// It is not for use with arbitrary data since leading 0 bytes will be dropped.
 func Encode(buf []byte) string {
 	var encoder big.Int
 
@@ -29,15 +32,28 @@ func Decode(input string) []byte {
 // If truncate is true, the result will be a string of the requested length.
 // Otherwise, it will be the encoded result of length bytes of random data.
 func Random(length int, truncate bool) (string, error) {
-	buf, err := uuid.GenerateRandomBytes(length)
-	if err != nil {
-		return "", err
-	}
+	bytesNeeded := length
 
-	result := Encode(buf)
+	// ~0.74 bytes are needed per output character in truncate mode. We'll
+	// ask for just a little more than that.
 	if truncate {
-		result = result[:length]
+		bytesNeeded = (bytesNeeded * 3 / 4) + 1
 	}
 
-	return result, nil
+	for {
+		buf, err := uuid.GenerateRandomBytes(bytesNeeded)
+		if err != nil {
+			return "", err
+		}
+
+		result := Encode(buf)
+
+		if truncate {
+			if len(result) < length {
+				continue
+			}
+			result = result[:length]
+		}
+		return result, nil
+	}
 }

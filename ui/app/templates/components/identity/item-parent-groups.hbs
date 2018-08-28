@@ -9,13 +9,13 @@
     }}
       <div class="columns is-mobile">
         <div class="column is-10">
-          <a href={{href-to "vault.cluster.access.identity.show" "groups" gid "details" }}
+          {{#link-to "vault.cluster.access.identity.show" "groups" gid "details"
             class="is-block has-text-black has-text-weight-semibold"
-            >{{i-con
+          }}{{i-con
               glyph='folder'
               size=14
               class="has-text-grey-light"
-              }}{{gid}}</a>
+              }}{{gid}}{{/link-to}}
         </div>
         <div class="column has-text-right">
         </div>

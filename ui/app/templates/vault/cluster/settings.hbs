@@ -23,12 +23,13 @@
         {{/unless}}
       {{/link-to}}
     </li>
-
-    <li>
-      {{#link-to "vault.cluster.settings.seal"}}
-        Seal
-      {{/link-to}}
-    </li>
+    {{#if namespaceService.inRootNamespace}}
+      <li>
+        {{#link-to "vault.cluster.settings.seal"}}
+          Seal
+        {{/link-to}}
+      </li>
+    {{/if}}
   {{/menu-sidebar}}
   <div class="column is-9">
     {{outlet}}

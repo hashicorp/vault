@@ -1,0 +1,17 @@
+<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="{{size}}" height="{{size}}" viewBox="0 0 16 16">
+  <defs>
+    <path d="M8 0l7 4v8l-7 4-7-4V4l7-4zm0 1.25L2 4.625v6.75l6 3.375 6-3.375v-6.75L8 1.25zm.001.5L13.5 4.875v6.25L8.001 14.25 2.5 11.125v-6.25L8.001 1.75z" id="a"/>
+    <linearGradient x1="50%" y1="0%" x2="50%" y2="100%" id="c">
+      <stop stop-color="#FFF" stop-opacity=".25" offset="0%"/>
+      <stop stop-color="#FFF" stop-opacity=".5" offset="100%"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" fill-rule="evenodd">
+    <mask id="b" fill="#fff">
+      <use xlink:href="#a"/>
+    </mask>
+    <use fill="#fff" xlink:href="#a"/>
+    <g mask="url(#b)" fill="#BAC1CC"><path d="M0 0h16v16H0z"/></g>
+    <path fill="url(#c)" opacity=".5" mask="url(#b)" d="M8 0l7 4v8l-7 4z"/>
+  </g>
+</svg>

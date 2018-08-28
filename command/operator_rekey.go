@@ -282,7 +282,7 @@ func (c *OperatorRekeyCommand) Run(args []string) int {
 		if Format(c.UI) == "table" {
 			c.UI.Warn(wrapAtLength(
 				"WARNING! The -delete flag is deprecated. Please use -backup-delete " +
-					"instead. This flag will be removed in Vault 0.11 (or later)."))
+					"instead. This flag will be removed in Vault 0.12."))
 		}
 		c.flagBackupDelete = true
 	}
@@ -290,7 +290,7 @@ func (c *OperatorRekeyCommand) Run(args []string) int {
 		if Format(c.UI) == "table" {
 			c.UI.Warn(wrapAtLength(
 				"WARNING! The -retrieve flag is deprecated. Please use -backup-retrieve " +
-					"instead. This flag will be removed in Vault 0.11 (or later)."))
+					"instead. This flag will be removed in Vault 0.12."))
 		}
 		c.flagBackupRetrieve = true
 	}
@@ -298,7 +298,7 @@ func (c *OperatorRekeyCommand) Run(args []string) int {
 		if Format(c.UI) == "table" {
 			c.UI.Warn(wrapAtLength(
 				"WARNING! The -recovery-key flag is deprecated. Please use -target=recovery " +
-					"instead. This flag will be removed in Vault 0.11 (or later)."))
+					"instead. This flag will be removed in Vault 0.12."))
 		}
 		c.flagTarget = "recovery"
 	}

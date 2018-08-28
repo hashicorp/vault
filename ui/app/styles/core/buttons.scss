@@ -184,6 +184,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
       &,
       &:first-child:last-child {
         margin-left: -$size-10;
+        margin-right: $size-11;
       }
     }
   }
@@ -199,7 +200,31 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   }
 }
 
+.button.icon {
+  box-sizing: border-box;
+  padding: 0 $size-11;
+  height: 24px;
+  width: 24px;
+  &,
+  & .icon {
+    min-width: 0;
+  }
+}
+
 .button .icon.auto-width {
   width: auto;
   margin: 0 !important;
+}
+
+.button.next-feature-step {
+  width: 100%;
+  text-align: left;
+  background: $white;
+  color: $blue;
+  box-shadow: none;
+  display: block;
+  border: 1px solid $grey-light;
+  border-radius: $radius;
+  height: auto;
+  padding: $size-8;
 }

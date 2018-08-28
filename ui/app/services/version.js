@@ -3,13 +3,16 @@ import { task } from 'ember-concurrency';
 
 const { Service, inject, computed } = Ember;
 
+const hasFeatureMethod = (context, featureKey) => {
+  const features = context.get('features');
+  if (!features) {
+    return false;
+  }
+  return features.includes(featureKey);
+};
 const hasFeature = featureKey => {
   return computed('features', 'features.[]', function() {
-    const features = this.get('features');
-    if (!features) {
-      return false;
-    }
-    return features.includes(featureKey);
+    return hasFeatureMethod(this, featureKey);
   });
 };
 export default Service.extend({
@@ -23,6 +26,7 @@ export default Service.extend({
   hasDRReplication: hasFeature('DR Replication'),
 
   hasSentinel: hasFeature('Sentinel'),
+  hasNamespaces: hasFeature('Namespaces'),
 
   isEnterprise: computed.match('version', /\+.+$/),
 
@@ -30,6 +34,10 @@ export default Service.extend({
 
   setVersion(resp) {
     this.set('version', resp.version);
+  },
+
+  hasFeature(feature) {
+    return hasFeatureMethod(this, feature);
   },
 
   setFeatures(resp) {

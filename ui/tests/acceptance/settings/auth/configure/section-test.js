@@ -23,7 +23,10 @@ test('it can save options', function(assert) {
   const path = `approle-${new Date().getTime()}`;
   const type = 'approle';
   const section = 'options';
-  enablePage.visit().enableAuth(type, path);
+  enablePage.visit();
+  andThen(() => {
+    enablePage.form.mount(type, path);
+  });
   page.visit({ path, section });
   andThen(() => {
     page.fields().findByName('description').textarea('This is AppRole!');

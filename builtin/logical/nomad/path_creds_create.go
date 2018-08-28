@@ -11,6 +11,10 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+// maxTokenNameLength is the maximum length for the name of a Nomad access
+// token
+const maxTokenNameLength = 256
+
 func pathCredsCreate(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("name"),
@@ -29,6 +33,12 @@ func pathCredsCreate(b *backend) *framework.Path {
 
 func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+	conf, _ := b.readConfigAccess(ctx, req.Storage)
+	// establish a default
+	tokenNameLength := maxTokenNameLength
+	if conf != nil && conf.MaxTokenNameLength > 0 {
+		tokenNameLength = conf.MaxTokenNameLength
+	}
 
 	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
@@ -56,10 +66,11 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	// Generate a name for the token
 	tokenName := fmt.Sprintf("vault-%s-%s-%d", name, req.DisplayName, time.Now().UnixNano())
 
-	// Handling nomad maximum token length
-	// https://github.com/hashicorp/nomad/blob/d9276e22b3b74674996fb548cdb6bc4c70d5b0e4/nomad/structs/structs.go#L115
-	if len(tokenName) > 64 {
-		tokenName = tokenName[0:63]
+	// Note: if the given role name is sufficiently long, the UnixNano() portion
+	// of the pseudo randomized token name is the part that gets trimmed off,
+	// weakening it's randomness.
+	if len(tokenName) > tokenNameLength {
+		tokenName = tokenName[:tokenNameLength]
 	}
 
 	// Create it

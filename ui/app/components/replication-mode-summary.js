@@ -1,6 +1,5 @@
 import Ember from 'ember';
-import { hrefTo } from 'vault/helpers/href-to';
-const { computed, get, getProperties } = Ember;
+const { computed, get, getProperties, Component, inject } = Ember;
 
 const replicationAttr = function(attr) {
   return computed('mode', `cluster.{dr,performance}.${attr}`, function() {
@@ -8,10 +7,11 @@ const replicationAttr = function(attr) {
     return get(cluster, `${mode}.${attr}`);
   });
 };
-export default Ember.Component.extend({
-  version: Ember.inject.service(),
-  classNames: ['level', 'box-label'],
-  classNameBindings: ['isMenu:is-mobile'],
+export default Component.extend({
+  version: inject.service(),
+  router: inject.service(),
+  namespace: inject.service(),
+  classNameBindings: ['isMenu::box', 'isMenu::level'],
   attributeBindings: ['href', 'target'],
   display: 'banner',
   isMenu: computed.equal('display', 'menu'),
@@ -22,7 +22,11 @@ export default Ember.Component.extend({
       return 'https://www.hashicorp.com/products/vault';
     }
     if (this.get('replicationEnabled') || display === 'menu') {
-      return hrefTo(this, 'vault.cluster.replication.mode.index', this.get('cluster.name'), mode);
+      return this.get('router').urlFor(
+        'vault.cluster.replication.mode.index',
+        this.get('cluster.name'),
+        mode
+      );
     }
     return null;
   }),
@@ -32,6 +36,7 @@ export default Ember.Component.extend({
     }
     return null;
   }),
+  internalLink: false,
   isPerformance: computed.equal('mode', 'performance'),
   replicationEnabled: replicationAttr('replicationEnabled'),
   replicationUnsupported: computed.equal('cluster.mode', 'unsupported'),

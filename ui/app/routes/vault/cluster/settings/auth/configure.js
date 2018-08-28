@@ -10,7 +10,7 @@ export default Ember.Route.extend({
     const { method } = this.paramsFor(this.routeName);
     return this.store.findAll('auth-method').then(() => {
       const model = this.store.peekRecord('auth-method', method);
-      const modelType = model && model.get('type');
+      const modelType = model && model.get('methodType');
       if (!model || (modelType !== 'token' && !METHODS.findBy('type', modelType))) {
         const error = new DS.AdapterError();
         Ember.set(error, 'httpStatus', 404);

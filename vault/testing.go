@@ -1110,7 +1110,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		var handler http.Handler = http.NewServeMux()
 		handlers = append(handlers, handler)
 		server := &http.Server{
-			Handler: handler,
+			Handler:  handler,
+			ErrorLog: logger.StandardLogger(nil),
 		}
 		servers = append(servers, server)
 	}

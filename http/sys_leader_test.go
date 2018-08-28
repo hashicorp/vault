@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"testing"
@@ -20,10 +21,12 @@ func TestSysLeader_get(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"ha_enabled":             false,
-		"is_self":                false,
-		"leader_address":         "",
-		"leader_cluster_address": "",
+		"ha_enabled":                          false,
+		"is_self":                             false,
+		"leader_address":                      "",
+		"leader_cluster_address":              "",
+		"performance_standby":                 false,
+		"performance_standby_last_remote_wal": json.Number("0"),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

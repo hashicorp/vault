@@ -4,9 +4,9 @@
       <ul>
         <li>
           <span class="sep">&#x0002f;</span>
-          <a href={{href-to "vault.cluster.access.identity.aliases"}}>
+          {{#link-to "vault.cluster.access.identity.aliases"}}
             {{pluralize (humanize model.identityType)}}
-          </a>
+          {{/link-to}}
         </li>
       </ul>
     </nav>
@@ -17,10 +17,10 @@
     </h1>
   </p.levelLeft>
   <p.levelRight>
-    <a href="{{href-to 'vault.cluster.access.identity.aliases.edit' model.id}}" class="button has-icon-right is-ghost is-compact" data-test-alias-edit-link=true>
+    {{#link-to "vault.cluster.access.identity.aliases.edit" model.id class="button has-icon-right is-ghost is-compact" data-test-alias-edit-link=true}}
       Edit {{lowercase (humanize model.identityType)}}
       {{i-con glyph="chevron-right" size=11}}
-    </a>
+    {{/link-to}}
   </p.levelRight>
 </PageHeader>
 <div class="box is-sideless is-fullwidth is-paddingless is-marginless">
@@ -28,9 +28,9 @@
     <ul>
       {{#each (tabs-for-identity-show model.identityType) as |tab|}}
         {{#link-to "vault.cluster.access.identity.aliases.show" model.id tab tagName="li"}}
-          <a href={{href-to "vault.cluster.access.identity.aliases.show" model.id tab }}>
+          {{#link-to "vault.cluster.access.identity.aliases.show" model.id tab}}
             {{capitalize tab}}
-          </a>
+          {{/link-to}}
         {{/link-to}}
       {{/each}}
     </ul>

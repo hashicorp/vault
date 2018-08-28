@@ -96,14 +96,15 @@ func TestRandom(t *testing.T) {
 		t.Fatalf("Expected different random values. Got duplicate: %s", a)
 	}
 
-	c, _ := Random(4738, true)
-	if len(c) != 4738 {
-		t.Fatalf("Expected length 4738, got: %d", len(c))
+	for i := 0; i < 3000; i++ {
+		c, _ := Random(i, true)
+		if len(c) != i {
+			t.Fatalf("Expected length %d, got: %d", i, len(c))
+		}
 	}
 
 	d, _ := Random(100, false)
-	if len(d) < 134 || len(d) > 135 {
-		t.Fatalf("Expected length 134 or 135, got: %d", len(d))
+	if len(d) < 133 || len(d) > 135 {
+		t.Fatalf("Expected length 133-135, got: %d", len(d))
 	}
-
 }

@@ -91,22 +91,6 @@ func (c *LeaseRenewCommand) Run(args []string) int {
 		return 1
 	case 1:
 		leaseID = strings.TrimSpace(args[0])
-	case 2:
-		// Deprecation
-		// TODO: remove in 0.9.0
-		if Format(c.UI) == "table" {
-			c.UI.Warn(wrapAtLength(
-				"WARNING! Specifying INCREMENT as a second argument is deprecated. " +
-					"Please use -increment instead. This will be removed in the next " +
-					"major release of Vault."))
-		}
-		leaseID = strings.TrimSpace(args[0])
-		parsed, err := time.ParseDuration(appendDurationSuffix(args[1]))
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Invalid increment: %s", err))
-			return 1
-		}
-		increment = parsed
 	default:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1-2, got %d)", len(args)))
 		return 1

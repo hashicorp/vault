@@ -15,6 +15,7 @@ const authService = Ember.Service.extend({
   authenticate() {
     return Ember.$.getJSON('http://localhost:2000');
   },
+  setLastFetch() {},
 });
 
 const workingAuthService = Ember.Service.extend({
@@ -108,48 +109,56 @@ test('it renders all the supported tabs when no methods are passed', function(as
 });
 
 test('it renders all the supported methods and Other tab when methods are present', function(assert) {
-  let methods = [
-    {
+  let methods = {
+    'foo/': {
       type: 'userpass',
-      id: 'foo',
-      path: 'foo/',
     },
-    {
+    'approle/': {
       type: 'approle',
-      id: 'approle',
-      path: 'approle/',
     },
-  ];
-  this.set('methods', methods);
+  };
+  let server = new Pretender(function() {
+    this.get('/v1/sys/internal/ui/mounts', () => {
+      return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
+    });
+  });
 
-  this.render(hbs`{{auth-form cluster=cluster methods=methods}}`);
-  assert.equal(component.tabs.length, 2, 'renders a tab for userpass and Other');
-  assert.equal(component.tabs.objectAt(0).name, 'foo', 'uses the path in the label');
-  assert.equal(component.tabs.objectAt(1).name, 'Other', 'second tab is the Other tab');
+  this.render(hbs`{{auth-form cluster=cluster }}`);
+  return wait().then(() => {
+    assert.equal(component.tabs.length, 2, 'renders a tab for userpass and Other');
+    assert.equal(component.tabs.objectAt(0).name, 'foo', 'uses the path in the label');
+    assert.equal(component.tabs.objectAt(1).name, 'Other', 'second tab is the Other tab');
+    server.shutdown();
+  });
 });
 
 test('it calls authorize with the correct path', function(assert) {
   this.register('service:auth', workingAuthService);
   this.inject.service('auth');
   let authSpy = sinon.spy(this.get('auth'), 'authenticate');
-  let methods = [
-    {
+  let methods = {
+    'foo/': {
       type: 'userpass',
-      id: 'foo',
-      path: 'foo/',
     },
-  ];
-  this.set('methods', methods);
-  this.set('selectedAuth', 'foo/');
+  };
+  let server = new Pretender(function() {
+    this.get('/v1/sys/internal/ui/mounts', () => {
+      return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
+    });
+  });
 
-  this.render(hbs`{{auth-form cluster=cluster methods=methods selectedAuth=selectedAuth}}`);
-  component.login();
+  this.set('selectedAuth', 'foo/');
+  this.render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
+  wait().then(() => {
+    return component.login();
+  });
 
   return wait().then(() => {
     assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
     let { data } = authSpy.getCall(0).args[0];
-    assert.equal(data.path, methods[0].id, 'uses the id for the path');
+    assert.equal(data.path, 'foo', 'uses the id for the path');
     authSpy.restore();
+    server.shutdown();
   });
 });
 

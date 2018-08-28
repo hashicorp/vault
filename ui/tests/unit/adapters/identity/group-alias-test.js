@@ -1,9 +1,10 @@
 import { moduleFor, test } from 'ember-qunit';
 import testCases from './_test-cases';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
+import needs from 'vault/tests/unit/adapters/_adapter-needs';
 
 moduleFor('adapter:identity/group-alias', 'Unit | Adapter | identity/group-alias', {
-  needs: ['service:auth', 'service:flash-messages', 'service:control-group', 'service:version'],
+  needs,
   beforeEach() {
     this.server = apiStub();
   },

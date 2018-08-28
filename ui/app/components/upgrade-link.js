@@ -3,7 +3,7 @@ import Ember from 'ember';
 const { computed } = Ember;
 
 export default Ember.Component.extend({
-  modalContainer: computed(function() {
+  modalContainer: computed('isActive', function() {
     return document.getElementById('modal-wormhole');
   }),
   isAnimated: false,

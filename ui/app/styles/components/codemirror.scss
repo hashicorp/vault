@@ -72,20 +72,24 @@ $gutter-grey: #2a2f36;
     color: #6d8a88;
   }
 
+  div.CodeMirror-selected {
+    background: rgb(33, 66, 131);
+  }
+
   &.CodeMirror-focused div.CodeMirror-selected {
-    background: rgba(255, 255, 255, 0.10);
+    background: rgb(33, 66, 131);
   }
 
   .CodeMirror-line::selection,
   .CodeMirror-line > span::selection,
   .CodeMirror-line > span > span::selection {
-    background: rgba(255, 255, 255, 0.10);
+    background: rgb(33, 66, 131);
   }
 
   .CodeMirror-line::-moz-selection,
   .CodeMirror-line > span::-moz-selection,
   .CodeMirror-line > span > span::-moz-selection {
-    background: rgba(255, 255, 255, 0.10);
+    background: rgb(33, 66, 131);
   }
 
   span.cm-comment {
