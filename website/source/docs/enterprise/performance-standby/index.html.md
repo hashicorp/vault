@@ -36,6 +36,11 @@ storage write is detected the standby will forward the request over the cluster
 port connection to the active node. If the request is read-only the Performance
 Standby will handle the requests locally.
 
+Sending requests to Performance Stanbys that result in forwarded writes will be
+slightly slower than going directly to the active node. A client that has
+advanced knowledge of the behavior of the call can choose to point the request
+to the appropriate node.
+
 ### Direct Access
 
 A Performance Standby will tag itself as such in consul if service registration
@@ -46,8 +51,8 @@ based on consul configuration).
 
 ### Behind Load Balancers
 
-Additionally if you wish to point your load balancers at performance standby
-nodes the `sys/health` endpoint could be used to determine if a node is a
+Additionally, if you wish to point your load balancers at performance standby
+nodes, the `sys/health` endpoint can be used to determine if a node is a
 performance standby. See the [sys/health API](/api/system/health.html) docs for
 more info.
 
@@ -58,16 +63,16 @@ transactional updates, such as Consul.
 
 ## Disabling Performance Standbys
 
-To disable performance standbys the `disable_performance_standby` should be set
-to true in the Vault config file. This will both tell a standby not to attempt
-to enable performance mode and an active node to not allow any performance
-standby connections.
+To disable performance standbys the `disable_performance_standby` flag should be
+set to true in the Vault config file. This will both tell a standby not to
+attempt to enable performance mode and an active node to not allow any
+performance standby connections.
 
 This setting should be synced across all nodes in the cluster.
 
 ## Monitoring Performance Standbys
 
-To verify your node is a performance standby the `vault status` command could be
+To verify your node is a performance standby the `vault status` command can be
 used:
 
 ```
