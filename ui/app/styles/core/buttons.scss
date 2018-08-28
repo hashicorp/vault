@@ -216,7 +216,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   margin: 0 !important;
 }
 
-.button.with-grey-outline {
+.button.next-feature-step {
   width: 100%;
   text-align: left;
   background: $white;
@@ -225,4 +225,6 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   display: block;
   border: 1px solid $grey-light;
   border-radius: $radius;
+  height: auto;
+  padding: $size-8;
 }

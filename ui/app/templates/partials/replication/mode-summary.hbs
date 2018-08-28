@@ -12,8 +12,9 @@
   </h3>
   {{#if cluster.dr.replicationEnabled}}
     {{#link-to
-     "vault.cluster.replication.mode.index"
+      "vault.cluster.replication.mode.index"
       "dr"
+      class="link-plain"
     }}
       {{replication-mode-summary
         mode="dr"
@@ -38,6 +39,7 @@
     {{#link-to
       "vault.cluster.replication.mode.index"
       "performance"
+      class="link-plain"
     }}
       {{replication-mode-summary
         mode="performance"

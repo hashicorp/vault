@@ -93,7 +93,7 @@
   }
 
   .wizard-header {
-    margin: 0;
+    margin-bottom: $size-10;
   }
 }
 
@@ -112,6 +112,7 @@
 
 .wizard-section .title .icon {
   height: auto;
+  margin-right: $size-11;
   width: auto;
 }
 
