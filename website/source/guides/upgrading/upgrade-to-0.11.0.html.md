@@ -33,6 +33,26 @@ of the JSON response object. However, this has some subtle issues that pop up
 from time to time and is becoming increasingly complicated to maintain, so it's
 finally being removed.
 
+### Path Fallback for List Operations
+
+For a very long time Vault has automatically adjusted `list` operations to
+always end in a `/`, as list operations operates on prefixes, so all list
+operations by definition end with `/`. This was done server-side so affects all
+clients. However, this has also led to a lot of confusion for users writing
+policies that assume that the path that they use in the CLI is the path used
+internally. Starting in 0.11, ACL policies gain a new fallback rule for
+listing: they will use a matching path ending in `/` if available, but if not
+found, they will look for the same path without a trailing `/`. This allows
+putting `list` capabilities in the same path block as most other capabilities
+for that path, while not providing any extra access if `list` wasn't actually
+provided there.
+
+### Performance Standbys On By Default
+
+If you flavor/license of Vault Enterprise supports Performance Standbys, they
+are on by default. You can disable this behavior per-node with the
+`disable_performance_standby` configuration flag.
+
 ## Full List Since 0.10.0
 
 ### Revocations of dynamic secrets leases now asynchronous 
