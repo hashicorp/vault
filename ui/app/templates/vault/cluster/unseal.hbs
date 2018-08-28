@@ -10,6 +10,7 @@
     </MessageInPage>
     <ShamirFlow
       @action="unseal"
+      @onUpdate={{action 'setUnsealState'}}
       @onShamirSuccess={{action 'transitionToCluster'}}
       @buttonText="Unseal"
       @thresholdPath="t"

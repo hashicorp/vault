@@ -5,10 +5,6 @@ const { get, set } = Ember;
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default RoleEdit.extend({
-  init() {
-    this._super(...arguments);
-  },
-
   actions: {
     createOrUpdate(type, event) {
       event.preventDefault();
@@ -21,13 +17,13 @@ export default RoleEdit.extend({
       }
 
       var credential_type = get(this, 'model.credential_type');
-      if (credential_type == "iam_user") {
+      if (credential_type == 'iam_user') {
         set(this, 'model.role_arns', []);
       }
-      if (credential_type == "assumed_role") {
+      if (credential_type == 'assumed_role') {
         set(this, 'model.policy_arns', []);
       }
-      if (credential_type == "federation_token") {
+      if (credential_type == 'federation_token') {
         set(this, 'model.role_arns', []);
         set(this, 'model.policy_arns', []);
       }

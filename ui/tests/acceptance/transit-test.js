@@ -231,7 +231,7 @@ const testEncryption = (assert, keyName) => {
   });
 };
 test('transit backend', function(assert) {
-  assert.expect(50);
+  assert.expect(49);
   const now = new Date().getTime();
   const transitPath = `transit-${now}`;
 

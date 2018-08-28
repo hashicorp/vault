@@ -73,6 +73,7 @@
   }}
 {{else if (eq attr.options.editType 'ttl')}}
   {{ttl-picker
+    data-test-input=attr.name
     initialValue=(or (get model valuePath) attr.options.defaultValue)
     labelText=labelString
     warning=attr.options.warning

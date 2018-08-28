@@ -1,42 +1,42 @@
-  {{#if showNav}}
-    <NavHeader data-test-header-with-nav @class="{{if consoleOpen 'panel-open'}} {{if consoleFullscreen ' panel-fullscreen'}}" as |Nav|>
-      <Nav.home>
-        {{#if (has-feature "Namespaces")}}
-          {{#if media.isMobile}}
-            <NamespacePicker
-              @class="navbar-item has-text-white has-current-color-fill"
-              @namespace={{namespaceQueryParam}}
-            >
-              {{partial 'svg/vault-logo'}}
-            </NamespacePicker>
-          {{/if}}
-        {{else}}
-          <HomeLink @class="navbar-item has-text-white has-current-color-fill">
+{{#if showNav}}
+  <NavHeader data-test-header-with-nav @class="{{if consoleOpen 'panel-open'}} {{if consoleFullscreen ' panel-fullscreen'}}" as |Nav|>
+    <Nav.home>
+      {{#if (has-feature "Namespaces")}}
+        {{#if media.isMobile}}
+          <NamespacePicker
+            @class="navbar-item has-text-white has-current-color-fill"
+            @namespace={{namespaceQueryParam}}
+          >
             {{partial 'svg/vault-logo'}}
-          </HomeLink>
+          </NamespacePicker>
         {{/if}}
-      </Nav.home>
-      <Nav.items>
+      {{else}}
+        <HomeLink @class="navbar-item has-text-white has-current-color-fill">
+          {{partial 'svg/vault-logo'}}
+        </HomeLink>
+      {{/if}}
+    </Nav.home>
+    <Nav.items>
+      <div class="navbar-item">
+        <button type="button" class="button is-transparent" {{action 'toggleConsole'}} data-test-console-toggle>
+          {{#if consoleOpen}}
+            {{i-con glyph="console-active" size=24}}
+            {{i-con glyph="chevron-up" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
+          {{else}}
+            {{i-con glyph="console" size=24}}
+            {{i-con glyph="chevron-down" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
+          {{/if}}
+        </button>
+      </div>
+      {{#if namespaceService.inRootNamespace}}
         <div class="navbar-item">
-          <button type="button" class="button is-transparent" {{action 'toggleConsole'}} data-test-console-toggle>
-            {{#if consoleOpen}}
-              {{i-con glyph="console-active" size=24}}
-              {{i-con glyph="chevron-up" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
-            {{else}}
-              {{i-con glyph="console" size=24}}
-              {{i-con glyph="chevron-down" aria-hidden="true" size=8 class="has-text-white auto-width is-status-chevron"}}
-            {{/if}}
-          </button>
+          {{status-menu}}
         </div>
-        {{#if namespaceService.inRootNamespace}}
-          <div class="navbar-item">
-            {{status-menu}}
-          </div>
-        {{/if}}
-        <div class="navbar-item">
-          {{status-menu type="user"}}
-        </div>
-      </Nav.items>
+      {{/if}}
+      <div class="navbar-item">
+        {{status-menu type="user"}}
+      </div>
+    </Nav.items>
       <Nav.main>
         <ul class="navbar-sections tabs tabs-subnav {{if (and (has-feature "Namespaces") media.isTablet) 'with-ns-picker'}}">
           {{#if (and (has-feature "Namespaces") media.isTablet) }}
@@ -113,28 +113,30 @@
     {{/each}}
   </div>
   {{#if showNav}}
-    <section class="section">
-      <div class="container is-widescreen">
-        {{component
-          (if
-            (or
-              (is-after (now interval=1000) auth.tokenExpirationDate)
-              (and activeClusterName auth.currentToken)
+    <UiWizard>
+      <section class="section">
+        <div class="container is-widescreen">
+          {{component
+            (if
+              (or
+                (is-after (now interval=1000) auth.tokenExpirationDate)
+                (and activeClusterName auth.currentToken)
+              )
+              'token-expire-warning'
+              null
             )
-            'token-expire-warning'
-            null
-          )
-        }}
-        {{#unless (and
-            activeClusterName
-            auth.currentToken
-            (is-after (now interval=1000) auth.tokenExpirationDate)
-          )
-        }}
-          {{outlet}}
-        {{/unless}}
-      </div>
-    </section>
+          }}
+          {{#unless (and
+              activeClusterName
+              auth.currentToken
+              (is-after (now interval=1000) auth.tokenExpirationDate)
+            )
+          }}
+            {{outlet}}
+          {{/unless}}
+        </div>
+      </section>
+    </UiWizard>
   {{else}}
     {{outlet}}
   {{/if}}

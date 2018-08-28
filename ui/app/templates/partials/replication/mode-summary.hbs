@@ -10,20 +10,48 @@
     {{i-con class="has-text-grey is-medium" glyph="replication" size=20}}
     Disaster Recovery (DR)
   </h3>
-  {{replication-mode-summary
-    mode="dr"
-    cluster=cluster
-    tagName=(if cluster.dr.replicationEnabled 'a' 'div')
-  }}
+  {{#if cluster.dr.replicationEnabled}}
+    {{#link-to
+      "vault.cluster.replication.mode.index"
+      "dr"
+      class="link-plain"
+    }}
+      {{replication-mode-summary
+        mode="dr"
+        cluster=cluster
+        tagName="span"
+      }}
+    {{/link-to}}
+  {{else}}
+    {{replication-mode-summary
+      mode="dr"
+      cluster=cluster
+      tagName="div"
+    }}
+  {{/if}}
 </div>
 <div class="box is-bottomless is-fullwidth is-marginless">
   <h3 class="title is-flex-center is-5 is-marginless">
     {{i-con class="has-text-grey is-medium" glyph="perf-replication" size=20}}
     Performance
   </h3>
-  {{replication-mode-summary
-    mode="performance"
-    cluster=cluster
-    tagName=(if cluster.performance.replicationEnabled 'a' 'div')
-  }}
+  {{#if cluster.dr.replicationEnabled}}
+    {{#link-to
+      "vault.cluster.replication.mode.index"
+      "performance"
+      class="link-plain"
+    }}
+      {{replication-mode-summary
+        mode="performance"
+        cluster=cluster
+        tagName="span"
+      }}
+    {{/link-to}}
+  {{else}}
+    {{replication-mode-summary
+      mode="performance"
+      cluster=cluster
+      tagName="div"
+    }}
+  {{/if}}
 </div>
