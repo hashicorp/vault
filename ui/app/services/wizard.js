@@ -19,6 +19,7 @@ const FEATURE_LIST = 'vault:ui-feature-list';
 const FEATURE_STATE = 'vault:ui-feature-state';
 const COMPLETED_FEATURES = 'vault:ui-completed-list';
 const COMPONENT_STATE = 'vault:ui-component-state';
+const RESUME_URL = 'vault:ui-tutorial-resume-url';
 const MACHINES = {
   secrets: SecretsMachineConfig,
   policies: PoliciesMachineConfig,
@@ -171,10 +172,7 @@ export default Service.extend(DEFAULTS, {
           expectedRouteName = action.params[0];
           transitionURL = router.urlFor(...action.params).replace(/^\/ui/, '');
           Ember.run.next(() => {
-            router.transitionTo(...action.params).followRedirects().then(() => {
-              this.set('expectedRouteName', expectedRouteName);
-              this.set('expectedURL', transitionURL);
-            });
+            router.transitionTo(...action.params);
           });
           break;
         case 'saveFeatures':
@@ -189,6 +187,8 @@ export default Service.extend(DEFAULTS, {
         case 'handlePaused':
           this.handlePaused();
           return;
+        case 'handleResume':
+          this.handleResume();
         case 'showTutorialWhenAuthenticated':
           this.set('showWhenUnauthenticated', false);
           break;
@@ -221,7 +221,17 @@ export default Service.extend(DEFAULTS, {
   handlePaused() {
     this.saveExtState(RESUME_URL, this.get('expectedURL'));
   },
-  handleResume() {},
+
+  handleResume() {
+    let resumeURL = this.storage().getItem(RESUME_URL);
+    if (!resumeURL) {
+      return;
+    }
+    this.get('router').transitionTo(resumeURL).followRedirects().then(() => {
+      this.initializeMachines();
+      this.storage().removeItem(RESUME_URL);
+    });
+  },
 
   handleDismissed() {
     this.storage().removeItem(FEATURE_STATE);
