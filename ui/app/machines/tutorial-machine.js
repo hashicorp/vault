@@ -69,10 +69,10 @@ export default {
         CONTINUE: 'active',
       },
       onEntry: [
-        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
         { type: 'render', level: 'feature', component: null },
         { type: 'render', level: 'step', component: null },
         { type: 'render', level: 'detail', component: null },
+        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
       ],
     },
     dismissed: {
@@ -89,20 +89,20 @@ export default {
         CONTINUE: 'active.feature',
       },
       onEntry: [
-        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-paused' },
         { type: 'render', level: 'feature', component: null },
         { type: 'render', level: 'step', component: null },
         { type: 'render', level: 'detail', component: null },
+        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-paused' },
         'handlePaused',
       ],
       onExit: ['handleResume'],
     },
     complete: {
       onEntry: [
-        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-complete' },
         { type: 'render', level: 'feature', component: null },
         { type: 'render', level: 'step', component: null },
         { type: 'render', level: 'detail', component: null },
+        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-complete' },
       ],
     },
   },

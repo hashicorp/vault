@@ -81,9 +81,15 @@ export default Service.extend(DEFAULTS, {
   restartGuide() {
     let storage = this.storage();
     // empty storage
-    [TUTORIAL_STATE, FEATURE_LIST, FEATURE_STATE, COMPLETED_FEATURES, COMPONENT_STATE].forEach(key =>
-      storage.removeItem(key)
-    );
+    [
+      TUTORIAL_STATE,
+      FEATURE_LIST,
+      FEATURE_STATE,
+      COMPLETED_FEATURES,
+      COMPONENT_STATE,
+      RESUME_URL,
+      RESUME_ROUTE,
+    ].forEach(key => storage.removeItem(key));
     // reset wizard state
     this.setProperties(DEFAULTS);
     // restart machines from blank state
