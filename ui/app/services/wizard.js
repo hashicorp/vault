@@ -219,7 +219,10 @@ export default Service.extend(DEFAULTS, {
   },
 
   handlePaused() {
-    this.saveExtState(RESUME_URL, this.get('expectedURL'));
+    let expected = this.get('expectedURL');
+    if (expected) {
+      this.saveExtState(RESUME_URL, this.get('expectedURL'));
+    }
   },
 
   handleResume() {
