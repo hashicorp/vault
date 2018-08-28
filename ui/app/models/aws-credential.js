@@ -20,6 +20,7 @@ export default DS.Model.extend({
   }),
   ttl: attr({
     editType: 'ttl',
+    defaultValue: '3600s',
     label: 'TTL',
     helpText:
       'Specifies the TTL for the use of the STS token. Valid only when credential_type is assumed_role or federation_token.',
