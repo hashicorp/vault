@@ -122,8 +122,9 @@ for more information about roles.
 
 ### Parameters
 
-- `azure_roles` (`array: <required>`) - List of Azure roles to be assigned to the generated service
-   principal. See [roles docs][roles] for details on role definition.
+- `azure_roles` (`string: <required>`) - List of Azure roles to be assigned to the generated service
+   principal. The array must be in JSON format, properly escaped as a string. See [roles docs][roles]
+   for details on role definition.
 - `ttl` (`string: ""`) – Specifies the default TTL for service principals generated using this role.
    Accepts time suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine default TTL time.
 - `max_ttl` (`string: ""`) – Specifies the maximum TTL for service principals generated using this role. Accepts time
@@ -133,16 +134,16 @@ for more information about roles.
 
 ```json
 {
-  "azure_roles": [
+  "azure_roles": "[
     {
-    	"role_name": "Contributor",
-    	"scope":  "/subscriptions/<uuid>/resourceGroup/Website"
+      \"role_name\": \"Contributor\",
+      \"scope\":  \"/subscriptions/<uuid>/resourceGroup/Website\"
     },
     {
-    	"role_id": "/subscriptions/<uuid>/providers/Microsoft.Authorization/roleDefinitions/<uuid>",
-    	"scope":  "/subscriptions/<uuid>"
+      \"role_id\": \"/subscriptions/<uuid>/providers/Microsoft.Authorization/roleDefinitions/<uuid>\",
+      \"scope\":  \"/subscriptions/<uuid>\"
     }
-  ],
+  ]",
   "ttl": 3600,
   "max_ttl": "24h"
 }
