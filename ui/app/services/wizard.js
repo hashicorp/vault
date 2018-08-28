@@ -19,6 +19,8 @@ const FEATURE_LIST = 'vault:ui-feature-list';
 const FEATURE_STATE = 'vault:ui-feature-state';
 const COMPLETED_FEATURES = 'vault:ui-completed-list';
 const COMPONENT_STATE = 'vault:ui-component-state';
+const RESUME_URL = 'vault:ui-tutorial-resume-url';
+const RESUME_ROUTE = 'vault:ui-tutorial-resume-route';
 const MACHINES = {
   secrets: SecretsMachineConfig,
   policies: PoliciesMachineConfig,
@@ -61,7 +63,7 @@ export default Service.extend(DEFAULTS, {
       this.set('componentState', this.getExtState(COMPONENT_STATE));
     }
     let stateNodes = TutorialMachine.getStateNodes(this.get('currentState'));
-    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
+    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []), null, 'tutorial');
     if (this.storageHasKey(FEATURE_LIST)) {
       this.set('featureList', this.getExtState(FEATURE_LIST));
       if (this.storageHasKey(FEATURE_STATE)) {
@@ -79,9 +81,15 @@ export default Service.extend(DEFAULTS, {
   restartGuide() {
     let storage = this.storage();
     // empty storage
-    [TUTORIAL_STATE, FEATURE_LIST, FEATURE_STATE, COMPLETED_FEATURES, COMPONENT_STATE].forEach(key =>
-      storage.removeItem(key)
-    );
+    [
+      TUTORIAL_STATE,
+      FEATURE_LIST,
+      FEATURE_STATE,
+      COMPLETED_FEATURES,
+      COMPONENT_STATE,
+      RESUME_URL,
+      RESUME_ROUTE,
+    ].forEach(key => storage.removeItem(key));
     // reset wizard state
     this.setProperties(DEFAULTS);
     // restart machines from blank state
@@ -112,7 +120,7 @@ export default Service.extend(DEFAULTS, {
     let { actions, value } = TutorialMachine.transition(currentState, event);
     this.saveState('currentState', value);
     this.saveExtState(TUTORIAL_STATE, this.get('currentState'));
-    this.executeActions(actions, event);
+    this.executeActions(actions, event, 'tutorial');
   },
 
   transitionFeatureMachine(currentState, event, extendedState) {
@@ -127,7 +135,7 @@ export default Service.extend(DEFAULTS, {
     let { actions, value } = FeatureMachine.transition(currentState, event, this.get('componentState'));
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
-    this.executeActions(actions, event);
+    this.executeActions(actions, event, 'feature');
     // if all features were completed, the FeatureMachine gets nulled
     // out and won't exist here as there is no next step
     if (FeatureMachine) {
@@ -153,7 +161,11 @@ export default Service.extend(DEFAULTS, {
     return Boolean(this.getExtState(key));
   },
 
-  executeActions(actions, event) {
+  executeActions(actions, event, machineType) {
+    let transitionURL;
+    let expectedRouteName;
+    let router = this.get('router');
+
     for (let action of actions) {
       let type = action;
       if (action.type) {
@@ -164,8 +176,10 @@ export default Service.extend(DEFAULTS, {
           this.set(`${action.level}Component`, action.component);
           break;
         case 'routeTransition':
+          expectedRouteName = action.params[0];
+          transitionURL = router.urlFor(...action.params).replace(/^\/ui/, '');
           Ember.run.next(() => {
-            this.get('router').transitionTo(...action.params);
+            router.transitionTo(...action.params);
           });
           break;
         case 'saveFeatures':
@@ -176,6 +190,12 @@ export default Service.extend(DEFAULTS, {
           break;
         case 'handleDismissed':
           this.handleDismissed();
+          break;
+        case 'handlePaused':
+          this.handlePaused();
+          return;
+        case 'handleResume':
+          this.handleResume();
           break;
         case 'showTutorialWhenAuthenticated':
           this.set('showWhenUnauthenticated', false);
@@ -190,6 +210,41 @@ export default Service.extend(DEFAULTS, {
           break;
       }
     }
+    if (machineType === 'tutorial') {
+      return;
+    }
+    // if we're transitioning in the actions, we want that url,
+    // else we want the URL we land on in didTransition in the
+    // application route - we'll notify the application route to
+    // update the route
+    if (transitionURL) {
+      this.set('expectedURL', transitionURL);
+      this.set('expectedRouteName', expectedRouteName);
+      this.set('setURLAfterTransition', false);
+    } else {
+      this.set('setURLAfterTransition', true);
+    }
+  },
+
+  handlePaused() {
+    let expected = this.get('expectedURL');
+    if (expected) {
+      this.saveExtState(RESUME_URL, this.get('expectedURL'));
+      this.saveExtState(RESUME_ROUTE, this.get('expectedRouteName'));
+    }
+  },
+
+  handleResume() {
+    let resumeURL = this.storage().getItem(RESUME_URL);
+    if (!resumeURL) {
+      return;
+    }
+    this.get('router').transitionTo(resumeURL).followRedirects().then(() => {
+      this.set('expectedRouteName', this.storage().getItem(RESUME_ROUTE));
+      this.set('expectedURL', resumeURL);
+      this.initializeMachines();
+      this.storage().removeItem(RESUME_URL);
+    });
   },
 
   handleDismissed() {
@@ -224,7 +279,7 @@ export default Service.extend(DEFAULTS, {
     }
     this.saveState('nextStep', next.value);
     let stateNodes = FeatureMachine.getStateNodes(this.get('featureState'));
-    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []));
+    this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []), null, 'feature');
   },
 
   startFeature() {

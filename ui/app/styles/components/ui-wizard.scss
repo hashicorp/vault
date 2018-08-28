@@ -15,6 +15,7 @@
 
   @include until($tablet) {
     padding-right: 0;
+    padding-bottom: 50vh;
   }
 }
 
@@ -29,6 +30,18 @@
   bottom: $size-8;
   top: calc(3.5rem + #{$size-8});
   overflow: auto;
+
+  p {
+    line-height: 1.2;
+  }
+
+  .dismiss-collapsed {
+    position: absolute;
+    top: $size-8;
+    right: $size-8;
+    color: $grey;
+    z-index: 30;
+  }
 
   @include until($tablet) {
     box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);

@@ -1,6 +1,11 @@
 export default {
   key: 'tutorial',
   initial: 'idle',
+  on: {
+    DISMISS: 'dismissed',
+    DONE: 'complete',
+    PAUSE: 'paused',
+  },
   states: {
     init: {
       key: 'init',
@@ -46,10 +51,6 @@ export default {
     active: {
       key: 'feature',
       initial: 'select',
-      on: {
-        DISMISS: 'dismissed',
-        DONE: 'complete',
-      },
       onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-active' },
       states: {
         select: {
@@ -65,41 +66,44 @@ export default {
       on: {
         INIT: 'init.idle',
         AUTH: 'active.select',
-        DISMISS: 'dismissed',
         CONTINUE: 'active',
       },
       onEntry: [
-        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
         { type: 'render', level: 'feature', component: null },
         { type: 'render', level: 'step', component: null },
         { type: 'render', level: 'detail', component: null },
+        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
       ],
     },
     dismissed: {
-      on: { CONTINUE: 'idle' },
       onEntry: [
-        { type: 'render', level: 'feature', component: null },
         { type: 'render', level: 'tutorial', component: null },
+        { type: 'render', level: 'feature', component: null },
         { type: 'render', level: 'step', component: null },
         { type: 'render', level: 'detail', component: null },
         'handleDismissed',
       ],
     },
     paused: {
-      on: { CONTINUE: ['handlePause'] },
-      onEntry: { type: 'render', level: 'tutorial', component: 'wizard/tutorial-paused' },
-    },
-    complete: {
+      on: {
+        CONTINUE: 'active.feature',
+      },
       onEntry: [
-        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-complete' },
         { type: 'render', level: 'feature', component: null },
         { type: 'render', level: 'step', component: null },
         { type: 'render', level: 'detail', component: null },
+        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-paused' },
+        'handlePaused',
       ],
-      on: {
-        PAUSE: 'idle',
-        DISMISS: 'dismissed',
-      },
+      onExit: ['handleResume'],
+    },
+    complete: {
+      onEntry: [
+        { type: 'render', level: 'feature', component: null },
+        { type: 'render', level: 'step', component: null },
+        { type: 'render', level: 'detail', component: null },
+        { type: 'render', level: 'tutorial', component: 'wizard/tutorial-complete' },
+      ],
     },
   },
 };
