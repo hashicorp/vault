@@ -53,6 +53,42 @@ If you flavor/license of Vault Enterprise supports Performance Standbys, they
 are on by default. You can disable this behavior per-node with the
 `disable_performance_standby` configuration flag.
 
+### AWS Secret Engine Roles
+Roles in the AWS Secret Engine were previously ambiguous. For example, if the
+`arn` parameter had been specified, that could have been interpreted as the ARN
+of an AWS IAM policy to attach to an IAM user or it could have been the ARN of
+an AWS role to assume. Now, types are explicit, both in terms of what
+credential type is being requested (e.g., an IAM User or an Assumed Role?) as
+well as the parameters being sent to vault (e.g., the IAM policy document
+attached to an IAM user or used during a GetFederationToken call). All
+credential retrieval remains backwards compatible as does updating role data.
+However, the data returned when reading role data is now different and
+breaking, so anything which reads role data out of Vault will need to be
+updated to handle the new role data format.
+
+While creating/updating roles remains backwards compatible, the old parameters
+are now considered deprecated. You should use the new parameters as documented
+in the API docs.
+
+As part of this, the `/aws/creds/` and `/aws/sts/` endpoints have been merged,
+with the behavior only differing as specified below. The `/aws/sts/` endpoint
+is considered deprecated and should only be used when needing backwards
+compatibility.
+
+All roles will be automatically updated to the new role format when accessed.
+However, due to the way role data was previously being stored in Vault, it's
+possible that invalid data was stored that both make the upgrade impossible as
+well as would have made the role unable to retrieve credentials. In this
+situation, the previous role data is returned in an `invalid_data` key so you
+can inspect what used to be in the role and correct the role data if desired.
+One consequence of the prior AWS role storage format is that a single Vault
+role could have led to two different AWS credential types being retrieved when
+a `policy` parameter was stored. In this case, these legacy roles will be
+allowed to retrieve both IAM User and Federation Token credentials, with the
+credential type depending on the path used to access it (IAM User if accessed
+via the `/aws/creds/<role_name>` endpoint and Federation Token if accessed via
+the `/aws/sts/<role_name>` endpoint).
+
 ## Full List Since 0.10.0
 
 ### Revocations of dynamic secrets leases now asynchronous 
