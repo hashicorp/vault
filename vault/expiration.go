@@ -1155,7 +1155,12 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 		return nil
 	}
 
-	le.Secret.IssueTime = le.IssueTime
+	if le.Secret != nil {
+		// not sure if this is really valid to have a leaseEntry with a nil Secret
+		// (if there's a nil Secret, what are you really leasing?), but the tests
+		// create one, and good to be defensive
+		le.Secret.IssueTime = le.IssueTime
+	}
 
 	// Handle standard revocation via backends
 	resp, err := m.router.Route(m.quitContext, logical.RevokeRequest(le.Path, le.Secret, le.Data))
