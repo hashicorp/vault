@@ -64,6 +64,7 @@ IMPROVEMENTS:
  * auth/approle: Add ability to set token bound CIDRs on individual Secret IDs
    [GH-5034]
  * cli: Add support for passing parameters to `vault read` operations [GH-5093]
+ * secrets/aws: Make credential types more explicit [GH-4360]
  * secrets/nomad: Support for longer token names [GH-5117]
  * secrets/pki: Allow disabling CRL generation [GH-5134]
  * storage/azure: Add support for different Azure environments [GH-4997]
