@@ -5,13 +5,8 @@ const { get, set } = Ember;
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default RoleEdit.extend({
-  useARN: false,
   init() {
     this._super(...arguments);
-    const arn = get(this, 'model.arn');
-    if (arn) {
-      set(this, 'useARN', true);
-    }
   },
 
   actions: {
@@ -24,11 +19,22 @@ export default RoleEdit.extend({
       if (type === 'create' && Ember.isBlank(modelId)) {
         return;
       }
-      // clear the policy or arn before save depending on "useARN"
-      if (get(this, 'useARN')) {
-        set(this, 'model.policy', '');
-      } else {
-        set(this, 'model.arn', '');
+
+      var credential_type = get(this, 'model.credential_type');
+      if (credential_type == "iam_user") {
+        set(this, 'model.role_arns', []);
+      }
+      if (credential_type == "assumed_role") {
+        set(this, 'model.policy_arns', []);
+      }
+      if (credential_type == "federation_token") {
+        set(this, 'model.role_arns', []);
+        set(this, 'model.policy_arns', []);
+      }
+
+      var policy_document = get(this, 'model.policy_document');
+      if (policy_document == '{}') {
+        set(this, 'model.policy_document', '');
       }
 
       this.persist('save', () => {
