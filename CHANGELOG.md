@@ -61,6 +61,9 @@ FEATURES:
  * **HA Support for MySQL Storage**: MySQL storage now supports HA.
  * **ACL Templating**: ACL policies can now be templated using identity Entity,
    Groups, and Metadata.
+ * **UI Onboarding wizards**: The Vault UI can provide contextual help and 
+   guidance, linking out to relevant links or guides on vaultproject.io for
+   various workflows in Vault.
 
 IMPROVEMENTS:
 
