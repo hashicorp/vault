@@ -23,6 +23,10 @@ DEPRECATIONS/CHANGES:
    capabilities in the same path block as most other capabilities for that
    path, while not providing any extra access if `list` wasn't actually
    provided there.
+ * Performance Standbys On By Default: If you flavor/license of Vault
+   Enterprise supports Performance Standbys, they are on by default. You can
+   disable this behavior per-node with the `disable_performance_standby`
+   configuration flag.
 
 FEATURES:
 
