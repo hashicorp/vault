@@ -65,18 +65,15 @@ export default Ember.Route.extend({
       Ember.run.next(() => {
         let applicationURL = this.get('routing.currentURL');
         let activeRoute = this.get('routing.currentRouteName');
-        let expectedRouteName = this.get('wizard.expectedRouteName');
 
         if (this.get('wizard.setURLAfterTransition')) {
           this.set('wizard.setURLAfterTransition', false);
           this.set('wizard.expectedURL', applicationURL);
           this.set('wizard.expectedRouteName', activeRoute);
-          return true;
         }
-        if (expectedRouteName) {
-          if (this.get('routing').isActive(expectedRouteName) === false) {
-            wizard.transitionTutorialMachine(wizard.get('currentState'), 'PAUSE');
-          }
+        let expectedRouteName = this.get('wizard.expectedRouteName');
+        if (this.get('routing').isActive(expectedRouteName) === false) {
+          wizard.transitionTutorialMachine(wizard.get('currentState'), 'PAUSE');
         }
       });
       return true;

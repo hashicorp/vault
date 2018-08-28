@@ -20,6 +20,7 @@ const FEATURE_STATE = 'vault:ui-feature-state';
 const COMPLETED_FEATURES = 'vault:ui-completed-list';
 const COMPONENT_STATE = 'vault:ui-component-state';
 const RESUME_URL = 'vault:ui-tutorial-resume-url';
+const RESUME_ROUTE = 'vault:ui-tutorial-resume-route';
 const MACHINES = {
   secrets: SecretsMachineConfig,
   policies: PoliciesMachineConfig,
@@ -222,6 +223,7 @@ export default Service.extend(DEFAULTS, {
     let expected = this.get('expectedURL');
     if (expected) {
       this.saveExtState(RESUME_URL, this.get('expectedURL'));
+      this.saveExtState(RESUME_ROUTE, this.get('expectedRouteName'));
     }
   },
 
@@ -231,6 +233,8 @@ export default Service.extend(DEFAULTS, {
       return;
     }
     this.get('router').transitionTo(resumeURL).followRedirects().then(() => {
+      this.set('expectedRouteName', this.storage().getItem(RESUME_ROUTE));
+      this.set('expectedURL', resumeURL);
       this.initializeMachines();
       this.storage().removeItem(RESUME_URL);
     });
