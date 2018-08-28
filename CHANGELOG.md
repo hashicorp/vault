@@ -27,6 +27,14 @@ DEPRECATIONS/CHANGES:
    Enterprise supports Performance Standbys, they are on by default. You can
    disable this behavior per-node with the `disable_performance_standby`
    configuration flag.
+ * AWS Secret Engine Roles: The AWS Secret Engine roles are now explicit about
+   the type of AWS credential they are generating; this reduces reduce
+   ambiguity that existed previously as well as enables new features for
+   specific credential types. Writing role data and generating credentials
+   remain backwards compatible; however, the data returned when reading a
+   role's configuration has changed in backwards-incompatible ways. Anything
+   that depended on reading role data from the AWS secret engine will break
+   until it is updated to work with the new format.
 
 FEATURES:
 
