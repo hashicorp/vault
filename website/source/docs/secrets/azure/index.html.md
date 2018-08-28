@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Azure - Secrets Engine"
+sidebar_title: "Azure"
 sidebar_current: "docs-secrets-azure"
 description: |-
   The Azure Vault secrets engine dynamically generates Azure

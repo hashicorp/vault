@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "MongoDB - Database - Secrets Engines"
+sidebar_title: "MongoDB"
 sidebar_current: "docs-secrets-databases-mongodb"
 description: |-
   MongoDB is one of the supported plugins for the database secrets engine. This
