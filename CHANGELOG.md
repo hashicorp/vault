@@ -1,4 +1,4 @@
-## Next (Unreleased)
+## 0.11 (August 28th, 2018)
 
 DEPRECATIONS/CHANGES:
 
