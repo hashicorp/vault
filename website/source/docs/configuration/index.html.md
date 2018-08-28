@@ -146,6 +146,11 @@ The following parameters are used on backends that support [high availability][h
   such as request forwarding are enabled. Setting this to true on one Vault node
   will disable these features _only when that node is the active node_.
 
+- `disable_performance_standby` `(bool: false)` - Specifies whether performance
+  standbys should be disabled on this node. Setting this to true on one Vault
+  node will disable this feature when this node is Active or Standby. It's
+  recomended to sync this setting across all nodes in the cluster.
+
 ### Vault Enterprise Parameters
 
 - `disable_sealwrap` `(bool: false)` – Disables using [seal wrapping][sealwrap]
