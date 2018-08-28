@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -52,7 +53,7 @@ type AESGCMBarrier struct {
 	backend physical.Backend
 
 	l      sync.RWMutex
-	sealed bool
+	sealed *uint32
 
 	// keyring is used to maintain all of the encryption keys, including
 	// the active key used for encryption, but also prior keys to allow
@@ -74,10 +75,11 @@ type AESGCMBarrier struct {
 func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 	b := &AESGCMBarrier{
 		backend: physical,
-		sealed:  true,
+		sealed:  new(uint32),
 		cache:   make(map[uint32]cipher.AEAD),
 		currentAESGCMVersionByte: byte(AESGCMVersion2),
 	}
+	atomic.StoreUint32(b.sealed, 1)
 	return b, nil
 }
 
@@ -212,17 +214,17 @@ func (b *AESGCMBarrier) KeyLength() (int, int) {
 // Sealed checks if the barrier has been unlocked yet. The Barrier
 // is not expected to be able to perform any CRUD until it is unsealed.
 func (b *AESGCMBarrier) Sealed() (bool, error) {
-	b.l.RLock()
-	sealed := b.sealed
-	b.l.RUnlock()
-	return sealed, nil
+	return atomic.LoadUint32(b.sealed) == 1, nil
 }
 
 // VerifyMaster is used to check if the given key matches the master key
 func (b *AESGCMBarrier) VerifyMaster(key []byte) error {
+	if atomic.LoadUint32(b.sealed) == 1 {
+		return ErrBarrierSealed
+	}
 	b.l.RLock()
 	defer b.l.RUnlock()
-	if b.sealed {
+	if atomic.LoadUint32(b.sealed) == 1 {
 		return ErrBarrierSealed
 	}
 	if subtle.ConstantTimeCompare(key, b.keyring.MasterKey()) != 1 {
@@ -320,11 +322,15 @@ func (b *AESGCMBarrier) ReloadMasterKey(ctx context.Context) error {
 // Unseal is used to provide the master key which permits the barrier
 // to be unsealed. If the key is not correct, the barrier remains sealed.
 func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
+	// Do nothing if already unsealed
+	if atomic.LoadUint32(b.sealed) == 0 {
+		return nil
+	}
+
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	// Do nothing if already unsealed
-	if !b.sealed {
+	if atomic.LoadUint32(b.sealed) == 0 {
 		return nil
 	}
 
@@ -358,7 +364,7 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 
 		// Setup the keyring and finish
 		b.keyring = keyring
-		b.sealed = false
+		atomic.StoreUint32(b.sealed, 0)
 		return nil
 	}
 
@@ -413,13 +419,14 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 
 	// Set the vault as unsealed
 	b.keyring = keyring
-	b.sealed = false
+	atomic.StoreUint32(b.sealed, 0)
 	return nil
 }
 
 // Seal is used to re-seal the barrier. This requires the barrier to
 // be unsealed again to perform any further operations.
 func (b *AESGCMBarrier) Seal() error {
+	atomic.StoreUint32(b.sealed, 1)
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -427,16 +434,20 @@ func (b *AESGCMBarrier) Seal() error {
 	b.cache = make(map[uint32]cipher.AEAD)
 	b.keyring.Zeroize(true)
 	b.keyring = nil
-	b.sealed = true
 	return nil
 }
 
 // Rotate is used to create a new encryption key. All future writes
 // should use the new key, while old values should still be decryptable.
 func (b *AESGCMBarrier) Rotate(ctx context.Context) (uint32, error) {
+	if atomic.LoadUint32(b.sealed) == 1 {
+		return 0, ErrBarrierSealed
+	}
+
 	b.l.Lock()
 	defer b.l.Unlock()
-	if b.sealed {
+
+	if atomic.LoadUint32(b.sealed) == 1 {
 		return 0, ErrBarrierSealed
 	}
 
@@ -472,9 +483,14 @@ func (b *AESGCMBarrier) Rotate(ctx context.Context) (uint32, error) {
 
 // CreateUpgrade creates an upgrade path key to the given term from the previous term
 func (b *AESGCMBarrier) CreateUpgrade(ctx context.Context, term uint32) error {
+	if atomic.LoadUint32(b.sealed) == 1 {
+		return ErrBarrierSealed
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
-	if b.sealed {
+
+	if atomic.LoadUint32(b.sealed) == 1 {
 		return ErrBarrierSealed
 	}
 
@@ -511,9 +527,14 @@ func (b *AESGCMBarrier) DestroyUpgrade(ctx context.Context, term uint32) error {
 
 // CheckUpgrade looks for an upgrade to the current term and installs it
 func (b *AESGCMBarrier) CheckUpgrade(ctx context.Context) (bool, uint32, error) {
+	if atomic.LoadUint32(b.sealed) == 1 {
+		return false, 0, ErrBarrierSealed
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
-	if b.sealed {
+
+	if atomic.LoadUint32(b.sealed) == 1 {
 		return false, 0, ErrBarrierSealed
 	}
 
@@ -559,9 +580,14 @@ func (b *AESGCMBarrier) CheckUpgrade(ctx context.Context) (bool, uint32, error) 
 
 // ActiveKeyInfo is used to inform details about the active key
 func (b *AESGCMBarrier) ActiveKeyInfo() (*KeyInfo, error) {
+	if atomic.LoadUint32(b.sealed) == 1 {
+		return nil, ErrBarrierSealed
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
-	if b.sealed {
+
+	if atomic.LoadUint32(b.sealed) == 1 {
 		return nil, ErrBarrierSealed
 	}
 
@@ -620,7 +646,7 @@ func (b *AESGCMBarrier) SetMasterKey(key []byte) error {
 // Performs common tasks related to updating the master key; note that the lock
 // must be held before calling this function
 func (b *AESGCMBarrier) updateMasterKeyCommon(key []byte) (*Keyring, error) {
-	if b.sealed {
+	if atomic.LoadUint32(b.sealed) == 1 {
 		return nil, ErrBarrierSealed
 	}
 
@@ -637,13 +663,15 @@ func (b *AESGCMBarrier) updateMasterKeyCommon(key []byte) (*Keyring, error) {
 func (b *AESGCMBarrier) Put(ctx context.Context, entry *Entry) error {
 	defer metrics.MeasureSince([]string{"barrier", "put"}, time.Now())
 	b.l.RLock()
-	defer b.l.RUnlock()
-	if b.sealed {
+
+	if atomic.LoadUint32(b.sealed) == 1 {
+		b.l.RUnlock()
 		return ErrBarrierSealed
 	}
 
 	term := b.keyring.ActiveTerm()
 	primary, err := b.aeadForTerm(term)
+	b.l.RUnlock()
 	if err != nil {
 		return err
 	}
@@ -660,21 +688,38 @@ func (b *AESGCMBarrier) Put(ctx context.Context, entry *Entry) error {
 func (b *AESGCMBarrier) Get(ctx context.Context, key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"barrier", "get"}, time.Now())
 	b.l.RLock()
-	defer b.l.RUnlock()
-	if b.sealed {
+
+	if atomic.LoadUint32(b.sealed) == 1 {
+		b.l.RUnlock()
 		return nil, ErrBarrierSealed
 	}
 
 	// Read the key from the backend
 	pe, err := b.backend.Get(ctx, key)
 	if err != nil {
+		b.l.RUnlock()
 		return nil, err
 	} else if pe == nil {
+		b.l.RUnlock()
 		return nil, nil
 	}
 
+	// Verify the term
+	term := binary.BigEndian.Uint32(pe.Value[:4])
+	// Get the GCM by term
+	// It is expensive to do this first but it is not a
+	// normal case that this won't match
+	gcm, err := b.aeadForTerm(term)
+	if err != nil {
+		return nil, err
+	}
+	if gcm == nil {
+		return nil, fmt.Errorf("no decryption key available for term %d", term)
+	}
+	b.l.RUnlock()
+
 	// Decrypt the ciphertext
-	plain, err := b.decryptKeyring(key, pe.Value)
+	plain, err := b.decryptKeyring(key, pe.Value, gcm)
 	if err != nil {
 		return nil, errwrap.Wrapf("decryption failed: {{err}}", err)
 	}
@@ -691,9 +736,7 @@ func (b *AESGCMBarrier) Get(ctx context.Context, key string) (*Entry, error) {
 // Delete is used to permanently delete an entry
 func (b *AESGCMBarrier) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"barrier", "delete"}, time.Now())
-	b.l.RLock()
-	defer b.l.RUnlock()
-	if b.sealed {
+	if atomic.LoadUint32(b.sealed) == 1 {
 		return ErrBarrierSealed
 	}
 
@@ -704,9 +747,7 @@ func (b *AESGCMBarrier) Delete(ctx context.Context, key string) error {
 // prefix, up to the next prefix.
 func (b *AESGCMBarrier) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"barrier", "list"}, time.Now())
-	b.l.RLock()
-	defer b.l.RUnlock()
-	if b.sealed {
+	if atomic.LoadUint32(b.sealed) == 1 {
 		return nil, ErrBarrierSealed
 	}
 
@@ -820,21 +861,7 @@ func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]
 }
 
 // decryptKeyring is used to decrypt a value using the keyring
-func (b *AESGCMBarrier) decryptKeyring(path string, cipher []byte) ([]byte, error) {
-	// Verify the term
-	term := binary.BigEndian.Uint32(cipher[:4])
-
-	// Get the GCM by term
-	// It is expensive to do this first but it is not a
-	// normal case that this won't match
-	gcm, err := b.aeadForTerm(term)
-	if err != nil {
-		return nil, err
-	}
-	if gcm == nil {
-		return nil, fmt.Errorf("no decryption key available for term %d", term)
-	}
-
+func (b *AESGCMBarrier) decryptKeyring(path string, cipher []byte, gcm cipher.AEAD) ([]byte, error) {
 	nonce := cipher[5 : 5+gcm.NonceSize()]
 	raw := cipher[5+gcm.NonceSize():]
 	out := make([]byte, 0, len(raw)-gcm.NonceSize())
@@ -853,46 +880,58 @@ func (b *AESGCMBarrier) decryptKeyring(path string, cipher []byte) ([]byte, erro
 // Encrypt is used to encrypt in-memory for the BarrierEncryptor interface
 func (b *AESGCMBarrier) Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
 	b.l.RLock()
-	if b.sealed {
+	if atomic.LoadUint32(b.sealed) == 1 {
 		b.l.RUnlock()
 		return nil, ErrBarrierSealed
 	}
 
 	term := b.keyring.ActiveTerm()
 	primary, err := b.aeadForTerm(term)
+	b.l.RUnlock()
 	if err != nil {
-		b.l.RUnlock()
 		return nil, err
 	}
 
 	ciphertext := b.encrypt(key, term, primary, plaintext)
-	b.l.RUnlock()
 	return ciphertext, nil
 }
 
 // Decrypt is used to decrypt in-memory for the BarrierEncryptor interface
 func (b *AESGCMBarrier) Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error) {
 	b.l.RLock()
-	if b.sealed {
+	if atomic.LoadUint32(b.sealed) == 1 {
 		b.l.RUnlock()
 		return nil, ErrBarrierSealed
 	}
 
-	// Decrypt the ciphertext
-	plain, err := b.decryptKeyring(key, ciphertext)
+	// Verify the term
+	term := binary.BigEndian.Uint32(ciphertext[:4])
+
+	// Get the GCM by term
+	// It is expensive to do this first but it is not a
+	// normal case that this won't match
+	gcm, err := b.aeadForTerm(term)
 	if err != nil {
-		b.l.RUnlock()
+		return nil, err
+	}
+	if gcm == nil {
+		return nil, fmt.Errorf("no decryption key available for term %d", term)
+	}
+	b.l.RUnlock()
+
+	// Decrypt the ciphertext
+	plain, err := b.decryptKeyring(key, ciphertext, gcm)
+	if err != nil {
 		return nil, errwrap.Wrapf("decryption failed: {{err}}", err)
 	}
 
-	b.l.RUnlock()
 	return plain, nil
 }
 
 func (b *AESGCMBarrier) Keyring() (*Keyring, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
-	if b.sealed {
+	if atomic.LoadUint32(b.sealed) == 1 {
 		return nil, ErrBarrierSealed
 	}
 
