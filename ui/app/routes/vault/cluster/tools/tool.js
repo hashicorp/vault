@@ -23,6 +23,7 @@ export default Ember.Route.extend({
         );
       }
       this.controller.setProperties(params);
+      return true;
     },
   },
 });
