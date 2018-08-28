@@ -1,4 +1,4 @@
-## 0.11 (August 28th, 2018)
+## 0.11.0 (August 28th, 2018)
 
 DEPRECATIONS/CHANGES:
 
