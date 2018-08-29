@@ -8,6 +8,7 @@
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+  transition: padding $speed;
 }
 
 .ui-wizard-container .app-content.wizard-open {
@@ -32,7 +33,7 @@
   overflow: auto;
 
   p {
-    line-height: 1.2;
+    line-height: 1.33;
   }
 
   .dismiss-collapsed {
@@ -64,7 +65,9 @@
 }
 
 .wizard-header {
-  margin-bottom: $size-5;
+  border-bottom: $light-border;
+  padding-bottom: $size-8;
+  margin-bottom: $size-4;
   position: relative;
 
   .icon {
@@ -81,6 +84,7 @@
 }
 
 .ui-wizard.collapsed {
+  animation: drop-fade-above $speed-slow;
   color: $white;
   background: $black;
   bottom: auto;
@@ -141,4 +145,8 @@
   padding-top: $size-4;
   margin-top: $size-4;
   border-top: 1px solid $grey-light;
+}
+
+.wizard-instructions {
+  margin: $size-4 0;
 }
