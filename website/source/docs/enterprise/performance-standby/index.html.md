@@ -56,11 +56,6 @@ nodes, the `sys/health` endpoint can be used to determine if a node is a
 performance standby. See the [sys/health API](/api/system/health.html) docs for
 more info.
 
-## Storage Support
-
-Using Performance Standbys requires a storage backend that supports
-transactional updates, such as Consul.
-
 ## Disabling Performance Standbys
 
 To disable performance standbys the `disable_performance_standby` flag should be
