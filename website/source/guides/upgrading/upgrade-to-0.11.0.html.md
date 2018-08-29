@@ -44,7 +44,7 @@ provided there.
 
 ### Performance Standbys On By Default
 
-If you flavor/license of Vault Enterprise supports Performance Standbys, they
+If your flavor/license of Vault Enterprise supports Performance Standbys, they
 are on by default. You can disable this behavior per-node with the
 `disable_performance_standby` configuration flag.
 
@@ -86,7 +86,7 @@ the `/aws/sts/<role_name>` endpoint).
 
 ## Full List Since 0.10.0
 
-### Revocations of dynamic secrets leases now asynchronous 
+### Revocations of dynamic secrets leases now asynchronous
 
 Dynamic secret lease revocation are now queued/asynchronous rather
 than synchronous. This allows Vault to take responsibility for revocation
@@ -101,7 +101,7 @@ The CLI will no longer retry commands on 5xx errors. This was a
 source of confusion to users as to why Vault would "hang" before returning a
 5xx error. The Go API client still defaults to two retries.
 
-### Identity Entity Alias metadata 
+### Identity Entity Alias metadata
 
 You can no longer manually set metadata on
 entity aliases. All alias data (except the canonical entity ID it refers to)
