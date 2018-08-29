@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Sentinel Properties"
+sidebar_title: "Properties"
 sidebar_current: "docs-vault-enterprise-sentinel-properties"
 description: |-
   An overview of how Sentinel interacts with Vault Enterprise.

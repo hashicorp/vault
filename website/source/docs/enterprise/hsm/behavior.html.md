@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Behavioral Changes - HSM Integration - Vault Enterprise"
+sidebar_title: "Behavioral Changes"
 sidebar_current: "docs-vault-enterprise-hsm-behavior"
 description: |-
   Vault Enterprise HSM support changes the way Vault works with regard to unseal and recovery keys as well as rekey and recovery operations.

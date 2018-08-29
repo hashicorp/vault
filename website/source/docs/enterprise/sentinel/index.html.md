@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Enterprise Sentinel Integration"
+sidebar_title: "Sentinel"
 sidebar_current: "docs-vault-enterprise-sentinel"
 description: |-
   An overview of how Sentinel interacts with Vault Enterprise.
