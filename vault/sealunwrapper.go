@@ -14,6 +14,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/physical"
+	physicaltypes "github.com/hashicorp/vault/physical/types"
 )
 
 // NewSealUnwrapper creates a new seal unwrapper
@@ -72,7 +73,7 @@ func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, e
 	}
 
 	var performUnwrap bool
-	se := &physical.SealWrapEntry{}
+	se := &physicaltypes.SealWrapEntry{}
 	// If the value ends in our canary value, try to decode the bytes.
 	eLen := len(entry.Value)
 	if eLen > 0 && entry.Value[eLen-1] == 's' {
@@ -109,7 +110,7 @@ func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, e
 	}
 
 	performUnwrap = false
-	se = &physical.SealWrapEntry{}
+	se = &physicaltypes.SealWrapEntry{}
 	// If the value ends in our canary value, try to decode the bytes.
 	eLen = len(entry.Value)
 	if eLen > 0 && entry.Value[eLen-1] == 's' {
