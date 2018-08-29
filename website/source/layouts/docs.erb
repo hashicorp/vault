@@ -164,6 +164,28 @@
             'token-helper'
             ]
           }, {
+            category: 'agent',
+            content: [
+              {
+                category: 'autoauth',
+                content: [
+                  {
+                    category: 'methods',
+                    content: [
+                      'aws',
+                      'azure',
+                      'gcp',
+                      'jwt',
+                      'kubernetes'
+                    ]
+                  }
+                ]
+              }, {
+                category: 'sinks',
+                content: ['file']
+              }
+            ]
+          }, {
             category: 'secrets',
             content: [
               { category: 'ad' },
@@ -228,6 +250,41 @@
               'userpass',
               'app-id',
               'mfa'
+            ]
+          }, {
+            category: 'audit',
+            content: [
+              'file',
+              'syslog',
+              'socket'
+            ]
+          }, {
+            category: 'plugin'
+          }, {
+            category: 'enterprise',
+            content: [
+              { category: 'replication' },
+              { category: 'auto-unseal' },
+              {
+                category: 'hsm',
+                content: ['behavior', 'security']
+              },
+              { category: 'sealwrap' },
+              { category: 'namespaces' },
+              { category: 'control-groups' },
+              {
+                category: 'mfa',
+                content: [
+                  'mfa-duo',
+                  'mfa-okta',
+                  'mfa-pingid',
+                  'mfa-totp'
+                ]
+              },
+              {
+                category: 'sentinel',
+                content: ['examples', 'properties']
+              }
             ]
           }
         ]) %>")

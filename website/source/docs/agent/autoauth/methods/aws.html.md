@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth AWS Method"
+sidebar_title: "AWS"
 sidebar_current: "docs-agent-autoauth-methods-aws"
 description: |-
   AWS Method for Vault Agent Auto-Auth

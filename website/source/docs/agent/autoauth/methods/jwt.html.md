@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth JWT Method"
+sidebar_title: "JWT/OIDC"
 sidebar_current: "docs-agent-autoauth-methods-jwt"
 description: |-
   JWT Method for Vault Agent Auto-Auth
