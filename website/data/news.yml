@@ -1,6 +1,11 @@
 default_link_text: "Read more"
 posts:
   -
+    title: "Vault 0.11 released"
+    body: >-
+      We are proud to announce the release of HashiCorp Vault 0.11. TThe 0.11 release of Vault delivers new features to streamline token management, implement secure multitenancy within Vault, distribute read requests across Vault nodes, graphically install Vault, and much more! 
+    link_url: "https://www.hashicorp.com/blog/vault-0-11/"
+  -
     title: "Vault 0.10 released"
     body: >-
       We are proud to announce the release of HashiCorp Vault 0.10. This
