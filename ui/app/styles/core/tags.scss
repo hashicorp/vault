@@ -10,6 +10,19 @@
   code {
     color: $grey;
   }
+
+  .icon {
+    height: 12px;
+    margin-left: -0.25em;
+    margin-right: 0.25em;
+    min-width: 0;
+    width: 12px;
+  }
+}
+
+.tag.is-outlined {
+  background-color: transparent;
+  border: 1px solid $grey-light;
 }
 
 .tag.is-bold {

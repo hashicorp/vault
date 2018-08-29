@@ -1,11 +1,7 @@
-import DS from 'ember-data';
 import Ember from 'ember';
-const { decamelize } = Ember.String;
+import ApplicationSerializer from './application';
 
-export default DS.RESTSerializer.extend({
-  keyForAttribute: function(attr) {
-    return decamelize(attr);
-  },
+export default ApplicationSerializer.extend({
   normalizeBackend(path, backend) {
     let struct = {};
     for (let attribute in backend) {
@@ -51,11 +47,20 @@ export default DS.RESTSerializer.extend({
       }
     }
 
-    const transformedPayload = { [primaryModelClass.modelName]: backends };
-    return this._super(store, primaryModelClass, transformedPayload, id, requestType);
+    return this._super(store, primaryModelClass, backends, id, requestType);
   },
 
-  serialize() {
-    return this._super(...arguments);
+  serialize(snapshot) {
+    let type = snapshot.record.get('engineType');
+    let data = this._super(...arguments);
+    // only KV uses options
+    if (type !== 'kv' && type !== 'generic') {
+      delete data.options;
+    } else if (!data.options.version) {
+      // if options.version isn't set for some reason
+      // default to 2
+      data.options.version = 2;
+    }
+    return data;
   },
 });

@@ -5,10 +5,13 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -28,6 +31,21 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	// fast path a successful exit.
 	if b.System().Tainted() {
 		return nil, nil
+	}
+
+	signingBundle, caErr := fetchCAInfo(ctx, req)
+	switch caErr.(type) {
+	case errutil.UserError:
+		return logical.ErrorResponse(fmt.Sprintf("could not fetch the CA certificate: %s", caErr)), nil
+	case errutil.InternalError:
+		return nil, fmt.Errorf("error fetching CA certificate: %s", caErr)
+	}
+	if signingBundle == nil {
+		return nil, errors.New("CA info not found")
+	}
+	colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
+	if colonSerial == certutil.GetHexFormatted(signingBundle.Certificate.SerialNumber.Bytes(), ":") {
+		return logical.ErrorResponse("adding CA to CRL is not allowed"), nil
 	}
 
 	alreadyRevoked := false
@@ -73,7 +91,9 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			return nil, fmt.Errorf("got a nil certificate")
 		}
 
-		if cert.NotAfter.Before(time.Now()) {
+		// Add a little wiggle room because leases are stored with a second
+		// granularity
+		if cert.NotAfter.Before(time.Now().Add(2 * time.Second)) {
 			return nil, nil
 		}
 
@@ -100,7 +120,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 
 	}
 
-	crlErr := buildCRL(ctx, b, req)
+	crlErr := buildCRL(ctx, b, req, false)
 	switch crlErr.(type) {
 	case errutil.UserError:
 		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
@@ -121,14 +141,39 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 
 // Builds a CRL by going through the list of revoked certificates and building
 // a new CRL with the stored revocation times and serial numbers.
-func buildCRL(ctx context.Context, b *backend, req *logical.Request) error {
-	revokedSerials, err := req.Storage.List(ctx, "revoked/")
+func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bool) error {
+	crlInfo, err := b.CRL(ctx, req.Storage)
+	if err != nil {
+		return errutil.InternalError{Err: fmt.Sprintf("error fetching CRL config information: %s", err)}
+	}
+
+	crlLifetime := b.crlLifetime
+	var revokedCerts []pkix.RevokedCertificate
+	var revInfo revocationInfo
+	var revokedSerials []string
+
+	if crlInfo != nil {
+		if crlInfo.Expiry != "" {
+			crlDur, err := time.ParseDuration(crlInfo.Expiry)
+			if err != nil {
+				return errutil.InternalError{Err: fmt.Sprintf("error parsing CRL duration of %s", crlInfo.Expiry)}
+			}
+			crlLifetime = crlDur
+		}
+
+		if crlInfo.Disable {
+			if !forceNew {
+				return nil
+			}
+			goto WRITE
+		}
+	}
+
+	revokedSerials, err = req.Storage.List(ctx, "revoked/")
 	if err != nil {
 		return errutil.InternalError{Err: fmt.Sprintf("error fetching list of revoked certs: %s", err)}
 	}
 
-	revokedCerts := []pkix.RevokedCertificate{}
-	var revInfo revocationInfo
 	for _, serial := range revokedSerials {
 		revokedEntry, err := req.Storage.Get(ctx, "revoked/"+serial)
 		if err != nil {
@@ -167,25 +212,13 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request) error {
 		revokedCerts = append(revokedCerts, newRevCert)
 	}
 
+WRITE:
 	signingBundle, caErr := fetchCAInfo(ctx, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return errutil.UserError{Err: fmt.Sprintf("could not fetch the CA certificate: %s", caErr)}
 	case errutil.InternalError:
 		return errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
-	}
-
-	crlLifetime := b.crlLifetime
-	crlInfo, err := b.CRL(ctx, req.Storage)
-	if err != nil {
-		return errutil.InternalError{Err: fmt.Sprintf("error fetching CRL config information: %s", err)}
-	}
-	if crlInfo != nil {
-		crlDur, err := time.ParseDuration(crlInfo.Expiry)
-		if err != nil {
-			return errutil.InternalError{Err: fmt.Sprintf("error parsing CRL duration of %s", crlInfo.Expiry)}
-		}
-		crlLifetime = crlDur
 	}
 
 	crlBytes, err := signingBundle.Certificate.CreateCRL(rand.Reader, signingBundle.PrivateKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))

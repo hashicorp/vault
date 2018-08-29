@@ -12,6 +12,7 @@ import (
 	"time"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
@@ -66,7 +67,21 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
-	client, err := storage.NewBasicClient(accountName, accountKey)
+	environmentName := os.Getenv("AZURE_ENVIRONMENT")
+	if environmentName == "" {
+		environmentName = conf["environment"]
+		if environmentName == "" {
+			environmentName = "AzurePublicCloud"
+		}
+	}
+	environment, err := azure.EnvironmentFromName(environmentName)
+	if err != nil {
+		errorMsg := fmt.Sprintf("failed to look up Azure environment descriptor for name %q: {{err}}",
+			environmentName)
+		return nil, errwrap.Wrapf(errorMsg, err)
+	}
+
+	client, err := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, environment)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create Azure client: {{err}}", err)
 	}

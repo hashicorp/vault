@@ -81,9 +81,9 @@ key_type       	otp
 ### Establish an SSH session
 
 ```text
-$ ssh username@localhost
+$ ssh username@x.x.x.x
 Password: <Enter OTP>
-username@ip:~$
+username@x.x.x.x:~$
 ```
 
 ### Automate it!

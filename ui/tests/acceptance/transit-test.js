@@ -231,7 +231,7 @@ const testEncryption = (assert, keyName) => {
   });
 };
 test('transit backend', function(assert) {
-  assert.expect(50);
+  assert.expect(49);
   const now = new Date().getTime();
   const transitPath = `transit-${now}`;
 
@@ -259,9 +259,8 @@ test('transit backend', function(assert) {
     }
     click('[data-test-transit-key-actions-link]');
     andThen(() => {
-      assert.equal(
-        currentURL(),
-        `/vault/secrets/${transitPath}/actions/${key.name}`,
+      assert.ok(
+        currentURL().startsWith(`/vault/secrets/${transitPath}/actions/${key.name}`),
         `${key.name}: navigates to tranist actions`
       );
       if (index === 0) {

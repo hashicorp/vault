@@ -66,6 +66,10 @@ Router.map(function() {
         });
         this.route('control-groups');
         this.route('control-group-accessor', { path: '/control-groups/:accessor' });
+        this.route('namespaces', function() {
+          this.route('index', { path: '/' });
+          this.route('create');
+        });
       });
       this.route('secrets', function() {
         this.route('backends', { path: '/' });

@@ -1,6 +1,7 @@
 <form {{action (perform save) on="submit"}}>
-  {{message-error model=model}}
   <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode={{mode}} @noun={{lowercase (humanize model.identityType)}} />
+    {{message-error model=model}}
     {{#if (eq mode "merge")}}
       {{#message-in-page type="warning"}}
         Metadata on merged entities is not preserved, you will need to recreate it on the entity you merge to.
@@ -22,13 +23,13 @@
           {{/if}}
         </button>
         {{#if (or (eq mode "merge") (eq mode "create" ))}}
-          <a href={{href-to cancelLink}} class="button" data-test-cancel-link>
+          {{#link-to cancelLink class="button" data-test-cancel-link=true}}
             Cancel
-          </a>
+          {{/link-to}}
         {{else}}
-          <a href={{href-to cancelLink model.id "details"}} class="button" data-test-cancel-link>
+          {{#link-to cancelLink model.id "details" class="button" data-test-cancel-link=true}}
             Cancel
-          </a>
+          {{/link-to}}
         {{/if}}
       </div>
     </div>

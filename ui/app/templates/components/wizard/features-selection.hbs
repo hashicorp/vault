@@ -1,0 +1,41 @@
+<WizardContent @headerText="Vault Web UI" @glyph="tour">
+  <h2 class="title is-6">
+    Choosing where to go
+  </h2>
+  <p>You did it! You now have access to your Vault and can start entering your data. We can help you get started with any of the options below</p>
+  {{#if (or (has-feature "Performance Replication") (has-feature "DR Replication")) }}
+  {{/if}}
+  <h3 class="feature-header">Walk me through setting up:</h3>
+  <form id="features-form" class="feature-selection" {{action "saveFeatures" on="submit"}}>
+    {{#each allFeatures as |feature|}}
+    {{#if feature.show}}
+    <div class="feature-box {{if feature.selected 'is-active'}}">
+      <div class="b-checkbox">
+        <input
+          id="feature-{{feature.key}}"
+          type="checkbox"
+          class="styled"
+          checked={{feature.selected}}
+          onchange={{action (mut feature.selected) value="target.checked"}}
+         />
+        <label for="feature-{{feature.key}}">{{feature.name}}</label>
+        <button type="button" class="button is-ghost icon is-pulled-right" onclick={{action (toggle (concat feature.key "-isOpen") this)}}>
+          <ICon
+            @glyph={{if (get this (concat feature.key "-isOpen")) "chevron-up" "chevron-down"}}
+            @class="has-text-grey auto-width is-paddingless is-flex-column"
+          />
+        </button>
+      </div>
+      {{#if (get this (concat feature.key "-isOpen"))}}
+        <ul class="feature-steps">
+          {{#each feature.steps as |step|}}
+            <li>{{step}}</li>
+          {{/each}}
+        </ul>
+      {{/if}}
+    </div>
+    {{/if}}
+    {{/each}}
+    <button type="submit" class="button is-primary">Start</button>
+  </form>
+</WizardContent>

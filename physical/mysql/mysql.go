@@ -37,6 +37,7 @@ const mysqlTLSKey = "default"
 // within MySQL database.
 type MySQLBackend struct {
 	dbTable      string
+	dbLockTable  string
 	client       *sql.DB
 	statements   map[string]*sql.Stmt
 	logger       log.Logger
@@ -44,6 +45,7 @@ type MySQLBackend struct {
 	conf         map[string]string
 	redirectHost string
 	redirectPort int64
+	haEnabled    bool
 }
 
 // NewMySQLBackend constructs a MySQL backend using the given API client and
@@ -64,7 +66,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if !ok {
 		table = "vault"
 	}
-	dbTable := "`" + database + "`" + "." + "`" + table + "`"
+	dbTable := "`" + database + "`.`" + table + "`"
 
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
@@ -115,52 +117,72 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
+	// Default value for ha_enabled
+	haEnabledStr, ok := conf["ha_enabled"]
+	if !ok {
+		haEnabledStr = "false"
+	}
+	haEnabled, err := strconv.ParseBool(haEnabledStr)
+	if err != nil {
+		return nil, fmt.Errorf("value [%v] of 'ha_enabled' could not be understood", haEnabledStr)
+	}
+
 	locktable, ok := conf["lock_table"]
 	if !ok {
-		locktable = "vault_lock"
+		locktable = table + "_lock"
 	}
 
-	dbLockTable := database + "." + locktable
+	dbLockTable := "`" + database + "`.`" + locktable + "`"
 
-	// Check table exists
-	var lockTableExist bool
-	lockTableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", locktable, database)
+	// Only create lock table if ha_enabled is true
+	if haEnabled {
+		// Check table exists
+		var lockTableExist bool
+		lockTableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", locktable, database)
 
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to check mysql table exist: {{err}}", err)
-	}
-	defer lockTableRows.Close()
-	lockTableExist = lockTableRows.Next()
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to check mysql table exist: {{err}}", err)
+		}
+		defer lockTableRows.Close()
+		lockTableExist = lockTableRows.Next()
 
-	// Create the required table if it doesn't exists.
-	if !lockTableExist {
-		create_query := "CREATE TABLE IF NOT EXISTS " + dbLockTable +
-			" (node_job varchar(512), current_leader varchar(512), PRIMARY KEY (node_job))"
-		if _, err := db.Exec(create_query); err != nil {
-			return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
+		// Create the required table if it doesn't exists.
+		if !lockTableExist {
+			create_query := "CREATE TABLE IF NOT EXISTS " + dbLockTable +
+				" (node_job varchar(512), current_leader varchar(512), PRIMARY KEY (node_job))"
+			if _, err := db.Exec(create_query); err != nil {
+				return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
+			}
 		}
 	}
 
 	// Setup the backend.
 	m := &MySQLBackend{
-		dbTable:    dbTable,
-		client:     db,
-		statements: make(map[string]*sql.Stmt),
-		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
-		conf:       conf,
+		dbTable:     dbTable,
+		dbLockTable: dbLockTable,
+		client:      db,
+		statements:  make(map[string]*sql.Stmt),
+		logger:      logger,
+		permitPool:  physical.NewPermitPool(maxParInt),
+		conf:        conf,
+		haEnabled:   haEnabled,
 	}
 
 	// Prepare all the statements required
 	statements := map[string]string{
 		"put": "INSERT INTO " + dbTable +
 			" VALUES( ?, ? ) ON DUPLICATE KEY UPDATE vault_value=VALUES(vault_value)",
-		"get":       "SELECT vault_value FROM " + dbTable + " WHERE vault_key = ?",
-		"delete":    "DELETE FROM " + dbTable + " WHERE vault_key = ?",
-		"list":      "SELECT vault_key FROM " + dbTable + " WHERE vault_key LIKE ?",
-		"get_lock":  "SELECT current_leader FROM " + dbLockTable + " WHERE node_job = ?",
-		"used_lock": "SELECT IS_USED_LOCK(?)",
+		"get":    "SELECT vault_value FROM " + dbTable + " WHERE vault_key = ?",
+		"delete": "DELETE FROM " + dbTable + " WHERE vault_key = ?",
+		"list":   "SELECT vault_key FROM " + dbTable + " WHERE vault_key LIKE ?",
 	}
+
+	// Only prepare ha-related statements if we need them
+	if haEnabled {
+		statements["get_lock"] = "SELECT current_leader FROM " + dbLockTable + " WHERE node_job = ?"
+		statements["used_lock"] = "SELECT IS_USED_LOCK(?)"
+	}
+
 	for name, query := range statements {
 		if err := m.prepare(name, query); err != nil {
 			return nil, err
@@ -364,7 +386,7 @@ func (m *MySQLBackend) LockWith(key, value string) (physical.Lock, error) {
 }
 
 func (m *MySQLBackend) HAEnabled() bool {
-	return true
+	return m.haEnabled
 }
 
 // MySQLHALock is a MySQL Lock implementation for the HABackend
@@ -549,18 +571,6 @@ func NewMySQLLock(in *MySQLBackend, l log.Logger, key, value string) (*MySQLLock
 	// the rest of the MySQL backend and any cleanup that might need to be done.
 	conn, _ := NewMySQLClient(in.conf, in.logger)
 
-	table, ok := in.conf["lock_table"]
-	if !ok {
-		table = "vault_lock"
-	}
-
-	database, ok := in.conf["database"]
-	if !ok {
-		database = "vault"
-	}
-
-	dbTable := database + "." + table
-
 	m := &MySQLLock{
 		parentConn: in,
 		in:         conn,
@@ -571,7 +581,7 @@ func NewMySQLLock(in *MySQLBackend, l log.Logger, key, value string) (*MySQLLock
 	}
 
 	statements := map[string]string{
-		"put": "INSERT INTO " + dbTable +
+		"put": "INSERT INTO " + in.dbLockTable +
 			" VALUES( ?, ? ) ON DUPLICATE KEY UPDATE current_leader=VALUES(current_leader)",
 	}
 

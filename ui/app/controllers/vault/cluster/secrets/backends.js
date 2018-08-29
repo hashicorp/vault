@@ -8,7 +8,7 @@ export default Controller.extend({
 
   supportedBackends: computed('displayableBackends', 'displayableBackends.[]', function() {
     return (this.get('displayableBackends') || [])
-      .filter(backend => LINKED_BACKENDS.includes(backend.get('type')))
+      .filter(backend => LINKED_BACKENDS.includes(backend.get('engineType')))
       .sortBy('id');
   }),
 

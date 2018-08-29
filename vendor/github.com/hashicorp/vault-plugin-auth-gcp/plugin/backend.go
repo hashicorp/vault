@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -145,8 +146,8 @@ func (b *GcpAuthBackend) initClients(ctx context.Context, s logical.Storage) (er
 		if err != nil {
 			return fmt.Errorf("credentials were not configured and fallback to application default credentials failed: %v", err)
 		}
-
-		httpClient = oauth2.NewClient(ctx, tknSrc)
+		cleanCtx := context.WithValue(context.Background(), oauth2.HTTPClient, cleanhttp.DefaultClient())
+		httpClient = oauth2.NewClient(cleanCtx, tknSrc)
 	} else {
 		httpClient, err = gcputil.GetHttpClient(config.Credentials, b.oauthScopes...)
 		if err != nil {

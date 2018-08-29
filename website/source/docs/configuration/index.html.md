@@ -98,10 +98,6 @@ to specify where the configuration is.
     LimitMEMLOCK=infinity
     ```
 
-- `disable_sealwrap` `(bool: false)` – Disables using [seal wrapping][sealwrap]
-  for any value except the master key. If this value is toggled, the new
-  behavior will happen lazily (as values are read or written).
-
 - `plugin_directory` `(string: "")` – A directory from which plugins are
   allowed to be loaded. Vault must have permission to read files in this
   directory to successfully load plugins.
@@ -149,6 +145,19 @@ The following parameters are used on backends that support [high availability][h
 - `disable_clustering` `(bool: false)` – Specifies whether clustering features
   such as request forwarding are enabled. Setting this to true on one Vault node
   will disable these features _only when that node is the active node_.
+
+### Vault Enterprise Parameters
+
+The following parameters are only used with Vault Enterprise
+
+- `disable_sealwrap` `(bool: false)` – Disables using [seal wrapping][sealwrap]
+  for any value except the master key. If this value is toggled, the new
+  behavior will happen lazily (as values are read or written).
+
+- `disable_performance_standby` `(bool: false)` – Specifies whether performance
+  standbys should be disabled on this node. Setting this to true on one Vault
+  node will disable this feature when this node is Active or Standby. It's
+  recomended to sync this setting across all nodes in the cluster.
 
 [storage-backend]: /docs/configuration/storage/index.html
 [listener]: /docs/configuration/listener/index.html

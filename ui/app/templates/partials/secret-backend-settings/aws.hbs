@@ -2,15 +2,15 @@
   <nav class="tabs sub-nav">
     <ul>
       {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='') tagName="li"}}
-        <a href="{{href-to  "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='') }}" data-test-aws-link="root-creds">
+        {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='') data-test-aws-link="root-creds"}}
           Dynamic IAM Root Credentials
-        </a>
+        {{/link-to}}
       {{/link-to}}
 
       {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='leases') tagName="li"}}
-        <a href="{{href-to  "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='leases') }}" data-test-aws-link="leases">
+        {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='leases') data-test-aws-link="leases"}}
           Leases
-        </a>
+        {{/link-to}}
       {{/link-to}}
     </ul>
   </nav>
@@ -21,6 +21,7 @@
     data-test-aws-leases-form="true"
   >
     <div class="box is-fullwidth is-shadowless is-marginless">
+      <NamespaceReminder @mode="saved" @noun="configuration" />
       {{message-error model=model}}
       <p class="has-text-grey-dark">
         If you do not supply lease settings, we will use the default values in AWS.
@@ -40,6 +41,7 @@
     data-test-aws-root-creds-form="true"
   >
     <div class="box is-fullwidth is-shadowless is-marginless">
+      <NamespaceReminder @mode="save" @noun="configuration" />
       <p class="has-text-grey-dark">
       Note: the client uses the official AWS SDK and will use the specified credentials, environment credentials, shared file credentials, or IAM role/ECS task credentials in that order.
       </p>

@@ -1,6 +1,7 @@
 import { test } from 'qunit';
 import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
 import backendListPage from 'vault/tests/pages/secrets/backends';
+import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 
 moduleForAcceptance('Acceptance | settings', {
   beforeEach() {
@@ -20,17 +21,17 @@ test('settings', function(assert) {
   visit('/vault/settings/mount-secret-backend');
   andThen(function() {
     assert.equal(currentURL(), '/vault/settings/mount-secret-backend');
+
+    mountSecrets
+      .selectType(type)
+      .next()
+      .path(path)
+      .toggleOptions()
+      .defaultTTLVal(100)
+      .defaultTTLUnit('s')
+      .submit();
   });
 
-  fillIn('[data-test-secret-backend-type]', type);
-  fillIn('[data-test-secret-backend-path]', path);
-  click('[data-test-secret-backend-options]');
-
-  // set a ttl of 100s
-  fillIn('[data-test-secret-backend-default-ttl] input', 100);
-  fillIn('[data-test-secret-backend-default-ttl] select', 's');
-
-  click('[data-test-secret-backend-submit]');
   andThen(() => {
     assert.equal(currentURL(), `/vault/secrets`, 'redirects to secrets page');
     assert.ok(

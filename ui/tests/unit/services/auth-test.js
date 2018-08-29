@@ -118,7 +118,13 @@ let GITHUB_RESPONSE = {
 };
 
 moduleFor('service:auth', 'Unit | Service | auth', {
-  needs: ['service:flash-messages', 'adapter:cluster', 'service:version', 'service:control-group'],
+  needs: [
+    'service:flash-messages',
+    'adapter:cluster',
+    'service:version',
+    'service:control-group',
+    'service:namespace',
+  ],
   beforeEach: function() {
     Ember.getOwner(this).lookup('service:flash-messages').registerTypes(['warning']);
     this.store = storage();
@@ -250,15 +256,15 @@ test('github authentication', function(assert) {
   });
 
   Ember.run(() => {
-    service.authenticate({ clusterId: '1', backend: 'GitHub', data: { token: 'test' } }).then(() => {
+    service.authenticate({ clusterId: '1', backend: 'github', data: { token: 'test' } }).then(() => {
       const clusterTokenName = service.get('currentTokenName');
       const clusterToken = service.get('currentToken');
       const authData = service.get('authData');
-      const expectedTokenName = `${TOKEN_PREFIX}GitHub${TOKEN_SEPARATOR}1`;
+      const expectedTokenName = `${TOKEN_PREFIX}github${TOKEN_SEPARATOR}1`;
 
       assert.equal(GITHUB_RESPONSE.auth.client_token, clusterToken, 'token is saved properly');
       assert.equal(expectedTokenName, clusterTokenName, 'token name is saved properly');
-      assert.equal('GitHub', authData.backend.type, 'backend is saved properly');
+      assert.equal('github', authData.backend.type, 'backend is saved properly');
       assert.equal(
         GITHUB_RESPONSE.auth.metadata.org + '/' + GITHUB_RESPONSE.auth.metadata.username,
         authData.displayName,

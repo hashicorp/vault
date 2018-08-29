@@ -154,8 +154,11 @@ func (c *Core) fetchACLTokenEntryAndEntity(req *logical.Request) (*ACL, *logical
 	allPolicies := append(te.Policies, identityPolicies...)
 
 	// Construct the corresponding ACL object
-	acl, err := c.policyStore.ACL(c.activeContext, allPolicies...)
+	acl, err := c.policyStore.ACL(c.activeContext, entity, allPolicies...)
 	if err != nil {
+		if errwrap.ContainsType(err, new(TemplateError)) {
+			return nil, nil, nil, nil, err
+		}
 		c.logger.Error("failed to construct ACL", "error", err)
 		return nil, nil, nil, nil, ErrInternalError
 	}
@@ -181,6 +184,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		// unauth, we just have no information to attach to the request, so
 		// ignore errors...this was best-effort anyways
 		if err != nil && !unauth {
+			if errwrap.ContainsType(err, new(TemplateError)) {
+				c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor")
+				err = logical.ErrPermissionDenied
+			}
 			return nil, te, err
 		}
 	}
@@ -286,13 +293,13 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 	ctx, cancel := context.WithCancel(c.activeContext)
 	defer cancel()
 
-	go func() {
+	go func(ctx context.Context, httpCtx context.Context) {
 		select {
 		case <-ctx.Done():
 		case <-httpCtx.Done():
 			cancel()
 		}
-	}()
+	}(ctx, httpCtx)
 
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
@@ -628,22 +635,6 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}
 
-	// If the request was to renew a token, and if there are group aliases set
-	// in the auth object, then the group memberships should be refreshed
-	if strings.HasPrefix(req.Path, "auth/token/renew") &&
-		resp != nil &&
-		resp.Auth != nil &&
-		resp.Auth.EntityID != "" &&
-		resp.Auth.GroupAliases != nil &&
-		c.identityStore != nil {
-		err := c.identityStore.refreshExternalGroupMembershipsByEntityID(resp.Auth.EntityID, resp.Auth.GroupAliases)
-		if err != nil {
-			c.logger.Error("failed to refresh external group memberships", "error", err)
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, auth, retErr
-		}
-	}
-
 	// Only the token store is allowed to return an auth block, for any
 	// other request this is an internal error. We exclude renewal of a token,
 	// since it does not need to be re-registered
@@ -807,10 +798,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 			auth.EntityID = entity.ID
 			if auth.GroupAliases != nil {
-				err = c.identityStore.refreshExternalGroupMembershipsByEntityID(auth.EntityID, auth.GroupAliases)
+				validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(auth.EntityID, auth.GroupAliases)
 				if err != nil {
 					return nil, nil, err
 				}
+				auth.GroupAliases = validAliases
 			}
 		}
 

@@ -5,6 +5,7 @@ const { inject } = Ember;
 
 export default Ember.Route.extend(ClusterRoute, {
   version: inject.service(),
+  wizard: inject.service(),
   queryParams: {
     page: {
       refreshModel: true,
@@ -12,6 +13,12 @@ export default Ember.Route.extend(ClusterRoute, {
     pageFilter: {
       refreshModel: true,
     },
+  },
+
+  activate() {
+    if (this.get('wizard.featureState') === 'details') {
+      this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', this.policyType());
+    }
   },
 
   shouldReturnEmptyModel(policyType, version) {

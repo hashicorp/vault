@@ -47,7 +47,7 @@ func TestMySQLBackend(t *testing.T) {
 
 	defer func() {
 		mysql := b.(*MySQLBackend)
-		_, err := mysql.client.Exec("DROP TABLE " + mysql.dbTable)
+		_, err := mysql.client.Exec("DROP TABLE IF EXISTS " + mysql.dbTable + " ," + mysql.dbLockTable)
 		if err != nil {
 			t.Fatalf("Failed to drop table: %v", err)
 		}
@@ -80,11 +80,12 @@ func TestMySQLHABackend(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewMySQLBackend(map[string]string{
-		"address":  address,
-		"database": database,
-		"table":    table,
-		"username": username,
-		"password": password,
+		"address":    address,
+		"database":   database,
+		"table":      table,
+		"username":   username,
+		"password":   password,
+		"ha_enabled": "true",
 	}, logger)
 
 	if err != nil {
@@ -93,7 +94,7 @@ func TestMySQLHABackend(t *testing.T) {
 
 	defer func() {
 		mysql := b.(*MySQLBackend)
-		_, err := mysql.client.Exec("DROP TABLE " + mysql.dbTable)
+		_, err := mysql.client.Exec("DROP TABLE IF EXISTS " + mysql.dbTable + " ," + mysql.dbLockTable)
 		if err != nil {
 			t.Fatalf("Failed to drop table: %v", err)
 		}
@@ -101,7 +102,7 @@ func TestMySQLHABackend(t *testing.T) {
 
 	ha, ok := b.(physical.HABackend)
 	if !ok {
-		t.Fatalf("zookeeper does not implement HABackend")
+		t.Fatalf("MySQL does not implement HABackend")
 	}
 	physical.ExerciseHABackend(t, ha, ha)
 }

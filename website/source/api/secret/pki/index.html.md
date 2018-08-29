@@ -236,6 +236,7 @@ $ curl \
   "renewable": false,
   "lease_duration": 0,
   "data": {
+      "disable": false,
       "expiry": "72h"
     },
   "auth": null
@@ -245,7 +246,15 @@ $ curl \
 ## Set CRL Configuration
 
 This endpoint allows setting the duration for which the generated CRL should be
-marked valid.
+marked valid. If the CRL is disabled, it will return a signed but zero-length
+CRL for any request. If enabled, it will re-build the CRL.
+
+  ~> Note: Disabling the CRL does not affect whether revoked certificates are
+  stored internally. Certificates that have been revoked when a role's
+  certificate storage is enabled will continue to be marked and stored as
+  revoked until `tidy` has been run with the desired safety buffer. Re-enabling
+  CRL generation will then result in all such certificates becoming a part of
+  the CRL.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -254,6 +263,7 @@ marked valid.
 ### Parameters
 
 - `expiry` `(string: "72h")` – Specifies the time until expiration.
+- `disable` `(bool: false)` – Disables or enables CRL building.
 
 ### Sample Payload
 

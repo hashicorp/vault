@@ -19,6 +19,10 @@ through use of a reference architecture. This example is to convey a general
 architecture, which is likely to be adapted to accommodate the specific needs of
 each implementation.
 
+- [Vault Deployment Guide](/guides/operations/deployment-guide.html) covers the
+steps required to install and configure a single HashiCorp Vault cluster as
+defined in the Vault Reference Architecture.
+
 - [Vault HA with Consul](/guides/operations/vault-ha-consul.html) guide
 walks you through a simple Vault HA cluster implementation which is backed by
 [HashiCorp Consul](https://www.consul.io/intro/index.html).
@@ -58,6 +62,9 @@ cluster.
 guide demonstrates how to selectively filter out secret engines from being
 replicated across clusters. This feature can help organizations to comply with
 ***General Data Protection Regulation (GDPR)***.
+
+- [Multi-Tenant Pattern with Namespaces](/guides/operations/multi-tenant.html) guide discuss a pattern to
+isolate secrets using ACL Namespaces.
 
 - [Vault Auto-unseal using AWS Key Management Service (KMS)](/guides/operations/autounseal-aws-kms.html) guide demonstrates an example of
 how to use Terraform to provision an instance that utilizes an encryption key

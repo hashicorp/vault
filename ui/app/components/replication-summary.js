@@ -2,7 +2,7 @@ import Ember from 'ember';
 import decodeConfigFromJWT from 'vault/utils/decode-config-from-jwt';
 import ReplicationActions from 'vault/mixins/replication-actions';
 
-const { computed, get } = Ember;
+const { computed, get, Component, inject } = Ember;
 
 const DEFAULTS = {
   mode: 'primary',
@@ -17,7 +17,9 @@ const DEFAULTS = {
   replicationMode: 'dr',
 };
 
-export default Ember.Component.extend(ReplicationActions, DEFAULTS, {
+export default Component.extend(ReplicationActions, DEFAULTS, {
+  wizard: inject.service(),
+  version: inject.service(),
   didReceiveAttrs() {
     this._super(...arguments);
     const initialReplicationMode = this.get('initialReplicationMode');
@@ -28,7 +30,6 @@ export default Ember.Component.extend(ReplicationActions, DEFAULTS, {
   showModeSummary: false,
   initialReplicationMode: null,
   cluster: null,
-  version: Ember.inject.service(),
 
   replicationAttrs: computed.alias('cluster.replicationAttrs'),
 
@@ -55,7 +56,6 @@ export default Ember.Component.extend(ReplicationActions, DEFAULTS, {
       ) {
         return false;
       }
-
       return true;
     }
   ),
@@ -66,7 +66,12 @@ export default Ember.Component.extend(ReplicationActions, DEFAULTS, {
 
   actions: {
     onSubmit(/*action, mode, data, event*/) {
-      return this.submitHandler(...arguments);
+      let promise = this.submitHandler(...arguments);
+      let wizard = this.get('wizard');
+      promise.then(() => {
+        wizard.transitionFeatureMachine(wizard.get('featureState'), 'ENABLEREPLICATION');
+      });
+      return promise;
     },
 
     clear() {

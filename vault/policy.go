@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/hclutil"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/mitchellh/copystructure"
 )
@@ -81,10 +82,11 @@ var (
 // Policy is used to represent the policy specified by
 // an ACL configuration.
 type Policy struct {
-	Name  string       `hcl:"name"`
-	Paths []*PathRules `hcl:"-"`
-	Raw   string
-	Type  PolicyType
+	Name      string       `hcl:"name"`
+	Paths     []*PathRules `hcl:"-"`
+	Raw       string
+	Type      PolicyType
+	Templated bool
 }
 
 // PathRules represents a policy for a path in the namespace.
@@ -152,6 +154,27 @@ func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 // intermediary set of policies, before being compiled into
 // the ACL
 func ParseACLPolicy(rules string) (*Policy, error) {
+	return parseACLPolicyWithTemplating(rules, false, nil, nil)
+}
+
+// parseACLPolicyWithTemplating performs the actual work and checks whether we
+// should perform substitutions. If performTemplating is true we know that it
+// is templated so we don't check again, otherwise we check to see if it's a
+// templated policy.
+func parseACLPolicyWithTemplating(rules string, performTemplating bool, entity *identity.Entity, groups []*identity.Group) (*Policy, error) {
+	// Check for templating
+	var hasTemplating bool
+	var err error
+	if !performTemplating {
+		hasTemplating, _, err = identity.PopulateString(&identity.PopulateStringInput{
+			ValidityCheckOnly: true,
+			String:            rules,
+		})
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to validate policy templating: {{err}}", err)
+		}
+	}
+
 	// Parse the rules
 	root, err := hcl.Parse(rules)
 	if err != nil {
@@ -177,12 +200,13 @@ func ParseACLPolicy(rules string) (*Policy, error) {
 	var p Policy
 	p.Raw = rules
 	p.Type = PolicyTypeACL
+	p.Templated = hasTemplating || performTemplating
 	if err := hcl.DecodeObject(&p, list); err != nil {
 		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
 	}
 
 	if o := list.Filter("path"); len(o.Items) > 0 {
-		if err := parsePaths(&p, o); err != nil {
+		if err := parsePaths(&p, o, performTemplating, entity, groups); err != nil {
 			return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
 		}
 	}
@@ -190,14 +214,29 @@ func ParseACLPolicy(rules string) (*Policy, error) {
 	return &p, nil
 }
 
-func parsePaths(result *Policy, list *ast.ObjectList) error {
+func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, entity *identity.Entity, groups []*identity.Group) error {
 	paths := make([]*PathRules, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "path"
 		if len(item.Keys) > 0 {
 			key = item.Keys[0].Token.Value().(string)
 		}
+
+		// Check the path
+		if performTemplating {
+			_, templated, err := identity.PopulateString(&identity.PopulateStringInput{
+				String: key,
+				Entity: entity,
+				Groups: groups,
+			})
+			if err != nil {
+				continue
+			}
+			key = templated
+		}
+
 		valid := []string{
+			"comment",
 			"policy",
 			"capabilities",
 			"allowed_parameters",
@@ -216,6 +255,7 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		pc.Permissions = new(ACLPermissions)
 
 		pc.Prefix = key
+
 		if err := hcl.DecodeObject(&pc, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
 		}

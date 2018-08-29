@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+// Factory returns a Nomad backend that satisfies the logical.Backend interface
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {
@@ -16,6 +17,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return b, nil
 }
 
+// Backend returns the configured Nomad backend
 func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
@@ -66,5 +68,6 @@ func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, e
 	if err != nil {
 		return nil, err
 	}
+
 	return client, nil
 }

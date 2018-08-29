@@ -1,6 +1,7 @@
 {
   "ui":true,
   "raw_storage_endpoint":true,
+  "disable_sealwrap":true,
   "listener":[
     {
       "tcp":{

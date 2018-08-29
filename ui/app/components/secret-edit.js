@@ -6,7 +6,7 @@ import KVObject from 'vault/lib/kv-object';
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
-const { get, computed } = Ember;
+const { get, computed, inject } = Ember;
 
 export default Ember.Component.extend(FocusOnInsertMixin, {
   // a key model
@@ -35,6 +35,8 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
 
   hasLintError: false,
 
+  wizard: inject.service(),
+
   init() {
     this._super(...arguments);
     const secrets = this.get('key.secretData');
@@ -45,6 +47,11 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
       this.set('preferAdvancedEdit', true);
     }
     this.checkRows();
+    if (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') {
+      let engine = this.get('key').backend.includes('kv') ? 'kv' : this.get('key').backend;
+      this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', engine);
+    }
+
     if (this.get('mode') === 'edit') {
       this.send('addRow');
     }
@@ -144,6 +151,9 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
 
     return model[method]().then(() => {
       if (!Ember.get(model, 'isError')) {
+        if (this.get('wizard.featureState') === 'secret') {
+          this.get('wizard').transitionFeatureMachine('secret', 'CONTINUE');
+        }
         successCallback(key);
       }
     });

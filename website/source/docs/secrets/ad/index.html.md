@@ -84,7 +84,7 @@ to generate passwords:
     $ vault write ad/config \
         binddn=$USERNAME \
         bindpass=$PASSWORD \
-        url=ldap://138.91.247.105 \
+        url=ldaps://138.91.247.105 \
         userdn='dc=example,dc=com'
     ```
 

@@ -22,7 +22,7 @@ export default Ember.Route.extend({
     let { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let { secret } = this.paramsFor(this.routeName);
     let backendModel = this.store.peekRecord('secret-engine', backend);
-    let type = backendModel && backendModel.get('type');
+    let type = backendModel && backendModel.get('engineType');
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.transitionTo('vault.cluster.secrets');
     }
@@ -33,7 +33,7 @@ export default Ember.Route.extend({
 
   getModelType(backend, tab) {
     let backendModel = this.store.peekRecord('secret-engine', backend);
-    let type = backendModel.get('type');
+    let type = backendModel.get('engineType');
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
@@ -115,7 +115,7 @@ export default Ember.Route.extend({
       backend,
       backendModel,
       baseKey: { id: secret },
-      backendType: backendModel.get('type'),
+      backendType: backendModel.get('engineType'),
     });
     if (!has404) {
       const pageFilter = secretParams.pageFilter;
