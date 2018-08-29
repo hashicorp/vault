@@ -142,7 +142,7 @@ proto:
 	protoc helper/storagepacker/types.proto --go_out=plugins=grpc:../../..
 	protoc helper/forwarding/types.proto --go_out=plugins=grpc:../../..
 	protoc logical/*.proto --go_out=plugins=grpc:../../..
-	protoc physical/types/types.proto --go_out=plugins=grpc:../../..
+	protoc physical/types.proto --go_out=plugins=grpc:../../..
 	protoc helper/identity/types.proto --go_out=plugins=grpc:../../..
 	protoc builtin/logical/database/dbplugin/*.proto --go_out=plugins=grpc:../../..
 	protoc logical/plugin/pb/*.proto --go_out=plugins=grpc:../../..
