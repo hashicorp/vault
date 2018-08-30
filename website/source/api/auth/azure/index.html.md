@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "Azure - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-azure"
+sidebar_current: "api-http-auth-azure"
 description: |-
   This is the API documentation for the Vault Azure authentication
   method plugin.

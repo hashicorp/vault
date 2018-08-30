@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/init - HTTP API"
-sidebar_current: "docs-http-system-init"
+sidebar_current: "api-http-system-init"
 description: |-
   The `/sys/init` endpoint is used to initialize a new Vault.
 ---

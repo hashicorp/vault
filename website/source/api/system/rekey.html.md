@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/rekey - HTTP API"
-sidebar_current: "docs-http-system-rekey"
+sidebar_current: "api-http-system-rekey"
 description: |-
   The `/sys/rekey` endpoints are used to rekey the unseal keys for Vault.
 ---

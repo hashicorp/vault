@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "Cassandra - Database - Secrets Engines - HTTP API"
 sidebar_title: "Cassandra"
-sidebar_current: "docs-http-secret-databases-cassandra"
+sidebar_current: "api-http-secret-databases-cassandra"
 description: |-
   The Cassandra plugin for Vault's database secrets engine generates database credentials to access Cassandra servers.
 ---

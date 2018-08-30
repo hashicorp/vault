@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/wrapping/lookup - HTTP API"
-sidebar_current: "docs-http-system-wrapping-lookup"
+sidebar_current: "api-http-system-wrapping-lookup"
 description: |-
   The `/sys/wrapping/lookup` endpoint returns wrapping token properties.
 ---

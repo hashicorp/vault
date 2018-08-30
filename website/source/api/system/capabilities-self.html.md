@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/capabilities-self - HTTP API"
-sidebar_current: "docs-http-system-capabilities-self"
+sidebar_current: "api-http-system-capabilities-self"
 description: |-
   The `/sys/capabilities-self` endpoint is used to fetch the capabilities of
   client token on the given paths.

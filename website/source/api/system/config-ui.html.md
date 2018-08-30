@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/config/ui - HTTP API"
-sidebar_current: "docs-http-system-config-ui"
+sidebar_current: "api-http-system-config-ui"
 description: |-
   The '/sys/config/ui' endpoint configures the UI.
 ---

@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "MongoDB - Secrets Engines - HTTP API"
 sidebar_title: "MongoDB <sup>DEPRECATED</sup>"
-sidebar_current: "docs-http-secret-mongodb"
+sidebar_current: "api-http-secret-mongodb"
 description: |-
   This is the API documentation for the Vault MongoDB secrets engine.
 ---

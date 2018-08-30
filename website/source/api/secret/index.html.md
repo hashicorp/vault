@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "Secrets Engines - HTTP API"
 sidebar_title: "Secrets Engines"
-sidebar_current: "docs-http-secret"
+sidebar_current: "api-http-secret"
 description: |-
   Each secrets engine publishes its own set of API paths and methods. These
   endpoints are documented in this section.

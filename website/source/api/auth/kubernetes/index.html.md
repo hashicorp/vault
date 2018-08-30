@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "Kubernetes - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-kubernetes"
+sidebar_current: "api-http-auth-kubernetes"
 description: |-
   This is the API documentation for the Vault Kubernetes auth method plugin.
 ---

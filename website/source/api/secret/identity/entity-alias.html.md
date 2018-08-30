@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "Identity Secret Backend: Entity Alias - HTTP API"
 sidebar_title: "Entity Alias"
-sidebar_current: "docs-http-secret-identity-entity-alias"
+sidebar_current: "api-http-secret-identity-entity-alias"
 description: |-
   This is the API documentation for managing entity aliases in the identity store.
 ---

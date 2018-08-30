@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "JWT - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-jwt"
+sidebar_current: "api-http-auth-jwt"
 description: |-
   This is the API documentation for the Vault JWT authentication
   method plugin.
@@ -109,7 +109,7 @@ entities attempting to login. At least one of the bound values must be set.
   using this role, in seconds.
 - `period` `(int: <optional>)` - If set, indicates that the token generated
   using this role should never expire, but instead always use the value set
-  here as the TTL for every renewal. 
+  here as the TTL for every renewal.
 - `num_uses` `(int: <optional>)` - If set, puts a use-count limitation on the
   issued token.
 - `bound_subject` `(string: <optional>)` - If set, requires that the `sub`

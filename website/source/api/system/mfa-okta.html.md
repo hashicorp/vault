@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/mfa/method/okta - HTTP API"
-sidebar_current: "docs-http-system-mfa-okta"
+sidebar_current: "api-http-system-mfa-okta"
 description: |-
   The '/sys/mfa/method/okta' endpoint focuses on managing Okta MFA behaviors in Vault Enterprise.
 ---

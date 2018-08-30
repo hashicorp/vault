@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "Active Directory - Secrets Engines - HTTP API"
 sidebar_title: "Active Directory"
-sidebar_current: "docs-http-secret-active-directory"
+sidebar_current: "api-http-secret-active-directory"
 description: |-
   This is the API documentation for the Vault Active Directory secrets engine.
 ---

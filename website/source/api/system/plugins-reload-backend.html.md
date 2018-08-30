@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/plugins/reload/backend - HTTP API"
-sidebar_current: "docs-http-system-plugins-reload-backend"
+sidebar_current: "api-http-system-plugins-reload-backend"
 description: |-
   The `/sys/plugins/reload/backend` endpoint is used to reload plugin backends.
 ---

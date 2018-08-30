@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: /sys/audit-hash - HTTP API"
-sidebar_current: "docs-http-system-audit-hash"
+sidebar_current: "api-http-system-audit-hash"
 description: |-
   The `/sys/audit-hash` endpoint is used to hash data using an audit device's
   hash function and salt.

@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/generate-root - HTTP API"
-sidebar_current: "docs-http-system-generate-root"
+sidebar_current: "api-http-system-generate-root"
 description: |-
   The `/sys/generate-root/` endpoints are used to create a new root key for
   Vault.

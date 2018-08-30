@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "Okta - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-okta"
+sidebar_current: "api-http-auth-okta"
 description: |-
   This is the API documentation for the Vault Okta auth method.
 ---

@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "PostgreSQL - Secrets Engines - HTTP API"
 sidebar_title: "PostgreSQL <sup>DEPRECATED</sup>"
-sidebar_current: "docs-http-secret-postgresql"
+sidebar_current: "api-http-secret-postgresql"
 description: |-
   This is the API documentation for the Vault PostgreSQL secrets engine.
 ---
