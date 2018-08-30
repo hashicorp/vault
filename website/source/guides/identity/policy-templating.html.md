@@ -32,7 +32,7 @@ creation of ACL policies in Vault.
 
 ## Estimated Time to Complete
 
-5 - 10 minutes
+10 minutes
 
 
 ## Challenge
@@ -89,14 +89,17 @@ Since this guide demonstrates the creation of an **`admin`** policy, log in with
 
 ## Steps
 
-Assuming that the following requirements exist:
+Assume the following policy requirements:
 
-- Each user can perform all operations on their allocated key/value secret path (**`user-kv/<user_name>`**)
+- Each user can perform all operations on their allocated key/value secret path
+ (**`user-kv/<user_name>`**)
 
-- Each group can have its own key/value secret path where all operations can
-be performed by the group members (**`group-kv/<group_name>`**)
+- Education group has a dedicated key/value secret store for each region where
+all operations can be performed by the group members
+(**`group-kv/education/<region>`**)
 
 - Each group can update the group information such as metadata about the group
+ (**`identity/group/id/<group_id>`**)
 
 <br>
 
@@ -113,95 +116,85 @@ You are going to perform the following:
 Policy authors can pass in a policy path containing templating delimiters which
 is double curly braces (**`{{<parameter>}}`**).
 
-**Example:**
+
+#### Available Templating Parameters
+
+|                                    Name                                |                                    Description                               |
+| :--------------------------------------------------------------------- | :--------------------------------------------------------------------------- |
+| `identity.entity.id`                                                   | The entity's ID                                                              |
+| `identity.entity.name`                                                 | The entity's name                                                            |
+| `identity.entity.metadata.<<metadata key>>`                            | Metadata associated with the entity for the given key                        |
+| `identity.entity.aliases.<<mount accessor>>.id`                        | Entity alias ID for the given mount                                          |
+| `identity.entity.aliases.<<mount accessor>>.name`                      | Entity alias name for the given mount                                        |
+| `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata associated with the alias for the given mount and metadata key      |
+| `identity.groups.ids.<<group id>>.name`                                | The group name for the given group ID                                        |
+| `identity.groups.names.<<group name>>.id`                              | The group ID for the given group name                                        |
+| `identity.groups.names.<<group id>>.metadata.<<metadata key>>`         | Metadata associated with the group for the given key                         |
+| `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                         |
+
+**Example:** The following policy a user to change their own password for those
+`userpass` users.
 
 ```hcl
-path "auth/userpass/users/{{identity.entity.name}}/password" {
+path "auth/userpass/users/{{identity.entity.aliases.auth_userpass_6671d643.name}}/password" {
   capabilities = [ "update" ]
 }
 ```
 
-#### Available Templating Parameters
+> **NOTE:** Identity groups are not directly attached to a token and an entity
+can be associated with multiple groups.  Therefore, in order to reference a
+group, the **group ID** or **group name** must be provided (e.g.
+`identity.groups.ids.59f001d5-dd49-6d63-51e4-357c1e7a4d44.name`).
 
-| Parameter expression    | Description                                        |
-|-------------------------|----------------------------------------------------|
-| `entity.id`               | Identity entity ID                             
-| `entity.name`             | Identity entity name
-| `entity.metadata.<key>`   | Entity metadata value for `<key>`
-| `group.id`                | Identity group ID
-| `group.name`              | Identity group name
-| `group.<group_id>.id`     | The group ID of a particular group (`<group_id>`)
-| `group.<group_id>.name`   | The name of a particular group (`<group_id>`)
-| `group.<group_id>.metadata.<key>` | The metadata value for `<key>` for a particular group (`<group_id>`)
+---
 
-Identity groups are not directly attached to a token and an entity can be
-associated with multiple groups.  Therefore, in order to reference a group, the
-exact group ID must be provided (e.g.
-`identity.group.59f001d5-dd49-6d63-51e4-357c1e7a4d44.name`).
-
-~> The **`identity.group.id`** parameter enumerates all groups associated with an entity
-and add a path for each group that the entity is a member of. This allows
-functionality like group-based storage areas for every group where gaining
-access to those storage areas is as easy as being added to new groups.
-
-
-**Example:** A token is attached to the entity ID. The entity's group membership
-information is not attached to the token. The example below shows that the
-entity belongs to two different groups.  
-
-```plaintext
-$ vault token lookup
-
-Key                  Value
----                  -----
-accessor             aab457ae-a9bc-06bb-60e5-895c8c378bbe
-creation_time        1534364708
-creation_ttl         768h
-display_name         userpass-bob
-entity_id            04480b3e-b796-8217-740e-cad118e5365a
-...
-
-$ vault read identity/entity/id/04480b3e-b796-8217-740e-cad118e5365a
-
-Key                    Value
----                    -----
-aliases                [map[canonical_id:04480b3e-b796-8217-740e-cad118e5365a ...
-creation_time          2018-08-15T20:17:43.980450493Z
-direct_group_ids       [59f001d5-dd49-6d63-51e4-357c1e7a4d44 3528c7dd-953b-8b2f-c1c6-5943e3ad1a4a]
-disabled               false
-group_ids              [59f001d5-dd49-6d63-51e4-357c1e7a4d44 3528c7dd-953b-8b2f-c1c6-5943e3ad1a4a]
-...
-```
-
-#### Example ACL policy   
+#### Write the following policies:  
 
 **`user-tmpl.hcl`**
 
 ```hcl
 # Grant permissions on user specific path
-path "user-kv/{{entity.name}}/*" {
+path "user-kv/{{identity.entity.name}}/*" {
 	capabilities = [ "create", "update", "read", "delete", "list" ]
+}
+
+# For Web UI usage
+path "user-kv/" {
+  capabilities = ["list"]
 }
 ```
 
 **`group-tmpl.hcl`**
 
 ```hcl
-# Grant permissions on the group specific path that this user is a part of
-path "group-kv/{{group.name}}/*" {
+# Grant permissions on the group specific path
+path "group-kv/education/{{identity.groups.names.education.metadata.region}}/*" {
 	capabilities = [ "create", "update", "read", "delete", "list" ]
 }
 
 # Group member can update the group information
-path "identity/group/id/{{group.id}}" {
+path "identity/group/id/{{identity.groups.names.education.id}}" {
   capabilities = [ "update", "read" ]
+}
+
+# For Web UI usage
+path "group-kv/" {
+  capabilities = ["list"]
+}
+
+path "identity/group/id" {
+  capabilities = [ "list" ]
 }
 ```
 
 
 ### <a name="step2"></a>Step 2: Deploy your policy
 
-#### CLI command
+- [CLI command](#step2-cli)
+- [API call using cURL](#step2-api)
+- [Web UI](#step2-ui)
+
+#### <a name="step2-cli"></a>CLI command
 
 ```shell
 # Create user-tmpl policy
@@ -212,7 +205,7 @@ $ vault policy write group-tmpl group-tmpl.hcl
 ```
 
 
-#### API call using cURL
+#### <a name="step2-api"></a>API call using cURL
 
 To create a policy, use the `/sys/policies/acl` endpoint:
 
@@ -256,7 +249,7 @@ $ curl --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/sys/policies/acl/group-tmpl
 ```
 
-#### Web UI
+#### <a name="step2-ui"></a>Web UI
 
 Open a web browser and launch the Vault UI (e.g. http://127.0.0.1:8200/ui) and
 then login.
@@ -287,6 +280,10 @@ as its group member.
 entities and groups.  Refer to the [Identity - Entities and
 Groups](/guides/identity/identity.html) guide if you need the full details.
 
+- [CLI command](#step3-cli)
+- [Web UI](#step3-ui)
+
+#### <a name="step3-cli"></a>CLI command
 
 The following command uses [`jq`](https://stedolan.github.io/jq/download/) tool
 to parse JSON output.
@@ -313,11 +310,12 @@ $ vault write identity/entity-alias name="bob" \
 # Finally, create education group and add bob_smith entity as a member
 $ vault write identity/group name="education" \
       policies="group-tmpl" \
+      metadata=region="us-west" \
       member_entity_ids=$(cat entity_id.txt)  \
       | jq -r ".data.id" > group_id.txt
 ```
 
-#### Web UI
+#### <a name="step3-ui"></a>Web UI
 
 1. Click the **Access** tab, and select **Enable new method**.
 
@@ -326,7 +324,7 @@ $ vault write identity/group name="education" \
 1. Click **Enable Method**.
 
 1. Click the Vault CLI shell icon (**`>_`**) to open a command shell.  Enter the
-following command to create a new user, **`bob`**:
+following command to create a new user, **`bob`**.
 
     ```plaintext
     $ vault write auth/userpass/users/bob password="training"
@@ -350,16 +348,22 @@ following command to create a new user, **`bob`**:
 
 1. Click **Groups** from the left navigation, and select **Create group**.
 
-1. Enter **`education`** in the **Name**, and enter **`group-tmpl`**
-in the **Policies** fields.
+1. Enter **`education`** in the **Name**, and enter **`group-tmpl`** in the
+**Policies** fields. Under **Metadata**, enter **`region`** as a key and
+**`us-west`** as the key value.  Enter the `bob_smith` entity ID in the **Member
+Entity IDs** field.
+    ![Group](/assets/images/vault-acl-templating-2.png)
 
-1. Enter the `bob_smith` entity ID in the **Member Entity IDs** field, and
-then click **Create**.
+1. Click **Create**.
 
 
 ### <a name="step4"></a>Step 4: Test the ACL templating
 
-#### CLI Command
+- [CLI command](#step4-cli)
+- [API call using cURL](#step4-api)
+- [Web UI](#step4-ui)
+
+#### <a name="step4-cli"></a>CLI Command
 
 1. Enable key/value secrets engine at `user-kv` and `group-kv` paths.
 
@@ -386,27 +390,83 @@ then click **Create**.
     token_meta_username    bob
     ```
 
-1. Try writing some secrets at `user-kv/bob_smith` path.
+1. Remember that `bob` is a member of the `bob_smith` entity; therefore, the
+"`user-kv/{{identity.entity.name}}/*`" expression in the `user-tmpl` policy
+translates to "**`user-kv/bob_smith/*`**".  Let's test!
 
     ```plaintext
     $ vault kv put user-kv/bob_smith/apikey webapp="12344567890"
     Success! Data written to: user-kv/bob_smith/apikey
     ```
 
-1. Now, try accessing the `group-kv/education` path.
+1. The region was set to `us-west` for the `education` group that the
+`bob_smith` belongs to.  Therefore, the
+"`group-kv/education/{{identity.groups.names.education.metadata.region}}/*`"
+expression in the `group-tmpl` policy translates to
+"**`group-kv/education/us-west/*`**".  Let's verify.
 
     ```plaintext
-    $ vault kv put group-kv/education/creds password="12344567890"
-    Success! Data written to: group-kv/education/creds
+    $ vault kv put group-kv/education/us-west/db_cred password="ABCDEFGHIJKLMN"
+    Success! Data written to: group-kv/education/us-west/db_cred
     ```
 
-1. Verify that you can update the group information by adding metadata.
+1. Verify that you can update the group information. The `group-tmpl` policy
+permits "update" and "read" on the
+"`identity/group/id/{{identity.groups.names.education.id}}`" path. In _Step 2_,
+you saved the `education` group ID in the `group_id.txt` file.
 
     ```plaintext
-    $ vault write identity/group/id/$(cat group_id.txt) metadata=region="US West" policies="group-tmpl"
+    $ vault write identity/group/id/$(cat group_id.txt) \
+            policies="group-tmpl" \
+            metadata=region="us-west" \
+            metadata=contact_email="james@example.com"
     ```
 
-#### API call using cURL
+    Read the group information to verify that the data has been updated.
+
+    ```plaintext
+    $ vault read identity/group/id/$(cat group_id.txt)
+
+    Key                  Value
+    ---                  -----
+    alias                map[]
+    creation_time        2018-08-29T20:38:49.383960564Z
+    id                   d6ee454e-915a-4bef-9e43-4ffd7762cd4c
+    last_update_time     2018-08-29T22:52:42.005544616Z
+    member_entity_ids    [1a272450-d147-c3fd-63ae-f16b65b5ee02]
+    member_group_ids     <nil>
+    metadata             map[contact_email:james@example.com region:us-west]
+    modify_index         3
+    name                 education
+    parent_group_ids     <nil>
+    policies             [group-tmpl]
+    type                 internal
+    ```
+
+#### <a name="step4-api"></a>API call using cURL
+
+1. Enable key/value secrets engine at `user-kv` and `group-kv` paths.
+
+    ```plaintext
+    $ tee payload.json <<EOF
+    {
+      "type": "kv",
+      "options": {
+        "version": "1"
+      }
+    }
+    EOF
+
+    $ curl --header "X-Vault-Token: ..." \
+           --request POST \
+           --data @payload.json \
+           https://127.0.0.1:8200/v1/sys/mounts/user-tmpl
+
+    $ curl --header "X-Vault-Token: ..." \
+           --request POST \
+           --data @payload.json \
+           https://127.0.0.1:8200/v1/sys/mounts/group-tmpl
+    ```
 
 1. Log in as **`bob`**.
 
@@ -416,9 +476,11 @@ then click **Create**.
            http://127.0.0.1:8200/v1/auth/userpass/login/bob | jq
     ```
 
-    Copy the generated **`client_token`** value.
+    Copy the generated **`client_token`** value for `bob`.
 
-1. Try writing some secrets at `user-kv/bob_smith` path.
+1. Remember that `bob` is a member of the `bob_smith` entity; therefore, the
+"`user-kv/{{identity.entity.name}}/*`" expression in the `user-tmpl` policy
+translates to "**`user-kv/bob_smith/*`**".  Let's test!
 
     ```plaintext
     $ curl --header "X-Vault-Token: <bob_client_token>" \
@@ -427,22 +489,29 @@ then click **Create**.
            http://127.0.0.1:8200/v1/user-kv/bob_smith/apikey
     ```
 
-1. Now, try accessing the `group-kv/education` path.
+1. The region was set to `us-west` for the `education` group that the
+`bob_smith` belongs to.  Therefore, the
+"`group-kv/education/{{identity.groups.names.education.metadata.region}}/*`"
+expression in the `group-tmpl` policy translates to
+"**`group-kv/education/us-west/*`**".  Let's verify.
 
     ```plaintext
     $ curl --header "X-Vault-Token: <bob_client_token>" \
            --request POST \
-           --data '{"password": "12344567890"}' \
-           http://127.0.0.1:8200/v1/group-kv/education/creds
+           --data '{"password": "ABCDEFGHIJKLMN"}' \
+           http://127.0.0.1:8200/v1/group-kv/education/us-west/db_cred
     ```
 
-1. Verify that you can update the group information by adding metadata.
+1. Verify that you can update the group information. The `group-tmpl` policy
+permits "update" and "read" on the
+"`identity/group/id/{{identity.groups.names.education.id}}`" path.
 
     ```plaintext
-    $ tee payload.json <<EOF
+    $ tee group_info.json <<EOF
     {
       "metadata": {
-        "password": "123456789"
+        "password": "ABCDEFGHIJKLMN",
+        "region": "us-west"
       },
       "policies": "group-tmpl"
     }
@@ -450,13 +519,89 @@ then click **Create**.
 
     $ curl --header "X-Vault-Token: <bob_client_token>" \
            --request POST \
-           --data '{"password": "12344567890"}' \
-           http://127.0.0.1:8200/v1/group-kv/education/creds
+           --data @group_info.json \
+           http://127.0.0.1:8200/v1/identity/group/id/<education_group_id>
     ```
 
+    Where the group ID is the ID returned in _Step 2_.  (NOTE: If you performed
+    Step 2 using CLI commands, the group ID is stored in the `group_id.txt`
+    file.  If you performed the tasks via Web UI, copy the `education` group ID
+    from UI.)
+
+    Read the group information to verify that the data has been updated.
+
+    ```plaintext
+    $ curl --header "X-Vault-Token: <bob_client_token>" \
+           http://127.0.0.1:8200/v1/identity/group/id/<education_group_id>
+    ```
+
+
+#### <a name="step4-ui"></a>Web UI
+
+1. In **Secrets** tab, select **Enable new engine**.
+
+1. Select the radio-button for **KV**, and then click **Next**.
+
+1. Enter **`user-tmpl`** in the path field, and then select **1** for KV
+version.
+
+1. Click **Enable Engine**.
+
+1. Return to **Secrets** and then select **Enable new engine** again.
+
+1. Select the radio-button for **KV**, and then click **Next**.
+
+1. Enter **`group-tmpl`** in the path field, and then select **1** for KV
+version.
+
+1. Click **Enable Engine**.
+
+1. Now, sign out as the current user so that you can log in as `bob`. ![Sign
+off](/assets/images/vault-acl-templating-3.png)
+
+1. In the Vault sign in page, select **Username** and then enter **`bob`** in
+the **Username** field, and **`training`** in the **Password** field.
+
+1. Click **Sign in**.
+
+1. Remember that `bob` is a member of the `bob_smith` entity; therefore, the
+"`user-kv/{{identity.entity.name}}/*`" expression in the `user-tmpl` policy
+translates to "**`user-kv/bob_smith/*`**".  Select **`user-kv`** secrets engine,
+and then select **Create secret**.
+
+1. Enter **`bob_smith/apikey`** in the **PATH FOR THIS SECRET** field. Enter
+**`webapp`** in the key field, and **`12344567890`** in its value field.
+
+1. Click **Save**.  You should be able to perform this successfully.
+
+1. The region was set to `us-west` for the `education` group that the
+`bob_smith` belongs to.  Therefore, the
+"`group-kv/education/{{identity.groups.names.education.metadata.region}}/*`"
+expression in the `group-tmpl` policy translates to
+"**`group-kv/education/us-west/*`**".  In the **Secrets** tab, select
+**`group-tmpl`** secrets engine.
+
+1. Select **Create secret**.
+
+1. Enter **`education/us-west/db_cred`** in the **PATH FOR THIS SECRET** field.
+Enter **`password`** in the key field, and **`ABCDEFGHIJKLMN`** in its value
+field.
+
+1. Click **Save**.  You should be able to perform this successfully.
+
+1. To verify that you can update the group information which is allowed by the
+"`identity/group/id/{{identity.groups.names.education.id}}`" expression in the
+`group-tmpl` policy, select the **Access** tab.
+
+1. Select **Groups**, and then **`education`**.
+
+1. Select **Edit group**. Add a new metadata where the key is **`contact_email`**
+and its value is **`james@example.com`**.
+
+1. Click **Save**.  The group metadata should be successfully updated.
 
 
 ## Next steps
 
-To learn about Sentinel policies, refer to the [Sentinel
-Policies](/guides/identity/sentinel.html) guide.
+To learn about Sentinel policies to implement finer-grained policies, refer to
+the [Sentinel Policies](/guides/identity/sentinel.html) guide.
