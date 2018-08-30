@@ -44,14 +44,11 @@ Namespaces are isolated environments that functionally exist as "Vaults within a
 They have separate login paths and support creating and managing data isolated to their
 namespace. This data includes the following: 
 
-- Secret Engine Mounts
+- Secret Engines
+- Auth Methods
 - Policies
 - Identities (Entities, Groups)
 - Tokens
-
-Namespaces can also be configured to inherit all of this data from a higher *parent* namespace.
-This simplifies the deployment of new namespaces, and can be combined with sentinel policies 
-to prescribe organization-wide infosec policies on tenants.
 
 Rather than rely on Vault system admins, namespaces can be managed by delegated admins who
 can be prescribed administration rights for their namespace. These delegated admins can also
