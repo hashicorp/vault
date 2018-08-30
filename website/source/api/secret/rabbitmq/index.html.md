@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "RabbitMQ - Secrets Engines - HTTP API"
 sidebar_title: "RabbitMQ"
-sidebar_current: "docs-http-secret-rabbitmq"
+sidebar_current: "api-http-secret-rabbitmq"
 description: |-
   This is the API documentation for the Vault RabbitMQ secrets engine.
 ---

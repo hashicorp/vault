@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/leases - HTTP API"
-sidebar_current: "docs-http-system-leases"
+sidebar_current: "api-http-system-leases"
 description: |-
   The `/sys/leases` endpoints are used to view and manage leases.
 ---

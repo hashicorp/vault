@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "Azure - Secrets Engines - HTTP API"
 sidebar_title: "Azure"
-sidebar_current: "docs-http-secret-azure"
+sidebar_current: "api-http-secret-azure"
 description: |-
   This is the API documentation for the Vault Azure secrets engine.
 ---

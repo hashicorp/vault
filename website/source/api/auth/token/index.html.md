@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "Token - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-token"
+sidebar_current: "api-http-auth-token"
 description: |-
   This is the API documentation for the Vault token auth method.
 ---

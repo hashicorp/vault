@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/policies/ - HTTP API"
-sidebar_current: "docs-http-system-policies"
+sidebar_current: "api-http-system-policies"
 description: |-
   The `/sys/policies/` endpoints are used to manage ACL, RGP, and EGP policies in Vault.
 ---

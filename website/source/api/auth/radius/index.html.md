@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "RADIUS - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-radius"
+sidebar_current: "api-http-auth-radius"
 description: |-
   This is the API documentation for the Vault RADIUS auth method.
 ---

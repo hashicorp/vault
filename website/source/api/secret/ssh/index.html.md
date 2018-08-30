@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "SSH - Secrets Engines - HTTP API"
 sidebar_title: "SSH"
-sidebar_current: "docs-http-secret-ssh"
+sidebar_current: "api-http-secret-ssh"
 description: |-
   This is the API documentation for the Vault SSH secrets engine.
 ---

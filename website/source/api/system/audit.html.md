@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/audit - HTTP API"
-sidebar_current: "docs-http-system-audit/"
+sidebar_current: "api-http-system-audit/"
 description: |-
   The `/sys/audit` endpoint is used to enable and disable audit devices.
 ---

@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "HTTP API: Libraries"
 sidebar_title: "Client Libraries"
-sidebar_current: "docs-http-libraries"
+sidebar_current: "api-http-libraries"
 description: |-
   List of official and community contributed libraries for interacting with the Vault HTTP API.
 ---

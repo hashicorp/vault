@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "MongoDB - Database - Secrets Engines - HTTP API"
 sidebar_title: "MongoDB"
-sidebar_current: "docs-http-secret-databases-mongodb"
+sidebar_current: "api-http-secret-databases-mongodb"
 description: |-
   The MongoDB plugin for Vault's database secrets engine generates database credentials to access MongoDB servers.
 ---

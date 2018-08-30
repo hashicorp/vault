@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "PostgreSQL - Database - Secrets Engines - HTTP API"
 sidebar_title: "PostgreSQL"
-sidebar_current: "docs-http-secret-databases-postgresql"
+sidebar_current: "api-http-secret-databases-postgresql"
 description: |-
   The PostgreSQL plugin for Vault's database secrets engine generates database credentials to access PostgreSQL servers.
 ---

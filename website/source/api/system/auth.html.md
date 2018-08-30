@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/auth - HTTP API"
-sidebar_current: "docs-http-system-auth"
+sidebar_current: "api-http-system-auth"
 description: |-
   The `/sys/auth` endpoint is used to manage auth methods in Vault.
 ---

@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "TLS Certificate - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-cert"
+sidebar_current: "api-http-auth-cert"
 description: |-
   This is the API documentation for the Vault TLS Certificate authentication
   method.

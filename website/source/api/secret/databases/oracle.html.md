@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "Oracle - Database - Secrets Engines - HTTP API"
 sidebar_title: "Oracle"
-sidebar_current: "docs-http-secret-databases-oracle-maria"
+sidebar_current: "api-http-secret-databases-oracle-maria"
 description: |-
   The Oracle plugin for Vault's database secrets engine generates database credentials to access Oracle servers.
 ---

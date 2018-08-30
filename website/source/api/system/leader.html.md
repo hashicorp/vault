@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/leader - HTTP API"
-sidebar_current: "docs-http-system-leader"
+sidebar_current: "api-http-system-leader"
 description: |-
   The `/sys/leader` endpoint is used to check the high availability status and
   current leader of Vault.
