@@ -12,6 +12,17 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 0.11.0 compared to 0.10.0. Please read it carefully.
 
+## Known Issues
+
+### Minified JSON Policies
+
+Users that generate policies in minfied JSON may cause a parsing errors due to 
+a regression in the policy parser when it encounters repeating brackets. Although 
+HCL is the official language for policies in Vault, HCL is JSON compatible and JSON 
+should work in place of HCL. To work around this error, pretty print the JSON policies
+or add spaces between repeating brackets.  This regression will be addressed in
+a future release.
+
 ## Changes Since 0.10.4
 
 ### Request Timeouts
