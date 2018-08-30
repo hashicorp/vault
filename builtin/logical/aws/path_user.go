@@ -156,8 +156,7 @@ func pathUserRollback(ctx context.Context, req *logical.Request, _kind string, d
 			if req.Secret == nil {
 				// WAL rollback
 				acceptMissingIamUsers = true
-			}
-			if time.Since(req.Secret.IssueTime) > time.Duration(5*time.Minute) {
+			} else if time.Since(req.Secret.IssueTime) > time.Duration(5*time.Minute) {
 				acceptMissingIamUsers = true
 			}
 			if aerr.Code() == iam.ErrCodeNoSuchEntityException && acceptMissingIamUsers {
