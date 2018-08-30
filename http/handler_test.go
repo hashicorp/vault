@@ -82,7 +82,7 @@ func TestHandler_cors(t *testing.T) {
 		"Access-Control-Allow-Origin":  addr,
 		"Access-Control-Allow-Headers": strings.Join(vault.StdAllowedHeaders, ","),
 		"Access-Control-Max-Age":       "300",
-		"Vary": "Origin",
+		"Vary":                         "Origin",
 	}
 
 	for expHeader, expected := range expHeaders {
