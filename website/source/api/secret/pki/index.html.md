@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "PKI - Secrets Engines - HTTP API"
+sidebar_title: "PKI"
 sidebar_current: "docs-http-secret-pki"
 description: |-
   This is the API documentation for the Vault PKI secrets engine.

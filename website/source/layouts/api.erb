@@ -1,6 +1,67 @@
 <% wrap_layout :inner do %>
   <% content_for :sidebar do %>
     <ul class="nav docs-nav">
+      <hashi-docs-sidebar
+        category='docs'
+        current_page='<%= current_page.path %>'
+        data="<%= encode(sidebar_data('api')) %>"
+        order="<%= encode([
+          'libraries',
+          'relatedtools',
+          '------------',
+          {
+            category: 'secret',
+            content: [
+              { category: 'ad' },
+              { category: 'aws' },
+              { category: 'azure' },
+              { category: 'consul' },
+              { category: 'cubbyhole' },
+              {
+                category: 'databases',
+                content: [
+                  'cassandra',
+                  'hanadb',
+                  'mongodb',
+                  'mssql',
+                  'mysql-maria',
+                  'postgresql',
+                  'oracle'
+                ]
+              },
+              { category: 'gcp' },
+              {
+                category: 'kv',
+                content: ['kv-v1', 'kv-v2']
+              }, {
+                category: 'identity',
+                content: [
+                  'entity',
+                  'entity-alias',
+                  'group',
+                  'group-alias',
+                  'lookup'
+                ]
+              },
+              { category: 'nomad' },
+              { category: 'pki' },
+              { category: 'rabbitmq' },
+              { category: 'ssh' },
+              { category: 'totp' },
+              { category: 'transit' },
+              '-----------------------',
+              { category: 'cassandra' },
+              { category: 'mongodb' },
+              { category: 'mssql' },
+              { category: 'mysql' },
+              { category: 'postgresql' }
+            ]
+          }
+        ]) %>")
+      ></hashi-docs-sidebar>
+
+      <p>--------------------------------</p>
+
       <li<%= sidebar_current("docs-http-overview") %>>
         <a href="/api/index.html">Overview</a>
       </li>
