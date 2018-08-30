@@ -148,14 +148,17 @@ The following parameters are used on backends that support [high availability][h
 
 ### Vault Enterprise Parameters
 
+The following parameters are only used with Vault Enterprise
+
 - `disable_sealwrap` `(bool: false)` – Disables using [seal wrapping][sealwrap]
   for any value except the master key. If this value is toggled, the new
   behavior will happen lazily (as values are read or written).
 
-- `disable_performance_standby` `(bool: false)` – If set, the node will not be
-  available to act as a performance standby node when not active.
+- `disable_performance_standby` `(bool: false)` – Specifies whether performance
+  standbys should be disabled on this node. Setting this to true on one Vault
+  node will disable this feature when this node is Active or Standby. It's
+  recomended to sync this setting across all nodes in the cluster.
 
-The following parameters are only used with Vault Enterprise
 [storage-backend]: /docs/configuration/storage/index.html
 [listener]: /docs/configuration/listener/index.html
 [seal]: /docs/configuration/seal/index.html
