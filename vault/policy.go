@@ -150,7 +150,7 @@ func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 	return ret, nil
 }
 
-// Parse is used to parse the specified ACL rules into an
+// ParseACLPolicy is used to parse the specified ACL rules into an
 // intermediary set of policies, before being compiled into
 // the ACL
 func ParseACLPolicy(rules string) (*Policy, error) {
@@ -162,19 +162,6 @@ func ParseACLPolicy(rules string) (*Policy, error) {
 // is templated so we don't check again, otherwise we check to see if it's a
 // templated policy.
 func parseACLPolicyWithTemplating(rules string, performTemplating bool, entity *identity.Entity, groups []*identity.Group) (*Policy, error) {
-	// Check for templating
-	var hasTemplating bool
-	var err error
-	if !performTemplating {
-		hasTemplating, _, err = identity.PopulateString(&identity.PopulateStringInput{
-			ValidityCheckOnly: true,
-			String:            rules,
-		})
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to validate policy templating: {{err}}", err)
-		}
-	}
-
 	// Parse the rules
 	root, err := hcl.Parse(rules)
 	if err != nil {
@@ -200,7 +187,6 @@ func parseACLPolicyWithTemplating(rules string, performTemplating bool, entity *
 	var p Policy
 	p.Raw = rules
 	p.Type = PolicyTypeACL
-	p.Templated = hasTemplating || performTemplating
 	if err := hcl.DecodeObject(&p, list); err != nil {
 		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
 	}
@@ -233,6 +219,17 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				continue
 			}
 			key = templated
+		} else {
+			hasTemplating, _, err := identity.PopulateString(&identity.PopulateStringInput{
+				ValidityCheckOnly: true,
+				String:            key,
+			})
+			if err != nil {
+				return errwrap.Wrapf("failed to validate policy templating: {{err}}", err)
+			}
+			if hasTemplating {
+				result.Templated = true
+			}
 		}
 
 		valid := []string{
