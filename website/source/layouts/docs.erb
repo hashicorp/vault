@@ -107,6 +107,7 @@
                 'generate-root',
                 'init',
                 'key-status',
+                'migrate',
                 'rekey',
                 'rotate',
                 'seal',
@@ -172,6 +173,7 @@
                   {
                     category: 'methods',
                     content: [
+                      'alicloud'
                       'aws',
                       'azure',
                       'gcp',
@@ -185,10 +187,13 @@
                 content: ['file']
               }
             ]
-          }, {
+          },
+          '----------------',
+          {
             category: 'secrets',
             content: [
               { category: 'ad' },
+              { category: 'alicloud' },
               { category: 'aws' },
               { category: 'azure' },
               { category: 'consul' },
@@ -225,6 +230,7 @@
               },
               { category: 'totp' },
               { category: 'transit' },
+              '------------------------',
               { category: 'cassandra' },
               { category: 'mongodb' },
               { category: 'mssql' },
@@ -248,6 +254,7 @@
               'cert',
               'token',
               'userpass',
+              '---------',
               'app-id',
               'mfa'
             ]
@@ -260,7 +267,9 @@
             ]
           }, {
             category: 'plugin'
-          }, {
+          },
+          '----------------',
+          {
             category: 'enterprise',
             content: [
               { category: 'replication' },
@@ -271,6 +280,7 @@
               },
               { category: 'sealwrap' },
               { category: 'namespaces' },
+              { category: 'performance-standby' },
               { category: 'control-groups' },
               {
                 category: 'mfa',
@@ -289,6 +299,7 @@
           }
         ]) %>")
       ></hashi-docs-sidebar>
+<<<<<<< HEAD
 
       <p>----------------------------</p>
 
@@ -1007,6 +1018,8 @@
           </li>
         </ul>
       </li>
+=======
+>>>>>>> add extra dividers
     </ul>
   <% end %>
 
