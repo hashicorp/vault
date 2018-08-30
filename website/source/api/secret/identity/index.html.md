@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "Identity - Secrets Engines - HTTP API"
+sidebar_title: "Identity"
 sidebar_current: "docs-http-secret-identity"
 description: |-
   This is the API documentation for the Vault Identity secrets engine.

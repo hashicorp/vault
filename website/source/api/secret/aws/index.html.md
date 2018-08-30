@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "AWS - Secrets Engines - HTTP API"
+sidebar_title: "AWS"
 sidebar_current: "docs-http-secret-aws"
 description: |-
   This is the API documentation for the Vault AWS secrets engine.
