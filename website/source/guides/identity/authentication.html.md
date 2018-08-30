@@ -623,9 +623,9 @@ exists on the virtual machine.
 
 ![AppRole auth method workflow](/assets/images/vault-approle-workflow2.png)
 
-Secret ID is like a password. To minimize the chance of accidental disclosure,
-use [**response wrapping**](/docs/concepts/response-wrapping.html) to avoid
-transmitting the Secret ID in plaintext.
+The secret ID can be delivered using [**response
+wrapping**](/docs/concepts/response-wrapping.html) to transmit the _reference_
+to the secret ID rather than the actual value.
 
 In [Step 3](#step3), you executed the following command to retrieve the Secret
 ID:
