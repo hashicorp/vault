@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/carrot/middleman-hashicorp
-  revision: 50541582456a5ba51a6ffda6f3156c84be387ae9
+  revision: 60ea9a228efd3e72b902c784f29689113d4ec03a
   specs:
     middleman-hashicorp (0.3.28)
       activesupport (~> 5.0)
