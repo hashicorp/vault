@@ -603,23 +603,22 @@ expression in the `group-tmpl` policy translates to
 
 1. Select **Create secret**.
 
-1. Enter **`education/us-west/db_cred`** in the **PATH FOR THIS SECRET** field.
-Enter **`password`** in the key field, and **`ABCDEFGHIJKLMN`** in its value
+1. Enter `education/us-west/db_cred` in the **PATH FOR THIS SECRET** field.
+Enter `password` in the key field, and `ABCDEFGHIJKLMN` in its value
 field.
 
 1. Click **Save**. You should be able to perform this successfully.
 
 1. To verify that you can update the group information which is allowed by the
-"`identity/group/id/{{identity.groups.names.education.id}}`" expression in the
+`"identity/group/id/{{identity.groups.names.education.id}}"` expression in the
 `group-tmpl` policy, select the **Access** tab.
 
-1. Select **Groups**, and then **`education`**.
+1. Select **Groups**, and then `education`.
 
-1. Select **Edit group**. Add a new metadata where the key is **`contact_email`**
-and its value is **`james@example.com`**.
+1. Select **Edit group**. Add a new metadata pair where the key is `contact_email`
+and its value is `james@example.com`.
 
 1. Click **Save**. The group metadata should be successfully updated.
-
 
 ## Next steps
 
