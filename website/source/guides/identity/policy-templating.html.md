@@ -3,7 +3,7 @@ layout: "guides"
 page_title: "ACL Policy Templating - Guides"
 sidebar_current: "guides-identity-policy-templating"
 description: |-
-  As of 0.11, ACL policies supports templating to allow non-static policy paths.
+  As of 0.11, ACL policies support templating to allow non-static policy paths.
 ---
 
 # ACL Policy Templating
@@ -13,13 +13,13 @@ grants **no permissions** in the system. Therefore, policies must be created to
 govern the behavior of clients and instrument Role-Based Access Control (RBAC)
 by specifying access privileges (_authorization_).
 
-Since everything in Vault is path based that the policy authors must be aware of
+Since everything in Vault is path based, policy authors must be aware of
 all existing paths as well as paths to be created.
 
 The [Policies](/guides/identity/policies.html) guide walks you through the
 creation of ACL policies in Vault.
 
-> This guide highlights the use of ACL templating which was introduced in
+-> This guide highlights the use of ACL templating which was introduced in
 **Vault 0.11**.
 
 ## Reference Material
@@ -29,16 +29,14 @@ creation of ACL policies in Vault.
 - [Identity Secrets Engine](/docs/secrets/identity/index.html)
 - [Identity: Entities and Groups](/guides/identity/identity.html)
 
-
 ## Estimated Time to Complete
 
 10 minutes
 
-
 ## Challenge
 
 The only way to specify non-static paths in ACL policies was to use globs (`*`)
-at the end of its paths.  
+at the end of paths.
 
 ```hcl
 path "transit/keys/*" {
@@ -50,40 +48,40 @@ path "secret/webapp_*" {
 }
 ```
 
-This makes many management and delegation tasks to be challenging. For example,
+This makes many management and delegation tasks challenging. For example,
 allowing a user to change their own password by invoking the
-"**`auth/userpass/users/<user_name>/password`**" endpoint can require either a policy
-for _every user_ or Sentinel which is a part of Vault Enterprise.
+`auth/userpass/users/<user_name>/password` endpoint can require either a policy
+for _every user_ or requires the use of Sentinel which is a part of [Vault
+Enterprise](/docs/enterprise/sentinel/index.html).
 
 ## Solution
 
 As of **Vault 0.11**, ACL templating capability is available to allow a subset
 of user information to be used within ACL policy paths.
 
-**NOTE:** This feature leverages [Vault
-Identities](/docs/secrets/identity/index.html) to inject values in ACL policy
+-> **NOTE:** This feature leverages [Vault
+Identities](/docs/secrets/identity/index.html) to inject values into ACL policy
 paths.
 
 ## Prerequisites
 
 To perform the tasks described in this guide, you need to have an environment
-with **Vault 0.11** or later.  Refer to the [Getting
+with **Vault 0.11** or later. Refer to the [Getting
 Started](/intro/getting-started/install.html) guide to install Vault.
 
-Alternatively, you can use the [Vault
+Alternately, you can use the [Vault
 Playground](https://www.katacoda.com/hashicorp/scenarios/vault-playground)
 environment.
 
--> This guide assumes that you know how to create ACL policies.  If you don't,
-go through the  [Interactive Policy
+~> This guide assumes that you know how to create ACL policies. If you don't,
+go through the interactive [Policy
 tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-policies) or
 [Policies](/guides/identity/policies.html) guide first.
 
-
 ### Policy requirements
 
-Since this guide demonstrates the creation of an **`admin`** policy, log in with
-**`root`** token if possible. Otherwise, refer to the policy requirement in the
+Since this guide demonstrates the creation of an `admin` policy, log in with the
+`root` token if possible. Otherwise, refer to the policy requirement in the
 [Policies](/guides/identity/policies.html#policy-requirements) guide.
 
 
@@ -92,30 +90,30 @@ Since this guide demonstrates the creation of an **`admin`** policy, log in with
 Assume that the following policy requirements were given:
 
 - Each _user_ can perform all operations on their allocated key/value secret
- path (**`user-kv/data/<user_name>`**)
+ path (`user-kv/data/<user_name>`)
 
-- Education _group_ has a dedicated key/value secret store for each region where
+- The education _group_ has a dedicated key/value secret store for each region where
  all operations can be performed by the group members
- (**`group-kv/data/education/<region>`**)
+ (`group-kv/data/education/<region>`)
 
 - The _group_ members can update the group information such as metadata about
- the group (**`identity/group/id/<group_id>`**)
+ the group (`identity/group/id/<group_id>`)
 
-<br>
-
-In this guide, you are going to perform the following:
+In this guide, you are going to perform the following steps:
 
 1. [Write templated ACL policies](#step1)
 1. [Deploy your policy](#step2)
 1. [Setup an entity and a group](#step3)
 1. [Test the ACL templating](#step4)
 
-
 ### <a name="step1"></a>Step 1: Write templated ACL policies
 
-Policy authors can pass in a policy path containing templating delimiters which
-is double curly braces (**`{{<parameter>}}`**).
+Policy authors can pass in a policy path containing double curly braces as
+templating delimiters.
 
+```handlebars
+{{parameter}}
+```
 
 #### Available Templating Parameters
 
@@ -133,13 +131,15 @@ is double curly braces (**`{{<parameter>}}`**).
 | `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                         |
 
 
-> **NOTE:** Identity groups are not directly attached to a token and an entity
-can be associated with multiple groups.  Therefore, in order to reference a
+-> **NOTE:** Identity groups are not directly attached to a token and an entity
+can be associated with multiple groups. Therefore, in order to reference a
 group, the **group ID** or **group name** must be provided (e.g.
 `identity.groups.ids.59f001d5-dd49-6d63-51e4-357c1e7a4d44.name`).
 
+Example:
 
-**Example:**
+This policy allows users to change their own password given that the username
+and password are defined in the `userpass` auth method.
 
 ```hcl
 path "auth/userpass/users/{{identity.entity.aliases.auth_userpass_6671d643.name}}/password" {
@@ -147,16 +147,13 @@ path "auth/userpass/users/{{identity.entity.aliases.auth_userpass_6671d643.name}
 }
 ```
 
-This policy allows users to change their own password given that the username
-and password are defined in the  `userpass` auth method.
+#### Write the following policies:
 
----
-
-#### Write the following policies:  
-
-**`user-tmpl.hcl`**
+User template
 
 ```hcl
+# user-tmpl.hcl
+
 # Grant permissions on user specific path
 path "user-kv/data/{{identity.entity.name}}/*" {
 	capabilities = [ "create", "update", "read", "delete", "list" ]
@@ -168,9 +165,11 @@ path "user-kv/metadata" {
 }
 ```
 
-**`group-tmpl.hcl`**
+Group template
 
 ```hcl
+# group-tmpl.hcl
+
 # Grant permissions on the group specific path
 # The region is specified in the group metadata
 path "group-kv/data/education/{{identity.groups.names.education.metadata.region}}/*" {
@@ -202,10 +201,10 @@ path "identity/group/id" {
 #### <a name="step2-cli"></a>CLI command
 
 ```shell
-# Create user-tmpl policy
+# Create the user-tmpl policy
 $ vault policy write user-tmpl user-tmpl.hcl
 
-# Create group-tmpl policy
+# Create the group-tmpl policy
 $ vault policy write group-tmpl group-tmpl.hcl
 ```
 
@@ -214,7 +213,7 @@ $ vault policy write group-tmpl group-tmpl.hcl
 
 To create a policy, use the `/sys/policies/acl` endpoint:
 
-```plaintext
+```sh
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request PUT \
        --data <PAYLOAD> \
@@ -224,7 +223,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 Where `<TOKEN>` is your valid token, and `<PAYLOAD>` includes the policy name and
 stringified policy.
 
-**Example:**
+Example:
 
 ```shell
 # API request payload for user-tmpl
@@ -261,28 +260,28 @@ then login.
 
 1. Click the **Policies** tab, and then select **Create ACL policy**.
 
-1. Toggle **Upload file**, and click **Choose a file** to select your
-**`user-tmpl.hcl`** file you authored at [Step 1](#step1).
+1. Toggle **Upload file**, and click **Choose a file** to select the
+   `user-tmpl.hcl` file you wrote at [Step 1](#step1).
 
     ![Create Policy](/assets/images/vault-ctrl-grp-2.png)
 
-    This loads the policy and sets the **Name** to be `user-tmpl`.
+    This loads the policy and sets the **Name** to `user-tmpl`.
 
-1. Click **Create Policy** to complete.
+1. Click the **Create Policy** button.
 
-1. Repeat the steps to create **`group-tmpl`** policy.
+1. Repeat the steps to create the `group-tmpl` policy.
 
 
 ### <a name="step3"></a>Step 3: Setup an entity and a group
 
 Let's create an entity, **`bob_smith`** with a user **`bob`** as its entity
-alias.  Also, create a group, **`education`** and add the **`bob_smith`** entity
+alias. Also, create a group, **`education`** and add the **`bob_smith`** entity
 as its group member.
 
 ![Entity & Group](/assets/images/vault-acl-templating.png)
 
 -> This step only demonstrates CLI commands and Web UI to create
-entities and groups.  Refer to the [Identity - Entities and
+entities and groups. Refer to the [Identity - Entities and
 Groups](/guides/identity/identity.html) guide if you need the full details.
 
 - [CLI command](#step3-cli)
@@ -301,7 +300,7 @@ $ vault auth enable userpass
 $ vault write auth/userpass/users/bob password="training"
 
 # Retrieve the userpass mount accessor and save it in a file named, accessor.txt
-$ vault auth list -format=json | jq -r '.["userpass/"].accessor' > accessor.txt  
+$ vault auth list -format=json | jq -r '.["userpass/"].accessor' > accessor.txt
 
 # Create bob_smith entity and save the identity ID in the entity_id.txt
 $ vault write -format=json identity/entity name="bob_smith" policies="user-tmpl" \
@@ -329,7 +328,7 @@ $ vault write -format=json identity/group name="education" \
 
 1. Click **Enable Method**.
 
-1. Click the Vault CLI shell icon (**`>_`**) to open a command shell.  Enter the
+1. Click the Vault CLI shell icon (**`>_`**) to open a command shell. Enter the
 following command to create a new user, **`bob`**.
 
     ```plaintext
@@ -346,7 +345,7 @@ following command to create a new user, **`bob`**.
 
 1. Click **Create**.
 
-1. Select **Add alias**.  Enter **`bob`** in the **Name** field and select
+1. Select **Add alias**. Enter **`bob`** in the **Name** field and select
 **`userpass/ (userpass)`** from the **Auth Backend** drop-down list.
 
 1. Select the **`bob_smith`** entity and copy its **ID** displayed under the
@@ -356,7 +355,7 @@ following command to create a new user, **`bob`**.
 
 1. Enter **`education`** in the **Name**, and enter **`group-tmpl`** in the
 **Policies** fields. Under **Metadata**, enter **`region`** as a key and
-**`us-west`** as the key value.  Enter the `bob_smith` entity ID in the **Member
+**`us-west`** as the key value. Enter the `bob_smith` entity ID in the **Member
 Entity IDs** field.
     ![Group](/assets/images/vault-acl-templating-2.png)
 
@@ -398,7 +397,7 @@ Entity IDs** field.
 
 1. Remember that `bob` is a member of the `bob_smith` entity; therefore, the
 "`user-kv/data/{{identity.entity.name}}/*`" expression in the `user-tmpl` policy
-translates to "**`user-kv/data/bob_smith/*`**".  Let's test!
+translates to "**`user-kv/data/bob_smith/*`**". Let's test!
 
     ```plaintext
     $ vault kv put user-kv/bob_smith/apikey webapp="12344567890"
@@ -411,10 +410,10 @@ translates to "**`user-kv/data/bob_smith/*`**".  Let's test!
     ```
 
 1. The region was set to `us-west` for the `education` group that the
-`bob_smith` belongs to.  Therefore, the
+`bob_smith` belongs to. Therefore, the
 "`group-kv/data/education/{{identity.groups.names.education.metadata.region}}/*`"
 expression in the `group-tmpl` policy translates to
-"**`group-kv/data/education/us-west/*`**".  Let's verify.
+"**`group-kv/data/education/us-west/*`**". Let's verify.
 
     ```plaintext
     $ vault kv put group-kv/education/us-west/db_cred password="ABCDEFGHIJKLMN"
@@ -496,7 +495,7 @@ permits "update" and "read" on the
 
 1. Remember that `bob` is a member of the `bob_smith` entity; therefore, the
 "`user-kv/data/{{identity.entity.name}}/*`" expression in the `user-tmpl` policy
-translates to "**`user-kv/data/bob_smith/*`**".  Let's test!
+translates to "**`user-kv/data/bob_smith/*`**". Let's test!
 
     ```plaintext
     $ curl --header "X-Vault-Token: <bob_client_token>" \
@@ -506,10 +505,10 @@ translates to "**`user-kv/data/bob_smith/*`**".  Let's test!
     ```
 
 1. The region was set to `us-west` for the `education` group that the
-`bob_smith` belongs to.  Therefore, the
+`bob_smith` belongs to. Therefore, the
 "`group-kv/data/education/{{identity.groups.names.education.metadata.region}}/*`"
 expression in the `group-tmpl` policy translates to
-"**`group-kv/data/education/us-west/*`**".  Let's verify.
+"**`group-kv/data/education/us-west/*`**". Let's verify.
 
     ```plaintext
     $ curl --header "X-Vault-Token: <bob_client_token>" \
@@ -539,9 +538,9 @@ permits "update" and "read" on the
            http://127.0.0.1:8200/v1/identity/group/id/<education_group_id>
     ```
 
-    Where the group ID is the ID returned in [Step 2](#step2).  (NOTE: If you performed
+    Where the group ID is the ID returned in [Step 2](#step2). (NOTE: If you performed
     Step 2 using the CLI commands, the group ID is stored in the `group_id.txt`
-    file.  If you performed the tasks via Web UI, copy the `education` group ID
+    file. If you performed the tasks via Web UI, copy the `education` group ID
     from UI.)
 
     Read the group information to verify that the data has been updated.
@@ -582,19 +581,19 @@ the **Username** field, and **`training`** in the **Password** field.
 
 1. Remember that `bob` is a member of the `bob_smith` entity; therefore, the
 "`user-kv/data/{{identity.entity.name}}/*`" expression in the `user-tmpl` policy
-translates to "**`user-kv/data/bob_smith/*`**".  Select **`user-kv`** secrets engine,
+translates to "**`user-kv/data/bob_smith/*`**". Select **`user-kv`** secrets engine,
 and then select **Create secret**.
 
 1. Enter **`bob_smith/apikey`** in the **PATH FOR THIS SECRET** field. Enter
 **`webapp`** in the key field, and **`12344567890`** in its value field.
 
-1. Click **Save**.  You should be able to perform this successfully.
+1. Click **Save**. You should be able to perform this successfully.
 
 1. The region was set to `us-west` for the `education` group that the
-`bob_smith` belongs to.  Therefore, the
+`bob_smith` belongs to. Therefore, the
 "`group-kv/data/education/{{identity.groups.names.education.metadata.region}}/*`"
 expression in the `group-tmpl` policy translates to
-"**`group-kv/data/education/us-west/*`**".  In the **Secrets** tab, select
+"**`group-kv/data/education/us-west/*`**". In the **Secrets** tab, select
 
 1. Select **Create secret**.
 
@@ -602,7 +601,7 @@ expression in the `group-tmpl` policy translates to
 Enter **`password`** in the key field, and **`ABCDEFGHIJKLMN`** in its value
 field.
 
-1. Click **Save**.  You should be able to perform this successfully.
+1. Click **Save**. You should be able to perform this successfully.
 
 1. To verify that you can update the group information which is allowed by the
 "`identity/group/id/{{identity.groups.names.education.id}}`" expression in the
@@ -613,7 +612,7 @@ field.
 1. Select **Edit group**. Add a new metadata where the key is **`contact_email`**
 and its value is **`james@example.com`**.
 
-1. Click **Save**.  The group metadata should be successfully updated.
+1. Click **Save**. The group metadata should be successfully updated.
 
 
 ## Next steps
