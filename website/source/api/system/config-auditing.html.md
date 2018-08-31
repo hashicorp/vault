@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/config/auditing - HTTP API"
+sidebar_title: "<tt>/sys/config/auditing</tt>"
 sidebar_current: "api-http-system-config-auditing"
 description: |-
   The `/sys/config/auditing` endpoint is used to configure auditing settings.

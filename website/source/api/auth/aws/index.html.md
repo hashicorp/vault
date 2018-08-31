@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "AWS - Auth Methods - HTTP API"
+sidebar_title: "AWS"
 sidebar_current: "api-http-auth-aws"
 description: |-
   This is the API documentation for the Vault AWS auth method.

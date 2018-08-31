@@ -56,6 +56,84 @@
               { category: 'mysql' },
               { category: 'postgresql' }
             ]
+          }, {
+            category: 'auth',
+            content: [
+            { category: 'approle' },
+            { category: 'alicloud' },
+            { category: 'aws' },
+            { category: 'azure' },
+            { category: 'github' },
+            { category: 'gcp' },
+            { category: 'jwt' },
+            { category: 'kubernetes' },
+            { category: 'ldap' },
+            { category: 'okta' },
+            { category: 'radius' },
+            { category: 'cert' },
+            { category: 'token' },
+            { category: 'userpass' },
+            { category: 'app-id' }
+            ]
+          }, {
+            category: 'system',
+            content: [
+            'audit',
+            'audit-hash',
+            'auth',
+            'capabilities',
+            'capabilities-accessor',
+            'capabilities-self',
+            'config-auditing',
+            'config-control-group',
+            'config-cors',
+            'config-ui',
+            'control-group',
+            'generate-root',
+            'health',
+            'init',
+            'internal-ui-mounts',
+            'key-status',
+            'leader',
+            'leases',
+            'license',
+            'namespaces',
+            {
+              category: 'mfa',
+              content: [
+                'mfa-duo',
+                'mfa-okta',
+                'mfa-pingid',
+                'mfa-totp'
+              ]
+            },
+            'mounts',
+            'plugins-reload-backend',
+            'plugins-catalog',
+            'policy',
+            'policies',
+            'raw',
+            'rekey',
+            'rekey-recovery-key',
+            'remount',
+            {
+              category: 'replication',
+              content: [
+                'replication-performance',
+                'replication-dr'
+              ]
+            },
+            'rotate',
+            'seal',
+            'seal-status',
+            'step-down',
+            'tools',
+            'unseal',
+            'wrapping-lookup',
+            'wrapping-rewrap',
+            'wrapping-unwrap',
+            'wrapping-wrap',
+            ]
           }
         ]) %>")
       ></hashi-docs-sidebar>

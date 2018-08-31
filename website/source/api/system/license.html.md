@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/license - HTTP API"
+sidebar_title: "<tt>/sys/license</tt>"
 sidebar_current: "api-http-system-license"
 description: |-
   The `/sys/license` endpoint is used to view and update the license used in 

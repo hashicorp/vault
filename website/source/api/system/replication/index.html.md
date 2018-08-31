@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/replication - HTTP API"
+sidebar_title: "<tt>/sys/replication</tt>"
 sidebar_current: "api-http-system-replication"
 description: |-
   The '/sys/replication' endpoint focuses on managing general operations in Vault Enterprise replication

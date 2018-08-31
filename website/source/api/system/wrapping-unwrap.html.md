@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/wrapping/unwrap - HTTP API"
+sidebar_title: "<tt>/sys/wrapping/unwrap</tt>"
 sidebar_current: "api-http-system-wrapping-unwrap"
 description: |-
   The `/sys/wrapping/unwrap` endpoint unwraps a wrapped response.

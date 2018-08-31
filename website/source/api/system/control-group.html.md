@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/control-group - HTTP API"
+sidebar_title: "<tt>/sys/control-group</tt>"
 sidebar_current: "api-http-system-control-group"
 description: |-
   The '/sys/control-group' endpoint handles the Control Group workflow.

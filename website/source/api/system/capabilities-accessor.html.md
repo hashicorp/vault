@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/capabilities-accessor - HTTP API"
+sidebar_title: "<tt>/sys/capabilities-accessor</tt>"
 sidebar_current: "api-http-system-capabilities-accessor"
 description: |-
   The `/sys/capabilities-accessor` endpoint is used to fetch the capabilities of
