@@ -14,6 +14,11 @@ for Vault 0.11.0 compared to 0.10.0. Please read it carefully.
 
 ## Known Issues
 
+### Nomad Integration
+
+Users that integrate Vault with Nomad should hold off on upgrading.  A modification to 
+Vault's API is causing a runtime issue with the Nomad to Vault integration.
+
 ### Minified JSON Policies
 
 Users that generate policies in minfied JSON may cause a parsing errors due to 
