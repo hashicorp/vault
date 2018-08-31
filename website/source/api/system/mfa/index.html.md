@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/mfa - HTTP API"
+sidebar_title: "<tt>/sys/mfa</tt>"
 sidebar_current: "api-http-system-mfa"
 description: |-
   The '/sys/mfa' endpoint focuses on managing MFA behaviors in Vault Enterprise MFA.
@@ -12,10 +13,10 @@ description: |-
 
 ## Supported MFA types.
 
-- [TOTP](/api/system/mfa-totp.html)
+* [TOTP](/api/system/mfa-totp.html)
 
-- [Okta](/api/system/mfa-okta.html)
+* [Okta](/api/system/mfa-okta.html)
 
-- [Duo](/api/system/mfa-duo.html)
+* [Duo](/api/system/mfa-duo.html)
 
-- [PingID](/api/system/mfa-pingid.html)
+* [PingID](/api/system/mfa-pingid.html)

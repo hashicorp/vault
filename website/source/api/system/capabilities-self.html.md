@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/capabilities-self - HTTP API"
+sidebar_title: "<tt>/sys/capabilities-self</tt>"
 sidebar_current: "api-http-system-capabilities-self"
 description: |-
   The `/sys/capabilities-self` endpoint is used to fetch the capabilities of

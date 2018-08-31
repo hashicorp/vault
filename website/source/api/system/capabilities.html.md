@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/capabilities - HTTP API"
+sidebar_title: "<tt>/sys/capabilities</tt>"
 sidebar_current: "api-http-system-capabilities/"
 description: |-
   The `/sys/capabilities` endpoint is used to fetch the capabilities of a token

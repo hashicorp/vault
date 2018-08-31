@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/mfa/method/pingid - HTTP API"
+sidebar_title: "<tt>/sys/mfa/method/pingid</tt>"
 sidebar_current: "api-http-system-mfa-pingid"
 description: |-
   The '/sys/mfa/method/pingid' endpoint focuses on managing PingID MFA behaviors in Vault Enterprise.

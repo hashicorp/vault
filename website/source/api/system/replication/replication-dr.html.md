@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/replication - HTTP API"
+sidebar_title: "<tt>/sys/replication/dr</tt>"
 sidebar_current: "api-http-system-replication-dr"
 description: |-
   The '/sys/replication/dr' endpoint focuses on managing general operations in Vault Enterprise Disaster Recovery replication

@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/wrapping/wrap - HTTP API"
+sidebar_title: "<tt>/sys/wrapping/wrap</tt>"
 sidebar_current: "api-http-system-wrapping-wrap"
 description: |-
   The `/sys/wrapping/wrap` endpoint wraps the given values in a

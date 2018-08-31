@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/plugins/catalog - HTTP API"
+sidebar_title: "<tt>/sys/plugins/catalog</tt>"
 sidebar_current: "api-http-system-plugins-catalog"
 description: |-
   The `/sys/plugins/catalog` endpoint is used to manage plugins.

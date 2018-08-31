@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/replication - HTTP API"
+sidebar_title: "<tt>/sys/replication/performance</tt>"
 sidebar_current: "api-http-system-replication-performance"
 description: |-
   The '/sys/replication/performance' endpoint focuses on managing general operations in Vault Enterprise Performance Replication

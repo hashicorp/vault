@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/mfa/method/duo - HTTP API"
+sidebar_title: "<tt>/sys/mfa/method/duo</tt>"
 sidebar_current: "api-http-system-mfa-duo"
 description: |-
   The '/sys/mfa/method/duo' endpoint focuses on managing Duo MFA behaviors in Vault Enterprise.

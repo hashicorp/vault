@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "LDAP - Auth Methods - HTTP API"
+sidebar_title: "LDAP"
 sidebar_current: "api-http-auth-ldap"
 description: |-
   This is the API documentation for the Vault LDAP auth method.
