@@ -151,8 +151,8 @@ func TestIdentityStore_EntityCreateUpdate(t *testing.T) {
 
 func TestIdentityStore_CloneImmutability(t *testing.T) {
 	alias := &identity.Alias{
-		ID:   "testaliasid",
-		Name: "testaliasname",
+		ID:                     "testaliasid",
+		Name:                   "testaliasname",
 		MergedFromCanonicalIDs: []string{"entityid1"},
 	}
 
