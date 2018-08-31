@@ -109,11 +109,8 @@ In this guide, you are going to perform the following steps:
 ### <a name="step1"></a>Step 1: Write templated ACL policies
 
 Policy authors can pass in a policy path containing double curly braces as
-templating delimiters.
+templating delimiters: `{{<parameter>}}`.
 
-```handlebars
-{{parameter}}
-```
 
 #### Available Templating Parameters
 
@@ -149,11 +146,9 @@ path "auth/userpass/users/{{identity.entity.aliases.auth_userpass_6671d643.name}
 
 #### Write the following policies:
 
-User template
+User template (`user-tmpl.hcl`)
 
 ```hcl
-# user-tmpl.hcl
-
 # Grant permissions on user specific path
 path "user-kv/data/{{identity.entity.name}}/*" {
 	capabilities = [ "create", "update", "read", "delete", "list" ]
@@ -165,11 +160,9 @@ path "user-kv/metadata" {
 }
 ```
 
-Group template
+Group template (`group-tmpl.hcl`)
 
 ```hcl
-# group-tmpl.hcl
-
 # Grant permissions on the group specific path
 # The region is specified in the group metadata
 path "group-kv/data/education/{{identity.groups.names.education.metadata.region}}/*" {
