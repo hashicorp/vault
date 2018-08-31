@@ -574,10 +574,10 @@ the **Username** field, and **`training`** in the **Password** field.
 
 1. Remember that `bob` is a member of the `bob_smith` entity; therefore, the
 "`user-kv/data/{{identity.entity.name}}/*`" expression in the `user-tmpl` policy
-translates to "**`user-kv/data/bob_smith/*`**". Select **`user-kv`** secrets engine,
-and then select **Create secret**.
+translates to "**`user-kv/data/bob_smith/*`**". Select **`user-kv`** secrets
+engine, and then select **Create secret**.
 
-1. Enter **`bob_smith/apikey`** in the **PATH FOR THIS SECRET** field. Enter
+1. Enter **`bob_smith/apikey`** in the **PATH FOR THIS SECRET** field, 
 **`webapp`** in the key field, and **`12344567890`** in its value field.
 
 1. Click **Save**. You should be able to perform this successfully.
@@ -586,9 +586,8 @@ and then select **Create secret**.
 `bob_smith` belongs to. Therefore, the
 "`group-kv/data/education/{{identity.groups.names.education.metadata.region}}/*`"
 expression in the `group-tmpl` policy translates to
-"**`group-kv/data/education/us-west/*`**". In the **Secrets** tab, select
-
-1. Select **Create secret**.
+"**`group-kv/data/education/us-west/*`**".  From the **Secrets** tab, select
+**`group-kv`** secrets engine, and then select **Create secret**.
 
 1. Enter **`education/us-west/db_cred`** in the **PATH FOR THIS SECRET** field.
 Enter **`password`** in the key field, and **`ABCDEFGHIJKLMN`** in its value
@@ -602,8 +601,8 @@ field.
 
 1. Select **Groups**, and then **`education`**.
 
-1. Select **Edit group**. Add a new metadata where the key is **`contact_email`**
-and its value is **`james@example.com`**.
+1. Select **Edit group**. Add a new metadata where the key is
+**`contact_email`** and its value is **`james@example.com`**.
 
 1. Click **Save**. The group metadata should be successfully updated.
 
