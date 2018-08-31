@@ -1,7 +1,8 @@
 ---
 layout: "intro"
 page_title: "Secrets Engines - Getting Started"
-sidebar_current: "gettingstarted-secretbackends"
+sidebar_title: "Secrets Engines"
+sidebar_current: "gettingstarted-secret-backends"
 description: |-
   secrets engines are what create, read, update, and delete secrets.
 ---

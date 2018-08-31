@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Built-in Help - Getting Started"
+sidebar_title: "Built-in Help"
 sidebar_current: "gettingstarted-help"
 description: |-
   Vault has a built-in help system to learn about the available paths in Vault and how to use them.

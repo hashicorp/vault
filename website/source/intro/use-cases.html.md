@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Use Cases"
+sidebar_title: "Use Cases"
 sidebar_current: "use-cases"
 description: |-
   This page lists some concrete use cases for Vault, but the possible use cases are much broader than what we cover.

@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Vault vs. Dropbox"
+sidebar_title: "Dropbox"
 sidebar_current: "vs-other-dropbox"
 description: |-
   Comparison between Vault and attempting to store secrets with Dropbox.

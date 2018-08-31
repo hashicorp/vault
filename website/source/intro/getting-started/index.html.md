@@ -1,7 +1,8 @@
 ---
 layout: "intro"
 page_title: "Install Vault - Getting Started"
-sidebar_current: "gettingstarted-install"
+sidebar_title: "Getting Started"
+sidebar_current: "gettingstarted"
 description: |-
   The first step to using Vault is to get it installed.
 ---
@@ -83,6 +84,7 @@ $ vault -autocomplete-install
 This will automatically install the helpers in your `~/.bashrc` or `~/.zshrc`, or to
 `~/.config/fish/completions/vault.fish` for Fish users. Then restart your terminal
 or reload your shell:
+
 ```sh
 $ exec $SHELL
 ```

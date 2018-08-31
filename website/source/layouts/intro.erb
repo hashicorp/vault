@@ -1,6 +1,43 @@
 <% wrap_layout :inner do %>
   <% content_for :sidebar do %>
     <ul class="nav docs-nav">
+      <hashi-docs-sidebar
+        category='intro'
+        current_page='<%= current_page.path %>'
+        data="<%= encode(sidebar_data('intro')) %>"
+        order="<%= encode([
+          'use-cases',
+          {
+            category: 'vs',
+            content: [
+              'chef-puppet-etc',
+              'hsm',
+              'dropbox',
+              'consul',
+              'kms',
+              'keywhiz',
+              'custom'
+            ]
+          }, {
+            category: 'getting-started',
+            content: [
+              'dev-server',
+              'first-secret',
+              'secrets-engines',
+              'dynamic-secrets',
+              'help',
+              'authentication',
+              'policies',
+              'deploy',
+              'apis',
+              'next-steps'
+            ]
+          }
+        ]) %>")
+      ></hashi-docs-sidebar>
+
+      <p>-------------------------------</p>
+
       <li<%= sidebar_current("what") %>>
         <a href="/intro/index.html">What is Vault?</a>
       </li>
