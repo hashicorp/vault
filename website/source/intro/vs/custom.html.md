@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Vault vs. Custom Solutions"
+sidebar_title: "Custom Solutions"
 sidebar_current: "vs-other-custom"
 description: |-
   Comparison between Vault and writing a custom solution.

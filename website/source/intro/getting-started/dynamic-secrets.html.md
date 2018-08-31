@@ -1,7 +1,8 @@
 ---
 layout: "intro"
 page_title: "Dynamic Secrets - Getting Started"
-sidebar_current: "gettingstarted-dynamicsecrets"
+sidebar_title: "Dynamic Secrets"
+sidebar_current: "gettingstarted-dynamic-secrets"
 description: |-
   On this page we introduce dynamic secrets by showing you how to create AWS access keys with Vault.
 ---
@@ -79,12 +80,8 @@ is okay - just use this one for now.
     {
       "Sid": "Stmt1426528957000",
       "Effect": "Allow",
-      "Action": [
-        "ec2:*"
-      ],
-      "Resource": [
-        "*"
-      ]
+      "Action": ["ec2:*"],
+      "Resource": ["*"]
     }
   ]
 }

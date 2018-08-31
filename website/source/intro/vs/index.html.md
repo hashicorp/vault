@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Vault vs. Other Software"
+sidebar_title: "Vault vs. Other Software"
 sidebar_current: "vs-other"
 description: |-
   Comparisons between Vault and other software that claim to store secrets in some capacity.
