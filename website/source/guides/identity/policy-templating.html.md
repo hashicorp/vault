@@ -24,7 +24,6 @@ creation of ACL policies in Vault.
 
 ## Reference Material
 
-- [Policies](/docs/concepts/policies.html)
 - [Templated Policies](/docs/concepts/policies.html#templated-policies)
 - [Policy API](/api/system/policy.html)
 - [Identity Secrets Engine](/docs/secrets/identity/index.html)
@@ -133,8 +132,14 @@ is double curly braces (**`{{<parameter>}}`**).
 | `identity.groups.names.<<group id>>.metadata.<<metadata key>>`         | Metadata associated with the group for the given key                         |
 | `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                         |
 
-**Example:** The following policy a user to change their own password for those
-`userpass` users.
+
+> **NOTE:** Identity groups are not directly attached to a token and an entity
+can be associated with multiple groups.  Therefore, in order to reference a
+group, the **group ID** or **group name** must be provided (e.g.
+`identity.groups.ids.59f001d5-dd49-6d63-51e4-357c1e7a4d44.name`).
+
+
+**Example:**
 
 ```hcl
 path "auth/userpass/users/{{identity.entity.aliases.auth_userpass_6671d643.name}}/password" {
@@ -142,10 +147,8 @@ path "auth/userpass/users/{{identity.entity.aliases.auth_userpass_6671d643.name}
 }
 ```
 
-> **NOTE:** Identity groups are not directly attached to a token and an entity
-can be associated with multiple groups.  Therefore, in order to reference a
-group, the **group ID** or **group name** must be provided (e.g.
-`identity.groups.ids.59f001d5-dd49-6d63-51e4-357c1e7a4d44.name`).
+This policy allows users to change their own password given that the username
+and password are defined in the  `userpass` auth method.
 
 ---
 
@@ -169,6 +172,7 @@ path "user-kv/metadata" {
 
 ```hcl
 # Grant permissions on the group specific path
+# The region is specified in the group metadata
 path "group-kv/data/education/{{identity.groups.names.education.metadata.region}}/*" {
 	capabilities = [ "create", "update", "read", "delete", "list" ]
 }
