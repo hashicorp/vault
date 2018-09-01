@@ -1380,6 +1380,7 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 
 	if data.params.UseCSRValues {
 		certTemplate.Subject = data.csr.Subject
+		certTemplate.Subject.ExtraNames = certTemplate.Subject.Names
 
 		certTemplate.DNSNames = data.csr.DNSNames
 		certTemplate.EmailAddresses = data.csr.EmailAddresses
