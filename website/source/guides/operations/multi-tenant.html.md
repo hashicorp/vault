@@ -853,12 +853,14 @@ client must acquire a valid token for each namespace to access their secrets.
 
 For the simplicity, this guide used the username and password (`userpass`) auth
 method which was enabled at the education namespace.  However, most likely, your
-organization uses LDAP auth method which is enabled at the `root` instead.
+organization uses LDAP auth method which is enabled in the `root` namespace
+instead.
 
-In such as case, here are the steps to create the "Training Admin" as described
-in this guide:
+In such as case, here are the steps to create the "Training Admin" group as
+described in this guide.
 
-1. Enable and configure the desired auth method (e.g. LDAP) at the root.
+1. Enable and configure the desired auth method (e.g. LDAP) in the root
+namespace.
 
     ```plaintext
     $ vault auth enable ldap
@@ -875,7 +877,7 @@ in this guide:
             starttls=true
     ```
 
-1. Create an _external_ group at the root.
+1. Create an _external_ group in the `root` namespace.
 
     ```shell
     # Get the mount accessor for ldap auth method and save it in accessor.txt file
