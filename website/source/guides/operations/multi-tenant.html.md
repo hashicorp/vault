@@ -853,7 +853,7 @@ client must acquire a valid token for each namespace to access their secrets.
 
 For the simplicity, this guide used the username and password (`userpass`) auth
 method which was enabled at the education namespace.  However, most likely, your
-organization uses LDAP auth method which is enabled in the `root` namespace
+organization uses LDAP auth method which is enabled in the root namespace
 instead.
 
 In such as case, here are the steps to create the "Training Admin" group as
@@ -877,7 +877,7 @@ namespace.
             starttls=true
     ```
 
-1. Create an _external_ group in the `root` namespace.
+1. Create an _external_ group in the root namespace.
 
     ```shell
     # Get the mount accessor for ldap auth method and save it in accessor.txt file
@@ -896,9 +896,9 @@ namespace.
     ```
 
 1. In the `education/training` namespace, create an _internal_ group which has
-the external group at the root (`training_admin_root`) as its member.
+the external group (`training_admin_root`) as its member.
 
-    ```shell
+    ```plaintext
     $ vault write -namespace=education/training identity/group \
             name="Training Admin" \
             policies="training-admin" \
