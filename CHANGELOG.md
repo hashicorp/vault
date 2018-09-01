@@ -1,3 +1,7 @@
+## 0.11.1 (Unreleased)
+
+
+
 ## 0.11.0 (August 28th, 2018)
 
 DEPRECATIONS/CHANGES:
@@ -11,7 +15,9 @@ DEPRECATIONS/CHANGES:
    However, this has some subtle issues that pop up from time to time and is
    becoming increasingly complicated to maintain, so it's finally being
    removed.
- * Path Fallback for List Operations: For a very long time Vault has
+ * (NOTE: will be re-added into 0.11.1 as it broke more than anticipated. There
+   will be some further guidelines around when this will be removed again.)
+   Path Fallback for List Operations: For a very long time Vault has
    automatically adjusted `list` operations to always end in a `/`, as list
    operations operates on prefixes, so all list operations by definition end
    with `/`. This was done server-side so affects all clients. However, this
