@@ -1,6 +1,8 @@
 ## 0.11.1 (Unreleased)
 
+BUG FIXES:
 
+ * secrets/pki: Fix sign-verbatim losing extra Subject attributes [GH-5245]
 
 ## 0.11.0 (August 28th, 2018)
 
