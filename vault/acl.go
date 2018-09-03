@@ -231,10 +231,8 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	_, raw, ok = a.globRules.LongestPrefix(path)
 	if !ok {
 		return []string{DenyCapability}
-	} else {
-		perm := raw.(*ACLPermissions)
-		capabilities = perm.CapabilitiesBitmap
 	}
+	capabilities = raw.(*ACLPermissions).CapabilitiesBitmap
 
 CHECK:
 	if capabilities&SudoCapabilityInt > 0 {
