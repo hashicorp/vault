@@ -9,6 +9,7 @@
   flex-direction: column;
   flex-grow: 1;
   transition: padding $speed;
+  will-change: padding;
 }
 
 .ui-wizard-container .app-content.wizard-open {
