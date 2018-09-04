@@ -84,7 +84,7 @@ flags](/docs/commands/index.html) included on all commands.
 
 - `-status` `(bool": false)` - Print the current initialization status. An exit
   code of 0 means the Vault is already initialized. An exit code of 1 means an
-  error occurred. An exit code of 2 means the mean is not initialized.
+  error occurred. An exit code of 2 means the Vault is not initialized.
 
 ### Consul Options
 
