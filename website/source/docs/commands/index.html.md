@@ -65,7 +65,7 @@ $ vault -autocomplete-install
 
 ~> Be sure to **restart your shell** after installing autocompletion!
 
-When you start tying a Vault command, press the `<tab>` character to show a
+When you start typing a Vault command, press the `<tab>` character to show a
 list of available completions. Type `-<tab>` to show available flag completions.
 
 If the `VAULT_*` environment variables are set, the autocompletion will
