@@ -574,12 +574,12 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"role_tag":                       "testtag",
 		"resolve_aws_unique_ids":         false,
 		"allow_instance_migration":       true,
-		"ttl":                            "10m",
-		"max_ttl":                        "20m",
-		"policies":                       "testpolicy1,testpolicy2",
-		"disallow_reauthentication":      false,
-		"hmac_key":                       "testhmackey",
-		"period":                         "1m",
+		"ttl":                       "10m",
+		"max_ttl":                   "20m",
+		"policies":                  "testpolicy1,testpolicy2",
+		"disallow_reauthentication": false,
+		"hmac_key":                  "testhmackey",
+		"period":                    "1m",
 	}
 
 	roleReq.Path = "role/testrole"
@@ -613,11 +613,11 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"resolve_aws_unique_ids":         false,
 		"role_tag":                       "testtag",
 		"allow_instance_migration":       true,
-		"ttl":                            time.Duration(600),
-		"max_ttl":                        time.Duration(1200),
-		"policies":                       []string{"testpolicy1", "testpolicy2"},
-		"disallow_reauthentication":      false,
-		"period":                         time.Duration(60),
+		"ttl":                       time.Duration(600),
+		"max_ttl":                   time.Duration(1200),
+		"policies":                  []string{"testpolicy1", "testpolicy2"},
+		"disallow_reauthentication": false,
+		"period":                    time.Duration(60),
 	}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
@@ -676,9 +676,9 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 		"auth_type":                      "ec2",
 		"bound_iam_instance_profile_arn": "arn:aws:iam::123456789012:instance-profile/test-profile-name",
 		"resolve_aws_unique_ids":         false,
-		"ttl":                            "10s",
-		"max_ttl":                        "20s",
-		"period":                         "30s",
+		"ttl":     "10s",
+		"max_ttl": "20s",
+		"period":  "30s",
 	}
 
 	roleReq := &logical.Request{

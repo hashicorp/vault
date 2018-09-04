@@ -82,7 +82,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 			NotBefore:             time.Now().Add(-30 * time.Second),
 			NotAfter:              time.Now().Add(262980 * time.Hour),
 			BasicConstraintsValid: true,
-			IsCA:                  true,
+			IsCA: true,
 		}
 		caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, cak.Public(), cak)
 		if err != nil {
