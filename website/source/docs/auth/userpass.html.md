@@ -24,8 +24,8 @@ same entry.
 
 ```text
 $ vault login -method=userpass \
-    username=foo \
-    password=bar
+    username=mitchellh \
+    password=foo
 ```
 
 ### Via the API
@@ -85,6 +85,5 @@ management tool.
 
 ## API
 
-The Userpass auth method has a full HTTP API. Please see the
-[Userpass auth method API](/api/auth/userpass/index.html) for more
-details.
+The Userpass auth method has a full HTTP API. Please see the [Userpass auth
+method API](/api/auth/userpass/index.html) for more details.

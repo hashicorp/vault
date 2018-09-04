@@ -1,3 +1,9 @@
+## 0.11.1 (Unreleased)
+
+BUG FIXES:
+
+ * secrets/pki: Fix sign-verbatim losing extra Subject attributes [GH-5245]
+
 ## 0.11.0 (August 28th, 2018)
 
 DEPRECATIONS/CHANGES:
@@ -5,7 +11,9 @@ DEPRECATIONS/CHANGES:
  * Request Timeouts: A default request timeout of 90s is now enforced. This
    setting can be overwritten in the config file. If you anticipate requests
    taking longer than 90s this setting should be updated before upgrading.
- * `sys/` Top Level Injection: For the last two years for backwards
+ * (NOTE: will be re-added into 0.11.1 as it broke more than anticipated. There
+   will be some further guidelines around when this will be removed again.)
+   * `sys/` Top Level Injection: For the last two years for backwards
    compatibility data for various `sys/` routes has been injected into both the
    Secret's Data map and into the top level of the JSON response object.
    However, this has some subtle issues that pop up from time to time and is
@@ -61,6 +69,9 @@ FEATURES:
  * **HA Support for MySQL Storage**: MySQL storage now supports HA.
  * **ACL Templating**: ACL policies can now be templated using identity Entity,
    Groups, and Metadata.
+ * **UI Onboarding wizards**: The Vault UI can provide contextual help and 
+   guidance, linking out to relevant links or guides on vaultproject.io for
+   various workflows in Vault.
 
 IMPROVEMENTS:
 

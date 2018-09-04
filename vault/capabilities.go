@@ -25,46 +25,29 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 		return nil, &logical.StatusBadRequest{Err: "invalid token"}
 	}
 
-	if te.Policies == nil {
-		return []string{DenyCapability}, nil
-	}
+	// Start with token entry policies
+	policies := te.Policies
 
-	var policies []*Policy
-	for _, tePolicy := range te.Policies {
-		policy, err := c.policyStore.GetPolicy(ctx, tePolicy, PolicyTypeToken)
-		if err != nil {
-			return nil, err
-		}
-		policies = append(policies, policy)
-	}
-
+	// Fetch entity and entity group policies
 	entity, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(te.EntityID)
 	if err != nil {
 		return nil, err
 	}
-
 	if entity != nil && entity.Disabled {
 		c.logger.Warn("permission denied as the entity on the token is disabled")
 		return nil, logical.ErrPermissionDenied
 	}
-	if te != nil && te.EntityID != "" && entity == nil {
+	if te.EntityID != "" && entity == nil {
 		c.logger.Warn("permission denied as the entity on the token is invalid")
 		return nil, logical.ErrPermissionDenied
 	}
-
-	for _, item := range derivedPolicies {
-		policy, err := c.policyStore.GetPolicy(ctx, item, PolicyTypeToken)
-		if err != nil {
-			return nil, err
-		}
-		policies = append(policies, policy)
-	}
+	policies = append(policies, derivedPolicies...)
 
 	if len(policies) == 0 {
 		return []string{DenyCapability}, nil
 	}
 
-	acl, err := NewACL(policies)
+	acl, err := c.policyStore.ACL(ctx, entity, policies...)
 	if err != nil {
 		return nil, err
 	}
