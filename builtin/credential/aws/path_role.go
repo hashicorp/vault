@@ -891,12 +891,12 @@ Create a role and associate policies to it.
 
 const pathRoleDesc = `
 A precondition for login is that a role should be created in the backend.
-The login endpoint takes in the role name against which the instance
-should be validated. After authenticating the instance, the authorization
-for the instance to access Vault's resources is determined by the policies
-that are associated to the role though this endpoint.
+The login endpoint takes in the role name against which the client
+should be validated. After authenticating the client, the authorization
+to access Vault's resources is determined by the policies that are
+associated to the role though this endpoint.
 
-When the instances require only a subset of policies on the role, then
+When an EC2 instance requires only a subset of policies on the role, then
 'role_tag' option on the role can be enabled to create a role tag via the
 endpoint 'role/<role>/tag'. This tag then needs to be applied on the
 instance before it attempts a login. The policies on the tag should be a
