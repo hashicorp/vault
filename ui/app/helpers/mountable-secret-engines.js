@@ -5,7 +5,6 @@ const MOUNTABLE_SECRET_ENGINES = [
     displayName: 'Active Directory',
     value: 'ad',
     type: 'ad',
-    glyph: 'azure',
     category: 'cloud',
   },
   {
