@@ -860,11 +860,11 @@ func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
 		"resolve_aws_unique_ids":         r.ResolveAWSUniqueIDs,
 		"role_tag":                       r.RoleTag,
 		"allow_instance_migration":       r.AllowInstanceMigration,
-		"ttl":                            r.TTL / time.Second,
-		"max_ttl":                        r.MaxTTL / time.Second,
-		"policies":                       r.Policies,
-		"disallow_reauthentication":      r.DisallowReauthentication,
-		"period":                         r.Period / time.Second,
+		"ttl":                       r.TTL / time.Second,
+		"max_ttl":                   r.MaxTTL / time.Second,
+		"policies":                  r.Policies,
+		"disallow_reauthentication": r.DisallowReauthentication,
+		"period":                    r.Period / time.Second,
 	}
 
 	convertNilToEmptySlice := func(data map[string]interface{}, field string) {
