@@ -104,8 +104,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"host": cfg.Host,
-			"port": cfg.Port,
+			"host":                       cfg.Host,
+			"port":                       cfg.Port,
 			"unregistered_user_policies": cfg.UnregisteredUserPolicies,
 			"dial_timeout":               cfg.DialTimeout,
 			"read_timeout":               cfg.ReadTimeout,
