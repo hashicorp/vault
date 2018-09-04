@@ -1114,7 +1114,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
 		return nil
 	}
 
-	c.logger.Debug("marked as sealed")
+	c.logger.Info("marked as sealed")
 
 	// Clear forwarding clients
 	c.requestForwardingConnectionLock.Lock()
