@@ -21,7 +21,7 @@ import (
 	Creds can be inferred from instance metadata, and those creds
 	expire every 60 minutes, so we're going to need to poll for new
 	creds. Since we're polling anyways, let's poll once a minute so
-	all changes can be quicked up rather quickly. This is configurable,
+	all changes can be picked up rather quickly. This is configurable,
 	however.
 
 */
@@ -196,14 +196,14 @@ func (a *alicloudMethod) Shutdown() {
 }
 
 func (a *alicloudMethod) pollForCreds(credProvider providers.Provider, frequencySeconds int) {
-	timer := time.NewTimer(time.Duration(frequencySeconds) * time.Second)
-	defer timer.Stop()
+	ticker := time.NewTicker(time.Duration(frequencySeconds) * time.Second)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-a.stopCh:
 			a.logger.Trace("shutdown triggered, stopping alicloud auth handler")
 			return
-		case <-timer.C:
+		case <-ticker.C:
 			if err := a.checkCreds(credProvider); err != nil {
 				a.logger.Warn("unable to retrieve current creds, retaining last creds", err)
 			}
