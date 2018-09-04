@@ -144,9 +144,6 @@ func TestServer_ReloadListener(t *testing.T) {
 	ui, cmd := testServerCommand(t)
 	_ = ui
 
-	finished := false
-	finishedMutex := sync.Mutex{}
-
 	wg.Add(1)
 	args := []string{"-config", td + "/reload.hcl"}
 	go func() {
@@ -154,9 +151,6 @@ func TestServer_ReloadListener(t *testing.T) {
 			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
 			t.Errorf("got a non-zero exit status: %s", output)
 		}
-		finishedMutex.Lock()
-		finished = true
-		finishedMutex.Unlock()
 		wg.Done()
 	}()
 
