@@ -29,6 +29,13 @@ Premium_, and also available for _Vault Enterprise Pro_ with additional fee.
 This is particularly useful for processing high volume [_Encryption as a
 Service_](/docs/secrets/transit/index.html) requests.
 
+## Reference Materials
+
+- [Performance Standby Nodes](/docs/enterprise/performance-standby/index.html)
+- [High Availability Mode](/docs/concepts/ha.html)
+- [Consul Storage Backend](/docs/configuration/storage/consul.html)
+- [Vault Reference Architecture](/guides/operations/reference-architecture.html)
+
 
 ## Server Configuration
 
@@ -78,14 +85,6 @@ datacenters.
 
 ![Global Architecture](/assets/images/vault-perf-standby-2.png)
 
-
-
-## Reference Materials
-
-- [High Availability Mode](/docs/concepts/ha.html)
-- [Consul Storage Backend](/docs/configuration/storage/consul.html)
-- [Performance Standby Nodes](/docs/enterprise/performance-standby/index.html)
-- [Vault Reference Architecture](/guides/operations/reference-architecture.html)
 
 
 ## Next steps
