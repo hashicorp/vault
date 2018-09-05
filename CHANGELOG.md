@@ -1,4 +1,4 @@
-## 0.11.1 (Unreleased)
+## 0.11.1 (September 5th, 2018)
 
 SECURITY:
 
@@ -9,7 +9,8 @@ SECURITY:
    and weakening the security of the key. On most platforms this should never
    happen because reading from kernel random sources is non-blocking and always
    successful, but there may be platform-specific behavior that has not been
-   accounted for.
+   accounted for. (Vault has tests to check exactly this, and the tests have
+   never seen nonce re-use.)
 
 IMPROVEMENTS:
 
