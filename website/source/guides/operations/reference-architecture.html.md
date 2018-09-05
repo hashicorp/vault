@@ -5,6 +5,7 @@ sidebar_current: "guides-operations-reference-architecture"
 description: |-
   This guide provides guidance in the best practices of Vault
   implementations through use of a reference architecture.
+product_version: 0.11
 ---
 
 # Vault Reference Architecture
