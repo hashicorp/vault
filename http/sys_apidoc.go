@@ -28,7 +28,7 @@ import (
 	"github.com/hashicorp/vault/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 
-	credAzure "github.com/hashicorp/vault-plugin-auth-azure/plugin"
+	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
