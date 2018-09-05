@@ -5,6 +5,8 @@ BUG FIXES:
  * core: Re-add `sys/` top-route injection for now [GH-5241]
  * secrets/database: Fix nil pointer when revoking some leases [GH-5262]
  * secrets/pki: Fix sign-verbatim losing extra Subject attributes [GH-5245]
+ * secrets/pki: Remove certificates from store when tidying revoked
+   certificates [GH-5231]
 
 ## 0.11.0 (August 28th, 2018)
 
