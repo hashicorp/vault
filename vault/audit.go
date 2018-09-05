@@ -308,7 +308,9 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 // setupAudit is invoked after we've loaded the audit able to
 // initialize the audit backends
 func (c *Core) setupAudits(ctx context.Context) error {
-	broker := NewAuditBroker(c.baseLogger.Named("audit"))
+	brokerLogger := c.baseLogger.Named("audit")
+	c.AddLogger(brokerLogger)
+	broker := NewAuditBroker(brokerLogger)
 
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
@@ -413,6 +415,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 	}
 
 	auditLogger := c.baseLogger.Named("audit")
+	c.AddLogger(auditLogger)
 
 	switch entry.Type {
 	case "file":

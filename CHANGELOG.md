@@ -12,11 +12,17 @@ SECURITY:
    accounted for. (Vault has tests to check exactly this, and the tests have
    never seen nonce re-use.)
 
-IMPROVEMENTS:
+FEATURES:
 
  * AliCloud Agent Support: Vault Agent can now authenticate against the
    AliCloud auth method.
  * UI: Enable AliCloud auth method and Azure secrets engine via the UI.
+
+IMPROVEMENTS:
+
+ * core: Logging level for most logs (not including secrets/auth plugins) can
+   now be changed on-the-fly via `SIGHUP`, reading the desired value from
+   Vault's config file [GH-5280]
 
 BUG FIXES:
 

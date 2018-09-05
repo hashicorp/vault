@@ -923,9 +923,11 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		conf["plugin_name"] = entry.Config.PluginName
 	}
 
+	backendLogger := c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor))
+	c.AddLogger(backendLogger)
 	config := &logical.BackendConfig{
 		StorageView: view,
-		Logger:      c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor)),
+		Logger:      backendLogger,
 		Config:      conf,
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,
