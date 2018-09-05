@@ -14,6 +14,12 @@ const MOUNTABLE_SECRET_ENGINES = [
     category: 'cloud',
   },
   {
+    displayName: 'Azure',
+    value: 'azure',
+    type: 'azure',
+    category: 'cloud',
+  },
+  {
     displayName: 'Consul',
     value: 'consul',
     type: 'consul',
@@ -76,7 +82,7 @@ const MOUNTABLE_SECRET_ENGINES = [
 ];
 
 export function engines() {
-  return MOUNTABLE_SECRET_ENGINES;
+  return MOUNTABLE_SECRET_ENGINES.slice();
 }
 
 export default Ember.Helper.helper(engines);
