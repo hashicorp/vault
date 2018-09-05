@@ -135,6 +135,8 @@ type TokenStore struct {
 
 	tidyLock *uint32
 
+	core *Core
+
 	identityPoliciesDeriverFunc func(string) (*identity.Entity, []string, error)
 
 	quitContext context.Context
@@ -148,12 +150,13 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 
 	// Initialize the store
 	t := &TokenStore{
-		view:                        view,
-		cubbyholeDestroyer:          destroyCubbyhole,
-		logger:                      logger,
-		tokenLocks:                  locksutil.CreateLocks(),
-		tokensPendingDeletion:       &sync.Map{},
-		saltLock:                    sync.RWMutex{},
+		view:                  view,
+		cubbyholeDestroyer:    destroyCubbyhole,
+		logger:                logger,
+		tokenLocks:            locksutil.CreateLocks(),
+		tokensPendingDeletion: &sync.Map{},
+		saltLock:              sync.RWMutex{},
+		core:                  c,
 		identityPoliciesDeriverFunc: c.fetchEntityAndDerivedPolicies,
 		tidyLock:                    new(uint32),
 		quitContext:                 c.activeContext,
@@ -1309,6 +1312,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		ctx = ts.quitContext
 
 		logger := ts.logger.Named("tidy")
+		ts.core.AddLogger(logger)
 
 		var tidyErrors *multierror.Error
 

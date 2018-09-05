@@ -40,12 +40,16 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		core:   core,
 	}
 
-	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, iStore.logger, "")
+	entitiesPackerLogger := iStore.logger.Named("storagepacker").Named("entities")
+	core.AddLogger(entitiesPackerLogger)
+	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
+	core.AddLogger(groupsPackerLogger)
+	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, entitiesPackerLogger, "")
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create entity packer: {{err}}", err)
 	}
 
-	iStore.groupPacker, err = storagepacker.NewStoragePacker(iStore.view, iStore.logger, groupBucketsPrefix)
+	iStore.groupPacker, err = storagepacker.NewStoragePacker(iStore.view, groupsPackerLogger, groupBucketsPrefix)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create group packer: {{err}}", err)
 	}

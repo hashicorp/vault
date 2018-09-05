@@ -53,6 +53,8 @@ type Config struct {
 
 	PluginDirectory string `hcl:"plugin_directory"`
 
+	LogLevel string `hcl:"log_level"`
+
 	PidFile              string      `hcl:"pid_file"`
 	EnableRawEndpoint    bool        `hcl:"-"`
 	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
@@ -297,6 +299,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DefaultMaxRequestDuration = c.DefaultMaxRequestDuration
 	if c2.DefaultMaxRequestDuration > result.DefaultMaxRequestDuration {
 		result.DefaultMaxRequestDuration = c2.DefaultMaxRequestDuration
+	}
+
+	result.LogLevel = c.LogLevel
+	if c2.LogLevel != "" {
+		result.LogLevel = c2.LogLevel
 	}
 
 	result.ClusterName = c.ClusterName
