@@ -110,14 +110,14 @@ management tool.
     By default, the secrets engine will mount at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-1. Create a named encryption key ring:
+1. Create a named encryption key:
 
     ```text
     $ vault write -f transit/keys/my-key
     Success! Data written to: transit/keys/my-key
     ```
 
-    Usually each application has its own encryption key ring.
+    Usually each application has its own encryption key.
 
 ## Usage
 
