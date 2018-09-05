@@ -15,6 +15,7 @@ IMPROVEMENTS:
 
  * AliCloud Agent Support: Vault Agent can now authenticate against the
    AliCloud auth method.
+ * UI: Enable AliCloud auth method and Azure secrets engine via the UI.
 
 BUG FIXES:
 
@@ -26,6 +27,9 @@ BUG FIXES:
  * secrets/pki: Fix sign-verbatim losing extra Subject attributes [GH-5245]
  * secrets/pki: Remove certificates from store when tidying revoked
    certificates [GH-5231]
+ * ui: JSON editor will not coerce input to an object, and will now show an 
+   error about Vault expecting an object [GH-5271]
+ 
 
 ## 0.11.0 (August 28th, 2018)
 
