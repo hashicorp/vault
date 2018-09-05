@@ -152,7 +152,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "log-level",
 		Target:     &c.flagLogLevel,
-		Default:    "(not set)",
+		Default:    notSetValue,
 		EnvVar:     "VAULT_LOG_LEVEL",
 		Completion: complete.PredictSet("trace", "debug", "info", "warn", "err"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
@@ -310,7 +310,7 @@ func (c *ServerCommand) Run(args []string) int {
 	var logLevelWasNotSet bool
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
-	case "(not set)":
+	case notSetValue:
 		logLevelWasNotSet = true
 		level = log.Info
 	case "trace":
