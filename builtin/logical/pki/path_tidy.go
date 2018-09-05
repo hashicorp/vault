@@ -23,6 +23,11 @@ func pathTidy(b *backend) *framework.Path {
 the certificate store`,
 			},
 
+			"tidy_revocation_list": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: `Deprecated; synonym for 'tidy_revoked_certs`,
+			},
+
 			"tidy_revoked_certs": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `Set to true to expire all revoked
@@ -54,6 +59,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	safetyBuffer := d.Get("safety_buffer").(int)
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool)
+	tidyRevocationList := d.Get("tidy_revocation_list").(bool)
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
@@ -121,7 +127,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 				}
 			}
 
-			if tidyRevokedCerts {
+			if tidyRevokedCerts || tidyRevocationList {
 				b.revokeStorageLock.Lock()
 				defer b.revokeStorageLock.Unlock()
 
