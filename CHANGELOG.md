@@ -1,7 +1,24 @@
 ## 0.11.1 (Unreleased)
 
+SECURITY:
+
+ * Random Byte Reading in Barrier: Prior to this release, Vault was not
+   properly checking the error code when reading random bytes for the IV for
+   AES operations in its cryptographic barrier. Specifically, this means that
+   such an IV could potentially be zero multiple times, causing nonce re-use
+   and weakening the security of the key. On most platforms this should never
+   happen because reading from kernel random sources is non-blocking and always
+   successful, but there may be platform-specific behavior that has not been
+   accounted for.
+
+IMPROVEMENTS:
+
+ * AliCloud Agent Support: Vault Agent can now authenticate against the
+   AliCloud auth method.
+
 BUG FIXES:
 
+ * core: Properly check error return from random byte reading [GH-5277]
  * core: Re-add `sys/` top-route injection for now [GH-5241]
  * secrets/database: Fix nil pointer when revoking some leases [GH-5262]
  * secrets/pki: Fix sign-verbatim losing extra Subject attributes [GH-5245]
