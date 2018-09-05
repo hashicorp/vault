@@ -5,7 +5,8 @@ posts:
     body: >-
       We are proud to announce the release of HashiCorp Vault 0.10. This
       version includes an open source web UI, versioned key-value secrets,
-      Azure authentication, GCP Secrets Engine, Root DB credential rotation, and much more!
+      Azure authentication, Google Cloud Secrets Engine, Root DB credential
+      rotation, and much more!
     link_url: "https://www.hashicorp.com/blog/vault-0-10/"
   -
     title: "Vault 0.9 released"

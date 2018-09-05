@@ -1,12 +1,10 @@
-<header class="page-header">
-  <div class="level">
-    <div class="level-left">
-      <h3 class="title is-3">
-        Rewrap Token
-      </h3>
-    </div>
-  </div>
-</header>
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Rewrap Token
+    </h1>
+  </p.levelLeft>
+</PageHeader>
 
 {{#if rewrap_token}}
   <div class="box is-sideless is-fullwidth is-marginless">
@@ -43,6 +41,8 @@
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode="perform" @noun={{selectedAction}} />
+    {{message-error errors=errors}}
     <div class="field">
       <label for="token" class="is-label">Wrapping token</label>
       <div class="control">

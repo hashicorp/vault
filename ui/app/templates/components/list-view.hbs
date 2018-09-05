@@ -1,0 +1,19 @@
+{{#if items.length}}
+  <div class="box is-fullwidth is-bottomless is-sideless is-paddingless">
+    {{#each items as |item|}}
+      {{yield (hash deleteItem=deleteItem saveItem=saveItem item=item)}}
+    {{/each}}
+  </div>
+{{else}}
+  <div class="box is-bottomless has-background-white-bis">
+    <div class="columns is-centered">
+      <div class="column is-half has-text-centered">
+        <div class="box is-shadowless has-background-white-bis">
+          <p class="has-text-grey">
+            {{emptyMessage}}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+{{/if}}

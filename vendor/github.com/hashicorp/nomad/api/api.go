@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,6 +17,13 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 	rootcerts "github.com/hashicorp/go-rootcerts"
+)
+
+var (
+	// ClientConnTimeout is the timeout applied when attempting to contact a
+	// client directly before switching to a connection through the Nomad
+	// server.
+	ClientConnTimeout = 1 * time.Second
 )
 
 // QueryOptions are used to parameterize a query
@@ -145,6 +153,8 @@ func (c *Config) ClientConfig(region, address string, tlsEnabled bool) *Config {
 		WaitTime:   c.WaitTime,
 		TLSConfig:  c.TLSConfig.Copy(),
 	}
+
+	// Update the tls server name for connecting to a client
 	if tlsEnabled && config.TLSConfig != nil {
 		config.TLSConfig.TLSServerName = fmt.Sprintf("client.%s.nomad", region)
 	}
@@ -249,6 +259,34 @@ func DefaultConfig() *Config {
 	return config
 }
 
+// SetTimeout is used to place a timeout for connecting to Nomad. A negative
+// duration is ignored, a duration of zero means no timeout, and any other value
+// will add a timeout.
+func (c *Config) SetTimeout(t time.Duration) error {
+	if c == nil {
+		return fmt.Errorf("nil config")
+	} else if c.httpClient == nil {
+		return fmt.Errorf("nil HTTP client")
+	} else if c.httpClient.Transport == nil {
+		return fmt.Errorf("nil HTTP client transport")
+	}
+
+	// Apply a timeout.
+	if t.Nanoseconds() >= 0 {
+		transport, ok := c.httpClient.Transport.(*http.Transport)
+		if !ok {
+			return fmt.Errorf("unexpected HTTP transport: %T", c.httpClient.Transport)
+		}
+
+		transport.DialContext = (&net.Dialer{
+			Timeout:   t,
+			KeepAlive: 30 * time.Second,
+		}).DialContext
+	}
+
+	return nil
+}
+
 // ConfigureTLS applies a set of TLS configurations to the the HTTP client.
 func (c *Config) ConfigureTLS() error {
 	if c.TLSConfig == nil {
@@ -314,7 +352,7 @@ func NewClient(config *Config) (*Client, error) {
 		config.httpClient = defConfig.httpClient
 	}
 
-	// Configure the TLS cofigurations
+	// Configure the TLS configurations
 	if err := config.ConfigureTLS(); err != nil {
 		return nil, err
 	}
@@ -343,7 +381,15 @@ func (c *Client) SetNamespace(namespace string) {
 // GetNodeClient returns a new Client that will dial the specified node. If the
 // QueryOptions is set, its region will be used.
 func (c *Client) GetNodeClient(nodeID string, q *QueryOptions) (*Client, error) {
-	return c.getNodeClientImpl(nodeID, q, c.Nodes().Info)
+	return c.getNodeClientImpl(nodeID, -1, q, c.Nodes().Info)
+}
+
+// GetNodeClientWithTimeout returns a new Client that will dial the specified
+// node using the specified timeout. If the QueryOptions is set, its region will
+// be used.
+func (c *Client) GetNodeClientWithTimeout(
+	nodeID string, timeout time.Duration, q *QueryOptions) (*Client, error) {
+	return c.getNodeClientImpl(nodeID, timeout, q, c.Nodes().Info)
 }
 
 // nodeLookup is the definition of a function used to lookup a node. This is
@@ -353,7 +399,7 @@ type nodeLookup func(nodeID string, q *QueryOptions) (*Node, *QueryMeta, error)
 // getNodeClientImpl is the implementation of creating a API client for
 // contacting a node. It takes a function to lookup the node such that it can be
 // mocked during tests.
-func (c *Client) getNodeClientImpl(nodeID string, q *QueryOptions, lookup nodeLookup) (*Client, error) {
+func (c *Client) getNodeClientImpl(nodeID string, timeout time.Duration, q *QueryOptions, lookup nodeLookup) (*Client, error) {
 	node, _, err := lookup(nodeID, q)
 	if err != nil {
 		return nil, err
@@ -380,6 +426,10 @@ func (c *Client) getNodeClientImpl(nodeID string, q *QueryOptions, lookup nodeLo
 
 	// Get an API client for the node
 	conf := c.config.ClientConfig(region, node.HTTPAddr, node.TLSEnabled)
+
+	// Set the timeout
+	conf.SetTimeout(timeout)
+
 	return NewClient(conf)
 }
 

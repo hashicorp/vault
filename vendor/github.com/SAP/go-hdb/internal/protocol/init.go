@@ -83,103 +83,57 @@ func (r *initRequest) String() string {
 }
 
 func (r *initRequest) read(rd *bufio.Reader) error {
-	var err error
-
-	if err := rd.Skip(initRequestFillerSize); err != nil { //filler
-		return err
-	}
-
-	if r.product.major, err = rd.ReadInt8(); err != nil {
-		return err
-	}
-	if r.product.minor, err = rd.ReadInt16(); err != nil {
-		return err
-	}
-	if r.protocol.major, err = rd.ReadInt8(); err != nil {
-		return err
-	}
-	if r.protocol.minor, err = rd.ReadInt16(); err != nil {
-		return err
-	}
-	if err := rd.Skip(1); err != nil { //reserved filler
-		return err
-	}
-	if r.numOptions, err = rd.ReadInt8(); err != nil {
-		return err
-	}
+	rd.Skip(initRequestFillerSize) //filler
+	r.product.major = rd.ReadInt8()
+	r.product.minor = rd.ReadInt16()
+	r.protocol.major = rd.ReadInt8()
+	r.protocol.minor = rd.ReadInt16()
+	rd.Skip(1) //reserved filler
+	r.numOptions = rd.ReadInt8()
 
 	switch r.numOptions {
 	default:
 		outLogger.Fatalf("invalid number of options %d", r.numOptions)
 
 	case 0:
-		if err := rd.Skip(2); err != nil {
-			return err
-		}
+		rd.Skip(2)
 
 	case 1:
-		if cnt, err := rd.ReadInt8(); err == nil {
-			if cnt != 1 {
-				return fmt.Errorf("endianess %d - 1 expected", cnt)
-			}
-		} else {
-			return err
+		cnt := rd.ReadInt8()
+		if cnt != 1 {
+			outLogger.Fatalf("endianess %d - 1 expected", cnt)
 		}
-		_endianess, err := rd.ReadInt8()
-		if err != nil {
-			return err
-		}
-		r.endianess = endianess(_endianess)
+		r.endianess = endianess(rd.ReadInt8())
 	}
 
 	if trace {
 		outLogger.Printf("read %s", r)
 	}
 
-	return nil
+	return rd.GetError()
 }
 
 func (r *initRequest) write(wr *bufio.Writer) error {
-
-	if err := wr.WriteUint32(initRequestFiller); err != nil {
-		return err
-	}
-	if err := wr.WriteInt8(r.product.major); err != nil {
-		return err
-	}
-	if err := wr.WriteInt16(r.product.minor); err != nil {
-		return err
-	}
-	if err := wr.WriteInt8(r.protocol.major); err != nil {
-		return err
-	}
-	if err := wr.WriteInt16(r.protocol.minor); err != nil {
-		return err
-	}
+	wr.WriteUint32(initRequestFiller)
+	wr.WriteInt8(r.product.major)
+	wr.WriteInt16(r.product.minor)
+	wr.WriteInt8(r.protocol.major)
+	wr.WriteInt16(r.protocol.minor)
 
 	switch r.numOptions {
 	default:
 		outLogger.Fatalf("invalid number of options %d", r.numOptions)
 
 	case 0:
-		if err := wr.WriteZeroes(4); err != nil {
-			return err
-		}
+		wr.WriteZeroes(4)
 
 	case 1:
 		// reserved
-		if err := wr.WriteZeroes(1); err != nil {
-			return err
-		}
-		if err := wr.WriteInt8(r.numOptions); err != nil {
-			return err
-		}
-		if err := wr.WriteInt8(int8(okEndianess)); err != nil {
-			return err
-		}
-		if err := wr.WriteInt8(int8(r.endianess)); err != nil {
-			return err
-		}
+		wr.WriteZeroes(1)
+		wr.WriteInt8(r.numOptions)
+		wr.WriteInt8(int8(okEndianess))
+		wr.WriteInt8(int8(r.endianess))
+
 	}
 
 	// flush
@@ -211,49 +165,25 @@ func (r *initReply) String() string {
 }
 
 func (r *initReply) read(rd *bufio.Reader) error {
-	var err error
-
-	if r.product.major, err = rd.ReadInt8(); err != nil {
-		return err
-	}
-	if r.product.minor, err = rd.ReadInt16(); err != nil {
-		return err
-	}
-	if r.protocol.major, err = rd.ReadInt8(); err != nil {
-		return err
-	}
-	if r.protocol.minor, err = rd.ReadInt16(); err != nil {
-		return err
-	}
-
-	if err := rd.Skip(2); err != nil { //commitInitReplySize
-		return err
-	}
+	r.product.major = rd.ReadInt8()
+	r.product.minor = rd.ReadInt16()
+	r.protocol.major = rd.ReadInt8()
+	r.protocol.minor = rd.ReadInt16()
+	rd.Skip(2) //commitInitReplySize
 
 	if trace {
 		outLogger.Printf("read %s", r)
 	}
 
-	return nil
+	return rd.GetError()
 }
 
 func (r *initReply) write(wr *bufio.Writer) error {
-	if err := wr.WriteInt8(r.product.major); err != nil {
-		return err
-	}
-	if err := wr.WriteInt16(r.product.minor); err != nil {
-		return err
-	}
-	if err := wr.WriteInt8(r.product.major); err != nil {
-		return err
-	}
-	if err := wr.WriteInt16(r.protocol.minor); err != nil {
-		return err
-	}
-
-	if err := wr.WriteZeroes(2); err != nil { // commitInitReplySize
-		return err
-	}
+	wr.WriteInt8(r.product.major)
+	wr.WriteInt16(r.product.minor)
+	wr.WriteInt8(r.product.major)
+	wr.WriteInt16(r.protocol.minor)
+	wr.WriteZeroes(2) // commitInitReplySize
 
 	// flush
 	if err := wr.Flush(); err != nil {

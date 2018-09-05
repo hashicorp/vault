@@ -1,18 +1,8 @@
 import Ember from 'ember';
-import hbs from 'htmlbars-inline-precompile';
 
-const { computed } = Ember;
+const { Component, computed } = Ember;
 
-export default Ember.Component.extend({
-  layout: hbs`<a href="{{href-to 'vault.cluster' 'vault'}}" class={{class}}>
-      {{#if hasBlock}}
-        {{yield}}
-      {{else}}
-        {{text}}
-      {{/if}}
-      </a>
-  `,
-
+export default Component.extend({
   tagName: '',
 
   text: computed(function() {

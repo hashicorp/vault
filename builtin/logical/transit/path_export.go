@@ -64,16 +64,20 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(fmt.Sprintf("invalid export type: %s", exportType)), logical.ErrInvalidRequest
 	}
 
-	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
-	if lock != nil {
-		defer lock.RUnlock()
-	}
+	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+		Storage: req.Storage,
+		Name:    name,
+	})
 	if err != nil {
 		return nil, err
 	}
 	if p == nil {
 		return nil, nil
 	}
+	if !b.System().CachingDisabled() {
+		p.Lock(false)
+	}
+	defer p.Unlock()
 
 	if !p.Exportable {
 		return logical.ErrorResponse("key is not exportable"), nil

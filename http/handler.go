@@ -1,7 +1,9 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -12,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/NYTimes/gziphandler"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
@@ -51,10 +54,11 @@ const (
 	// soft-mandatory Sentinel policies.
 	PolicyOverrideHeaderName = "X-Vault-Policy-Override"
 
-	// MaxRequestSize is the maximum accepted request size. This is to prevent
-	// a denial of service attack where no Content-Length is provided and the server
-	// is fed ever more data until it exhausts memory.
-	MaxRequestSize = 32 * 1024 * 1024
+	// DefaultMaxRequestSize is the default maximum accepted request size. This
+	// is to prevent a denial of service attack where no Content-Length is
+	// provided and the server is fed ever more data until it exhausts memory.
+	// Can be overridden per listener.
+	DefaultMaxRequestSize = 32 * 1024 * 1024
 )
 
 var (
@@ -62,11 +66,37 @@ var (
 
 	// Set to false by stub_asset if the ui build tag isn't enabled
 	uiBuiltIn = true
+
+	injectDataIntoTopRoutes = []string{
+		"/v1/sys/audit",
+		"/v1/sys/audit/",
+		"/v1/sys/audit-hash/",
+		"/v1/sys/auth",
+		"/v1/sys/auth/",
+		"/v1/sys/config/cors",
+		"/v1/sys/config/auditing/request-headers/",
+		"/v1/sys/config/auditing/request-headers",
+		"/v1/sys/capabilities",
+		"/v1/sys/capabilities-accessor",
+		"/v1/sys/capabilities-self",
+		"/v1/sys/key-status",
+		"/v1/sys/mounts",
+		"/v1/sys/mounts/",
+		"/v1/sys/policy",
+		"/v1/sys/policy/",
+		"/v1/sys/rekey/backup",
+		"/v1/sys/rekey/recovery-key-backup",
+		"/v1/sys/remount",
+		"/v1/sys/rotate",
+		"/v1/sys/wrapping/wrap",
+	}
 )
 
 // Handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
-func Handler(core *vault.Core) http.Handler {
+func Handler(props *vault.HandlerProperties) http.Handler {
+	core := props.Core
+
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
 	mux.Handle("/v1/sys/init", handleSysInit(core))
@@ -80,20 +110,22 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy)))
 	mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
 	mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
+	mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
 	mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
 	mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
-	mux.Handle("/v1/sys/wrapping/lookup", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
-	mux.Handle("/v1/sys/wrapping/rewrap", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
-	mux.Handle("/v1/sys/wrapping/unwrap", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
+	mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+	mux.Handle("/v1/sys/wrapping/lookup", handleRequestForwarding(core, handleLogical(core, wrappingVerificationFunc)))
+	mux.Handle("/v1/sys/wrapping/rewrap", handleRequestForwarding(core, handleLogical(core, wrappingVerificationFunc)))
+	mux.Handle("/v1/sys/wrapping/unwrap", handleRequestForwarding(core, handleLogical(core, wrappingVerificationFunc)))
 	for _, path := range injectDataIntoTopRoutes {
-		mux.Handle(path, handleRequestForwarding(core, handleLogical(core, true, nil)))
+		mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core, nil)))
 	}
 	mux.Handle("/v1/sys/internal/apidoc/", handleSysApiDoc(core))
-	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, false, nil)))
-	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
+	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, nil)))
+	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, nil)))
 	if core.UIEnabled() == true {
 		if uiBuiltIn {
-			mux.Handle("/ui/", http.StripPrefix("/ui/", handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
+			mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
 		} else {
 			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 		}
@@ -106,11 +138,14 @@ func Handler(core *vault.Core) http.Handler {
 
 	// Wrap the help wrapped handler with another layer with a generic
 	// handler
-	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler)
+	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler, props.MaxRequestSize, props.MaxRequestDuration)
 
 	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
 	// characters in the request path.
-	printablePathCheckHandler := cleanhttp.PrintablePathCheckHandler(genericWrappedHandler, nil)
+	printablePathCheckHandler := genericWrappedHandler
+	if !props.DisablePrintableCheck {
+		printablePathCheckHandler = cleanhttp.PrintablePathCheckHandler(genericWrappedHandler, nil)
+	}
 
 	return printablePathCheckHandler
 }
@@ -118,12 +153,27 @@ func Handler(core *vault.Core) http.Handler {
 // wrapGenericHandler wraps the handler with an extra layer of handler where
 // tasks that should be commonly handled for all the requests and/or responses
 // are performed.
-func wrapGenericHandler(h http.Handler) http.Handler {
+func wrapGenericHandler(h http.Handler, maxRequestSize int64, maxRequestDuration time.Duration) http.Handler {
+	if maxRequestDuration == 0 {
+		maxRequestDuration = vault.DefaultMaxRequestDuration
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
 		w.Header().Set("Cache-Control", "no-store")
+
+		// Start with the request context
+		ctx := r.Context()
+		var cancelFunc context.CancelFunc
+		// Add our timeout
+		ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
+		// Add a size limiter if desired
+		if maxRequestSize > 0 {
+			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
+		}
+		r = r.WithContext(ctx)
 		h.ServeHTTP(w, r)
+		cancelFunc()
 		return
 	})
 }
@@ -271,6 +321,11 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 
 func handleUI(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+
+		// The fileserver handler strips trailing slashes and does a redirect.
+		// We don't want the redirect to happen so we preemptively trim the slash
+		// here.
+		req.URL.Path = strings.TrimSuffix(req.URL.Path, "/")
 		h.ServeHTTP(w, req)
 		return
 	})
@@ -319,8 +374,19 @@ func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
 func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
-	limit := http.MaxBytesReader(w, r.Body, MaxRequestSize)
-	err := jsonutil.DecodeJSONFromReader(limit, out)
+	reader := r.Body
+	ctx := r.Context()
+	maxRequestSize := ctx.Value("max_request_size")
+	if maxRequestSize != nil {
+		max, ok := maxRequestSize.(int64)
+		if !ok {
+			return errors.New("could not parse max_request_size from request context")
+		}
+		if max > 0 {
+			reader = http.MaxBytesReader(w, r.Body, max)
+		}
+	}
+	err := jsonutil.DecodeJSONFromReader(reader, out)
 	if err != nil && err != io.EOF {
 		return errwrap.Wrapf("failed to parse JSON input: {{err}}", err)
 	}
@@ -398,7 +464,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 // request is a helper to perform a request and properly exit in the
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool) {
-	resp, err := core.HandleRequest(r)
+	resp, err := core.HandleRequest(rawReq.Context(), r)
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)
 		return resp, false
@@ -415,13 +481,20 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	// Request the leader address
 	_, redirectAddr, _, err := core.Leader()
 	if err != nil {
+		if err == vault.ErrHANotEnabled {
+			// Standalone node, serve 503
+			err = errors.New("node is not active")
+			respondError(w, http.StatusServiceUnavailable, err)
+			return
+		}
+
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	// If there is no leader, generate a 503 error
 	if redirectAddr == "" {
-		err = fmt.Errorf("no active Vault instance found")
+		err = errors.New("no active Vault instance found")
 		respondError(w, http.StatusServiceUnavailable, err)
 		return
 	}
@@ -467,6 +540,7 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) *logic
 		if err == nil && te != nil {
 			req.ClientTokenAccessor = te.Accessor
 			req.ClientTokenRemainingUses = te.NumUses
+			req.SetTokenEntry(te)
 		}
 	}
 
@@ -542,28 +616,4 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 
 type ErrorResponse struct {
 	Errors []string `json:"errors"`
-}
-
-var injectDataIntoTopRoutes = []string{
-	"/v1/sys/audit",
-	"/v1/sys/audit/",
-	"/v1/sys/audit-hash/",
-	"/v1/sys/auth",
-	"/v1/sys/auth/",
-	"/v1/sys/config/cors",
-	"/v1/sys/config/auditing/request-headers/",
-	"/v1/sys/config/auditing/request-headers",
-	"/v1/sys/capabilities",
-	"/v1/sys/capabilities-accessor",
-	"/v1/sys/capabilities-self",
-	"/v1/sys/key-status",
-	"/v1/sys/mounts",
-	"/v1/sys/mounts/",
-	"/v1/sys/policy",
-	"/v1/sys/policy/",
-	"/v1/sys/rekey/backup",
-	"/v1/sys/rekey/recovery-key-backup",
-	"/v1/sys/remount",
-	"/v1/sys/rotate",
-	"/v1/sys/wrapping/wrap",
 }

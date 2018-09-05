@@ -23,6 +23,11 @@ func pathConfigAccess(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Token for API calls",
 			},
+
+			"max_token_name_length": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Description: "Max length for name of generated Nomad tokens",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -73,7 +78,8 @@ func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"address": conf.Address,
+			"address":               conf.Address,
+			"max_token_name_length": conf.MaxTokenNameLength,
 		},
 	}, nil
 }
@@ -96,6 +102,8 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 		conf.Token = token.(string)
 	}
 
+	conf.MaxTokenNameLength = data.Get("max_token_name_length").(int)
+
 	entry, err := logical.StorageEntryJSON("config/access", conf)
 	if err != nil {
 		return nil, err
@@ -115,6 +123,7 @@ func (b *backend) pathConfigAccessDelete(ctx context.Context, req *logical.Reque
 }
 
 type accessConfig struct {
-	Address string `json:"address"`
-	Token   string `json:"token"`
+	Address            string `json:"address"`
+	Token              string `json:"token"`
+	MaxTokenNameLength int    `json:"max_token_name_length"`
 }

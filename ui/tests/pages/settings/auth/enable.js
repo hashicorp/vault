@@ -6,10 +6,4 @@ export default create({
   visit: visitable('/vault/settings/auth/enable'),
   form: backendForm,
   flash: flashMessages,
-  enableAuth(type, path) {
-    if (path) {
-      return this.form.path(path).type(type).submit();
-    }
-    return this.form.type(type).submit();
-  },
 });

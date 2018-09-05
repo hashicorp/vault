@@ -283,16 +283,6 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		policies = append(policies, user.Policies...)
 	}
 
-	if len(policies) == 0 {
-		errStr := "user is not a member of any authorized policy"
-		if len(oktaResponse.Warnings) > 0 {
-			errStr = fmt.Sprintf("%s; additionally, %s", errStr, oktaResponse.Warnings[0])
-		}
-
-		oktaResponse.Data["error"] = errStr
-		return nil, oktaResponse, nil, nil
-	}
-
 	return policies, oktaResponse, allGroups, nil
 }
 

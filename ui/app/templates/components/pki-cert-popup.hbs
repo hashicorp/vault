@@ -2,15 +2,15 @@
   <nav class="menu">
     <ul class="menu-list">
       <li class="action">
-        <a href={{href-to 'vault.cluster.secrets.backend.show' item.idForNav}} data-test-pki-cert-link="show">
+        {{#link-to "vault.cluster.secrets.backend.show" item.idForNav data-test-pki-cert-link="show"}}
           Details
-        </a>
+        {{/link-to}}
       </li>
       {{#if item.canRevoke}}
         <li class="action">
           {{#confirm-action
             confirmButtonClasses="button is-primary"
-            buttonClasses="link"
+            buttonClasses="link is-destroy"
             onConfirmAction=(action "delete" item)
             confirmMessage=(concat "Are you sure you want to revoke " item.id "?")
             showConfirm=(get this (concat "shouldDelete-" item.id))

@@ -3,10 +3,12 @@ package aws
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -14,16 +16,26 @@ import (
 
 func pathUser(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "creds/" + framework.GenericNameRegex("name"),
+		Pattern: "(creds|sts)/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
+			"role_arn": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "ARN of role to assume when credential_type is " + assumedRoleCred,
+			},
+			"ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: "Lifetime of the returned credentials in seconds",
+				Default:     3600,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathUserRead,
+			logical.ReadOperation:   b.pathCredsRead,
+			logical.UpdateOperation: b.pathCredsRead,
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,
@@ -31,22 +43,72 @@ func pathUser(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	policyName := d.Get("name").(string)
+func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	roleName := d.Get("name").(string)
 
 	// Read the policy
-	policy, err := req.Storage.Get(ctx, "policy/"+policyName)
+	role, err := b.roleRead(ctx, req.Storage, roleName, true)
 	if err != nil {
 		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
 	}
-	if policy == nil {
+	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Role '%s' not found", policyName)), nil
+			"Role '%s' not found", roleName)), nil
 	}
 
-	// Use the helper to create the secret
-	return b.secretAccessKeysCreate(
-		ctx, req.Storage, req.DisplayName, policyName, string(policy.Value))
+	ttl := int64(d.Get("ttl").(int))
+	roleArn := d.Get("role_arn").(string)
+
+	var credentialType string
+	switch {
+	case len(role.CredentialTypes) == 1:
+		credentialType = role.CredentialTypes[0]
+	// There is only one way for the CredentialTypes to contain more than one entry, and that's an upgrade path
+	// where it contains iamUserCred and federationTokenCred
+	// This ambiguity can be resolved based on req.Path, so resolve it assuming CredentialTypes only has those values
+	case len(role.CredentialTypes) > 1:
+		if strings.HasPrefix(req.Path, "creds") {
+			credentialType = iamUserCred
+		} else {
+			credentialType = federationTokenCred
+		}
+		// sanity check on the assumption above
+		if !strutil.StrListContains(role.CredentialTypes, credentialType) {
+			return logical.ErrorResponse(fmt.Sprintf("requested credential type %q not in allowed credential types %#v", credentialType, role.CredentialTypes)), nil
+		}
+	}
+
+	// creds requested through the sts path shouldn't be allowed to get iamUserCred type creds
+	// when the role is created from legacy data because they might have more privileges in AWS.
+	// See https://github.com/hashicorp/vault/issues/4229#issuecomment-380316788 for details.
+	if role.ProhibitFlexibleCredPath {
+		if credentialType == iamUserCred && strings.HasPrefix(req.Path, "sts") {
+			return logical.ErrorResponse(fmt.Sprintf("attempted to retrieve %s credentials through the sts path; this is not allowed for legacy roles", iamUserCred)), nil
+		}
+		if credentialType != iamUserCred && strings.HasPrefix(req.Path, "creds") {
+			return logical.ErrorResponse(fmt.Sprintf("attempted to retrieve %s credentials through the creds path; this is not allowed for legacy roles", credentialType)), nil
+		}
+	}
+
+	switch credentialType {
+	case iamUserCred:
+		return b.secretAccessKeysCreate(ctx, req.Storage, req.DisplayName, roleName, role)
+	case assumedRoleCred:
+		switch {
+		case roleArn == "":
+			if len(role.RoleArns) != 1 {
+				return logical.ErrorResponse("did not supply a role_arn parameter and unable to determine one"), nil
+			}
+			roleArn = role.RoleArns[0]
+		case !strutil.StrListContains(role.RoleArns, roleArn):
+			return logical.ErrorResponse(fmt.Sprintf("role_arn %q not in allowed role arns for Vault role %q", roleArn, roleName)), nil
+		}
+		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, ttl)
+	case federationTokenCred:
+		return b.secretTokenCreate(ctx, req.Storage, req.DisplayName, roleName, role.PolicyDocument, ttl)
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unknown credential_type: %q", credentialType)), nil
+	}
 }
 
 func pathUserRollback(ctx context.Context, req *logical.Request, _kind string, data interface{}) error {
@@ -161,15 +223,17 @@ type walUser struct {
 }
 
 const pathUserHelpSyn = `
-Generate an access key pair for a specific role.
+Generate AWS credentials from a specific Vault role.
 `
 
 const pathUserHelpDesc = `
-This path will generate a new, never before used key pair for
+This path will generate new, never before used AWS credentials for
 accessing AWS. The IAM policy used to back this key pair will be
 the "name" parameter. For example, if this backend is mounted at "aws",
 then "aws/creds/deploy" would generate access keys for the "deploy" role.
 
 The access keys will have a lease associated with them. The access keys
-can be revoked by using the lease ID.
+can be revoked by using the lease ID when using the iam_user credential type.
+When using AWS STS credential types (assumed_role or federation_token),
+revoking the lease does not revoke the access keys.
 `

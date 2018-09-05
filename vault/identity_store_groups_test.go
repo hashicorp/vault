@@ -6,6 +6,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/logical"
 )
@@ -117,10 +118,13 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 	}
 
 	// Insert it into memdb
-	err = i.MemDBUpsertGroup(group)
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+	err = i.MemDBUpsertGroupInTxn(txn, group)
 	if err != nil {
 		t.Fatal(err)
 	}
+	txn.Commit()
 
 	// Insert another dummy group
 	group = &identity.Group{
@@ -137,10 +141,14 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 	}
 
 	// Insert it into memdb
-	err = i.MemDBUpsertGroup(group)
+
+	txn = i.db.Txn(true)
+	defer txn.Abort()
+	err = i.MemDBUpsertGroupInTxn(txn, group)
 	if err != nil {
 		t.Fatal(err)
 	}
+	txn.Commit()
 
 	var fetchedGroup *identity.Group
 
@@ -178,23 +186,6 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 	}
 	if len(fetchedGroups) != 2 {
 		t.Fatalf("failed to fetch a indexed groups")
-	}
-
-	// Fetch groups based on policy name
-	fetchedGroups, err = i.MemDBGroupsByPolicy("testpolicy1", false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(fetchedGroups) != 1 || fetchedGroups[0].Name != "testgroupname" {
-		t.Fatalf("failed to fetch an indexed group")
-	}
-
-	fetchedGroups, err = i.MemDBGroupsByPolicy("testpolicy2", false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(fetchedGroups) != 2 {
-		t.Fatalf("failed to fetch indexed groups")
 	}
 
 	// Fetch groups based on member entity ID
@@ -290,6 +281,7 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 			"testkey1": "testvalue1",
 			"testkey2": "testvalue2",
 		},
+		"parent_group_ids": []string(nil),
 	}
 	expectedData["id"] = resp.Data["id"]
 	expectedData["type"] = resp.Data["type"]
@@ -301,8 +293,8 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	expectedData["alias"] = resp.Data["alias"]
 
-	if !reflect.DeepEqual(expectedData, resp.Data) {
-		t.Fatalf("bad: group data;\nexpected: %#v\n actual: %#v\n", expectedData, resp.Data)
+	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Update the policies and metadata in the group
@@ -410,6 +402,7 @@ func TestIdentityStore_GroupsCRUD_ByID(t *testing.T) {
 			"testkey1": "testvalue1",
 			"testkey2": "testvalue2",
 		},
+		"parent_group_ids": []string(nil),
 	}
 	expectedData["id"] = resp.Data["id"]
 	expectedData["type"] = resp.Data["type"]
@@ -421,8 +414,8 @@ func TestIdentityStore_GroupsCRUD_ByID(t *testing.T) {
 	expectedData["modify_index"] = resp.Data["modify_index"]
 	expectedData["alias"] = resp.Data["alias"]
 
-	if !reflect.DeepEqual(expectedData, resp.Data) {
-		t.Fatalf("bad: group data;\nexpected: %#v\n actual: %#v\n", expectedData, resp.Data)
+	if diff := deep.Equal(expectedData, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Update the policies and metadata in the group

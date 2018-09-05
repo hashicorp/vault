@@ -536,6 +536,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
 					},
+					"sync": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Default:     true,
+						Description: strings.TrimSpace(sysHelp["revoke-sync"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -571,6 +576,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 					"prefix": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["revoke-prefix-path"][0]),
+					},
+					"sync": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Default:     true,
+						Description: strings.TrimSpace(sysHelp["revoke-sync"][0]),
 					},
 				},
 
@@ -657,8 +667,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				Pattern: "policy/?$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handlePolicyList,
-					logical.ListOperation: b.handlePolicyList,
+					logical.ReadOperation: b.handlePoliciesList(PolicyTypeACL),
+					logical.ListOperation: b.handlePoliciesList(PolicyTypeACL),
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["policy-list"][0]),
@@ -684,9 +694,9 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handlePolicyRead,
-					logical.UpdateOperation: b.handlePolicySet,
-					logical.DeleteOperation: b.handlePolicyDelete,
+					logical.ReadOperation:   b.handlePoliciesRead(PolicyTypeACL),
+					logical.UpdateOperation: b.handlePoliciesSet(PolicyTypeACL),
+					logical.DeleteOperation: b.handlePoliciesDelete(PolicyTypeACL),
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
@@ -1184,12 +1194,17 @@ func (b *SystemBackend) handleCORSDelete(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := b.Core.expiration.Tidy()
-	if err != nil {
-		b.Backend.Logger().Error("failed to tidy leases", "error", err)
-		return handleErrorNoReadOnlyForward(err)
-	}
-	return nil, err
+	go func() {
+		err := b.Core.expiration.Tidy()
+		if err != nil {
+			b.Backend.Logger().Error("failed to tidy leases", "error", err)
+			return
+		}
+	}()
+
+	resp := &logical.Response{}
+	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
 func (b *SystemBackend) invalidate(ctx context.Context, key string) {
@@ -1453,6 +1468,9 @@ func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Req
 	for _, path := range paths {
 		pathCap, err := b.Core.Capabilities(ctx, token, path)
 		if err != nil {
+			if !strings.HasSuffix(req.Path, "capabilities-self") && errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+				return nil, &logical.StatusBadRequest{Err: "invalid token"}
+			}
 			return nil, err
 		}
 		ret.Data[path] = pathCap
@@ -2018,8 +2036,9 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	description := data.Get("description").(string)
-	if description != "" {
+	if rawVal, ok := data.GetOk("description"); ok {
+		description := rawVal.(string)
+
 		oldDesc := mountEntry.Description
 		mountEntry.Description = description
 
@@ -2094,7 +2113,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 	if rawVal, ok := data.GetOk("listing_visibility"); ok {
 		lvString := rawVal.(string)
-		listingVisibility := ListingVisiblityType(lvString)
+		listingVisibility := ListingVisibilityType(lvString)
 
 		if err := checkListingVisibility(listingVisibility); err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", listingVisibility)), nil
@@ -2162,7 +2181,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			changed = true
 			numBuiltIn++
 			// Special case to make sure we can not disable versioning once it's
-			// enabeled. If the vkv backend suports downgrading this can be removed.
+			// enabled. If the vkv backend suports downgrading this can be removed.
 			meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
 			if err != nil {
 				return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
@@ -2218,7 +2237,7 @@ func (b *SystemBackend) handleLeaseLookup(ctx context.Context, req *logical.Requ
 			logical.ErrInvalidRequest
 	}
 
-	leaseTimes, err := b.Core.expiration.FetchLeaseTimes(leaseID)
+	leaseTimes, err := b.Core.expiration.FetchLeaseTimes(ctx, leaseID)
 	if err != nil {
 		b.Backend.Logger().Error("error retrieving lease", "lease_id", leaseID, "error", err)
 		return handleError(err)
@@ -2280,7 +2299,7 @@ func (b *SystemBackend) handleRenew(ctx context.Context, req *logical.Request, d
 	increment := time.Duration(incrementRaw) * time.Second
 
 	// Invoke the expiration manager directly
-	resp, err := b.Core.expiration.Renew(leaseID, increment)
+	resp, err := b.Core.expiration.Renew(ctx, leaseID, increment)
 	if err != nil {
 		b.Backend.Logger().Error("lease renewal failed", "lease_id", leaseID, "error", err)
 		return handleErrorNoReadOnlyForward(err)
@@ -2300,42 +2319,57 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 			logical.ErrInvalidRequest
 	}
 
-	// Invoke the expiration manager directly
-	if err := b.Core.expiration.Revoke(leaseID); err != nil {
+	if data.Get("sync").(bool) {
+		// Invoke the expiration manager directly
+		if err := b.Core.expiration.Revoke(b.Core.activeContext, leaseID); err != nil {
+			b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
+			return handleErrorNoReadOnlyForward(err)
+		}
+
+		return nil, nil
+	}
+
+	if err := b.Core.expiration.LazyRevoke(b.Core.activeContext, leaseID); err != nil {
 		b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
-	return nil, nil
+
+	return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
 }
 
 // handleRevokePrefix is used to revoke a prefix with many LeaseIDs
 func (b *SystemBackend) handleRevokePrefix(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRevokePrefixCommon(req, data, false)
+	return b.handleRevokePrefixCommon(ctx, req, data, false, data.Get("sync").(bool))
 }
 
 // handleRevokeForce is used to revoke a prefix with many LeaseIDs, ignoring errors
 func (b *SystemBackend) handleRevokeForce(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRevokePrefixCommon(req, data, true)
+	return b.handleRevokePrefixCommon(ctx, req, data, true, true)
 }
 
 // handleRevokePrefixCommon is used to revoke a prefix with many LeaseIDs
-func (b *SystemBackend) handleRevokePrefixCommon(
-	req *logical.Request, data *framework.FieldData, force bool) (*logical.Response, error) {
+func (b *SystemBackend) handleRevokePrefixCommon(ctx context.Context,
+	req *logical.Request, data *framework.FieldData, force, sync bool) (*logical.Response, error) {
 	// Get all the options
 	prefix := data.Get("prefix").(string)
 
 	// Invoke the expiration manager directly
 	var err error
 	if force {
-		err = b.Core.expiration.RevokeForce(prefix)
+		err = b.Core.expiration.RevokeForce(b.Core.activeContext, prefix)
 	} else {
-		err = b.Core.expiration.RevokePrefix(prefix)
+		err = b.Core.expiration.RevokePrefix(b.Core.activeContext, prefix, sync)
 	}
 	if err != nil {
 		b.Backend.Logger().Error("revoke prefix failed", "prefix", prefix, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
-	return nil, nil
+
+	if sync {
+		return nil, nil
+	}
+
+	return logical.RespondWithStatusCode(nil, nil, http.StatusAccepted)
 }
 
 // handleAuthTable handles the "auth" endpoint to provide the auth table
@@ -2539,21 +2573,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 	return nil, nil
 }
 
-// handlePolicyList handles the "policy" endpoint to provide the enabled policies
-func (b *SystemBackend) handlePolicyList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// Get all the configured policies
-	policies, err := b.Core.policyStore.ListPolicies(ctx, PolicyTypeACL)
-
-	// Add the special "root" policy
-	policies = append(policies, "root")
-	resp := logical.ListResponse(policies)
-
-	// Backwords compatibility
-	resp.Data["policies"] = resp.Data["keys"]
-
-	return resp, err
-}
-
+// handlePoliciesList handles /sys/policy/ and /sys/policies/<type> endpoints to provide the enabled policies
 func (b *SystemBackend) handlePoliciesList(policyType PolicyType) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		policies, err := b.Core.policyStore.ListPolicies(ctx, policyType)
@@ -2565,14 +2585,21 @@ func (b *SystemBackend) handlePoliciesList(policyType PolicyType) framework.Oper
 		case PolicyTypeACL:
 			// Add the special "root" policy if not egp
 			policies = append(policies, "root")
-			return logical.ListResponse(policies), nil
+			resp := logical.ListResponse(policies)
 
+			// If the request is from sys/policy/ we handle backwards compatibility
+			if strings.HasPrefix(req.Path, "policy") {
+				resp.Data["policies"] = resp.Data["keys"]
+			}
+
+			return resp, nil
 		}
 
 		return logical.ErrorResponse("unknown policy type"), nil
 	}
 }
 
+// handlePoliciesRead handles the "/sys/policy/<name>" and "/sys/policies/<type>/<name>" endpoints to read a policy
 func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
@@ -2586,10 +2613,18 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 			return nil, nil
 		}
 
+		// If the request is from sys/policy/ we handle backwards compatibility
+		var respDataPolicyName string
+		if policyType == PolicyTypeACL && strings.HasPrefix(req.Path, "policy") {
+			respDataPolicyName = "rules"
+		} else {
+			respDataPolicyName = "policy"
+		}
+
 		resp := &logical.Response{
 			Data: map[string]interface{}{
-				"name":   policy.Name,
-				"policy": policy.Raw,
+				"name":             policy.Name,
+				respDataPolicyName: policy.Raw,
 			},
 		}
 
@@ -2597,31 +2632,11 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 	}
 }
 
-// handlePolicyRead handles the "policy/<name>" endpoint to read a policy
-func (b *SystemBackend) handlePolicyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name := data.Get("name").(string)
-
-	policy, err := b.Core.policyStore.GetPolicy(ctx, name, PolicyTypeACL)
-	if err != nil {
-		return handleError(err)
-	}
-
-	if policy == nil {
-		return nil, nil
-	}
-
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"name":  policy.Name,
-			"rules": policy.Raw,
-		},
-	}
-
-	return resp, nil
-}
-
+// handlePoliciesSet handles the "/sys/policy/<name>" and "/sys/policies/<type>/<name>" endpoints to set a policy
 func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		var resp *logical.Response
+
 		policy := &Policy{
 			Name: strings.ToLower(data.Get("name").(string)),
 			Type: policyType,
@@ -2631,6 +2646,13 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		}
 
 		policy.Raw = data.Get("policy").(string)
+		if policy.Raw == "" && policyType == PolicyTypeACL && strings.HasPrefix(req.Path, "policy") {
+			policy.Raw = data.Get("rules").(string)
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("'rules' is deprecated, please use 'policy' instead")
+		}
 		if policy.Raw == "" {
 			return logical.ErrorResponse("'policy' parameter not supplied or empty"), nil
 		}
@@ -2646,6 +2668,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 				return handleError(err)
 			}
 			policy.Paths = p.Paths
+			policy.Templated = p.Templated
 
 		default:
 			return logical.ErrorResponse("unknown policy type"), nil
@@ -2655,46 +2678,8 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
 			return handleError(err)
 		}
-		return nil, nil
+		return resp, nil
 	}
-}
-
-// handlePolicySet handles the "policy/<name>" endpoint to set a policy
-func (b *SystemBackend) handlePolicySet(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
-	policy := &Policy{
-		Type: PolicyTypeACL,
-		Name: strings.ToLower(data.Get("name").(string)),
-	}
-	if policy.Name == "" {
-		return logical.ErrorResponse("policy name must be provided in the URL"), nil
-	}
-
-	var resp *logical.Response
-
-	policy.Raw = data.Get("policy").(string)
-	if policy.Raw == "" {
-		policy.Raw = data.Get("rules").(string)
-		if resp == nil {
-			resp = &logical.Response{}
-		}
-		resp.AddWarning("'rules' is deprecated, please use 'policy' instead")
-	}
-	if policy.Raw == "" {
-		return logical.ErrorResponse("'policy' parameter not supplied or empty"), nil
-	}
-
-	p, err := ParseACLPolicy(policy.Raw)
-	if err != nil {
-		return handleError(err)
-	}
-	policy.Paths = p.Paths
-
-	// Update the policy
-	if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
-		return handleError(err)
-	}
-	return resp, nil
 }
 
 func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.OperationFunc {
@@ -2706,16 +2691,6 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 		}
 		return nil, nil
 	}
-}
-
-// handlePolicyDelete handles the "policy/<name>" endpoint to delete a policy
-func (b *SystemBackend) handlePolicyDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name := data.Get("name").(string)
-
-	if err := b.Core.policyStore.DeletePolicy(ctx, name, PolicyTypeACL); err != nil {
-		return handleError(err)
-	}
-	return nil, nil
 }
 
 // handleAuditTable handles the "audit" endpoint to provide the audit table
@@ -3533,15 +3508,24 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		isAuthed = true
 
 		var entity *identity.Entity
+		var te *logical.TokenEntry
 		// Load the ACL policies so we can walk the prefix for this mount
-		acl, _, entity, err = b.Core.fetchACLTokenEntryAndEntity(req)
+		acl, te, entity, _, err = b.Core.fetchACLTokenEntryAndEntity(req)
 		if err != nil {
+			if errwrap.ContainsType(err, new(TemplateError)) {
+				b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
+				err = logical.ErrPermissionDenied
+			}
 			return nil, err
 		}
 		if entity != nil && entity.Disabled {
+			b.logger.Warn("permission denied as the entity on the token is disabled")
 			return nil, logical.ErrPermissionDenied
 		}
-
+		if te != nil && te.EntityID != "" && entity == nil {
+			b.logger.Warn("permission denied as the entity on the token is invalid")
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
 	hasAccess := func(me *MountEntry) bool {
@@ -3615,12 +3599,21 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	resp.Data["path"] = me.Path
 
 	// Load the ACL policies so we can walk the prefix for this mount
-	acl, _, entity, err := b.Core.fetchACLTokenEntryAndEntity(req)
+	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
+		if errwrap.ContainsType(err, new(TemplateError)) {
+			b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
+			err = logical.ErrPermissionDenied
+		}
 		return nil, err
 	}
 	if entity != nil && entity.Disabled {
+		b.logger.Warn("permission denied as the entity on the token is disabled")
 		return errResp, logical.ErrPermissionDenied
+	}
+	if te != nil && te.EntityID != "" && entity == nil {
+		b.logger.Warn("permission denied as the entity on the token is invalid")
+		return nil, logical.ErrPermissionDenied
 	}
 
 	if !hasMountAccess(acl, me.Path) {
@@ -3636,12 +3629,21 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		return nil, nil
 	}
 
-	acl, _, entity, err := b.Core.fetchACLTokenEntryAndEntity(req)
+	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(req)
 	if err != nil {
+		if errwrap.ContainsType(err, new(TemplateError)) {
+			b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
+			err = logical.ErrPermissionDenied
+		}
 		return nil, err
 	}
 
 	if entity != nil && entity.Disabled {
+		b.logger.Warn("permission denied as the entity on the token is disabled")
+		return logical.ErrorResponse(logical.ErrPermissionDenied.Error()), nil
+	}
+	if te != nil && te.EntityID != "" && entity == nil {
+		b.logger.Warn("permission denied as the entity on the token is invalid")
 		return logical.ErrorResponse(logical.ErrPermissionDenied.Error()), nil
 	}
 
@@ -3746,8 +3748,9 @@ func sanitizeMountPath(path string) string {
 	return path
 }
 
-func checkListingVisibility(visibility ListingVisiblityType) error {
+func checkListingVisibility(visibility ListingVisibilityType) error {
 	switch visibility {
+	case ListingVisibilityDefault:
 	case ListingVisibilityHidden:
 	case ListingVisibilityUnauth:
 	default:
@@ -3996,6 +3999,17 @@ at the end of the lease period if not renewed. However, in some cases
 you may want to force an immediate revocation. This endpoint can be
 used to revoke the secret with the given Lease ID.
 		`,
+	},
+
+	"revoke-sync": {
+		"Whether or not to perform the revocation synchronously",
+		`
+If false, the call will return immediately and revocation will be queued; if it
+fails, Vault will keep trying. If true, if the revocation fails, Vault will not
+automatically try again and will return an error. For revoke-prefix, this
+setting will apply to all leases being revoked. For revoke-force, since errors
+are ignored, this setting is not supported.
+`,
 	},
 
 	"revoke-prefix": {
@@ -4343,7 +4357,7 @@ This path responds to the following HTTP methods.
 		"This function can be used to generate high-entropy random bytes.",
 	},
 	"listing_visibility": {
-		"Determines the visibility of the mount in the UI-specific listing endpoint.",
+		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and ''.",
 		"",
 	},
 	"passthrough_request_headers": {

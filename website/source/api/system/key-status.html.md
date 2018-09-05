@@ -24,6 +24,14 @@ Vault.
 
 ### Sample Request
 
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/key-status
+
+```
+
 ### Sample Response
 
 ```json

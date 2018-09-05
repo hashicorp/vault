@@ -100,15 +100,15 @@ func ParseDN(str string) (*DN, error) {
 			}
 			// Not a special character, assume hex encoded octet
 			if len(str) == i+1 {
-				return nil, errors.New("Got corrupted escaped character")
+				return nil, errors.New("got corrupted escaped character")
 			}
 
 			dst := []byte{0}
 			n, err := enchex.Decode([]byte(dst), []byte(str[i:i+2]))
 			if err != nil {
-				return nil, fmt.Errorf("Failed to decode escaped character: %s", err)
+				return nil, fmt.Errorf("failed to decode escaped character: %s", err)
 			} else if n != 1 {
-				return nil, fmt.Errorf("Expected 1 byte when un-escaping, got %d", n)
+				return nil, fmt.Errorf("expected 1 byte when un-escaping, got %d", n)
 			}
 			buffer.WriteByte(dst[0])
 			i++
@@ -131,9 +131,12 @@ func ParseDN(str string) (*DN, error) {
 				}
 				rawBER, err := enchex.DecodeString(data)
 				if err != nil {
-					return nil, fmt.Errorf("Failed to decode BER encoding: %s", err)
+					return nil, fmt.Errorf("failed to decode BER encoding: %s", err)
 				}
-				packet := ber.DecodePacket(rawBER)
+				packet, err := ber.DecodePacketErr(rawBER)
+				if err != nil {
+					return nil, fmt.Errorf("failed to decode BER packet: %s", err)
+				}
 				buffer.WriteString(packet.Data.String())
 				i += len(data) - 1
 			}

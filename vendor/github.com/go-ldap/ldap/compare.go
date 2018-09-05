@@ -37,7 +37,7 @@ func (l *Conn) Compare(dn, attribute, value string) (bool, error) {
 
 	ava := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "AttributeValueAssertion")
 	ava.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, attribute, "AttributeDesc"))
-	ava.AppendChild(ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagOctetString, value, "AssertionValue"))
+	ava.AppendChild(ber.Encode(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, value, "AssertionValue"))
 	request.AppendChild(ava)
 	packet.AppendChild(request)
 
@@ -77,5 +77,5 @@ func (l *Conn) Compare(dn, attribute, value string) (bool, error) {
 			return false, NewError(resultCode, errors.New(resultDescription))
 		}
 	}
-	return false, fmt.Errorf("Unexpected Response: %d", packet.Children[1].Tag)
+	return false, fmt.Errorf("unexpected Response: %d", packet.Children[1].Tag)
 }

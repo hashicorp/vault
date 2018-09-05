@@ -35,6 +35,6 @@ export default Ember.Route.extend(ListRoute, {
     reload() {
       this.store.clearAllDatasets();
       this.refresh();
-    }
+    },
   },
 });

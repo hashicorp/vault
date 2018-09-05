@@ -1,0 +1,19 @@
+<div class="wizard-header">
+  {{#unless hidePopup}}
+    <PopupMenu @class="wizard-dismiss-menu">
+      <nav class="menu">
+        <ul class="menu-list">
+          <li class="action">
+            <button type="button" class="button link " onclick={{action "dismissWizard"}}>
+              Dismiss
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </PopupMenu>
+  {{/unless}}
+  <h1 class="title is-5">
+    <ICon @glyph={{glyph}} @size="21" /> {{headerText}}
+  </h1>
+</div>
+{{yield}}

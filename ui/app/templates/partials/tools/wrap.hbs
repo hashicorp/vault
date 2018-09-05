@@ -1,12 +1,10 @@
-<header class="page-header">
-  <div class="level">
-    <div class="level-left">
-      <h3 class="title is-3">
-        Wrap Data
-      </h3>
-    </div>
-  </div>
-</header>
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Wrap Data
+    </h1>
+  </p.levelLeft>
+</PageHeader>
 
 {{#if token}}
   <div class="box is-sideless is-fullwidth is-marginless">
@@ -43,6 +41,8 @@
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode="perform" @noun={{selectedAction}} />
+    {{message-error errors=errors}}
     <div class="field">
       <label for="data" class="is-label">Data to wrap <span class="is-size-9 is-lowercase has-text-grey">(json-formatted)</span></label>
       <div class="control">

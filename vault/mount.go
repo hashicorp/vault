@@ -41,14 +41,16 @@ const (
 	mountTableType = "mounts"
 )
 
-// ListingVisiblityType represents the types for listing visilibity
-type ListingVisiblityType string
+// ListingVisibilityType represents the types for listing visibility
+type ListingVisibilityType string
 
 const (
+	// ListingVisibilityDefault is the default value for listing visibility
+	ListingVisibilityDefault ListingVisibilityType = ""
 	// ListingVisibilityHidden is the hidden type for listing visibility
-	ListingVisibilityHidden ListingVisiblityType = ""
+	ListingVisibilityHidden ListingVisibilityType = "hidden"
 	// ListingVisibilityUnauth is the unauth type for listing visibility
-	ListingVisibilityUnauth ListingVisiblityType = "unauth"
+	ListingVisibilityUnauth ListingVisibilityType = "unauth"
 )
 
 var (
@@ -194,26 +196,26 @@ type MountEntry struct {
 
 // MountConfig is used to hold settable options
 type MountConfig struct {
-	DefaultLeaseTTL           time.Duration        `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
-	MaxLeaseTTL               time.Duration        `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
-	ForceNoCache              bool                 `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
-	PluginName                string               `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	AuditNonHMACRequestKeys   []string             `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
-	AuditNonHMACResponseKeys  []string             `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
-	ListingVisibility         ListingVisiblityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
-	PassthroughRequestHeaders []string             `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	DefaultLeaseTTL           time.Duration         `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
+	MaxLeaseTTL               time.Duration         `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
+	ForceNoCache              bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
+	PluginName                string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys   []string              `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
+	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
 type APIMountConfig struct {
-	DefaultLeaseTTL           string               `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL               string               `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	ForceNoCache              bool                 `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginName                string               `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	AuditNonHMACRequestKeys   []string             `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
-	AuditNonHMACResponseKeys  []string             `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
-	ListingVisibility         ListingVisiblityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
-	PassthroughRequestHeaders []string             `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	DefaultLeaseTTL           string                `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL               string                `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache              bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
+	PluginName                string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys   []string              `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
+	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
 }
 
 // Clone returns a deep copy of the mount entry
@@ -406,7 +408,7 @@ func (c *Core) unmountInternal(ctx context.Context, path string) error {
 		}
 
 		// Revoke all the dynamic keys
-		if err := c.expiration.RevokePrefix(path); err != nil {
+		if err := c.expiration.RevokePrefix(c.activeContext, path, true); err != nil {
 			return err
 		}
 
@@ -553,7 +555,7 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	}
 
 	// Revoke all the dynamic keys
-	if err := c.expiration.RevokePrefix(src); err != nil {
+	if err := c.expiration.RevokePrefix(c.activeContext, src, true); err != nil {
 		return err
 	}
 
@@ -923,7 +925,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 
 	config := &logical.BackendConfig{
 		StorageView: view,
-		Logger:      c.logger.ResetNamed(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor)),
+		Logger:      c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor)),
 		Config:      conf,
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,

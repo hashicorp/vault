@@ -290,7 +290,7 @@ cluster.
 that each standby is sealed and unsealed with the primary’s unseal keys. The
 secondary cluster mirrors the configuration of its primary cluster's backends
 such as auth methods, secret engines, audit devices, etc. It uses the primary as
-the _source of truth_ and ass token requests to the primary.
+the _source of truth_ and passes token requests to the primary.
 
 
 Restart the secondary vault server (e.g. `https://us-central.compute.com:8201`)

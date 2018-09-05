@@ -75,6 +75,7 @@ func handleSysHealthHead(core *vault.Core, w http.ResponseWriter, r *http.Reques
 func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, error) {
 	// Check if being a standby is allowed for the purpose of a 200 OK
 	_, standbyOK := r.URL.Query()["standbyok"]
+	_, perfStandbyOK := r.URL.Query()["perfstandbyok"]
 
 	uninitCode := http.StatusNotImplemented
 	if code, found, ok := fetchStatusCode(r, "uninitcode"); !ok {
@@ -111,11 +112,19 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		drSecondaryCode = code
 	}
 
+	perfStandbyCode := 473 // unofficial 4xx status code
+	if code, found, ok := fetchStatusCode(r, "performancestandbycode"); !ok {
+		return http.StatusBadRequest, nil, nil
+	} else if found {
+		perfStandbyCode = code
+	}
+
 	ctx := context.Background()
 
 	// Check system status
-	sealed, _ := core.Sealed()
+	sealed := core.Sealed()
 	standby, _ := core.Standby()
+	perfStandby := core.PerfStandby()
 	var replicationState consts.ReplicationState
 	if standby {
 		replicationState = core.ActiveNodeReplicationState()
@@ -137,6 +146,8 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		code = sealedCode
 	case replicationState.HasState(consts.ReplicationDRSecondary):
 		code = drSecondaryCode
+	case !perfStandbyOK && perfStandby:
+		code = perfStandbyCode
 	case !standbyOK && standby:
 		code = standbyCode
 	}
@@ -160,6 +171,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		Initialized:                init,
 		Sealed:                     sealed,
 		Standby:                    standby,
+		PerformanceStandby:         perfStandby,
 		ReplicationPerformanceMode: replicationState.GetPerformanceString(),
 		ReplicationDRMode:          replicationState.GetDRString(),
 		ServerTimeUTC:              time.Now().UTC().Unix(),
@@ -174,6 +186,7 @@ type HealthResponse struct {
 	Initialized                bool   `json:"initialized"`
 	Sealed                     bool   `json:"sealed"`
 	Standby                    bool   `json:"standby"`
+	PerformanceStandby         bool   `json:"performance_standby"`
 	ReplicationPerformanceMode string `json:"replication_performance_mode"`
 	ReplicationDRMode          string `json:"replication_dr_mode"`
 	ServerTimeUTC              int64  `json:"server_time_utc"`

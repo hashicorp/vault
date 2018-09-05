@@ -6,11 +6,6 @@
 // +build appengine
 
 // This file provides glue for making github work on App Engine.
-// In order to get the entire github package to compile with
-// Go 1.6, you will need to rewrite all the import "context" lines.
-// Fortunately, this is easy with "gofmt":
-//
-//     gofmt -w -r '"context" -> "golang.org/x/net/context"' *.go
 
 package github
 

@@ -58,7 +58,8 @@ type RepositoryCreateForkOptions struct {
 //
 // This method might return an *AcceptedError and a status code of
 // 202. This is because this is the status that GitHub returns to signify that
-// it is now computing creating the fork in a background task.
+// it is now computing creating the fork in a background task. In this event,
+// the Repository value will be returned, which includes the details about the pending fork.
 // A follow up request, after a delay of a second or so, should result
 // in a successful request.
 //
@@ -77,6 +78,9 @@ func (s *RepositoriesService) CreateFork(ctx context.Context, owner, repo string
 
 	fork := new(Repository)
 	resp, err := s.client.Do(ctx, req, fork)
+	if _, ok := err.(*AcceptedError); ok {
+		return fork, resp, err
+	}
 	if err != nil {
 		return nil, resp, err
 	}

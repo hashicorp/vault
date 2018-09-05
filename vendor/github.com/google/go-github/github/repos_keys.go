@@ -79,7 +79,7 @@ func (s *RepositoriesService) CreateKey(ctx context.Context, owner string, repo 
 // EditKey edits a deploy key.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/keys/#edit
-func (s *RepositoriesService) EditKey(ctx context.Context, owner string, repo string, id int, key *Key) (*Key, *Response, error) {
+func (s *RepositoriesService) EditKey(ctx context.Context, owner string, repo string, id int64, key *Key) (*Key, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/keys/%v", owner, repo, id)
 
 	req, err := s.client.NewRequest("PATCH", u, key)
@@ -99,7 +99,7 @@ func (s *RepositoriesService) EditKey(ctx context.Context, owner string, repo st
 // DeleteKey deletes a deploy key.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/keys/#delete
-func (s *RepositoriesService) DeleteKey(ctx context.Context, owner string, repo string, id int) (*Response, error) {
+func (s *RepositoriesService) DeleteKey(ctx context.Context, owner string, repo string, id int64) (*Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/keys/%v", owner, repo, id)
 
 	req, err := s.client.NewRequest("DELETE", u, nil)

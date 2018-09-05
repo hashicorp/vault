@@ -97,13 +97,19 @@ export default Ember.Component.extend({
       this.get('onChange')(path, value);
     },
 
-    codemirrorUpdated(path, value, codemirror) {
+    setAndBroadcastBool(path, trueVal, falseVal, value) {
+      let valueToSet = value === true ? trueVal : falseVal;
+      this.send('setAndBroadcast', path, valueToSet);
+    },
+
+    codemirrorUpdated(path, isString, value, codemirror) {
       codemirror.performLint();
       const hasErrors = codemirror.state.lint.marked.length > 0;
+      let valToSet = isString ? value : JSON.parse(value);
 
       if (!hasErrors) {
-        this.get('model').set(path, JSON.parse(value));
-        this.get('onChange')(path, JSON.parse(value));
+        this.get('model').set(path, valToSet);
+        this.get('onChange')(path, valToSet);
       }
     },
   },

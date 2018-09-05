@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
@@ -60,6 +60,7 @@ func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURL string) {
 		session.SetSocketTimeout(1 * time.Minute)
 		return session.Ping()
 	}); err != nil {
+		cleanup()
 		t.Fatalf("Could not connect to mongo docker container: %s", err)
 	}
 

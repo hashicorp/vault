@@ -1,13 +1,18 @@
 import Ember from 'ember';
 import DS from 'ember-data';
 import fetch from 'fetch';
+import config from '../config/environment';
 
-const POLLING_URL_PATTERNS = ['sys/seal-status', 'sys/health', 'sys/replication/status'];
+const { APP } = config;
+const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
+const { inject, assign, set, RSVP } = Ember;
 
 export default DS.RESTAdapter.extend({
-  auth: Ember.inject.service(),
+  auth: inject.service(),
+  namespaceService: inject.service('namespace'),
+  controlGroup: inject.service(),
 
-  flashMessages: Ember.inject.service(),
+  flashMessages: inject.service(),
 
   namespace: 'v1/sys',
 
@@ -23,17 +28,26 @@ export default DS.RESTAdapter.extend({
     return false;
   },
 
-  _preRequest(url, options) {
-    const token = this.get('auth.currentToken');
+  addHeaders(url, options) {
+    let token = options.clientToken || this.get('auth.currentToken');
+    let headers = {};
     if (token && !options.unauthenticated) {
-      options.headers = Ember.assign(options.headers || {}, {
-        'X-Vault-Token': token,
-      });
+      headers['X-Vault-Token'] = token;
       if (options.wrapTTL) {
-        Ember.assign(options.headers, { 'X-Vault-Wrap-TTL': options.wrapTTL });
+        headers['X-Vault-Wrap-TTL'] = options.wrapTTL;
       }
     }
-    const isPolling = POLLING_URL_PATTERNS.some(str => url.includes(str));
+    let namespace =
+      typeof options.namespace === 'undefined' ? this.get('namespaceService.path') : options.namespace;
+    if (namespace && !NAMESPACE_ROOT_URLS.some(str => url.includes(str))) {
+      headers['X-Vault-Namespace'] = namespace;
+    }
+    options.headers = assign(options.headers || {}, headers);
+  },
+
+  _preRequest(url, options) {
+    this.addHeaders(url, options);
+    const isPolling = POLLING_URLS.some(str => url.includes(str));
     if (!isPolling) {
       this.get('auth').setLastFetch(Date.now());
     }
@@ -44,18 +58,40 @@ export default DS.RESTAdapter.extend({
     return options;
   },
 
-  ajax(url, type, options = {}) {
+  ajax(intendedUrl, method, passedOptions = {}) {
+    let url = intendedUrl;
+    let type = method;
+    let options = passedOptions;
+    let controlGroup = this.get('controlGroup');
+    let controlGroupToken = controlGroup.tokenForUrl(url);
+    // if we have a control group token that matches the intendedUrl,
+    // then we want to unwrap it and return the unwrapped response as
+    // if it were the initial request
+    // To do this, we rewrite the function args
+    if (controlGroupToken) {
+      url = '/v1/sys/wrapping/unwrap';
+      type = 'POST';
+      options = {
+        clientToken: controlGroupToken.token,
+        data: {
+          token: controlGroupToken.token,
+        },
+      };
+    }
     let opts = this._preRequest(url, options);
 
     return this._super(url, type, opts).then((...args) => {
+      if (controlGroupToken) {
+        controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
+      }
       const [resp] = args;
       if (resp && resp.warnings) {
-        const flash = this.get('flashMessages');
+        let flash = this.get('flashMessages');
         resp.warnings.forEach(message => {
           flash.info(message);
         });
       }
-      return Ember.RSVP.resolve(...args);
+      return controlGroup.checkForControlGroup(args, resp, options.wrapTTL);
     });
   },
 
@@ -63,13 +99,13 @@ export default DS.RESTAdapter.extend({
   rawRequest(url, type, options = {}) {
     let opts = this._preRequest(url, options);
     return fetch(url, {
-      method: type | 'GET',
-      headers: opts.headers | {},
+      method: type || 'GET',
+      headers: opts.headers || {},
     }).then(response => {
       if (response.status >= 200 && response.status < 300) {
-        return Ember.RSVP.resolve(response);
+        return RSVP.resolve(response);
       } else {
-        return Ember.RSVP.reject();
+        return RSVP.reject();
       }
     });
   },
@@ -78,8 +114,8 @@ export default DS.RESTAdapter.extend({
     const returnVal = this._super(...arguments);
     // ember data errors don't have the status code, so we add it here
     if (returnVal instanceof DS.AdapterError) {
-      Ember.set(returnVal, 'httpStatus', status);
-      Ember.set(returnVal, 'path', requestData.url);
+      set(returnVal, 'httpStatus', status);
+      set(returnVal, 'path', requestData.url);
     }
     return returnVal;
   },

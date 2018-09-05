@@ -2,7 +2,8 @@
   <div class="modal-background"></div>
   <div class="modal-content">
     <h2 class="title upgrade-overlay-title is-2 has-text-white">
-      Vault Enterprise
+      <ICon @glyph="edition-enterprise" aria-hidden="true" @size=32 />
+      Try Vault Enterprise Free for 30 Days
     </h2>
     <h3 class="title is-5 has-text-white">
       Collaborate on secrets management and access
@@ -11,7 +12,7 @@
       Vault Enterprise has features to help unify disparate users and roles,
       use collaboration workflows, and disaster recovery for system recovery,
       provide governance over secrets management and access with multi-factor
-      authentication. Choose the plan that is right for your team.
+      authentication. You'll have access to all the features below.
     </p>
     <div class="columns">
       <div class="column is-flex">
@@ -26,9 +27,6 @@
                   {{/unless}}
                 {{/unless}}
               </h3>
-            </div>
-            <div class="level-right upgrade-overlay-icon">
-              {{partial "svg/edition-icon-pro"}}
             </div>
           </div>
           <ul class="upgrade-features-list">
@@ -49,9 +47,6 @@
                 Premium
               </h3>
             </div>
-            <div class="level-right upgrade-overlay-icon">
-              {{partial "svg/edition-icon-premium"}}
-            </div>
           </div>
           <ul class="upgrade-features-list">
             <li>All Pro features</li>
@@ -62,14 +57,14 @@
             <li>Sentinel Integration</li>
             <li>Control Groups</li>
             <li>Seal Wrap / FIPS 140-2 Compliance</li>
-            <li>Gold support: 24x7 support w/SLA</li>
+            <li>Gold support: 24&times;7 support w/SLA</li>
           </ul>
         </div>
       </div>
     </div>
     <p class="has-text-centered">
-      <a href="https://www.hashicorp.com/go/vault-enterprise" class="button is-primary has-icon-right" target="_blank">
-        Request Info
+      <a href="https://hashicorp.com/products/vault/trial?source={{trackingSource}}" class="button is-primary has-icon-right" target="_blank" rel="noreferrer noopener">
+        Start Trial
         {{i-con glyph="chevron-right"}}
       </a>
     </p>

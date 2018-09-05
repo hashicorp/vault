@@ -76,17 +76,17 @@ generate a key but no key is found. See
 
 #### Unseal Key
 
-Vault's unseal key can be rekeyed using a normal `vault rekey` operation from
-the CLI or the matching API calls. The rekey operation is authorized by meeting
-the threshold of recovery keys. After rekeying, the new barrier key is wrapped
-by the HSM and stored like the previous key; it is not returned to the users
-that submitted their recovery keys.
+Vault's unseal key can be rekeyed using a normal `vault operator rekey`
+operation from the CLI or the matching API calls. The rekey operation is
+authorized by meeting the threshold of recovery keys. After rekeying, the new
+barrier key is wrapped by the HSM and stored like the previous key; it is not
+returned to the users that submitted their recovery keys.
 
 #### Recovery Key
 
 The recovery key can be rekeyed to change the number of shares/threshold or to
 target different key holders via different PGP keys. When using the Vault CLI,
-this is performed by using the `-recovery-key=true` flag to `vault rekey`.
+this is performed by using the `-recovery-key=true` flag to `vault operator rekey`.
 
 Via the API, the rekey operation is performed with the same parameters as the
 [normal `/sys/rekey`

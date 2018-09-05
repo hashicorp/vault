@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/version"
 )
 
 type dynamicSystemView struct {
@@ -42,7 +43,13 @@ func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token
 	}
 
 	// Construct the corresponding ACL object
-	acl, err := d.core.policyStore.ACL(ctx, te.Policies...)
+	entity, entityPolicies, err := d.core.fetchEntityAndDerivedPolicies(te.EntityID)
+	if err != nil {
+		d.core.logger.Error("failed to fetch entity information", "error", err)
+		return false
+	}
+
+	acl, err := d.core.policyStore.ACL(ctx, entity, append(entityPolicies, te.Policies...)...)
 	if err != nil {
 		d.core.logger.Error("failed to retrieve ACL for token's policies", "token_policies", te.Policies, "error", err)
 		return false
@@ -144,4 +151,71 @@ func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string) (*plug
 // MlockEnabled returns the configuration setting for enabling mlock on plugins.
 func (d dynamicSystemView) MlockEnabled() bool {
 	return d.core.enableMlock
+}
+
+func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) {
+	// Requests from token created from the token backend will not have entity information.
+	// Return missing entity instead of error when requesting from MemDB.
+	if entityID == "" {
+		return nil, nil
+	}
+
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.identityStore == nil {
+		return nil, fmt.Errorf("system view identity store is nil")
+	}
+
+	// Retrieve the entity from MemDB
+	entity, err := d.core.identityStore.MemDBEntityByID(entityID, false)
+	if err != nil {
+		return nil, err
+	}
+	if entity == nil {
+		return nil, nil
+	}
+
+	// Return a subset of the data
+	ret := &logical.Entity{
+		ID:   entity.ID,
+		Name: entity.Name,
+	}
+
+	if entity.Metadata != nil {
+		ret.Metadata = make(map[string]string, len(entity.Metadata))
+		for k, v := range entity.Metadata {
+			ret.Metadata[k] = v
+		}
+	}
+
+	aliases := make([]*logical.Alias, len(entity.Aliases))
+	for i, a := range entity.Aliases {
+		alias := &logical.Alias{
+			MountAccessor: a.MountAccessor,
+			Name:          a.Name,
+		}
+		// MountType is not stored with the entity and must be looked up
+		if mount := d.core.router.validateMountByAccessor(a.MountAccessor); mount != nil {
+			alias.MountType = mount.MountType
+		}
+
+		if a.Metadata != nil {
+			alias.Metadata = make(map[string]string, len(a.Metadata))
+			for k, v := range a.Metadata {
+				alias.Metadata[k] = v
+			}
+		}
+
+		aliases[i] = alias
+	}
+	ret.Aliases = aliases
+
+	return ret, nil
+}
+
+func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironment, error) {
+	return &logical.PluginEnvironment{
+		VaultVersion: version.GetVersion().Version,
+	}, nil
 }

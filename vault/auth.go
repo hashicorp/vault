@@ -189,7 +189,7 @@ func (c *Core) disableCredential(ctx context.Context, path string) error {
 
 	if backend != nil {
 		// Revoke credentials from this path
-		if err := c.expiration.RevokePrefix(fullPath); err != nil {
+		if err := c.expiration.RevokePrefix(c.activeContext, fullPath, true); err != nil {
 			return err
 		}
 
@@ -580,7 +580,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	config := &logical.BackendConfig{
 		StorageView: view,
-		Logger:      c.logger.ResetNamed(fmt.Sprintf("auth.%s.%s", t, entry.Accessor)),
+		Logger:      c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor)),
 		Config:      conf,
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,

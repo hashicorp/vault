@@ -105,7 +105,13 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		return OutputSecret(c.UI, secret)
 	}
 
-	versions := secret.Data["versions"].(map[string]interface{})
+	versionsRaw, ok := secret.Data["versions"]
+	if !ok || versionsRaw == nil {
+		c.UI.Error(fmt.Sprintf("No value found at %s", path))
+		OutputSecret(c.UI, secret)
+		return 2
+	}
+	versions := versionsRaw.(map[string]interface{})
 
 	delete(secret.Data, "versions")
 

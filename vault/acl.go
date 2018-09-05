@@ -34,10 +34,11 @@ type PolicyCheckOpts struct {
 }
 
 type AuthResults struct {
-	ACLResults *ACLResults
-	Allowed    bool
-	RootPrivs  bool
-	Error      *multierror.Error
+	ACLResults  *ACLResults
+	Allowed     bool
+	RootPrivs   bool
+	DeniedError bool
+	Error       *multierror.Error
 }
 
 type ACLResults struct {
@@ -71,8 +72,12 @@ func NewACL(policies []*Policy) (*ACL, error) {
 
 		// Check if this is root
 		if policy.Name == "root" {
+			if len(policies) != 1 {
+				return nil, fmt.Errorf("other policies present along with root")
+			}
 			a.root = true
 		}
+
 		for _, pc := range policy.Paths {
 			// Check which tree to use
 			tree := a.exactRules
@@ -213,6 +218,14 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 		capabilities = perm.CapabilitiesBitmap
 		goto CHECK
 	}
+	if strings.HasSuffix(path, "/") {
+		raw, ok = a.exactRules.Get(strings.TrimSuffix(path, "/"))
+		if ok {
+			perm := raw.(*ACLPermissions)
+			capabilities = perm.CapabilitiesBitmap
+			goto CHECK
+		}
+	}
 
 	// Find a glob rule, default deny if no match
 	_, raw, ok = a.globRules.LongestPrefix(path)
@@ -280,6 +293,14 @@ func (a *ACL) AllowOperation(req *logical.Request) (ret *ACLResults) {
 		permissions = raw.(*ACLPermissions)
 		capabilities = permissions.CapabilitiesBitmap
 		goto CHECK
+	}
+	if op == logical.ListOperation {
+		raw, ok = a.exactRules.Get(strings.TrimSuffix(path, "/"))
+		if ok {
+			permissions = raw.(*ACLPermissions)
+			capabilities = permissions.CapabilitiesBitmap
+			goto CHECK
+		}
 	}
 
 	// Find a glob rule, default deny if no match
@@ -406,7 +427,7 @@ CHECK:
 	ret.Allowed = true
 	return
 }
-func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) (ret *AuthResults) {
+func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) (ret *AuthResults) {
 	ret = new(AuthResults)
 
 	// First, perform normal ACL checks if requested. The only time no ACL

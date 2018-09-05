@@ -10,14 +10,14 @@ moduleForAcceptance('Acceptance | settings/auth/enable', {
 });
 
 test('it mounts and redirects', function(assert) {
-  page.visit();
-  andThen(() => {
-    assert.equal(currentRouteName(), 'vault.cluster.settings.auth.enable');
-  });
   // always force the new mount to the top of the list
   const path = `approle-${new Date().getTime()}`;
   const type = 'approle';
-  page.enableAuth(type, path);
+  page.visit();
+  andThen(() => {
+    assert.equal(currentRouteName(), 'vault.cluster.settings.auth.enable');
+    page.form.mount(type, path);
+  });
   andThen(() => {
     assert.equal(
       page.flash.latestMessage,

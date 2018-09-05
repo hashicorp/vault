@@ -110,24 +110,12 @@ func (h *partHeader) String() string {
 }
 
 func (h *partHeader) write(wr *bufio.Writer) error {
-	if err := wr.WriteInt8(int8(h.partKind)); err != nil {
-		return err
-	}
-	if err := wr.WriteInt8(int8(h.partAttributes)); err != nil {
-		return err
-	}
-	if err := wr.WriteInt16(h.argumentCount); err != nil {
-		return err
-	}
-	if err := wr.WriteInt32(h.bigArgumentCount); err != nil {
-		return err
-	}
-	if err := wr.WriteInt32(h.bufferLength); err != nil {
-		return err
-	}
-	if err := wr.WriteInt32(h.bufferSize); err != nil {
-		return err
-	}
+	wr.WriteInt8(int8(h.partKind))
+	wr.WriteInt8(int8(h.partAttributes))
+	wr.WriteInt16(h.argumentCount)
+	wr.WriteInt32(h.bigArgumentCount)
+	wr.WriteInt32(h.bufferLength)
+	wr.WriteInt32(h.bufferSize)
 
 	//no filler
 
@@ -139,30 +127,12 @@ func (h *partHeader) write(wr *bufio.Writer) error {
 }
 
 func (h *partHeader) read(rd *bufio.Reader) error {
-	var err error
-
-	if pk, err := rd.ReadInt8(); err == nil {
-		h.partKind = partKind(pk)
-	} else {
-		return err
-	}
-	if pa, err := rd.ReadInt8(); err == nil {
-		h.partAttributes = partAttributes(pa)
-	} else {
-		return err
-	}
-	if h.argumentCount, err = rd.ReadInt16(); err != nil {
-		return err
-	}
-	if h.bigArgumentCount, err = rd.ReadInt32(); err != nil {
-		return err
-	}
-	if h.bufferLength, err = rd.ReadInt32(); err != nil {
-		return err
-	}
-	if h.bufferSize, err = rd.ReadInt32(); err != nil {
-		return err
-	}
+	h.partKind = partKind(rd.ReadInt8())
+	h.partAttributes = partAttributes(rd.ReadInt8())
+	h.argumentCount = rd.ReadInt16()
+	h.bigArgumentCount = rd.ReadInt32()
+	h.bufferLength = rd.ReadInt32()
+	h.bufferSize = rd.ReadInt32()
 
 	// no filler
 
@@ -170,5 +140,5 @@ func (h *partHeader) read(rd *bufio.Reader) error {
 		outLogger.Printf("read part header: %s", h)
 	}
 
-	return nil
+	return rd.GetError()
 }

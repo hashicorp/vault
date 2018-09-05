@@ -16,7 +16,7 @@ moduleForComponent('identity/item-details', 'Integration | Component | identity/
   },
   afterEach() {
     component.removeContext();
-  }
+  },
 });
 
 test('it renders the disabled warning', function(assert) {
@@ -25,7 +25,7 @@ test('it renders the disabled warning', function(assert) {
       return Ember.RSVP.resolve();
     },
     disabled: true,
-    canEdit: true
+    canEdit: true,
   });
   sinon.spy(model, 'save');
   this.set('model', model);
@@ -38,7 +38,7 @@ test('it renders the disabled warning', function(assert) {
 
 test('it does not render the button if canEdit is false', function(assert) {
   let model = Ember.Object.create({
-    disabled: true
+    disabled: true,
   });
 
   this.set('model', model);

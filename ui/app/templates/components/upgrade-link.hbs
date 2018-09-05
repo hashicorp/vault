@@ -2,6 +2,6 @@
   {{yield}}
 </button>
 
-{{#ember-wormhole to="modal-wormhole"}}
+{{#maybe-in-element modalContainer false}}
   {{partial "partials/upgrade-overlay"}}
-{{/ember-wormhole}}
+{{/maybe-in-element}}

@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 )
 
 func init() {
@@ -244,22 +243,10 @@ func TestClientTimeoutSetting(t *testing.T) {
 	defer os.Setenv(EnvVaultClientTimeout, oldClientTimeout)
 	config := DefaultConfig()
 	config.ReadEnvironment()
-	client, err := NewClient(config)
+	_, err := NewClient(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = client.NewRequest("PUT", "/")
-	if client.config.HttpClient.Timeout != time.Second*10 {
-		t.Fatalf("error setting client timeout using env variable")
-	}
-
-	// Setting custom client timeout for a new request
-	client.SetClientTimeout(time.Second * 20)
-	_ = client.NewRequest("PUT", "/")
-	if client.config.HttpClient.Timeout != time.Second*20 {
-		t.Fatalf("error setting client timeout using SetClientTimeout")
-	}
-
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)

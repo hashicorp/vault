@@ -1,13 +1,12 @@
 import Ember from 'ember';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
-import autosize from 'autosize';
 import KVObject from 'vault/lib/kv-object';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
-const { get, computed } = Ember;
+const { get, computed, inject } = Ember;
 
 export default Ember.Component.extend(FocusOnInsertMixin, {
   // a key model
@@ -31,10 +30,13 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   // use a named action here so we don't have to pass one in
   // this will bubble to the route
   toggleAdvancedEdit: 'toggleAdvancedEdit',
+  error: null,
 
   codemirrorString: null,
 
   hasLintError: false,
+
+  wizard: inject.service(),
 
   init() {
     this._super(...arguments);
@@ -46,15 +48,13 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
       this.set('preferAdvancedEdit', true);
     }
     this.checkRows();
+    if (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') {
+      let engine = this.get('key').backend.includes('kv') ? 'kv' : this.get('key').backend;
+      this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', engine);
+    }
+
     if (this.get('mode') === 'edit') {
       this.send('addRow');
-    }
-  },
-
-  didRender() {
-    const textareas = this.$('textarea');
-    if (textareas.length) {
-      autosize(textareas);
     }
   },
 
@@ -78,9 +78,10 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   buttonDisabled: computed.or(
     'requestInFlight',
     'key.isFolder',
-    'key.didError',
+    'key.isError',
     'key.flagsIsInvalid',
-    'hasLintError'
+    'hasLintError',
+    'error'
   ),
 
   basicModeDisabled: computed('secretDataIsAdvanced', 'showAdvancedMode', function() {
@@ -137,7 +138,12 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   // successCallback is called in the context of the component
   persistKey(method, successCallback, isCreate) {
     let model = this.get('key');
-    const key = model.get('id');
+    let key = model.get('id');
+
+    if (key.startsWith('/')) {
+      key = key.replace(/^\/+/g, '');
+      model.set('id', key);
+    }
 
     if (isCreate && typeof model.createRecord === 'function') {
       // create an ember data model from the proxy
@@ -145,8 +151,11 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
       this.set('key', model);
     }
 
-    return model[method]().then(result => {
-      if (!Ember.get(result, 'didError')) {
+    return model[method]().then(() => {
+      if (!Ember.get(model, 'isError')) {
+        if (this.get('wizard.featureState') === 'secret') {
+          this.get('wizard').transitionFeatureMachine('secret', 'CONTINUE');
+        }
         successCallback(key);
       }
     });
@@ -159,7 +168,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    handleKeyDown(_, e) {
+    handleKeyDown(e) {
       e.stopPropagation();
       if (!(e.keyCode === keys.ENTER && e.metaKey)) {
         return;
@@ -235,10 +244,15 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     },
 
     codemirrorUpdated(val, codemirror) {
+      this.set('error', null);
       codemirror.performLint();
       const noErrors = codemirror.state.lint.marked.length === 0;
       if (noErrors) {
-        this.get('secretData').fromJSONString(val);
+        try {
+          this.get('secretData').fromJSONString(val);
+        } catch (e) {
+          this.set('error', e.message);
+        }
       }
       this.set('hasLintError', !noErrors);
       this.set('codemirrorString', val);

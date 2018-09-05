@@ -1,51 +1,48 @@
 {{#if model.replicationAttrs.replicationEnabled}}
-  <header class="page-header">
-    <div class="level">
-      <div class="level-left">
-        <h1 class="title is-3" data-test-replication-title=true>
-          {{#if (eq replicationMode 'dr')}}
-            Disaster Recovery
-          {{else if (eq replicationMode 'performance')}}
-            Performance
-          {{/if}}
-          <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display=true>
-              {{model.replicationAttrs.modeForUrl}}
-          </span>
-          {{#if secondaryId}}
-            <span class="tag is-light has-text-grey-dark">
-              <code>
-                {{model.replicationAttrs.secondaryId}}
-              </code>
-            </span>
-          {{/if}}
-          <span class="tag is-light">
-            <code class="has-text-grey-dark">
-              {{model.replicationAttrs.clusterIdDisplay}}
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3" data-test-replication-title=true>
+        {{#if (eq replicationMode 'dr')}}
+          Disaster Recovery
+        {{else if (eq replicationMode 'performance')}}
+          Performance
+        {{/if}}
+        <span class="tag is-light has-text-grey-dark" data-test-replication-mode-display=true>
+            {{model.replicationAttrs.modeForUrl}}
+        </span>
+        {{#if secondaryId}}
+          <span class="tag is-light has-text-grey-dark">
+            <code>
+              {{model.replicationAttrs.secondaryId}}
             </code>
           </span>
-        </h1>
-      </div>
-    </div>
-  </header>
-
+        {{/if}}
+        <span class="tag is-light">
+          <code class="has-text-grey-dark">
+            {{model.replicationAttrs.clusterIdDisplay}}
+          </code>
+        </span>
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
   <div class="box is-bottomless is-fullwidth is-paddingless is-marginless">
     <nav class="tabs sub-nav">
       <ul>
         <li class="{{if (is-active-route 'vault.cluster.replication.mode.index') 'is-active' ''}}">
-          <a href="{{href-to 'vault.cluster.replication.mode' model.name replicationMode }}" data-test-replication-link="details">
+          {{#link-to "vault.cluster.replication.mode" model.name replicationMode data-test-replication-link="details"}}
             Details
-          </a>
+          {{/link-to}}
         </li>
         <li class="{{if (is-active-route 'vault.cluster.replication.mode.manage') 'is-active' ''}}">
-          <a href="{{href-to 'vault.cluster.replication.mode.manage' model.name replicationMode }}" data-test-replication-link="manage">
+          {{#link-to "vault.cluster.replication.mode.manage" model.name replicationMode data-test-replication-link="manage"}}
             Manage
-          </a>
+          {{/link-to}}
         </li>
         {{#if model.replicationAttrs.isPrimary}}
           <li class="{{if (is-active-route 'vault.cluster.replication.mode.secondaries') 'is-active' ''}}">
-            <a href="{{href-to 'vault.cluster.replication.mode.secondaries' model.name replicationMode }}" data-test-replication-link="secondaries">
+            {{#link-to "vault.cluster.replication.mode.secondaries" model.name replicationMode data-test-replication-link="secondaries"}}
               Secondaries
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
       </ul>

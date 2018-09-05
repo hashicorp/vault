@@ -51,7 +51,7 @@ To generate unseal keys for Keybase users, Vault accepts the `keybase:` prefix
 to the `-pgp-keys` argument:
 
 ```
-$ vault init -key-shares=3 -key-threshold=2 \
+$ vault operator init -key-shares=3 -key-threshold=2 \
     -pgp-keys="keybase:jefferai,keybase:vishalnayak,keybase:sethvargo"
 ```
 
@@ -100,7 +100,7 @@ This is your unseal key in plain-text and should be guarded the same way you
 guard a password. Now you can enter your key to the `unseal` command:
 
 ```
-$ vault unseal
+$ vault operator unseal
 Key (will be hidden): ...
 ```
 
@@ -135,7 +135,7 @@ without ASCII armoring) or binary. Once saved to disk, the path to these files
 can be specified as an argument to the `-pgp-keys` flag.
 
 ```
-$ vault init -key-shares=3 -key-threshold=2 \
+$ vault operator init -key-shares=3 -key-threshold=2 \
     -pgp-keys="jeff.asc,vishal.asc,seth.asc"
 ```
 
@@ -180,6 +180,6 @@ This is your unseal key in plain-text and should be guarded the same way you
 guard a password. Now you can enter your key to the `unseal` command:
 
 ```
-$ vault unseal
+$ vault operator unseal
 Key (will be hidden): ...
 ```

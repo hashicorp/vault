@@ -158,6 +158,10 @@ type APIMeta struct {
 	// An array of IP addresses in CIDR format specifying the addresses
 	// which serve GitHub Pages websites.
 	Pages []string `json:"pages,omitempty"`
+
+	// An Array of IP addresses specifying the addresses that source imports
+	// will originate from on GitHub.com.
+	Importer []string `json:"importer,omitempty"`
 }
 
 // APIMeta returns information about GitHub.com, the service. Or, if you access

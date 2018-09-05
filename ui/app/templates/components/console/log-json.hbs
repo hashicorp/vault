@@ -1,0 +1,13 @@
+<div class="console-ui-output has-copy-button">
+  {{json-editor
+      value=(stringify content)
+      options=(hash
+        readOnly=true
+        lineNumbers=false
+        autoHeight=true
+        gutters=false
+        theme='hashi auto-height'
+      )
+   }}
+  <HoverCopyButton @copyValue={{stringify content}} />
+</div>

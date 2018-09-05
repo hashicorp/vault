@@ -42,7 +42,10 @@ test('version 1 performs the correct capabilities lookup', function(assert) {
   let enginePath = `kv-${new Date().getTime()}`;
   let secretPath = 'foo/bar';
   // mount version 1 engine
-  mountSecrets.visit().path(enginePath).type('kv').version(1).submit();
+  mountSecrets.visit();
+  andThen(() => {
+    mountSecrets.selectType('kv').next().path(enginePath).version(1).submit();
+  });
 
   listPage.create();
   editPage.createSecret(secretPath, 'foo', 'bar');
@@ -53,5 +56,17 @@ test('version 1 performs the correct capabilities lookup', function(assert) {
       `${enginePath}/${secretPath}`,
       'calls capabilites with the correct path'
     );
+  });
+});
+
+test('it redirects to the path ending in / for list pages', function(assert) {
+  const path = `foo/bar/kv-path-${new Date().getTime()}`;
+  listPage.visitRoot({ backend: 'secret' });
+  listPage.create();
+  editPage.createSecret(path, 'foo', 'bar');
+  listPage.visit({ backend: 'secret', id: 'foo/bar' });
+  andThen(() => {
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
+    assert.ok(currentURL().endsWith('/'), 'redirects to the path ending in a slash');
   });
 });

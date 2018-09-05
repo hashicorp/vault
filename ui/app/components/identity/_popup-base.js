@@ -16,7 +16,7 @@ export default Component.extend({
       model.rollbackAttributes();
     }
   },
-  onSuccess(){},
+  onSuccess() {},
   // override and return a promise
   transaction() {
     assert('override transaction call in an extension of popup-base', false);

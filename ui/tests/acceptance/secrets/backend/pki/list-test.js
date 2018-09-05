@@ -20,7 +20,7 @@ test('it renders an empty list', function(assert) {
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'redirects from the index');
     assert.ok(page.createIsPresent, 'create button is present');
     assert.ok(page.configureIsPresent, 'configure button is present');
-    assert.equal(page.tabs().count, 2, 'shows 2 tabs');
+    assert.equal(page.tabs.length, 2, 'shows 2 tabs');
     assert.ok(page.backendIsEmpty);
   });
 });

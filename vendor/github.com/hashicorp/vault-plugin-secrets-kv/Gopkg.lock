@@ -16,16 +16,9 @@
   branch = "master"
   name = "github.com/armon/go-radix"
   packages = ["."]
-  revision = "1fca145dffbcaa8fe914309b1ec0cfc67500fe61"
+  revision = "7fddfc383310abc091d79a27f116d30cf0424032"
 
 [[projects]]
-  name = "github.com/fatih/structs"
-  packages = ["."]
-  revision = "a720dfa8df582c51dee1b36feabb906bde1588bd"
-  version = "v1.0"
-
-[[projects]]
-  branch = "master"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -34,19 +27,20 @@
     "ptypes/duration",
     "ptypes/timestamp"
   ]
-  revision = "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175"
+  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
   name = "github.com/golang/snappy"
   packages = ["."]
-  revision = "553a641470496b2327abcac10b36396bd98e45c9"
+  revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/errwrap"
   packages = ["."]
-  revision = "7554cd9344cec97297fa6649b055a8c98c2a1e55"
+  revision = "d6c0cd88035724dd42e0f335ae30161c20575ecc"
 
 [[projects]]
   branch = "master"
@@ -58,25 +52,43 @@
   branch = "master"
   name = "github.com/hashicorp/go-hclog"
   packages = ["."]
-  revision = "5bcb0f17e36442247290887cc914a6e507afa5c4"
+  revision = "ff2cf002a8dd750586d91dddd4470c341f981fe1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-immutable-radix"
+  packages = ["."]
+  revision = "7f3cd4390caab3250a57f30efdb2a65dd7649ecf"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/go-multierror"
   packages = ["."]
-  revision = "b7773ae218740a7be65057fc60b366a49b538a44"
+  revision = "3d5d8f294aa03d8e98859feac328afbdf1ae0703"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/go-plugin"
   packages = ["."]
-  revision = "8068b0bdcfb702b4ab69d0e42c6023b4996c3026"
+  revision = "a4620f9913d19f03a6bf19b2f304daaaf83ea130"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-retryablehttp"
+  packages = ["."]
+  revision = "e651d75abec6fbd4f2c09508f72ae7af8a8b7171"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/go-rootcerts"
   packages = ["."]
   revision = "6bb64b370b90e7ef1fa532be9e591a81c3493e00"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-sockaddr"
+  packages = ["."]
+  revision = "6d291a969b86c4b633730bfc6b8b9d64c3aafed9"
 
 [[projects]]
   branch = "master"
@@ -88,7 +100,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-version"
   packages = ["."]
-  revision = "4fe82ae3040f80a03d04d2cccb5606a626b8e1ee"
+  revision = "270f2f71b1ee587f3b609f00f422b76a6b28f348"
 
 [[projects]]
   branch = "master"
@@ -113,17 +125,19 @@
     "json/scanner",
     "json/token"
   ]
-  revision = "f40e974e75af4e271d97ce0fc917af5898ae7bda"
+  revision = "ef8a98b0bbce4a65b5aa4c368430a80ddc533168"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/vault"
   packages = [
     "api",
+    "helper/base62",
     "helper/certutil",
     "helper/compressutil",
     "helper/consts",
     "helper/errutil",
+    "helper/hclutil",
     "helper/jsonutil",
     "helper/kdf",
     "helper/keysutil",
@@ -131,6 +145,7 @@
     "helper/logging",
     "helper/mlock",
     "helper/parseutil",
+    "helper/pathmanager",
     "helper/pluginutil",
     "helper/salt",
     "helper/strutil",
@@ -143,19 +158,19 @@
     "physical/inmem",
     "version"
   ]
-  revision = "205c40489422f350b58e3d57b242fe8e6e36134a"
+  revision = "27ba04d734b87a22d50d10571c1b4da574cb9056"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/yamux"
   packages = ["."]
-  revision = "2658be15c5f05e76244154714161f17e3e77de2e"
+  revision = "3520598351bb3500a49ae9563f5539666ae0a27c"
 
 [[projects]]
   branch = "master"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
-  revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
+  revision = "58046073cbffe2f25d425fe1331102f55cf719de"
 
 [[projects]]
   branch = "master"
@@ -167,7 +182,7 @@
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
+  revision = "f15292f7a699fcc1a38a80977f80a046874ba8ac"
 
 [[projects]]
   name = "github.com/oklog/run"
@@ -183,12 +198,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/sethgrid/pester"
-  packages = ["."]
-  revision = "ed9870dad3170c0b25ab9b11830cc57c3a7798fb"
-
-[[projects]]
-  branch = "master"
   name = "golang.org/x/crypto"
   packages = [
     "chacha20poly1305",
@@ -196,29 +205,33 @@
     "ed25519/internal/edwards25519",
     "hkdf",
     "internal/chacha20",
+    "internal/subtle",
     "poly1305"
   ]
-  revision = "80db560fac1fb3e6ac81dbc7f8ae4c061f5257bd"
+  revision = "de0752318171da717af4ce24d0a2e8626afaeb11"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
     "context",
+    "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
     "internal/timeseries",
-    "lex/httplex",
     "trace"
   ]
-  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
+  revision = "aaf60122140d3fcf75376d319f0554393160eb50"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
-  revision = "c488ab1dd8481ef762f96a79a9577c27825be697"
+  packages = [
+    "cpu",
+    "unix"
+  ]
+  revision = "1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -243,9 +256,15 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/time"
+  packages = ["rate"]
+  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
+
+[[projects]]
+  branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "f8c8703595236ae70fdf8789ecb656ea0bcdcf46"
+  revision = "d0a8f471bba2dbb160885b0000d814ee5d559bad"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -259,11 +278,15 @@
     "credentials",
     "encoding",
     "encoding/proto",
-    "grpclb/grpc_lb_v1/messages",
     "grpclog",
     "health",
     "health/grpc_health_v1",
     "internal",
+    "internal/backoff",
+    "internal/channelz",
+    "internal/envconfig",
+    "internal/grpcrand",
+    "internal/transport",
     "keepalive",
     "metadata",
     "naming",
@@ -273,15 +296,14 @@
     "resolver/passthrough",
     "stats",
     "status",
-    "tap",
-    "transport"
+    "tap"
   ]
-  revision = "8e4536a86ab602859c20df5ebfd0bd4228d08655"
-  version = "v1.10.0"
+  revision = "32fb0ac620c32ba40a4626ddf94d90d12cce3455"
+  version = "v1.14.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b931a497c04b2b7fccc2f3962172d83debc80221239075635e829449f433fdd0"
+  inputs-digest = "740d4e4fd63b71fd35439d84478f05f41a67e634c1d5548418f68fc5c99050e0"
   solver-name = "gps-cdcl"
   solver-version = 1

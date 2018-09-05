@@ -12,7 +12,10 @@ moduleForAcceptance('Acceptance | settings/auth/configure', {
 test('it redirects to section options when there are no other sections', function(assert) {
   const path = `approle-${new Date().getTime()}`;
   const type = 'approle';
-  enablePage.visit().enableAuth(type, path);
+  enablePage.visit();
+  andThen(() => {
+    enablePage.form.mount(type, path);
+  });
   page.visit({ path });
   andThen(() => {
     assert.equal(currentRouteName(), 'vault.cluster.settings.auth.configure.section');
@@ -23,9 +26,11 @@ test('it redirects to section options when there are no other sections', functio
 test('it redirects to the first section', function(assert) {
   const path = `aws-${new Date().getTime()}`;
   const type = 'aws';
-  enablePage.visit().enableAuth(type, path);
+  enablePage.visit();
+  andThen(() => {
+    enablePage.form.mount(type, path);
+  });
   page.visit({ path });
-
   andThen(() => {
     assert.equal(currentRouteName(), 'vault.cluster.settings.auth.configure.section');
     assert.equal(

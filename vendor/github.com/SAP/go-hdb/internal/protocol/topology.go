@@ -22,18 +22,18 @@ import (
 	"github.com/SAP/go-hdb/internal/bufio"
 )
 
-type topologyOptions struct {
+type topologyInformation struct {
 	mlo     multiLineOptions
 	_numArg int
 }
 
-func newTopologyOptions() *topologyOptions {
-	return &topologyOptions{
+func newTopologyInformation() *topologyInformation {
+	return &topologyInformation{
 		mlo: multiLineOptions{},
 	}
 }
 
-func (o *topologyOptions) String() string {
+func (o *topologyInformation) String() string {
 	mlo := make([]map[topologyOption]interface{}, len(o.mlo))
 	for i, po := range o.mlo {
 		typedPo := make(map[topologyOption]interface{})
@@ -45,43 +45,36 @@ func (o *topologyOptions) String() string {
 	return fmt.Sprintf("%s", mlo)
 }
 
-func (o *topologyOptions) kind() partKind {
+func (o *topologyInformation) kind() partKind {
 	return pkTopologyInformation
 }
 
-func (o *topologyOptions) size() int {
+func (o *topologyInformation) size() int {
 	return o.mlo.size()
 }
 
-func (o *topologyOptions) numArg() int {
+func (o *topologyInformation) numArg() int {
 	return len(o.mlo)
 }
 
-func (o *topologyOptions) setNumArg(numArg int) {
+func (o *topologyInformation) setNumArg(numArg int) {
 	o._numArg = numArg
 }
 
-func (o *topologyOptions) read(rd *bufio.Reader) error {
-	if err := o.mlo.read(rd, o._numArg); err != nil {
-		return err
-	}
+func (o *topologyInformation) read(rd *bufio.Reader) error {
+	o.mlo.read(rd, o._numArg)
 
 	if trace {
 		outLogger.Printf("topology options: %v", o)
 	}
 
-	return nil
+	return rd.GetError()
 }
 
-func (o *topologyOptions) write(wr *bufio.Writer) error {
-
+func (o *topologyInformation) write(wr *bufio.Writer) error {
 	for _, m := range o.mlo {
-		if err := wr.WriteInt16(int16(len(m))); err != nil {
-			return err
-		}
-		if err := o.mlo.write(wr); err != nil {
-			return err
-		}
+		wr.WriteInt16(int16(len(m)))
+		o.mlo.write(wr)
 	}
 
 	if trace {

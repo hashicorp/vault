@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -151,6 +152,22 @@ func parseArgsDataString(stdin io.Reader, args []string) (map[string]string, err
 	return result, nil
 }
 
+// parseArgsDataStringLists parses the args data and returns the values as
+// string lists. If the values cannot be represented as strings, an error is
+// returned.
+func parseArgsDataStringLists(stdin io.Reader, args []string) (map[string][]string, error) {
+	raw, err := parseArgsData(stdin, args)
+	if err != nil {
+		return nil, err
+	}
+
+	var result map[string][]string
+	if err := mapstructure.WeakDecode(raw, &result); err != nil {
+		return nil, errors.Wrap(err, "failed to convert values to strings")
+	}
+	return result, nil
+}
+
 // truncateToSeconds truncates the given duration to the number of seconds. If
 // the duration is less than 1s, it is returned as 0. The integer represents
 // the whole number unit of seconds for the duration.
@@ -238,6 +255,18 @@ func humanDuration(d time.Duration) string {
 
 // humanDurationInt prints the given int as if it were a time.Duration  number
 // of seconds.
-func humanDurationInt(i int) string {
-	return humanDuration(time.Duration(i) * time.Second)
+func humanDurationInt(i interface{}) interface{} {
+	switch i.(type) {
+	case int:
+		return humanDuration(time.Duration(i.(int)) * time.Second)
+	case int64:
+		return humanDuration(time.Duration(i.(int64)) * time.Second)
+	case json.Number:
+		if i, err := i.(json.Number).Int64(); err == nil {
+			return humanDuration(time.Duration(i) * time.Second)
+		}
+	}
+
+	// If we don't know what type it is, just return the original value
+	return i
 }

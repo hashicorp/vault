@@ -50,13 +50,11 @@ func (f *transactionFlags) setNumArg(numArg int) {
 }
 
 func (f *transactionFlags) read(rd *bufio.Reader) error {
-	if err := f.options.read(rd, f._numArg); err != nil {
-		return err
-	}
+	f.options.read(rd, f._numArg)
 
 	if trace {
 		outLogger.Printf("transaction flags: %v", f)
 	}
 
-	return nil
+	return rd.GetError()
 }

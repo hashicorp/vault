@@ -73,7 +73,7 @@ type GenerateRootResult struct {
 func (c *Core) GenerateRootProgress() (int, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return 0, consts.ErrSealed
 	}
 	if c.standby {
@@ -91,7 +91,7 @@ func (c *Core) GenerateRootProgress() (int, error) {
 func (c *Core) GenerateRootConfiguration() (*GenerateRootConfig, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil, consts.ErrSealed
 	}
 	if c.standby {
@@ -141,7 +141,7 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return consts.ErrSealed
 	}
 	if c.standby {
@@ -211,7 +211,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return nil, consts.ErrSealed
 	}
 	if c.standby {
@@ -349,7 +349,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 func (c *Core) GenerateRootCancel() error {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if c.sealed {
+	if c.Sealed() {
 		return consts.ErrSealed
 	}
 	if c.standby {

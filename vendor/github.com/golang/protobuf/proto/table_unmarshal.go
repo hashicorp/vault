@@ -97,6 +97,8 @@ type unmarshalFieldInfo struct {
 
 	// if a required field, contains a single set bit at this field's index in the required field list.
 	reqMask uint64
+
+	name string // name of the field, for error reporting
 }
 
 var (
@@ -181,6 +183,10 @@ func (u *unmarshalInfo) unmarshal(m pointer, b []byte) error {
 				continue
 			}
 			if err != errInternalBadWireType {
+				if err == errInvalidUTF8 {
+					fullName := revProtoTypes[reflect.PtrTo(u.typ)] + "." + f.name
+					err = fmt.Errorf("proto: string field %q contains invalid UTF-8", fullName)
+				}
 				return err
 			}
 			// Fragments with bad wire type are treated as unknown fields.
@@ -351,7 +357,7 @@ func (u *unmarshalInfo) computeUnmarshalInfo() {
 		}
 
 		// Store the info in the correct slot in the message.
-		u.setTag(tag, toField(&f), unmarshal, reqMask)
+		u.setTag(tag, toField(&f), unmarshal, reqMask, name)
 	}
 
 	// Find any types associated with oneof fields.
@@ -366,10 +372,17 @@ func (u *unmarshalInfo) computeUnmarshalInfo() {
 
 			f := typ.Field(0) // oneof implementers have one field
 			baseUnmarshal := fieldUnmarshaler(&f)
-			tagstr := strings.Split(f.Tag.Get("protobuf"), ",")[1]
-			tag, err := strconv.Atoi(tagstr)
+			tags := strings.Split(f.Tag.Get("protobuf"), ",")
+			fieldNum, err := strconv.Atoi(tags[1])
 			if err != nil {
-				panic("protobuf tag field not an integer: " + tagstr)
+				panic("protobuf tag field not an integer: " + tags[1])
+			}
+			var name string
+			for _, tag := range tags {
+				if strings.HasPrefix(tag, "name=") {
+					name = strings.TrimPrefix(tag, "name=")
+					break
+				}
 			}
 
 			// Find the oneof field that this struct implements.
@@ -380,7 +393,7 @@ func (u *unmarshalInfo) computeUnmarshalInfo() {
 					// That lets us know where this struct should be stored
 					// when we encounter it during unmarshaling.
 					unmarshal := makeUnmarshalOneof(typ, of.ityp, baseUnmarshal)
-					u.setTag(tag, of.field, unmarshal, 0)
+					u.setTag(fieldNum, of.field, unmarshal, 0, name)
 				}
 			}
 		}
@@ -401,7 +414,7 @@ func (u *unmarshalInfo) computeUnmarshalInfo() {
 	// [0 0] is [tag=0/wiretype=varint varint-encoded-0].
 	u.setTag(0, zeroField, func(b []byte, f pointer, w int) ([]byte, error) {
 		return nil, fmt.Errorf("proto: %s: illegal tag 0 (wire type %d)", t, w)
-	}, 0)
+	}, 0, "")
 
 	// Set mask for required field check.
 	u.reqMask = uint64(1)<<uint(len(u.reqFields)) - 1
@@ -413,8 +426,9 @@ func (u *unmarshalInfo) computeUnmarshalInfo() {
 // tag = tag # for field
 // field/unmarshal = unmarshal info for that field.
 // reqMask = if required, bitmask for field position in required field list. 0 otherwise.
-func (u *unmarshalInfo) setTag(tag int, field field, unmarshal unmarshaler, reqMask uint64) {
-	i := unmarshalFieldInfo{field: field, unmarshal: unmarshal, reqMask: reqMask}
+// name = short name of the field.
+func (u *unmarshalInfo) setTag(tag int, field field, unmarshal unmarshaler, reqMask uint64, name string) {
+	i := unmarshalFieldInfo{field: field, unmarshal: unmarshal, reqMask: reqMask, name: name}
 	n := u.typ.NumField()
 	if tag >= 0 && (tag < 16 || tag < 2*n) { // TODO: what are the right numbers here?
 		for len(u.dense) <= tag {
@@ -442,11 +456,17 @@ func typeUnmarshaler(t reflect.Type, tags string) unmarshaler {
 	tagArray := strings.Split(tags, ",")
 	encoding := tagArray[0]
 	name := "unknown"
+	proto3 := false
+	validateUTF8 := true
 	for _, tag := range tagArray[3:] {
 		if strings.HasPrefix(tag, "name=") {
 			name = tag[5:]
 		}
+		if tag == "proto3" {
+			proto3 = true
+		}
 	}
+	validateUTF8 = validateUTF8 && proto3
 
 	// Figure out packaging (pointer, slice, or both)
 	slice := false
@@ -594,6 +614,15 @@ func typeUnmarshaler(t reflect.Type, tags string) unmarshaler {
 		}
 		return unmarshalBytesValue
 	case reflect.String:
+		if validateUTF8 {
+			if pointer {
+				return unmarshalUTF8StringPtr
+			}
+			if slice {
+				return unmarshalUTF8StringSlice
+			}
+			return unmarshalUTF8StringValue
+		}
 		if pointer {
 			return unmarshalStringPtr
 		}
@@ -1448,6 +1477,58 @@ func unmarshalStringValue(b []byte, f pointer, w int) ([]byte, error) {
 		return nil, io.ErrUnexpectedEOF
 	}
 	v := string(b[:x])
+	*f.toString() = v
+	return b[x:], nil
+}
+
+func unmarshalStringPtr(b []byte, f pointer, w int) ([]byte, error) {
+	if w != WireBytes {
+		return b, errInternalBadWireType
+	}
+	x, n := decodeVarint(b)
+	if n == 0 {
+		return nil, io.ErrUnexpectedEOF
+	}
+	b = b[n:]
+	if x > uint64(len(b)) {
+		return nil, io.ErrUnexpectedEOF
+	}
+	v := string(b[:x])
+	*f.toStringPtr() = &v
+	return b[x:], nil
+}
+
+func unmarshalStringSlice(b []byte, f pointer, w int) ([]byte, error) {
+	if w != WireBytes {
+		return b, errInternalBadWireType
+	}
+	x, n := decodeVarint(b)
+	if n == 0 {
+		return nil, io.ErrUnexpectedEOF
+	}
+	b = b[n:]
+	if x > uint64(len(b)) {
+		return nil, io.ErrUnexpectedEOF
+	}
+	v := string(b[:x])
+	s := f.toStringSlice()
+	*s = append(*s, v)
+	return b[x:], nil
+}
+
+func unmarshalUTF8StringValue(b []byte, f pointer, w int) ([]byte, error) {
+	if w != WireBytes {
+		return b, errInternalBadWireType
+	}
+	x, n := decodeVarint(b)
+	if n == 0 {
+		return nil, io.ErrUnexpectedEOF
+	}
+	b = b[n:]
+	if x > uint64(len(b)) {
+		return nil, io.ErrUnexpectedEOF
+	}
+	v := string(b[:x])
 	if !utf8.ValidString(v) {
 		return nil, errInvalidUTF8
 	}
@@ -1455,7 +1536,7 @@ func unmarshalStringValue(b []byte, f pointer, w int) ([]byte, error) {
 	return b[x:], nil
 }
 
-func unmarshalStringPtr(b []byte, f pointer, w int) ([]byte, error) {
+func unmarshalUTF8StringPtr(b []byte, f pointer, w int) ([]byte, error) {
 	if w != WireBytes {
 		return b, errInternalBadWireType
 	}
@@ -1475,7 +1556,7 @@ func unmarshalStringPtr(b []byte, f pointer, w int) ([]byte, error) {
 	return b[x:], nil
 }
 
-func unmarshalStringSlice(b []byte, f pointer, w int) ([]byte, error) {
+func unmarshalUTF8StringSlice(b []byte, f pointer, w int) ([]byte, error) {
 	if w != WireBytes {
 		return b, errInternalBadWireType
 	}

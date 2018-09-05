@@ -18,7 +18,7 @@ export default Ember.Controller.extend(ListController, {
         })
         .catch(e => {
           this.get('flashMessages').success(
-            `There was a problem deleting ${type}: ${id} - ${e.error.join(' ') || e.message}`
+            `There was a problem deleting ${type}: ${id} - ${e.errors.join(' ') || e.message}`
           );
         });
     },
@@ -29,13 +29,14 @@ export default Ember.Controller.extend(ListController, {
       let id = model.id;
       model.toggleProperty('disabled');
 
-      model.save().
-        then(() => {
+      model
+        .save()
+        .then(() => {
           this.get('flashMessages').success(`Successfully ${action[0]} ${type}: ${id}`);
         })
         .catch(e => {
           this.get('flashMessages').success(
-            `There was a problem ${action[1]} ${type}: ${id} - ${e.error.join(' ') || e.message}`
+            `There was a problem ${action[1]} ${type}: ${id} - ${e.errors.join(' ') || e.message}`
           );
         });
     },

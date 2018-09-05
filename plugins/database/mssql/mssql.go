@@ -387,5 +387,5 @@ END
 `
 
 const rotateRootCredentialsSQL = `
-ALTER LOGIN [%s] WITH PASSWORD = '%s' 
+ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}' 
 `

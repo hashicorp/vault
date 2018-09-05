@@ -82,7 +82,7 @@ flags](/docs/commands/index.html) included on all commands.
 
 - `-pgp-key` `(keybase or pgp)`- Path to a file on disk containing a binary or
   base64-encoded public GPG key. This can also be specified as a Keybase
-  username using the format "keybase:<username>". When supplied, the generated
+  username using the format `keybase:<username>`. When supplied, the generated
   root token will be encrypted and base64-encoded with the given public key.
 
 - `-status` `(bool: false)` - Print the status of the current attempt without

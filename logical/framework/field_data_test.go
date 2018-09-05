@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
 )
@@ -47,6 +48,60 @@ func TestFieldDataGet(t *testing.T) {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{
 					Type:    TypeString,
+					Default: "bar",
+				},
+			},
+			map[string]interface{}{},
+			"foo",
+			"bar",
+		},
+
+		"lowercase string type, lowercase string value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeLowerCaseString},
+			},
+			map[string]interface{}{
+				"foo": "bar",
+			},
+			"foo",
+			"bar",
+		},
+
+		"lowercase string type, mixed-case string value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeLowerCaseString},
+			},
+			map[string]interface{}{
+				"foo": "BaR",
+			},
+			"foo",
+			"bar",
+		},
+
+		"lowercase string type, int value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeLowerCaseString},
+			},
+			map[string]interface{}{
+				"foo": 42,
+			},
+			"foo",
+			"42",
+		},
+
+		"lowercase string type, unset value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeLowerCaseString},
+			},
+			map[string]interface{}{},
+			"foo",
+			"",
+		},
+
+		"lowercase string type, unset value with lowercase default": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{
+					Type:    TypeLowerCaseString,
 					Default: "bar",
 				},
 			},
@@ -413,6 +468,87 @@ func TestFieldDataGet(t *testing.T) {
 			},
 		},
 
+		"type header, keypair string array": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{"key1:value1", "key2:value2", "key3:1"},
+			},
+			"foo",
+			http.Header{
+				"Key1": []string{"value1"},
+				"Key2": []string{"value2"},
+				"Key3": []string{"1"},
+			},
+		},
+
+		"type header, b64 string": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": "eyJDb250ZW50LUxlbmd0aCI6IFsiNDMiXSwgIlVzZXItQWdlbnQiOiBbImF3cy1zZGstZ28vMS40LjEyIChnbzEuNy4xOyBsaW51eDsgYW1kNjQpIl0sICJYLVZhdWx0LUFXU0lBTS1TZXJ2ZXItSWQiOiBbInZhdWx0LmV4YW1wbGUuY29tIl0sICJYLUFtei1EYXRlIjogWyIyMDE2MDkzMFQwNDMxMjFaIl0sICJDb250ZW50LVR5cGUiOiBbImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZDsgY2hhcnNldD11dGYtOCJdLCAiQXV0aG9yaXphdGlvbiI6IFsiQVdTNC1ITUFDLVNIQTI1NiBDcmVkZW50aWFsPWZvby8yMDE2MDkzMC91cy1lYXN0LTEvc3RzL2F3czRfcmVxdWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1kYXRlO3gtdmF1bHQtc2VydmVyLCBTaWduYXR1cmU9YTY5ZmQ3NTBhMzQ0NWM0ZTU1M2UxYjNlNzlkM2RhOTBlZWY1NDA0N2YxZWI0ZWZlOGZmYmM5YzQyOGMyNjU1YiJdfQ==",
+			},
+			"foo",
+			http.Header{
+				"Content-Length":           []string{"43"},
+				"User-Agent":               []string{"aws-sdk-go/1.4.12 (go1.7.1; linux; amd64)"},
+				"X-Vault-Awsiam-Server-Id": []string{"vault.example.com"},
+				"X-Amz-Date":               []string{"20160930T043121Z"},
+				"Content-Type":             []string{"application/x-www-form-urlencoded; charset=utf-8"},
+				"Authorization":            []string{"AWS4-HMAC-SHA256 Credential=foo/20160930/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-server, Signature=a69fd750a3445c4e553e1b3e79d3da90eef54047f1eb4efe8ffbc9c428c2655b"},
+			},
+		},
+
+		"type header, json string": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": `{"hello":"world","bonjour":["monde","dieu"]}`,
+			},
+			"foo",
+			http.Header{
+				"Hello":   []string{"world"},
+				"Bonjour": []string{"monde", "dieu"},
+			},
+		},
+
+		"type header, keypair string array with dupe key": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{"key1:value1", "key2:value2", "key3:1", "key3:true"},
+			},
+			"foo",
+			http.Header{
+				"Key1": []string{"value1"},
+				"Key2": []string{"value2"},
+				"Key3": []string{"1", "true"},
+			},
+		},
+
+		"type header, map string slice": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{
+				"foo": map[string][]string{
+					"key1": {"value1"},
+					"key2": {"value2"},
+					"key3": {"1"},
+				},
+			},
+			"foo",
+			http.Header{
+				"Key1": []string{"value1"},
+				"Key2": []string{"value2"},
+				"Key3": []string{"1"},
+			},
+		},
+
 		"name string type, not supplied": {
 			map[string]*FieldSchema{
 				"foo": {Type: TypeNameString},
@@ -502,6 +638,15 @@ func TestFieldDataGet(t *testing.T) {
 			"foo",
 			map[string]string{},
 		},
+
+		"type header, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeHeader},
+			},
+			map[string]interface{}{},
+			"foo",
+			http.Header{},
+		},
 	}
 
 	for name, tc := range cases {
@@ -511,7 +656,7 @@ func TestFieldDataGet(t *testing.T) {
 		}
 
 		if err := data.Validate(); err != nil {
-			t.Fatalf("bad: %#v", err)
+			t.Fatalf("bad: %s", err)
 		}
 
 		actual := data.Get(tc.Key)
@@ -586,5 +731,39 @@ func TestFieldDataGet_Error(t *testing.T) {
 		if err == nil {
 			t.Fatalf("error expected, none received")
 		}
+	}
+}
+
+func TestFieldDataGetFirst(t *testing.T) {
+	data := &FieldData{
+		Raw: map[string]interface{}{
+			"foo":  "bar",
+			"fizz": "buzz",
+		},
+		Schema: map[string]*FieldSchema{
+			"foo":  {Type: TypeNameString},
+			"fizz": {Type: TypeNameString},
+		},
+	}
+
+	result, ok := data.GetFirst("foo", "fizz")
+	if !ok {
+		t.Fatal("should have found value for foo")
+	}
+	if result.(string) != "bar" {
+		t.Fatal("should have gotten bar for foo")
+	}
+
+	result, ok = data.GetFirst("fizz", "foo")
+	if !ok {
+		t.Fatal("should have found value for fizz")
+	}
+	if result.(string) != "buzz" {
+		t.Fatal("should have gotten buzz for fizz")
+	}
+
+	result, ok = data.GetFirst("cats")
+	if ok {
+		t.Fatal("shouldn't have gotten anything for cats")
 	}
 }

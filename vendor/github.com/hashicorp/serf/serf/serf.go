@@ -691,6 +691,13 @@ func (s *Serf) Leave() error {
 		return err
 	}
 
+	// Wait for the leave to propagate through the cluster. The broadcast
+	// timeout is how long we wait for the message to go out from our own
+	// queue, but this wait is for that message to propagate through the
+	// cluster. In particular, we want to stay up long enough to service
+	// any probes from other nodes before they learn about us leaving.
+	time.Sleep(s.config.LeavePropagateDelay)
+
 	// Transition to Left only if we not already shutdown
 	s.stateLock.Lock()
 	if s.state != SerfShutdown {
@@ -1324,7 +1331,7 @@ func (s *Serf) handleQueryResponse(resp *messageQueryResponse) {
 
 // handleNodeConflict is invoked when a join detects a conflict over a name.
 // This means two different nodes (IP/Port) are claiming the same name. Memberlist
-// will reject the "new" node mapping, but we can still be notified
+// will reject the "new" node mapping, but we can still be notified.
 func (s *Serf) handleNodeConflict(existing, other *memberlist.Node) {
 	// Log a basic warning if the node is not us...
 	if existing.Name != s.config.NodeName {
@@ -1670,12 +1677,17 @@ func (s *Serf) Stats() map[string]string {
 		return strconv.FormatUint(v, 10)
 	}
 	s.memberLock.RLock()
-	defer s.memberLock.RUnlock()
+	members := toString(uint64(len(s.members)))
+	failed := toString(uint64(len(s.failedMembers)))
+	left := toString(uint64(len(s.leftMembers)))
+	health_score := toString(uint64(s.memberlist.GetHealthScore()))
+
+	s.memberLock.RUnlock()
 	stats := map[string]string{
-		"members":      toString(uint64(len(s.members))),
-		"failed":       toString(uint64(len(s.failedMembers))),
-		"left":         toString(uint64(len(s.leftMembers))),
-		"health_score": toString(uint64(s.memberlist.GetHealthScore())),
+		"members":      members,
+		"failed":       failed,
+		"left":         left,
+		"health_score": health_score,
 		"member_time":  toString(uint64(s.clock.Time())),
 		"event_time":   toString(uint64(s.eventClock.Time())),
 		"query_time":   toString(uint64(s.queryClock.Time())),

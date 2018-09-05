@@ -6,8 +6,8 @@ export default create({
   editForm,
   createItem(item_type, type) {
     if (type) {
-      return this.visit({item_type}).editForm.type(type).submit();
+      return this.visit({ item_type }).editForm.type(type).submit();
     }
-    return this.visit({item_type}).editForm.submit();
-  }
+    return this.visit({ item_type }).editForm.submit();
+  },
 });

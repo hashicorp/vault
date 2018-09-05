@@ -27,11 +27,13 @@ type Config struct {
 
 	Seal *Seal `hcl:"-"`
 
-	CacheSize       int         `hcl:"cache_size"`
-	DisableCache    bool        `hcl:"-"`
-	DisableCacheRaw interface{} `hcl:"disable_cache"`
-	DisableMlock    bool        `hcl:"-"`
-	DisableMlockRaw interface{} `hcl:"disable_mlock"`
+	CacheSize                int         `hcl:"cache_size"`
+	DisableCache             bool        `hcl:"-"`
+	DisableCacheRaw          interface{} `hcl:"disable_cache"`
+	DisableMlock             bool        `hcl:"-"`
+	DisableMlockRaw          interface{} `hcl:"disable_mlock"`
+	DisablePrintableCheck    bool        `hcl:"-"`
+	DisablePrintableCheckRaw interface{} `hcl:"disable_printable_check"`
 
 	EnableUI    bool        `hcl:"-"`
 	EnableUIRaw interface{} `hcl:"ui"`
@@ -42,6 +44,9 @@ type Config struct {
 	MaxLeaseTTLRaw     interface{}   `hcl:"max_lease_ttl"`
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
 	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
+
+	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
+	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_time"`
 
 	ClusterName         string `hcl:"cluster_name"`
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
@@ -56,12 +61,17 @@ type Config struct {
 	ClusterAddr          string      `hcl:"cluster_addr"`
 	DisableClustering    bool        `hcl:"-"`
 	DisableClusteringRaw interface{} `hcl:"disable_clustering"`
+
+	DisablePerformanceStandby    bool        `hcl:"-"`
+	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby"`
+
+	DisableSealWrap    bool        `hcl:"-"`
+	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
 func DevConfig(ha, transactional bool) *Config {
 	ret := &Config{
-		DisableCache:      false,
 		DisableMlock:      true,
 		EnableRawEndpoint: true,
 
@@ -284,6 +294,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DefaultLeaseTTL = c2.DefaultLeaseTTL
 	}
 
+	result.DefaultMaxRequestDuration = c.DefaultMaxRequestDuration
+	if c2.DefaultMaxRequestDuration > result.DefaultMaxRequestDuration {
+		result.DefaultMaxRequestDuration = c2.DefaultMaxRequestDuration
+	}
+
 	result.ClusterName = c.ClusterName
 	if c2.ClusterName != "" {
 		result.ClusterName = c2.ClusterName
@@ -312,6 +327,16 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.PidFile = c.PidFile
 	if c2.PidFile != "" {
 		result.PidFile = c2.PidFile
+	}
+
+	result.DisablePerformanceStandby = c.DisablePerformanceStandby
+	if c2.DisablePerformanceStandby {
+		result.DisablePerformanceStandby = c2.DisablePerformanceStandby
+	}
+
+	result.DisableSealWrap = c.DisableSealWrap
+	if c2.DisableSealWrap {
+		result.DisableSealWrap = c2.DisableSealWrap
 	}
 
 	return result
@@ -365,6 +390,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
+	if result.DefaultMaxRequestDurationRaw != nil {
+		if result.DefaultMaxRequestDuration, err = parseutil.ParseDurationSecond(result.DefaultMaxRequestDurationRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	if result.EnableUIRaw != nil {
 		if result.EnableUI, err = parseutil.ParseBool(result.EnableUIRaw); err != nil {
 			return nil, err
@@ -383,6 +414,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
+	if result.DisablePrintableCheckRaw != nil {
+		if result.DisablePrintableCheck, err = parseutil.ParseBool(result.DisablePrintableCheckRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	if result.EnableRawEndpointRaw != nil {
 		if result.EnableRawEndpoint, err = parseutil.ParseBool(result.EnableRawEndpointRaw); err != nil {
 			return nil, err
@@ -395,37 +432,21 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
+	if result.DisablePerformanceStandbyRaw != nil {
+		if result.DisablePerformanceStandby, err = parseutil.ParseBool(result.DisablePerformanceStandbyRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisableSealWrapRaw != nil {
+		if result.DisableSealWrap, err = parseutil.ParseBool(result.DisableSealWrapRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
-	}
-
-	valid := []string{
-		"storage",
-		"ha_storage",
-		"backend",
-		"ha_backend",
-		"hsm",
-		"seal",
-		"listener",
-		"cache_size",
-		"disable_cache",
-		"disable_mlock",
-		"ui",
-		"telemetry",
-		"default_lease_ttl",
-		"max_lease_ttl",
-		"cluster_name",
-		"cluster_cipher_suites",
-		"plugin_directory",
-		"pid_file",
-		"raw_storage_endpoint",
-		"api_addr",
-		"cluster_addr",
-		"disable_clustering",
-	}
-	if err := checkHCLKeys(list, valid); err != nil {
-		return nil, err
 	}
 
 	// Look for storage but still support old backend
@@ -704,36 +725,14 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 		key = item.Keys[0].Token.Value().(string)
 	}
 
-	var valid []string
 	// Valid parameter for the Seal types
 	switch key {
 	case "pkcs11":
-		valid = []string{
-			"lib",
-			"slot",
-			"pin",
-			"mechanism",
-			"hmac_mechanism",
-			"key_label",
-			"hmac_key_label",
-			"generate_key",
-			"regenerate_key",
-			"max_parallel",
-		}
 	case "awskms":
-		valid = []string{
-			"region",
-			"access_key",
-			"secret_key",
-			"kms_key_id",
-			"max_parallel",
-		}
+	case "gcpckms":
+	case "azurekeyvault":
 	default:
 		return fmt.Errorf("invalid seal type %q", key)
-	}
-
-	if err := checkHCLKeys(item.Val, valid); err != nil {
-		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 	}
 
 	var m map[string]string
@@ -755,33 +754,6 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 		key := "listener"
 		if len(item.Keys) > 0 {
 			key = item.Keys[0].Token.Value().(string)
-		}
-
-		valid := []string{
-			"address",
-			"cluster_address",
-			"endpoint",
-			"x_forwarded_for_authorized_addrs",
-			"x_forwarded_for_hop_skips",
-			"x_forwarded_for_reject_not_authorized",
-			"x_forwarded_for_reject_not_present",
-			"infrastructure",
-			"node_id",
-			"proxy_protocol_behavior",
-			"proxy_protocol_authorized_addrs",
-			"tls_disable",
-			"tls_cert_file",
-			"tls_key_file",
-			"tls_min_version",
-			"tls_cipher_suites",
-			"tls_prefer_server_cipher_suites",
-			"tls_require_and_verify_client_cert",
-			"tls_disable_client_certs",
-			"tls_client_ca_file",
-			"token",
-		}
-		if err := checkHCLKeys(item.Val, valid); err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
 		}
 
 		var m map[string]interface{}
@@ -809,31 +781,6 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 	// Get our one item
 	item := list.Items[0]
 
-	// Check for invalid keys
-	valid := []string{
-		"circonus_api_token",
-		"circonus_api_app",
-		"circonus_api_url",
-		"circonus_submission_interval",
-		"circonus_submission_url",
-		"circonus_check_id",
-		"circonus_check_force_metric_activation",
-		"circonus_check_instance_id",
-		"circonus_check_search_tag",
-		"circonus_check_display_name",
-		"circonus_check_tags",
-		"circonus_broker_id",
-		"circonus_broker_select_tag",
-		"disable_hostname",
-		"dogstatsd_addr",
-		"dogstatsd_tags",
-		"statsd_address",
-		"statsite_address",
-	}
-	if err := checkHCLKeys(item.Val, valid); err != nil {
-		return multierror.Prefix(err, "telemetry:")
-	}
-
 	var t Telemetry
 	if err := hcl.DecodeObject(&t, item.Val); err != nil {
 		return multierror.Prefix(err, "telemetry:")
@@ -847,31 +794,4 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		return multierror.Prefix(err, "telemetry:")
 	}
 	return nil
-}
-
-func checkHCLKeys(node ast.Node, valid []string) error {
-	var list *ast.ObjectList
-	switch n := node.(type) {
-	case *ast.ObjectList:
-		list = n
-	case *ast.ObjectType:
-		list = n.List
-	default:
-		return fmt.Errorf("cannot check HCL keys of type %T", n)
-	}
-
-	validMap := make(map[string]struct{}, len(valid))
-	for _, v := range valid {
-		validMap[v] = struct{}{}
-	}
-
-	var result error
-	for _, item := range list.Items {
-		key := item.Keys[0].Token.Value().(string)
-		if _, ok := validMap[key]; !ok {
-			result = multierror.Append(result, fmt.Errorf("invalid key %q on line %d", key, item.Assign.Line))
-		}
-	}
-
-	return result
 }

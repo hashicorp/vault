@@ -1,14 +1,11 @@
 import Ember from 'ember';
+import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 
 export default Ember.Test.registerAsyncHelper('mountSupportedSecretBackend', function(_, assert, type, path) {
-  visit('/vault/settings/mount-secret-backend');
-  andThen(function() {
-    assert.equal(currentURL(), '/vault/settings/mount-secret-backend');
+  mountSecrets.visit();
+  andThen(() => {
+    return mountSecrets.mount(type, path);
   });
-
-  fillIn('[data-test-secret-backend-type]', type);
-  fillIn('[data-test-secret-backend-path]', path);
-  click('[data-test-secret-backend-submit]');
   return andThen(() => {
     assert.equal(currentURL(), `/vault/secrets/${path}/list`, `redirects to ${path} index`);
     assert.ok(

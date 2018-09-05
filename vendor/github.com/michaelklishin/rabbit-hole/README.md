@@ -51,14 +51,15 @@ should be instantiated with `rabbithole.NewClient`:
 rmqc, _ = NewClient("http://127.0.0.1:15672", "guest", "guest")
 ```
 
-SSL/TSL is now available, by adding a Transport Layer to the parameters
+TLS (HTTPS) can be enabled by adding an HTTP transport to the parameters
 of `rabbithole.NewTLSClient`:
+
 ``` go
 transport := &http.Transport{TLSClientConfig: tlsConfig}
 rmqc, _ := NewTLSClient("https://127.0.0.1:15672", "guest", "guest", transport)
 ```
-However, RabbitMQ-Management does not have SSL/TLS enabled by default,
-so you must enable it.
+
+RabbitMQ HTTP API has to be [configured to use TLS](http://www.rabbitmq.com/management.html#web-dispatch-config).
 
 [API reference](http://godoc.org/github.com/michaelklishin/rabbit-hole) is available on [godoc.org](http://godoc.org).
 
@@ -334,4 +335,4 @@ See [CONTRIBUTING.md](https://github.com/michaelklishin/rabbit-hole/blob/master/
 
 2-clause BSD license.
 
-(c) Michael S. Klishin, 2013-2017.
+(c) Michael S. Klishin, 2013-2018.

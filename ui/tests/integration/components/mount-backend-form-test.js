@@ -28,21 +28,23 @@ moduleForComponent('mount-backend-form', 'Integration | Component | mount backen
 test('it renders', function(assert) {
   this.render(hbs`{{mount-backend-form}}`);
   assert.equal(component.header, 'Enable an authentication method', 'renders auth header in default state');
-  assert.equal(component.fields().count, 2, 'renders 2 fields');
+  assert.ok(component.types.length > 0, 'renders type picker');
 });
 
 test('it changes path when type is changed', function(assert) {
   this.render(hbs`{{mount-backend-form}}`);
-  assert.equal(component.pathValue, 'approle', 'defaults to approle (first in the list)');
-  component.type('aws');
-  assert.equal(component.pathValue, 'aws', 'updates to the value of the type');
+  component.selectType('aws').next();
+  assert.equal(component.pathValue, 'aws', 'sets the value of the type');
+  component.back().selectType('approle').next();
+  assert.equal(component.pathValue, 'approle', 'updates the value of the type');
 });
 
 test('it keeps path value if the user has changed it', function(assert) {
   this.render(hbs`{{mount-backend-form}}`);
+  component.selectType('approle').next();
   assert.equal(component.pathValue, 'approle', 'defaults to approle (first in the list)');
   component.path('newpath');
-  component.type('aws');
+  component.back().selectType('aws').next();
   assert.equal(component.pathValue, 'newpath', 'updates to the value of the type');
 });
 
@@ -51,7 +53,7 @@ test('it calls mount success', function(assert) {
   this.set('onMountSuccess', spy);
   this.render(hbs`{{mount-backend-form onMountSuccess=onMountSuccess}}`);
 
-  component.path('foo').type('approle').submit();
+  component.mount('approle', 'foo').submit();
   return wait().then(() => {
     assert.equal(this.server.db.authMethods.length, 1, 'it enables an auth method');
     assert.ok(spy.calledOnce, 'calls the passed success method');
@@ -65,7 +67,7 @@ test('it calls mount mount config error', function(assert) {
   this.set('onConfigError', spy2);
   this.render(hbs`{{mount-backend-form onMountSuccess=onMountSuccess onConfigError=onConfigError}}`);
 
-  component.path('bar').type('kubernetes');
+  component.selectType('kubernetes').next().path('bar');
   // kubernetes requires a host + a cert / pem, so only filling the host will error
   component.fields().fillIn('kubernetesHost', 'host');
   component.submit();

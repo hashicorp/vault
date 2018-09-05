@@ -8,56 +8,88 @@ description: |-
 
 # HTTP API
 
-The Vault HTTP API gives you full access to Vault via HTTP. Every
-aspect of Vault can be controlled via this API. The Vault CLI uses
-the HTTP API to access Vault.
-
-## Version Prefix
+The Vault HTTP API gives you full access to Vault via HTTP. Every aspect of
+Vault can be controlled via this API. The Vault CLI uses the HTTP API to access
+Vault.
 
 All API routes are prefixed with `/v1/`.
 
-This documentation is only for the v1 API.
+This documentation is only for the v1 API, which is currently the only version.
 
-~> **Backwards compatibility:** At the current version, Vault does
-not yet promise backwards compatibility even with the v1 prefix. We'll
-remove this warning when this policy changes. We expect we'll reach API
-stability by Vault 1.0.
+  ~> **Backwards compatibility:** At the current version, Vault does not yet
+  promise backwards compatibility even with the v1 prefix. We'll remove this
+  warning when this policy changes. At this point in time the core API (that
+  is, `sys/` routes) change very infrequently, but various secrets engines/auth
+  methods/etc. sometimes have minor changes to accommodate new features as
+  they're developed.
 
 ## Transport
 
-The API is expected to be accessed over a TLS connection at
-all times, with a valid certificate that is verified by a well
-behaved client. It is possible to disable TLS verification for
-listeners, however, so API clients should expect to have to do both
-depending on user settings.
+The API is expected to be accessed over a TLS connection at all times, with a
+valid certificate that is verified by a well-behaved client. It is possible to
+disable TLS verification for listeners, however, so API clients should expect
+to have to do both depending on user settings.
 
 ## Authentication
 
-Once the Vault is unsealed, every other operation requires a _client token_. A
-user may have a client token sent to her.  The client token must be sent as the
-`X-Vault-Token` HTTP header.
+Once Vault is unsealed, almost every other operation requires a _client token_.
+A user may have a client token sent to her.  The client token must be sent as
+the `X-Vault-Token` HTTP header.
 
 Otherwise, a client token can be retrieved via [authentication
 backends](/docs/auth/index.html).
 
-Each auth method will have one or more unauthenticated login
-endpoints. These endpoints can be reached without any authentication, and are
-used for authentication itself. These endpoints are specific to each
-auth method.
+Each auth method has one or more unauthenticated login endpoints. These
+endpoints can be reached without any authentication, and are used for
+authentication to Vault itself. These endpoints are specific to each auth
+method.
 
-Login endpoints for auth methods that generate an identity will be
-sent down via JSON. The resulting token should be saved on the client or passed
-via the `X-Vault-Token` header for future requests.
+Responses from auth login methods that generate an authentication token are
+sent back to the client via JSON. The resulting token should be saved on the
+client or passed via the `X-Vault-Token` header for future requests.
 
-## Reading, Writing, and Listing Secrets
+## Namespaces
 
-Different backends implement different APIs according to their functionality.
-The examples below are created with the `kv` backend, which acts like a
-Key/Value store. Read the documentation for a particular backend for detailed
-information on its API; this simply provides a general overview.
+If using the [Namespaces](/docs/enterprise/namespaces/index.html) feature, API
+operations are relative to the namespace value passed in via the
+`X-Vault-Namespace` header. For instance, if the request path is to
+`secret/foo`, and the header is set to `ns1/ns2/`, the final request path Vault
+uses will be `ns1/ns2/secret/foo`. Note that it is semantically equivalent to
+use a full path rather than the `X-Vault-Namespace` header, as the operation in
+Vault will always look up the correct namespace based on the final given path.
+Thus, it would be equivalent to the above example to set `X-Vault-Namespace` to
+`ns1/` and a request path of `ns2/secret/foo`, or to not set
+`X-Vault-Namespace` at all and use a request path of `ns1/ns2/secret/foo`.
 
-Reading a secret via the HTTP API is done by issuing a GET using the
-following URL:
+For example, the following two commands result in equivalent requests:
+
+```shell
+$ curl \
+    -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
+    -H "X-Vault-Namespace: ns1/ns2/" \
+    -X GET \
+    http://127.0.0.1:8200/v1/secret/foo
+```
+
+```shell
+$ curl \
+    -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
+    -X GET \
+    http://127.0.0.1:8200/v1/ns1/ns2/secret/foo
+```
+
+## API Operations
+
+With few documented exceptions, all request body data and response data from
+Vault is via JSON. Vault will set the `Content-Type` header appropriately but
+does not require that clients set it.
+
+Different plugins implement different APIs according to their functionality.
+The examples below are created with the `KVv1` backend, which acts like a very
+simple Key/Value store. Read the documentation for a particular backend for
+detailed information on its API; this simply provides a general overview.
+
+For `KVv1`, reading a secret via the HTTP API is done by issuing a GET:
 
 ```text
 /v1/secret/foo
@@ -75,8 +107,13 @@ $ curl \
     http://127.0.0.1:8200/v1/secret/foo
 ```
 
+A few endpoints consume query parameters via `GET` calls, but only if those
+parameters are not sensitive, as some load balancers will log these. Most
+endpoints that consume parameters use `POST` instead and put the parameters in
+the request body.
+
 You can list secrets as well. To do this, either issue a GET with the query
-parameter `list=true`, or you can use the LIST HTTP verb. For the `kv`
+parameter `list=true`, or you can use the `LIST` HTTP verb. For the `kv`
 backend, listing is allowed on directories only, and returns the keys in the
 given directory:
 
@@ -87,10 +124,10 @@ $ curl \
     http://127.0.0.1:8200/v1/secret/
 ```
 
-The API documentation will use `LIST` as the HTTP ver, but you can still use
-`GET` with the `?list=true` query string.
+The API documentation uses `LIST` as the HTTP verb, but you can still use `GET`
+with the `?list=true` query string.
 
-To write a secret, issue a POST on the following URL:
+To use an API that consumes data via request body, issue a `POST` or `PUT`:
 
 ```text
 /v1/secret/foo
@@ -115,19 +152,20 @@ $ curl \
     http://127.0.0.1:8200/v1/secret/baz
 ```
 
-Vault currently considers PUT and POST to be synonyms. Rather than trust a
+Vault currently considers `PUT` and `POST` to be synonyms. Rather than trust a
 client's stated intentions, Vault backends can implement an existence check to
 discover whether an operation is actually a create or update operation based on
-the data already stored within Vault.
+the data already stored within Vault. This makes permission management via ACLs
+more flexible.
 
 For more examples, please look at the Vault API client.
 
 ## Help
 
-To retrieve the help for any API within Vault, including mounted
-backends, auth methods, etc. then append `?help=1` to any
-URL. If you have valid permission to access the path, then the help text
-will be returned with the following structure:
+To retrieve the help for any API within Vault, including mounted backends, auth
+methods, etc. then append `?help=1` to any URL. If you have valid permission to
+access the path, then the help text will be returned with the following
+structure:
 
 ```javascript
 {
@@ -153,26 +191,32 @@ or equal to 400.
 
 ## HTTP Status Codes
 
-The following HTTP status codes are used throughout the API.
+The following HTTP status codes are used throughout the API. Vault tries to
+adhere to these whenever possible, but in some cases may not -- feel free to
+file a bug in that case to point our attention to it!
 
 - `200` - Success with data.
 - `204` - Success, no data returned.
 - `400` - Invalid request, missing or invalid data.
-- `403` - Forbidden, your authentication details are either
-   incorrect, you don't have access to this feature, or - if CORS is
-   enabled - you made a cross-origin request from an origin that is
-   not allowed to make such requests.
-- `404` - Invalid path. This can both mean that the path truly
-   doesn't exist or that you don't have permission to view a
-   specific path. We use 404 in some cases to avoid state leakage.
-- `429` - Default return code for health status of standby nodes, indicating a
-   warning.
-- `500` - Internal server error. An internal error has occurred,
-   try again later. If the error persists, report a bug.
-- `503` - Vault is down for maintenance or is currently sealed.
-   Try again later.
+- `403` - Forbidden, your authentication details are either incorrect, you
+  don't have access to this feature, or - if CORS is enabled - you made a
+  cross-origin request from an origin that is not allowed to make such
+  requests.
+- `404` - Invalid path. This can both mean that the path truly doesn't exist or
+  that you don't have permission to view a specific path. We use 404 in some
+  cases to avoid state leakage.
+- `429` - Default return code for health status of standby nodes. This will
+  likely change in the future.
+- `473` - Default return code for health status of performance standby nodes.
+- `500` - Internal server error. An internal error has occurred, try again
+  later. If the error persists, report a bug.
+- `502` - A request to Vault required Vault making a request to a third party;
+  the third party responded with an error of some kind.
+- `503` - Vault is down for maintenance or is currently sealed.  Try again
+  later.
 
 ## Limits
 
-A maximum request size of 32MB is imposed to prevent a denial
-of service attack with arbitrarily large requests.
+A maximum request size of 32MB is imposed to prevent a denial of service attack
+with arbitrarily large requests; this can be tuned per `listener` block in
+Vault's server configuration file.

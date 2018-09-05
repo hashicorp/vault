@@ -5,32 +5,39 @@
       "vault.cluster.access.identity.show"
       item.id
       "details"
-      class="box is-sideless is-marginless"
+      class="list-item-row"
       data-test-identity-row=true
       }}
       <div class="columns is-mobile">
-        <div class="column is-10">
-          <a href={{href-to
+        <div class="column is-7-tablet is-10-mobile">
+          {{#link-to
             "vault.cluster.access.identity.show"
             item.id
             "details"
-            }}
             class="is-block has-text-black has-text-weight-semibold"
             data-test-identity-link=true
-          >{{i-con
+          }}{{i-con
               glyph="role"
               size=14
               class="has-text-grey-light"
-            }}<span class="has-text-weight-semibold">{{item.id}}</span></a>
+              }}<span class="has-text-weight-semibold">{{item.name}}</span>{{/link-to}}
+          <div class="has-text-grey is-size-8">
+            {{item.id}}
+          </div>
+        </div>
+        <div class="column is-3 is-hidden-mobile">
+          {{#if item.aliases.length}}
+            {{pluralize item.aliases.length "alias"}}
+          {{/if}}
         </div>
         <div class="column has-text-right">
           {{#popup-menu name="identity-item" onOpen=(action "reloadRecord" item)}}
             <nav class="menu">
               <ul class="menu-list">
                 <li class="action">
-                  <a href={{href-to "vault.cluster.access.identity.show" item.id "details" }}>
+                  {{#link-to "vault.cluster.access.identity.show" item.id "details"}}
                     Details
-                  </a>
+                  {{/link-to}}
                 </li>
                 {{#if (or item.isReloading item.updatePath.isPending item.aliasPath.isPending)}}
                   <li class="action">
@@ -41,9 +48,9 @@
                 {{else}}
                   {{#if item.canEdit}}
                     <li class="action">
-                      <a href={{href-to 'vault.cluster.access.identity.edit' item.id}}>
+                      {{#link-to "vault.cluster.access.identity.edit" item.id}}
                         Edit
-                      </a>
+                      {{/link-to}}
                     </li>
                     <li class="action">
                       {{#if item.disabled}}
@@ -69,9 +76,9 @@
                   {{/if}}
                   {{#if item.canAddAlias}}
                     <li class="action">
-                      <a href={{href-to 'vault.cluster.access.identity.aliases.add' (pluralize identityType) item.id}}>
+                      {{#link-to "vault.cluster.access.identity.aliases.add" (pluralize identityType) item.id}}
                         Add alias
-                      </a>
+                      {{/link-to}}
                     </li>
                   {{/if}}
                   {{#if item.canDelete}}

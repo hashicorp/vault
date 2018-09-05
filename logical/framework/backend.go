@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"regexp"
 	"sort"
 	"strings"
@@ -540,9 +541,7 @@ func (s *FieldSchema) DefaultOrZero() interface{} {
 // Zero returns the correct zero-value for a specific FieldType
 func (t FieldType) Zero() interface{} {
 	switch t {
-	case TypeNameString:
-		return ""
-	case TypeString:
+	case TypeString, TypeNameString, TypeLowerCaseString:
 		return ""
 	case TypeInt:
 		return 0
@@ -560,6 +559,8 @@ func (t FieldType) Zero() interface{} {
 		return []string{}
 	case TypeCommaIntSlice:
 		return []int{}
+	case TypeHeader:
+		return http.Header{}
 	default:
 		panic("unknown type: " + t.String())
 	}

@@ -115,6 +115,12 @@ Default: cn`,
 			Type:        framework.TypeBool,
 			Description: "If true, case sensitivity will be used when comparing usernames and groups for matching policies.",
 		},
+
+		"use_token_groups": {
+			Type:        framework.TypeBool,
+			Default:     false,
+			Description: "If true, use the Active Directory tokenGroups constructed attribute of the user to find the group memberships. This will find all security groups including nested ones.",
+		},
 	}
 }
 
@@ -231,26 +237,32 @@ func NewConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 		*cfg.CaseSensitiveNames = caseSensitiveNames.(bool)
 	}
 
+	useTokenGroups := d.Get("use_token_groups").(bool)
+	if useTokenGroups {
+		cfg.UseTokenGroups = useTokenGroups
+	}
+
 	return cfg, nil
 }
 
 type ConfigEntry struct {
-	Url           string `json:"url"`
-	UserDN        string `json:"userdn"`
-	GroupDN       string `json:"groupdn"`
-	GroupFilter   string `json:"groupfilter"`
-	GroupAttr     string `json:"groupattr"`
-	UPNDomain     string `json:"upndomain"`
-	UserAttr      string `json:"userattr"`
-	Certificate   string `json:"certificate"`
-	InsecureTLS   bool   `json:"insecure_tls"`
-	StartTLS      bool   `json:"starttls"`
-	BindDN        string `json:"binddn"`
-	BindPassword  string `json:"bindpass"`
-	DenyNullBind  bool   `json:"deny_null_bind"`
-	DiscoverDN    bool   `json:"discoverdn"`
-	TLSMinVersion string `json:"tls_min_version"`
-	TLSMaxVersion string `json:"tls_max_version"`
+	Url            string `json:"url"`
+	UserDN         string `json:"userdn"`
+	GroupDN        string `json:"groupdn"`
+	GroupFilter    string `json:"groupfilter"`
+	GroupAttr      string `json:"groupattr"`
+	UPNDomain      string `json:"upndomain"`
+	UserAttr       string `json:"userattr"`
+	Certificate    string `json:"certificate"`
+	InsecureTLS    bool   `json:"insecure_tls"`
+	StartTLS       bool   `json:"starttls"`
+	BindDN         string `json:"binddn"`
+	BindPassword   string `json:"bindpass"`
+	DenyNullBind   bool   `json:"deny_null_bind"`
+	DiscoverDN     bool   `json:"discoverdn"`
+	TLSMinVersion  string `json:"tls_min_version"`
+	TLSMaxVersion  string `json:"tls_max_version"`
+	UseTokenGroups bool   `json:"use_token_groups"`
 
 	// This json tag deviates from snake case because there was a past issue
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames".
@@ -267,21 +279,22 @@ func (c *ConfigEntry) Map() map[string]interface{} {
 
 func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 	m := map[string]interface{}{
-		"url":             c.Url,
-		"userdn":          c.UserDN,
-		"groupdn":         c.GroupDN,
-		"groupfilter":     c.GroupFilter,
-		"groupattr":       c.GroupAttr,
-		"upndomain":       c.UPNDomain,
-		"userattr":        c.UserAttr,
-		"certificate":     c.Certificate,
-		"insecure_tls":    c.InsecureTLS,
-		"starttls":        c.StartTLS,
-		"binddn":          c.BindDN,
-		"deny_null_bind":  c.DenyNullBind,
-		"discoverdn":      c.DiscoverDN,
-		"tls_min_version": c.TLSMinVersion,
-		"tls_max_version": c.TLSMaxVersion,
+		"url":              c.Url,
+		"userdn":           c.UserDN,
+		"groupdn":          c.GroupDN,
+		"groupfilter":      c.GroupFilter,
+		"groupattr":        c.GroupAttr,
+		"upndomain":        c.UPNDomain,
+		"userattr":         c.UserAttr,
+		"certificate":      c.Certificate,
+		"insecure_tls":     c.InsecureTLS,
+		"starttls":         c.StartTLS,
+		"binddn":           c.BindDN,
+		"deny_null_bind":   c.DenyNullBind,
+		"discoverdn":       c.DiscoverDN,
+		"tls_min_version":  c.TLSMinVersion,
+		"tls_max_version":  c.TLSMaxVersion,
+		"use_token_groups": c.UseTokenGroups,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames

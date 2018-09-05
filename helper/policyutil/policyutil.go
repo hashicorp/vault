@@ -78,11 +78,14 @@ func SanitizePolicies(policies []string, addDefault bool) []string {
 // the "default" policy out of its comparisons as it may be added later by core
 // after a set of policies has been saved by a backend.
 func EquivalentPolicies(a, b []string) bool {
-	if a == nil && b == nil {
+	switch {
+	case a == nil && b == nil:
 		return true
-	}
-
-	if a == nil || b == nil {
+	case a == nil && len(b) == 1 && b[0] == "default":
+		return true
+	case b == nil && len(a) == 1 && a[0] == "default":
+		return true
+	case a == nil || b == nil:
 		return false
 	}
 

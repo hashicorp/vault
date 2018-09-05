@@ -17,6 +17,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -24,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/crypto/chacha20poly1305"
@@ -169,6 +171,10 @@ type KeyEntry struct {
 	// The public key in an appropriate format for the type of key
 	FormattedPublicKey string `json:"public_key"`
 
+	// If convergent is enabled, the version (falling back to what's in the
+	// policy)
+	ConvergentVersion int `json:"convergent_version"`
+
 	// This is deprecated (but still filled) in favor of the value above which
 	// is more precise
 	DeprecatedCreationTime int64 `json:"creation_time"`
@@ -215,8 +221,7 @@ type PolicyConfig struct {
 	Type KeyType
 
 	// Derived keys MUST provide a context and the master underlying key is
-	// never used. If convergent encryption is true, the context will be used
-	// as the nonce as well.
+	// never used.
 	Derived              bool
 	KDF                  int
 	ConvergentEncryption bool
@@ -242,24 +247,19 @@ type PolicyConfig struct {
 
 // NewPolicy takes a policy config and returns a Policy with those settings.
 func NewPolicy(config PolicyConfig) *Policy {
-	var convergentVersion int
-	if config.ConvergentEncryption {
-		convergentVersion = 2
-	}
-
 	return &Policy{
+		l:                    new(sync.RWMutex),
 		Name:                 config.Name,
 		Type:                 config.Type,
 		Derived:              config.Derived,
 		KDF:                  config.KDF,
 		ConvergentEncryption: config.ConvergentEncryption,
-		ConvergentVersion:    convergentVersion,
+		ConvergentVersion:    -1,
 		Exportable:           config.Exportable,
 		DeletionAllowed:      config.DeletionAllowed,
 		AllowPlaintextBackup: config.AllowPlaintextBackup,
 		VersionTemplate:      config.VersionTemplate,
 		StoragePrefix:        config.StoragePrefix,
-		versionPrefixCache:   &sync.Map{},
 	}
 }
 
@@ -281,12 +281,24 @@ func LoadPolicy(ctx context.Context, s logical.Storage, path string) (*Policy, e
 		return nil, err
 	}
 
-	policy.versionPrefixCache = &sync.Map{}
+	policy.l = new(sync.RWMutex)
+
 	return &policy, nil
 }
 
 // Policy is the struct used to store metadata
 type Policy struct {
+	// This is a pointer on purpose: if we are running with cache disabled we
+	// need to actually swap in the lock manager's lock for this policy with
+	// the local lock.
+	l *sync.RWMutex
+	// writeLocked allows us to implement Lock() and Unlock()
+	writeLocked bool
+	// Stores whether it's been deleted. This acts as a guard for operations
+	// that may write data, e.g. if one request rotates and that request is
+	// served after a delete.
+	deleted uint32
+
 	Name string      `json:"name"`
 	Key  []byte      `json:"key,omitempty"` //DEPRECATED
 	Keys keyEntryMap `json:"keys"`
@@ -343,9 +355,27 @@ type Policy struct {
 	// policy object.
 	StoragePrefix string `json:"storage_prefix"`
 
-	// versionPrefixCache stores caches of verison prefix strings and the split
+	// versionPrefixCache stores caches of version prefix strings and the split
 	// version template.
-	versionPrefixCache *sync.Map
+	versionPrefixCache sync.Map
+}
+
+func (p *Policy) Lock(exclusive bool) {
+	if exclusive {
+		p.l.Lock()
+		p.writeLocked = true
+	} else {
+		p.l.RLock()
+	}
+}
+
+func (p *Policy) Unlock() {
+	if p.writeLocked {
+		p.writeLocked = false
+		p.l.Unlock()
+	} else {
+		p.l.RUnlock()
+	}
 }
 
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane
@@ -472,6 +502,10 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 }
 
 func (p *Policy) Persist(ctx context.Context, storage logical.Storage) (retErr error) {
+	if atomic.LoadUint32(&p.deleted) == 1 {
+		return errors.New("key has been deleted, not persisting")
+	}
+
 	// Other functions will take care of restoring other values; this is just
 	// responsible for archiving and keys since the archive function can modify
 	// keys. At the moment one of the other functions calling persist will also
@@ -544,7 +578,8 @@ func (p *Policy) NeedsUpgrade() bool {
 		return true
 	}
 
-	// Need to write the version
+	// Need to write the version if zero; for version 3 on we set this to -1 to
+	// ignore it since we store this information in each key entry
 	if p.ConvergentEncryption && p.ConvergentVersion == 0 {
 		return true
 	}
@@ -636,7 +671,12 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage) (retErr e
 // on the policy. If derivation is disabled the raw key is used and no context
 // is required, otherwise the KDF mode is used with the context to derive the
 // proper key.
-func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
+func (p *Policy) DeriveKey(context []byte, ver, numBytes int) ([]byte, error) {
+	// Fast-path non-derived keys
+	if !p.Derived {
+		return p.Keys[strconv.Itoa(ver)].Key, nil
+	}
+
 	if !p.Type.DerivationSupported() {
 		return nil, errutil.UserError{Err: fmt.Sprintf("derivation not supported for key type %v", p.Type)}
 	}
@@ -647,11 +687,6 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 
 	if ver <= 0 || ver > p.LatestVersion {
 		return nil, errutil.UserError{Err: "invalid key version"}
-	}
-
-	// Fast-path non-derived keys
-	if !p.Derived {
-		return p.Keys[strconv.Itoa(ver)].Key, nil
 	}
 
 	// Ensure a context is provided
@@ -668,10 +703,10 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	case Kdf_hkdf_sha256:
 		reader := hkdf.New(sha256.New, p.Keys[strconv.Itoa(ver)].Key, nil, context)
 		derBytes := bytes.NewBuffer(nil)
-		derBytes.Grow(32)
+		derBytes.Grow(numBytes)
 		limReader := &io.LimitedReader{
 			R: reader,
-			N: 32,
+			N: int64(numBytes),
 		}
 
 		switch p.Type {
@@ -680,8 +715,8 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("error reading returned derived bytes: %v", err)}
 			}
-			if n != 32 {
-				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to read enough derived bytes, needed 32, got %d", n)}
+			if n != int64(numBytes) {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to read enough derived bytes, needed %d, got %d", numBytes, n)}
 			}
 			return derBytes.Bytes(), nil
 
@@ -701,6 +736,24 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	default:
 		return nil, errutil.InternalError{Err: "unsupported key derivation mode"}
 	}
+}
+
+func (p *Policy) convergentVersion(ver int) int {
+	if !p.ConvergentEncryption {
+		return 0
+	}
+
+	convergentVersion := p.ConvergentVersion
+	if convergentVersion == 0 {
+		// For some reason, not upgraded yet
+		convergentVersion = 1
+	}
+	currKey := p.Keys[strconv.Itoa(ver)]
+	if currKey.ConvergentVersion != 0 {
+		convergentVersion = currKey.ConvergentVersion
+	}
+
+	return convergentVersion
 }
 
 func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, error) {
@@ -729,18 +782,41 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 
 	switch p.Type {
 	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
-		// Derive the key that should be used
-		key, err := p.DeriveKey(context, ver)
+		hmacKey := context
+
+		var aead cipher.AEAD
+		var encKey []byte
+		var deriveHMAC bool
+
+		numBytes := 32
+		if p.convergentVersion(ver) > 2 {
+			deriveHMAC = true
+			numBytes = 64
+		}
+		key, err := p.DeriveKey(context, ver, numBytes)
 		if err != nil {
 			return "", err
 		}
 
-		var aead cipher.AEAD
+		if len(key) < numBytes {
+			return "", errutil.InternalError{Err: "could not derive key, length too small"}
+		}
+
+		encKey = key[:32]
+		if len(encKey) != 32 {
+			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
+		}
+		if deriveHMAC {
+			hmacKey = key[32:]
+			if len(hmacKey) != 32 {
+				return "", errutil.InternalError{Err: "could not derive hmac key, length not correct"}
+			}
+		}
 
 		switch p.Type {
 		case KeyType_AES256_GCM96:
 			// Setup the cipher
-			aesCipher, err := aes.NewCipher(key)
+			aesCipher, err := aes.NewCipher(encKey)
 			if err != nil {
 				return "", errutil.InternalError{Err: err.Error()}
 			}
@@ -754,7 +830,7 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 			aead = gcm
 
 		case KeyType_ChaCha20_Poly1305:
-			cha, err := chacha20poly1305.New(key)
+			cha, err := chacha20poly1305.New(encKey)
 			if err != nil {
 				return "", errutil.InternalError{Err: err.Error()}
 			}
@@ -763,16 +839,22 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 		}
 
 		if p.ConvergentEncryption {
-			switch p.ConvergentVersion {
+			convergentVersion := p.convergentVersion(ver)
+			switch convergentVersion {
 			case 1:
 				if len(nonce) != aead.NonceSize() {
 					return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long when using convergent encryption with this key", aead.NonceSize())}
 				}
-			default:
-				nonceHmac := hmac.New(sha256.New, context)
+			case 2, 3:
+				if len(hmacKey) == 0 {
+					return "", errutil.InternalError{Err: fmt.Sprintf("invalid hmac key length of zero")}
+				}
+				nonceHmac := hmac.New(sha256.New, hmacKey)
 				nonceHmac.Write(plaintext)
 				nonceSum := nonceHmac.Sum(nil)
 				nonce = nonceSum[:aead.NonceSize()]
+			default:
+				return "", errutil.InternalError{Err: fmt.Sprintf("unhandled convergent version %d", convergentVersion)}
 			}
 		} else {
 			// Compute random nonce
@@ -786,7 +868,7 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 		ciphertext = aead.Seal(nil, nonce, plaintext, nil)
 
 		// Place the encrypted data after the nonce
-		if !p.ConvergentEncryption || p.ConvergentVersion > 1 {
+		if !p.ConvergentEncryption || p.convergentVersion(ver) > 1 {
 			ciphertext = append(nonce, ciphertext...)
 		}
 
@@ -825,10 +907,6 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.UserError{Err: "invalid ciphertext: no prefix"}
 	}
 
-	if p.ConvergentEncryption && p.ConvergentVersion == 1 && (nonce == nil || len(nonce) == 0) {
-		return "", errutil.UserError{Err: "invalid convergent nonce supplied"}
-	}
-
 	splitVerCiphertext := strings.SplitN(strings.TrimPrefix(value, tplParts[0]), tplParts[1], 2)
 	if len(splitVerCiphertext) != 2 {
 		return "", errutil.UserError{Err: "invalid ciphertext: wrong number of fields"}
@@ -853,6 +931,11 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.UserError{Err: ErrTooOld}
 	}
 
+	convergentVersion := p.convergentVersion(ver)
+	if convergentVersion == 1 && (nonce == nil || len(nonce) == 0) {
+		return "", errutil.UserError{Err: "invalid convergent nonce supplied"}
+	}
+
 	// Decode the base64
 	decoded, err := base64.StdEncoding.DecodeString(splitVerCiphertext[1])
 	if err != nil {
@@ -863,17 +946,21 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 
 	switch p.Type {
 	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
-		key, err := p.DeriveKey(context, ver)
+		var aead cipher.AEAD
+
+		encKey, err := p.DeriveKey(context, ver, 32)
 		if err != nil {
 			return "", err
 		}
 
-		var aead cipher.AEAD
+		if len(encKey) != 32 {
+			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
+		}
 
 		switch p.Type {
 		case KeyType_AES256_GCM96:
 			// Setup the cipher
-			aesCipher, err := aes.NewCipher(key)
+			aesCipher, err := aes.NewCipher(encKey)
 			if err != nil {
 				return "", errutil.InternalError{Err: err.Error()}
 			}
@@ -887,7 +974,7 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 			aead = gcm
 
 		case KeyType_ChaCha20_Poly1305:
-			cha, err := chacha20poly1305.New(key)
+			cha, err := chacha20poly1305.New(encKey)
 			if err != nil {
 				return "", errutil.InternalError{Err: err.Error()}
 			}
@@ -901,7 +988,7 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 
 		// Extract the nonce and ciphertext
 		var ciphertext []byte
-		if p.ConvergentEncryption && p.ConvergentVersion < 2 {
+		if p.ConvergentEncryption && convergentVersion == 1 {
 			ciphertext = decoded
 		} else {
 			nonce = decoded[:aead.NonceSize()]
@@ -992,7 +1079,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm, sigAlgorith
 		if p.Derived {
 			// Derive the key that should be used
 			var err error
-			key, err = p.DeriveKey(context, ver)
+			key, err = p.DeriveKey(context, ver, 32)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 			}
@@ -1122,7 +1209,7 @@ func (p *Policy) VerifySignature(context, input []byte, sig, hashAlgorithm strin
 		if p.Derived {
 			// Derive the key that should be used
 			var err error
-			key, err = p.DeriveKey(context, ver)
+			key, err = p.DeriveKey(context, ver, 32)
 			if err != nil {
 				return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 			}
@@ -1257,6 +1344,12 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) (retErr er
 		entry.RSAKey, err = rsa.GenerateKey(rand.Reader, bitSize)
 		if err != nil {
 			return err
+		}
+	}
+
+	if p.ConvergentEncryption {
+		if p.ConvergentVersion == -1 || p.ConvergentVersion > 1 {
+			entry.ConvergentVersion = currentConvergentVersion
 		}
 	}
 

@@ -1,0 +1,23 @@
+<div class="console-ui-input" data-test-component="console/command-input">
+  {{#if isRunning}}
+    <div class="control console-spinner is-loading"></div>
+  {{else}}
+    {{i-con glyph="chevron-right" size=12 }}
+  {{/if}}
+  <input onkeyup={{action 'handleKeyUp'}} value={{value}} autocomplete="off" spellcheck="false" />
+  {{#tool-tip horizontalPosition="auto-right" verticalPosition=(if isFullscreen "above" "below") as |d|}}
+    {{#d.trigger tagName="button" type="button" class=(concat "button is-compact" (if isFullscreen " active")) click=(action "fullscreen") data-test-tool-tip-trigger=true}}
+      {{i-con glyph=(if isFullscreen "fullscreen-close" "fullscreen-open") aria-hidden="true" size=16}}
+    {{/d.trigger}}
+    {{#d.content class="tool-tip"}}
+      <div class="box">
+        {{#if isFullscreen}}
+        Minimize
+        {{else}}
+        Maximize
+        {{/if}}
+      </div>
+    {{/d.content}}
+  {{/tool-tip}}
+</div>
+<NamespaceReminder @class="console-reminder" @mode="execute" @noun="command" />

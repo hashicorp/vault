@@ -1,7 +1,5 @@
 import Ember from 'ember';
-import hbs from 'htmlbars-inline-precompile';
-import { hrefTo } from 'vault/helpers/href-to';
-const { computed } = Ember;
+const { computed, Component } = Ember;
 
 export function linkParams({ mode, secret, queryParams }) {
   let params;
@@ -20,7 +18,8 @@ export function linkParams({ mode, secret, queryParams }) {
   return params;
 }
 
-export default Ember.Component.extend({
+export default Component.extend({
+  tagName: '',
   mode: 'list',
 
   secret: null,
@@ -28,16 +27,7 @@ export default Ember.Component.extend({
   ariaLabel: null,
 
   linkParams: computed('mode', 'secret', 'queryParams', function() {
-    return linkParams(this.getProperties('mode', 'secret', 'queryParams'));
+    let data = this.getProperties('mode', 'secret', 'queryParams');
+    return linkParams(data);
   }),
-
-  attributeBindings: ['href', 'aria-label:ariaLabel'],
-
-  href: computed('linkParams', function() {
-    return hrefTo(this, ...this.get('linkParams'));
-  }),
-
-  layout: hbs`{{yield}}`,
-
-  tagName: 'a',
 });

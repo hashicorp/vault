@@ -279,7 +279,7 @@ test('it includes algorithm param for HMAC', function(assert) {
       backend: 'transit',
       id: 'akey',
       payload: {
-        algorithm: "sha2-384"
+        algorithm: 'sha2-384',
       },
     },
     'passes expected args to the adapter'

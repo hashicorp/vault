@@ -49,7 +49,7 @@ storage "etcd" {
   enabled. This can also be provided via the environment variable
   `ETCD_HA_ENABLED`.
 
-- `path` `(string: "vault/")` – Specifies the path in Etcd where Vault data will
+- `path` `(string: "/vault/")` – Specifies the path in Etcd where Vault data will
   be stored.
 
 - `sync` `(string: "true")` – Specifies whether to sync the list of available

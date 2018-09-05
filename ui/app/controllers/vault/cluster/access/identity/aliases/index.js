@@ -5,6 +5,6 @@ export default Ember.Controller.extend(ListController, {
   actions: {
     onDelete() {
       this.send('reload');
-    }
-  }
+    },
+  },
 });

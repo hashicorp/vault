@@ -1,6 +1,7 @@
-{{message-error model=model}}
 <form onsubmit={{action "createOrUpdate" "create"}} onchange={{action "handleChange"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
+    {{message-error model=model}}
+    <NamespaceReminder @mode={{mode}} @noun="SSH role" />
     {{#with (if (eq model.keyType 'otp') 3 4) as |numRequired|}}
       {{#each (take numRequired model.attrsForKeyType) as |attr|}}
         {{#unless (and (eq mode 'edit') (eq attr.name 'name'))}}

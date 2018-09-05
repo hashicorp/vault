@@ -28,7 +28,7 @@ const (
 
 //rows affected
 type rowsAffected struct {
-	sums    []int32
+	rows    []int32
 	_numArg int
 }
 
@@ -41,36 +41,32 @@ func (r *rowsAffected) setNumArg(numArg int) {
 }
 
 func (r *rowsAffected) read(rd *bufio.Reader) error {
-	if r.sums == nil || r._numArg > cap(r.sums) {
-		r.sums = make([]int32, r._numArg)
+	if r.rows == nil || r._numArg > cap(r.rows) {
+		r.rows = make([]int32, r._numArg)
 	} else {
-		r.sums = r.sums[:r._numArg]
+		r.rows = r.rows[:r._numArg]
 	}
 
-	var err error
-
 	for i := 0; i < r._numArg; i++ {
-		r.sums[i], err = rd.ReadInt32()
-		if err != nil {
-			return err
+		r.rows[i] = rd.ReadInt32()
+		if trace {
+			outLogger.Printf("rows affected %d: %d", i, r.rows[i])
 		}
 	}
 
-	if trace {
-		outLogger.Printf("rows affected %v", r.sums)
-	}
-
-	return nil
+	return rd.GetError()
 }
 
 func (r *rowsAffected) total() int64 {
-	if r.sums == nil {
+	if r.rows == nil {
 		return 0
 	}
 
 	total := int64(0)
-	for _, sum := range r.sums {
-		total += int64(sum)
+	for _, rows := range r.rows {
+		if rows > 0 {
+			total += int64(rows)
+		}
 	}
 	return total
 }

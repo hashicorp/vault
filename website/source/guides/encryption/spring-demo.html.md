@@ -30,6 +30,7 @@ environment.
 
 ## Reference Material
 
+- [Encryption as a Service](/guides/encryption/transit.html) 
 - [Manage secrets, access, and encryption in
 the public cloud with
 Vault](https://www.hashicorp.com/resources/solutions-engineering-webinar-series-episode-2-vault)
@@ -82,8 +83,9 @@ you should find the following folders:
 
 | Folder           | Description                                               |
 |------------------|-----------------------------------------------------------|
-| `kubernetes`     | Supporting files to deploy the demo app to Kubernetes   |
-| `nomad`          | Supporting files to deploy the demo app to Nomad        |
+| `aws`            | Supporting files to deploy the demo app to AWS            |
+| `kubernetes`     | Supporting files to deploy the demo app to Kubernetes     |
+| `nomad`          | Supporting files to deploy the demo app to Nomad          |
 | `scripts`        | Scripts to setup PostgreSQL and Vault                     |
 | `src/main`       | Sample app source code                                    |
 | `vagrant-local`  | Vagrant file to deploy the demo locally                   |

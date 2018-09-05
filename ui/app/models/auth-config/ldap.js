@@ -85,6 +85,12 @@ export default AuthConfig.extend({
     helpText:
       'LDAP attribute to follow on objects returned by groupfilter in order to enumerate user group membership. Examples: for groupfilter queries returning group objects, use: cn. For queries returning user objects, use: memberOf. The default is cn.',
   }),
+  useTokenGroups: attr('boolean', {
+    defaultValue: false,
+    label: 'Use Token Groups',
+    helpText:
+      'Use the Active Directory tokenGroups constructed attribute to find the group memberships. This returns all security groups for the user, including nested groups. In an Active Directory environment with a large number of groups this method offers increased performance. Selecting this will cause Group DN, Attribute, and Filter to be ignored.',
+  }),
 
   fieldGroups: computed(function() {
     const groups = [
@@ -108,7 +114,7 @@ export default AuthConfig.extend({
         'Customize User Search': ['binddn', 'userdn', 'bindpass'],
       },
       {
-        'Customize Group Membership Search': ['groupfilter', 'groupattr', 'groupdn'],
+        'Customize Group Membership Search': ['groupfilter', 'groupattr', 'groupdn', 'useTokenGroups'],
       },
     ];
     return fieldToAttrs(this, groups);

@@ -6,7 +6,7 @@ export default create({
   flashMessage,
   items: collection('[data-test-identity-row]', {
     menu: clickable('[data-test-popup-menu-trigger]'),
-    id: text('[data-test-identity-link]'),
+    name: text('[data-test-identity-link]'),
   }),
   delete: clickable('[data-test-item-delete] [data-test-confirm-action-trigger]'),
   confirmDelete: clickable('[data-test-item-delete] [data-test-confirm-button]'),

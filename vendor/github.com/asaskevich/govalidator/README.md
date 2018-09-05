@@ -1,7 +1,7 @@
 govalidator
 ===========
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/asaskevich/govalidator?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![GoDoc](https://godoc.org/github.com/asaskevich/govalidator?status.png)](https://godoc.org/github.com/asaskevich/govalidator) [![Coverage Status](https://img.shields.io/coveralls/asaskevich/govalidator.svg)](https://coveralls.io/r/asaskevich/govalidator?branch=master) [![wercker status](https://app.wercker.com/status/1ec990b09ea86c910d5f08b0e02c6043/s "wercker status")](https://app.wercker.com/project/bykey/1ec990b09ea86c910d5f08b0e02c6043)
-[![Build Status](https://travis-ci.org/asaskevich/govalidator.svg?branch=master)](https://travis-ci.org/asaskevich/govalidator) [![Go Report Card](https://goreportcard.com/badge/github.com/asaskevich/govalidator)](https://goreportcard.com/report/github.com/asaskevich/govalidator) [![GoSearch](http://go-search.org/badge?id=github.com%2Fasaskevich%2Fgovalidator)](http://go-search.org/view?id=github.com%2Fasaskevich%2Fgovalidator)
+[![Build Status](https://travis-ci.org/asaskevich/govalidator.svg?branch=master)](https://travis-ci.org/asaskevich/govalidator) [![Go Report Card](https://goreportcard.com/badge/github.com/asaskevich/govalidator)](https://goreportcard.com/report/github.com/asaskevich/govalidator) [![GoSearch](http://go-search.org/badge?id=github.com%2Fasaskevich%2Fgovalidator)](http://go-search.org/view?id=github.com%2Fasaskevich%2Fgovalidator) [![Backers on Open Collective](https://opencollective.com/govalidator/backers/badge.svg)](#backers) [![Sponsors on Open Collective](https://opencollective.com/govalidator/sponsors/badge.svg)](#sponsors) 
 
 A package of validators and sanitizers for strings, structs and collections. Based on [validator.js](https://github.com/chriso/validator.js).
 
@@ -446,6 +446,11 @@ Feel free to create what you want, but keep in mind when you implement new featu
 - Public functions must be documented and described in source file and added to README.md to the list of available functions
 - There are must be unit-tests for any new functions and improvements
 
+## Credits
+### Contributors
+
+This project exists thanks to all the people who contribute. [[Contribute](CONTRIBUTING.md)].
+
 #### Special thanks to [contributors](https://github.com/asaskevich/govalidator/graphs/contributors)
 * [Daniel Lohse](https://github.com/annismckenzie)
 * [Attila Oláh](https://github.com/attilaolah)
@@ -456,3 +461,30 @@ Feel free to create what you want, but keep in mind when you implement new featu
 * [Nathan Davies](https://github.com/nathj07)
 * [Matt Sanford](https://github.com/mzsanford)
 * [Simon ccl1115](https://github.com/ccl1115)
+
+<a href="graphs/contributors"><img src="https://opencollective.com/govalidator/contributors.svg?width=890" /></a>
+
+
+### Backers
+
+Thank you to all our backers! 🙏 [[Become a backer](https://opencollective.com/govalidator#backer)]
+
+<a href="https://opencollective.com/govalidator#backers" target="_blank"><img src="https://opencollective.com/govalidator/backers.svg?width=890"></a>
+
+
+### Sponsors
+
+Support this project by becoming a sponsor. Your logo will show up here with a link to your website. [[Become a sponsor](https://opencollective.com/govalidator#sponsor)]
+
+<a href="https://opencollective.com/govalidator/sponsor/0/website" target="_blank"><img src="https://opencollective.com/govalidator/sponsor/0/avatar.svg"></a>
+<a href="https://opencollective.com/govalidator/sponsor/1/website" target="_blank"><img src="https://opencollective.com/govalidator/sponsor/1/avatar.svg"></a>
+<a href="https://opencollective.com/govalidator/sponsor/2/website" target="_blank"><img src="https://opencollective.com/govalidator/sponsor/2/avatar.svg"></a>
+<a href="https://opencollective.com/govalidator/sponsor/3/website" target="_blank"><img src="https://opencollective.com/govalidator/sponsor/3/avatar.svg"></a>
+<a href="https://opencollective.com/govalidator/sponsor/4/website" target="_blank"><img src="https://opencollective.com/govalidator/sponsor/4/avatar.svg"></a>
+<a href="https://opencollective.com/govalidator/sponsor/5/website" target="_blank"><img src="https://opencollective.com/govalidator/sponsor/5/avatar.svg"></a>
+<a href="https://opencollective.com/govalidator/sponsor/6/website" target="_blank"><img src="https://opencollective.com/govalidator/sponsor/6/avatar.svg"></a>
+<a href="https://opencollective.com/govalidator/sponsor/7/website" target="_blank"><img src="https://opencollective.com/govalidator/sponsor/7/avatar.svg"></a>
+<a href="https://opencollective.com/govalidator/sponsor/8/website" target="_blank"><img src="https://opencollective.com/govalidator/sponsor/8/avatar.svg"></a>
+<a href="https://opencollective.com/govalidator/sponsor/9/website" target="_blank"><img src="https://opencollective.com/govalidator/sponsor/9/avatar.svg"></a>
+
+

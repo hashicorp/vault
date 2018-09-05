@@ -3,9 +3,9 @@
   <nav class="menu">
     <ul class="menu-list">
       <li class="action">
-        <a href={{href-to "vault.cluster.access.identity.aliases.show" (pluralize item.parentType) item.id "details" }}>
+        {{#link-to "vault.cluster.access.identity.aliases.show" (pluralize item.parentType) item.id "details"}}
           Details
-        </a>
+        {{/link-to}}
       </li>
       {{#if item.updatePath.isPending}}
         <li class="action">
@@ -16,9 +16,9 @@
       {{else}}
         {{#if item.canEdit}}
           <li class="action">
-            <a href={{href-to "vault.cluster.access.identity.aliases.edit" (pluralize item.parentType) item.id}}>
+            {{#link-to "vault.cluster.access.identity.aliases.edit" (pluralize item.parentType) item.id}}
               Edit
-            </a>
+            {{/link-to}}
           </li>
         {{/if}}
         {{#if item.canDelete}}
@@ -26,7 +26,7 @@
             {{#confirm-action
               data-test-item-delete=true
               confirmButtonClasses="button is-primary"
-              buttonClasses="link"
+              buttonClasses="link is-destroy"
               onConfirmAction=(action "performTransaction" item)
               confirmMessage=(concat "Are you sure you want to delete " item.id "?")
               showConfirm=(get this (concat "shouldDelete-" item.id))

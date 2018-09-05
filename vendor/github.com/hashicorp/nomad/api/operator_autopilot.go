@@ -1,12 +1,8 @@
 package api
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -178,85 +174,45 @@ type OperatorHealthReply struct {
 }
 
 // AutopilotGetConfiguration is used to query the current Autopilot configuration.
-func (op *Operator) AutopilotGetConfiguration(q *QueryOptions) (*AutopilotConfiguration, error) {
-	r, err := op.c.newRequest("GET", "/v1/operator/autopilot/configuration")
+func (op *Operator) AutopilotGetConfiguration(q *QueryOptions) (*AutopilotConfiguration, *QueryMeta, error) {
+	var resp AutopilotConfiguration
+	qm, err := op.c.query("/v1/operator/autopilot/configuration", &resp, q)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	r.setQueryOptions(q)
-	_, resp, err := requireOK(op.c.doRequest(r))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var out AutopilotConfiguration
-	if err := decodeBody(resp, &out); err != nil {
-		return nil, err
-	}
-
-	return &out, nil
+	return &resp, qm, nil
 }
 
 // AutopilotSetConfiguration is used to set the current Autopilot configuration.
-func (op *Operator) AutopilotSetConfiguration(conf *AutopilotConfiguration, q *WriteOptions) error {
-	r, err := op.c.newRequest("PUT", "/v1/operator/autopilot/configuration")
+func (op *Operator) AutopilotSetConfiguration(conf *AutopilotConfiguration, q *WriteOptions) (*WriteMeta, error) {
+	var out bool
+	wm, err := op.c.write("/v1/operator/autopilot/configuration", conf, &out, q)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	r.setWriteOptions(q)
-	r.obj = conf
-	_, resp, err := requireOK(op.c.doRequest(r))
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	return nil
+	return wm, nil
 }
 
 // AutopilotCASConfiguration is used to perform a Check-And-Set update on the
 // Autopilot configuration. The ModifyIndex value will be respected. Returns
 // true on success or false on failures.
-func (op *Operator) AutopilotCASConfiguration(conf *AutopilotConfiguration, q *WriteOptions) (bool, error) {
-	r, err := op.c.newRequest("PUT", "/v1/operator/autopilot/configuration")
+func (op *Operator) AutopilotCASConfiguration(conf *AutopilotConfiguration, q *WriteOptions) (bool, *WriteMeta, error) {
+	var out bool
+	wm, err := op.c.write("/v1/operator/autopilot/configuration?cas="+strconv.FormatUint(conf.ModifyIndex, 10), conf, &out, q)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
-	r.setWriteOptions(q)
-	r.params.Set("cas", strconv.FormatUint(conf.ModifyIndex, 10))
-	r.obj = conf
-	_, resp, err := requireOK(op.c.doRequest(r))
-	if err != nil {
-		return false, err
-	}
-	defer resp.Body.Close()
 
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, resp.Body); err != nil {
-		return false, fmt.Errorf("Failed to read response: %v", err)
-	}
-	res := strings.Contains(buf.String(), "true")
-
-	return res, nil
+	return out, wm, nil
 }
 
 // AutopilotServerHealth is used to query Autopilot's top-level view of the health
 // of each Nomad server.
-func (op *Operator) AutopilotServerHealth(q *QueryOptions) (*OperatorHealthReply, error) {
-	r, err := op.c.newRequest("GET", "/v1/operator/autopilot/health")
-	if err != nil {
-		return nil, err
-	}
-	r.setQueryOptions(q)
-	_, resp, err := requireOK(op.c.doRequest(r))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
+func (op *Operator) AutopilotServerHealth(q *QueryOptions) (*OperatorHealthReply, *QueryMeta, error) {
 	var out OperatorHealthReply
-	if err := decodeBody(resp, &out); err != nil {
-		return nil, err
+	qm, err := op.c.query("/v1/operator/autopilot/health", &out, q)
+	if err != nil {
+		return nil, nil, err
 	}
-	return &out, nil
+	return &out, qm, nil
 }

@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -40,14 +41,15 @@ func TestSysRekey_Init_Status(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"started":          false,
-		"t":                json.Number("0"),
-		"n":                json.Number("0"),
-		"progress":         json.Number("0"),
-		"required":         json.Number("3"),
-		"pgp_fingerprints": interface{}(nil),
-		"backup":           false,
-		"nonce":            "",
+		"started":               false,
+		"t":                     json.Number("0"),
+		"n":                     json.Number("0"),
+		"progress":              json.Number("0"),
+		"required":              json.Number("3"),
+		"pgp_fingerprints":      interface{}(nil),
+		"backup":                false,
+		"nonce":                 "",
+		"verification_required": false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -71,13 +73,14 @@ func TestSysRekey_Init_Setup(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"started":          true,
-		"t":                json.Number("3"),
-		"n":                json.Number("5"),
-		"progress":         json.Number("0"),
-		"required":         json.Number("3"),
-		"pgp_fingerprints": interface{}(nil),
-		"backup":           false,
+		"started":               true,
+		"t":                     json.Number("3"),
+		"n":                     json.Number("5"),
+		"progress":              json.Number("0"),
+		"required":              json.Number("3"),
+		"pgp_fingerprints":      interface{}(nil),
+		"backup":                false,
+		"verification_required": false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -94,13 +97,14 @@ func TestSysRekey_Init_Setup(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"started":          true,
-		"t":                json.Number("3"),
-		"n":                json.Number("5"),
-		"progress":         json.Number("0"),
-		"required":         json.Number("3"),
-		"pgp_fingerprints": interface{}(nil),
-		"backup":           false,
+		"started":               true,
+		"t":                     json.Number("3"),
+		"n":                     json.Number("5"),
+		"progress":              json.Number("0"),
+		"required":              json.Number("3"),
+		"pgp_fingerprints":      interface{}(nil),
+		"backup":                false,
+		"verification_required": false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -138,14 +142,15 @@ func TestSysRekey_Init_Cancel(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"started":          false,
-		"t":                json.Number("0"),
-		"n":                json.Number("0"),
-		"progress":         json.Number("0"),
-		"required":         json.Number("3"),
-		"pgp_fingerprints": interface{}(nil),
-		"backup":           false,
-		"nonce":            "",
+		"started":               false,
+		"t":                     json.Number("0"),
+		"n":                     json.Number("0"),
+		"progress":              json.Number("0"),
+		"required":              json.Number("3"),
+		"pgp_fingerprints":      interface{}(nil),
+		"backup":                false,
+		"nonce":                 "",
+		"verification_required": false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -191,14 +196,15 @@ func TestSysRekey_Update(t *testing.T) {
 
 		actual = map[string]interface{}{}
 		expected = map[string]interface{}{
-			"started":          true,
-			"nonce":            rekeyStatus["nonce"].(string),
-			"backup":           false,
-			"pgp_fingerprints": interface{}(nil),
-			"required":         json.Number("3"),
-			"t":                json.Number("3"),
-			"n":                json.Number("5"),
-			"progress":         json.Number(fmt.Sprintf("%d", i+1)),
+			"started":               true,
+			"nonce":                 rekeyStatus["nonce"].(string),
+			"backup":                false,
+			"pgp_fingerprints":      interface{}(nil),
+			"required":              json.Number("3"),
+			"t":                     json.Number("3"),
+			"n":                     json.Number("5"),
+			"progress":              json.Number(fmt.Sprintf("%d", i+1)),
+			"verification_required": false,
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
@@ -218,8 +224,8 @@ func TestSysRekey_Update(t *testing.T) {
 			t.Fatalf("expected a nonce, i is %d, actual is %#v", i, actual)
 		}
 
-		if !reflect.DeepEqual(actual, expected) {
-			t.Fatalf("\nexpected: \n%#v\nactual: \n%#v", expected, actual)
+		if diff := deep.Equal(actual, expected); diff != nil {
+			t.Fatal(diff)
 		}
 	}
 

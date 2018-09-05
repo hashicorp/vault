@@ -122,7 +122,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return resp, err
 	}
 
-	if !policyutil.EquivalentPolicies(loginPolicies, req.Auth.Policies) {
+	if !policyutil.EquivalentPolicies(loginPolicies, req.Auth.TokenPolicies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
@@ -151,8 +151,8 @@ func (b *backend) RadiusLogin(ctx context.Context, req *logical.Request, usernam
 			Timeout: time.Duration(cfg.DialTimeout) * time.Second,
 		},
 	}
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(cfg.ReadTimeout)*time.Second)
-	received, err := client.Exchange(ctx, packet, hostport)
+	clientCtx, cancelFunc := context.WithTimeout(ctx, time.Duration(cfg.ReadTimeout)*time.Second)
+	received, err := client.Exchange(clientCtx, packet, hostport)
 	cancelFunc()
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
@@ -161,20 +161,15 @@ func (b *backend) RadiusLogin(ctx context.Context, req *logical.Request, usernam
 		return nil, logical.ErrorResponse("access denied by the authentication server"), nil
 	}
 
-	var policies []string
+	policies := cfg.UnregisteredUserPolicies
+
 	// Retrieve user entry from storage
 	user, err := b.user(ctx, req.Storage, username)
 	if err != nil {
-		return policies, logical.ErrorResponse("could not retrieve user entry from storage"), err
+		return nil, logical.ErrorResponse("could not retrieve user entry from storage"), err
 	}
-	if user == nil {
-		// No user found, check if unregistered users are allowed (unregistered_user_policies not empty)
-		if len(policyutil.SanitizePolicies(cfg.UnregisteredUserPolicies, false)) == 0 {
-			return nil, logical.ErrorResponse("authentication succeeded but user has no associated policies"), nil
-		}
-		policies = policyutil.SanitizePolicies(cfg.UnregisteredUserPolicies, true)
-	} else {
-		policies = policyutil.SanitizePolicies(user.Policies, true)
+	if user != nil {
+		policies = user.Policies
 	}
 
 	return policies, &logical.Response{}, nil

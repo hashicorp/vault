@@ -71,7 +71,7 @@ To write a policy using the command line, specify the path to a policy file to
 upload.
 
 ```text
-$ vault policy write my-policy acl.hcl
+$ vault policy write my-policy my-policy.hcl
 Success! Uploaded policy: my-policy
 ```
 

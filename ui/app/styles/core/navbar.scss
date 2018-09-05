@@ -43,5 +43,23 @@ a.navbar-item {
     left: 3.5em;
     top: 0;
     height: 3.25rem;
+    &.with-ns-picker {
+      left: 0;
+    }
+  }
+
+  .icon.edition-icon {
+    margin: -0.25em -0.5em -0.25em 0.15em;
+    opacity: 0.33;
+    transition: opacity $speed;
+
+    #edition-enterprise-hexagon {
+      fill: #fff;
+    }
+  }
+
+  li.is-active .icon.edition-icon,
+  li:hover .icon.edition-icon {
+    opacity: 0.5;
   }
 }
