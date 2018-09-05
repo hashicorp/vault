@@ -211,7 +211,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		if roleEntry.InvalidData != "" {
 			return logical.ErrorResponse(fmt.Sprintf("unable to parse supplied data: %q", roleEntry.InvalidData)), nil
 		}
-		resp.AddWarning("Detected use of legacy role or policy paramemter. Please upgrade to use the new parameters.")
+		resp.AddWarning("Detected use of legacy role or policy parameter. Please upgrade to use the new parameters.")
 	} else {
 		roleEntry.ProhibitFlexibleCredPath = false
 	}
