@@ -30,6 +30,8 @@ BUG FIXES:
    certificates and simplify API [GH-5231]
  * ui: JSON editor will not coerce input to an object, and will now show an 
    error about Vault expecting an object [GH-5271]
+ * ui: authentication form will now default to any methods that have been tuned
+   to show up for unauthenticated users [GH-5281]
  
 
 ## 0.11.0 (August 28th, 2018)
