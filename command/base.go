@@ -24,8 +24,8 @@ const (
 	// maxLineLength is the maximum width of any line.
 	maxLineLength int = 78
 
-	// notSetNamespace is a flag value for a not-set namespace
-	notSetNamespace = "(not set)"
+	// notSetValue is a flag value for a not-set value
+	notSetValue = "(not set)"
 )
 
 // reRemoveWhitespace is a regular expression for stripping whitespace from
@@ -129,10 +129,10 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	// flagNS takes precedence over flagNamespace. After resolution, point both
 	// flags to the same value to be able to use them interchangeably anywhere.
-	if c.flagNS != notSetNamespace {
+	if c.flagNS != notSetValue {
 		c.flagNamespace = c.flagNS
 	}
-	if c.flagNamespace != notSetNamespace {
+	if c.flagNamespace != notSetValue {
 		client.SetNamespace(namespace.Canonicalize(c.flagNamespace))
 	}
 
@@ -256,7 +256,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			f.StringVar(&StringVar{
 				Name:       "namespace",
 				Target:     &c.flagNamespace,
-				Default:    notSetNamespace, // this can never be a real value
+				Default:    notSetValue, // this can never be a real value
 				EnvVar:     "VAULT_NAMESPACE",
 				Completion: complete.PredictAnything,
 				Usage: "The namespace to use for the command. Setting this is not " +
@@ -267,7 +267,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			f.StringVar(&StringVar{
 				Name:       "ns",
 				Target:     &c.flagNS,
-				Default:    notSetNamespace, // this can never be a real value
+				Default:    notSetValue, // this can never be a real value
 				Completion: complete.PredictAnything,
 				Hidden:     true,
 				Usage:      "Alias for -namespace. This takes precedence over -namespace.",
