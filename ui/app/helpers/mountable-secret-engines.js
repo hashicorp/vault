@@ -14,6 +14,12 @@ const MOUNTABLE_SECRET_ENGINES = [
     category: 'cloud',
   },
   {
+    displayName: 'Azure',
+    value: 'azure',
+    type: 'azure',
+    category: 'cloud',
+  },
+  {
     displayName: 'Consul',
     value: 'consul',
     type: 'consul',
