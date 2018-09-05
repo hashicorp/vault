@@ -410,7 +410,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 			return nil, fmt.Errorf("AMI ID in the instance description is nil")
 		}
 		if !strutil.StrListContains(roleEntry.BoundAmiIDs, *instance.ImageId) {
-			return fmt.Errorf("AMI ID %q does not belong to role %q", instance.ImageId, roleName), nil
+			return fmt.Errorf("AMI ID %q does not belong to role %q", *instance.ImageId, roleName), nil
 		}
 	}
 
@@ -897,8 +897,8 @@ func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, rol
 	}
 
 	return &roleTagLoginResponse{
-		Policies: rTag.Policies,
-		MaxTTL:   rTag.MaxTTL,
+		Policies:                 rTag.Policies,
+		MaxTTL:                   rTag.MaxTTL,
 		DisallowReauthentication: rTag.DisallowReauthentication,
 	}, nil
 }

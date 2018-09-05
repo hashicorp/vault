@@ -44,11 +44,14 @@
 @import "./components/auth-form";
 @import "./components/b64-toggle";
 @import "./components/box-label";
+@import "./components/box-radio";
 @import "./components/codemirror";
 @import "./components/confirm";
 @import "./components/console-ui-panel";
 @import "./components/control-group";
+@import "./components/doc-link";
 @import "./components/env-banner";
+@import "./components/features-selection";
 @import "./components/form-section";
 @import "./components/global-flash";
 @import "./components/hover-copy-button";
@@ -77,4 +80,5 @@
 @import "./components/tool-tip";
 @import "./components/unseal-warning";
 @import "./components/upgrade-overlay";
+@import "./components/ui-wizard";
 @import "./components/vault-loading";

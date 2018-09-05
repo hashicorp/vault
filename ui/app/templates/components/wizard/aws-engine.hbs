@@ -1,0 +1,10 @@
+<WizardSection
+  @headerText="AWS"
+  @headerIcon="enable/aws"
+  @docText="Docs: AWS Secrets"
+  @docPath="/docs/secrets/aws/index.html"
+>
+  <p>
+    The AWS secrets engine generates AWS access credentials dynamically based on IAM policies. This generally makes working with AWS IAM easier, since it does not involve clicking in the web UI. Additionally, the process is codified and mapped to internal auth methods (such as LDAP). The AWS IAM credentials are time-based and are automatically revoked when the Vault lease expires.
+  </p>
+</WizardSection>

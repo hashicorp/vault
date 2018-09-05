@@ -8,14 +8,15 @@ import (
 	"net/url"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
-	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials"
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/sts"
 )
 
-// Generates the necessary data to send to the Vault server for generating a token
-// This is useful for other API clients to use
-func GenerateLoginData(accessKeyID, accessKeySecret, securityToken, region string) (map[string]interface{}, error) {
-	creds := credentials.NewStsTokenCredential(accessKeyID, accessKeySecret, securityToken)
+// Generates the necessary data to send to the Vault server for generating a token.
+// This is useful for other API clients to use.
+// If "" is passed in for accessKeyID, accessKeySecret, and securityToken,
+// attempts to use credentials set as env vars or available through instance metadata.
+func GenerateLoginData(role string, creds auth.Credential, region string) (map[string]interface{}, error) {
 
 	config := sdk.NewConfig()
 
@@ -51,6 +52,7 @@ func GenerateLoginData(accessKeyID, accessKeySecret, securityToken, region strin
 	}
 	headers := base64.StdEncoding.EncodeToString(b)
 	return map[string]interface{}{
+		"role":                     role,
 		"identity_request_url":     u,
 		"identity_request_headers": headers,
 	}, nil

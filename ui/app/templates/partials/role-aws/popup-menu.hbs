@@ -10,20 +10,7 @@
       {{else if item.canGenerate}}
         <li class="action">
           {{#link-to "vault.cluster.secrets.backend.credentials" item.id data-test-role-aws-link="generate"}}
-            Generate IAM Credentials
-          {{/link-to}}
-        </li>
-      {{/if}}
-      {{#if item.stsPath.isPending}}
-        <li class="action">
-          <button disabled=true type="button" class="link button is-loading is-transparent">
-            loading
-          </button>
-        </li>
-      {{else if item.canGenerateSTS}}
-        <li class="action">
-          {{#link-to "vault.cluster.secrets.backend.credentials" item.id (query-params action="sts") data-test-role-aws-link="generate-sts"}}
-            Generate STS Credentials
+            Generate credentials
           {{/link-to}}
         </li>
       {{/if}}

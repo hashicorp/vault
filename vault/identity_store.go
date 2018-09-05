@@ -40,12 +40,16 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		core:   core,
 	}
 
-	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, iStore.logger, "")
+	entitiesPackerLogger := iStore.logger.Named("storagepacker").Named("entities")
+	core.AddLogger(entitiesPackerLogger)
+	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
+	core.AddLogger(groupsPackerLogger)
+	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, entitiesPackerLogger, "")
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create entity packer: {{err}}", err)
 	}
 
-	iStore.groupPacker, err = storagepacker.NewStoragePacker(iStore.view, iStore.logger, groupBucketsPrefix)
+	iStore.groupPacker, err = storagepacker.NewStoragePacker(iStore.view, groupsPackerLogger, groupBucketsPrefix)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create group packer: {{err}}", err)
 	}
@@ -360,8 +364,6 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 		return entity, nil
 	}
 
-	i.logger.Debug("creating a new entity", "alias", alias)
-
 	entity = &identity.Entity{}
 
 	err = i.sanitizeEntity(entity)
@@ -374,6 +376,7 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 		CanonicalID:   entity.ID,
 		Name:          alias.Name,
 		MountAccessor: alias.MountAccessor,
+		Metadata:      alias.Metadata,
 		MountPath:     mountValidationResp.MountPath,
 		MountType:     mountValidationResp.MountType,
 	}
@@ -382,6 +385,8 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 	if err != nil {
 		return nil, err
 	}
+
+	i.logger.Debug("creating a new entity", "alias", newAlias)
 
 	// Append the new alias to the new entity
 	entity.Aliases = []*identity.Alias{

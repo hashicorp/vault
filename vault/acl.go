@@ -218,6 +218,14 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 		capabilities = perm.CapabilitiesBitmap
 		goto CHECK
 	}
+	if strings.HasSuffix(path, "/") {
+		raw, ok = a.exactRules.Get(strings.TrimSuffix(path, "/"))
+		if ok {
+			perm := raw.(*ACLPermissions)
+			capabilities = perm.CapabilitiesBitmap
+			goto CHECK
+		}
+	}
 
 	// Find a glob rule, default deny if no match
 	_, raw, ok = a.globRules.LongestPrefix(path)
@@ -285,6 +293,14 @@ func (a *ACL) AllowOperation(req *logical.Request) (ret *ACLResults) {
 		permissions = raw.(*ACLPermissions)
 		capabilities = permissions.CapabilitiesBitmap
 		goto CHECK
+	}
+	if op == logical.ListOperation {
+		raw, ok = a.exactRules.Get(strings.TrimSuffix(path, "/"))
+		if ok {
+			permissions = raw.(*ACLPermissions)
+			capabilities = permissions.CapabilitiesBitmap
+			goto CHECK
+		}
 	}
 
 	// Find a glob rule, default deny if no match

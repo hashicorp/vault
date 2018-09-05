@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/auth"
+	"github.com/hashicorp/vault/command/agent/auth/alicloud"
 	"github.com/hashicorp/vault/command/agent/auth/aws"
 	"github.com/hashicorp/vault/command/agent/auth/azure"
 	"github.com/hashicorp/vault/command/agent/auth/gcp"
@@ -284,6 +285,8 @@ func (c *AgentCommand) Run(args []string) int {
 		Config:    config.AutoAuth.Method.Config,
 	}
 	switch config.AutoAuth.Method.Type {
+	case "alicloud":
+		method, err = alicloud.NewAliCloudAuthMethod(authConfig)
 	case "aws":
 		method, err = aws.NewAWSAuthMethod(authConfig)
 	case "azure":

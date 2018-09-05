@@ -37,6 +37,17 @@ fromJSONTests.forEach(function([name, input, content]) {
   });
 });
 
+test(`fromJSON: non-object input`, function(assert) {
+  let input = [{ foo: 'bar' }];
+  assert.throws(
+    () => {
+      KVObject.create({ content: [] }).fromJSON(input);
+    },
+    /Vault expects data to be formatted as an JSON object/,
+    'throws when non-object input is used to construct the KVObject'
+  );
+});
+
 fromJSONTests.forEach(function([name, input, content]) {
   test(`fromJSONString: ${name}`, function(assert) {
     let inputString = JSON.stringify(input, null, 2);

@@ -2,7 +2,7 @@ import Ember from 'ember';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 
-const { get, set, computed } = Ember;
+const { get, set, computed, inject } = Ember;
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
@@ -11,8 +11,14 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   onDataChange: null,
   refresh: 'refresh',
   key: null,
-  routing: Ember.inject.service('-routing'),
+  routing: inject.service('-routing'),
   requestInFlight: computed.or('key.isLoading', 'key.isReloading', 'key.isSaving'),
+  wizard: inject.service(),
+
+  init() {
+    this._super(...arguments);
+  },
+
   willDestroyElement() {
     const key = this.get('key');
     if (get(key, 'isError')) {
@@ -48,6 +54,13 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     const key = get(this, 'key');
     return key[method]().then(() => {
       if (!Ember.get(key, 'isError')) {
+        if (this.get('wizard.featureState') === 'secret') {
+          this.get('wizard').transitionFeatureMachine('secret', 'CONTINUE');
+        } else {
+          if (this.get('wizard.featureState') === 'encryption') {
+            this.get('wizard').transitionFeatureMachine('encryption', 'CONTINUE', 'transit');
+          }
+        }
         successCallback(key);
       }
     });

@@ -26,6 +26,7 @@ The default status codes are:
 - `200` if initialized, unsealed, and active
 - `429` if unsealed and standby
 - `472` if data recovery mode replication secondary and active
+- `473` if performance standby 
 - `501` if not initialized
 - `503` if sealed
 
@@ -44,6 +45,9 @@ The default status codes are:
 
 - `drsecondarycode` `(int: 472)` – Specifies the status code that should be
   returned for a DR secondary node.
+
+- `performancestandbycode` `(int: 473)` – Specifies the status code that should be
+  returned for a performance standby node.
 
 - `sealedcode` `(int: 503)` – Specifies the status code that should be returned
   for a sealed node.
@@ -72,6 +76,7 @@ standby of its status.
   "initialized": true,
   "sealed": false,
   "standby": false,
+  "performance_standby": false,
   "replication_perf_mode": "disabled",
   "replication_dr_mode": "disabled",
   "server_time_utc": 1516639589,

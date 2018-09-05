@@ -10,6 +10,9 @@ export default DS.JSONSerializer.extend({
   normalizeItems(payload) {
     if (payload.data && payload.data.keys && Array.isArray(payload.data.keys)) {
       let models = payload.data.keys.map(key => {
+        if (typeof key !== 'string') {
+          return key;
+        }
         let pk = this.get('primaryKey') || 'id';
         return { [pk]: key };
       });

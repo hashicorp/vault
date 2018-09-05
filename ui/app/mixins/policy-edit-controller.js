@@ -4,6 +4,7 @@ let { inject } = Ember;
 
 export default Ember.Mixin.create({
   flashMessages: inject.service(),
+  wizard: inject.service(),
   actions: {
     deletePolicy(model) {
       let policyType = model.get('policyType');
@@ -29,6 +30,9 @@ export default Ember.Mixin.create({
       let name = model.get('name');
       model.save().then(m => {
         flash.success(`${policyType.toUpperCase()} policy "${name}" was successfully saved.`);
+        if (this.get('wizard.featureState') === 'create') {
+          this.get('wizard').transitionFeatureMachine('create', 'CONTINUE', policyType);
+        }
         return this.transitionToRoute('vault.cluster.policy.show', m.get('policyType'), m.get('name'));
       });
     },

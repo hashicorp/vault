@@ -7,14 +7,6 @@ import (
 	"strings"
 )
 
-type nsContext struct {
-	context.Context
-	// Note: this is currently not locked because we think all uses will take
-	// place within a single goroutine. If that isn't the case, this should be
-	// protected by an atomic.Value.
-	cachedNS *Namespace
-}
-
 type contextValues struct{}
 
 type Namespace struct {
@@ -55,11 +47,7 @@ func (n *Namespace) TrimmedPath(path string) string {
 }
 
 func ContextWithNamespace(ctx context.Context, ns *Namespace) context.Context {
-	nsCtx := context.WithValue(ctx, contextNamespace, ns)
-	return &nsContext{
-		Context:  nsCtx,
-		cachedNS: ns,
-	}
+	return context.WithValue(ctx, contextNamespace, ns)
 }
 
 func RootContext(ctx context.Context) context.Context {
@@ -79,13 +67,6 @@ func FromContext(ctx context.Context) (*Namespace, error) {
 		return nil, errors.New("context was nil")
 	}
 
-	nsCtx, ok := ctx.(*nsContext)
-	if ok {
-		if nsCtx.cachedNS != nil {
-			return nsCtx.cachedNS, nil
-		}
-	}
-
 	nsRaw := ctx.Value(contextNamespace)
 	if nsRaw == nil {
 		return nil, ErrNoNamespace
@@ -96,9 +77,6 @@ func FromContext(ctx context.Context) (*Namespace, error) {
 		return nil, ErrNoNamespace
 	}
 
-	if ok {
-		nsCtx.cachedNS = ns
-	}
 	return ns, nil
 }
 

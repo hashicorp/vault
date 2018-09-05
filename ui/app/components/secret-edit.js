@@ -6,7 +6,7 @@ import KVObject from 'vault/lib/kv-object';
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
-const { get, computed } = Ember;
+const { get, computed, inject } = Ember;
 
 export default Ember.Component.extend(FocusOnInsertMixin, {
   // a key model
@@ -30,10 +30,13 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   // use a named action here so we don't have to pass one in
   // this will bubble to the route
   toggleAdvancedEdit: 'toggleAdvancedEdit',
+  error: null,
 
   codemirrorString: null,
 
   hasLintError: false,
+
+  wizard: inject.service(),
 
   init() {
     this._super(...arguments);
@@ -45,6 +48,11 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
       this.set('preferAdvancedEdit', true);
     }
     this.checkRows();
+    if (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') {
+      let engine = this.get('key').backend.includes('kv') ? 'kv' : this.get('key').backend;
+      this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', engine);
+    }
+
     if (this.get('mode') === 'edit') {
       this.send('addRow');
     }
@@ -72,7 +80,8 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     'key.isFolder',
     'key.isError',
     'key.flagsIsInvalid',
-    'hasLintError'
+    'hasLintError',
+    'error'
   ),
 
   basicModeDisabled: computed('secretDataIsAdvanced', 'showAdvancedMode', function() {
@@ -144,6 +153,9 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
 
     return model[method]().then(() => {
       if (!Ember.get(model, 'isError')) {
+        if (this.get('wizard.featureState') === 'secret') {
+          this.get('wizard').transitionFeatureMachine('secret', 'CONTINUE');
+        }
         successCallback(key);
       }
     });
@@ -232,10 +244,15 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     },
 
     codemirrorUpdated(val, codemirror) {
+      this.set('error', null);
       codemirror.performLint();
       const noErrors = codemirror.state.lint.marked.length === 0;
       if (noErrors) {
-        this.get('secretData').fromJSONString(val);
+        try {
+          this.get('secretData').fromJSONString(val);
+        } catch (e) {
+          this.set('error', e.message);
+        }
       }
       this.set('hasLintError', !noErrors);
       this.set('codemirrorString', val);

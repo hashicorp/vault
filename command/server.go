@@ -152,7 +152,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "log-level",
 		Target:     &c.flagLogLevel,
-		Default:    "info",
+		Default:    notSetValue,
 		EnvVar:     "VAULT_LOG_LEVEL",
 		Completion: complete.PredictSet("trace", "debug", "info", "warn", "err"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
@@ -307,8 +307,12 @@ func (c *ServerCommand) Run(args []string) int {
 		c.logWriter = os.Stdout
 	}
 	var level log.Level
+	var logLevelWasNotSet bool
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
+	case notSetValue:
+		logLevelWasNotSet = true
+		level = log.Info
 	case "trace":
 		level = log.Trace
 	case "debug":
@@ -334,10 +338,7 @@ func (c *ServerCommand) Run(args []string) int {
 		c.logger = logging.NewVaultLoggerWithWriter(c.logWriter, level)
 	}
 
-	grpclog.SetLogger(&grpclogFaker{
-		logger: c.logger.Named("grpclogfaker"),
-		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
-	})
+	allLoggers := []log.Logger{c.logger}
 
 	// Automatically enable dev mode if other dev flags are provided.
 	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster {
@@ -390,6 +391,32 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	if config.LogLevel != "" && logLevelWasNotSet {
+		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
+		switch configLogLevel {
+		case "trace":
+			c.logger.SetLevel(log.Trace)
+		case "debug":
+			c.logger.SetLevel(log.Debug)
+		case "notice", "info", "":
+			c.logger.SetLevel(log.Info)
+		case "warn", "warning":
+			c.logger.SetLevel(log.Warn)
+		case "err", "error":
+			c.logger.SetLevel(log.Error)
+		default:
+			c.UI.Error(fmt.Sprintf("Unknown log level: %s", config.LogLevel))
+			return 1
+		}
+	}
+
+	namedGRPCLogFaker := c.logger.Named("grpclogfaker")
+	allLoggers = append(allLoggers, namedGRPCLogFaker)
+	grpclog.SetLogger(&grpclogFaker{
+		logger: namedGRPCLogFaker,
+		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
+	})
+
 	// Ensure that a backend is provided
 	if config.Storage == nil {
 		c.UI.Output("A storage backend must be specified")
@@ -423,7 +450,9 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-	backend, err := factory(config.Storage.Config, c.logger.Named("storage."+config.Storage.Type))
+	namedStorageLogger := c.logger.Named("storage." + config.Storage.Type)
+	allLoggers = append(allLoggers, namedStorageLogger)
+	backend, err := factory(config.Storage.Config, namedStorageLogger)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
 		return 1
@@ -469,6 +498,7 @@ func (c *ServerCommand) Run(args []string) int {
 		PluginDirectory:    config.PluginDirectory,
 		EnableUI:           config.EnableUI,
 		EnableRaw:          config.EnableRawEndpoint,
+		AllLoggers:         allLoggers,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -1039,6 +1069,51 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 		case <-c.SighupCh:
 			c.UI.Output("==> Vault reload triggered")
+
+			// Check for new log level
+			var config *server.Config
+			var level log.Level
+			for _, path := range c.flagConfigs {
+				current, err := server.LoadConfig(path, c.logger)
+				if err != nil {
+					c.logger.Error("could not reload config", "path", path, "error", err)
+					goto RUNRELOADFUNCS
+				}
+
+				if config == nil {
+					config = current
+				} else {
+					config = config.Merge(current)
+				}
+			}
+
+			// Ensure at least one config was found.
+			if config == nil {
+				c.logger.Error("no config found at reload time")
+				goto RUNRELOADFUNCS
+			}
+
+			if config.LogLevel != "" {
+				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
+				switch configLogLevel {
+				case "trace":
+					level = log.Trace
+				case "debug":
+					level = log.Debug
+				case "notice", "info", "":
+					level = log.Info
+				case "warn", "warning":
+					level = log.Warn
+				case "err", "error":
+					level = log.Error
+				default:
+					c.logger.Error("unknown log level found on reload", "level", config.LogLevel)
+					goto RUNRELOADFUNCS
+				}
+				core.SetLogLevel(level)
+			}
+
+		RUNRELOADFUNCS:
 			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs); err != nil {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}

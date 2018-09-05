@@ -1,14 +1,12 @@
 import Ember from 'ember';
 import { moduleForModel, test } from 'ember-qunit';
-import { methods } from 'vault/helpers/mountable-auth-methods';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-const METHODS = methods();
 
 moduleForModel('test-form-model', 'Integration | Util | field to attrs', {
   needs: ['model:auth-config', 'model:mount-config'],
 });
 
-const PATH_ATTR = { type: 'string', name: 'path', options: { defaultValue: METHODS[0].value } };
+const PATH_ATTR = { type: 'string', name: 'path', options: {} };
 const DESCRIPTION_ATTR = { type: 'string', name: 'description', options: { editType: 'textarea' } };
 const DEFAULT_LEASE_ATTR = {
   type: undefined,
