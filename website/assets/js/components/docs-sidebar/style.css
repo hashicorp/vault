@@ -1,6 +1,8 @@
 @import '@hashicorp/hashi-global-styles/_variables';
 
 .g-docs-sidebar {
+  width: 275px;
+
   & ul {
     list-style: none;
     margin: 0;
@@ -70,6 +72,11 @@
           margin-left: 21.5px;
           border-left: 1px solid var(--gray-9);
 
+          &:last-child a {
+            padding-bottom: 0;
+            margin-bottom: 7px;
+          }
+
           &.active:not(.dir) > a:first-child {
             &:after {
               content: "";
@@ -99,12 +106,12 @@
           &.dir::before {
             content: "";
             width: 17px;
-            height: 17px;
+            height: 23px;
             display: block;
             background: white;
             position: absolute;
             left: -9px;
-            top: 12px;
+            top: 10px;
             border-radius: 50%;
           }
         }
