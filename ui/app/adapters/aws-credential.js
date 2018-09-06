@@ -4,15 +4,21 @@ export default ApplicationAdapter.extend({
   createRecord(store, type, snapshot) {
     let ttl = snapshot.attr('ttl');
     let roleArn = snapshot.attr('roleArn');
+    let roleType = snapshot.attr('credentialType');
+    let method = 'POST';
+    let options;
     let data = {};
-    if (ttl) {
-      data.ttl = ttl;
+    if (roleType === 'iam_user') {
+      method = 'GET';
+    } else {
+      if (ttl) {
+        data.ttl = ttl;
+      }
+      if (roleArn) {
+        data.role_arn = roleArn;
+      }
+      options = ttl || roleArn ? { data } : {};
     }
-    if (roleArn) {
-      data.role_arn = roleArn;
-    }
-    let method = ttl || roleArn ? 'POST' : 'GET';
-    let options = ttl || roleArn ? { data } : {};
     let role = snapshot.attr('role');
     let url = `/v1/${role.backend}/creds/${role.name}`;
 
