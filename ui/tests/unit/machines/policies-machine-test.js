@@ -1,13 +1,13 @@
 import { Machine } from 'xstate';
 import { moduleFor, test } from 'ember-qunit';
-import AuthMachineConfig from 'vault/machines/policies-machine';
+import PoliciesMachineConfig from 'vault/machines/policies-machine';
 
 moduleFor('machine:policies-machine', 'Unit | Machine | policies-machine', {
   beforeEach() {},
   afterEach() {},
 });
 
-const policiesMachine = Machine(AuthMachineConfig);
+const policiesMachine = Machine(PoliciesMachineConfig);
 
 const testCases = [
   {
