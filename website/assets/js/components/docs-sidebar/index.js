@@ -100,8 +100,8 @@ module.exports = class Sidebar extends Component {
           <li
             class={
               this.categoryMatch(currentPath, item.indexData.path.split('/'))
-                ? 'active'
-                : ''
+                ? 'dir active'
+                : 'dir'
             }
           >
             <a

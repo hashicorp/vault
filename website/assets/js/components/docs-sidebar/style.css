@@ -31,9 +31,30 @@
     }
 
     & > li {
+      position: relative;
+
       &.active > a:first-child {
         color: var(--default-blue);
         position: relative;
+      }
+
+      &.dir::after {
+        content: "";
+        width: 5px;
+        height: 8px;
+        display: block;
+        position: absolute;
+        background: url('/img/docs-sidebar-chevron.svg');
+        top: 17px;
+        left: -3px;
+      }
+
+      &.active.dir::after {
+        width: 8px;
+        height: 5px;
+        background: url('/img/docs-sidebar-chevron-active.svg');
+        top: 19px;
+        left: -5px;
       }
 
       & > ul > li, & > ul > hr {
@@ -49,7 +70,7 @@
           margin-left: 21.5px;
           border-left: 1px solid var(--gray-9);
 
-          &.active > a:first-child {
+          &.active:not(.dir) > a:first-child {
             &:after {
               content: "";
               width: 4px;
@@ -73,6 +94,18 @@
               top: 13px;
               border-radius: 50%;
             }
+          }
+
+          &.dir::before {
+            content: "";
+            width: 17px;
+            height: 17px;
+            display: block;
+            background: white;
+            position: absolute;
+            left: -9px;
+            top: 12px;
+            border-radius: 50%;
           }
         }
 
