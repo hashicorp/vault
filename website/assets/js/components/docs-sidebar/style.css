@@ -1,7 +1,86 @@
 @import '@hashicorp/hashi-global-styles/_variables';
 
 .g-docs-sidebar {
-  & li a {
-    color: var(--gray-4);
+  & ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    & a {
+      color: var(--gray-4);
+      padding: 7px 0 7px 12px;
+      display: block;
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: var(--gray-2);
+      }
+    }
+
+    & hr {
+      background: none;
+      padding: 8px 0;
+      margin: 0;
+
+      &:after {
+        content: "";
+        border-bottom: 1px solid var(--gray-9);
+        display: block;
+        width: 90%;
+      }
+    }
+
+    & > li {
+      &.active > a:first-child {
+        color: var(--default-blue);
+        position: relative;
+      }
+
+      & > ul > li, & > ul > hr {
+        display: none;
+      }
+
+      &.active > ul > li, &.active > ul > hr {
+        display: block;
+      }
+
+      & > ul {
+        & > li {
+          margin-left: 21.5px;
+          border-left: 1px solid var(--gray-9);
+
+          &.active > a:first-child {
+            &:after {
+              content: "";
+              width: 4px;
+              height: 4px;
+              display: block;
+              background: var(--default-blue);
+              position: absolute;
+              left: -2px;
+              top: 18px;
+              border-radius: 50%;
+            }
+
+            &:before {
+              content: "";
+              width: 14px;
+              height: 14px;
+              display: block;
+              background: white;
+              position: absolute;
+              left: -7px;
+              top: 13px;
+              border-radius: 50%;
+            }
+          }
+        }
+
+        & > hr {
+          border-left: 1px solid var(--gray-9);
+          margin-left: 21.5px;
+        }
+      }
+    }
   }
 }
