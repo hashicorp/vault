@@ -1,4 +1,4 @@
-## 0.11.1 (September 5th, 2018)
+## 0.11.1 (September 6th, 2018)
 
 SECURITY:
 
