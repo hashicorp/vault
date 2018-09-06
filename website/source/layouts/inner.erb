@@ -28,12 +28,7 @@
 	</aside>
 	<div class="content-wrap">
 		<div id="sidebar" role="complementary">
-			<div class="nav-toggle">
-				<%= inline_svg "feather/icon_list-menu.svg", width: 24 %>
-				<%= inline_svg "feather/icon_chevron-up.svg", width: 24 %>
-			</div>
 			<%= yield_content :sidebar %>
-			<div class="underlay"></div>
 		</div>
 
 		<div id="inner" class="g-container" role="main">

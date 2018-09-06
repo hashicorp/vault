@@ -9,13 +9,13 @@
     justify-content: space-between;
     margin: 0 auto;
 
-    @media (--medium) {
+    @media (min-width: 768px) {
       flex-direction: row;
       align-items: center;
       max-width: var(--medium-grid-max-width);
     }
 
-    @media (--large) {
+    @media (min-width: 1120px) {
       max-width: var(--site-max-width);
     }
   }
@@ -73,7 +73,7 @@
       margin: 0 20px;
       padding: 0 0 14px;
 
-      @media (--medium) {
+      @media (min-width: 768px) {
         padding: 32px 0;
       }
 
