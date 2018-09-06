@@ -26,6 +26,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * core: Ensure we use a background context when stepping down [GH-5290]
  * core: Properly check error return from random byte reading [GH-5277]
  * core: Re-add `sys/` top-route injection for now [GH-5241]
  * core: Properly store the replication checkpoint file if it's larger than the

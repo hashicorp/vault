@@ -199,7 +199,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 		return nil
 	}
 
-	ctx, cancel := context.WithCancel(c.activeContext)
+	ctx, cancel := context.WithCancel(namespace.RootContext(nil))
 	defer cancel()
 
 	go func() {
