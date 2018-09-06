@@ -108,6 +108,8 @@ helpers do
   def body_classes_for(page)
     classes = []
 
+    puts page.inspect
+
     if !(layout = page.data.layout).blank?
       classes << "layout-#{page.data.layout}"
     end
