@@ -20,6 +20,10 @@ var (
 	// ErrMultiAuthzPending is returned if the the request needs more
 	// authorizations
 	ErrMultiAuthzPending = errors.New("request needs further approval")
+
+	// ErrUpstreamRateLimited is returned when Vault recieves a rate limited
+	// response from an upstream
+	ErrUpstreamRateLimited = errors.New("upstream rate limited")
 )
 
 type HTTPCodedError interface {
