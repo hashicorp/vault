@@ -11,7 +11,7 @@ description: |-
 
 # Performance Standby Nodes
 
-~> **Enterprise Only:** Performance Standby Nodes feature is a part of _Vault Enterprise_.
+~> **Enterprise Only:** Performance Standby Nodes feature is a part of _Vault Enterprise Premium_.
 
 In [Vault High Availability](/guides/operations/vault-ha-consul.html) guide, it
 was explained that only one Vault server will be _active_ in a cluster and
@@ -23,8 +23,8 @@ _standby_ nodes and simply forward requests to the _active_ node.
 If you are running **_Vault Enterprise_ 0.11** or later, those standby
 nodes can handle most read-only requests and behave as read-replica.  
 
-~> This Performance Standby Nodes feature is included in _Vault Enterprise
-Premium_, and also available for _Vault Enterprise Pro_ with additional fee.
+~> This Performance Standby Nodes feature is included in ***Vault Enterprise
+Premium***, and also available for ***Vault Enterprise Pro*** with additional fee.
 
 This is particularly useful for processing high volume [_Encryption as a
 Service_](/docs/secrets/transit/index.html) requests.
@@ -42,31 +42,31 @@ Service_](/docs/secrets/transit/index.html) requests.
 Performance standby is enabled by default. If you wish to disable the
 performance standbys, you can do so by setting the
 [`disable_performance_standby`](/docs/configuration/index.html#vault-enterprise-parameters)
-flag to `true`.  
+flag to `true`.  This parameter is evaluated on the _active_ node.
 
 Since any of the nodes in a cluster can get elected as active, it is recommended
 to keep this setting consistent across all nodes in the cluster.
 
-!> Consider the situation where a node with performance standby _disabled_
-becomes the active node. In such a case, the performance standby feature is
+!> Consider a scenario where a node with performance standby _disabled_
+becomes the active node. The performance standby feature is
 disabled for the whole cluster although it is enabled on other nodes.
 
 
 ## Enterprise Cluster
 
 A highly available Vault Enterprise cluster consists of multiple servers, and
-there will be only one active node, and the rest can serve as performance
-standby nodes handling read-only requests locally.
+there will be only one active node. The rest can serve as performance standby
+nodes handling read-only requests locally.
 
 ![Cluster Architecture](/assets/images/vault-perf-standby-1.png)
 
 The number of performance standby nodes within a cluster depends on your Vault
 Enterprise license.
 
-Let's assume the following:
+Consider the following scenario:
 
-- A cluster contains 5 Vault servers
-- Vault Enterprise license allows 2 performance standby nodes
+- A cluster contains **five** Vault servers
+- Vault Enterprise license allows **two** performance standby nodes
 
 ![Cluster Architecture](/assets/images/vault-perf-standby.png)
 
@@ -74,17 +74,10 @@ In this scenario, the performance standby nodes running on VM 8 and VM 9 can
 process read-only requests. However, the _standby_ nodes running on VM 6 and VM
 10 simply forward all requests to the active node running on VM 7.
 
-> **NOTE:** The selection of performance standby nodes is similar to the
-selection of the active node.
-
-
-Your global deployment might implement [performance
-replication](/guides/operations/mount-filter.html) and [disaster recovery
-replication](/guides/operations/disaster-recovery.html) to scale with multiple
-datacenters.
-
-![Global Architecture](/assets/images/vault-perf-standby-2.png)
-
+> **NOTE:** The selection of performance standby node is determined by the
+active node. When a node is selected, it gets  promoted to become a performance
+standby. This is a race condition that there is no configuration
+parameter to specify which nodes to become performance standbys.
 
 
 ## Next steps
