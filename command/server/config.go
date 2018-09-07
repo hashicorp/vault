@@ -98,7 +98,10 @@ func DevConfig(ha, transactional bool) *Config {
 
 		EnableUI: true,
 
-		Telemetry: &Telemetry{},
+		Telemetry: &Telemetry{
+			PrometheusRetentionTime: 24 * time.Hour,
+			DisableHostname:         true,
+		},
 	}
 
 	switch {
