@@ -39,16 +39,16 @@ func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parsed_arn := parsedUserResponse.GetCallerIdentityResult[0].Arn; parsed_arn != expectedUserArn {
-		t.Errorf("expected to parse arn %#v, got %#v", expectedUserArn, parsed_arn)
+	if parsedArn := parsedUserResponse.GetCallerIdentityResult[0].Arn; parsedArn != expectedUserArn {
+		t.Errorf("expected to parse arn %#v, got %#v", expectedUserArn, parsedArn)
 	}
 
 	parsedRoleResponse, err := parseGetCallerIdentityResponse(responseFromAssumedRole)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parsed_arn := parsedRoleResponse.GetCallerIdentityResult[0].Arn; parsed_arn != expectedRoleArn {
-		t.Errorf("expected to parn arn %#v; got %#v", expectedRoleArn, parsed_arn)
+	if parsedArn := parsedRoleResponse.GetCallerIdentityResult[0].Arn; parsedArn != expectedRoleArn {
+		t.Errorf("expected to parn arn %#v; got %#v", expectedRoleArn, parsedArn)
 	}
 
 	_, err = parseGetCallerIdentityResponse("SomeRandomGibberish")
@@ -113,7 +113,7 @@ func TestBackend_pathLogin_parseIamArn(t *testing.T) {
 
 func TestBackend_validateVaultHeaderValue(t *testing.T) {
 	const canaryHeaderValue = "Vault-Server"
-	requestUrl, err := url.Parse("https://sts.amazonaws.com/")
+	requestURL, err := url.Parse("https://sts.amazonaws.com/")
 	if err != nil {
 		t.Fatalf("error parsing test URL: %v", err)
 	}
@@ -143,27 +143,27 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request", "SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 
-	err = validateVaultHeaderValue(postHeadersMissing, requestUrl, canaryHeaderValue)
+	err = validateVaultHeaderValue(postHeadersMissing, requestURL, canaryHeaderValue)
 	if err == nil {
 		t.Error("validated POST request with missing Vault header")
 	}
 
-	err = validateVaultHeaderValue(postHeadersInvalid, requestUrl, canaryHeaderValue)
+	err = validateVaultHeaderValue(postHeadersInvalid, requestURL, canaryHeaderValue)
 	if err == nil {
 		t.Error("validated POST request with invalid Vault header value")
 	}
 
-	err = validateVaultHeaderValue(postHeadersUnsigned, requestUrl, canaryHeaderValue)
+	err = validateVaultHeaderValue(postHeadersUnsigned, requestURL, canaryHeaderValue)
 	if err == nil {
 		t.Error("validated POST request with unsigned Vault header")
 	}
 
-	err = validateVaultHeaderValue(postHeadersValid, requestUrl, canaryHeaderValue)
+	err = validateVaultHeaderValue(postHeadersValid, requestURL, canaryHeaderValue)
 	if err != nil {
 		t.Errorf("did NOT validate valid POST request: %v", err)
 	}
 
-	err = validateVaultHeaderValue(postHeadersSplit, requestUrl, canaryHeaderValue)
+	err = validateVaultHeaderValue(postHeadersSplit, requestURL, canaryHeaderValue)
 	if err != nil {
 		t.Errorf("did NOT validate valid POST request with split Authorization header: %v", err)
 	}
@@ -171,11 +171,11 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 
 func TestBackend_pathLogin_parseIamRequestHeaders(t *testing.T) {
 	testIamParser := func(headers interface{}, expectedHeaders http.Header) error {
-		headersJson, err := json.Marshal(headers)
+		headersJSON, err := json.Marshal(headers)
 		if err != nil {
 			return fmt.Errorf("unable to JSON encode headers: %v", err)
 		}
-		headersB64 := base64.StdEncoding.EncodeToString(headersJson)
+		headersB64 := base64.StdEncoding.EncodeToString(headersJSON)
 
 		parsedHeaders, err := parseIamRequestHeaders(headersB64)
 		if err != nil {
