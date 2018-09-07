@@ -2,7 +2,8 @@ import { inject as service } from '@ember/service';
 import { assign } from '@ember/polyfills';
 import { hash, resolve } from 'rsvp';
 import { assert } from '@ember/debug';
-import Ember from 'ember';
+import { pluralize } from 'ember-inflector';
+
 import ApplicationAdapter from './application';
 import DS from 'ember-data';
 
@@ -52,7 +53,7 @@ export default ApplicationAdapter.extend({
   },
 
   pathForType(type) {
-    return type === 'cluster' ? 'clusters' : Ember.String.pluralize(type);
+    return type === 'cluster' ? 'clusters' : pluralize(type);
   },
 
   health() {
