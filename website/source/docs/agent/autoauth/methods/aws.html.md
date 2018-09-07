@@ -33,7 +33,7 @@ identity services the most secure of the four methods. If using identity service
 `cred_check_freq_seconds`, be sure the frequency is set low enough to pick up new credentials
 from the physical environment as they become available.
 
-To use identity services, choose the `iam` type and leave the `access_key` and `secret_key` 
+To use identity services, choose the `iam` type and leave the `access_key`, `secret_key`, and `session_token` 
 parameters unset in your configuration.
 
 ## Configuration
