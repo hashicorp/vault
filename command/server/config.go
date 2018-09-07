@@ -233,6 +233,12 @@ type Telemetry struct {
 	// DogStatsdTags are the global tags that should be sent with each packet to dogstatsd
 	// It is a list of strings, where each string looks like "my_tag_name:my_tag_value"
 	DogStatsDTags []string `hcl:"dogstatsd_tags"`
+
+	// Prometheus:
+	// PrometheusRetentionTime is the retention time for prometheus metrics if greater than 0.
+	// A value of 0 disable Prometheus support.
+	// Default: 0
+	PrometheusRetentionTime time.Duration `hcl:"prometheus_retention_time"`
 }
 
 func (s *Telemetry) GoString() string {
