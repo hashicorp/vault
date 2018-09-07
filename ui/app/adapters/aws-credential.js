@@ -14,10 +14,10 @@ export default ApplicationAdapter.extend({
       if (ttl) {
         data.ttl = ttl;
       }
-      if (roleArn) {
+      if (roleType === 'assumed_role' && roleArn) {
         data.role_arn = roleArn;
       }
-      options = ttl || roleArn ? { data } : {};
+      options = data.ttl || data.role_arn ? { data } : {};
     }
     let role = snapshot.attr('role');
     let url = `/v1/${role.backend}/creds/${role.name}`;
