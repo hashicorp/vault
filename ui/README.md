@@ -9,6 +9,7 @@ You will need the following things properly installed on your computer.
 
 * [Node.js](https://nodejs.org/) (with NPM)
 * [Yarn](https://yarnpkg.com/en/)
+* [Git](https://git-scm.com/)
 * [Ember CLI](https://ember-cli.com/)
 
 

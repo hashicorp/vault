@@ -11,10 +11,11 @@ import registerClipboardHelpers from '../helpers/ember-cli-clipboard';
 registerClipboardHelpers();
 
 export default function startApp(attrs) {
-  let attributes = Ember.merge({}, config.APP);
-  attributes = Ember.merge(attributes, attrs); // use defaults, but you can override;
+  let attributes = merge({}, config.APP);
+  attributes.autoboot = true;
+  attributes = merge(attributes, attrs); // use defaults, but you can override;
 
-  return Ember.run(() => {
+  return run(() => {
     let application = Application.create(attributes);
     application.setupForTesting();
     application.injectTestHelpers();

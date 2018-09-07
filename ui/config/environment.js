@@ -1,4 +1,5 @@
-/* jshint node: true */
+/* eslint-env node */
+'use strict';
 
 module.exports = function(environment) {
   var ENV = {
@@ -65,6 +66,7 @@ module.exports = function(environment) {
       'script-src': ["'self'"],
       'style-src': ["'unsafe-inline'", "'self'"],
     };
+    ENV.APP.autoboot = false;
   }
 
   if (environment === 'production') {
