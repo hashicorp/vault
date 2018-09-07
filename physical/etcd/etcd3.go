@@ -84,13 +84,22 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	cert, hasCert := conf["tls_cert_file"]
 	key, hasKey := conf["tls_key_file"]
 	ca, hasCa := conf["tls_ca_file"]
+	sskip, hasSkip := conf["tls_insecure_skip_verify"]
 	if (hasCert && hasKey) || hasCa {
 		tls := transport.TLSInfo{
 			TrustedCAFile: ca,
 			CertFile:      cert,
 			KeyFile:       key,
 		}
-
+		if hasSkip {
+			skip, err := strconv.ParseBool(sskip)
+			if err != nil {
+				return nil, errwrap.Wrapf(fmt.Sprintf("value of 'tls_insecure_skip_verify' (%v) could not be understood: {{err}}", sskip), err)
+			}
+			tls.InsecureSkipVerify = skip
+		} else {
+			tls.InsecureSkipVerify = false
+		}
 		tlscfg, err := tls.ClientConfig()
 		if err != nil {
 			return nil, err

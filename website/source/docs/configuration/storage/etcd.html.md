@@ -74,6 +74,11 @@ storage "etcd" {
 - `tls_key_file` `(string: "")` – Specifies the path to the private key for Etcd
   communication.
 
+- `tls_insecure_skip_verify` `(string: "false")` – Specifies whether verification
+  of the etcd TLS certificates can be skipped. Only applies to etcd v3 api. This
+  option should be used with caution as it makes vault vunerable to man-in-the-middle
+  attacks when communicating with etcd.
+
 ## `etcd` Examples
 
 ### DNS Discovery of cluster members
