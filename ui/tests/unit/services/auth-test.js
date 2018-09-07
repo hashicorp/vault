@@ -1,6 +1,8 @@
+import { run } from '@ember/runloop';
+import { copy } from '@ember/object/internals';
+import { getOwner } from '@ember/application';
 import { moduleFor, test } from 'ember-qunit';
 import { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX } from 'vault/services/auth';
-import Ember from 'ember';
 import Pretender from 'pretender';
 
 function storage() {
@@ -126,25 +128,25 @@ moduleFor('service:auth', 'Unit | Service | auth', {
     'service:namespace',
   ],
   beforeEach: function() {
-    Ember.getOwner(this).lookup('service:flash-messages').registerTypes(['warning']);
+    getOwner(this).lookup('service:flash-messages').registerTypes(['warning']);
     this.store = storage();
     this.memStore = storage();
     this.server = new Pretender(function() {
       this.get('/v1/auth/token/lookup-self', function(request) {
-        let resp = Ember.copy(ROOT_TOKEN_RESPONSE, true);
+        let resp = copy(ROOT_TOKEN_RESPONSE, true);
         resp.id = request.requestHeaders['X-Vault-Token'];
         resp.data.id = request.requestHeaders['X-Vault-Token'];
         return [200, {}, resp];
       });
       this.post('/v1/auth/userpass/login/:username', function(request) {
         const { username } = request.params;
-        let resp = Ember.copy(USERPASS_RESPONSE, true);
+        let resp = copy(USERPASS_RESPONSE, true);
         resp.auth.metadata.username = username;
         return [200, {}, resp];
       });
 
       this.post('/v1/auth/github/login', function() {
-        let resp = Ember.copy(GITHUB_RESPONSE, true);
+        let resp = copy(GITHUB_RESPONSE, true);
         return [200, {}, resp];
       });
     });
@@ -180,7 +182,7 @@ test('token authentication: root token', function(assert) {
       }
     },
   });
-  Ember.run(() => {
+  run(() => {
     service.authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } }).then(() => {
       const clusterTokenName = service.get('currentTokenName');
       const clusterToken = service.get('currentToken');
@@ -223,7 +225,7 @@ test('token authentication: root token in ember development environment', functi
     },
     environment: () => 'development',
   });
-  Ember.run(() => {
+  run(() => {
     service.authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } }).then(() => {
       const clusterTokenName = service.get('currentTokenName');
       const clusterToken = service.get('currentToken');
@@ -255,7 +257,7 @@ test('github authentication', function(assert) {
     storage: type => (type === 'memory' ? this.memStore : this.store),
   });
 
-  Ember.run(() => {
+  run(() => {
     service.authenticate({ clusterId: '1', backend: 'github', data: { token: 'test' } }).then(() => {
       const clusterTokenName = service.get('currentTokenName');
       const clusterToken = service.get('currentToken');
@@ -280,7 +282,7 @@ test('github authentication', function(assert) {
 test('userpass authentication', function(assert) {
   let done = assert.async();
   let service = this.subject({ storage: () => this.store });
-  Ember.run(() => {
+  run(() => {
     service
       .authenticate({
         clusterId: '1',
@@ -313,7 +315,7 @@ test('token auth expiry with non-root token', function(assert) {
   const tokenResp = TOKEN_NON_ROOT_RESPONSE();
   this.server.map(function() {
     this.get('/v1/auth/token/lookup-self', function(request) {
-      let resp = Ember.copy(tokenResp, true);
+      let resp = copy(tokenResp, true);
       resp.id = request.requestHeaders['X-Vault-Token'];
       resp.data.id = request.requestHeaders['X-Vault-Token'];
       return [200, {}, resp];
@@ -322,7 +324,7 @@ test('token auth expiry with non-root token', function(assert) {
 
   let done = assert.async();
   let service = this.subject({ storage: () => this.store });
-  Ember.run(() => {
+  run(() => {
     service.authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } }).then(() => {
       const clusterTokenName = service.get('currentTokenName');
       const clusterToken = service.get('currentToken');

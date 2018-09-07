@@ -1,11 +1,10 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
 
-const { inject } = Ember;
-
-export default Ember.Route.extend(ClusterRoute, {
-  version: inject.service(),
-  wizard: inject.service(),
+export default Route.extend(ClusterRoute, {
+  version: service(),
+  wizard: service(),
   queryParams: {
     page: {
       refreshModel: true,

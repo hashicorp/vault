@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { isEmpty } from '@ember/utils';
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
@@ -27,7 +27,7 @@ export default ApplicationAdapter.extend({
 
   urlForSecret(backend, id) {
     let url = `${this.buildURL()}/${backend}/`;
-    if (!Ember.isEmpty(id)) {
+    if (!isEmpty(id)) {
       url = url + id;
     }
 

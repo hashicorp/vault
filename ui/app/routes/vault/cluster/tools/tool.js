@@ -1,8 +1,9 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 import { toolsActions } from 'vault/helpers/tools-actions';
 
-export default Ember.Route.extend({
-  wizard: Ember.inject.service(),
+export default Route.extend({
+  wizard: service(),
 
   beforeModel(transition) {
     const supportedActions = toolsActions();

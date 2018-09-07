@@ -1,8 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { match, alias, or } from '@ember/object/computed';
+import { assign } from '@ember/polyfills';
+import { dasherize } from '@ember/string';
+import Component from '@ember/component';
+import { get, computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
-const { computed, inject, get } = Ember;
 
 const DEFAULTS = {
   token: null,
@@ -11,12 +15,12 @@ const DEFAULTS = {
   customPath: null,
 };
 
-export default Ember.Component.extend(DEFAULTS, {
-  router: inject.service(),
-  auth: inject.service(),
-  flashMessages: inject.service(),
-  store: inject.service(),
-  csp: inject.service('csp-event'),
+export default Component.extend(DEFAULTS, {
+  router: service(),
+  auth: service(),
+  flashMessages: service(),
+  store: service(),
+  csp: service('csp-event'),
 
   // set during init and potentially passed in via a query param
   selectedAuth: null,
@@ -82,34 +86,28 @@ export default Ember.Component.extend(DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
-  selectedAuthIsPath: computed.match('selectedAuth', /\/$/),
-  selectedAuthBackend: Ember.computed(
-    'methods',
-    'methods.[]',
-    'selectedAuth',
-    'selectedAuthIsPath',
-    function() {
-      let methods = this.get('methods');
-      let selectedAuth = this.get('selectedAuth');
-      let keyIsPath = this.get('selectedAuthIsPath');
-      if (!methods) {
-        return {};
-      }
-      if (keyIsPath) {
-        return methods.findBy('path', selectedAuth);
-      }
-      return BACKENDS.findBy('type', selectedAuth);
+  selectedAuthIsPath: match('selectedAuth', /\/$/),
+  selectedAuthBackend: computed('methods', 'methods.[]', 'selectedAuth', 'selectedAuthIsPath', function() {
+    let methods = this.get('methods');
+    let selectedAuth = this.get('selectedAuth');
+    let keyIsPath = this.get('selectedAuthIsPath');
+    if (!methods) {
+      return {};
     }
-  ),
+    if (keyIsPath) {
+      return methods.findBy('path', selectedAuth);
+    }
+    return BACKENDS.findBy('type', selectedAuth);
+  }),
 
   providerPartialName: computed('selectedAuthBackend', function() {
     let type = this.get('selectedAuthBackend.type') || 'token';
     type = type.toLowerCase();
-    let templateName = Ember.String.dasherize(type);
+    let templateName = dasherize(type);
     return `partials/auth-form/${templateName}`;
   }),
 
-  hasCSPError: computed.alias('csp.connectionViolations.firstObject'),
+  hasCSPError: alias('csp.connectionViolations.firstObject'),
 
   cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`,
 
@@ -159,7 +157,7 @@ export default Ember.Component.extend(DEFAULTS, {
     }
   }),
 
-  showLoading: computed.or('fetchMethods.isRunning', 'unwrapToken.isRunning'),
+  showLoading: or('fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
   handleError(e) {
     this.set('loading', false);
@@ -186,7 +184,7 @@ export default Ember.Component.extend(DEFAULTS, {
       );
       let attributes = get(backendMeta || {}, 'formAttributes') || {};
 
-      data = Ember.assign(data, this.getProperties(...attributes));
+      data = assign(data, this.getProperties(...attributes));
       if (this.get('customPath') || get(backend, 'id')) {
         data.path = this.get('customPath') || get(backend, 'id');
       }

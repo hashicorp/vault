@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { assign } from '@ember/polyfills';
 import Adapter from './pki';
 
 export default Adapter.extend({
@@ -33,7 +33,7 @@ export default Adapter.extend({
         data.id = id;
         data.id_for_nav = `cert/${id}`;
       }
-      return Ember.assign({}, resp, data);
+      return assign({}, resp, data);
     });
   },
 
@@ -60,7 +60,7 @@ export default Adapter.extend({
         serial_number: id,
         backend,
       };
-      return Ember.assign({}, resp, data);
+      return assign({}, resp, data);
     });
   },
 });

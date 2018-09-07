@@ -1,12 +1,13 @@
+import { resolve } from 'rsvp';
+import EmberObject from '@ember/object';
+import { getOwner } from '@ember/application';
 import { moduleForComponent, test } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { create } from 'ember-cli-page-object';
 import itemDetails from 'vault/tests/pages/components/identity/item-details';
-import Ember from 'ember';
 
 const component = create(itemDetails);
-const { getOwner } = Ember;
 
 moduleForComponent('identity/item-details', 'Integration | Component | identity/item details', {
   integration: true,
@@ -20,9 +21,9 @@ moduleForComponent('identity/item-details', 'Integration | Component | identity/
 });
 
 test('it renders the disabled warning', function(assert) {
-  let model = Ember.Object.create({
+  let model = EmberObject.create({
     save() {
-      return Ember.RSVP.resolve();
+      return resolve();
     },
     disabled: true,
     canEdit: true,
@@ -37,7 +38,7 @@ test('it renders the disabled warning', function(assert) {
 });
 
 test('it does not render the button if canEdit is false', function(assert) {
-  let model = Ember.Object.create({
+  let model = EmberObject.create({
     disabled: true,
   });
 
@@ -48,7 +49,7 @@ test('it does not render the button if canEdit is false', function(assert) {
 });
 
 test('it does not render the banner when item is enabled', function(assert) {
-  let model = Ember.Object.create();
+  let model = EmberObject.create();
   this.set('model', model);
 
   this.render(hbs`{{identity/item-details model=model}}`);

@@ -1,10 +1,10 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 
-const { inject, computed } = Ember;
-
-export default Ember.Component.extend({
-  wizard: inject.service(),
-  version: inject.service(),
+export default Component.extend({
+  wizard: service(),
+  version: service(),
   init() {
     this._super(...arguments);
     this.maybeHideFeatures();
@@ -36,7 +36,12 @@ export default Ember.Component.extend({
       {
         key: 'policies',
         name: 'Policies',
-        steps: ['Choosing a policy type', 'Creating a policy', 'Deleting your policy', 'Other types of policies'],
+        steps: [
+          'Choosing a policy type',
+          'Creating a policy',
+          'Deleting your policy',
+          'Other types of policies',
+        ],
         selected: false,
         show: true,
       },

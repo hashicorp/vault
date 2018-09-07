@@ -1,12 +1,13 @@
-import Ember from 'ember';
-
-const { Helper, inject, observer } = Ember;
+import { inject as service } from '@ember/service';
+import { isArray } from '@ember/array';
+import Helper from '@ember/component/helper';
+import { observer } from '@ember/object';
 
 const exact = (a, b) => a === b;
 const startsWith = (a, b) => a.indexOf(b) === 0;
 
 export default Helper.extend({
-  routing: inject.service('-routing'),
+  routing: service('-routing'),
 
   onRouteChange: observer('routing.router.currentURL', 'routing.router.currentRouteName', function() {
     this.recompute();
@@ -22,7 +23,7 @@ export default Helper.extend({
     if (!currentRoute) {
       return false;
     }
-    if (Ember.isArray(routeName)) {
+    if (isArray(routeName)) {
       return routeName.some(name => comparator(currentRoute, name));
     } else if (model) {
       // slice off the rootURL from the generated route

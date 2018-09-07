@@ -1,4 +1,5 @@
-import Ember from 'ember';
+import { resolve } from 'rsvp';
+import { getOwner } from '@ember/application';
 import { moduleForComponent, test } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
@@ -10,7 +11,7 @@ moduleForComponent('config-pki', 'Integration | Component | config pki', {
   integration: true,
   beforeEach() {
     component.setContext(this);
-    Ember.getOwner(this).lookup('service:flash-messages').registerTypes(['success']);
+    getOwner(this).lookup('service:flash-messages').registerTypes(['success']);
   },
 
   afterEach() {
@@ -93,7 +94,7 @@ test('it calls save with the correct arguments', function(assert) {
         ['tidyCertStore', 'anotherAttr'],
         'fields passed to save'
       );
-      return Ember.RSVP.resolve();
+      return resolve();
     })
   );
   this.set('section', section);

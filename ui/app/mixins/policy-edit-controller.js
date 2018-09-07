@@ -1,10 +1,9 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Mixin from '@ember/object/mixin';
 
-let { inject } = Ember;
-
-export default Ember.Mixin.create({
-  flashMessages: inject.service(),
-  wizard: inject.service(),
+export default Mixin.create({
+  flashMessages: service(),
+  wizard: service(),
   actions: {
     deletePolicy(model) {
       let policyType = model.get('policyType');

@@ -1,14 +1,16 @@
+import { resolve } from 'rsvp';
+import Service from '@ember/service';
+import EmberObject, { computed } from '@ember/object';
 import { moduleForComponent, test } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
-import Ember from 'ember';
 
-const CapabilitiesStub = Ember.Object.extend({
-  canUpdate: Ember.computed('capabilities', function() {
+const CapabilitiesStub = EmberObject.extend({
+  canUpdate: computed('capabilities', function() {
     return (this.get('capabilities') || []).includes('root');
   }),
 });
 
-const storeStub = Ember.Service.extend({
+const storeStub = Service.extend({
   callArgs: null,
   capabilitiesReturnVal: null,
   findRecord(_, path) {
@@ -18,7 +20,7 @@ const storeStub = Ember.Service.extend({
       path,
       capabilities: self.get('capabilitiesReturnVal') || [],
     });
-    return Ember.RSVP.resolve(caps);
+    return resolve(caps);
   },
 });
 
@@ -62,7 +64,7 @@ function testAction(
       JSON.stringify(expectedOnSubmit),
       `${testKey}: submitted values match expected`
     );
-    return Ember.RSVP.resolve();
+    return resolve();
   });
   this.set('storeService.capabilitiesReturnVal', ['root']);
   this.render(

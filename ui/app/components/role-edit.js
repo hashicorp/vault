@@ -1,20 +1,25 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { or } from '@ember/object/computed';
+import { isBlank } from '@ember/utils';
+import $ from 'jquery';
+import { on } from '@ember/object/evented';
+import Component from '@ember/component';
+import { set, get } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 
-const { get, set, computed, inject } = Ember;
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
-export default Ember.Component.extend(FocusOnInsertMixin, {
+export default Component.extend(FocusOnInsertMixin, {
   mode: null,
   emptyData: '{\n}',
   onDataChange: () => {},
   refresh: 'refresh',
   model: null,
-  routing: inject.service('-routing'),
-  wizard: inject.service(),
-  requestInFlight: computed.or('model.isLoading', 'model.isReloading', 'model.isSaving'),
+  routing: service('-routing'),
+  wizard: service(),
+  requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
   didReceiveAttrs() {
     this._super(...arguments);
@@ -49,12 +54,12 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     router.transitionTo.apply(router, arguments);
   },
 
-  bindKeys: Ember.on('didInsertElement', function() {
-    Ember.$(document).on('keyup.keyEdit', this.onEscape.bind(this));
+  bindKeys: on('didInsertElement', function() {
+    $(document).on('keyup.keyEdit', this.onEscape.bind(this));
   }),
 
-  unbindKeys: Ember.on('willDestroyElement', function() {
-    Ember.$(document).off('keyup.keyEdit');
+  unbindKeys: on('willDestroyElement', function() {
+    $(document).off('keyup.keyEdit');
   }),
 
   onEscape(e) {
@@ -71,7 +76,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   persist(method, successCallback) {
     const model = get(this, 'model');
     return model[method]().then(() => {
-      if (!Ember.get(model, 'isError')) {
+      if (!get(model, 'isError')) {
         if (this.get('wizard.featureState') === 'role') {
           this.get('wizard').transitionFeatureMachine('role', 'CONTINUE', this.get('backendType'));
         }
@@ -99,7 +104,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
       const modelId = this.get('model.id');
       // prevent from submitting if there's no key
       // maybe do something fancier later
-      if (type === 'create' && Ember.isBlank(modelId)) {
+      if (type === 'create' && isBlank(modelId)) {
         return;
       }
 

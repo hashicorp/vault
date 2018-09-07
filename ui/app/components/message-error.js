@@ -1,11 +1,12 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 
-export default Ember.Component.extend({
+export default Component.extend({
   model: null,
   errors: [],
   errorMessage: null,
 
-  displayErrors: Ember.computed(
+  displayErrors: computed(
     'errorMessage',
     'model.isError',
     'model.adapterError.message',

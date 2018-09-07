@@ -1,10 +1,10 @@
-import Ember from 'ember';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
-const { computed } = Ember;
 
-export default Ember.Component.extend({
+export default Component.extend({
   'data-test-field': true,
   classNames: ['field'],
 

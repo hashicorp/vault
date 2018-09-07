@@ -1,5 +1,8 @@
+import { run } from '@ember/runloop';
+import { resolve } from 'rsvp';
+import EmberObject from '@ember/object';
+import Service from '@ember/service';
 import { moduleForComponent, test } from 'ember-qunit';
-import Ember from 'ember';
 import wait from 'ember-test-helpers/wait';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
@@ -8,19 +11,19 @@ import editForm from 'vault/tests/pages/components/edit-form';
 
 const component = create(editForm);
 
-const flash = Ember.Service.extend({
+const flash = Service.extend({
   success: sinon.stub(),
 });
 
 const createModel = (canDelete = true) => {
-  return Ember.Object.create({
+  return EmberObject.create({
     fields: [{ name: 'one', type: 'string' }, { name: 'two', type: 'boolean' }],
     canDelete,
     destroyRecord() {
-      return Ember.RSVP.resolve();
+      return resolve();
     },
     save() {
-      return Ember.RSVP.resolve();
+      return resolve();
     },
     rollbackAttributes() {},
   });
@@ -58,7 +61,7 @@ test('it renders: custom deleteButton', function(assert) {
 test('it calls flash message fns on save', function(assert) {
   let model = createModel();
   let onSave = () => {
-    return Ember.RSVP.resolve();
+    return resolve();
   };
   this.set('model', model);
   this.set('onSave', onSave);
@@ -78,7 +81,7 @@ test('it calls flash message fns on save', function(assert) {
 test('it calls flash message fns on delete', function(assert) {
   let model = createModel();
   let onSave = () => {
-    return Ember.RSVP.resolve();
+    return resolve();
   };
   this.set('model', model);
   this.set('onSave', onSave);
@@ -87,7 +90,7 @@ test('it calls flash message fns on delete', function(assert) {
   this.render(hbs`{{edit-form model=model onSave=onSave}}`);
   component.deleteButton();
   wait().then(() => {
-    Ember.run(() => component.deleteConfirm());
+    run(() => component.deleteConfirm());
   });
 
   return wait().then(() => {

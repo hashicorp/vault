@@ -1,5 +1,5 @@
+import Service from '@ember/service';
 import { moduleForComponent, test } from 'ember-qunit';
-import Ember from 'ember';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { create } from 'ember-cli-page-object';
@@ -7,7 +7,7 @@ import controlGroup from '../../pages/components/control-group';
 
 const component = create(controlGroup);
 
-const controlGroupService = Ember.Service.extend({
+const controlGroupService = Service.extend({
   init() {
     this.set('wrapInfo', null);
   },
@@ -16,7 +16,7 @@ const controlGroupService = Ember.Service.extend({
   },
 });
 
-const authService = Ember.Service.extend();
+const authService = Service.extend();
 
 moduleForComponent('control-group', 'Integration | Component | control group', {
   integration: true,

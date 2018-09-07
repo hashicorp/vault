@@ -1,10 +1,9 @@
+import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
 import DS from 'ember-data';
-import Ember from 'ember';
 import identityCapabilities from 'vault/macros/identity-capabilities';
 
 const { attr, belongsTo } = DS;
-const { computed } = Ember;
 
 export default IdentityModel.extend({
   parentType: 'group',
@@ -33,6 +32,6 @@ export default IdentityModel.extend({
   }),
 
   updatePath: identityCapabilities(),
-  canDelete: computed.alias('updatePath.canDelete'),
-  canEdit: computed.alias('updatePath.canUpdate'),
+  canDelete: alias('updatePath.canDelete'),
+  canEdit: alias('updatePath.canUpdate'),
 });

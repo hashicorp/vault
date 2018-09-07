@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import LinkComponent from '@ember/routing/link-component';
 
-Ember.LinkComponent.reopen({
+LinkComponent.reopen({
   activeClass: 'is-active',
 });
 
-export default Ember.LinkComponent;
+export default LinkComponent;

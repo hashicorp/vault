@@ -1,9 +1,13 @@
-import Ember from 'ember';
+import { resolve } from 'rsvp';
+import { assign } from '@ember/polyfills';
+import $ from 'jquery';
+import { isArray } from '@ember/array';
+import { computed, get } from '@ember/object';
+import { getOwner } from '@ember/application';
+import Service, { inject as service } from '@ember/service';
 import getStorage from '../lib/token-storage';
 import ENV from 'vault/config/environment';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-
-const { get, isArray, computed, getOwner, Service, inject } = Ember;
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
@@ -14,7 +18,7 @@ const BACKENDS = supportedAuthBackends();
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
 export default Service.extend({
-  namespace: inject.service(),
+  namespace: service(),
   expirationCalcTS: null,
   init() {
     this._super(...arguments);
@@ -76,7 +80,7 @@ export default Service.extend({
     if (namespace) {
       defaults.headers['X-Vault-Namespace'] = namespace;
     }
-    return Ember.$.ajax(Ember.assign(defaults, options));
+    return $.ajax(assign(defaults, options));
   },
 
   renewCurrentToken() {
@@ -165,7 +169,7 @@ export default Service.extend({
     );
 
     if (resp.renewable) {
-      Ember.assign(data, this.calculateExpiration(resp));
+      assign(data, this.calculateExpiration(resp));
     }
 
     if (!data.displayName) {
@@ -175,7 +179,7 @@ export default Service.extend({
     this.set('tokens', tokens);
     this.set('allowExpiration', false);
     this.setTokenData(tokenName, data);
-    return Ember.RSVP.resolve({
+    return resolve({
       namespace: currentNamespace || data.userRootNamespace,
       token: tokenName,
       isRoot: policies.includes('root'),
@@ -318,7 +322,7 @@ export default Service.extend({
     const backend = this.backendFromTokenName(token);
     const stored = this.getTokenData(token);
 
-    return Ember.assign(stored, {
+    return assign(stored, {
       backend: BACKENDS.findBy('type', backend),
     });
   }),

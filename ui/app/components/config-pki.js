@@ -1,10 +1,10 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
+import { get } from '@ember/object';
 
-const { get, inject } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   classNames: 'config-pki',
-  flashMessages: inject.service(),
+  flashMessages: service(),
 
   /*
    *

@@ -1,13 +1,14 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
+import Component from '@ember/component';
 import hbs from 'htmlbars-inline-precompile';
 
-export default Ember.Component.extend({
+export default Component.extend({
   key: null,
   mode: null,
   path: null,
   actionClass: null,
 
-  title: Ember.computed.alias('key.keyWithoutParent'),
+  title: alias('key.keyWithoutParent'),
 
   layout: hbs`
     <div class="consul-show-header connected">

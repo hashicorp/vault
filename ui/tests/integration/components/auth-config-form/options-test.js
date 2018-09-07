@@ -1,5 +1,7 @@
+import { resolve } from 'rsvp';
+import EmberObject from '@ember/object';
+import { getOwner } from '@ember/application';
 import { moduleForComponent, test } from 'ember-qunit';
-import Ember from 'ember';
 import wait from 'ember-test-helpers/wait';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
@@ -12,7 +14,7 @@ const component = create(authConfigForm);
 moduleForComponent('auth-config-form/options', 'Integration | Component | auth-config-form options', {
   integration: true,
   beforeEach() {
-    Ember.getOwner(this).lookup('service:flash-messages').registerTypes(['success']);
+    getOwner(this).lookup('service:flash-messages').registerTypes(['success']);
     component.setContext(this);
   },
 
@@ -22,9 +24,9 @@ moduleForComponent('auth-config-form/options', 'Integration | Component | auth-c
 });
 
 test('it submits data correctly', function(assert) {
-  let model = Ember.Object.create({
+  let model = EmberObject.create({
     tune() {
-      return Ember.RSVP.resolve();
+      return resolve();
     },
     config: {
       serialize() {

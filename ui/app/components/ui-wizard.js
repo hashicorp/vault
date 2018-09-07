@@ -1,23 +1,24 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 import { matchesState } from 'xstate';
 
-const { inject, computed } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   classNames: ['ui-wizard-container'],
-  wizard: inject.service(),
-  auth: inject.service(),
+  wizard: service(),
+  auth: service(),
 
   shouldRender: computed('wizard.showWhenUnauthenticated', 'auth.currentToken', function() {
     return this.get('auth.currentToken') || this.get('wizard.showWhenUnauthenticated');
   }),
-  currentState: computed.alias('wizard.currentState'),
-  featureState: computed.alias('wizard.featureState'),
-  featureComponent: computed.alias('wizard.featureComponent'),
-  tutorialComponent: computed.alias('wizard.tutorialComponent'),
-  componentState: computed.alias('wizard.componentState'),
-  nextFeature: computed.alias('wizard.nextFeature'),
-  nextStep: computed.alias('wizard.nextStep'),
+  currentState: alias('wizard.currentState'),
+  featureState: alias('wizard.featureState'),
+  featureComponent: alias('wizard.featureComponent'),
+  tutorialComponent: alias('wizard.tutorialComponent'),
+  componentState: alias('wizard.componentState'),
+  nextFeature: alias('wizard.nextFeature'),
+  nextStep: alias('wizard.nextStep'),
 
   actions: {
     dismissWizard() {

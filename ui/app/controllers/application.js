@@ -1,11 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
+import { computed } from '@ember/object';
 import config from '../config/environment';
 
-const { Controller, computed, inject } = Ember;
 export default Controller.extend({
   env: config.environment,
-  auth: inject.service(),
-  store: inject.service(),
+  auth: service(),
+  store: service(),
   activeCluster: computed('auth.activeCluster', function() {
     return this.get('store').peekRecord('cluster', this.get('auth.activeCluster'));
   }),

@@ -1,5 +1,5 @@
+import { resolve } from 'rsvp';
 import { moduleFor, test } from 'ember-qunit';
-import Ember from 'ember';
 import needs from 'vault/tests/unit/adapters/_adapter-needs';
 
 moduleFor('adapter:cluster', 'Unit | Adapter | cluster', {
@@ -11,7 +11,7 @@ test('cluster api urls', function(assert) {
   let adapter = this.subject({
     ajax: (...args) => {
       [url, method, options] = args;
-      return Ember.RSVP.resolve();
+      return resolve();
     },
   });
   adapter.health();
@@ -113,7 +113,7 @@ test('cluster replication api urls', function(assert) {
   let adapter = this.subject({
     ajax: (...args) => {
       [url, method, options] = args;
-      return Ember.RSVP.resolve();
+      return resolve();
     },
   });
 

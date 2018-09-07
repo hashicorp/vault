@@ -1,10 +1,11 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 
-export default Ember.Component.extend({
+export default Component.extend({
   classNames: 'token-expire-warning',
-  auth: Ember.inject.service(),
+  auth: service(),
 
-  routing: Ember.inject.service('-routing'),
+  routing: service('-routing'),
 
   transitionToRoute: function() {
     var router = this.get('routing.router');

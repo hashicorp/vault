@@ -1,10 +1,12 @@
-import Ember from 'ember';
-const { inject, computed } = Ember;
+import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+import { isPresent } from '@ember/utils';
+import Mixin from '@ember/object/mixin';
 
-export default Ember.Mixin.create({
-  store: inject.service(),
-  routing: inject.service('-routing'),
-  router: computed.alias('routing.router'),
+export default Mixin.create({
+  store: service(),
+  routing: service('-routing'),
+  router: alias('routing.router'),
   submitHandler(action, clusterMode, data, event) {
     let replicationMode = (data && data.replicationMode) || this.get('replicationMode');
     if (event && event.preventDefault) {
@@ -17,7 +19,7 @@ export default Ember.Mixin.create({
     if (data) {
       data = Object.keys(data).reduce((newData, key) => {
         var val = data[key];
-        if (Ember.isPresent(val)) {
+        if (isPresent(val)) {
           newData[key] = val;
         }
         return newData;

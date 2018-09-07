@@ -1,17 +1,18 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 import { engines } from 'vault/helpers/mountable-secret-engines';
 
-const { inject, computed, Component } = Ember;
 const METHODS = methods();
 const ENGINES = engines();
 
 export default Component.extend({
-  store: inject.service(),
-  wizard: inject.service(),
-  flashMessages: inject.service(),
-  routing: inject.service('-routing'),
+  store: service(),
+  wizard: service(),
+  flashMessages: service(),
+  routing: service('-routing'),
 
   /*
    * @param Function

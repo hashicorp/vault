@@ -1,9 +1,10 @@
-import Ember from 'ember';
+import { typeOf } from '@ember/utils';
+import EmberError from '@ember/error';
+import Component from '@ember/component';
+import { set, get, computed } from '@ember/object';
 import Duration from 'Duration.js';
 
-const { computed, get, set } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   'data-test-component': 'ttl-picker',
   classNames: 'field',
   setDefaultValue: true,
@@ -54,7 +55,7 @@ export default Ember.Component.extend({
   init() {
     this._super(...arguments);
     if (!get(this, 'onChange')) {
-      throw new Ember.Error('`onChange` handler is a required attr in `' + this.toString() + '`.');
+      throw new EmberError('`onChange` handler is a required attr in `' + this.toString() + '`.');
     }
     if (get(this, 'initialValue') != undefined) {
       this.parseAndSetTime();
@@ -63,7 +64,7 @@ export default Ember.Component.extend({
 
   parseAndSetTime() {
     const value = get(this, 'initialValue');
-    const seconds = Ember.typeOf(value) === 'number' ? value : Duration.parse(value).seconds();
+    const seconds = typeOf(value) === 'number' ? value : Duration.parse(value).seconds();
 
     this.set('time', seconds);
     this.set('unit', 's');

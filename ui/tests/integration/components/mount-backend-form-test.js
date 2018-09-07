@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { getOwner } from '@ember/application';
 import { moduleForComponent, test } from 'ember-qunit';
 import wait from 'ember-test-helpers/wait';
 import hbs from 'htmlbars-inline-precompile';
@@ -15,7 +15,7 @@ moduleForComponent('mount-backend-form', 'Integration | Component | mount backen
   integration: true,
   beforeEach() {
     component.setContext(this);
-    Ember.getOwner(this).lookup('service:flash-messages').registerTypes(['success', 'danger']);
+    getOwner(this).lookup('service:flash-messages').registerTypes(['success', 'danger']);
     this.server = startMirage();
   },
 

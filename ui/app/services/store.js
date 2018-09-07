@@ -1,11 +1,14 @@
+import { schedule } from '@ember/runloop';
+import { copy } from '@ember/object/internals';
+import { resolve, Promise } from 'rsvp';
+import { dasherize } from '@ember/string';
+import { assert } from '@ember/debug';
+import { set, get, computed } from '@ember/object';
 import DS from 'ember-data';
-import Ember from 'ember';
 import clamp from 'vault/utils/clamp';
 
-const { assert, computed, get, set } = Ember;
-
 export function normalizeModelName(modelName) {
-  return Ember.String.dasherize(modelName);
+  return dasherize(modelName);
 }
 
 export function keyForCache(query) {
@@ -67,7 +70,7 @@ export default DS.Store.extend({
     assert('size is required', query.size);
 
     if (dataCache) {
-      return Ember.RSVP.resolve(this.fetchPage(modelName, query));
+      return resolve(this.fetchPage(modelName, query));
     }
     return adapter
       .query(this, { modelName }, query)
@@ -105,7 +108,7 @@ export default DS.Store.extend({
   constructResponse(modelName, query) {
     const { pageFilter, responsePath, size, page } = query;
     let { response, dataset } = this.getDataset(modelName, query);
-    response = Ember.copy(response, true);
+    response = copy(response, true);
     const data = this.filterData(pageFilter, dataset);
 
     const lastPage = Math.ceil(data.length / size);
@@ -134,8 +137,8 @@ export default DS.Store.extend({
     this.peekAll(modelName).forEach(record => {
       record.unloadRecord();
     });
-    return new Ember.RSVP.Promise(resolve => {
-      Ember.run.schedule('destroy', () => {
+    return new Promise(resolve => {
+      schedule('destroy', () => {
         this.push(
           this.serializerFor(modelName).normalizeResponse(
             this,

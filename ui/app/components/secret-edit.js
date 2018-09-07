@@ -1,4 +1,10 @@
-import Ember from 'ember';
+import { or } from '@ember/object/computed';
+import { isBlank, isNone } from '@ember/utils';
+import $ from 'jquery';
+import { on } from '@ember/object/evented';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
+import { computed, get } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
@@ -6,9 +12,8 @@ import KVObject from 'vault/lib/kv-object';
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
-const { get, computed, inject } = Ember;
 
-export default Ember.Component.extend(FocusOnInsertMixin, {
+export default Component.extend(FocusOnInsertMixin, {
   // a key model
   key: null,
 
@@ -36,7 +41,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
 
   hasLintError: false,
 
-  wizard: inject.service(),
+  wizard: service(),
 
   init() {
     this._super(...arguments);
@@ -65,17 +70,17 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     }
   },
 
-  partialName: Ember.computed('mode', function() {
+  partialName: computed('mode', function() {
     return `partials/secret-form-${this.get('mode')}`;
   }),
 
-  routing: Ember.inject.service('-routing'),
+  routing: service('-routing'),
 
-  showPrefix: computed.or('key.initialParentKey', 'key.parentKey'),
+  showPrefix: or('key.initialParentKey', 'key.parentKey'),
 
-  requestInFlight: computed.or('key.isLoading', 'key.isReloading', 'key.isSaving'),
+  requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
 
-  buttonDisabled: computed.or(
+  buttonDisabled: or(
     'requestInFlight',
     'key.isFolder',
     'key.isError',
@@ -115,12 +120,12 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     router.transitionTo.apply(router, arguments);
   },
 
-  bindKeys: Ember.on('didInsertElement', function() {
-    Ember.$(document).on('keyup.keyEdit', this.onEscape.bind(this));
+  bindKeys: on('didInsertElement', function() {
+    $(document).on('keyup.keyEdit', this.onEscape.bind(this));
   }),
 
-  unbindKeys: Ember.on('willDestroyElement', function() {
-    Ember.$(document).off('keyup.keyEdit');
+  unbindKeys: on('willDestroyElement', function() {
+    $(document).off('keyup.keyEdit');
   }),
 
   onEscape(e) {
@@ -152,7 +157,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     }
 
     return model[method]().then(() => {
-      if (!Ember.get(model, 'isError')) {
+      if (!get(model, 'isError')) {
         if (this.get('wizard.featureState') === 'secret') {
           this.get('wizard').transitionFeatureMachine('secret', 'CONTINUE');
         }
@@ -192,7 +197,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
 
       // prevent from submitting if there's no key
       // maybe do something fancier later
-      if (type === 'create' && Ember.isBlank(this.get('key.id'))) {
+      if (type === 'create' && isBlank(this.get('key.id'))) {
         return;
       }
 
@@ -218,7 +223,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
 
     addRow() {
       const data = this.get('secretData');
-      if (Ember.isNone(data.findBy('name', ''))) {
+      if (isNone(data.findBy('name', ''))) {
         data.pushObject({ name: '', value: '' });
         this.set('codemirrorString', data.toJSONString(true));
       }
@@ -229,7 +234,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     deleteRow(name) {
       const data = this.get('secretData');
       const item = data.findBy('name', name);
-      if (Ember.isBlank(item.name)) {
+      if (isBlank(item.name)) {
         return;
       }
       data.removeObject(item);

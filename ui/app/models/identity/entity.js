@@ -1,10 +1,8 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import identityCapabilities from 'vault/macros/identity-capabilities';
-
-const { computed } = Ember;
 
 const { attr, hasMany } = DS;
 
@@ -41,10 +39,10 @@ export default IdentityModel.extend({
   }),
 
   updatePath: identityCapabilities(),
-  canDelete: computed.alias('updatePath.canDelete'),
-  canEdit: computed.alias('updatePath.canUpdate'),
-  canRead: computed.alias('updatePath.canRead'),
+  canDelete: alias('updatePath.canDelete'),
+  canEdit: alias('updatePath.canUpdate'),
+  canRead: alias('updatePath.canRead'),
 
   aliasPath: lazyCapabilities(apiPath`identity/entity-alias`),
-  canAddAlias: computed.alias('aliasPath.canCreate'),
+  canAddAlias: alias('aliasPath.canCreate'),
 });

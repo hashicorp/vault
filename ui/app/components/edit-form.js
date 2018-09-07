@@ -1,10 +1,10 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import DS from 'ember-data';
 
-const { inject } = Ember;
-export default Ember.Component.extend({
-  flashMessages: inject.service(),
+export default Component.extend({
+  flashMessages: service(),
 
   // public API
   model: null,

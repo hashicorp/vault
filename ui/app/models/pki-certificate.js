@@ -1,9 +1,9 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-const { computed } = Ember;
 const { attr } = DS;
 
 export default DS.Model.extend({
@@ -125,5 +125,5 @@ export default DS.Model.extend({
   ),
 
   revokePath: lazyCapabilities(apiPath`${'backend'}/revoke`, 'backend'),
-  canRevoke: computed.alias('revokePath.canUpdate'),
+  canRevoke: alias('revokePath.canUpdate'),
 });

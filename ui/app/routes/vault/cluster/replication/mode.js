@@ -1,9 +1,11 @@
-import Ember from 'ember';
+import { on } from '@ember/object/evented';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 
 const SUPPORTED_REPLICATION_MODES = ['dr', 'performance'];
 
-export default Ember.Route.extend({
-  replicationMode: Ember.inject.service(),
+export default Route.extend({
+  replicationMode: service(),
 
   beforeModel() {
     const replicationMode = this.paramsFor(this.routeName).replication_mode;
@@ -18,7 +20,7 @@ export default Ember.Route.extend({
     return this.modelFor('vault.cluster.replication');
   },
 
-  setReplicationMode: Ember.on('activate', 'enter', function() {
+  setReplicationMode: on('activate', 'enter', function() {
     const replicationMode = this.paramsFor(this.routeName).replication_mode;
     this.get('replicationMode').setMode(replicationMode);
   }),

@@ -1,16 +1,21 @@
+import { inject as service } from '@ember/service';
+import { cancel, later } from '@ember/runloop';
+import { on } from '@ember/object/evented';
+import { reject } from 'rsvp';
+import Route from '@ember/routing/route';
+import { getOwner } from '@ember/application';
 import Ember from 'ember';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 
 const POLL_INTERVAL_MS = 10000;
-const { inject, Route, getOwner } = Ember;
 
 export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
-  namespaceService: inject.service('namespace'),
-  version: inject.service(),
-  store: inject.service(),
-  auth: inject.service(),
-  currentCluster: inject.service(),
+  namespaceService: service('namespace'),
+  version: service(),
+  store: service(),
+  auth: service(),
+  currentCluster: service(),
   modelTypes: ['node', 'secret', 'secret-engine'],
   globalNamespaceModels: ['node', 'cluster'],
 
@@ -49,7 +54,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       this.get('auth').setCluster(id);
       return this.get('version').fetchFeatures();
     } else {
-      return Ember.RSVP.reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
+      return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
     }
   },
 
@@ -59,8 +64,8 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     return this.get('store').findRecord('cluster', id);
   },
 
-  stopPoll: Ember.on('deactivate', function() {
-    Ember.run.cancel(this.get('timer'));
+  stopPoll: on('deactivate', function() {
+    cancel(this.get('timer'));
   }),
 
   poll() {
@@ -68,7 +73,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     // to get around that, we just disable the poll in tests
     return Ember.testing
       ? null
-      : Ember.run.later(() => {
+      : later(() => {
           this.controller.get('model').reload().then(
             () => {
               this.set('timer', this.poll());

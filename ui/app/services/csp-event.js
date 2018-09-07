@@ -1,12 +1,12 @@
 /*eslint-disable no-constant-condition*/
-import Ember from 'ember';
-import { task, waitForEvent } from 'ember-concurrency';
+import { filterBy } from '@ember/object/computed';
 
-const { Service, computed } = Ember;
+import Service from '@ember/service';
+import { task, waitForEvent } from 'ember-concurrency';
 
 export default Service.extend({
   events: [],
-  connectionViolations: computed.filterBy('events', 'violatedDirective', 'connect-src'),
+  connectionViolations: filterBy('events', 'violatedDirective', 'connect-src'),
 
   attach() {
     this.get('monitor').perform();

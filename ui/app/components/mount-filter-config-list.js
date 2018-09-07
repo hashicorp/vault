@@ -1,8 +1,7 @@
-import Ember from 'ember';
+import Component from '@ember/component';
+import { set, get } from '@ember/object';
 
-const { get, set } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   config: null,
   mounts: null,
 
