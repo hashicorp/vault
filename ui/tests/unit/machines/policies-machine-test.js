@@ -78,7 +78,7 @@ const testCases = [
     params: null,
     expectedResults: {
       value: 'create',
-      actions: [{ component: 'wizard/policies-create', level: 'step', type: 'render' }],
+      actions: [{ component: 'wizard/policies-create', level: 'feature', type: 'render' }],
     },
   },
   {
@@ -87,7 +87,7 @@ const testCases = [
     params: null,
     expectedResults: {
       value: 'details',
-      actions: [{ component: 'wizard/policies-details', level: 'step', type: 'render' }],
+      actions: [{ component: 'wizard/policies-details', level: 'feature', type: 'render' }],
     },
   },
   {
@@ -95,7 +95,7 @@ const testCases = [
     event: 'CONTINUE',
     expectedResults: {
       value: 'delete',
-      actions: [{ component: 'wizard/policies-delete', level: 'step', type: 'render' }],
+      actions: [{ component: 'wizard/policies-delete', level: 'feature', type: 'render' }],
     },
   },
   {
@@ -103,7 +103,7 @@ const testCases = [
     event: 'CONTINUE',
     expectedResults: {
       value: 'others',
-      actions: [{ component: 'wizard/policies-others', level: 'step', type: 'render' }],
+      actions: [{ component: 'wizard/policies-others', level: 'feature', type: 'render' }],
     },
   },
   {
