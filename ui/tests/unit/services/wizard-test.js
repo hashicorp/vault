@@ -257,12 +257,7 @@ module('Unit | Service | wizard', function(hooks) {
     });
 =======
 import { moduleFor, test } from 'ember-qunit';
-
 import { STORAGE_KEYS, DEFAULTS } from 'vault/helpers/wizard-constants';
-
-// const defaults = Object.keys(DEFAULTS).map((prop) => {
-//   return {prop: prop, value: null};
-// })
 
 moduleFor('service:wizard', 'Unit | Service | wizard', {
   beforeEach() {},
@@ -328,6 +323,30 @@ let testCases = [
     },
   },
   {
+    method: 'handlePaused',
+    args: [],
+    properties: {
+      expectedURL: 'this/is/a/url',
+      expectedRouteName: 'this.is.a.route',
+    },
+    expectedResults: {
+      storage: [
+        { key: STORAGE_KEYS.RESUME_URL, value: 'this/is/a/url' },
+        { key: STORAGE_KEYS.RESUME_ROUTE, value: 'this.is.a.route' },
+      ],
+    },
+  },
+  {
+    method: 'handlePaused',
+    args: [],
+    expectedResults: {
+      storage: [
+        { key: STORAGE_KEYS.RESUME_URL, value: undefined },
+        { key: STORAGE_KEYS.RESUME_ROUTE, value: undefined },
+      ],
+    },
+  },
+  {
     method: 'restartGuide',
     args: [],
     expectedResults: {
@@ -347,6 +366,45 @@ let testCases = [
       ],
     },
   },
+  {
+    method: 'saveState',
+    args: [
+      'currentState',
+      {
+        value: {
+          init: {
+            active: 'login',
+          },
+        },
+        actions: [{ type: 'render', level: 'feature', component: 'wizard/init-login' }],
+      },
+    ],
+    expectedResults: {
+      props: [{ prop: 'currentState', value: 'init.active.login' }],
+    },
+  },
+  {
+    method: 'saveState',
+    args: [
+      'currentState',
+      {
+        value: {
+          active: 'login',
+        },
+        actions: [{ type: 'render', level: 'feature', component: 'wizard/init-login' }],
+      },
+    ],
+    expectedResults: {
+      props: [{ prop: 'currentState', value: 'active.login' }],
+    },
+  },
+  {
+    method: 'saveState',
+    args: ['currentState', 'login'],
+    expectedResults: {
+      props: [{ prop: 'currentState', value: 'login' }],
+    },
+  },
 ];
 
 testCases.forEach(testCase => {
@@ -356,8 +414,18 @@ testCases.forEach(testCase => {
       storage() {
         return store;
       },
-      properties: DEFAULTS,
     });
+
+    if (testCase.properties) {
+      wizard.setProperties(testCase.properties);
+    } else {
+      wizard.setProperties(DEFAULTS);
+    }
+
+    if (testCase.storage) {
+      testCase.storage.forEach(item => wizard.storage().setItem(item.key, item.value));
+    }
+
     let result = wizard[testCase.method](...testCase.args);
     if (testCase.expectedResults.props) {
       testCase.expectedResults.props.forEach(property => {
