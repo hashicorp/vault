@@ -1,6 +1,7 @@
 import { get } from '@ember/object';
-import { expandProperties } from '@ember/object';
-
+//import { expandProperties } from '@ember/object/computed';
+import Ember from 'ember';
+const { expandProperties } = Ember;
 /*
  *
  * @param modelClass DS.Model
