@@ -66,7 +66,6 @@ module.exports = function(environment) {
       'script-src': ["'self'"],
       'style-src': ["'unsafe-inline'", "'self'"],
     };
-    ENV.APP.autoboot = false;
   }
 
   if (environment === 'production') {
