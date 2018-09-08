@@ -22,7 +22,7 @@ export default DS.Model.extend({
     return this.constructor.modelName;
   }),
 
-  unsealed: computed('nodes', 'nodes.[]', 'nodes.@each.sealed', function() {
+  unsealed: computed('nodes', 'nodes.{[],@each.sealed}', function() {
     // unsealed if there's at least one unsealed node
     return !!this.get('nodes').findBy('sealed', false);
   }),

@@ -90,7 +90,10 @@ export default Route.extend(UnloadModelRoute, {
       capabilities: model.capabilities,
       baseKey: { id: secret },
       // mode will be 'show', 'edit', 'create'
-      mode: this.routeName.split('.').pop().replace('-root', ''),
+      mode: this.routeName
+        .split('.')
+        .pop()
+        .replace('-root', ''),
       backend,
       preferAdvancedEdit,
       backendType,
@@ -139,11 +142,6 @@ export default Route.extend(UnloadModelRoute, {
 
     hasDataChanges(hasChanges) {
       this.set('hasChanges', hasChanges);
-    },
-
-    toggleAdvancedEdit(bool) {
-      this.controller.set('preferAdvancedEdit', bool);
-      this.controllerFor('vault.cluster.secrets.backend').set('preferAdvancedEdit', bool);
     },
   },
 });

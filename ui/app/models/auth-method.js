@@ -61,28 +61,32 @@ export default DS.Model.extend({
     urlType: 'updateRecord',
   }),
 
-  formFields: [
-    'type',
-    'path',
-    'description',
-    'accessor',
-    'local',
-    'sealWrap',
-    'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-  ],
+  formFields: computed(function() {
+    return [
+      'type',
+      'path',
+      'description',
+      'accessor',
+      'local',
+      'sealWrap',
+      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+    ];
+  }),
 
-  formFieldGroups: [
-    { default: ['path'] },
-    {
-      'Method Options': [
-        'description',
-        'config.listingVisibility',
-        'local',
-        'sealWrap',
-        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-      ],
-    },
-  ],
+  formFieldGroups: computed(function() {
+    return [
+      { default: ['path'] },
+      {
+        'Method Options': [
+          'description',
+          'config.listingVisibility',
+          'local',
+          'sealWrap',
+          'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+        ],
+      },
+    ];
+  }),
 
   attrs: computed('formFields', function() {
     return expandAttributeMeta(this, this.get('formFields'));

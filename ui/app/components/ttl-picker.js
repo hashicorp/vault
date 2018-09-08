@@ -14,12 +14,14 @@ export default Component.extend({
   time: 30,
   unit: 'm',
   initialValue: null,
-  unitOptions: [
-    { label: 'seconds', value: 's' },
-    { label: 'minutes', value: 'm' },
-    { label: 'hours', value: 'h' },
-    { label: 'days', value: 'd' },
-  ],
+  unitOptions: computed(function() {
+    return [
+      { label: 'seconds', value: 's' },
+      { label: 'minutes', value: 'm' },
+      { label: 'hours', value: 'h' },
+      { label: 'days', value: 'd' },
+    ];
+  }),
 
   ouputSeconds: false,
 

@@ -7,7 +7,7 @@ export default Route.extend({
 
   beforeModel(transition) {
     const supportedActions = toolsActions();
-    const { selectedAction } = this.paramsFor(this.routeName);
+    const { selected_action: selectedAction } = this.paramsFor(this.routeName);
     if (!selectedAction || !supportedActions.includes(selectedAction)) {
       transition.abort();
       return this.transitionTo(this.routeName, supportedActions[0]);

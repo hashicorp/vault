@@ -62,12 +62,14 @@ export default Component.extend({
     ];
   }),
 
-  showReplication: computed('version.hasPerfReplication', 'version.hasDRReplication', function() {
+  showReplication: computed('version.{hasPerfReplication,hasDRReplication}', function() {
     return this.get('version.hasPerfReplication') || this.get('version.hasDRReplication');
   }),
 
   selectedFeatures: computed('allFeatures.@each.selected', function() {
-    return this.get('allFeatures').filterBy('selected').mapBy('key');
+    return this.get('allFeatures')
+      .filterBy('selected')
+      .mapBy('key');
   }),
 
   actions: {

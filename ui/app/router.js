@@ -32,7 +32,7 @@ Router.map(function() {
       });
       this.route('unseal');
       this.route('tools', function() {
-        this.route('tool', { path: '/:selectedAction' });
+        this.route('tool', { path: '/:selected_action' });
       });
       this.route('access', function() {
         this.route('methods', { path: '/' });

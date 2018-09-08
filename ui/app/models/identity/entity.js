@@ -1,3 +1,4 @@
+import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
 import DS from 'ember-data';
@@ -7,7 +8,9 @@ import identityCapabilities from 'vault/macros/identity-capabilities';
 const { attr, hasMany } = DS;
 
 export default IdentityModel.extend({
-  formFields: ['name', 'disabled', 'policies', 'metadata'],
+  formFields: computed(function() {
+    return ['name', 'disabled', 'policies', 'metadata'];
+  }),
   name: attr('string'),
   disabled: attr('boolean', {
     defaultValue: false,

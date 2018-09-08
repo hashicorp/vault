@@ -40,8 +40,7 @@ export default Controller.extend({
   showNav: computed(
     'activeClusterName',
     'auth.currentToken',
-    'activeCluster.dr.isSecondary',
-    'activeCluster.{needsInit,sealed}',
+    'activeCluster.{dr.isSecondary,needsInit,sealed}',
     function() {
       if (
         this.get('activeCluster.dr.isSecondary') ||

@@ -1,7 +1,6 @@
 import { or } from '@ember/object/computed';
 import { isBlank, isNone } from '@ember/utils';
 import $ from 'jquery';
-import { on } from '@ember/object/evented';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed, get } from '@ember/object';
@@ -27,7 +26,9 @@ export default Component.extend(FocusOnInsertMixin, {
   secretData: null,
 
   // called with a bool indicating if there's been a change in the secretData
-  onDataChange: () => {},
+  onDataChange() {},
+  onRefresh() {},
+  onToggleAdvancedEdit() {},
 
   // did user request advanced mode
   preferAdvancedEdit: false,
@@ -63,11 +64,18 @@ export default Component.extend(FocusOnInsertMixin, {
     }
   },
 
+  didInsertElement() {
+    this._super(...arguments);
+    $(document).on('keyup.keyEdit', this.onEscape.bind(this));
+  },
+
   willDestroyElement() {
+    this._super(...arguments);
     const key = this.get('key');
     if (get(key, 'isError') && !key.isDestroyed) {
       key.rollbackAttributes();
     }
+    $(document).off('keyup.keyEdit');
   },
 
   partialName: computed('mode', function() {
@@ -119,14 +127,6 @@ export default Component.extend(FocusOnInsertMixin, {
     const router = this.get('routing.router');
     router.transitionTo.apply(router, arguments);
   },
-
-  bindKeys: on('didInsertElement', function() {
-    $(document).on('keyup.keyEdit', this.onEscape.bind(this));
-  }),
-
-  unbindKeys: on('willDestroyElement', function() {
-    $(document).off('keyup.keyEdit');
-  }),
 
   onEscape(e) {
     if (e.keyCode !== keys.ESC || this.get('mode') !== 'show') {
@@ -218,7 +218,7 @@ export default Component.extend(FocusOnInsertMixin, {
     },
 
     refresh() {
-      this.attrs.onRefresh();
+      this.get('onRefresh')();
     },
 
     addRow() {
@@ -245,7 +245,7 @@ export default Component.extend(FocusOnInsertMixin, {
     },
 
     toggleAdvanced(bool) {
-      this.sendAction('toggleAdvancedEdit', bool);
+      this.get('onToggleAdvancedEdit')(bool);
     },
 
     codemirrorUpdated(val, codemirror) {

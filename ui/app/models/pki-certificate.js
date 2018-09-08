@@ -16,15 +16,17 @@ export default DS.Model.extend({
   idForNav: attr('string', {
     readOnly: true,
   }),
-  DISPLAY_FIELDS: [
-    'certificate',
-    'issuingCa',
-    'caChain',
-    'privateKey',
-    'privateKeyType',
-    'serialNumber',
-    'revocationTime',
-  ],
+  DISPLAY_FIELDS: computed(function() {
+    return [
+      'certificate',
+      'issuingCa',
+      'caChain',
+      'privateKey',
+      'privateKeyType',
+      'serialNumber',
+      'revocationTime',
+    ];
+  }),
   role: attr('object', {
     readOnly: true,
   }),
@@ -91,7 +93,7 @@ export default DS.Model.extend({
   }),
 
   attrs: computed('certificate', 'csr', function() {
-    let keys = this.get('certificate') || this.get('csr') ? this.DISPLAY_FIELDS.slice(0) : [];
+    let keys = this.get('certificate') || this.get('csr') ? this.get('DISPLAY_FIELDS').slice(0) : [];
     return expandAttributeMeta(this, keys);
   }),
 

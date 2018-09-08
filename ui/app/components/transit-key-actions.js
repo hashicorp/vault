@@ -48,8 +48,7 @@ export default Component.extend(TRANSIT_PARAMS, {
   selectedAction: null,
   key: null,
 
-  refresh: 'refresh',
-
+  onRefresh() {},
   init() {
     this._super(...arguments);
     if (get(this, 'selectedAction')) {
@@ -145,7 +144,7 @@ export default Component.extend(TRANSIT_PARAMS, {
     }
     this.setProperties(props);
     if (action === 'rotate') {
-      this.sendAction('refresh');
+      this.get('onRefresh')();
     }
   },
 

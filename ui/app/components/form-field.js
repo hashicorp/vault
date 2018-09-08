@@ -42,7 +42,7 @@ export default Component.extend({
    * Computed property used in the label element next to the form element
    *
    */
-  labelString: computed('attr.name', 'attr.options.label', function() {
+  labelString: computed('attr.{name,options.label}', function() {
     const label = this.get('attr.options.label');
     const name = this.get('attr.name');
     if (label) {
@@ -61,7 +61,7 @@ export default Component.extend({
    * Computed property used to set values on the passed model
    *
    */
-  valuePath: computed('attr.name', 'attr.options.fieldValue', function() {
+  valuePath: computed('attr.{name,options.fieldValue}', function() {
     return this.get('attr.options.fieldValue') || this.get('attr.name');
   }),
 
@@ -80,7 +80,9 @@ export default Component.extend({
    *
    * Used by the pgp-file component when an attr is editType of 'file'
    */
-  file: { value: '' },
+  file: computed(function() {
+    return { value: '' };
+  }),
   emptyData: '{\n}',
 
   actions: {

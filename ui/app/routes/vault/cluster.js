@@ -1,5 +1,6 @@
 import { inject as service } from '@ember/service';
 import { cancel, later } from '@ember/runloop';
+import { computed } from '@ember/object';
 import { on } from '@ember/object/evented';
 import { reject } from 'rsvp';
 import Route from '@ember/routing/route';
@@ -16,8 +17,12 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   store: service(),
   auth: service(),
   currentCluster: service(),
-  modelTypes: ['node', 'secret', 'secret-engine'],
-  globalNamespaceModels: ['node', 'cluster'],
+  modelTypes: computed(function() {
+    return ['node', 'secret', 'secret-engine'];
+  }),
+  globalNamespaceModels: computed(function() {
+    return ['node', 'cluster'];
+  }),
 
   queryParams: {
     namespaceQueryParam: {
@@ -36,7 +41,9 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     // the model types blacklisted in `globalNamespaceModels`
     let store = this.store;
     let modelsToKeep = this.get('globalNamespaceModels');
-    for (let model of getOwner(this).lookup('data-adapter:main').getModelTypes()) {
+    for (let model of getOwner(this)
+      .lookup('data-adapter:main')
+      .getModelTypes()) {
       let { name } = model;
       if (modelsToKeep.includes(name)) {
         return;
@@ -74,15 +81,18 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     return Ember.testing
       ? null
       : later(() => {
-          this.controller.get('model').reload().then(
-            () => {
-              this.set('timer', this.poll());
-              return this.transitionToTargetRoute();
-            },
-            () => {
-              this.set('timer', this.poll());
-            }
-          );
+          this.controller
+            .get('model')
+            .reload()
+            .then(
+              () => {
+                this.set('timer', this.poll());
+                return this.transitionToTargetRoute();
+              },
+              () => {
+                this.set('timer', this.poll());
+              }
+            );
         }, POLL_INTERVAL_MS);
   },
 

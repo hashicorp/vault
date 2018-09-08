@@ -27,7 +27,7 @@ export default Component.extend({
     return `vault.cluster.secrets.backend.${mode}`;
   }),
 
-  secretPath: computed('baseKey', 'baseKey.display', 'baseKey.id', 'root', 'showCurrent', function() {
+  secretPath: computed('baseKey', 'baseKey.{display,id}', 'root', 'showCurrent', function() {
     let crumbs = [];
     const root = this.get('root');
     const baseKey = this.get('baseKey.display') || this.get('baseKey.id');

@@ -9,6 +9,7 @@ const component = create(controlGroup);
 
 const controlGroupService = Service.extend({
   init() {
+    this._super(...arguments);
     this.set('wrapInfo', null);
   },
   wrapInfoForAccessor() {

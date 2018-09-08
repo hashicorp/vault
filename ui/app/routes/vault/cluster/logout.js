@@ -1,3 +1,4 @@
+import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
@@ -8,7 +9,9 @@ export default Route.extend(ModelBoundaryRoute, {
   flashMessages: service(),
   console: service(),
 
-  modelTypes: ['secret', 'secret-engine'],
+  modelTypes: computed(function() {
+    return ['secret', 'secret-engine'];
+  }),
 
   beforeModel() {
     this.get('auth').deleteCurrentToken();

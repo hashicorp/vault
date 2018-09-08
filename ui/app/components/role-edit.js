@@ -2,7 +2,6 @@ import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import $ from 'jquery';
-import { on } from '@ember/object/evented';
 import Component from '@ember/component';
 import { set, get } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
@@ -14,8 +13,8 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default Component.extend(FocusOnInsertMixin, {
   mode: null,
   emptyData: '{\n}',
-  onDataChange: () => {},
-  refresh: 'refresh',
+  onDataChange() {},
+  onRefresh() {},
   model: null,
   routing: service('-routing'),
   wizard: service(),
@@ -42,25 +41,24 @@ export default Component.extend(FocusOnInsertMixin, {
     }
   },
 
+  didInsertElement() {
+    this._super(...arguments);
+    $(document).on('keyup.keyEdit', this.onEscape.bind(this));
+  },
+
   willDestroyElement() {
+    this._super(...arguments);
     const model = this.get('model');
     if (get(model, 'isError')) {
       model.rollbackAttributes();
     }
+    $(document).off('keyup.keyEdit');
   },
 
   transitionToRoute() {
     const router = this.get('routing.router');
     router.transitionTo.apply(router, arguments);
   },
-
-  bindKeys: on('didInsertElement', function() {
-    $(document).on('keyup.keyEdit', this.onEscape.bind(this));
-  }),
-
-  unbindKeys: on('willDestroyElement', function() {
-    $(document).off('keyup.keyEdit');
-  }),
 
   onEscape(e) {
     if (e.keyCode !== keys.ESC || this.get('mode') !== 'show') {
@@ -123,7 +121,7 @@ export default Component.extend(FocusOnInsertMixin, {
     },
 
     refresh() {
-      this.sendAction('refresh');
+      this.get('onRefresh')();
     },
 
     delete() {

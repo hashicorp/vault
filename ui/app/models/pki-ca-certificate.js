@@ -7,16 +7,18 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 const { attr } = DS;
 
 export default Certificate.extend({
-  DISPLAY_FIELDS: [
-    'csr',
-    'certificate',
-    'expiration',
-    'issuingCa',
-    'caChain',
-    'privateKey',
-    'privateKeyType',
-    'serialNumber',
-  ],
+  DISPLAY_FIELDS: computed(function() {
+    return [
+      'csr',
+      'certificate',
+      'expiration',
+      'issuingCa',
+      'caChain',
+      'privateKey',
+      'privateKeyType',
+      'serialNumber',
+    ];
+  }),
   backend: attr('string', {
     readOnly: true,
   }),

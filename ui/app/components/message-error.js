@@ -3,14 +3,14 @@ import Component from '@ember/component';
 
 export default Component.extend({
   model: null,
-  errors: [],
+  errors: computed(function() {
+    return [];
+  }),
   errorMessage: null,
 
   displayErrors: computed(
     'errorMessage',
-    'model.isError',
-    'model.adapterError.message',
-    'model.adapterError.errors.@each',
+    'model.{isError,adapterError.message,adapterError.errors.@each}',
     'errors',
     'errors.@each',
     function() {

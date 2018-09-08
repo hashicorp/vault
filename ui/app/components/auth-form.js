@@ -69,7 +69,7 @@ export default Component.extend(DEFAULTS, {
       this.get('router').replaceWith({
         queryParams: {
           with: this.firstMethod(),
-          wrappedToken: this.get('wrappedToken'),
+          wrapped_token: this.get('wrappedToken'),
           namespace: this.get('namespace'),
         },
       });
@@ -189,20 +189,22 @@ export default Component.extend(DEFAULTS, {
         data.path = this.get('customPath') || get(backend, 'id');
       }
       const clusterId = this.get('cluster.id');
-      this.get('auth').authenticate({ clusterId, backend: get(backend, 'type'), data }).then(
-        ({ isRoot, namespace }) => {
-          this.set('loading', false);
-          const transition = this.get('router').transitionTo(targetRoute, { queryParams: { namespace } });
-          if (isRoot) {
-            transition.followRedirects().then(() => {
-              this.get('flashMessages').warning(
-                'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
-              );
-            });
-          }
-        },
-        (...errArgs) => this.handleError(...errArgs)
-      );
+      this.get('auth')
+        .authenticate({ clusterId, backend: get(backend, 'type'), data })
+        .then(
+          ({ isRoot, namespace }) => {
+            this.set('loading', false);
+            const transition = this.get('router').transitionTo(targetRoute, { queryParams: { namespace } });
+            if (isRoot) {
+              transition.followRedirects().then(() => {
+                this.get('flashMessages').warning(
+                  'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
+                );
+              });
+            }
+          },
+          (...errArgs) => this.handleError(...errArgs)
+        );
     },
   },
 });

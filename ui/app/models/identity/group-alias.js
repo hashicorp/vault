@@ -1,3 +1,4 @@
+import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
 import DS from 'ember-data';
@@ -7,7 +8,9 @@ const { attr, belongsTo } = DS;
 
 export default IdentityModel.extend({
   parentType: 'group',
-  formFields: ['name', 'mountAccessor'],
+  formFields: computed(function() {
+    return ['name', 'mountAccessor'];
+  }),
   group: belongsTo('identity/group', { readOnly: true, async: false }),
 
   name: attr('string'),

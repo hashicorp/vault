@@ -33,7 +33,9 @@ export default Component.extend({
    * Defaults to an empty array.
    *
    */
-  inputValue: [],
+  inputValue: computed(function() {
+    return [];
+  }),
 
   /*
     *
@@ -89,7 +91,9 @@ export default Component.extend({
   },
 
   toVal() {
-    const inputs = this.get('inputList').filter(x => x.value).mapBy('value');
+    const inputs = this.get('inputList')
+      .filter(x => x.value)
+      .mapBy('value');
     if (this.get('format') === 'string') {
       return inputs.join(',');
     }
