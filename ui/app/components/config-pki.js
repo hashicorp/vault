@@ -32,7 +32,7 @@ export default Component.extend({
    * function that gets called to refresh the config model
    *
    */
-  onRefresh: () => {},
+  onRefresh() {},
 
   loading: false,
 
@@ -54,6 +54,9 @@ export default Component.extend({
             config.rollbackAttributes();
           }
           this.send('refresh');
+        })
+        .catch(() => {
+          // handle promise rejection - error will be shown by message-error component
         })
         .finally(() => {
           this.set('loading', false);

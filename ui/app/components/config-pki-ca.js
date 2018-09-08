@@ -63,7 +63,7 @@ export default Component.extend({
    * function that gets called to refresh the config model
    *
    */
-  onRefresh: () => {},
+  onRefresh() {},
 
   loading: false,
 
@@ -148,6 +148,9 @@ export default Component.extend({
               'You tried to generate a new root CA, but one currently exists. To replace the existing one, delete it first and then generate again.'
             );
           }
+        })
+        .catch(() => {
+          // handle promise rejection - error will be shown by message-error component
         })
         .finally(() => {
           this.set('loading', false);

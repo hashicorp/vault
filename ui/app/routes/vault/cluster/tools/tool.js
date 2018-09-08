@@ -14,6 +14,11 @@ export default Route.extend({
     }
   },
   model() {},
+  setupController(controller) {
+    let { selected_action: selectedAction } = this.paramsFor(this.routeName);
+    this._super(...arguments);
+    controller.set('selectedAction', selectedAction);
+  },
   actions: {
     didTransition() {
       const params = this.paramsFor(this.routeName);

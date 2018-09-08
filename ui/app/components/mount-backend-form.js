@@ -82,6 +82,7 @@ export default Component.extend({
       return;
     }
     let configRef = mount.hasMany('authConfigs').value();
+    if (!configRef) return;
     let currentConfig = configRef.get('firstObject');
     if (currentConfig) {
       // rollbackAttributes here will remove the the config model from the store
@@ -126,18 +127,25 @@ export default Component.extend({
     yield this.get('saveConfig').perform(mountModel);
   }).drop(),
 
+  advanceWizard() {
+    this.get('wizard').transitionFeatureMachine(
+      this.get('wizard.featureState'),
+      'CONTINUE',
+      this.get('mountModel').get('type')
+    );
+  },
   saveConfig: task(function*(mountModel) {
     const configRef = mountModel.hasMany('authConfigs').value();
+    if (!configRef) {
+      this.advanceWizard();
+      return;
+    }
     const config = configRef.get('firstObject');
     const { type, path } = mountModel.getProperties('type', 'path');
     try {
       if (config && Object.keys(config.changedAttributes()).length) {
         yield config.save();
-        this.get('wizard').transitionFeatureMachine(
-          this.get('wizard.featureState'),
-          'CONTINUE',
-          this.get('mountModel').get('type')
-        );
+        this.advanceWizard();
         this.get('flashMessages').success(
           `The config for ${type} ${this.get('mountType')} method at ${path} was saved successfully.`
         );
