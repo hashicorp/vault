@@ -123,6 +123,7 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 		var alias *identity.Alias
 		var entity *identity.Entity
 		var previousEntity *identity.Entity
+		var newAlias bool
 
 		i.lock.Lock()
 		defer i.lock.Unlock()
@@ -139,6 +140,7 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 			}
 		} else {
 			alias = &identity.Alias{}
+			newAlias = true
 		}
 
 		// Get entity id
@@ -207,15 +209,8 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 			if entity == nil {
 				return nil, fmt.Errorf("existing alias is not associated with an entity")
 			}
-			if canonicalID == "" || entity.ID == canonicalID {
-				// Update the alias in the entity.
-				for aliasIndex, item := range entity.Aliases {
-					if item.ID == alias.ID {
-						entity.Aliases[aliasIndex] = alias
-						break
-					}
-				}
-				return nil, nil
+			if canonicalID == "" {
+				canonicalID = entity.ID
 			}
 		}
 
@@ -262,6 +257,14 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 
 				entity.Aliases = append(entity.Aliases, alias)
 				resp.AddWarning(fmt.Sprintf("alias is being transferred from entity %q to %q", previousEntity.ID, entity.ID))
+			} else {
+				// Update the alias in the entity.
+				for aliasIndex, item := range entity.Aliases {
+					if item.ID == alias.ID {
+						entity.Aliases[aliasIndex] = alias
+						break
+					}
+				}
 			}
 		}
 
@@ -295,13 +298,16 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 			return nil, err
 		}
 
-		// Return ID of both alias and entity
-		resp.Data = map[string]interface{}{
-			"id":           alias.ID,
-			"canonical_id": entity.ID,
+		if newAlias {
+			// Return ID of both alias and entity
+			resp.Data = map[string]interface{}{
+				"id":           alias.ID,
+				"canonical_id": entity.ID,
+			}
+			return resp, nil
 		}
 
-		return resp, nil
+		return nil, nil
 	}
 }
 
