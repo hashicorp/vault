@@ -78,7 +78,7 @@
     "ember-computed-query": "^0.1.1",
     "ember-concurrency": "^0.8.14",
     "ember-data": "~3.0.0",
-    "ember-data-model-fragments": "2.14.x",
+    "ember-data-model-fragments": "3.0.x-beta.1",
     "ember-export-application-global": "^2.0.0",
     "ember-fetch": "^3.4.3",
     "ember-inflector": "^3.0.0",
