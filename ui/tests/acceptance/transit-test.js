@@ -1,264 +1,260 @@
-import { test } from 'qunit';
-import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import { click, fillIn, find, currentURL } from '@ember/test-helpers';
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import { encodeString } from 'vault/utils/b64';
 
-moduleForAcceptance('Acceptance | transit', {
-  beforeEach() {
+module('Acceptance | transit', function(hooks) {
+  setupApplicationTest(hooks);
+
+  hooks.beforeEach(function() {
     return authLogin();
-  },
-  afterEach() {
-    return authLogout();
-  },
-});
-
-let generateTransitKeys = () => {
-  const ts = new Date().getTime();
-  const keys = [
-    {
-      name: `aes-${ts}`,
-      type: 'aes256-gcm96',
-      exportable: true,
-      supportsEncryption: true,
-    },
-    {
-      name: `aes-convergent-${ts}`,
-      type: 'aes256-gcm96',
-      convergent: true,
-      supportsEncryption: true,
-    },
-    {
-      name: `chacha-${ts}`,
-      type: 'chacha20-poly1305',
-      exportable: true,
-      supportsEncryption: true,
-    },
-    {
-      name: `chacha-convergent-${ts}`,
-      type: 'chacha20-poly1305',
-      convergent: true,
-      supportsEncryption: true,
-    },
-    {
-      name: `ecdsa-${ts}`,
-      type: 'ecdsa-p256',
-      exportable: true,
-      supportsSigning: true,
-    },
-    {
-      name: `ed25519-${ts}`,
-      type: 'ed25519',
-      derived: true,
-      supportsSigning: true,
-    },
-    {
-      name: `rsa-2048-${ts}`,
-      type: `rsa-2048`,
-      supportsSigning: true,
-      supportsEncryption: true,
-    },
-    {
-      name: `rsa-4096-${ts}`,
-      type: `rsa-4096`,
-      supportsSigning: true,
-      supportsEncryption: true,
-    },
-  ];
-
-  keys.forEach(key => {
-    click('[data-test-secret-create]');
-    fillIn('[data-test-transit-key-name]', key.name);
-    fillIn('[data-test-transit-key-type]', key.type);
-    if (key.exportable) {
-      click('[data-test-transit-key-exportable]');
-    }
-    if (key.derived) {
-      click('[data-test-transit-key-derived]');
-    }
-    if (key.convergent) {
-      click('[data-test-transit-key-convergent-encryption]');
-    }
-    click('[data-test-transit-key-create]');
-
-    // link back to the list
-    click('[data-test-secret-root-link]');
   });
-  return keys;
-};
 
-const testEncryption = (assert, keyName) => {
-  const tests = [
-    // raw bytes for plaintext and context
-    {
-      plaintext: 'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
-      context: 'nqR8LiVgNh/lwO2rArJJE9F9DMhh0lKo4JX9DAAkCDw=',
-      encodePlaintext: false,
-      encodeContext: false,
-      decodeAfterDecrypt: false,
-      assertAfterEncrypt: key => {
-        assert.ok(
-          /vault:/.test(find('[data-test-transit-input="ciphertext"]').val()),
-          `${key}: ciphertext shows a vault-prefixed ciphertext`
-        );
+  hooks.afterEach(function() {
+    return authLogout();
+  });
+
+  let generateTransitKeys = () => {
+    const ts = new Date().getTime();
+    const keys = [
+      {
+        name: `aes-${ts}`,
+        type: 'aes256-gcm96',
+        exportable: true,
+        supportsEncryption: true,
       },
-      assertBeforeDecrypt: key => {
-        assert
-          .dom('[data-test-transit-input="context"]')
-          .hasValue(
-            'nqR8LiVgNh/lwO2rArJJE9F9DMhh0lKo4JX9DAAkCDw=',
-            `${key}: the ui shows the base64-encoded context`
+      {
+        name: `aes-convergent-${ts}`,
+        type: 'aes256-gcm96',
+        convergent: true,
+        supportsEncryption: true,
+      },
+      {
+        name: `chacha-${ts}`,
+        type: 'chacha20-poly1305',
+        exportable: true,
+        supportsEncryption: true,
+      },
+      {
+        name: `chacha-convergent-${ts}`,
+        type: 'chacha20-poly1305',
+        convergent: true,
+        supportsEncryption: true,
+      },
+      {
+        name: `ecdsa-${ts}`,
+        type: 'ecdsa-p256',
+        exportable: true,
+        supportsSigning: true,
+      },
+      {
+        name: `ed25519-${ts}`,
+        type: 'ed25519',
+        derived: true,
+        supportsSigning: true,
+      },
+      {
+        name: `rsa-2048-${ts}`,
+        type: `rsa-2048`,
+        supportsSigning: true,
+        supportsEncryption: true,
+      },
+      {
+        name: `rsa-4096-${ts}`,
+        type: `rsa-4096`,
+        supportsSigning: true,
+        supportsEncryption: true,
+      },
+    ];
+
+    keys.forEach(async key => {
+      await click('[data-test-secret-create]');
+      await fillIn('[data-test-transit-key-name]', key.name);
+      await fillIn('[data-test-transit-key-type]', key.type);
+      if (key.exportable) {
+        await click('[data-test-transit-key-exportable]');
+      }
+      if (key.derived) {
+        await click('[data-test-transit-key-derived]');
+      }
+      if (key.convergent) {
+        await click('[data-test-transit-key-convergent-encryption]');
+      }
+      await click('[data-test-transit-key-create]');
+
+      // link back to the list
+      await click('[data-test-secret-root-link]');
+    });
+    return keys;
+  };
+
+  const testEncryption = (assert, keyName) => {
+    const tests = [
+      // raw bytes for plaintext and context
+      {
+        plaintext: 'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
+        context: 'nqR8LiVgNh/lwO2rArJJE9F9DMhh0lKo4JX9DAAkCDw=',
+        encodePlaintext: false,
+        encodeContext: false,
+        decodeAfterDecrypt: false,
+        assertAfterEncrypt: key => {
+          assert.ok(
+            /vault:/.test(find('[data-test-transit-input="ciphertext"]').value),
+            `${key}: ciphertext shows a vault-prefixed ciphertext`
           );
-      },
+        },
+        assertBeforeDecrypt: key => {
+          assert
+            .dom('[data-test-transit-input="context"]')
+            .hasValue(
+              'nqR8LiVgNh/lwO2rArJJE9F9DMhh0lKo4JX9DAAkCDw=',
+              `${key}: the ui shows the base64-encoded context`
+            );
+        },
 
-      assertAfterDecrypt: key => {
-        assert
-          .dom('[data-test-transit-input="plaintext"]')
-          .hasValue(
-            'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
-            `${key}: the ui shows the base64-encoded plaintext`
+        assertAfterDecrypt: key => {
+          assert
+            .dom('[data-test-transit-input="plaintext"]')
+            .hasValue(
+              'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
+              `${key}: the ui shows the base64-encoded plaintext`
+            );
+        },
+      },
+      // raw bytes for plaintext, string for context
+      {
+        plaintext: 'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
+        context: encodeString('context'),
+        encodePlaintext: false,
+        encodeContext: false,
+        decodeAfterDecrypt: false,
+        assertAfterEncrypt: key => {
+          assert.ok(
+            /vault:/.test(find('[data-test-transit-input="ciphertext"]').value),
+            `${key}: ciphertext shows a vault-prefixed ciphertext`
           );
+        },
+        assertBeforeDecrypt: key => {
+          assert
+            .dom('[data-test-transit-input="context"]')
+            .hasValue(encodeString('context'), `${key}: the ui shows the input context`);
+        },
+        assertAfterDecrypt: key => {
+          assert
+            .dom('[data-test-transit-input="plaintext"]')
+            .hasValue(
+              'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
+              `${key}: the ui shows the base64-encoded plaintext`
+            );
+        },
       },
-    },
-    // raw bytes for plaintext, string for context
-    {
-      plaintext: 'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
-      context: encodeString('context'),
-      encodePlaintext: false,
-      encodeContext: false,
-      decodeAfterDecrypt: false,
-      assertAfterEncrypt: key => {
-        assert.ok(
-          /vault:/.test(find('[data-test-transit-input="ciphertext"]').val()),
-          `${key}: ciphertext shows a vault-prefixed ciphertext`
-        );
-      },
-      assertBeforeDecrypt: key => {
-        assert
-          .dom('[data-test-transit-input="context"]')
-          .hasValue(encodeString('context'), `${key}: the ui shows the input context`);
-      },
-      assertAfterDecrypt: key => {
-        assert
-          .dom('[data-test-transit-input="plaintext"]')
-          .hasValue(
-            'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
-            `${key}: the ui shows the base64-encoded plaintext`
+      // base64 input
+      {
+        plaintext: encodeString('This is the secret'),
+        context: encodeString('context'),
+        encodePlaintext: false,
+        encodeContext: false,
+        decodeAfterDecrypt: true,
+        assertAfterEncrypt: key => {
+          assert.ok(
+            /vault:/.test(find('[data-test-transit-input="ciphertext"]').value),
+            `${key}: ciphertext shows a vault-prefixed ciphertext`
           );
+        },
+        assertBeforeDecrypt: key => {
+          assert
+            .dom('[data-test-transit-input="context"]')
+            .hasValue(encodeString('context'), `${key}: the ui shows the input context`);
+        },
+        assertAfterDecrypt: key => {
+          assert
+            .dom('[data-test-transit-input="plaintext"]')
+            .hasValue('This is the secret', `${key}: the ui decodes plaintext`);
+        },
       },
-    },
-    // base64 input
-    {
-      plaintext: encodeString('This is the secret'),
-      context: encodeString('context'),
-      encodePlaintext: false,
-      encodeContext: false,
-      decodeAfterDecrypt: true,
-      assertAfterEncrypt: key => {
-        assert.ok(
-          /vault:/.test(find('[data-test-transit-input="ciphertext"]').val()),
-          `${key}: ciphertext shows a vault-prefixed ciphertext`
-        );
-      },
-      assertBeforeDecrypt: key => {
-        assert
-          .dom('[data-test-transit-input="context"]')
-          .hasValue(encodeString('context'), `${key}: the ui shows the input context`);
-      },
-      assertAfterDecrypt: key => {
-        assert
-          .dom('[data-test-transit-input="plaintext"]')
-          .hasValue('This is the secret', `${key}: the ui decodes plaintext`);
-      },
-    },
 
-    // string input
-    {
-      plaintext: 'There are many secrets 🤐',
-      context: 'secret 2',
-      encodePlaintext: true,
-      encodeContext: true,
-      decodeAfterDecrypt: true,
-      assertAfterEncrypt: key => {
-        assert.ok(findWithAssert('[data-test-transit-input="ciphertext"]'), `${key}: ciphertext box shows`);
-        assert.ok(
-          /vault:/.test(find('[data-test-transit-input="ciphertext"]').val()),
-          `${key}: ciphertext shows a vault-prefixed ciphertext`
-        );
+      // string input
+      {
+        plaintext: 'There are many secrets 🤐',
+        context: 'secret 2',
+        encodePlaintext: true,
+        encodeContext: true,
+        decodeAfterDecrypt: true,
+        assertAfterEncrypt: key => {
+          assert.ok(findWithAssert('[data-test-transit-input="ciphertext"]'), `${key}: ciphertext box shows`);
+          assert.ok(
+            /vault:/.test(find('[data-test-transit-input="ciphertext"]').value),
+            `${key}: ciphertext shows a vault-prefixed ciphertext`
+          );
+        },
+        assertBeforeDecrypt: key => {
+          assert
+            .dom('[data-test-transit-input="context"]')
+            .hasValue(encodeString('secret 2'), `${key}: the ui shows the encoded context`);
+        },
+        assertAfterDecrypt: key => {
+          assert.ok(findWithAssert('[data-test-transit-input="plaintext"]'), `${key}: plaintext box shows`);
+          assert
+            .dom('[data-test-transit-input="plaintext"]')
+            .hasValue('There are many secrets 🤐', `${key}: the ui decodes plaintext`);
+        },
       },
-      assertBeforeDecrypt: key => {
-        assert
-          .dom('[data-test-transit-input="context"]')
-          .hasValue(encodeString('secret 2'), `${key}: the ui shows the encoded context`);
-      },
-      assertAfterDecrypt: key => {
-        assert.ok(findWithAssert('[data-test-transit-input="plaintext"]'), `${key}: plaintext box shows`);
-        assert
-          .dom('[data-test-transit-input="plaintext"]')
-          .hasValue('There are many secrets 🤐', `${key}: the ui decodes plaintext`);
-      },
-    },
-  ];
+    ];
 
-  tests.forEach(testCase => {
-    click('[data-test-transit-action-link="encrypt"]');
-    fillIn('[data-test-transit-input="plaintext"]', testCase.plaintext);
-    fillIn('[data-test-transit-input="context"]', testCase.context);
-    if (testCase.encodePlaintext) {
-      click('[data-test-transit-b64-toggle="plaintext"]');
-    }
-    if (testCase.encodeContext) {
-      click('[data-test-transit-b64-toggle="context"]');
-    }
-    click('button:contains(Encrypt)');
-    if (testCase.assertAfterEncrypt) {
-      andThen(() => testCase.assertAfterEncrypt(keyName));
-    }
-    click('[data-test-transit-action-link="decrypt"]');
-    if (testCase.assertBeforeDecrypt) {
-      andThen(() => testCase.assertBeforeDecrypt(keyName));
-    }
-    click('button:contains(Decrypt)');
+    tests.forEach(async testCase => {
+      await click('[data-test-transit-action-link="encrypt"]');
+      await fillIn('[data-test-transit-input="plaintext"]', testCase.plaintext);
+      await fillIn('[data-test-transit-input="context"]', testCase.context);
+      if (testCase.encodePlaintext) {
+        await click('[data-test-transit-b64-toggle="plaintext"]');
+      }
+      if (testCase.encodeContext) {
+        await click('[data-test-transit-b64-toggle="context"]');
+      }
+      await click('button:contains(Encrypt)');
+      if (testCase.assertAfterEncrypt) {
+        testCase.assertAfterEncrypt(keyName);
+      }
+      await click('[data-test-transit-action-link="decrypt"]');
+      if (testCase.assertBeforeDecrypt) {
+        testCase.assertBeforeDecrypt(keyName);
+      }
+      await click('button:contains(Decrypt)');
 
-    if (testCase.assertAfterDecrypt) {
-      andThen(() => {
+      if (testCase.assertAfterDecrypt) {
         if (testCase.decodeAfterDecrypt) {
-          click('[data-test-transit-b64-toggle="plaintext"]');
-          andThen(() => testCase.assertAfterDecrypt(keyName));
+          await click('[data-test-transit-b64-toggle="plaintext"]');
+          testCase.assertAfterDecrypt(keyName);
         } else {
           testCase.assertAfterDecrypt(keyName);
         }
-      });
-    }
-  });
-};
-test('transit backend', function(assert) {
-  assert.expect(49);
-  const now = new Date().getTime();
-  const transitPath = `transit-${now}`;
+      }
+    });
+  };
+  test('transit backend', function(assert) {
+    assert.expect(49);
+    const now = new Date().getTime();
+    const transitPath = `transit-${now}`;
 
-  mountSupportedSecretBackend(assert, 'transit', transitPath);
+    mountSupportedSecretBackend(assert, 'transit', transitPath);
 
-  // create a bunch of different kinds of keys
-  const transitKeys = generateTransitKeys();
+    // create a bunch of different kinds of keys
+    const transitKeys = generateTransitKeys();
 
-  transitKeys.forEach((key, index) => {
-    click(`[data-test-secret-link="${key.name}"]`);
-    if (index === 0) {
-      click('[data-test-transit-link="versions"]');
-      andThen(() => {
+    transitKeys.forEach(async (key, index) => {
+      await click(`[data-test-secret-link="${key.name}"]`);
+      if (index === 0) {
+        await click('[data-test-transit-link="versions"]');
         assert
           .dom('[data-test-transit-key-version-row]')
           .exists({ count: 1 }, `${key.name}: only one key version`);
-      });
-      click('[data-test-transit-key-rotate] button');
-      click('[data-test-confirm-button]');
-      andThen(() => {
+        await click('[data-test-transit-key-rotate] button');
+        await click('[data-test-confirm-button]');
         assert
           .dom('[data-test-transit-key-version-row]')
           .exists({ count: 2 }, `${key.name}: two key versions after rotate`);
-      });
-    }
-    click('[data-test-transit-key-actions-link]');
-    andThen(() => {
+      }
+      await click('[data-test-transit-key-actions-link]');
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${transitPath}/actions/${key.name}`),
         `${key.name}: navigates to tranist actions`
@@ -282,7 +278,7 @@ test('transit backend', function(assert) {
       if (key.convergent && key.supportsEncryption) {
         testEncryption(assert, key.name);
       }
+      await click('[data-test-secret-root-link]');
     });
-    click('[data-test-secret-root-link]');
   });
 });

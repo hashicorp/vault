@@ -1,17 +1,17 @@
-import { test } from 'qunit';
-import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import enginesPage from 'vault/tests/pages/secrets/backends';
 
-moduleForAcceptance('Acceptance | console', {
-  beforeEach() {
-    return authLogin();
-  },
-});
+module('Acceptance | console', function(hooks) {
+  setupApplicationTest(hooks);
 
-test('refresh reloads the current route\'s data', function(assert) {
-  let numEngines;
-  enginesPage.visit();
-  andThen(() => {
+  hooks.beforeEach(function() {
+    return authLogin();
+  });
+
+  test("refresh reloads the current route's data", function(assert) {
+    let numEngines;
+    enginesPage.visit();
     numEngines = enginesPage.rows().count;
     enginesPage.consoleToggle();
     let now = Date.now();
@@ -20,12 +20,8 @@ test('refresh reloads the current route\'s data', function(assert) {
       enginesPage.console.consoleInput(inputString);
       enginesPage.console.enter();
     });
-  });
-  andThen(() => {
     enginesPage.console.consoleInput('refresh');
     enginesPage.console.enter();
-  });
-  andThen(() => {
     assert.equal(enginesPage.rows().count, numEngines + 3, 'new engines were added to the page');
   });
 });

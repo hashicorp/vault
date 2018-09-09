@@ -16,6 +16,9 @@ export default create({
   },
 
   createSecret(path, key, value) {
-    return this.path(path).secretKey(key).secretValue(value).save();
+    return this.path(path)
+      .secretKey(key)
+      .secretValue(value)
+      .save();
   },
 });

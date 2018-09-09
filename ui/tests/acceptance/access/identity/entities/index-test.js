@@ -1,23 +1,22 @@
-import { test } from 'qunit';
-import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import { currentRouteName } from '@ember/test-helpers';
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/access/identity/index';
 
-moduleForAcceptance('Acceptance | /access/identity/entities', {
-  beforeEach() {
-    return authLogin();
-  },
-});
+module('Acceptance | /access/identity/entities', function(hooks) {
+  setupApplicationTest(hooks);
 
-test('it renders the entities page', function(assert) {
-  page.visit({ item_type: 'entities' });
-  andThen(() => {
+  hooks.beforeEach(function() {
+    return authLogin();
+  });
+
+  test('it renders the entities page', function(assert) {
+    page.visit({ item_type: 'entities' });
     assert.equal(currentRouteName(), 'vault.cluster.access.identity.index', 'navigates to the correct route');
   });
-});
 
-test('it renders the groups page', function(assert) {
-  page.visit({ item_type: 'groups' });
-  andThen(() => {
+  test('it renders the groups page', function(assert) {
+    page.visit({ item_type: 'groups' });
     assert.equal(currentRouteName(), 'vault.cluster.access.identity.index', 'navigates to the correct route');
   });
 });

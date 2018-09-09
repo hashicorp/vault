@@ -1,24 +1,23 @@
-import { test } from 'qunit';
-import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import { currentRouteName } from '@ember/test-helpers';
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/auth/enable';
 import listPage from 'vault/tests/pages/access/methods';
 
-moduleForAcceptance('Acceptance | settings/auth/enable', {
-  beforeEach() {
-    return authLogin();
-  },
-});
+module('Acceptance | settings/auth/enable', function(hooks) {
+  setupApplicationTest(hooks);
 
-test('it mounts and redirects', function(assert) {
-  // always force the new mount to the top of the list
-  const path = `approle-${new Date().getTime()}`;
-  const type = 'approle';
-  page.visit();
-  andThen(() => {
+  hooks.beforeEach(function() {
+    return authLogin();
+  });
+
+  test('it mounts and redirects', function(assert) {
+    // always force the new mount to the top of the list
+    const path = `approle-${new Date().getTime()}`;
+    const type = 'approle';
+    page.visit();
     assert.equal(currentRouteName(), 'vault.cluster.settings.auth.enable');
     page.form.mount(type, path);
-  });
-  andThen(() => {
     assert.equal(
       page.flash.latestMessage,
       `Successfully mounted ${type} auth method at ${path}.`,
