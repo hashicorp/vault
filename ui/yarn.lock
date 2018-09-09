@@ -3634,7 +3634,7 @@ ember-cli-pretender@^1.0.1:
     pretender "^1.4.2"
     resolve "^1.2.0"
 
-ember-cli-qunit@^4.1.1:
+ember-cli-qunit@^4.3.2:
   version "4.3.2"
   resolved "https://registry.yarnpkg.com/ember-cli-qunit/-/ember-cli-qunit-4.3.2.tgz#cfd89ad3b0dbc28a9c2223d532b52eeade7c602c"
   dependencies:

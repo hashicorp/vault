@@ -68,7 +68,7 @@
     "ember-cli-moment-shim": "^3.7.1",
     "ember-cli-page-object": "1.14",
     "ember-cli-pretender": "^1.0.1",
-    "ember-cli-qunit": "^4.1.1",
+    "ember-cli-qunit": "^4.3.2",
     "ember-cli-sass": "^7.1.7",
     "ember-cli-shims": "^1.2.0",
     "ember-cli-sri": "meirish/ember-cli-sri#rooturl",
