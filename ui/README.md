@@ -48,6 +48,11 @@ acceptance tests then run, proxing requests back to that server.
 * `yarn run test -f="policies"` to filter the tests that are run. `-f` gets passed into
 [QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
 
+### Linting
+
+* `yarn lint:js`
+* `yarn lint:js -- --fix`
+
 ### Building Vault UI into a Vault Binary
 We use `go-bindata-assetfs` to build the static assets of the
 Ember application into a Vault binary.
