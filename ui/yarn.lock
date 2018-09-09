@@ -1607,6 +1607,13 @@ broccoli-file-creator@^1.0.0, broccoli-file-creator@^1.1.1:
     broccoli-plugin "^1.1.0"
     mkdirp "^0.5.1"
 
+broccoli-file-creator@^2.1.1:
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/broccoli-file-creator/-/broccoli-file-creator-2.1.1.tgz#7351dd2496c762cfce7736ce9b49e3fce0c7b7db"
+  dependencies:
+    broccoli-plugin "^1.1.0"
+    mkdirp "^0.5.1"
+
 broccoli-filter@^0.1.11:
   version "0.1.14"
   resolved "https://registry.yarnpkg.com/broccoli-filter/-/broccoli-filter-0.1.14.tgz#23cae3891ff9ebb7b4d7db00c6dcf03535daf7ad"
@@ -3529,12 +3536,14 @@ ember-cli-normalize-entity-name@^1.0.0:
   dependencies:
     silent-error "^1.0.0"
 
-ember-cli-page-object@1.14:
-  version "1.14.1"
-  resolved "https://registry.yarnpkg.com/ember-cli-page-object/-/ember-cli-page-object-1.14.1.tgz#2e3599c204c56440c6c8154fc686c603816f877a"
+ember-cli-page-object@1.15.0-beta.3:
+  version "1.15.0-beta.3"
+  resolved "https://registry.yarnpkg.com/ember-cli-page-object/-/ember-cli-page-object-1.15.0-beta.3.tgz#e41f3a33e35a6717c507b1a4c13fc990950c7d35"
   dependencies:
+    broccoli-file-creator "^2.1.1"
+    broccoli-merge-trees "^2.0.0"
     ceibo "~2.0.0"
-    ember-cli-babel "^6.6.0"
+    ember-cli-babel "^6.12.0"
     ember-cli-node-assets "^0.2.2"
     ember-native-dom-helpers "^0.5.3"
     jquery "^3.2.1"
