@@ -25,8 +25,13 @@ export default {
   },
   mount(type, path) {
     if (path) {
-      return this.selectType(type).next().path(path).submit();
+      return this.selectType(type)
+        .next()
+        .path(path)
+        .submit();
     }
-    return this.selectType(type).next().submit();
+    return this.selectType(type)
+      .next()
+      .submit();
   },
 };

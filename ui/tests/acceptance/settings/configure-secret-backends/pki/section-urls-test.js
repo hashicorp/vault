@@ -1,37 +1,35 @@
-import { test } from 'qunit';
-import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import { currentRouteName } from '@ember/test-helpers';
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section';
-moduleForAcceptance('Acceptance | settings/configure/secrets/pki/urls', {
-  beforeEach() {
+
+module('Acceptance | settings/configure/secrets/pki/urls', function(hooks) {
+  setupApplicationTest(hooks);
+
+  hooks.beforeEach(function() {
     return authLogin();
-  },
-});
+  });
 
-test('it saves urls config', function(assert) {
-  const path = `pki-${new Date().getTime()}`;
-  mountSupportedSecretBackend(assert, 'pki', path);
-  page.visit({ backend: path, section: 'urls' });
-  andThen(() => {
+  test('it saves urls config', function(assert) {
+    const path = `pki-${new Date().getTime()}`;
+    mountSupportedSecretBackend(assert, 'pki', path);
+    page.visit({ backend: path, section: 'urls' });
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
-  });
 
-  page.form
-    .fields(0)
-    .input('foo')
-    .change();
-  page.form.submit();
+    page.form
+      .fields(0)
+      .input('foo')
+      .change();
+    page.form.submit();
 
-  andThen(() => {
     assert.ok(page.form.hasError, 'shows error on invalid input');
-  });
 
-  page.form
-    .fields(0)
-    .input('foo.example.com')
-    .change();
-  page.form.submit();
+    page.form
+      .fields(0)
+      .input('foo.example.com')
+      .change();
+    page.form.submit();
 
-  andThen(() => {
     assert.equal(page.lastMessage, 'The urls config for this backend has been updated.');
   });
 });

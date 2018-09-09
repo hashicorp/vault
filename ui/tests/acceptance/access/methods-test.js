@@ -1,16 +1,17 @@
-import { test } from 'qunit';
-import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import { currentRouteName } from '@ember/test-helpers';
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/access/methods';
 
-moduleForAcceptance('Acceptance | /access/', {
-  beforeEach() {
-    return authLogin();
-  },
-});
+module('Acceptance | /access/', function(hooks) {
+  setupApplicationTest(hooks);
 
-test('it navigates', function(assert) {
-  page.visit();
-  andThen(() => {
+  hooks.beforeEach(function() {
+    return authLogin();
+  });
+
+  test('it navigates', function(assert) {
+    page.visit();
     assert.ok(currentRouteName(), 'vault.cluster.access.methods', 'navigates to the correct route');
     assert.ok(page.navLinks(0).isActive, 'the first link is active');
     assert.equal(page.navLinks(0).text, 'Auth Methods');
