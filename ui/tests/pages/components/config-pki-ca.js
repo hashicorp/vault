@@ -39,13 +39,22 @@ export default {
 
   generateCA(commonName = 'PKI CA', type = 'root') {
     if (type === 'intermediate') {
-      return this.replaceCA().commonName(commonName).caType('intermediate').submit();
+      return this.replaceCA()
+        .commonName(commonName)
+        .caType('intermediate')
+        .submit();
     }
-    return this.replaceCA().commonName(commonName).submit();
+    return this.replaceCA()
+      .commonName(commonName)
+      .submit();
   },
 
   uploadCA(pem) {
-    return this.replaceCA().uploadCert().enterCertAsText().pemBundle(pem).submit();
+    return this.replaceCA()
+      .uploadCert()
+      .enterCertAsText()
+      .pemBundle(pem)
+      .submit();
   },
 
   signIntermediate(commonName) {

@@ -14,10 +14,17 @@ export default create({
   hasCert: isPresent('[data-test-row-value="Certificate"]'),
   fillInField: fillable('[data-test-field]'),
   issueCert(commonName) {
-    return this.commonName(commonName).toggleOptions().fillInField('unit', 'h').submit();
+    return this.commonName(commonName)
+      .toggleOptions()
+      .fillInField('unit', 'h')
+      .submit();
   },
 
   sign(commonName, csr) {
-    return this.csr(csr).commonName(commonName).toggleOptions().fillInField('unit', 'h').submit();
+    return this.csr(csr)
+      .commonName(commonName)
+      .toggleOptions()
+      .fillInField('unit', 'h')
+      .submit();
   },
 });

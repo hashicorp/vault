@@ -1,33 +1,36 @@
-import { moduleForComponent, test } from 'ember-qunit';
+import { module, test } from 'qunit';
+import { setupRenderingTest } from 'ember-qunit';
+import { render, click, findAll, fillIn, blur } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-moduleForComponent('mount-filter-config-list', 'Integration | Component | mount filter config list', {
-  integration: true,
-});
+module('Integration | Component | mount filter config list', function(hooks) {
+  setupRenderingTest(hooks);
 
-test('it renders', function(assert) {
-  this.set('config', { mode: 'whitelist', paths: [] });
-  this.set('mounts', [{ path: 'userpass/', type: 'userpass', accessor: 'userpass' }]);
-  this.render(hbs`{{mount-filter-config-list config=config mounts=mounts}}`);
+  test('it renders', async function(assert) {
+    this.set('config', { mode: 'whitelist', paths: [] });
+    this.set('mounts', [{ path: 'userpass/', type: 'userpass', accessor: 'userpass' }]);
+    await render(hbs`{{mount-filter-config-list config=config mounts=mounts}}`);
 
-  assert.equal(this.$('#filter-userpass').length, 1);
-});
+    assert.equal(findAll('#filter-userpass').length, 1);
+  });
 
-test('it sets config.paths', function(assert) {
-  this.set('config', { mode: 'whitelist', paths: [] });
-  this.set('mounts', [{ path: 'userpass/', type: 'userpass', accessor: 'userpass' }]);
-  this.render(hbs`{{mount-filter-config-list config=config mounts=mounts}}`);
+  test('it sets config.paths', async function(assert) {
+    this.set('config', { mode: 'whitelist', paths: [] });
+    this.set('mounts', [{ path: 'userpass/', type: 'userpass', accessor: 'userpass' }]);
+    await render(hbs`{{mount-filter-config-list config=config mounts=mounts}}`);
 
-  this.$('#filter-userpass').click();
-  assert.ok(this.get('config.paths').includes('userpass/'), 'adds to paths');
+    await click('#filter-userpass');
+    assert.ok(this.get('config.paths').includes('userpass/'), 'adds to paths');
 
-  this.$('#filter-userpass').click();
-  assert.equal(this.get('config.paths').length, 0, 'removes from paths');
-});
+    await click('#filter-userpass');
+    assert.equal(this.get('config.paths').length, 0, 'removes from paths');
+  });
 
-test('it sets config.mode', function(assert) {
-  this.set('config', { mode: 'whitelist', paths: [] });
-  this.render(hbs`{{mount-filter-config-list config=config}}`);
-  this.$('#filter-mode').val('blacklist').change();
-  assert.equal(this.get('config.mode'), 'blacklist');
+  test('it sets config.mode', async function(assert) {
+    this.set('config', { mode: 'whitelist', paths: [] });
+    await render(hbs`{{mount-filter-config-list config=config}}`);
+    await fillIn('#filter-mode', 'blacklist');
+    await blur('#filter-mode');
+    assert.equal(this.get('config.mode'), 'blacklist');
+  });
 });
