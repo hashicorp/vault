@@ -12,7 +12,6 @@ export default Component.extend({
   store: service(),
   wizard: service(),
   flashMessages: service(),
-  routing: service('-routing'),
 
   /*
    * @param Function
@@ -21,8 +20,8 @@ export default Component.extend({
    * Optional param to call a function upon successfully mounting a backend
    *
    */
-  onMountSuccess: () => {},
-  onConfigError: () => {},
+  onMountSuccess() {},
+  onConfigError() {},
   /*
    * @param String
    * @public
@@ -82,8 +81,7 @@ export default Component.extend({
       return;
     }
     let configRef = mount.hasMany('authConfigs').value();
-    if (!configRef) return;
-    let currentConfig = configRef.get('firstObject');
+    let currentConfig = configRef && configRef.get('firstObject');
     if (currentConfig) {
       // rollbackAttributes here will remove the the config model from the store
       // because `isNew` will be true
@@ -136,12 +134,13 @@ export default Component.extend({
   },
   saveConfig: task(function*(mountModel) {
     const configRef = mountModel.hasMany('authConfigs').value();
+    const { type, path } = mountModel.getProperties('type', 'path');
     if (!configRef) {
       this.advanceWizard();
+      yield this.get('onMountSuccess')(type, path);
       return;
     }
     const config = configRef.get('firstObject');
-    const { type, path } = mountModel.getProperties('type', 'path');
     try {
       if (config && Object.keys(config.changedAttributes()).length) {
         yield config.save();

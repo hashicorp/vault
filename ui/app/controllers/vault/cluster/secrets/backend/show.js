@@ -2,6 +2,7 @@ import Controller, { inject as controller } from '@ember/controller';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 
 export default Controller.extend(BackendCrumbMixin, {
+  backendController: controller('vault.cluster.secrets.backend'),
   queryParams: ['tab'],
   tab: '',
   reset() {

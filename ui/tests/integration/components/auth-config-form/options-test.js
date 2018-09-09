@@ -14,7 +14,9 @@ const component = create(authConfigForm);
 moduleForComponent('auth-config-form/options', 'Integration | Component | auth-config-form options', {
   integration: true,
   beforeEach() {
-    getOwner(this).lookup('service:flash-messages').registerTypes(['success']);
+    getOwner(this)
+      .lookup('service:flash-messages')
+      .registerTypes(['success']);
     component.setContext(this);
   },
 
@@ -38,7 +40,7 @@ test('it submits data correctly', function(assert) {
   this.set('model', model);
   this.render(hbs`{{auth-config-form/options model=model}}`);
   component.save();
-  wait().then(() => {
+  return wait().then(() => {
     assert.ok(model.config.serialize.calledOnce);
   });
 });
