@@ -10,18 +10,14 @@ import { setupApplicationTest } from 'ember-qunit';
 import secretList from 'vault/tests/pages/secrets/backend/list';
 import secretEdit from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import Ember from 'ember';
-
-let adapterException;
+import authPage from 'vault/tests/pages/auth';
+import logout from 'vault/tests/pages/logout';
 
 module('Acceptance | leases', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
-    adapterException = Ember.Test.adapter.exception;
-    Ember.Test.adapter.exception = () => null;
-
-    authLogin();
+  hooks.beforeEach(async function() {
+    await authPage.login();
     this.enginePath = `kv-for-lease-${new Date().getTime()}`;
     // need a version 1 mount for leased secrets here
     return mountSecrets
@@ -33,18 +29,17 @@ module('Acceptance | leases', function(hooks) {
   });
 
   hooks.afterEach(function() {
-    Ember.Test.adapter.exception = adapterException;
-    return authLogout();
+    return logout.visit();
   });
 
-  const createSecret = (context, isRenewable) => {
+  const createSecret = async (context, isRenewable) => {
     context.name = `secret-${new Date().getTime()}`;
-    secretList.visitRoot({ backend: context.enginePath });
-    secretList.create();
+    await secretList.visitRoot({ backend: context.enginePath });
+    await secretList.create();
     if (isRenewable) {
-      secretEdit.createSecret(context.name, 'ttl', '30h');
+      await secretEdit.createSecret(context.name, 'ttl', '30h');
     } else {
-      secretEdit.createSecret(context.name, 'foo', 'bar');
+      await secreTEdit.createSecret(context.name, 'foo', 'bar');
     }
   };
 

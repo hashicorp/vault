@@ -1,6 +1,8 @@
 import { click, fillIn, findAll, currentURL, find, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import authPage from 'vault/tests/pages/auth';
+import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 
 const disableReplication = async (type, assert) => {
   // disable performance replication
@@ -28,7 +30,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    authLogin();
+    return authPage.login();
     disableReplication('dr');
     return disableReplication('performance');
   });
@@ -52,7 +54,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
 
     await click('[data-test-replication-enable]');
-    pollCluster();
+    await pollCluster(this.owner);
 
     // add a secondary with a mount filter config
     await click('[data-test-replication-link="secondaries"]');
@@ -68,7 +70,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
       .trim();
     await click('[data-test-secondary-add]');
 
-    pollCluster();
+    await pollCluster(this.owner);
 
     // click into the added secondary's mount filter config
     await click('[data-test-replication-link="secondaries"]');
@@ -151,13 +153,13 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
 
     await click('[data-test-replication-enable]');
-    pollCluster();
+    await pollCluster(this.owner);
 
     // enable dr replication
     await visit('/vault/replication/dr');
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
     await click('[data-test-replication-enable]');
-    pollCluster();
+    await pollCluster(this.owner);
     await visit('/vault/replication/dr/manage');
     assert.ok(findAll('[data-test-demote-warning]').length, 'displays the demotion warning');
 

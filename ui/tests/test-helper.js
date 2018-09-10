@@ -3,7 +3,7 @@ import config from '../config/environment';
 import { setApplication } from '@ember/test-helpers';
 import { start } from 'ember-qunit';
 
-import login from './helpers/auth-login';
+import './helpers/auth-login';
 //import logout from './helpers/auth-logout';
 //import enableSecret from './helpers/mount-secret-backend';
 //import pollCluster from './helpers/poll-cluster';
