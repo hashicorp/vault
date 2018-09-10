@@ -241,7 +241,8 @@ type Telemetry struct {
 	// PrometheusRetentionTime is the retention time for prometheus metrics if greater than 0.
 	// A value of 0 disable Prometheus support.
 	// Default: 0
-	PrometheusRetentionTime time.Duration `hcl:"prometheus_retention_time"`
+	PrometheusRetentionTime    time.Duration `hcl:-`
+	PrometheusRetentionTimeRaw interface{}   `hcl:"prometheus_retention_time"`
 }
 
 func (s *Telemetry) GoString() string {
@@ -825,5 +826,13 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 	if err := hcl.DecodeObject(&result.Telemetry, item.Val); err != nil {
 		return multierror.Prefix(err, "telemetry:")
 	}
+
+	if result.Telemetry.PrometheusRetentionTimeRaw != nil {
+		var err error
+		if result.Telemetry.PrometheusRetentionTime, err = parseutil.ParseDurationSecond(result.Telemetry.PrometheusRetentionTimeRaw); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
