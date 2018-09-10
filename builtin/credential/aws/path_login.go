@@ -89,7 +89,7 @@ when using iam auth_type.`,
 This must match the request body included in the signature.`,
 			},
 			"iam_request_headers": {
-				Type: framework.TypeString,
+				Type: framework.TypeHeader,
 				Description: `Base64-encoded JSON representation of the request headers when auth_type is
 iam. This must at a minimum include the headers over
 which AWS has included a signature.`,
@@ -1149,16 +1149,9 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	}
 	body := string(bodyRaw)
 
-	headersB64 := data.Get("iam_request_headers").(string)
-	if headersB64 == "" {
+	header := data.Get("iam_request_headers").(http.Header)
+	if len(header) == 0 {
 		return logical.ErrorResponse("missing iam_request_headers"), nil
-	}
-	headers, err := parseIamRequestHeaders(headersB64)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Error parsing iam_request_headers: %v", err)), nil
-	}
-	if headers == nil {
-		return logical.ErrorResponse("nil response when parsing iam_request_headers"), nil
 	}
 
 	config, err := b.lockedClientConfigEntry(ctx, req.Storage)
@@ -1170,7 +1163,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 	if config != nil {
 		if config.IAMServerIdHeaderValue != "" {
-			err = validateVaultHeaderValue(headers, parsedUrl, config.IAMServerIdHeaderValue)
+			err = validateVaultHeaderValue(header, parsedUrl, config.IAMServerIdHeaderValue)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %v", iamServerIdHeader, err)), nil
 			}
@@ -1180,7 +1173,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		}
 	}
 
-	callerID, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, headers)
+	callerID, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, header)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %v", err)), nil
 	}
@@ -1536,6 +1529,7 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
+
 	response, err := client.Do(request)
 	if err != nil {
 		return nil, errwrap.Wrapf("error making request: {{err}}", err)

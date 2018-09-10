@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/vault/logical"
-	"github.com/y0ssar1an/q"
 )
 
 func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
@@ -299,7 +299,11 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 
 	stsRequestValid, _ := stsService.GetCallerIdentityRequest(stsInputParams)
 	stsRequestValid.HTTPRequest.Header.Add(iamServerIdHeader, testVaultHeaderValue)
-	stsRequestValid.HTTPRequest.Header.Add("Authorization", "AWS4-HMAC-SHA256 Date=2018-09-07, Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7")
+	stsRequestValid.HTTPRequest.Header.Add("Authorization", fmt.Sprintf("%s,%s,%s,%s",
+		"AWS4-HMAC-SHA256 Date=2018-09-07",
+		"Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request",
+		"SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id",
+		"Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"))
 	stsRequestValid.Sign()
 
 	loginData, err := buildCallerIdentityLoginData(stsRequestValid.HTTPRequest, testValidRoleName)
@@ -307,18 +311,93 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	q.Q("loginData=", loginData)
+	// base 64 encoded representation of valid headers, read from dummy data and
+	// extracted for re-use. It's the value from the "Default" test case that's
+	// built by buildCallerIdentityLoginData above
+	headersBase64Encoded := `eyJBdXRob3JpemF0aW9uIjpbIkFXUzQtSE1BQy1TSEEyNTYgQ3Jl
+ZGVudGlhbD1BS0lBSlBRNDY2QUlJUVc0TFBTUS8yMDE4MDkxMC91cy1lYXN0LTEvc3RzL2F3czRfcmVx
+dWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1k
+YXRlO3gtdmF1bHQtYXdzLWlhbS1zZXJ2ZXItaWQsIFNpZ25hdHVyZT0xZDQ2YWRiMGQxODFhODVlMDRh
+YjAyODFjZjI5OTQ1MTljM2E0ZGIzZGQ4MTVmM2RiZDNiNDBhMjM0OGYyODc1Il0sIkNvbnRlbnQtTGVu
+Z3RoIjpbIjQzIl0sIkNvbnRlbnQtVHlwZSI6WyJhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29k
+ZWQ7IGNoYXJzZXQ9dXRmLTgiXSwiVXNlci1BZ2VudCI6WyJhd3Mtc2RrLWdvLzEuMTQuMjQgKGdvMS4x
+MTsgZGFyd2luOyBhbWQ2NCkiXSwiWC1BbXotRGF0ZSI6WyIyMDE4MDkxMFQyMDA5MzNaIl0sIlgtVmF1
+bHQtQXdzLUlhbS1TZXJ2ZXItSWQiOlsiVmF1bHRBY2NlcHRhbmNlVGVzdGluZyJdfQ==`
 
-	loginRequest := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "login",
-		Storage:   storage,
-		Data:      loginData,
+	testCases := []struct {
+		Header    interface{}
+		Name      string
+		ExpectErr error
+	}{
+		{
+			Name: "Default - using internal mocks",
+		},
+		{
+			Name: "Test error - invalid headers",
+			Header: map[string]interface{}{
+				"something":                 "else",
+				"X-Vault-AWS-IAM-Server-ID": testVaultHeaderValue,
+			},
+			ExpectErr: errors.New("error validating X-Vault-AWS-IAM-Server-ID header: missing Authorization header"),
+		},
+		{
+			Name:   "Headers - base64 string",
+			Header: headersBase64Encoded,
+		},
+		{
+			Name: "Individual headers - correct",
+			Header: map[string]interface{}{
+				"Content-Length":            "43",
+				"Content-Type":              "application/x-www-form-urlencoded; charset=utf-8",
+				"User-Agent":                "aws-sdk-go/1.14.24 (go1.11; darwin; amd64)",
+				"X-Amz-Date":                "20180910T203328Z",
+				"X-Vault-Aws-Iam-Server-Id": "VaultAcceptanceTesting",
+				"Authorization":             "AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180910/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=cdef5819b2e97f1ff0f3e898fd2621aa03af00a4ec3e019122c20e5482534bf4",
+			},
+		},
+		{
+			Name: "Individual headers - missing Vault header",
+			Header: map[string]interface{}{
+				"Content-Length": "43",
+				"Content-Type":   "application/x-www-form-urlencoded; charset=utf-8",
+				"User-Agent":     "aws-sdk-go/1.14.24 (go1.11; darwin; amd64)",
+				"X-Amz-Date":     "20180910T203328Z",
+				"Authorization":  "AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180910/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=cdef5819b2e97f1ff0f3e898fd2621aa03af00a4ec3e019122c20e5482534bf4",
+			},
+			ExpectErr: errors.New("error validating X-Vault-AWS-IAM-Server-ID header: missing header \"X-Vault-AWS-IAM-Server-ID\""),
+		},
+		{
+			Name: "Individual headers - JSON string",
+			Header: `{
+				"Content-Length":"43",
+				"Content-Type":"application/x-www-form-urlencoded; charset=utf-8",
+				"User-Agent":"aws-sdk-go/1.14.24 (go1.11; darwin; amd64)",
+				"X-Amz-Date":"20180910T203328Z",
+				"X-Vault-Aws-Iam-Server-Id": "VaultAcceptanceTesting",
+				"Authorization":"AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180910/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=cdef5819b2e97f1ff0f3e898fd2621aa03af00a4ec3e019122c20e5482534bf4"}`,
+		},
 	}
 
-	resp, err := b.HandleRequest(context.Background(), loginRequest)
-	if err != nil || resp == nil || resp.IsError() {
-		t.Errorf("bad: expected failed login due to invalid role: resp:%#v\nerr:%v", resp, err)
-	}
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			if tc.Header != nil {
+				loginData["iam_request_headers"] = tc.Header
+			}
 
+			loginRequest := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "login",
+				Storage:   storage,
+				Data:      loginData,
+			}
+
+			resp, err := b.HandleRequest(context.Background(), loginRequest)
+			if err != nil || resp == nil || resp.IsError() {
+				if tc.ExpectErr != nil && tc.ExpectErr.Error() == resp.Error().Error() {
+					return
+				}
+				t.Errorf("bad: expected failed login due to invalid role:\nresp: %#v\n\nerr: %v", resp, err)
+			}
+		})
+	}
 }
