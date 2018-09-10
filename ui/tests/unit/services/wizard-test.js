@@ -1,8 +1,19 @@
+import Ember from 'ember';
+import sinon from 'sinon';
 import { moduleFor, test } from 'ember-qunit';
 import { STORAGE_KEYS, DEFAULTS } from 'vault/helpers/wizard-constants';
 
+let routerStub = Ember.Service.extend({
+  transitionTo: sinon.stub(),
+  urlFor: sinon.stub().returns('/ui/vault/foo'),
+  followRedirects: sinon.stub().returns(true),
+});
+
 moduleFor('service:wizard', 'Unit | Service | wizard', {
-  beforeEach() {},
+  beforeEach() {
+    this.register('service:router', routerStub);
+    this.inject.service('router', { as: 'router' });
+  },
   afterEach() {},
 });
 
@@ -155,14 +166,14 @@ let testCases = [
       props: [{ prop: 'featureState', value: 'idle' }, { prop: 'currentMachine', value: 'secrets' }],
     },
   },
-  // {
-  //   method: 'saveFeatures',
-  //   args: [['secrets', 'tools']],
-  //   expectedResults: {
-  //     props: [{prop: 'featureList', value: ['secrets', 'tools']}],
-  //     storage: [{ key: STORAGE_KEYS.FEATURE_LIST, value: ['secrets', 'tools'] }]
-  //   }
-  // }
+  {
+    method: 'saveFeatures',
+    args: [['secrets', 'tools']],
+    expectedResults: {
+      props: [{ prop: 'featureList', value: ['secrets', 'tools'] }],
+      storage: [{ key: STORAGE_KEYS.FEATURE_LIST, value: ['secrets', 'tools'] }],
+    },
+  },
 ];
 
 testCases.forEach(testCase => {
