@@ -1,6 +1,8 @@
 import { findAll, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import authPage from 'vault/tests/pages/auth';
+import logout from 'vault/tests/pages/logout';
 import Ember from 'ember';
 
 let adapterException;
@@ -14,13 +16,13 @@ module('Acceptance | not-found', function(hooks) {
     adapterException = Ember.Test.adapter.exception;
     Ember.Test.adapter.exception = () => {};
     Ember.Logger.error = () => {};
-    return authLogin();
+    return authPage.login();
   });
 
   hooks.afterEach(function() {
     Ember.Test.adapter.exception = adapterException;
     Ember.Logger.error = loggerError;
-    return authLogout();
+    return logout.visit();
   });
 
   test('top-level not-found', async function(assert) {

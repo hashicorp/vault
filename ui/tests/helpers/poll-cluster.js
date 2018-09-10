@@ -1,7 +1,7 @@
 import { run } from '@ember/runloop';
 import { registerAsyncHelper } from '@ember/test';
 
-export function poll(owner) {
+export function pollCluster(owner) {
   const clusterRoute = owner.lookup('route:vault/cluster');
   return run(() => {
     return clusterRoute.controller.model.reload();

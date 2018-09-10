@@ -7,26 +7,27 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
+import authPage from 'vault/tests/pages/auth';
 
 module('Acceptance | secrets/secret/create', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
     this.server = apiStub({ usePassthrough: true });
-    return authLogin();
+    return authPage.login();
   });
 
   hooks.afterEach(function() {
     this.server.shutdown();
   });
 
-  test('it creates a secret and redirects', function(assert) {
+  test('it creates a secret and redirects', async function(assert) {
     const path = `kv-path-${new Date().getTime()}`;
-    listPage.visitRoot({ backend: 'secret' });
+    await listPage.visitRoot({ backend: 'secret' });
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
 
-    listPage.create();
-    editPage.createSecret(path, 'foo', 'bar');
+    await listPage.create();
+    await editPage.createSecret(path, 'foo', 'bar');
     let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
     assert.equal(
       JSON.parse(capabilitiesReq.requestBody).paths,
@@ -37,20 +38,20 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
-  test('version 1 performs the correct capabilities lookup', function(assert) {
+  test('version 1 performs the correct capabilities lookup', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
     let secretPath = 'foo/bar';
     // mount version 1 engine
-    mountSecrets.visit();
-    mountSecrets
+    await mountSecrets.visit();
+    await mountSecrets
       .selectType('kv')
       .next()
       .path(enginePath)
       .version(1)
       .submit();
 
-    listPage.create();
-    editPage.createSecret(secretPath, 'foo', 'bar');
+    await listPage.create();
+    await editPage.createSecret(secretPath, 'foo', 'bar');
     let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
     assert.equal(
       JSON.parse(capabilitiesReq.requestBody).paths,
@@ -59,12 +60,12 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     );
   });
 
-  test('it redirects to the path ending in / for list pages', function(assert) {
+  test('it redirects to the path ending in / for list pages', async function(assert) {
     const path = `foo/bar/kv-path-${new Date().getTime()}`;
-    listPage.visitRoot({ backend: 'secret' });
-    listPage.create();
-    editPage.createSecret(path, 'foo', 'bar');
-    listPage.visit({ backend: 'secret', id: 'foo/bar' });
+    await listPage.visitRoot({ backend: 'secret' });
+    await listPage.create();
+    await editPage.createSecret(path, 'foo', 'bar');
+    await listPage.visit({ backend: 'secret', id: 'foo/bar' });
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
     assert.ok(currentURL().endsWith('/'), 'redirects to the path ending in a slash');
   });
