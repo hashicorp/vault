@@ -19,6 +19,7 @@ func handleSysMetrics(inm *metrics.InmemSink, prometheusRetention time.Duration)
 				if prometheusRetention.Nanoseconds() == 0 {
 					res.WriteHeader(500)
 					res.Write([]byte("prometheus support is not enabled"))
+					return
 				}
 
 				handlerOptions := promhttp.HandlerOpts{
