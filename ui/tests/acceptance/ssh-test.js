@@ -1,16 +1,19 @@
 import { click, fillIn, findAll, currentURL, find } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import authPage from 'vault/tests/pages/auth';
+import logout from 'vault/tests/pages/logout';
+import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | ssh secret backend', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    return authLogin();
+    return authPage.login();
   });
 
   hooks.afterEach(function() {
-    return authLogout();
+    return logout.visit();
   });
 
   const PUB_KEY = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCn9p5dHNr4aU4R2W7ln+efzO5N2Cdv/SXk6zbCcvhWcblWMjkXf802B0PbKvf6cJIzM/Xalb3qz1cK+UUjCSEAQWefk6YmfzbOikfc5EHaSKUqDdE+HlsGPvl42rjCr28qYfuYh031YfwEQGEAIEypo7OyAj+38NLbHAQxDxuaReee1YCOV5rqWGtEgl2VtP5kG+QEBza4ZfeglS85f/GGTvZC4Jq1GX+wgmFxIPnd6/mUXa4ecoR0QMfOAzzvPm4ajcNCQORfHLQKAcmiBYMiyQJoU+fYpi9CJGT1jWTmR99yBkrSg6yitI2qqXyrpwAbhNGrM0Fw0WpWxh66N9Xp meirish@Macintosh-3.local`;
@@ -64,7 +67,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
     const now = new Date().getTime();
     const sshPath = `ssh-${now}`;
 
-    mountSupportedSecretBackend(assert, 'ssh', sshPath);
+    await enablePage.visit().mount('ssh', sshPath);
     await click('[data-test-secret-backend-configure]');
     assert.equal(currentURL(), `/vault/settings/secrets/configure/${sshPath}`);
     assert.ok(findAll('[data-test-ssh-configure-form]').length, 'renders the empty configuration form');

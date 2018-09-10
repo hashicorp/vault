@@ -2,16 +2,19 @@ import { click, fillIn, find, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { encodeString } from 'vault/utils/b64';
+import authPage from 'vault/tests/pages/auth';
+import logout from 'vault/tests/pages/logout';
+import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | transit', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    return authLogin();
+    return authPage.login();
   });
 
   hooks.afterEach(function() {
-    return authLogout();
+    return logout.visit();
   });
 
   let generateTransitKeys = () => {
@@ -231,12 +234,12 @@ module('Acceptance | transit', function(hooks) {
       }
     });
   };
-  test('transit backend', function(assert) {
+  test('transit backend', async function(assert) {
     assert.expect(49);
     const now = new Date().getTime();
     const transitPath = `transit-${now}`;
 
-    mountSupportedSecretBackend(assert, 'transit', transitPath);
+    await enablePage.visit().mount('transit', transitPath);
 
     // create a bunch of different kinds of keys
     const transitKeys = generateTransitKeys();

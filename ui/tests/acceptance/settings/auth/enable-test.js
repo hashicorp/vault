@@ -3,21 +3,22 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/auth/enable';
 import listPage from 'vault/tests/pages/access/methods';
+import authPage from 'vault/tests/pages/auth';
 
 module('Acceptance | settings/auth/enable', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    return authLogin();
+    return authPage.login();
   });
 
-  test('it mounts and redirects', function(assert) {
+  test('it mounts and redirects', async function(assert) {
     // always force the new mount to the top of the list
     const path = `approle-${new Date().getTime()}`;
     const type = 'approle';
-    page.visit();
+    await page.visit();
     assert.equal(currentRouteName(), 'vault.cluster.settings.auth.enable');
-    page.form.mount(type, path);
+    await page.form.mount(type, path);
     assert.equal(
       page.flash.latestMessage,
       `Successfully mounted ${type} auth method at ${path}.`,

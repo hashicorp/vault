@@ -2,23 +2,23 @@ import { currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section';
+import authPage from 'vault/tests/pages/auth';
+import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | settings/configure/secrets/pki/tidy', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    return authLogin();
+    return authPage.login();
   });
 
-  test('it saves tidy config', function(assert) {
+  test('it saves tidy config', async function(assert) {
     const path = `pki-${new Date().getTime()}`;
-    mountSupportedSecretBackend(assert, 'pki', path);
-    page.visit({ backend: path, section: 'tidy' });
+    await enablePage.visit().mount('pki', path);
+    await page.visit({ backend: path, section: 'tidy' });
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
-    page.form.fields();
-
-    page.form.fields(0).clickLabel();
-    page.form.submit();
+    await page.form.fields(0).clickLabel();
+    await page.form.submit();
 
     assert.equal(page.lastMessage, 'The tidy config for this backend has been updated.');
   });

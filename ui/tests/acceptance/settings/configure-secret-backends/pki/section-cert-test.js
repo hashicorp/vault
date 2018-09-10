@@ -2,12 +2,14 @@ import { currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
+import authPage from 'vault/tests/pages/auth';
+import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | settings/configure/secrets/pki/cert', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    return authLogin();
+    return authPage.login();
   });
 
   const PEM_BUNDLE = `-----BEGIN CERTIFICATE-----
@@ -57,59 +59,59 @@ module('Acceptance | settings/configure/secrets/pki/cert', function(hooks) {
   BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
   -----END RSA PRIVATE KEY-----`;
 
-  const mountAndNav = (assert, prefix) => {
+  const mountAndNav = async (assert, prefix) => {
     const path = `${prefix}pki-${new Date().getTime()}`;
-    mountSupportedSecretBackend(assert, 'pki', path);
-    page.visit({ backend: path });
+    await enablePage.visit().mount('pki', path);
+    await page.visit({ backend: path });
     return path;
   };
 
-  test('cert config: generate', function(assert) {
+  test('cert config: generate', async function(assert) {
     mountAndNav(assert);
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
 
-    page.form.generateCA();
+    await page.form.generateCA();
     assert.ok(page.form.rows().count > 0, 'shows all of the rows');
     assert.ok(page.form.certificateIsPresent, 'the certificate is included');
 
-    page.form.back();
-    page.form.generateCA();
+    await page.form.back();
+    await page.form.generateCA();
     assert.ok(
       page.flash.latestMessage.includes('You tried to generate a new root CA'),
       'shows warning message'
     );
   });
 
-  test('cert config: upload', function(assert) {
+  test('cert config: upload', async function(assert) {
     mountAndNav(assert);
     assert.equal(page.form.downloadLinks().count, 0, 'there are no download links');
 
-    page.form.uploadCA(PEM_BUNDLE);
+    await page.form.uploadCA(PEM_BUNDLE);
     assert.ok(
       page.flash.latestMessage.startsWith('The certificate for this backend has been updated'),
       'flash message displays properly'
     );
   });
 
-  test('cert config: sign intermediate and set signed intermediate', function(assert) {
+  test('cert config: sign intermediate and set signed intermediate', async function(assert) {
     let csrVal, intermediateCert;
     const rootPath = mountAndNav(assert, 'root-');
-    page.form.generateCA();
+    await page.form.generateCA();
 
     const intermediatePath = mountAndNav(assert, 'intermediate-');
-    page.form.generateCA('Intermediate CA', 'intermediate');
+    await page.form.generateCA('Intermediate CA', 'intermediate');
     // cache csr
     csrVal = page.form.csr;
-    page.form.back();
+    await page.form.back();
 
-    page.visit({ backend: rootPath });
-    page.form.signIntermediate('Intermediate CA');
-    page.form.csrField(csrVal).submit();
+    await page.visit({ backend: rootPath });
+    await page.form.signIntermediate('Intermediate CA');
+    await page.form.csrField(csrVal).submit();
     intermediateCert = page.form.certificate;
-    page.form.back();
-    page.visit({ backend: intermediatePath });
+    await page.form.back();
+    await page.visit({ backend: intermediatePath });
 
-    page.form
+    await page.form
       .setSignedIntermediateBtn()
       .signedIntermediate(intermediateCert)
       .submit();
