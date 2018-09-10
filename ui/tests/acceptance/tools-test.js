@@ -3,16 +3,18 @@ import Pretender from 'pretender';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
+import authPage from 'vault/tests/pages/auth';
+import logout from 'vault/tests/pages/logout';
 
 module('Acceptance | tools', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    return authLogin();
+    return authPage.login();
   });
 
   hooks.afterEach(function() {
-    return authLogout();
+    return logout.visit();
   });
 
   const DATA_TO_WRAP = JSON.stringify({ tools: 'tests' });

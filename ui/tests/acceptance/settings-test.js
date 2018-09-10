@@ -3,16 +3,18 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import backendListPage from 'vault/tests/pages/secrets/backends';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
+import authPage from 'vault/tests/pages/auth';
+import logout from 'vault/tests/pages/logout';
 
 module('Acceptance | settings', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    return authLogin();
+    return authPage.login();
   });
 
   hooks.afterEach(function() {
-    return authLogout();
+    return logout.visit();
   });
 
   test('settings', async function(assert) {
@@ -24,7 +26,7 @@ module('Acceptance | settings', function(hooks) {
     await visit('/vault/settings/mount-secret-backend');
     assert.equal(currentURL(), '/vault/settings/mount-secret-backend');
 
-    mountSecrets
+    await mountSecrets
       .selectType(type)
       .next()
       .path(path)
@@ -38,8 +40,8 @@ module('Acceptance | settings', function(hooks) {
       `Successfully mounted '${type}' at '${path}'!`
     );
     let row = backendListPage.rows().findByPath(path);
-    row.menu();
-    backendListPage.configLink();
+    await row.menu();
+    await backendListPage.configLink();
     assert.ok(currentURL(), '/vault/secrets/${path}/configuration', 'navigates to the config page');
   });
 });
