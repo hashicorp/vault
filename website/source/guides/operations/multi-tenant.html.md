@@ -390,7 +390,7 @@ $ curl --header "X-Vault-Token: ..." \
        --header "X-Vault-Namespace: education" \
        --request PUT \
        --data @edu-payload.json \
-       https://vault.rocks/v1/sys/policies/acl/edu-admin
+       https://127.0.0.1:8200/v1/sys/policies/acl/edu-admin
 
 # Create a request payload
 $ tee training-payload.json <<EOF
@@ -404,7 +404,7 @@ EOF
 $ curl --header "X-Vault-Token: ..." \
        --request PUT \
        --data @training-payload.json \
-       https://vault.rocks/v1/education/training/sys/policies/acl/training-admin
+       https://127.0.0.1:8200/v1/education/training/sys/policies/acl/training-admin
 ```
 
 
