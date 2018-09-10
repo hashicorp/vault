@@ -54,44 +54,36 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
   let itemID;
   let aliasID;
   if (itemType === 'groups') {
-    createItemPage.createItem(itemType, 'external');
+    await createItemPage.createItem(itemType, 'external');
   } else {
-    createItemPage.createItem(itemType);
+    await createItemPage.createItem(itemType);
   }
-  andThen(() => {
-    let idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
-    itemID = idRow.rowValue;
-    page.visit({ item_type: itemType, id: itemID });
-  });
-  page.editForm.name(name).submit();
-  andThen(() => {
-    let idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
-    aliasID = idRow.rowValue;
-  });
-  aliasShowPage.edit();
+  let idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
+  itemID = idRow.rowValue;
+  await page.visit({ item_type: itemType, id: itemID });
+  await page.editForm.name(name).submit();
+  let idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
+  aliasID = idRow.rowValue;
+  await aliasShowPage.edit();
 
-  andThen(() => {
-    assert.equal(
-      currentRouteName(),
-      'vault.cluster.access.identity.aliases.edit',
-      `${itemType}: navigates to edit on create`
-    );
-  });
-  page.editForm.delete().confirmDelete();
-  andThen(() => {
-    assert.equal(
-      currentRouteName(),
-      'vault.cluster.access.identity.aliases.index',
-      `${itemType}: navigates to list page on delete`
-    );
-    assert.equal(
-      aliasIndexPage.items.filterBy('id', aliasID).length,
-      0,
-      `${itemType}: the row does not show in the list`
-    );
-    aliasIndexPage.flashMessage.latestMessage.startsWith(
-      'Successfully deleted',
-      `${itemType}: shows flash message`
-    );
-  });
+  assert.equal(
+    currentRouteName(),
+    'vault.cluster.access.identity.aliases.edit',
+    `${itemType}: navigates to edit on create`
+  );
+  await page.editForm.delete().confirmDelete();
+  assert.equal(
+    currentRouteName(),
+    'vault.cluster.access.identity.aliases.index',
+    `${itemType}: navigates to list page on delete`
+  );
+  assert.equal(
+    aliasIndexPage.items.filterBy('id', aliasID).length,
+    0,
+    `${itemType}: the row does not show in the list`
+  );
+  aliasIndexPage.flashMessage.latestMessage.startsWith(
+    'Successfully deleted',
+    `${itemType}: shows flash message`
+  );
 };
