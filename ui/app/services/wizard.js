@@ -127,6 +127,7 @@ export default Service.extend(DEFAULTS, {
   },
 
   executeActions(actions, event, machineType) {
+    debugger;
     let transitionURL;
     let expectedRouteName;
     let router = this.get('router');
