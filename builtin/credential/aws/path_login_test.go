@@ -1,13 +1,20 @@
 package awsauth
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/hashicorp/vault/logical"
+	"github.com/y0ssar1an/q"
 )
 
 func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
@@ -207,4 +214,111 @@ func TestBackend_pathLogin_parseIamRequestHeaders(t *testing.T) {
 	if err != nil {
 		t.Errorf("error parsing mixed-style headers: %v", err)
 	}
+}
+
+func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
+	storage := &logical.InmemStorage{}
+	config := logical.TestBackendConfig()
+	config.StorageView = storage
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// configure client
+
+	const testVaultHeaderValue = "VaultAcceptanceTesting"
+	const testValidRoleName = "valid-role"
+
+	responseFromUser := `<GetCallerIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <GetCallerIdentityResult>
+    <Arn>arn:aws:iam::123456789012:user/valid-role</Arn>
+    <UserId>ASOMETHINGSOMETHINGSOMETHING</UserId>
+    <Account>123456789012</Account>
+  </GetCallerIdentityResult>
+  <ResponseMetadata>
+    <RequestId>7f4fc40c-853a-11e6-8848-8d035d01eb87</RequestId>
+  </ResponseMetadata>
+</GetCallerIdentityResponse>`
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, responseFromUser)
+	}))
+	defer ts.Close()
+
+	clientConfigData := map[string]interface{}{
+		"iam_server_id_header_value": testVaultHeaderValue,
+		"endpoint":                   ts.URL,
+		"iam_endpoint":               ts.URL,
+		"sts_endpoint":               ts.URL,
+	}
+	clientRequest := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/client",
+		Storage:   storage,
+		Data:      clientConfigData,
+	}
+	_, err = b.HandleRequest(context.Background(), clientRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a role entry
+	// mutex here may not be needed, but was copied from another code example
+	b.roleMutex.Lock()
+	roleEntry, err := b.nonLockedAWSRole(context.Background(), storage, testValidRoleName)
+	if err != nil {
+		t.Fatalf("failed to get entry: %s", err)
+	}
+	b.roleMutex.Unlock()
+
+	if roleEntry == nil {
+		roleEntry = &awsRoleEntry{
+			Version: currentRoleStorageVersion,
+		}
+	}
+	roleEntry.AuthType = iamAuthType
+
+	if err := b.nonLockedSetAWSRole(context.Background(), storage, testValidRoleName, roleEntry); err != nil {
+		t.Fatalf("failed to set entry: %s", err)
+	}
+
+	awsSession, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	stsService := sts.New(awsSession)
+	stsInputParams := &sts.GetCallerIdentityInput{}
+
+	stsRequestValid, _ := stsService.GetCallerIdentityRequest(stsInputParams)
+	stsRequestValid.HTTPRequest.Header.Add(iamServerIdHeader, testVaultHeaderValue)
+	stsRequestValid.HTTPRequest.Header.Add("Authorization", "AWS4-HMAC-SHA256 Date=2018-09-07, Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7")
+	stsRequestValid.Sign()
+
+	loginData, err := buildCallerIdentityLoginData(stsRequestValid.HTTPRequest, testValidRoleName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	q.Q("loginData=", loginData)
+
+	loginRequest := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "login",
+		Storage:   storage,
+		Data:      loginData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), loginRequest)
+	if err != nil || resp == nil || resp.IsError() {
+		t.Errorf("bad: expected failed login due to invalid role: resp:%#v\nerr:%v", resp, err)
+	}
+
 }
