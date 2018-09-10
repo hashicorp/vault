@@ -1,12 +1,14 @@
 import { click, fillIn, findAll, currentURL, find } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import authPage from 'vault/tests/pages/auth';
+import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | aws secret backend', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    return authLogin();
+    return authPage.login();
   });
 
   hooks.afterEach(function() {
@@ -28,7 +30,7 @@ module('Acceptance | aws secret backend', function(hooks) {
     const path = `aws-${now}`;
     const roleName = 'awsrole';
 
-    mountSupportedSecretBackend(assert, 'aws', path);
+    await enablePage.visit().mount('aws', path);
     await click('[data-test-secret-backend-configure]');
     assert.equal(currentURL(), `/vault/settings/secrets/configure/${path}`);
     assert.ok(findAll('[data-test-aws-root-creds-form]').length, 'renders the empty root creds form');

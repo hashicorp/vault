@@ -8,6 +8,8 @@ import console from 'vault/tests/pages/components/console/ui-panel';
 import authForm from 'vault/tests/pages/components/auth-form';
 import controlGroup from 'vault/tests/pages/components/control-group';
 import controlGroupSuccess from 'vault/tests/pages/components/control-group-success';
+import authPage from 'vault/tests/pages/auth';
+import logout from 'vault/tests/pages/logout';
 
 const consoleComponent = create(console);
 const authFormComponent = create(authForm);
@@ -18,11 +20,11 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    return authLogin();
+    return authPage.login();
   });
 
   hooks.afterEach(function() {
-    return authLogout();
+    return logout.visit();
   });
 
   const POLICY = `'
@@ -55,8 +57,8 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
   const setupControlGroup = async context => {
     let userpassAccessor;
     await visit('/vault/secrets');
-    consoleComponent.toggle();
-    consoleComponent.runCommands([
+    await consoleComponent.toggle();
+    await consoleComponent.runCommands([
       //enable kv mount and write some data
       'write sys/mounts/kv type=kv',
       'write kv/foo bar=baz',
@@ -71,12 +73,12 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
       'read -field=accessor sys/internal/ui/mounts/auth/userpass',
     ]);
     userpassAccessor = consoleComponent.lastTextOutput;
-    consoleComponent.runCommands([
+    await consoleComponent.runCommands([
       // lookup entity id for our authorizer
       `write -field=id identity/lookup/entity name=${ADMIN_USER}`,
     ]);
     let authorizerEntityId = consoleComponent.lastTextOutput;
-    consoleComponent.runCommands([
+    await consoleComponent.runCommands([
       // create alias for authorizor and add them to the managers group
       `write identity/alias mount_accessor=${userpassAccessor} entity_id=${authorizerEntityId} name=${ADMIN_USER}`,
       `write identity/group name=managers member_entity_ids=${authorizerEntityId} policies=authorizer`,
@@ -84,12 +86,12 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
       'write -field=client_token auth/token/create policies=kv-control-group',
     ]);
     context.userToken = consoleComponent.lastLogOutput;
-    authLogout();
-    authLogin(context.userToken);
+    await logout.visit();
+    await authPage.login(context.userToken);
   };
 
   test('it redirects you if you try to navigate to a Control Group restricted path', async function(assert) {
-    setupControlGroup(this);
+    await setupControlGroup(this);
     await visit('/vault/secrets/kv/show/foo');
     assert.equal(
       currentPath(),
@@ -102,27 +104,27 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     let controlGroupToken;
     let accessor;
     let url = '/vault/secrets/kv/show/foo';
-    setupControlGroup(context);
+    await setupControlGroup(context);
 
     // as the requestor, go to the URL that's blocked by the control group
     // and store the values
     await visit(url);
     accessor = controlGroupComponent.accessor;
     controlGroupToken = controlGroupComponent.token;
-    authLogout();
+    await logout.visit();
 
     // log in as the admin, navigate to the accessor page,
     // and authorize the control group request
     await visit('/vault/auth?with=userpass');
-    authFormComponent.username(ADMIN_USER);
-    authFormComponent.password(ADMIN_PASSWORD);
-    authFormComponent.login();
+    await authFormComponent.username(ADMIN_USER);
+    await authFormComponent.password(ADMIN_PASSWORD);
+    await authFormComponent.login();
     await visit(`/vault/access/control-groups/${accessor}`);
-    controlGroupComponent.authorize();
+    await controlGroupComponent.authorize();
     assert.equal(controlGroupComponent.bannerPrefix, 'Thanks!', 'text display changes');
-    authLogout();
+    await logout.visit();
 
-    authLogin(context.userToken);
+    await authPage.login(context.userToken);
 
     if (shouldStoreToken) {
       localStorage.setItem(
@@ -138,12 +140,12 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
       );
       await visit(`/vault/access/control-groups/${accessor}`);
       assert.ok(controlGroupSuccessComponent.showsNavigateMessage, 'shows user the navigate message');
-      controlGroupSuccessComponent.navigate();
+      await controlGroupSuccessComponent.navigate();
       assert.equal(currentURL(), url, 'successfully loads the target url');
     } else {
       await visit(`/vault/access/control-groups/${accessor}`);
-      controlGroupSuccessComponent.token(controlGroupToken);
-      controlGroupSuccessComponent.unwrap();
+      await controlGroupSuccessComponent.token(controlGroupToken);
+      await controlGroupSuccessComponent.unwrap();
       assert.ok(controlGroupSuccessComponent.showsJsonViewer, 'shows the json viewer');
     }
   };
@@ -156,10 +158,10 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     workflow(assert, this);
   });
 
-  test('it displays the warning in the console when making a request to a Control Group path', function(assert) {
-    setupControlGroup(this);
-    consoleComponent.toggle();
-    consoleComponent.runCommands('read kv/foo');
+  test('it displays the warning in the console when making a request to a Control Group path', async function(assert) {
+    await setupControlGroup(this);
+    await consoleComponent.toggle();
+    await consoleComponent.runCommands('read kv/foo');
     let output = consoleComponent.lastLogOutput;
     assert.ok(output.includes('A Control Group was encountered at kv/foo'));
     assert.ok(output.includes('The Control Group Token is'));

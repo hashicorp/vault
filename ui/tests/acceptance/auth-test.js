@@ -5,6 +5,7 @@ import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import authForm from '../pages/components/auth-form';
 import { create } from 'ember-cli-page-object';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
+import authPage from 'vault/tests/pages/auth';
 
 const component = create(authForm);
 
@@ -13,7 +14,7 @@ module('Acceptance | auth', function(hooks) {
 
   hooks.beforeEach(function() {
     this.server = apiStub({ usePassthrough: true });
-    return authLogout();
+    return authPage.login();
   });
 
   hooks.afterEach(function() {
@@ -53,7 +54,7 @@ module('Acceptance | auth', function(hooks) {
       if (backend.type === 'github') {
         component.token('token');
       }
-      component.login();
+      await component.login();
       let lastRequest = this.server.passthroughRequests[this.server.passthroughRequests.length - 1];
       let body = JSON.parse(lastRequest.requestBody);
       if (backend.type === 'token') {
