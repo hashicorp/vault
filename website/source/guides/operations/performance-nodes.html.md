@@ -11,7 +11,7 @@ description: |-
 
 # Performance Standby Nodes
 
-~> **Enterprise Only:** Performance Standby Nodes feature is a part of _Vault Enterprise Premium_.
+~> **Enterprise Only:** Performance Standby Nodes feature is a part of _Vault Enterprise_.
 
 In [Vault High Availability](/guides/operations/vault-ha-consul.html) guide, it
 was explained that only one Vault server will be _active_ in a cluster and
@@ -20,14 +20,13 @@ _standby_ nodes and simply forward requests to the _active_ node.
 
 ![HA Architecture](/assets/images/vault-ha-consul-3.png)
 
-If you are running **_Vault Enterprise_ 0.11** or later, those standby
-nodes can handle most read-only requests and behave as read-replica.  
+If you are running **_Vault Enterprise_ 0.11** or later, those standby nodes can
+handle most read-only requests (encryption/decryption of data using [transit](/docs/secrets/transit/index.html)
+keys, GET requests of key/value secrets) and behave as read-replica. This can
+provide considerable improvements in throughput for traffic of this type,
+resulting in aggregate performance increase linearly correlated to the number of
+Performance Standby nodes deployed in a cluster.
 
-~> This Performance Standby Nodes feature is included in ***Vault Enterprise
-Premium***, and also available for ***Vault Enterprise Pro*** with additional fee.
-
-This is particularly useful for processing high volume [_Encryption as a
-Service_](/docs/secrets/transit/index.html) requests.
 
 ## Reference Materials
 
@@ -66,13 +65,14 @@ Enterprise license.
 Consider the following scenario:
 
 - A cluster contains **five** Vault servers
-- Vault Enterprise license allows **two** performance standby nodes
+- Your Vault Enterprise license allows **two** performance standby nodes
 
 ![Cluster Architecture](/assets/images/vault-perf-standby.png)
 
 In this scenario, the performance standby nodes running on VM 8 and VM 9 can
 process read-only requests. However, the _standby_ nodes running on VM 6 and VM
 10 simply forward all requests to the active node running on VM 7.
+
 
 > **NOTE:** The selection of performance standby node is determined by the
 active node. When a node is selected, it gets  promoted to become a performance
