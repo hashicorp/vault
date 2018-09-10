@@ -2,12 +2,13 @@ import { click, fillIn, findAll, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/policies/index';
+import authPage from 'vault/tests/pages/auth';
 
 module('Acceptance | policies (old)', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    return authLogin();
+    return authPage.login();
   });
 
   test('policies', async function(assert) {
@@ -16,7 +17,7 @@ module('Acceptance | policies (old)', function(hooks) {
     const policyName = `Policy test ${now}`;
     const policyLower = policyName.toLowerCase();
 
-    page.visit({ type: 'acl' });
+    await page.visit({ type: 'acl' });
     // new policy creation
     await click('[data-test-policy-create-link]');
     await fillIn('[data-test-policy-input="name"]', policyName);
@@ -53,7 +54,7 @@ module('Acceptance | policies (old)', function(hooks) {
     const policyString = 'path "*" { capabilities = ["update"]}';
     const policyName = `${now}-symbol,.`;
 
-    page.visit({ type: 'acl' });
+    await page.visit({ type: 'acl' });
     // new policy creation
     await click('[data-test-policy-create-link]');
     await fillIn('[data-test-policy-input="name"]', policyName);
