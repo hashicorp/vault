@@ -147,6 +147,22 @@ let testCases = [
       props: [{ prop: 'currentState', value: 'login' }],
     },
   },
+  {
+    method: 'startFeature',
+    args: [],
+    properties: { featureList: ['secrets', 'tools'] },
+    expectedResults: {
+      props: [{ prop: 'featureState', value: 'idle' }, { prop: 'currentMachine', value: 'secrets' }],
+    },
+  },
+  // {
+  //   method: 'saveFeatures',
+  //   args: [['secrets', 'tools']],
+  //   expectedResults: {
+  //     props: [{prop: 'featureList', value: ['secrets', 'tools']}],
+  //     storage: [{ key: STORAGE_KEYS.FEATURE_LIST, value: ['secrets', 'tools'] }]
+  //   }
+  // }
 ];
 
 testCases.forEach(testCase => {
