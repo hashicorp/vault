@@ -15,19 +15,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-// base 64 encoded representation of valid headers, read from dummy data and
-// extracted for re-use. It's the value from the "Default" test case that's
-// built by buildCallerIdentityLoginData above
-const headersBase64Encoded = `eyJBdXRob3JpemF0aW9uIjpbIkFXUzQtSE1BQy1TSEEyNTYgQ3Jl
-ZGVudGlhbD1BS0lBSlBRNDY2QUlJUVc0TFBTUS8yMDE4MDkxMC91cy1lYXN0LTEvc3RzL2F3czRfcmVx
-dWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1k
-YXRlO3gtdmF1bHQtYXdzLWlhbS1zZXJ2ZXItaWQsIFNpZ25hdHVyZT0xZDQ2YWRiMGQxODFhODVlMDRh
-YjAyODFjZjI5OTQ1MTljM2E0ZGIzZGQ4MTVmM2RiZDNiNDBhMjM0OGYyODc1Il0sIkNvbnRlbnQtTGVu
-Z3RoIjpbIjQzIl0sIkNvbnRlbnQtVHlwZSI6WyJhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29k
-ZWQ7IGNoYXJzZXQ9dXRmLTgiXSwiVXNlci1BZ2VudCI6WyJhd3Mtc2RrLWdvLzEuMTQuMjQgKGdvMS4x
-MTsgZGFyd2luOyBhbWQ2NCkiXSwiWC1BbXotRGF0ZSI6WyIyMDE4MDkxMFQyMDA5MzNaIl0sIlgtVmF1
-bHQtQXdzLUlhbS1TZXJ2ZXItSWQiOlsiVmF1bHRBY2NlcHRhbmNlVGVzdGluZyJdfQ==`
-
 func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
 	responseFromUser := `<GetCallerIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
   <GetCallerIdentityResult>
@@ -298,8 +285,16 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 			ExpectErr: parsingErr,
 		},
 		{
-			Name:   "Base64-complete",
-			Header: headersBase64Encoded,
+			Name: "Base64-complete",
+			Header: `eyJBdXRob3JpemF0aW9uIjpbIkFXUzQtSE1BQy1TSEEyNTYgQ3Jl
+ZGVudGlhbD1BS0lBSlBRNDY2QUlJUVc0TFBTUS8yMDE4MDkxMC91cy1lYXN0LTEvc3RzL2F3czRfcmVx
+dWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1k
+YXRlO3gtdmF1bHQtYXdzLWlhbS1zZXJ2ZXItaWQsIFNpZ25hdHVyZT0xZDQ2YWRiMGQxODFhODVlMDRh
+YjAyODFjZjI5OTQ1MTljM2E0ZGIzZGQ4MTVmM2RiZDNiNDBhMjM0OGYyODc1Il0sIkNvbnRlbnQtTGVu
+Z3RoIjpbIjQzIl0sIkNvbnRlbnQtVHlwZSI6WyJhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29k
+ZWQ7IGNoYXJzZXQ9dXRmLTgiXSwiVXNlci1BZ2VudCI6WyJhd3Mtc2RrLWdvLzEuMTQuMjQgKGdvMS4x
+MTsgZGFyd2luOyBhbWQ2NCkiXSwiWC1BbXotRGF0ZSI6WyIyMDE4MDkxMFQyMDA5MzNaIl0sIlgtVmF1
+bHQtQXdzLUlhbS1TZXJ2ZXItSWQiOlsiVmF1bHRBY2NlcHRhbmNlVGVzdGluZyJdfQ==`,
 		},
 		{
 			Name: "Base64-incomplete-missing-header",
