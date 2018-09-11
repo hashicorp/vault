@@ -218,15 +218,6 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 					}
 				}
 
-				// Update MemDB with new group alias information
-				if group.Alias != nil {
-					err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
-					if err != nil {
-						i.logger.Error("failed to update group alias in MemDB", "error", err)
-						return
-					}
-				}
-
 				// Only update MemDB and don't touch the storage
 				err = i.UpsertGroupInTxn(txn, group, false)
 				if err != nil {

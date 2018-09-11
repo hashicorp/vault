@@ -1,12 +1,12 @@
 ---
 layout: "docs"
-page_title: "JWT/OIDC - Auth Methods"
+page_title: "JWT - Auth Methods"
 sidebar_current: "docs-auth-jwt"
 description: |-
-  The JWT/OIDC auth method allows authentication using JWTs and OIDC.
+  The JWT auth method allows authentication using JWTs, with support for OIDC Discovery for key fetching
 ---
 
-# JWT/OIDC Auth Method
+# JWT Auth Method
 
 The `jwt` auth method can be used to authenticate with Vault using a JWT. This
 JWT can be cryptographically verified using locally-provided keys, or, if

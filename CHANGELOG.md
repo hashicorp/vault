@@ -1,4 +1,10 @@
-## 0.11.1 (September 5th, 2018)
+## 0.11.2 (Unreleased)
+
+BUG FIXES:
+
+ * agent: Fix auth handler-based wrapping of output tokens [GH-5316]
+
+## 0.11.1 (September 6th, 2018)
 
 SECURITY:
 
@@ -26,10 +32,14 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * core: Ensure we use a background context when stepping down [GH-5290]
  * core: Properly check error return from random byte reading [GH-5277]
  * core: Re-add `sys/` top-route injection for now [GH-5241]
  * core: Properly store the replication checkpoint file if it's larger than the
    storage engine's per-item limit
+ * core: Policies stored in minified JSON would return an error [GH-5229]
+ * core: Evaluate templated policies in capabilities check [GH-5250]
+ * identity: Update MemDB with identity group alias while loading groups [GH-5289]
  * secrets/database: Fix nil pointer when revoking some leases [GH-5262]
  * secrets/pki: Fix sign-verbatim losing extra Subject attributes [GH-5245]
  * secrets/pki: Remove certificates from store when tidying revoked

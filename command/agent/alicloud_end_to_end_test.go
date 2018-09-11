@@ -91,9 +91,9 @@ func TestAliCloudEndToEnd(t *testing.T) {
 		Logger:    logger.Named("auth.alicloud"),
 		MountPath: "auth/alicloud",
 		Config: map[string]interface{}{
-			"role":                    "test",
-			"region":                  "us-west-1",
-			"cred_check_freq_seconds": 1,
+			"role":                     "test",
+			"region":                   "us-west-1",
+			"credential_poll_interval": 1,
 		},
 	})
 	if err != nil {
