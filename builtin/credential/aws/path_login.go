@@ -1147,8 +1147,8 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	}
 	body := string(bodyRaw)
 
-	header := data.Get("iam_request_headers").(http.Header)
-	if len(header) == 0 {
+	headers := data.Get("iam_request_headers").(http.Header)
+	if len(headers) == 0 {
 		return logical.ErrorResponse("missing iam_request_headers"), nil
 	}
 
@@ -1161,7 +1161,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 	if config != nil {
 		if config.IAMServerIdHeaderValue != "" {
-			err = validateVaultHeaderValue(header, parsedUrl, config.IAMServerIdHeaderValue)
+			err = validateVaultHeaderValue(headers, parsedUrl, config.IAMServerIdHeaderValue)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %v", iamServerIdHeader, err)), nil
 			}
@@ -1171,7 +1171,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		}
 	}
 
-	callerID, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, header)
+	callerID, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, headers)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %v", err)), nil
 	}
