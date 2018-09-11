@@ -5,14 +5,12 @@ import (
 	"crypto/subtle"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
 	"encoding/pem"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -1482,41 +1480,6 @@ func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse,
 	result := GetCallerIdentityResponse{}
 	err := decoder.Decode(&result)
 	return result, err
-}
-
-func parseIamRequestHeaders(headersB64 string) (http.Header, error) {
-	headersJson, err := base64.StdEncoding.DecodeString(headersB64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to base64 decode iam_request_headers")
-	}
-	var headersDecoded map[string]interface{}
-	err = jsonutil.DecodeJSON(headersJson, &headersDecoded)
-	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to JSON decode iam_request_headers %q: {{err}}", headersJson), err)
-	}
-	headers := make(http.Header)
-	for k, v := range headersDecoded {
-		switch typedValue := v.(type) {
-		case string:
-			headers.Add(k, typedValue)
-		case json.Number:
-			headers.Add(k, typedValue.String())
-		case []interface{}:
-			for _, individualVal := range typedValue {
-				switch possibleStrVal := individualVal.(type) {
-				case string:
-					headers.Add(k, possibleStrVal)
-				case json.Number:
-					headers.Add(k, possibleStrVal.String())
-				default:
-					return nil, fmt.Errorf("header %q contains value %q that has type %s, not string", k, individualVal, reflect.TypeOf(individualVal))
-				}
-			}
-		default:
-			return nil, fmt.Errorf("header %q value %q has type %s, not string or []interface", k, typedValue, reflect.TypeOf(v))
-		}
-	}
-	return headers, nil
 }
 
 func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (*GetCallerIdentityResult, error) {
