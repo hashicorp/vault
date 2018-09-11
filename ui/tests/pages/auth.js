@@ -5,13 +5,13 @@ export default create({
   visit: visitable('/vault/auth'),
   submit: clickable('[data-test-auth-submit]'),
   tokenInput: fillable('[data-test-token]'),
-  flashes: collection({
-    itemScope: '[data-test-flash-message-body]',
+  flashes: collection('[data-test-flash-message-body]', {
     click: clickable(),
   }),
-  clickLast() {
-    const count = this.flashes().count;
-    return this.flashes(count - 1).click();
+  clickLast: async function() {
+    const count = this.flashes.length;
+    let last = this.flashes.objectAt(count - 1);
+    return count && last.click();
   },
   login: async function(token) {
     this.visit({ with: 'token' })

@@ -16,7 +16,7 @@ module('Acceptance | console', function(hooks) {
     numEngines = enginesPage.rows().count;
     await enginesPage.consoleToggle();
     let now = Date.now();
-    [1, 2, 3].forEach(async function() {
+    [1, 2, 3].forEach(async num => {
       let inputString = `write sys/mounts/${now + num} type=kv`;
       await enginesPage.console.consoleInput(inputString);
       await enginesPage.console.enter();

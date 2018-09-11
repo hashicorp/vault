@@ -39,7 +39,7 @@ module('Acceptance | leases', function(hooks) {
     if (isRenewable) {
       await secretEdit.createSecret(context.name, 'ttl', '30h');
     } else {
-      await secreTEdit.createSecret(context.name, 'foo', 'bar');
+      await secretEdit.createSecret(context.name, 'foo', 'bar');
     }
   };
 

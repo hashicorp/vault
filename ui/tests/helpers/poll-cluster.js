@@ -9,5 +9,5 @@ export function pollCluster(owner) {
 }
 
 registerAsyncHelper('pollCluster', function(app) {
-  poll(app.__container__);
+  pollCluster(app.__container__);
 });
