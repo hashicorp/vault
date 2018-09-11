@@ -10,13 +10,13 @@ module('Acceptance | /access/identity/entities/aliases/add', function(hooks) {
     return authPage.login();
   });
 
-  test('it allows create, list, delete of an entity alias', function(assert) {
+  test('it allows create, list, delete of an entity alias', async function(assert) {
     let name = `alias-${Date.now()}`;
-    testAliasCRUD(name, 'entities', assert);
+    await testAliasCRUD(name, 'entities', assert);
   });
 
-  test('it allows delete from the edit form', function(assert) {
+  test('it allows delete from the edit form', async function(assert) {
     let name = `alias-${Date.now()}`;
-    testAliasDeleteFromForm(name, 'entities', assert);
+    await testAliasDeleteFromForm(name, 'entities', assert);
   });
 });
