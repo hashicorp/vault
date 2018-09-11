@@ -23,9 +23,9 @@ Vault will use the AWS SDK's normal credential chain behavior, which means it
 will use the first valid credentials it finds in the following order:
 
 1. A static credential configuration
-2. Env variables
+2. Environment variables
 3. A file containing credentials
-4. From any identity services available in its physical environment like container env variables or role-based instance metadata
+4. From any identity services available in its physical environment like container environment variables or role-based instance metadata
  
 Wherever possible, we recommend using identity services (method 4) for credentials. 
 These rotate regularly and require no effort on your part to provision, making 
@@ -50,6 +50,5 @@ parameters unset in your configuration.
 
 - `session_token` `(string: optional)` - The session token to use for authentication, if needed.
 
-- `header_value` `(string: optional)` - If configured in Vault, the value to.
-  use for
+- `header_value` `(string: optional)` - If configured in Vault, the value to use for
   [`iam_server_id_header_value`](https://www.vaultproject.io/api/auth/aws/index.html#iam_server_id_header_value).
