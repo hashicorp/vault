@@ -31,8 +31,7 @@ Nodes** feature is included in _Vault Enterprise Premium_, and also available
 for _Vault Enterprise Pro_ with additional fee. This is particularly useful for
 processing high volume Encryption as a Service ([Transit secrets
 engine](/docs/secrets/transit/index.html)) requests. Read [Performance Standby
-Nodes](/docs/enterprise/performance-standby/index.html) documentation for more
-details.
+Nodes](/docs/enterprise/performance-standby/index.html) documentation and a [guide](/guides/operations/performance-nodes.html) for more details.
 
 
 ~> This guide will walk you through a simple Vault Highly Available (HA) cluster
