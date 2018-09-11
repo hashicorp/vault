@@ -15,13 +15,13 @@ method](https://www.vaultproject.io/docs/auth/alicloud.html).
 
 The Vault agent will use the first credential it can successfully obtain in the following order:
 
-1. [Env variables](https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/sdk/auth/credentials/providers/env.go)
+1. [Environment variables](https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/sdk/auth/credentials/providers/env.go)
 2. A static credential configuration
 3. Instance metadata (recommended)
 
 Wherever possible, we recommend using instance metadata for credentials. These rotate every hour
 and require no effort on your part to provision, making instance metadata the most secure of the three methods. If 
-using instance metadata _and_ a custom `cred_check_freq_seconds`, be sure the frequency is set for 
+using instance metadata _and_ a custom `credential_poll_interval`, be sure the frequency is set for 
 less than an hour, because instance metadata credentials expire every hour.
 
 Environment variables are given first precedence to provide the ability to quickly override your
@@ -35,7 +35,7 @@ configuration.
 
 - `region` `(string: required)` - The AliCloud region in which the Vault agent resides. Example: "us-west-1".
 
-- `cred_check_freq_seconds` `(integer: optional)` - In seconds, how frequently the Vault agent should check for new credentials.
+- `credential_poll_interval` `(integer: optional)` - In seconds, how frequently the Vault agent should check for new credentials.
 
 ### Optional Static Credential Configuration (Not Preferred)
 
