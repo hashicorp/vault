@@ -53,8 +53,9 @@ orchestrator](#trusted-orchestrator).
 ### Platform Integration
 
 In the **Platform Integration** model, Vault trusts the underlying platform
-(e.g. AWS, Azure, GCP) which assigns a token or cryptographic identity (such as
-IAM token, signed JWT) to virtual machine, container, or serverless function.
+(e.g. AliCloud, AWS, Azure, GCP) which assigns a token or cryptographic identity
+(such as IAM token, signed JWT) to virtual machine, container, or serverless
+function.
 
 Vault uses the provided identifier to verify the identity of the client by
 interacting with the underlying platform. After the client identity is verified,
@@ -92,6 +93,9 @@ can leverage the corresponding auth method to authenticate with Vault.
 - [Azure Auth Method](/docs/auth/azure.html)
 - [GCP Auth Method](/docs/auth/gcp.html)
 
+
+~> **NOTE:** See the [Vault Agent](#vault-agent) section to learn about the
+client daemon which automates the authentication process.
 
 ### Trusted Orchestrator
 
@@ -132,6 +136,37 @@ this model can be applied regardless of where the applications are running.
 - [Token Auth Method](/docs/auth/token.html)
   - [Cubbyhole Response Wrapping](/guides/secret-mgmt/cubbyhole.html)
 
+
+### Vault Agent
+
+Vault agent allows the implementation of the [platform integration](#platform-integration)
+pattern easier and faster.
+
+For those [supported auth methods](/docs/agent/autoauth/methods/index.html),
+Vault agent can automate the authentication to Vault, and keep the acquired
+token renewed until the renewal is no longer allowed.
+
+![Vault Agent](/assets/images/vault-secure-intro-5.png)
+
+To leverage this feature, run the vault binary in agent mode (`vault agent
+-config=<config_file>`) on the client. The agent configuration file must specify
+the auth method and [sink](/docs/agent/autoauth/sinks/index.html) locations
+where the token to be written.
+
+When the agent is started, it will attempt to acquire a Vault token using the
+auth method specified in the agent configuration file.  On successful
+authentication, the resulting token is written to the sink locations.
+Optionally, this token can be response-wrapped or encrypted. Whenever the
+current token value changes, the agent writes to the sinks. If authentication
+fails, the agent waits for a while and then retry.
+
+The client can simply retrieve the token from the sink and connect to Vault
+using the token.
+
+**Reference Materials:**
+
+- [Vault Agent documentation](/docs/agent/index.html)
+- [Auto-Auth documentation](/docs/agent/autoauth/index.html)
 
 
 ## Next steps
