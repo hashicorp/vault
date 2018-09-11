@@ -369,6 +369,8 @@ func setupIAMTestServer() *httptest.Server {
 			key := strings.Split(s, "=")
 			parts[i] = key[0]
 		}
+
+		// verify the "Authorization" header contains all the expected parts
 		expectedAuthParts := []string{"AWS4-HMAC-SHA256 Credential", "SignedHeaders", "Signature"}
 		var matchingCount int
 		for _, v := range parts {
