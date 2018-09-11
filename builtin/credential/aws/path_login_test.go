@@ -203,44 +203,8 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// setup test server to intercept and respond to the IAM login path's
-	// invocation of submitCallerIdentityRequest (which does not use the AWS SDK),
-	// which receieves the mocked response responseFromUser containing user
-	// information matching the role.
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		responseString := `<GetCallerIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
-  <GetCallerIdentityResult>
-    <Arn>arn:aws:iam::123456789012:user/valid-role</Arn>
-    <UserId>ASOMETHINGSOMETHINGSOMETHING</UserId>
-    <Account>123456789012</Account>
-  </GetCallerIdentityResult>
-  <ResponseMetadata>
-    <RequestId>7f4fc40c-853a-11e6-8848-8d035d01eb87</RequestId>
-  </ResponseMetadata>
-</GetCallerIdentityResponse>`
-
-		auth := r.Header.Get("Authorization")
-		parts := strings.Split(auth, ",")
-		for i, s := range parts {
-			s = strings.TrimSpace(s)
-			key := strings.Split(s, "=")
-			parts[i] = key[0]
-		}
-		expectedAuthParts := []string{"AWS4-HMAC-SHA256 Credential", "SignedHeaders", "Signature"}
-		var matchingCount int
-		for _, v := range parts {
-			for _, z := range expectedAuthParts {
-				if z == v {
-					matchingCount++
-				}
-			}
-		}
-		if matchingCount != len(expectedAuthParts) {
-			responseString = "missing auth parts"
-		}
-		fmt.Fprintln(w, responseString)
-	}))
-
+	// sets up a test server to stand in for STS service
+	ts := setupIAMTestServer()
 	defer ts.Close()
 
 	clientConfigData := map[string]interface{}{
@@ -404,4 +368,44 @@ func defaultLoginData() (map[string]interface{}, error) {
 	stsRequestValid.Sign()
 
 	return buildCallerIdentityLoginData(stsRequestValid.HTTPRequest, testValidRoleName)
+}
+
+// setupIAMTestServer configures httptest server to intercept and respond to the
+// IAM login path's invocation of submitCallerIdentityRequest (which does not
+// use the AWS SDK), which receieves the mocked response responseFromUser
+// containing user information matching the role.
+func setupIAMTestServer() *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		responseString := `<GetCallerIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <GetCallerIdentityResult>
+    <Arn>arn:aws:iam::123456789012:user/valid-role</Arn>
+    <UserId>ASOMETHINGSOMETHINGSOMETHING</UserId>
+    <Account>123456789012</Account>
+  </GetCallerIdentityResult>
+  <ResponseMetadata>
+    <RequestId>7f4fc40c-853a-11e6-8848-8d035d01eb87</RequestId>
+  </ResponseMetadata>
+</GetCallerIdentityResponse>`
+
+		auth := r.Header.Get("Authorization")
+		parts := strings.Split(auth, ",")
+		for i, s := range parts {
+			s = strings.TrimSpace(s)
+			key := strings.Split(s, "=")
+			parts[i] = key[0]
+		}
+		expectedAuthParts := []string{"AWS4-HMAC-SHA256 Credential", "SignedHeaders", "Signature"}
+		var matchingCount int
+		for _, v := range parts {
+			for _, z := range expectedAuthParts {
+				if z == v {
+					matchingCount++
+				}
+			}
+		}
+		if matchingCount != len(expectedAuthParts) {
+			responseString = "missing auth parts"
+		}
+		fmt.Fprintln(w, responseString)
+	}))
 }
