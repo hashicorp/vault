@@ -30,7 +30,7 @@ will use the first valid credentials it finds in the following order:
 Wherever possible, we recommend using identity services (method 4) for credentials. 
 These rotate regularly and require no effort on your part to provision, making 
 identity services the most secure of the four methods. If using identity services _and_ a custom 
-`cred_check_freq_seconds`, be sure the frequency is set low enough to pick up new credentials
+`credential_poll_interval`, be sure the frequency is set low enough to pick up new credentials
 from the physical environment as they become available.
 
 To use identity services, choose the `iam` type and leave the `access_key`, `secret_key`, and `session_token` 
@@ -42,7 +42,7 @@ parameters unset in your configuration.
 
 - `role` `(string: required)` - The role to authenticate against on Vault.
 
-- `cred_check_freq_seconds` `(integer: optional)` - In seconds, how frequently the Vault agent should check for new credentials if using the iam type.
+- `credential_poll_interval` `(integer: optional)` - In seconds, how frequently the Vault agent should check for new credentials if using the iam type.
 
 - `access_key` `(string: optional)` - When using static credentials, the access key to use.
 

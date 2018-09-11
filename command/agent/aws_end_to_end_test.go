@@ -101,9 +101,9 @@ func TestAWSEndToEnd(t *testing.T) {
 		Logger:    logger.Named("auth.aws"),
 		MountPath: "auth/aws",
 		Config: map[string]interface{}{
-			"role":                    "test",
-			"type":                    "iam",
-			"cred_check_freq_seconds": 1,
+			"role": "test",
+			"type": "iam",
+			"credential_poll_interval": 1,
 		},
 	})
 	if err != nil {
