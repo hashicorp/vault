@@ -285,39 +285,17 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 			ExpectErr: parsingErr,
 		},
 		{
-			Name: "Base64-complete",
-			Header: `eyJBdXRob3JpemF0aW9uIjpbIkFXUzQtSE1BQy1TSEEyNTYgQ3Jl
-ZGVudGlhbD1BS0lBSlBRNDY2QUlJUVc0TFBTUS8yMDE4MDkxMC91cy1lYXN0LTEvc3RzL2F3czRfcmVx
-dWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1k
-YXRlO3gtdmF1bHQtYXdzLWlhbS1zZXJ2ZXItaWQsIFNpZ25hdHVyZT0xZDQ2YWRiMGQxODFhODVlMDRh
-YjAyODFjZjI5OTQ1MTljM2E0ZGIzZGQ4MTVmM2RiZDNiNDBhMjM0OGYyODc1Il0sIkNvbnRlbnQtTGVu
-Z3RoIjpbIjQzIl0sIkNvbnRlbnQtVHlwZSI6WyJhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29k
-ZWQ7IGNoYXJzZXQ9dXRmLTgiXSwiVXNlci1BZ2VudCI6WyJhd3Mtc2RrLWdvLzEuMTQuMjQgKGdvMS4x
-MTsgZGFyd2luOyBhbWQ2NCkiXSwiWC1BbXotRGF0ZSI6WyIyMDE4MDkxMFQyMDA5MzNaIl0sIlgtVmF1
-bHQtQXdzLUlhbS1TZXJ2ZXItSWQiOlsiVmF1bHRBY2NlcHRhbmNlVGVzdGluZyJdfQ==`,
+			Name:   "Base64-complete",
+			Header: base64Complete(),
 		},
 		{
-			Name: "Base64-incomplete-missing-header",
-			Header: `eyJBdXRob3JpemF0aW9uIjogWyJBV1M0LUhNQUMtU0hBMjU2IENyZWRlbnRpYWw9Q
-UtJQUpQUTQ2NkFJSVFXNExQU1EvMjAxODA5MDcvdXMtZWFzdC0xL3N0cy9hd3M0X3JlcXVlc3QsIFNpZ
-25lZEhlYWRlcnM9Y29udGVudC1sZW5ndGg7Y29udGVudC10eXBlO2hvc3Q7eC1hbXotZGF0ZTt4LXZhd
-Wx0LWF3cy1pYW0tc2VydmVyLWlkLCBTaWduYXR1cmU9OTcwODZiMDUzMTg1NDg0NDA5OWZjNTI3MzNmY
-TJjODhhMmJmYjU0YjI2ODk2MDBjNmUyNDkzNThhODM1M2I1MiJdLCJDb250ZW50LUxlbmd0aCI6IFsiN
-DMiXSwiQ29udGVudC1UeXBlIjogWyJhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29kZWQ7IGNoY
-XJzZXQ9dXRmLTgiXSwiVXNlci1BZ2VudCI6IFsiYXdzLXNkay1nby8xLjE0LjI0IChnbzEuMTE7IGRhc
-ndpbjsgYW1kNjQpIl0sIlgtQW16LURhdGUiOiBbIjIwMTgwOTA3VDIyMjE0NVoiXX0=`,
+			Name:      "Base64-incomplete-missing-header",
+			Header:    base64MissingVaultID(),
 			ExpectErr: missingHeaderErr,
 		},
 		{
-			Name: "Base64-incomplete-missing-auth-sig",
-			Header: `eyJBdXRob3JpemF0aW9uIjogWyJBV1M0LUhNQUMtU0hBMjU2IENyZWRlbnRpYWw9Q
-UtJQUpQUTQ2NkFJSVFXNExQU1EvMjAxODA5MDcvdXMtZWFzdC0xL3N0cy9hd3M0X3JlcXVlc3QsIFNpZ
-25lZEhlYWRlcnM9Y29udGVudC1sZW5ndGg7Y29udGVudC10eXBlO2hvc3Q7eC1hbXotZGF0ZTt4LXZhd
-Wx0LWF3cy1pYW0tc2VydmVyLWlkIl0sIkNvbnRlbnQtTGVuZ3RoIjogWyI0MyJdLCJDb250ZW50LVR5c
-GUiOiBbImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZDsgY2hhcnNldD11dGYtOCJdLCJVc
-2VyLUFnZW50IjogWyJhd3Mtc2RrLWdvLzEuMTQuMjQgKGdvMS4xMTsgZGFyd2luOyBhbWQ2NCkiXSwiW
-C1BbXotRGF0ZSI6IFsiMjAxODA5MDdUMjIyMTQ1WiJdLCJYLVZhdWx0LUF3cy1JYW0tU2VydmVyLUlkI
-jogWyJWYXVsdEFjY2VwdGFuY2VUZXN0aW5nIl19`,
+			Name:      "Base64-incomplete-missing-auth-sig",
+			Header:    base64MissingAuthField(),
 			ExpectErr: parsingErr,
 		},
 	}
@@ -370,6 +348,8 @@ func defaultLoginData() (map[string]interface{}, error) {
 // use the AWS SDK), which receieves the mocked response responseFromUser
 // containing user information matching the role.
 func setupIAMTestServer() *httptest.Server {
+	base64Complete()
+
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		responseString := `<GetCallerIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
   <GetCallerIdentityResult>
@@ -403,4 +383,17 @@ func setupIAMTestServer() *httptest.Server {
 		}
 		fmt.Fprintln(w, responseString)
 	}))
+}
+
+func base64Complete() string {
+	min := `{"Authorization":["AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180907/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=97086b0531854844099fc52733fa2c88a2bfb54b2689600c6e249358a8353b52"],"Content-Length":["43"],"Content-Type":["application/x-www-form-urlencoded; charset=utf-8"],"User-Agent":["aws-sdk-go/1.14.24 (go1.11; darwin; amd64)"],"X-Amz-Date":["20180907T222145Z"],"X-Vault-Aws-Iam-Server-Id":["VaultAcceptanceTesting"]}`
+	return min
+}
+func base64MissingVaultID() string {
+	min := `{"Authorization":["AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180907/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=97086b0531854844099fc52733fa2c88a2bfb54b2689600c6e249358a8353b52"],"Content-Length":["43"],"Content-Type":["application/x-www-form-urlencoded; charset=utf-8"],"User-Agent":["aws-sdk-go/1.14.24 (go1.11; darwin; amd64)"],"X-Amz-Date":["20180907T222145Z"]}`
+	return min
+}
+func base64MissingAuthField() string {
+	min := `{"Authorization":["AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180907/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id"],"Content-Length":["43"],"Content-Type":["application/x-www-form-urlencoded; charset=utf-8"],"User-Agent":["aws-sdk-go/1.14.24 (go1.11; darwin; amd64)"],"X-Amz-Date":["20180907T222145Z"],"X-Vault-Aws-Iam-Server-Id":["VaultAcceptanceTesting"]}`
+	return min
 }
