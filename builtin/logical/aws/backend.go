@@ -63,6 +63,8 @@ type backend struct {
 	// Mutex to protect access to iam/sts clients
 	clientMutex sync.RWMutex
 
+	// iamClient and stsClient hold configured iam and sts clients for reuse, and
+	// to enable mocking with AWS iface for tests
 	iamClient iamiface.IAMAPI
 	stsClient stsiface.STSAPI
 }
@@ -76,3 +78,43 @@ After mounting this backend, credentials to generate IAM keys must
 be configured with the "root" path and policies must be written using
 the "roles/" endpoints before any access keys can be generated.
 `
+
+// clientIAM returns the configured IAM client. If nil, it constructs a new one
+// and returns it, setting it the internal variable
+func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IAMAPI, error) {
+	b.clientMutex.RLock()
+	unlockFunc := b.clientMutex.RUnlock
+	defer func() { unlockFunc() }()
+	if b.iamClient == nil {
+		// Upgrade the lock for writing
+		b.clientMutex.RUnlock()
+		b.clientMutex.Lock()
+		unlockFunc = b.clientMutex.Unlock
+
+		iamClient, err := clientIAM(ctx, s)
+		if err != nil {
+			return nil, err
+		}
+		b.iamClient = iamClient
+	}
+	return b.iamClient, nil
+}
+
+func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsiface.STSAPI, error) {
+	b.clientMutex.RLock()
+	unlockFunc := b.clientMutex.RUnlock
+	defer func() { unlockFunc() }()
+	if b.stsClient == nil {
+		// Upgrade the lock for writing
+		b.clientMutex.RUnlock()
+		b.clientMutex.Lock()
+		unlockFunc = b.clientMutex.Unlock
+
+		stsClient, err := clientSTS(ctx, s)
+		if err != nil {
+			return nil, err
+		}
+		b.stsClient = stsClient
+	}
+	return b.stsClient, nil
+}

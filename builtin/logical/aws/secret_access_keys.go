@@ -69,25 +69,14 @@ func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
 
-	b.clientMutex.RLock()
-	unlockFunc := b.clientMutex.RUnlock
-	defer func() { unlockFunc() }()
-	if b.stsClient == nil {
-		// Upgrade the lock for writing
-		b.clientMutex.RUnlock()
-		b.clientMutex.Lock()
-		unlockFunc = b.clientMutex.Unlock
-
-		stsClient, err := clientSTS(ctx, s)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-		b.stsClient = stsClient
+	stsClient, err := b.clientSTS(ctx, s)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	username, usernameWarning := genUsername(displayName, policyName, "sts")
 
-	tokenResp, err := b.stsClient.GetFederationToken(
+	tokenResp, err := stsClient.GetFederationToken(
 		&sts.GetFederationTokenInput{
 			Name:            aws.String(username),
 			Policy:          aws.String(policy),
@@ -125,14 +114,10 @@ func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
-	b.clientMutex.Lock()
-	defer b.clientMutex.Unlock()
-	if b.stsClient == nil {
-		stsClient, err := clientSTS(ctx, s)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-		b.stsClient = stsClient
+
+	stsClient, err := b.clientSTS(ctx, s)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	username, usernameWarning := genUsername(displayName, roleName, "iam_user")
@@ -145,7 +130,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	if policy != "" {
 		assumeRoleInput.SetPolicy(policy)
 	}
-	tokenResp, err := b.stsClient.AssumeRole(assumeRoleInput)
+	tokenResp, err := stsClient.AssumeRole(assumeRoleInput)
 
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -180,20 +165,9 @@ func (b *backend) secretAccessKeysCreate(
 	s logical.Storage,
 	displayName, policyName string, role *awsRoleEntry) (*logical.Response, error) {
 
-	b.clientMutex.RLock()
-	unlockFunc := b.clientMutex.RUnlock
-	defer func() { unlockFunc() }()
-	if b.iamClient == nil {
-		// Upgrade the lock for writing
-		b.clientMutex.RUnlock()
-		b.clientMutex.Lock()
-		unlockFunc = b.clientMutex.Unlock
-
-		iamClient, err := clientIAM(ctx, s)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-		b.iamClient = iamClient
+	iamClient, err := b.clientIAM(ctx, s)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	username, usernameWarning := genUsername(displayName, policyName, "iam_user")
@@ -210,7 +184,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the user
-	_, err = b.iamClient.CreateUser(&iam.CreateUserInput{
+	_, err = iamClient.CreateUser(&iam.CreateUserInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {
@@ -220,7 +194,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	for _, arn := range role.PolicyArns {
 		// Attach existing policy against user
-		_, err = b.iamClient.AttachUserPolicy(&iam.AttachUserPolicyInput{
+		_, err = iamClient.AttachUserPolicy(&iam.AttachUserPolicyInput{
 			UserName:  aws.String(username),
 			PolicyArn: aws.String(arn),
 		})
@@ -232,7 +206,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 	if role.PolicyDocument != "" {
 		// Add new inline user policy against user
-		_, err = b.iamClient.PutUserPolicy(&iam.PutUserPolicyInput{
+		_, err = iamClient.PutUserPolicy(&iam.PutUserPolicyInput{
 			UserName:       aws.String(username),
 			PolicyName:     aws.String(policyName),
 			PolicyDocument: aws.String(role.PolicyDocument),
@@ -244,7 +218,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the keys
-	keyResp, err := b.iamClient.CreateAccessKey(&iam.CreateAccessKeyInput{
+	keyResp, err := iamClient.CreateAccessKey(&iam.CreateAccessKeyInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {
