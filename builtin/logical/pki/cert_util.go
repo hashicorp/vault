@@ -501,7 +501,7 @@ func parseOtherSANs(others []string) (map[string][]string, error) {
 		if len(splitType) != 2 {
 			return nil, fmt.Errorf("expected a colon in other SAN %q", other)
 		}
-		if strings.ToLower(splitType[0]) != "utf8" {
+		if !strings.EqualFold(splitType[0], "utf8") {
 			return nil, fmt.Errorf("only utf8 other SANs are supported; found non-supported type in other SAN %q", other)
 		}
 		result[splitOther[0]] = append(result[splitOther[0]], splitType[1])
