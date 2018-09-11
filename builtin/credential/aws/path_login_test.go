@@ -232,8 +232,8 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 	parsingErr := errors.New("error making upstream request: error parsing STS response")
 
 	testCases := []struct {
-		Header    interface{}
 		Name      string
+		Header    interface{}
 		ExpectErr error
 	}{
 		{
