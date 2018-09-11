@@ -38,8 +38,9 @@ Performance Standby nodes deployed in a cluster.
 
 ## Server Configuration
 
-Performance standby is enabled by default. If you wish to disable the
-performance standbys, you can do so by setting the
+Performance standby is enabled by default when the Vault Enterprise license
+includes this feature. If you wish to disable the performance standbys, you can
+do so by setting the
 [`disable_performance_standby`](/docs/configuration/index.html#vault-enterprise-parameters)
 flag to `true`.  This parameter is evaluated on the _active_ node.
 
