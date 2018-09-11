@@ -1,3 +1,9 @@
+## 0.11.2 (Unreleased)
+
+BUG FIXES:
+
+ * agent: Fix auth handler-based wrapping of output tokens [GH-5316]
+
 ## 0.11.1 (September 6th, 2018)
 
 SECURITY:
