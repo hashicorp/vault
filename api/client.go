@@ -15,6 +15,7 @@ import (
 	"time"
 	"unicode"
 
+	"encoding/json"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
@@ -38,6 +39,7 @@ const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
 const EnvVaultToken = "VAULT_TOKEN"
 const EnvVaultMFA = "VAULT_MFA"
 const EnvRateLimit = "VAULT_RATE_LIMIT"
+const EnvVaultHeaders = "VAULT_HEADERS"
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
@@ -377,6 +379,22 @@ func NewClient(c *Config) (*Client, error) {
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.token = token
+	}
+
+	if v := os.Getenv(EnvVaultHeaders); v != "" {
+		if client.headers == nil {
+			client.headers = make(http.Header)
+		}
+
+		var headers map[string]string
+
+		if err := json.Unmarshal([]byte(v), &headers); err != nil {
+			return nil, errwrap.Wrapf("couldn't unmarshal headers: {{err}}", err)
+		}
+
+		for k, v := range headers {
+			client.headers.Set(k, v)
+		}
 	}
 
 	return client, nil
