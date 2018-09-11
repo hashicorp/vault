@@ -21,11 +21,12 @@ _standby_ nodes and simply forward requests to the _active_ node.
 ![HA Architecture](/assets/images/vault-ha-consul-3.png)
 
 If you are running **_Vault Enterprise_ 0.11** or later, those standby nodes can
-handle most read-only requests (encryption/decryption of data using [transit](/docs/secrets/transit/index.html)
-keys, GET requests of key/value secrets) and behave as read-replica. This can
-provide considerable improvements in throughput for traffic of this type,
-resulting in aggregate performance increase linearly correlated to the number of
-Performance Standby nodes deployed in a cluster.
+handle most read-only requests. For example, performance standbys can handle
+encryption/decryption of data using [transit](/docs/secrets/transit/index.html)
+keys, GET requests of key/value secrets and other requests that do not change
+underlying storage. This can provide considerable improvements in throughput for
+traffic of this type, resulting in aggregate performance increase linearly
+correlated to the number of performance standby nodes deployed in a cluster.
 
 
 ## Reference Materials
@@ -38,11 +39,11 @@ Performance Standby nodes deployed in a cluster.
 
 ## Server Configuration
 
-Performance standby is enabled by default when the Vault Enterprise license
+Performance standbys are enabled by default when the Vault Enterprise license
 includes this feature. If you wish to disable the performance standbys, you can
 do so by setting the
 [`disable_performance_standby`](/docs/configuration/index.html#vault-enterprise-parameters)
-flag to `true`.  This parameter is evaluated on the _active_ node.
+flag to `true`.  
 
 Since any of the nodes in a cluster can get elected as active, it is recommended
 to keep this setting consistent across all nodes in the cluster.
