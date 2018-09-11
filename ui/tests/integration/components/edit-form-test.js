@@ -35,7 +35,7 @@ module('Integration | Component | edit form', function(hooks) {
 
   hooks.beforeEach(function() {
     this.owner.register('service:flash-messages', flash);
-    this.flashMessages = this.owner.lookup('service:flashMessages');
+    this.flashMessages = this.owner.lookup('service:flash-messages');
   });
 
   test('it renders', async function(assert) {
