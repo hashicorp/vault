@@ -439,7 +439,7 @@ and then click **Save**.
 1. Enter **`example.com`** in the **Common Name**.
 1. Select **pem_bundle** from the **Format** drop-down list, and then click
 **Save**.
-1. Click **Cooy Certificate** and save the generated certificate in a file, `intermediate.cert.pem`.
+1. Click **Copy Certificate** and save the generated certificate in a file, `intermediate.cert.pem`.
 1. Select **pki_int** from the **Secrets** tab to return to the intermediate CA.
 1. Select **Configure** and then click **Set signed intermediate**.
 1. Paste in the certificate in the **Signed Intermediate Certificate** field and
