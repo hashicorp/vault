@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, pauseTest } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
@@ -8,12 +8,13 @@ import showItemPage from 'vault/tests/pages/access/identity/show';
 export const testAliasCRUD = async function(name, itemType, assert) {
   let itemID;
   let aliasID;
+  let idRow;
   if (itemType === 'groups') {
     await createItemPage.createItem(itemType, 'external');
   } else {
     await createItemPage.createItem(itemType);
   }
-  let idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
+  idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   itemID = idRow.rowValue;
   await page.visit({ item_type: itemType, id: itemID });
   await page.editForm.name(name).submit();
@@ -32,6 +33,7 @@ export const testAliasCRUD = async function(name, itemType, assert) {
     )
   );
   assert.ok(aliasShowPage.nameContains(name), `${itemType}: renders the name on the show page`);
+  await aliasShowPage.flashMessage.clickLast();
 
   await aliasIndexPage.visit({ item_type: itemType });
   assert.equal(
@@ -48,21 +50,23 @@ export const testAliasCRUD = async function(name, itemType, assert) {
     'Successfully deleted',
     `${itemType}: shows flash message`
   );
+  await aliasShowPage.flashMessage.clickLast();
 };
 
 export const testAliasDeleteFromForm = async function(name, itemType, assert) {
   let itemID;
   let aliasID;
+  let idRow;
   if (itemType === 'groups') {
     await createItemPage.createItem(itemType, 'external');
   } else {
     await createItemPage.createItem(itemType);
   }
-  let idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
+  idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   itemID = idRow.rowValue;
   await page.visit({ item_type: itemType, id: itemID });
   await page.editForm.name(name).submit();
-  let idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
+  idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   aliasID = idRow.rowValue;
   await aliasShowPage.edit();
 
@@ -82,8 +86,10 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
     0,
     `${itemType}: the row does not show in the list`
   );
+  await pauseTest();
   aliasIndexPage.flashMessage.latestMessage.startsWith(
     'Successfully deleted',
     `${itemType}: shows flash message`
   );
+  await aliasShowPage.flashMessage.clickLast();
 };

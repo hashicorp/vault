@@ -29,14 +29,14 @@ const disableReplication = async (type, assert) => {
 module('Acceptance | Enterprise | replication', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
-    return authPage.login();
-    disableReplication('dr');
+  hooks.beforeEach(async function() {
+    await authPage.login();
+    await disableReplication('dr');
     return disableReplication('performance');
   });
 
-  hooks.afterEach(function() {
-    disableReplication('dr');
+  hooks.afterEach(async function() {
+    await disableReplication('dr');
     return disableReplication('performance');
   });
 

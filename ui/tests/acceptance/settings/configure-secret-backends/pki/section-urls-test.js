@@ -3,7 +3,6 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section';
 import authPage from 'vault/tests/pages/auth';
-import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | settings/configure/secrets/pki/urls', function(hooks) {
   setupApplicationTest(hooks);
