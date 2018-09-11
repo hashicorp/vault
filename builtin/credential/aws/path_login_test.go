@@ -348,8 +348,6 @@ func defaultLoginData() (map[string]interface{}, error) {
 // use the AWS SDK), which receieves the mocked response responseFromUser
 // containing user information matching the role.
 func setupIAMTestServer() *httptest.Server {
-	base64Complete()
-
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		responseString := `<GetCallerIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
   <GetCallerIdentityResult>
