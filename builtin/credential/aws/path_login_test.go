@@ -7,12 +7,26 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/vault/logical"
 )
+
+// base 64 encoded representation of valid headers, read from dummy data and
+// extracted for re-use. It's the value from the "Default" test case that's
+// built by buildCallerIdentityLoginData above
+const headersBase64Encoded = `eyJBdXRob3JpemF0aW9uIjpbIkFXUzQtSE1BQy1TSEEyNTYgQ3Jl
+ZGVudGlhbD1BS0lBSlBRNDY2QUlJUVc0TFBTUS8yMDE4MDkxMC91cy1lYXN0LTEvc3RzL2F3czRfcmVx
+dWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1k
+YXRlO3gtdmF1bHQtYXdzLWlhbS1zZXJ2ZXItaWQsIFNpZ25hdHVyZT0xZDQ2YWRiMGQxODFhODVlMDRh
+YjAyODFjZjI5OTQ1MTljM2E0ZGIzZGQ4MTVmM2RiZDNiNDBhMjM0OGYyODc1Il0sIkNvbnRlbnQtTGVu
+Z3RoIjpbIjQzIl0sIkNvbnRlbnQtVHlwZSI6WyJhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29k
+ZWQ7IGNoYXJzZXQ9dXRmLTgiXSwiVXNlci1BZ2VudCI6WyJhd3Mtc2RrLWdvLzEuMTQuMjQgKGdvMS4x
+MTsgZGFyd2luOyBhbWQ2NCkiXSwiWC1BbXotRGF0ZSI6WyIyMDE4MDkxMFQyMDA5MzNaIl0sIlgtVmF1
+bHQtQXdzLUlhbS1TZXJ2ZXItSWQiOlsiVmF1bHRBY2NlcHRhbmNlVGVzdGluZyJdfQ==`
 
 func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
 	responseFromUser := `<GetCallerIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
@@ -173,6 +187,8 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 	}
 }
 
+// TestBackend_pathLogin_IAMHeaders tests login with iam_request_headers,
+// supporting both base64 encoded string and JSON headers
 func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
@@ -187,12 +203,12 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// configure client
-
-	const testVaultHeaderValue = "VaultAcceptanceTesting"
-	const testValidRoleName = "valid-role"
-
-	responseFromUser := `<GetCallerIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+	// setup test server to intercept and respond to the IAM login path's
+	// invocation of submitCallerIdentityRequest (which does not use the AWS SDK),
+	// which receieves the mocked response responseFromUser containing user
+	// information matching the role.
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		responseString := `<GetCallerIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
   <GetCallerIdentityResult>
     <Arn>arn:aws:iam::123456789012:user/valid-role</Arn>
     <UserId>ASOMETHINGSOMETHINGSOMETHING</UserId>
@@ -203,15 +219,32 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
   </ResponseMetadata>
 </GetCallerIdentityResponse>`
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, responseFromUser)
+		auth := r.Header.Get("Authorization")
+		parts := strings.Split(auth, ",")
+		for i, s := range parts {
+			s = strings.TrimSpace(s)
+			key := strings.Split(s, "=")
+			parts[i] = key[0]
+		}
+		expectedAuthParts := []string{"AWS4-HMAC-SHA256 Credential", "SignedHeaders", "Signature"}
+		var matchingCount int
+		for _, v := range parts {
+			for _, z := range expectedAuthParts {
+				if z == v {
+					matchingCount++
+				}
+			}
+		}
+		if matchingCount != len(expectedAuthParts) {
+			responseString = "missing auth parts"
+		}
+		fmt.Fprintln(w, responseString)
 	}))
+
 	defer ts.Close()
 
 	clientConfigData := map[string]interface{}{
 		"iam_server_id_header_value": testVaultHeaderValue,
-		"endpoint":                   ts.URL,
-		"iam_endpoint":               ts.URL,
 		"sts_endpoint":               ts.URL,
 	}
 	clientRequest := &logical.Request{
@@ -226,60 +259,26 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 	}
 
 	// create a role entry
-	// mutex here may not be needed, but was copied from another code example
-	b.roleMutex.Lock()
-	roleEntry, err := b.nonLockedAWSRole(context.Background(), storage, testValidRoleName)
-	if err != nil {
-		t.Fatalf("failed to get entry: %s", err)
+	roleEntry := &awsRoleEntry{
+		Version:  currentRoleStorageVersion,
+		AuthType: iamAuthType,
 	}
-	b.roleMutex.Unlock()
-
-	if roleEntry == nil {
-		roleEntry = &awsRoleEntry{
-			Version: currentRoleStorageVersion,
-		}
-	}
-	roleEntry.AuthType = iamAuthType
 
 	if err := b.nonLockedSetAWSRole(context.Background(), storage, testValidRoleName, roleEntry); err != nil {
 		t.Fatalf("failed to set entry: %s", err)
 	}
 
-	awsSession, err := session.NewSession()
-	if err != nil {
-		fmt.Println("failed to create session,", err)
-		return
-	}
-
-	stsService := sts.New(awsSession)
-	stsInputParams := &sts.GetCallerIdentityInput{}
-
-	stsRequestValid, _ := stsService.GetCallerIdentityRequest(stsInputParams)
-	stsRequestValid.HTTPRequest.Header.Add(iamServerIdHeader, testVaultHeaderValue)
-	stsRequestValid.HTTPRequest.Header.Add("Authorization", fmt.Sprintf("%s,%s,%s,%s",
-		"AWS4-HMAC-SHA256 Date=2018-09-07",
-		"Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request",
-		"SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id",
-		"Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"))
-	stsRequestValid.Sign()
-
-	loginData, err := buildCallerIdentityLoginData(stsRequestValid.HTTPRequest, testValidRoleName)
+	// create a baseline loginData map structure, including iam_request_headers
+	// already base64encoded. This is the "Default" loginData used for all tests.
+	// Each sub test can override the map's iam_request_headers entry
+	loginData, err := defaultLoginData()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// base 64 encoded representation of valid headers, read from dummy data and
-	// extracted for re-use. It's the value from the "Default" test case that's
-	// built by buildCallerIdentityLoginData above
-	headersBase64Encoded := `eyJBdXRob3JpemF0aW9uIjpbIkFXUzQtSE1BQy1TSEEyNTYgQ3Jl
-ZGVudGlhbD1BS0lBSlBRNDY2QUlJUVc0TFBTUS8yMDE4MDkxMC91cy1lYXN0LTEvc3RzL2F3czRfcmVx
-dWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1k
-YXRlO3gtdmF1bHQtYXdzLWlhbS1zZXJ2ZXItaWQsIFNpZ25hdHVyZT0xZDQ2YWRiMGQxODFhODVlMDRh
-YjAyODFjZjI5OTQ1MTljM2E0ZGIzZGQ4MTVmM2RiZDNiNDBhMjM0OGYyODc1Il0sIkNvbnRlbnQtTGVu
-Z3RoIjpbIjQzIl0sIkNvbnRlbnQtVHlwZSI6WyJhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29k
-ZWQ7IGNoYXJzZXQ9dXRmLTgiXSwiVXNlci1BZ2VudCI6WyJhd3Mtc2RrLWdvLzEuMTQuMjQgKGdvMS4x
-MTsgZGFyd2luOyBhbWQ2NCkiXSwiWC1BbXotRGF0ZSI6WyIyMDE4MDkxMFQyMDA5MzNaIl0sIlgtVmF1
-bHQtQXdzLUlhbS1TZXJ2ZXItSWQiOlsiVmF1bHRBY2NlcHRhbmNlVGVzdGluZyJdfQ==`
+	// expected errors for certain tests
+	missingHeaderErr := errors.New("error validating X-Vault-AWS-IAM-Server-ID header: missing header \"X-Vault-AWS-IAM-Server-ID\"")
+	parsingErr := errors.New("error making upstream request: error parsing STS response")
 
 	testCases := []struct {
 		Header    interface{}
@@ -287,22 +286,10 @@ bHQtQXdzLUlhbS1TZXJ2ZXItSWQiOlsiVmF1bHRBY2NlcHRhbmNlVGVzdGluZyJdfQ==`
 		ExpectErr error
 	}{
 		{
-			Name: "Default - using internal mocks",
+			Name: "Default",
 		},
 		{
-			Name: "Test error - invalid headers",
-			Header: map[string]interface{}{
-				"something":                 "else",
-				"X-Vault-AWS-IAM-Server-ID": testVaultHeaderValue,
-			},
-			ExpectErr: errors.New("error validating X-Vault-AWS-IAM-Server-ID header: missing Authorization header"),
-		},
-		{
-			Name:   "Headers - base64 string",
-			Header: headersBase64Encoded,
-		},
-		{
-			Name: "Individual headers - correct",
+			Name: "Map-complete",
 			Header: map[string]interface{}{
 				"Content-Length":            "43",
 				"Content-Type":              "application/x-www-form-urlencoded; charset=utf-8",
@@ -313,7 +300,7 @@ bHQtQXdzLUlhbS1TZXJ2ZXItSWQiOlsiVmF1bHRBY2NlcHRhbmNlVGVzdGluZyJdfQ==`
 			},
 		},
 		{
-			Name: "Individual headers - missing Vault header",
+			Name: "Map-incomplete",
 			Header: map[string]interface{}{
 				"Content-Length": "43",
 				"Content-Type":   "application/x-www-form-urlencoded; charset=utf-8",
@@ -321,17 +308,58 @@ bHQtQXdzLUlhbS1TZXJ2ZXItSWQiOlsiVmF1bHRBY2NlcHRhbmNlVGVzdGluZyJdfQ==`
 				"X-Amz-Date":     "20180910T203328Z",
 				"Authorization":  "AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180910/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=cdef5819b2e97f1ff0f3e898fd2621aa03af00a4ec3e019122c20e5482534bf4",
 			},
-			ExpectErr: errors.New("error validating X-Vault-AWS-IAM-Server-ID header: missing header \"X-Vault-AWS-IAM-Server-ID\""),
+			ExpectErr: missingHeaderErr,
 		},
 		{
-			Name: "Individual headers - JSON string",
+			Name: "JSON-complete",
 			Header: `{
 				"Content-Length":"43",
 				"Content-Type":"application/x-www-form-urlencoded; charset=utf-8",
 				"User-Agent":"aws-sdk-go/1.14.24 (go1.11; darwin; amd64)",
 				"X-Amz-Date":"20180910T203328Z",
 				"X-Vault-Aws-Iam-Server-Id": "VaultAcceptanceTesting",
-				"Authorization":"AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180910/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=cdef5819b2e97f1ff0f3e898fd2621aa03af00a4ec3e019122c20e5482534bf4"}`,
+				"Authorization":"AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180910/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=cdef5819b2e97f1ff0f3e898fd2621aa03af00a4ec3e019122c20e5482534bf4"
+			}`,
+		},
+		{
+			Name: "JSON-incomplete",
+			Header: `{
+				"Content-Length":"43",
+				"Content-Type":"application/x-www-form-urlencoded; charset=utf-8",
+				"User-Agent":"aws-sdk-go/1.14.24 (go1.11; darwin; amd64)",
+				"X-Amz-Date":"20180910T203328Z",
+				"X-Vault-Aws-Iam-Server-Id": "VaultAcceptanceTesting",
+				"Authorization":"AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180910/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id"
+			}`,
+			ExpectErr: parsingErr,
+		},
+		{
+			Name:   "Base64-complete",
+			Header: headersBase64Encoded,
+		},
+		{
+			Name: "Base64-incomplete-missing-header",
+			Header: `eyJBdXRob3JpemF0aW9uIjogWyJBV1M0LUhNQUMtU0hBMjU2IENyZWRlbnRpYWw9Q
+UtJQUpQUTQ2NkFJSVFXNExQU1EvMjAxODA5MDcvdXMtZWFzdC0xL3N0cy9hd3M0X3JlcXVlc3QsIFNpZ
+25lZEhlYWRlcnM9Y29udGVudC1sZW5ndGg7Y29udGVudC10eXBlO2hvc3Q7eC1hbXotZGF0ZTt4LXZhd
+Wx0LWF3cy1pYW0tc2VydmVyLWlkLCBTaWduYXR1cmU9OTcwODZiMDUzMTg1NDg0NDA5OWZjNTI3MzNmY
+TJjODhhMmJmYjU0YjI2ODk2MDBjNmUyNDkzNThhODM1M2I1MiJdLCJDb250ZW50LUxlbmd0aCI6IFsiN
+DMiXSwiQ29udGVudC1UeXBlIjogWyJhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29kZWQ7IGNoY
+XJzZXQ9dXRmLTgiXSwiVXNlci1BZ2VudCI6IFsiYXdzLXNkay1nby8xLjE0LjI0IChnbzEuMTE7IGRhc
+ndpbjsgYW1kNjQpIl0sIlgtQW16LURhdGUiOiBbIjIwMTgwOTA3VDIyMjE0NVoiXX0=`,
+			ExpectErr: missingHeaderErr,
+		},
+		{
+			Name: "Base64-incomplete-missing-auth-sig",
+			Header: `eyJBdXRob3JpemF0aW9uIjogWyJBV1M0LUhNQUMtU0hBMjU2IENyZWRlbnRpYWw9Q
+UtJQUpQUTQ2NkFJSVFXNExQU1EvMjAxODA5MDcvdXMtZWFzdC0xL3N0cy9hd3M0X3JlcXVlc3QsIFNpZ
+25lZEhlYWRlcnM9Y29udGVudC1sZW5ndGg7Y29udGVudC10eXBlO2hvc3Q7eC1hbXotZGF0ZTt4LXZhd
+Wx0LWF3cy1pYW0tc2VydmVyLWlkIl0sIkNvbnRlbnQtTGVuZ3RoIjogWyI0MyJdLCJDb250ZW50LVR5c
+GUiOiBbImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZDsgY2hhcnNldD11dGYtOCJdLCJVc
+2VyLUFnZW50IjogWyJhd3Mtc2RrLWdvLzEuMTQuMjQgKGdvMS4xMTsgZGFyd2luOyBhbWQ2NCkiXSwiW
+C1BbXotRGF0ZSI6IFsiMjAxODA5MDdUMjIyMTQ1WiJdLCJYLVZhdWx0LUF3cy1JYW0tU2VydmVyLUlkI
+jogWyJWYXVsdEFjY2VwdGFuY2VUZXN0aW5nIl19`,
+			ExpectErr: parsingErr,
 		},
 	}
 
@@ -353,8 +381,27 @@ bHQtQXdzLUlhbS1TZXJ2ZXItSWQiOlsiVmF1bHRBY2NlcHRhbmNlVGVzdGluZyJdfQ==`
 				if tc.ExpectErr != nil && tc.ExpectErr.Error() == resp.Error().Error() {
 					return
 				}
-				t.Errorf("bad: expected failed login due to invalid role:\nresp: %#v\n\nerr: %v", resp, err)
+				t.Errorf("un expected failed login:\nresp: %#v\n\nerr: %v", resp, err)
 			}
 		})
 	}
+}
+
+func defaultLoginData() (map[string]interface{}, error) {
+	awsSession, err := session.NewSession()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session: %s", err)
+	}
+
+	stsService := sts.New(awsSession)
+	stsInputParams := &sts.GetCallerIdentityInput{}
+	stsRequestValid, _ := stsService.GetCallerIdentityRequest(stsInputParams)
+	stsRequestValid.HTTPRequest.Header.Add(iamServerIdHeader, testVaultHeaderValue)
+	stsRequestValid.HTTPRequest.Header.Add("Authorization", fmt.Sprintf("%s,%s,%s",
+		"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request",
+		"SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id",
+		"Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"))
+	stsRequestValid.Sign()
+
+	return buildCallerIdentityLoginData(stsRequestValid.HTTPRequest, testValidRoleName)
 }
