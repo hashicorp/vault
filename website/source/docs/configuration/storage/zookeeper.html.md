@@ -73,7 +73,7 @@ znodes and, potentially, take Vault out of service.
   for Zookeeper communication. Multiple CA certificates can be provided in the same file.
 
 - `tls_cert_file` `(string: "")` (optional) – Specifies the path to the
-  certificate for Zookeeper communication.
+  client certificate for Zookeeper communication.
 
 - `tls_key_file` `(string: "")` – Specifies the path to the private key for
   Zookeeper communication.
