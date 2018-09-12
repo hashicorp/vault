@@ -1,8 +1,10 @@
-import { click, fillIn, findAll, currentURL, find } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, find, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
+import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
+import withFlash from 'vault/tests/helpers/with-flash';
 
 module('Acceptance | aws secret backend', function(hooks) {
   setupApplicationTest(hooks);
@@ -12,7 +14,7 @@ module('Acceptance | aws secret backend', function(hooks) {
   });
 
   hooks.afterEach(function() {
-    return authLogout();
+    return logout.visit();
   });
 
   const POLICY = {
@@ -30,7 +32,8 @@ module('Acceptance | aws secret backend', function(hooks) {
     const path = `aws-${now}`;
     const roleName = 'awsrole';
 
-    await enablePage.visit().mount('aws', path);
+    await enablePage.enable('aws', path);
+
     await click('[data-test-secret-backend-configure]');
     assert.equal(currentURL(), `/vault/settings/secrets/configure/${path}`);
     assert.ok(findAll('[data-test-aws-root-creds-form]').length, 'renders the empty root creds form');
@@ -39,20 +42,21 @@ module('Acceptance | aws secret backend', function(hooks) {
 
     await fillIn('[data-test-aws-input="accessKey"]', 'foo');
     await fillIn('[data-test-aws-input="secretKey"]', 'bar');
-    await click('[data-test-aws-input="root-save"]');
-    assert.ok(
-      find('[data-test-flash-message]').textContent.trim(),
-      `The backend configuration saved successfully!`
-    );
-    await click('[data-test-flash-message]');
-    await click('[data-test-aws-link="leases"]');
-    await click('[data-test-aws-input="lease-save"]');
 
-    assert.ok(
-      find('[data-test-flash-message]').textContent.trim(),
-      `The backend configuration saved successfully!`
-    );
-    await click('[data-test-flash-message]');
+    await withFlash(click('[data-test-aws-input="root-save"]'), () => {
+      assert.ok(
+        find('[data-test-flash-message]').textContent.trim(),
+        `The backend configuration saved successfully!`
+      );
+    });
+
+    await click('[data-test-aws-link="leases"]');
+    await withFlash(click('[data-test-aws-input="lease-save"]'), () => {
+      assert.ok(
+        find('[data-test-flash-message]').textContent.trim(),
+        `The backend configuration saved successfully!`
+      );
+    });
 
     await click('[data-test-backend-view-link]');
     assert.equal(currentURL(), `/vault/secrets/${path}/list`, `navigates to the roles list`);
@@ -82,8 +86,8 @@ module('Acceptance | aws secret backend', function(hooks) {
     //and delete
     await click(`[data-test-secret-link="${roleName}"] [data-test-popup-menu-trigger]`);
     await click(`[data-test-aws-role-delete="${roleName}"] button`);
-    await click(`[data-test-confirm-button]`);
 
+    await withFlash(click(`[data-test-confirm-button]`));
     assert.dom(`[data-test-secret-link="${roleName}"]`).doesNotExist(`aws: role is no longer in the list`);
   });
 });

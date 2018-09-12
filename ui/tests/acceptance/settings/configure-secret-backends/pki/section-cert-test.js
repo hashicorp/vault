@@ -61,7 +61,7 @@ module('Acceptance | settings/configure/secrets/pki/cert', function(hooks) {
 
   const mountAndNav = async (assert, prefix) => {
     const path = `${prefix}pki-${new Date().getTime()}`;
-    await enablePage.visit().mount('pki', path);
+    await enablePage.enable('pki', path);
     await page.visit({ backend: path });
     return path;
   };

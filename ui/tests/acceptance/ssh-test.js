@@ -67,7 +67,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
     const now = new Date().getTime();
     const sshPath = `ssh-${now}`;
 
-    await enablePage.visit().mount('ssh', sshPath);
+    await enablePage.enable('ssh', sshPath);
     await click('[data-test-secret-backend-configure]');
     assert.equal(currentURL(), `/vault/settings/secrets/configure/${sshPath}`);
     assert.ok(findAll('[data-test-ssh-configure-form]').length, 'renders the empty configuration form');
@@ -79,7 +79,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
 
     assert.equal(currentURL(), `/vault/secrets/${sshPath}/list`, `redirects to ssh index`);
 
-    ROLES.forEach(async role => {
+    for (let role of ROLES) {
       // create a role
       await click('[ data-test-secret-create]');
       assert.ok(
@@ -133,6 +133,6 @@ module('Acceptance | ssh secret backend', function(hooks) {
       assert
         .dom(`[data-test-secret-link="${role.name}"]`)
         .doesNotExist(`${role.type}: role is no longer in the list`);
-    });
+    }
   });
 });
