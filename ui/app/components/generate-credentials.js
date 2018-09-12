@@ -28,7 +28,7 @@ const MODEL_TYPES = {
 export default Component.extend({
   wizard: service(),
   store: service(),
-  routing: service('-routing'),
+  router: service(),
   // set on the component
   backend: null,
   action: null,
@@ -44,8 +44,7 @@ export default Component.extend({
       return type.model;
     }
     // if we don't have a mode for that type then redirect them back to the backend list
-    const router = this.get('routing.router');
-    router.transitionTo.call(router, 'vault.cluster.secrets.backend.list-root', this.get('model.backend'));
+    this.get('router').transitionTo('vault.cluster.secrets.backend.list-root', this.get('model.backend'));
   },
 
   options: computed('action', 'backend.type', function() {
