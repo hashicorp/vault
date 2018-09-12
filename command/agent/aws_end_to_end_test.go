@@ -2,22 +2,22 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
-	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials"
-	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
-	"github.com/aliyun/alibaba-cloud-sdk-go/services/sts"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
-	vaultalicloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	"github.com/hashicorp/vault/api"
+	vaultaws "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/agent/auth"
-	agentalicloud "github.com/hashicorp/vault/command/agent/auth/alicloud"
+	agentaws "github.com/hashicorp/vault/command/agent/auth/aws"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/helper/logging"
@@ -27,12 +27,23 @@ import (
 )
 
 const (
-	envVarAlicloudAccessKey = "ALICLOUD_TEST_ACCESS_KEY"
-	envVarAlicloudSecretKey = "ALICLOUD_TEST_SECRET_KEY"
-	envVarAlicloudRoleArn   = "ALICLOUD_TEST_ROLE_ARN"
+	// These are the access key and secret that should be used when calling "AssumeRole"
+	// for the given AWS_TEST_ROLE_ARN.
+	envVarAwsTestAccessKey = "AWS_TEST_ACCESS_KEY"
+	envVarAwsTestSecretKey = "AWS_TEST_SECRET_KEY"
+	envVarAwsTestRoleArn   = "AWS_TEST_ROLE_ARN"
+
+	// The AWS SDK doesn't export its standard env vars so they're captured here.
+	// These are used for the duration of the test to make sure the agent is able to
+	// pick up creds from the env.
+	//
+	// To run this test, do not set these. Only the above ones need to be set.
+	envVarAwsAccessKey    = "AWS_ACCESS_KEY_ID"
+	envVarAwsSecretKey    = "AWS_SECRET_ACCESS_KEY"
+	envVarAwsSessionToken = "AWS_SESSION_TOKEN"
 )
 
-func TestAliCloudEndToEnd(t *testing.T) {
+func TestAWSEndToEnd(t *testing.T) {
 	if !runAcceptanceTests {
 		t.SkipNow()
 	}
@@ -41,7 +52,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
-			"alicloud": vaultalicloud.Factory,
+			"aws": vaultaws.Factory,
 		},
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -54,15 +65,19 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Setup Vault
-	if err := client.Sys().EnableAuthWithOptions("alicloud", &api.EnableAuthOptions{
-		Type: "alicloud",
+	if err := client.Sys().EnableAuthWithOptions("aws", &api.EnableAuthOptions{
+		Type: "aws",
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := client.Logical().Write("auth/alicloud/role/test", map[string]interface{}{
-		"arn": os.Getenv(envVarAlicloudRoleArn),
+	if _, err := client.Logical().Write("auth/aws/role/test", map[string]interface{}{
+		"auth_type": "iam",
+		"policies":  "default",
+		// Retain thru the account number of the given arn and wildcard the rest.
+		"bound_iam_principal_arn": os.Getenv(envVarAwsTestRoleArn)[:25] + "*",
 	}); err != nil {
+		fmt.Println(err)
 		t.Fatal(err)
 	}
 
@@ -72,22 +87,22 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	})
 	defer timer.Stop()
 
-	// We're going to feed alicloud auth creds via env variables.
-	if err := setAliCloudEnvCreds(); err != nil {
+	// We're going to feed aws auth creds via env variables.
+	if err := setAwsEnvCreds(); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := unsetAliCloudEnvCreds(); err != nil {
+		if err := unsetAwsEnvCreds(); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
-	am, err := agentalicloud.NewAliCloudAuthMethod(&auth.AuthConfig{
-		Logger:    logger.Named("auth.alicloud"),
-		MountPath: "auth/alicloud",
+	am, err := agentaws.NewAWSAuthMethod(&auth.AuthConfig{
+		Logger:    logger.Named("auth.aws"),
+		MountPath: "auth/aws",
 		Config: map[string]interface{}{
-			"role":                     "test",
-			"region":                   "us-west-1",
+			"role": "test",
+			"type": "iam",
 			"credential_poll_interval": 1,
 		},
 	})
@@ -157,40 +172,47 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	}
 }
 
-func setAliCloudEnvCreds() error {
-	config := sdk.NewConfig()
-	config.Scheme = "https"
-	client, err := sts.NewClientWithOptions("us-west-1", config, credentials.NewAccessKeyCredential(os.Getenv(envVarAlicloudAccessKey), os.Getenv(envVarAlicloudSecretKey)))
+func setAwsEnvCreds() error {
+
+	cfg := &aws.Config{
+		Credentials: credentials.NewStaticCredentials(os.Getenv(envVarAwsTestAccessKey), os.Getenv(envVarAwsTestSecretKey), ""),
+	}
+	sess, err := session.NewSession(cfg)
 	if err != nil {
 		return err
 	}
-	roleSessionName, err := uuid.GenerateUUID()
-	if err != nil {
-		return err
-	}
-	assumeRoleReq := sts.CreateAssumeRoleRequest()
-	assumeRoleReq.RoleArn = os.Getenv(envVarAlicloudRoleArn)
-	assumeRoleReq.RoleSessionName = strings.Replace(roleSessionName, "-", "", -1)
-	assumeRoleResp, err := client.AssumeRole(assumeRoleReq)
+	client := sts.New(sess)
+
+	roleArn := os.Getenv(envVarAwsTestRoleArn)
+	uid, err := uuid.GenerateUUID()
 	if err != nil {
 		return err
 	}
 
-	if err := os.Setenv(providers.EnvVarAccessKeyID, assumeRoleResp.Credentials.AccessKeyId); err != nil {
+	input := &sts.AssumeRoleInput{
+		RoleArn:         &roleArn,
+		RoleSessionName: &uid,
+	}
+	output, err := client.AssumeRole(input)
+	if err != nil {
 		return err
 	}
-	if err := os.Setenv(providers.EnvVarAccessKeySecret, assumeRoleResp.Credentials.AccessKeySecret); err != nil {
+
+	if err := os.Setenv(envVarAwsAccessKey, *output.Credentials.AccessKeyId); err != nil {
 		return err
 	}
-	return os.Setenv(providers.EnvVarAccessKeyStsToken, assumeRoleResp.Credentials.SecurityToken)
+	if err := os.Setenv(envVarAwsSecretKey, *output.Credentials.SecretAccessKey); err != nil {
+		return err
+	}
+	return os.Setenv(envVarAwsSessionToken, *output.Credentials.SessionToken)
 }
 
-func unsetAliCloudEnvCreds() error {
-	if err := os.Unsetenv(providers.EnvVarAccessKeyID); err != nil {
+func unsetAwsEnvCreds() error {
+	if err := os.Unsetenv(envVarAwsAccessKey); err != nil {
 		return err
 	}
-	if err := os.Unsetenv(providers.EnvVarAccessKeySecret); err != nil {
+	if err := os.Unsetenv(envVarAwsSecretKey); err != nil {
 		return err
 	}
-	return os.Unsetenv(providers.EnvVarAccessKeyStsToken)
+	return os.Unsetenv(envVarAwsSessionToken)
 }

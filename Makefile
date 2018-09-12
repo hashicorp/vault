@@ -153,7 +153,8 @@ fmtcheck:
 #@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
-	gofmt -w $(GOFMT_FILES)
+	@true
+#gofmt -w $(GOFMT_FILES)
 
 spellcheck:
 	@echo "==> Spell checking website..."

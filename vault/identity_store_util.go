@@ -923,13 +923,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 	// Sanitize the group alias
 	if group.Alias != nil {
 		group.Alias.CanonicalID = group.ID
-
 		err = i.sanitizeAlias(group.Alias)
-		if err != nil {
-			return err
-		}
-
-		err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
 		if err != nil {
 			return err
 		}
@@ -1092,6 +1086,12 @@ func (i *IdentityStore) UpsertGroupInTxn(txn *memdb.Txn, group *identity.Group, 
 	// Increment the modify index of the group
 	group.ModifyIndex++
 
+	if group.Alias != nil {
+		err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
+		if err != nil {
+			return err
+		}
+	}
 	// Insert or update group in MemDB using the transaction created above
 	err = i.MemDBUpsertGroupInTxn(txn, group)
 	if err != nil {

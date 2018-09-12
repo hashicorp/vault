@@ -57,7 +57,10 @@ export default Ember.Component.extend(DEFAULTS, {
     }
     // this is here because we're changing the `with` attr and there's no way to short-circuit rendering,
     // so we'll just nav -> get new attrs -> re-render
-    if (!this.get('selectedAuth') || (this.get('selectedAuth') && !this.get('selectedAuthBackend'))) {
+    if (
+      (this.get('fetchMethods.isIdle') && !this.get('selectedAuth')) ||
+      (this.get('selectedAuth') && !this.get('selectedAuthBackend'))
+    ) {
       this.set('selectedAuth', this.firstMethod());
       this.get('router').replaceWith({
         queryParams: {

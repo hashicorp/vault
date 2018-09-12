@@ -578,9 +578,11 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		conf["plugin_name"] = entry.Config.PluginName
 	}
 
+	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
+	c.AddLogger(authLogger)
 	config := &logical.BackendConfig{
 		StorageView: view,
-		Logger:      c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor)),
+		Logger:      authLogger,
 		Config:      conf,
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,

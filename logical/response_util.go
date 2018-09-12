@@ -105,6 +105,8 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 			statusCode = http.StatusNotFound
 		case errwrap.Contains(err, ErrInvalidRequest.Error()):
 			statusCode = http.StatusBadRequest
+		case errwrap.Contains(err, ErrUpstreamRateLimited.Error()):
+			statusCode = http.StatusBadGateway
 		}
 	}
 
