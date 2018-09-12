@@ -1,17 +1,17 @@
-import { currentURL, currentPath, visit } from '@ember/test-helpers';
+import { currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 
 import { storageKey } from 'vault/services/control-group';
-import console from 'vault/tests/pages/components/console/ui-panel';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import authForm from 'vault/tests/pages/components/auth-form';
 import controlGroup from 'vault/tests/pages/components/control-group';
 import controlGroupSuccess from 'vault/tests/pages/components/control-group-success';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 
-const consoleComponent = create(console);
+const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
 const controlGroupComponent = create(controlGroup);
 const controlGroupSuccessComponent = create(controlGroupSuccess);
@@ -88,13 +88,14 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     context.userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(context.userToken);
+    return this;
   };
 
   test('it redirects you if you try to navigate to a Control Group restricted path', async function(assert) {
     await setupControlGroup(this);
     await visit('/vault/secrets/kv/show/foo');
     assert.equal(
-      currentPath(),
+      currentRouteName(),
       'vault.cluster.access.control-group-accessor',
       'redirects to access control group route'
     );
@@ -150,12 +151,12 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     }
   };
 
-  test('it allows the full flow to work with a saved token', function(assert) {
-    workflow(assert, this, true);
+  test('it allows the full flow to work with a saved token', async function(assert) {
+    await workflow(assert, this, true);
   });
 
-  test('it allows the full flow to work without a saved token', function(assert) {
-    workflow(assert, this);
+  test('it allows the full flow to work without a saved token', async function(assert) {
+    await workflow(assert, this);
   });
 
   test('it displays the warning in the console when making a request to a Control Group path', async function(assert) {

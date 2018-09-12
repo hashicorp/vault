@@ -17,7 +17,7 @@ module('Acceptance | transit', function(hooks) {
     return logout.visit();
   });
 
-  let generateTransitKeys = () => {
+  let generateTransitKeys = async () => {
     const ts = new Date().getTime();
     const keys = [
       {
@@ -70,7 +70,7 @@ module('Acceptance | transit', function(hooks) {
       },
     ];
 
-    keys.forEach(async key => {
+    for (let key of keys) {
       await click('[data-test-secret-create]');
       await fillIn('[data-test-transit-key-name]', key.name);
       await fillIn('[data-test-transit-key-type]', key.type);
@@ -87,11 +87,11 @@ module('Acceptance | transit', function(hooks) {
 
       // link back to the list
       await click('[data-test-secret-root-link]');
-    });
+    }
     return keys;
   };
 
-  const testEncryption = (assert, keyName) => {
+  const testEncryption = async (assert, keyName) => {
     const tests = [
       // raw bytes for plaintext and context
       {
@@ -204,7 +204,7 @@ module('Acceptance | transit', function(hooks) {
       },
     ];
 
-    tests.forEach(async testCase => {
+    for (let testCase of tests) {
       await click('[data-test-transit-action-link="encrypt"]');
       await fillIn('[data-test-transit-input="plaintext"]', testCase.plaintext);
       await fillIn('[data-test-transit-input="context"]', testCase.context);
@@ -232,7 +232,7 @@ module('Acceptance | transit', function(hooks) {
           testCase.assertAfterDecrypt(keyName);
         }
       }
-    });
+    }
   };
   test('transit backend', async function(assert) {
     assert.expect(49);
@@ -242,7 +242,7 @@ module('Acceptance | transit', function(hooks) {
     await enablePage.enable('transit', transitPath);
 
     // create a bunch of different kinds of keys
-    const transitKeys = generateTransitKeys();
+    const transitKeys = await generateTransitKeys();
 
     for (let [index, key] of transitKeys.entries()) {
       await click(`[data-test-secret-link="${key.name}"]`);
@@ -279,7 +279,7 @@ module('Acceptance | transit', function(hooks) {
           .doesNotExist(`${key.name}: non-exportable key does not link to export action`);
       }
       if (key.convergent && key.supportsEncryption) {
-        testEncryption(assert, key.name);
+        await testEncryption(assert, key.name);
       }
       await click('[data-test-secret-root-link]');
     }

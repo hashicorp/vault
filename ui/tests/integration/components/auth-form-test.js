@@ -185,15 +185,18 @@ module('Integration | Component | auth form', function(hooks) {
   });
 
   test('it renders all the supported methods when no supported methods are present in passed methods', async function(assert) {
-    let methods = [
-      {
+    let methods = {
+      'approle/': {
         type: 'approle',
-        id: 'approle',
-        path: 'approle/',
       },
-    ];
-    this.set('methods', methods);
-    await render(hbs`{{auth-form cluster=cluster methods=methods}}`);
+    };
+    let server = new Pretender(function() {
+      this.get('/v1/sys/internal/ui/mounts', () => {
+        return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
+      });
+    });
+    await render(hbs`{{auth-form cluster=cluster}}`);
+    await settled();
     assert.equal(component.tabs.length, BACKENDS.length, 'renders a tab for every backend');
   });
 
