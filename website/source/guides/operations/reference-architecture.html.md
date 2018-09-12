@@ -207,15 +207,17 @@ adhere to security best practices.
 
 ### High Availability
 
-A Vault cluster is the highly-available unit of deployment within one datacenter.
-A recommended approach is three Vault servers with a Consul storage backend.
-With this configuration, during a Vault server outage, failover is handled
-immediately without human intervention. To learn more about setting up your
-Vault servers in HA mode, read [_Vault HA with
-Consul_](/guides/operations/vault-ha-consul.html) guide.
+A Vault cluster is the highly-available unit of deployment within one
+datacenter. A recommended approach is three Vault servers with a Consul storage
+backend. With this configuration, during a Vault server outage, failover is
+handled immediately without human intervention.
 
-High-availability and data-locality across datacenters requires
-Vault Enterprise.
+To learn more about setting up your Vault servers in HA mode, read [_Vault HA
+with Consul_](/guides/operations/vault-ha-consul.html) guide.
+
+> High-availability with [Performance Standby
+Nodes](/guides/operations/performance-nodes.html) and data-locality across
+datacenters requires Vault Enterprise.
 
 
 ## <a name="multi-dc"></a>Deployment Topology for Multiple Datacenters
