@@ -45,7 +45,7 @@ policies which defines the permitted operations for the client.
 
 ![Auth Method](/assets/images/vault-auth-method.png)
 
-There are three basic methods to securely authenticate a secret consumer:
+There are three basic approaches to securely authenticate a secret consumer:
 
 - [Platform Integration](#platform-integration)
 - [Trusted Orchestrator](#trusted-orchestrator)
