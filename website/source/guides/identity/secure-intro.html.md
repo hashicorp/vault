@@ -45,12 +45,14 @@ policies which defines the permitted operations for the client.
 
 ![Auth Method](/assets/images/vault-auth-method.png)
 
-There are two basic patterns to securely authenticate a secret consumer:
-[platform integration](#platform-integration) and [trusted
-orchestrator](#trusted-orchestrator).  
+There are three basic methods to securely authenticate a secret consumer:
+
+- [Platform Integration](#platform-integration)
+- [Trusted Orchestrator](#trusted-orchestrator)
+- [Vault Agent](#vault-agent)
 
 
-### Platform Integration
+## Platform Integration
 
 In the **Platform Integration** model, Vault trusts the underlying platform
 (e.g. AliCloud, AWS, Azure, GCP) which assigns a token or cryptographic identity
@@ -82,22 +84,19 @@ secrets.
 ![Vault AWS EC2 Authentication Flow](/assets/images/vault-aws-ec2-auth-flow.png)
 
 
-**Use Case**
+### Use Case
 
 When the client app is running on a VM hosted on a supported cloud platform, you
 can leverage the corresponding auth method to authenticate with Vault.
 
-**Reference Materials:**
+### Reference Materials:
 
 - [AWS Auth Method](/docs/auth/aws.html)
 - [Azure Auth Method](/docs/auth/azure.html)
 - [GCP Auth Method](/docs/auth/gcp.html)
 
 
-~> **NOTE:** See the [Vault Agent](#vault-agent) section to learn about the
-client daemon which automates the authentication process.
-
-### Trusted Orchestrator
+## Trusted Orchestrator
 
 In the **Trusted Orchestrator** model, you have an _orchestrator_ which is
 already authenticated against Vault with privileged permissions. The
@@ -122,12 +121,12 @@ authenticate against Vault.
 ![AppRole auth method workflow](/assets/images/vault-secure-intro-4.png)
 
 
-**Use Case**
+### Use Case
 
 When you are using an orchestrator tool such as Chef to launch applications,
 this model can be applied regardless of where the applications are running.
 
-**Reference Materials:**
+### Reference Materials:
 
 - [AppRole Auth Method](/docs/auth/approle.html)
   - [AppRole Pull Authentication](/guides/identity/authentication.html)
@@ -137,14 +136,22 @@ this model can be applied regardless of where the applications are running.
   - [Cubbyhole Response Wrapping](/guides/secret-mgmt/cubbyhole.html)
 
 
-### Vault Agent
+## Vault Agent
 
-Vault agent allows the implementation of the [platform integration](#platform-integration)
-pattern easier and faster.
+Vault agent is a client daemon which automates the workflow of client login and
+token refresh. It can be used with either [platform
+integration](#platform-integration) or [trusted
+orchestrator](#trusted-orchestrator) approaches.
 
-For those [supported auth methods](/docs/agent/autoauth/methods/index.html),
-Vault agent can automate the authentication to Vault, and keep the acquired
-token renewed until the renewal is no longer allowed.
+#### Vault agent auto-auth:
+
+- Automatically authenticates to Vault for those [supported auth
+methods](/docs/agent/autoauth/methods/index.html)
+- Keeps token renewed (re-authenticates as needed) until the renewal is no
+longer allowed
+- Designed with robustness and fault tolerance
+
+
 
 ![Vault Agent](/assets/images/vault-secure-intro-5.png)
 
@@ -161,10 +168,13 @@ current token value changes, the agent writes to the sinks. If authentication
 fails, the agent waits for a while and then retry.
 
 The client can simply retrieve the token from the sink and connect to Vault
-using the token.
+using the token. This simplifies client integration since the Vault agent
+handles the login and token refresh logic.
 
-**Reference Materials:**
 
+### Reference Materials:
+
+- [Streamline Secrets Management with Vault Agent and Vault 0.11](https://youtu.be/zDnIqSB4tyA)
 - [Vault Agent documentation](/docs/agent/index.html)
 - [Auto-Auth documentation](/docs/agent/autoauth/index.html)
 
