@@ -88,9 +88,10 @@ This must match the request body included in the signature.`,
 			},
 			"iam_request_headers": {
 				Type: framework.TypeHeader,
-				Description: `Base64-encoded JSON representation of the request headers when auth_type is
-iam. This must at a minimum include the headers over
-which AWS has included a signature.`,
+				Description: `Key/value pairs of headers for use in the
+sts:GetCallerIdentity HTTP requests headers when auth_typeis iam. Can be either 
+a Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. 
+This must at a minimum include the headers over which AWS has included a  signature.`,
 			},
 			"identity": {
 				Type: framework.TypeString,
