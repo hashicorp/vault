@@ -143,8 +143,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
       .hasText(secondaryName, 'it displays the secondary in the list of known secondaries');
 
     // disable dr replication
-    disableReplication('dr', assert);
-    return wait();
+    await disableReplication('dr', assert);
   });
 
   test('disabling dr primary when perf replication is enabled', async function(assert) {
@@ -164,8 +163,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     assert.ok(findAll('[data-test-demote-warning]').length, 'displays the demotion warning');
 
     // disable replication
-    disableReplication('performance', assert);
-    disableReplication('dr', assert);
-    return wait();
+    await disableReplication('performance', assert);
+    await disableReplication('dr', assert);
   });
 });

@@ -16,11 +16,11 @@ module('Acceptance | console', function(hooks) {
     numEngines = enginesPage.rows().count;
     await enginesPage.consoleToggle();
     let now = Date.now();
-    [1, 2, 3].forEach(async num => {
+    for (let num of [1, 2, 3]) {
       let inputString = `write sys/mounts/${now + num} type=kv`;
       await enginesPage.console.consoleInput(inputString);
       await enginesPage.console.enter();
-    });
+    }
     await enginesPage.console.consoleInput('refresh');
     await enginesPage.console.enter();
     assert.equal(enginesPage.rows().count, numEngines + 3, 'new engines were added to the page');
