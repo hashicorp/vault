@@ -6,12 +6,14 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import generatePage from 'vault/tests/pages/secrets/backend/pki/generate-cert';
 import showPage from 'vault/tests/pages/secrets/backend/pki/show';
 import configPage from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
+import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
+import authPage from 'vault/tests/pages/auth';
 
 module('Acceptance | secrets/pki/list?tab=certs', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    return authLogin();
+    return authPage.login();
   });
 
   const CSR = `-----BEGIN CERTIFICATE REQUEST-----
@@ -32,40 +34,40 @@ module('Acceptance | secrets/pki/list?tab=certs', function(hooks) {
   -----END CERTIFICATE REQUEST-----`;
 
   // mount, generate CA, nav to create role page
-  const setup = (assert, action = 'issue') => {
+  const setup = async (assert, action = 'issue') => {
     const path = `pki-${new Date().getTime()}`;
     const roleName = 'role';
-    mountSupportedSecretBackend(assert, 'pki', path);
-    configPage.visit({ backend: path }).form.generateCA();
-    editPage.visitRoot({ backend: path });
-    editPage.createRole('role', 'example.com');
-    generatePage.visit({ backend: path, id: roleName, action });
+    await enablePage.enable('pki', path);
+    await configPage.visit({ backend: path }).form.generateCA();
+    await editPage.visitRoot({ backend: path });
+    await editPage.createRole('role', 'example.com');
+    await generatePage.visit({ backend: path, id: roleName, action });
     return path;
   };
 
-  test('it issues a cert', function(assert) {
-    setup(assert);
+  test('it issues a cert', async function(assert) {
+    await setup(assert);
 
-    generatePage.issueCert('foo');
+    await generatePage.issueCert('foo');
     assert.ok(generatePage.hasCert, 'displays the cert');
 
-    generatePage.back();
+    await generatePage.back();
     assert.notOk(generatePage.commonNameValue, 'the form is cleared');
   });
 
-  test('it signs a csr', function(assert) {
-    setup(assert, 'sign');
-    generatePage.sign('common', CSR);
+  test('it signs a csr', async function(assert) {
+    await setup(assert, 'sign');
+    await generatePage.sign('common', CSR);
     assert.ok(generatePage.hasCert, 'displays the cert');
   });
 
-  test('it views a cert', function(assert) {
-    const path = setup(assert);
-    generatePage.issueCert('foo');
-    listPage.visitRoot({ backend: path, tab: 'certs' });
+  test('it views a cert', async function(assert) {
+    const path = await setup(assert);
+    await generatePage.issueCert('foo');
+    await listPage.visitRoot({ backend: path, tab: 'certs' });
     assert.ok(listPage.secrets.length > 0, 'lists certs');
 
-    listPage.secrets.objectAt(0).click();
+    await listPage.secrets.objectAt(0).click();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'navigates to the show page');
     assert.ok(showPage.hasCert, 'shows the cert');
   });

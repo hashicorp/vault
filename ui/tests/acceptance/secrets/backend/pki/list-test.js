@@ -2,22 +2,24 @@ import { currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/secrets/backend/list';
+import authPage from 'vault/tests/pages/auth';
+import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | secrets/pki/list', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
-    return authLogin();
+    return authPage.login();
   });
 
-  const mountAndNav = assert => {
+  const mountAndNav = async assert => {
     const path = `pki-${new Date().getTime()}`;
-    mountSupportedSecretBackend(assert, 'pki', path);
-    page.visitRoot({ backend: path });
+    await enablePage.enable('pki', path);
+    await page.visitRoot({ backend: path });
   };
 
-  test('it renders an empty list', function(assert) {
-    mountAndNav(assert);
+  test('it renders an empty list', async function(assert) {
+    await mountAndNav(assert);
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'redirects from the index');
     assert.ok(page.createIsPresent, 'create button is present');
     assert.ok(page.configureIsPresent, 'configure button is present');
@@ -25,15 +27,15 @@ module('Acceptance | secrets/pki/list', function(hooks) {
     assert.ok(page.backendIsEmpty);
   });
 
-  test('it navigates to the create page', function(assert) {
-    mountAndNav(assert);
-    page.create();
+  test('it navigates to the create page', async function(assert) {
+    await mountAndNav(assert);
+    await page.create();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.create-root', 'links to the create page');
   });
 
-  test('it navigates to the configure page', function(assert) {
-    mountAndNav(assert);
-    page.configure();
+  test('it navigates to the configure page', async function(assert) {
+    await mountAndNav(assert);
+    await page.configure();
     assert.equal(
       currentRouteName(),
       'vault.cluster.settings.configure-secret-backend.section',
