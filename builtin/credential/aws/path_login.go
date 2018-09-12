@@ -89,7 +89,7 @@ This must match the request body included in the signature.`,
 			"iam_request_headers": {
 				Type: framework.TypeHeader,
 				Description: `Key/value pairs of headers for use in the
-sts:GetCallerIdentity HTTP requests headers when auth_typeis iam. Can be either 
+sts:GetCallerIdentity HTTP requests headers when auth_type is iam. Can be either 
 a Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. 
 This must at a minimum include the headers over which AWS has included a  signature.`,
 			},
@@ -201,7 +201,7 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 	}
 
 	// If reauthentication is disabled or if the nonce supplied matches a
-	// predefied nonce which indicates reauthentication to be disabled,
+	// predefined nonce which indicates reauthentication to be disabled,
 	// authentication will not succeed.
 	if storedIdentity.DisallowReauthentication ||
 		subtle.ConstantTimeCompare([]byte(reauthenticationDisabledNonce), []byte(clientNonce)) == 1 {
