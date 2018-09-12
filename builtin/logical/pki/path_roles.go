@@ -286,6 +286,11 @@ for "generate_lease".`,
 				Type:        framework.TypeBool,
 				Description: `Mark Basic Constraints valid when issuing non-CA certificates.`,
 			},
+			"not_before": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Default:     30,
+				Description: `The number of seconds before now the cert need to be created / sign.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -493,6 +498,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
 		PolicyIdentifiers:             data.Get("policy_identifiers").([]string),
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
+		NotBefore:                     data.Get("not_before").(int),
 	}
 
 	otherSANs := data.Get("allowed_other_sans").([]string)
@@ -683,6 +689,7 @@ type roleEntry struct {
 	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
 	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
+	NotBefore                     int           `json:"not_before" mapstructure:"not_before"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
@@ -726,6 +733,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"require_cn":                         r.RequireCN,
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
+		"not_before":                         r.NotBefore,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength
