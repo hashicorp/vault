@@ -66,16 +66,11 @@ znodes and, potentially, take Vault out of service.
     ip:70.95.0.0/16
     ```
 
-- `auth_info` `(string: "")` – Specifies an authentication string in Zookeeper
-  AddAuth format. For example, `digest:UserName:Password` could be used to
-  authenticate as user `UserName` using password `Password` with the `digest`
-  mechanism.
-
 - `tls_enabled` `(bool: false)` – Specifies if TLS communication with the Zookeeper
    backend has to be enabled.
 
-- `tls_ca_file` `(string: "")` – Specifies the path to the CA certificate used
-  for Zookeeper communication.
+- `tls_ca_file` `(string: "")` – Specifies the path to the CA certificate file used
+  for Zookeeper communication. Multiple CA certificates can be provided in the same file.
 
 - `tls_cert_file` `(string: "")` (optional) – Specifies the path to the
   certificate for Zookeeper communication.
