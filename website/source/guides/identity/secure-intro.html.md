@@ -151,8 +151,6 @@ methods](/docs/agent/autoauth/methods/index.html)
 longer allowed
 - Designed with robustness and fault tolerance
 
-
-
 ![Vault Agent](/assets/images/vault-secure-intro-5.png)
 
 To leverage this feature, run the vault binary in agent mode (`vault agent
@@ -170,7 +168,6 @@ fails, the agent waits for a while and then retry.
 The client can simply retrieve the token from the sink and connect to Vault
 using the token. This simplifies client integration since the Vault agent
 handles the login and token refresh logic.
-
 
 ### Reference Materials:
 
