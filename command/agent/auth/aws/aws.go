@@ -35,7 +35,7 @@ const (
 		rather quickly. This is configurable, however.
 
 	*/
-	defaultCredCheckFreqSeconds = 60
+	defaultCredentialPollInterval = 60
 )
 
 type awsMethod struct {
@@ -137,10 +137,10 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	if a.authType == typeIAM {
 
 		// Check for an optional custom frequency at which we should poll for creds.
-		credCheckFreqSec := defaultCredCheckFreqSeconds
-		if checkFreqRaw, ok := conf.Config["credential_poll_interval"]; ok {
-			if credFreq, ok := checkFreqRaw.(int); ok {
-				credCheckFreqSec = credFreq
+		credentialPollIntervalSec := defaultCredentialPollInterval
+		if credentialPollIntervalRaw, ok := conf.Config["credential_poll_interval"]; ok {
+			if credentialPollInterval, ok := credentialPollIntervalRaw.(int); ok {
+				credentialPollIntervalSec = credentialPollInterval
 			} else {
 				return nil, errors.New("could not convert 'credential_poll_interval' into int")
 			}
@@ -154,7 +154,7 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		}
 		a.lastCreds = creds
 
-		go a.pollForCreds(accessKey, secretKey, sessionToken, credCheckFreqSec)
+		go a.pollForCreds(accessKey, secretKey, sessionToken, credentialPollIntervalSec)
 	}
 
 	return a, nil
