@@ -4,9 +4,16 @@ import { moduleFor, test } from 'ember-qunit';
 import { STORAGE_KEYS, DEFAULTS } from 'vault/helpers/wizard-constants';
 
 let routerStub = Ember.Service.extend({
-  transitionTo: sinon.stub(),
+  transitionTo: sinon.stub().returns({
+    followRedirects: function() {
+      return {
+        then: function(callback) {
+          callback();
+        },
+      };
+    },
+  }),
   urlFor: sinon.stub().returns('/ui/vault/foo'),
-  followRedirects: sinon.stub().returns(true),
 });
 
 moduleFor('service:wizard', 'Unit | Service | wizard', {
@@ -91,6 +98,34 @@ let testCases = [
   },
   {
     method: 'handlePaused',
+    args: [],
+    expectedResults: {
+      storage: [
+        { key: STORAGE_KEYS.RESUME_URL, value: undefined },
+        { key: STORAGE_KEYS.RESUME_ROUTE, value: undefined },
+      ],
+    },
+  },
+  {
+    method: 'handleResume',
+    storage: [
+      { key: STORAGE_KEYS.RESUME_URL, value: 'this/is/a/url' },
+      { key: STORAGE_KEYS.RESUME_ROUTE, value: 'this.is.a.route' },
+    ],
+    args: [],
+    expectedResults: {
+      props: [
+        { prop: 'expectedURL', value: 'this/is/a/url' },
+        { prop: 'expectedRouteName', value: 'this.is.a.route' },
+      ],
+      storage: [
+        { key: STORAGE_KEYS.RESUME_URL, value: undefined },
+        { key: STORAGE_KEYS.RESUME_ROUTE, value: 'this.is.a.route' },
+      ],
+    },
+  },
+  {
+    method: 'handleResume',
     args: [],
     expectedResults: {
       storage: [
