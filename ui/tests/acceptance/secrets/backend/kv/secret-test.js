@@ -8,6 +8,7 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
+import withFlash from 'vault/tests/helpers/with-flash';
 
 module('Acceptance | secrets/secret/create', function(hooks) {
   setupApplicationTest(hooks);
@@ -43,8 +44,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let secretPath = 'foo/bar';
     // mount version 1 engine
     await mountSecrets.visit();
+    await mountSecrets.selectType('kv');
     await mountSecrets
-      .selectType('kv')
       .next()
       .path(enginePath)
       .version(1)
