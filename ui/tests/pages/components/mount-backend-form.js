@@ -17,21 +17,18 @@ export default {
     mountType: value(),
   }),
   type: fillable('[name="mount-type"]'),
-  selectType(type) {
+  selectType: async function(type) {
     let types = this.types;
     let thing = types.filterBy('mountType', type)[0];
-    thing.select();
-    return this;
+    return thing.select();
   },
-  mount(type, path) {
+  mount: async function(type, path) {
+    await this.selectType(type);
     if (path) {
-      return this.selectType(type)
-        .next()
+      return this.next()
         .path(path)
         .submit();
     }
-    return this.selectType(type)
-      .next()
-      .submit();
+    return this.next().submit();
   },
 };

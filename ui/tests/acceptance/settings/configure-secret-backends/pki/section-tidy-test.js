@@ -14,7 +14,7 @@ module('Acceptance | settings/configure/secrets/pki/tidy', function(hooks) {
 
   test('it saves tidy config', async function(assert) {
     const path = `pki-${new Date().getTime()}`;
-    await enablePage.visit().mount('pki', path);
+    await enablePage.enable('pki', path);
     await page.visit({ backend: path, section: 'tidy' });
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
     await page.form.fields(0).clickLabel();

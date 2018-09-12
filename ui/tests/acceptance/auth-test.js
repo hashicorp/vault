@@ -5,7 +5,7 @@ import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import authForm from '../pages/components/auth-form';
 import { create } from 'ember-cli-page-object';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
-import authPage from 'vault/tests/pages/auth';
+import logout from 'vault/tests/pages/logout';
 
 const component = create(authForm);
 
@@ -14,7 +14,7 @@ module('Acceptance | auth', function(hooks) {
 
   hooks.beforeEach(function() {
     this.server = apiStub({ usePassthrough: true });
-    return authPage.login();
+    return logout.visit();
   });
 
   hooks.afterEach(function() {
@@ -22,37 +22,37 @@ module('Acceptance | auth', function(hooks) {
   });
 
   test('auth query params', async function(assert) {
-    const backends = supportedAuthBackends();
+    let backends = supportedAuthBackends();
     await visit('/vault/auth');
     assert.equal(currentURL(), '/vault/auth?with=token');
-    backends.reverse().forEach(async backend => {
+    for (let backend of backends.reverse()) {
       await click(`[data-test-auth-method-link="${backend.type}"]`);
       assert.equal(
         currentURL(),
         `/vault/auth?with=${backend.type}`,
         `has the correct URL for ${backend.type}`
       );
-    });
+    }
   });
 
   test('it clears token when changing selected auth method', async function(assert) {
     await visit('/vault/auth');
     assert.equal(currentURL(), '/vault/auth?with=token');
-    component
+    await component
       .token('token')
       .tabs.filterBy('name', 'GitHub')[0]
       .link();
-    component.tabs.filterBy('name', 'Token')[0].link();
+    await component.tabs.filterBy('name', 'Token')[0].link();
     assert.equal(component.tokenValue, '', 'it clears the token value when toggling methods');
   });
 
   test('it sends the right attributes when authenticating', async function(assert) {
     let backends = supportedAuthBackends();
     await visit('/vault/auth');
-    backends.reverse().forEach(async backend => {
+    for (let backend of backends.reverse()) {
       await click(`[data-test-auth-method-link="${backend.type}"]`);
       if (backend.type === 'github') {
-        component.token('token');
+        await component.token('token');
       }
       await component.login();
       let lastRequest = this.server.passthroughRequests[this.server.passthroughRequests.length - 1];
@@ -67,6 +67,6 @@ module('Acceptance | auth', function(hooks) {
       } else {
         assert.ok(Object.keys(body).includes('password'), `${backend.type} includes password`);
       }
-    });
+    }
   });
 });
