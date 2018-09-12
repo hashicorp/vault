@@ -15,8 +15,7 @@ module('Acceptance | settings/auth/configure', function(hooks) {
   test('it redirects to section options when there are no other sections', async function(assert) {
     const path = `approle-${new Date().getTime()}`;
     const type = 'approle';
-    await enablePage.visit();
-    await enablePage.form.mount(type, path);
+    await enablePage.enable(type, path);
     await page.visit({ path });
     assert.equal(currentRouteName(), 'vault.cluster.settings.auth.configure.section');
     assert.equal(currentURL(), `/vault/settings/auth/configure/${path}/options`, 'loads the options route');
@@ -25,8 +24,7 @@ module('Acceptance | settings/auth/configure', function(hooks) {
   test('it redirects to the first section', async function(assert) {
     const path = `aws-${new Date().getTime()}`;
     const type = 'aws';
-    await enablePage.visit();
-    await enablePage.form.mount(type, path);
+    await enablePage.enable(type, path);
     await page.visit({ path });
     assert.equal(currentRouteName(), 'vault.cluster.settings.auth.configure.section');
     assert.equal(

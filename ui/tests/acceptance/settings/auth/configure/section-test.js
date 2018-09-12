@@ -26,8 +26,7 @@ module('Acceptance | settings/auth/configure/section', function(hooks) {
     const path = `approle-${new Date().getTime()}`;
     const type = 'approle';
     const section = 'options';
-    await enablePage.visit();
-    await enablePage.form.mount(type, path);
+    await enablePage.enable(type, path);
     await page.visit({ path, section });
     await page
       .fields()

@@ -1,4 +1,4 @@
-import { currentRouteName, pauseTest } from '@ember/test-helpers';
+import { currentRouteName, settled, pauseTest, find } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
@@ -10,15 +10,26 @@ export const testAliasCRUD = async function(name, itemType, assert) {
   let aliasID;
   let idRow;
   if (itemType === 'groups') {
-    await createItemPage.createItem(itemType, 'external');
+    createItemPage.createItem(itemType, 'external');
   } else {
-    await createItemPage.createItem(itemType);
+    createItemPage.createItem(itemType);
   }
+  await showItemPage.flashMessage.waitForFlash();
+  await showItemPage.flashMessage.clickLast();
   idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   itemID = idRow.rowValue;
   await page.visit({ item_type: itemType, id: itemID });
-  await page.editForm.name(name).submit();
+  let submit = page.editForm.name(name).submit();
 
+  await aliasShowPage.flashMessage.waitForFlash();
+  assert.ok(
+    aliasShowPage.flashMessage.latestMessage.startsWith(
+      'Successfully saved',
+      `${itemType}: shows a flash message`
+    )
+  );
+  await aliasShowPage.flashMessage.clickLast();
+  await submit;
   idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   aliasID = idRow.rowValue;
   assert.equal(
@@ -26,14 +37,7 @@ export const testAliasCRUD = async function(name, itemType, assert) {
     'vault.cluster.access.identity.aliases.show',
     'navigates to the correct route'
   );
-  assert.ok(
-    aliasShowPage.flashMessage.latestMessage.startsWith(
-      'Successfully saved',
-      `${itemType}: shows a flash message`
-    )
-  );
   assert.ok(aliasShowPage.nameContains(name), `${itemType}: renders the name on the show page`);
-  await aliasShowPage.flashMessage.clickLast();
 
   await aliasIndexPage.visit({ item_type: itemType });
   assert.equal(
@@ -42,15 +46,21 @@ export const testAliasCRUD = async function(name, itemType, assert) {
     `${itemType}: lists the entity in the entity list`
   );
 
-  await aliasIndexPage.items.filterBy('name', name)[0].menu();
-  await aliasIndexPage.delete().confirmDelete();
+  let item = aliasIndexPage.items.filterBy('name', name)[0];
+  await item.menu();
 
-  assert.equal(aliasIndexPage.items.filterBy('id', aliasID).length, 0, `${itemType}: the row is deleted`);
+  await aliasIndexPage.delete();
+  let foo = find('[data-test-item-delete] [data-test-confirm-action-trigger]');
+  let deleted = aliasIndexPage.confirmDelete();
+
+  await aliasIndexPage.flashMessage.waitForFlash();
   aliasIndexPage.flashMessage.latestMessage.startsWith(
     'Successfully deleted',
     `${itemType}: shows flash message`
   );
-  await aliasShowPage.flashMessage.clickLast();
+  await aliasIndexPage.flashMessage.clickLast();
+  await deleted;
+  assert.equal(aliasIndexPage.items.filterBy('id', aliasID).length, 0, `${itemType}: the row is deleted`);
 };
 
 export const testAliasDeleteFromForm = async function(name, itemType, assert) {
@@ -58,14 +68,21 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
   let aliasID;
   let idRow;
   if (itemType === 'groups') {
-    await createItemPage.createItem(itemType, 'external');
+    createItemPage.createItem(itemType, 'external');
   } else {
-    await createItemPage.createItem(itemType);
+    createItemPage.createItem(itemType);
   }
+  await showItemPage.flashMessage.waitForFlash();
+  await showItemPage.flashMessage.clickLast();
   idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   itemID = idRow.rowValue;
   await page.visit({ item_type: itemType, id: itemID });
-  await page.editForm.name(name).submit();
+  let save = page.editForm.name(name).submit();
+
+  await aliasShowPage.flashMessage.waitForFlash();
+  await aliasShowPage.flashMessage.clickLast();
+
+  await save;
   idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   aliasID = idRow.rowValue;
   await aliasShowPage.edit();
@@ -75,7 +92,17 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
     'vault.cluster.access.identity.aliases.edit',
     `${itemType}: navigates to edit on create`
   );
-  await page.editForm.delete().confirmDelete();
+  await page.editForm.delete();
+  let deleted = page.editForm.confirmDelete();
+
+  await aliasIndexPage.flashMessage.waitForFlash();
+  aliasIndexPage.flashMessage.latestMessage.startsWith(
+    'Successfully deleted',
+    `${itemType}: shows flash message`
+  );
+  await aliasShowPage.flashMessage.clickLast();
+
+  await deleted;
   assert.equal(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.index',
@@ -86,10 +113,4 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
     0,
     `${itemType}: the row does not show in the list`
   );
-  await pauseTest();
-  aliasIndexPage.flashMessage.latestMessage.startsWith(
-    'Successfully deleted',
-    `${itemType}: shows flash message`
-  );
-  await aliasShowPage.flashMessage.clickLast();
 };

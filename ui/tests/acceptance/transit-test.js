@@ -239,12 +239,12 @@ module('Acceptance | transit', function(hooks) {
     const now = new Date().getTime();
     const transitPath = `transit-${now}`;
 
-    await enablePage.visit().mount('transit', transitPath);
+    await enablePage.enable('transit', transitPath);
 
     // create a bunch of different kinds of keys
     const transitKeys = generateTransitKeys();
 
-    transitKeys.forEach(async (key, index) => {
+    for (let [index, key] of transitKeys.entries()) {
       await click(`[data-test-secret-link="${key.name}"]`);
       if (index === 0) {
         await click('[data-test-transit-link="versions"]');
@@ -282,6 +282,6 @@ module('Acceptance | transit', function(hooks) {
         testEncryption(assert, key.name);
       }
       await click('[data-test-secret-root-link]');
-    });
+    }
   });
 });

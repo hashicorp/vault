@@ -14,7 +14,7 @@ module('Acceptance | settings/configure/secrets/pki', function(hooks) {
 
   test('it redirects to the cert section', async function(assert) {
     const path = `pki-${new Date().getTime()}`;
-    await enablePage.visit().mount('pki', path);
+    await enablePage.enable('pki', path);
     await page.visit({ backend: path });
     assert.equal(
       currentRouteName(),
