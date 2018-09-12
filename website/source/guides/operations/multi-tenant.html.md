@@ -19,6 +19,8 @@ isolation and ensure teams can self-manage their own environments.
 
 ## Reference Material
 
+- [Namespaces](/docs/enterprise/namespaces/index.html)
+- [Streamline Secrets Management with Vault Agent and Vault 0.11](https://youtu.be/zDnIqSB4tyA)
 - [Vault Deployment Reference Architecture](/guides/operations/reference-architecture.html)
 - [Policies](/guides/identity/policies.html) guide
 
@@ -916,7 +918,7 @@ In this guide, you created policies in each namespace (`education` and
 namespace in the policy paths.  
 
 If you want to create policies in the root namespace to control `education` and
-`education/training` namespaces,  prepend the namespace in the paths.
+`education/training` namespaces, prepend the namespace in the paths.
 
 For example:
 
