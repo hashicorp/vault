@@ -3,8 +3,6 @@ import ApplicationAdapter from './application';
 export default ApplicationAdapter.extend({
   namespace: 'v1',
 
-  defaultSerializer: 'ssh',
-
   url(snapshot, action) {
     const { backend, caType, type } = snapshot.attributes();
     if (action === 'sign-intermediate') {
@@ -20,7 +18,7 @@ export default ApplicationAdapter.extend({
   },
 
   createRecordOrUpdate(store, type, snapshot, requestType) {
-    const serializer = store.serializerFor(this.get('defaultSerializer'));
+    const serializer = store.serializerFor('application');
     const isUpload = snapshot.attr('uploadPemBundle');
     const isSetSignedIntermediate = snapshot.adapterOptions.method === 'setSignedIntermediate';
     let action = snapshot.adapterOptions.method === 'signIntermediate' ? 'sign-intermediate' : null;
