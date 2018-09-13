@@ -197,6 +197,7 @@ module('Integration | Component | auth form', function(hooks) {
     });
     await render(hbs`{{auth-form cluster=cluster}}`);
     await settled();
+    server.shutdown();
     assert.equal(component.tabs.length, BACKENDS.length, 'renders a tab for every backend');
   });
 

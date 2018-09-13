@@ -1,4 +1,4 @@
-import { run } from '@ember/runloop';
+import { later, run } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import EmberObject from '@ember/object';
 import Service from '@ember/service';
@@ -34,8 +34,15 @@ module('Integration | Component | edit form', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    this.owner.register('service:flash-messages', flash);
-    this.flashMessages = this.owner.lookup('service:flash-messages');
+    run(() => {
+      this.owner.unregister('service:flash-messages');
+      this.owner.register('service:flash-messages', flash);
+      component.setContext(this);
+    });
+  });
+
+  hooks.afterEach(function() {
+    component.removeContext();
   });
 
   test('it renders', async function(assert) {
@@ -71,11 +78,13 @@ module('Integration | Component | edit form', function(hooks) {
     await render(hbs`{{edit-form model=model onSave=onSave}}`);
 
     component.submit();
+    later(() => run.cancelTimers(), 50);
     return settled().then(() => {
       assert.ok(saveSpy.calledOnce, 'calls passed onSave');
       assert.equal(saveSpy.getCall(0).args[0].saveType, 'save');
       assert.deepEqual(saveSpy.getCall(0).args[0].model, model, 'passes model to onSave');
-      assert.equal(this.flashMessages.success.callCount, 1, 'calls flash message success');
+      let flash = this.owner.lookup('service:flash-messages');
+      assert.equal(flash.success.callCount, 1, 'calls flash message success');
     });
   });
 
@@ -89,17 +98,14 @@ module('Integration | Component | edit form', function(hooks) {
     let saveSpy = sinon.spy(this, 'onSave');
 
     await render(hbs`{{edit-form model=model onSave=onSave}}`);
-    component.deleteButton();
-    settled().then(() => {
-      run(() => component.deleteConfirm());
-    });
+    await component.deleteButton();
+    await component.deleteConfirm();
 
+    later(() => run.cancelTimers(), 50);
     return settled().then(() => {
-      return settled().then(() => {
-        assert.ok(saveSpy.calledOnce, 'calls onSave');
-        assert.equal(saveSpy.getCall(0).args[0].saveType, 'destroyRecord');
-        assert.deepEqual(saveSpy.getCall(0).args[0].model, model, 'passes model to onSave');
-      });
+      assert.ok(saveSpy.calledOnce, 'calls onSave');
+      assert.equal(saveSpy.getCall(0).args[0].saveType, 'destroyRecord');
+      assert.deepEqual(saveSpy.getCall(0).args[0].model, model, 'passes model to onSave');
     });
   });
 });

@@ -45,11 +45,13 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // mount version 1 engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await mountSecrets
-      .next()
-      .path(enginePath)
-      .version(1)
-      .submit();
+    await withFlash(
+      mountSecrets
+        .next()
+        .path(enginePath)
+        .version(1)
+        .submit()
+    );
 
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');

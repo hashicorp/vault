@@ -43,7 +43,7 @@ module('Acceptance | tools', function(hooks) {
     await visit('/vault/tools');
     assert.equal(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
     TOOLS_ACTIONS.forEach(action => {
-      assert.ok(findWithAssert(`[data-test-tools-action-link="${action}"]`), `${action} link renders`);
+      assert.ok(find(`[data-test-tools-action-link="${action}"]`), `${action} link renders`);
     });
     findAll('.CodeMirror')[0].CodeMirror.setValue(DATA_TO_WRAP);
 

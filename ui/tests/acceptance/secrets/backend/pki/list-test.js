@@ -12,7 +12,7 @@ module('Acceptance | secrets/pki/list', function(hooks) {
     return authPage.login();
   });
 
-  const mountAndNav = async assert => {
+  const mountAndNav = async () => {
     const path = `pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await page.visitRoot({ backend: path });
