@@ -24,31 +24,26 @@ export default {
   tooltipTrigger: focusable('[data-test-tool-tip-trigger]'),
   tooltipContent: text('[data-test-help-text]'),
 
-  fields: collection({
-    itemScope: '[data-test-field]',
-    item: {
-      clickLabel: clickable('label'),
-      for: attribute('for', 'label'),
-      labelText: text('label', { multiple: true }),
-      input: fillable('input'),
-      select: fillable('select'),
-      textarea: fillable('textarea'),
-      change: triggerable('keyup', 'input'),
-      inputValue: value('input'),
-      textareaValue: value('textarea'),
-      inputChecked: attribute('checked', 'input[type=checkbox]'),
-      selectValue: value('select'),
-    },
-    findByName(name) {
-      // we use name in the label `for` attribute
-      // this is consistent across all types of fields
-      //(otherwise we'd have to use name on select or input or textarea)
-      return this.toArray().findBy('for', name);
-    },
-    fillIn(name, value) {
-      return this.findByName(name).input(value);
-    },
+  fields: collection('[data-test-field]', {
+    clickLabel: clickable('label'),
+    for: attribute('for', 'label'),
+    labelText: text('label', { multiple: true }),
+    input: fillable('input'),
+    select: fillable('select'),
+    textarea: fillable('textarea'),
+    change: triggerable('keyup', 'input'),
+    inputValue: value('input'),
+    textareaValue: value('textarea'),
+    inputChecked: attribute('checked', 'input[type=checkbox]'),
+    selectValue: value('select'),
   }),
+  fillInTextarea: async function(name, value) {
+    let field = this.fields.filterBy('for', name)[0];
+    return field.textarea(value);
+  },
+  fillIn: async function(name, value) {
+    return this.fields.filterBy('for', name)[0].input(value);
+  },
   field: getter(function() {
     return this.fields(0);
   }),

@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL, find, waitFor } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, find } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';

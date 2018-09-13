@@ -7,8 +7,6 @@ import DS from 'ember-data';
 export default ApplicationAdapter.extend({
   namespace: 'v1',
 
-  defaultSerializer: 'config',
-
   urlFor(backend, section) {
     const urls = {
       tidy: `/v1/${backend}/tidy`,
@@ -20,7 +18,7 @@ export default ApplicationAdapter.extend({
 
   createOrUpdate(store, type, snapshot) {
     const url = this.urlFor(snapshot.record.get('backend'), snapshot.adapterOptions.method);
-    const serializer = store.serializerFor(this.get('defaultSerializer'));
+    const serializer = store.serializerFor(type.modelName);
     if (!url) {
       return;
     }

@@ -13,7 +13,7 @@ module('Acceptance | console', function(hooks) {
   test("refresh reloads the current route's data", async function(assert) {
     let numEngines;
     await enginesPage.visit();
-    numEngines = enginesPage.rows().count;
+    numEngines = enginesPage.rows.length;
     await enginesPage.consoleToggle();
     let now = Date.now();
     for (let num of [1, 2, 3]) {
@@ -23,6 +23,6 @@ module('Acceptance | console', function(hooks) {
     }
     await enginesPage.console.consoleInput('refresh');
     await enginesPage.console.enter();
-    assert.equal(enginesPage.rows().count, numEngines + 3, 'new engines were added to the page');
+    assert.equal(enginesPage.rows.length, numEngines + 3, 'new engines were added to the page');
   });
 });

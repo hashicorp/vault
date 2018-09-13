@@ -1,4 +1,4 @@
-import { waitFor } from '@ember/test-helpers';
+import { waitFor, settled } from '@ember/test-helpers';
 import { collection, text, clickable } from 'ember-cli-page-object';
 import { getter } from 'ember-cli-page-object/macros';
 
@@ -17,8 +17,13 @@ export default {
   waitForFlash() {
     return waitFor('[data-test-flash-message-body]');
   },
-
   clickLast() {
     return this.latestItem.click();
+  },
+  async clickAll() {
+    for (let message of this.messages) {
+      message.click();
+    }
+    await settled();
   },
 };

@@ -12,10 +12,6 @@ module('Acceptance | ssh secret backend', function(hooks) {
     return authPage.login();
   });
 
-  hooks.afterEach(function() {
-    return logout.visit();
-  });
-
   const PUB_KEY = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCn9p5dHNr4aU4R2W7ln+efzO5N2Cdv/SXk6zbCcvhWcblWMjkXf802B0PbKvf6cJIzM/Xalb3qz1cK+UUjCSEAQWefk6YmfzbOikfc5EHaSKUqDdE+HlsGPvl42rjCr28qYfuYh031YfwEQGEAIEypo7OyAj+38NLbHAQxDxuaReee1YCOV5rqWGtEgl2VtP5kG+QEBza4ZfeglS85f/GGTvZC4Jq1GX+wgmFxIPnd6/mUXa4ecoR0QMfOAzzvPm4ajcNCQORfHLQKAcmiBYMiyQJoU+fYpi9CJGT1jWTmR99yBkrSg6yitI2qqXyrpwAbhNGrM0Fw0WpWxh66N9Xp meirish@Macintosh-3.local`;
 
   const ROLES = [
@@ -74,6 +70,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
 
     // default has generate CA checked so we just submit the form
     await click('[data-test-ssh-input="configure-submit"]');
+
     assert.ok(findAll('[data-test-ssh-input="public-key"]').length, 'a public key is fetched');
     await click('[data-test-backend-view-link]');
 
@@ -89,7 +86,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
 
       await fillIn('[data-test-input="name"]', role.name);
       await fillIn('[data-test-input="keyType"]', role.type);
-      role.fillInCreate();
+      await role.fillInCreate();
 
       // save the role
       await click('[data-test-role-ssh-create]');
@@ -101,7 +98,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
 
       // sign a key with this role
       await click('[data-test-backend-credentials]');
-      role.fillInGenerate();
+      await role.fillInGenerate();
 
       // generate creds
       await click('[data-test-secret-generate]');
