@@ -7,6 +7,7 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
 import configPki from '../../pages/components/config-pki-ca';
+import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
 const component = create(configPki);
 
@@ -27,6 +28,7 @@ module('Integration | Component | config pki ca', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
+    this.server = apiStub();
     component.setContext(this);
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
     this.owner.register('service:store', storeStub);
@@ -34,6 +36,7 @@ module('Integration | Component | config pki ca', function(hooks) {
   });
 
   hooks.afterEach(function() {
+    this.server.shutdown();
     component.removeContext();
   });
 
@@ -46,27 +49,26 @@ module('Integration | Component | config pki ca', function(hooks) {
     });
   };
 
-  const setupAndRender = function(context, onRefresh) {
+  const setupAndRender = async function(context, onRefresh) {
     const refreshFn = onRefresh || function() {};
     context.set('config', config());
     context.set('onRefresh', refreshFn);
-    context.render(hbs`{{config-pki-ca onRefresh=onRefresh config=config}}`);
+    await context.render(hbs`{{config-pki-ca onRefresh=onRefresh config=config}}`);
   };
 
-  test('it renders, no pem', function(assert) {
-    setupAndRender(this);
+  test('it renders, no pem', async function(assert) {
+    await setupAndRender(this);
 
     assert.notOk(component.hasTitle, 'no title in the default state');
     assert.equal(component.replaceCAText, 'Configure CA');
     assert.equal(component.downloadLinks().count, 0, 'there are no download links');
 
-    component.replaceCA();
+    await component.replaceCA();
     assert.equal(component.title, 'Configure CA Certificate');
-    component.back();
+    await component.back();
 
-    component.setSignedIntermediateBtn();
+    await component.setSignedIntermediateBtn();
     assert.equal(component.title, 'Set signed intermediate');
-    component.back();
   });
 
   test('it renders, with pem', async function(assert) {

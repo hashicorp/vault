@@ -34,13 +34,13 @@ module('Integration | Component | control group success', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    component.setContext(this);
-    this.owner.register('service:control-group', controlGroupService);
-    this.controlGroup = this.owner.lookup('service:controlGroup');
-    this.owner.register('service:router', routerService);
-    this.router = this.owner.lookup('service:router');
-    this.owner.register('service:store', storeService);
-    this.store = this.owner.lookup('service:store');
+    run(() => {
+      this.owner.unregister('service:store');
+      this.owner.register('service:control-group', controlGroupService);
+      this.owner.register('service:router', routerService);
+      this.owner.register('service:store', storeService);
+      component.setContext(this);
+    });
   });
 
   hooks.afterEach(function() {
@@ -75,9 +75,8 @@ module('Integration | Component | control group success', function(hooks) {
     this.set('model', MODEL);
     await render(hbs`{{control-group-success model=model}}`);
     assert.ok(component.showsUnwrapForm, 'shows unwrap form');
-    component.token('token');
+    await component.token('token');
     component.unwrap();
-
     later(() => run.cancelTimers(), 50);
     return settled().then(() => {
       assert.ok(component.showsJsonViewer, 'shows unwrapped data');

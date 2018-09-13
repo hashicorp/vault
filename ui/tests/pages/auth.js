@@ -1,4 +1,4 @@
-import { create, visitable, fillable, clickable, collection } from 'ember-cli-page-object';
+import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
 import withFlash from 'vault/tests/helpers/with-flash';
 
 export default create({

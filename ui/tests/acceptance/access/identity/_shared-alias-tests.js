@@ -1,4 +1,4 @@
-import { currentRouteName, find } from '@ember/test-helpers';
+import { currentRouteName } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';

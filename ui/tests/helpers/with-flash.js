@@ -8,6 +8,6 @@ export default async function withFlash(promise, assertion) {
   if (assertion) {
     assertion();
   }
-  await flash.clickLast();
-  return promise;
+  await flash.clickAll();
+  await promise;
 }

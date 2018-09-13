@@ -14,7 +14,7 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     return authPage.login();
   });
 
-  const mountAndNav = async assert => {
+  const mountAndNav = async () => {
     const path = `pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await editPage.visitRoot({ backend: path });

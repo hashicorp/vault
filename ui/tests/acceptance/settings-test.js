@@ -5,6 +5,7 @@ import backendListPage from 'vault/tests/pages/secrets/backends';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
+import withFlash from 'vault/tests/helpers/with-flash';
 
 module('Acceptance | settings', function(hooks) {
   setupApplicationTest(hooks);
@@ -26,20 +27,24 @@ module('Acceptance | settings', function(hooks) {
     await visit('/vault/settings/mount-secret-backend');
     assert.equal(currentURL(), '/vault/settings/mount-secret-backend');
 
-    await mountSecrets
-      .selectType(type)
-      .next()
-      .path(path)
-      .toggleOptions()
-      .defaultTTLVal(100)
-      .defaultTTLUnit('s')
-      .submit();
-    assert.equal(currentURL(), `/vault/secrets`, 'redirects to secrets page');
-    assert.ok(
-      find('[data-test-flash-message]').textContent.trim(),
-      `Successfully mounted '${type}' at '${path}'!`
+    await mountSecrets.selectType(type);
+    await withFlash(
+      mountSecrets
+        .next()
+        .path(path)
+        .toggleOptions()
+        .defaultTTLVal(100)
+        .defaultTTLUnit('s')
+        .submit(),
+      () => {
+        assert.ok(
+          find('[data-test-flash-message]').textContent.trim(),
+          `Successfully mounted '${type}' at '${path}'!`
+        );
+      }
     );
-    let row = backendListPage.rows().findByPath(path);
+    assert.equal(currentURL(), `/vault/secrets`, 'redirects to secrets page');
+    let row = backendListPage.rows.filterBy('path', path + '/')[0];
     await row.menu();
     await backendListPage.configLink();
     assert.ok(currentURL(), '/vault/secrets/${path}/configuration', 'navigates to the config page');
