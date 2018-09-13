@@ -4,6 +4,11 @@ BUG FIXES:
 
  * agent: Fix auth handler-based wrapping of output tokens [GH-5316]
 
+IMPROVEMENTS:
+
+ * auth/aws: add support for key/value pairs or JSON values for 
+   `iam_request_headers` with IAM auth method [GH-5320]
+
 ## 0.11.1 (September 6th, 2018)
 
 SECURITY:
