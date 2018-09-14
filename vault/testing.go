@@ -952,7 +952,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			NotBefore:             time.Now().Add(-30 * time.Second),
 			NotAfter:              time.Now().Add(262980 * time.Hour),
 			BasicConstraintsValid: true,
-			IsCA: true,
+			IsCA:                  true,
 		}
 		caBytes, err = x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, caKey.Public(), caKey)
 		if err != nil {
@@ -1110,7 +1110,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		var handler http.Handler = http.NewServeMux()
 		handlers = append(handlers, handler)
 		server := &http.Server{
-			Handler: handler,
+			Handler:  handler,
+			ErrorLog: logger.StandardLogger(nil),
 		}
 		servers = append(servers, server)
 	}

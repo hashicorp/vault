@@ -16,15 +16,15 @@ type NamespaceLookupCommand struct {
 }
 
 func (c *NamespaceLookupCommand) Synopsis() string {
-	return "Create a new namespace"
+	return "Look up an existing namespace"
 }
 
 func (c *NamespaceLookupCommand) Help() string {
 	helpText := `
 Usage: vault namespace create [options] PATH
 
-  Create a child namespace. The namespace created will be relative to the 
-  namespace provided in either VAULT_NAMESPACE environemnt variable or
+  Create a child namespace. The namespace created will be relative to the
+  namespace provided in either the VAULT_NAMESPACE environment variable or
   -namespace CLI flag.
 
   Get information about the namespace of the locally authenticated token:
@@ -33,7 +33,7 @@ Usage: vault namespace create [options] PATH
 
   Get information about the namespace of a particular child token (e.g. ns1/ns2/):
 
-      $ vault namespace create -namespace=ns1 ns2
+      $ vault namespace lookup -namespace=ns1 ns2
 
 ` + c.Flags().Help()
 
@@ -78,19 +78,15 @@ func (c *NamespaceLookupCommand) Run(args []string) int {
 		return 2
 	}
 
-	resp, err := client.Sys().GetNamespace(namespacePath)
+	secret, err := client.Logical().Read("sys/namespaces/" + namespacePath)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error looking up namespace: %s", err))
 		return 2
 	}
-
-	switch Format(c.UI) {
-	case "table":
-		data := map[string]interface{}{
-			"path": resp.Path,
-		}
-		return OutputData(c.UI, data)
-	default:
-		return OutputData(c.UI, resp)
+	if secret == nil {
+		c.UI.Error("Namespace not found")
+		return 2
 	}
+
+	return OutputSecret(c.UI, secret)
 }

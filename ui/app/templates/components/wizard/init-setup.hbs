@@ -1,0 +1,18 @@
+<WizardContent @headerText="Initialization" @glyph="tour">
+  <WizardSection
+    @headerText="Setting up your master keys"
+    @docText="Learn: Initialization"
+    @docPath="/intro/getting-started/deploy.html#initializing-the-vault"
+  >
+    <p>
+      This is the very first step of setting up
+      a Vault server. Vault comes with an important
+      security feature called a "seal", which lets you
+      shut down and secure your Vault installation if
+      there is a security breach. This is the default
+      state of Vault, so it is currently sealed since
+      it was just installed. To unseal the vault, you will
+      need to provide the key(s) that you generate here.
+    </p>
+  </WizardSection>
+</WizardContent>

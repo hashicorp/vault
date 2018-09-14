@@ -52,25 +52,6 @@ const (
 	// information for primaries
 	knownPrimaryAddrsPrefix = "core/primary-addrs/"
 
-	// lockRetryInterval is the interval we re-attempt to acquire the
-	// HA lock if an error is encountered
-	lockRetryInterval = 10 * time.Second
-
-	// leaderCheckInterval is how often a standby checks for a new leader
-	leaderCheckInterval = 2500 * time.Millisecond
-
-	// keyRotateCheckInterval is how often a standby checks for a key
-	// rotation taking place.
-	keyRotateCheckInterval = 30 * time.Second
-
-	// keyRotateGracePeriod is how long we allow an upgrade path
-	// for standby instances before we delete the upgrade keys
-	keyRotateGracePeriod = 2 * time.Minute
-
-	// leaderPrefixCleanDelay is how long to wait between deletions
-	// of orphaned leader keys, to prevent slamming the backend.
-	leaderPrefixCleanDelay = 200 * time.Millisecond
-
 	// coreKeyringCanaryPath is used as a canary to indicate to replicated
 	// clusters that they need to perform a rekey operation synchronously; this
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
@@ -188,6 +169,7 @@ type Core struct {
 	sealed    *uint32
 
 	standby              bool
+	perfStandby          bool
 	standbyDoneCh        chan struct{}
 	standbyStopCh        chan struct{}
 	manualStepDownCh     chan struct{}
@@ -274,7 +256,10 @@ type Core struct {
 	defaultLeaseTTL time.Duration
 	maxLeaseTTL     time.Duration
 
-	logger log.Logger
+	// baseLogger is used to avoid ResetNamed as it strips useful prefixes in
+	// e.g. testing
+	baseLogger log.Logger
+	logger     log.Logger
 
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
@@ -382,6 +367,10 @@ type Core struct {
 
 	// Stores any funcs that should be run on successful postUnseal
 	postUnsealFuncs []func()
+
+	// Stores loggers so we can reset the level
+	allLoggers     []log.Logger
+	allLoggersLock sync.RWMutex
 }
 
 // CoreConfig is used to parameterize a core
@@ -435,6 +424,8 @@ type CoreConfig struct {
 
 	ReloadFuncs     *map[string][]reload.ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
+
+	AllLoggers []log.Logger
 }
 
 // NewCore is used to construct a new core
@@ -482,6 +473,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		router:                           NewRouter(),
 		sealed:                           new(uint32),
 		standby:                          true,
+		baseLogger:                       conf.Logger,
 		logger:                           conf.Logger.Named("core"),
 		defaultLeaseTTL:                  conf.DefaultLeaseTTL,
 		maxLeaseTTL:                      conf.MaxLeaseTTL,
@@ -502,9 +494,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		activeNodeReplicationState:       new(uint32),
 		keepHALockOnStepDown:             new(uint32),
 		activeContextCancelFunc:          new(atomic.Value),
+		allLoggers:                       conf.AllLoggers,
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
+	c.allLoggers = append(c.allLoggers, c.logger)
 
 	atomic.StoreUint32(c.replicationState, uint32(consts.ReplicationDRDisabled|consts.ReplicationPerformanceDisabled))
 	c.localClusterCert.Store(([]byte)(nil))
@@ -534,15 +528,19 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.seal.SetCore(c)
 
-	c.sealUnwrapper = NewSealUnwrapper(phys, conf.Logger.ResetNamed("storage.sealunwrapper"))
+	unwrapperLogger := c.baseLogger.Named("storage.sealunwrapper")
+	c.allLoggers = append(c.allLoggers, unwrapperLogger)
+	c.sealUnwrapper = NewSealUnwrapper(phys, unwrapperLogger)
 
 	var ok bool
 
 	// Wrap the physical backend in a cache layer if enabled
+	cacheLogger := c.baseLogger.Named("storage.cache")
+	c.allLoggers = append(c.allLoggers, cacheLogger)
 	if txnOK {
-		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.ResetNamed("storage.cache"))
+		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, cacheLogger)
 	} else {
-		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.ResetNamed("storage.cache"))
+		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, cacheLogger)
 	}
 	c.physicalCache = c.physical.(physical.ToggleablePurgemonster)
 
@@ -599,7 +597,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends["system"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		b := NewSystemBackend(c, conf.Logger.Named("system"))
+		sysBackendLogger := conf.Logger.Named("system")
+		c.AddLogger(sysBackendLogger)
+		b := NewSystemBackend(c, sysBackendLogger)
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
 		}
@@ -607,7 +607,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	logicalBackends["identity"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return NewIdentityStore(ctx, c, config, conf.Logger.Named("identity"))
+		identityLogger := conf.Logger.Named("identity")
+		c.AddLogger(identityLogger)
+		return NewIdentityStore(ctx, c, config, identityLogger)
 	}
 
 	c.logicalBackends = logicalBackends
@@ -617,7 +619,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		credentialBackends[k] = f
 	}
 	credentialBackends["token"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return NewTokenStore(ctx, conf.Logger.Named("token"), c, config)
+		tsLogger := conf.Logger.Named("token")
+		c.AddLogger(tsLogger)
+		return NewTokenStore(ctx, tsLogger, c, config)
 	}
 	c.credentialBackends = credentialBackends
 
@@ -1128,7 +1132,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
 		return nil
 	}
 
-	c.logger.Debug("marked as sealed")
+	c.logger.Info("marked as sealed")
 
 	// Clear forwarding clients
 	c.requestForwardingConnectionLock.Lock()
@@ -1469,4 +1473,18 @@ func (c *Core) RouterAccess() *RouterAccess {
 // IsDRSecondary returns if the current cluster state is a DR secondary.
 func (c *Core) IsDRSecondary() bool {
 	return c.ReplicationState().HasState(consts.ReplicationDRSecondary)
+}
+
+func (c *Core) AddLogger(logger log.Logger) {
+	c.allLoggersLock.Lock()
+	defer c.allLoggersLock.Unlock()
+	c.allLoggers = append(c.allLoggers, logger)
+}
+
+func (c *Core) SetLogLevel(level log.Level) {
+	c.allLoggersLock.RLock()
+	defer c.allLoggersLock.RUnlock()
+	for _, logger := range c.allLoggers {
+		logger.SetLevel(level)
+	}
 }

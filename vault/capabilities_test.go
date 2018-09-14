@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sort"
 	"testing"
@@ -112,6 +113,82 @@ path "secret/sample" {
 	sort.Strings(expected)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
+	}
+}
+
+func TestCapabilities_TemplatedPolicies(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	i, _, c := testIdentityStoreWithGithubAuth(t)
+
+	// Create an entity and assign policy1 to it
+	entityReq := &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+	}
+	resp, err = i.HandleRequest(context.Background(), entityReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %#v\n", resp, err)
+	}
+	entityID := resp.Data["id"].(string)
+
+	// Create a token for the entity and assign policy2 on the token
+	ent := &logical.TokenEntry{
+		ID:       "capabilitiestoken",
+		Path:     "auth/token/create",
+		Policies: []string{"testpolicy"},
+		EntityID: entityID,
+		TTL:      time.Hour,
+	}
+	testMakeTokenDirectly(t, c.tokenStore, ent)
+
+	tCases := []struct {
+		policy   string
+		path     string
+		expected []string
+	}{
+		{
+			`name = "testpolicy"
+			path "secret/{{identity.entity.id}}/sample" {
+				capabilities = ["update", "create"]
+			}
+			`,
+			fmt.Sprintf("secret/%s/sample", entityID),
+			[]string{"update", "create"},
+		},
+		{
+			`{"name": "testpolicy", "path": {"secret/{{identity.entity.id}}/sample": {"capabilities": ["read", "create"]}}}`,
+			fmt.Sprintf("secret/%s/sample", entityID),
+			[]string{"read", "create"},
+		},
+		{
+			`{"name": "testpolicy", "path": {"secret/sample": {"capabilities": ["read"]}}}`,
+			"secret/sample",
+			[]string{"read"},
+		},
+	}
+
+	for _, tCase := range tCases {
+		// Create the above policies
+		policy, err := ParseACLPolicy(tCase.policy)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		err = c.policyStore.SetPolicy(context.Background(), policy)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		actual, err := c.Capabilities(context.Background(), "capabilitiestoken", tCase.path)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		sort.Strings(actual)
+		sort.Strings(tCase.expected)
+		if !reflect.DeepEqual(actual, tCase.expected) {
+			t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, tCase.expected)
+		}
 	}
 }
 

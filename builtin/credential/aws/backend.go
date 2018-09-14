@@ -286,12 +286,21 @@ func getAnyRegionForAwsPartition(partitionId string) *endpoints.Region {
 }
 
 const backendHelp = `
-aws-ec2 auth method takes in PKCS#7 signature of an AWS EC2 instance and a client
-created nonce to authenticates the EC2 instance with Vault.
+The aws auth method uses either AWS IAM credentials or AWS-signed EC2 metadata
+to authenticate clients, which are IAM principals or EC2 instances.
 
 Authentication is backed by a preconfigured role in the backend. The role
 represents the authorization of resources by containing Vault's policies.
 Role can be created using 'role/<role>' endpoint.
+
+Authentication of IAM principals, either IAM users or roles, is done using a
+specifically signed AWS API request using clients' AWS IAM credentials. IAM
+principals can then be assigned to roles within Vault. This is known as the
+"iam" auth method.
+
+Authentication of EC2 instances is done using either a signed PKCS#7 document
+or a detached RSA signature of an AWS EC2 instance's identity document along
+with a client-created nonce. This is known as the "ec2" auth method.
 
 If there is need to further restrict the capabilities of the role on the instance
 that is using the role, 'role_tag' option can be enabled on the role, and a tag

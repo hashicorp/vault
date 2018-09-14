@@ -923,13 +923,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 	// Sanitize the group alias
 	if group.Alias != nil {
 		group.Alias.CanonicalID = group.ID
-
 		err = i.sanitizeAlias(group.Alias)
-		if err != nil {
-			return err
-		}
-
-		err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
 		if err != nil {
 			return err
 		}
@@ -1092,6 +1086,12 @@ func (i *IdentityStore) UpsertGroupInTxn(txn *memdb.Txn, group *identity.Group, 
 	// Increment the modify index of the group
 	group.ModifyIndex++
 
+	if group.Alias != nil {
+		err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
+		if err != nil {
+			return err
+		}
+	}
 	// Insert or update group in MemDB using the transaction created above
 	err = i.MemDBUpsertGroupInTxn(txn, group)
 	if err != nil {
@@ -1552,9 +1552,9 @@ func (i *IdentityStore) MemDBGroupByAliasID(aliasID string, clone bool) (*identi
 	return i.MemDBGroupByAliasIDInTxn(txn, aliasID, clone)
 }
 
-func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID string, groupAliases []*logical.Alias) error {
+func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID string, groupAliases []*logical.Alias) ([]*logical.Alias, error) {
 	if entityID == "" {
-		return fmt.Errorf("empty entity ID")
+		return nil, fmt.Errorf("empty entity ID")
 	}
 
 	i.groupLock.Lock()
@@ -1565,7 +1565,7 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID strin
 
 	oldGroups, err := i.MemDBGroupsByMemberEntityIDInTxn(txn, entityID, true, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	mountAccessor := ""
@@ -1574,22 +1574,24 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID strin
 	}
 
 	var newGroups []*identity.Group
+	var validAliases []*logical.Alias
 	for _, alias := range groupAliases {
 		aliasByFactors, err := i.MemDBAliasByFactors(alias.MountAccessor, alias.Name, true, true)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if aliasByFactors == nil {
 			continue
 		}
 		mappingGroup, err := i.MemDBGroupByAliasID(aliasByFactors.ID, true)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if mappingGroup == nil {
-			return fmt.Errorf("group unavailable for a valid alias ID %q", aliasByFactors.ID)
+			return nil, fmt.Errorf("group unavailable for a valid alias ID %q", aliasByFactors.ID)
 		}
 		newGroups = append(newGroups, mappingGroup)
+		validAliases = append(validAliases, alias)
 	}
 
 	diff := diffGroups(oldGroups, newGroups)
@@ -1606,7 +1608,7 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID strin
 
 		err = i.UpsertGroupInTxn(txn, group, true)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -1628,13 +1630,13 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID strin
 
 		err = i.UpsertGroupInTxn(txn, group, true)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	txn.Commit()
 
-	return nil
+	return validAliases, nil
 }
 
 // diffGroups is used to diff two sets of groups

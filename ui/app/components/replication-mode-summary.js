@@ -11,8 +11,7 @@ export default Component.extend({
   version: inject.service(),
   router: inject.service(),
   namespace: inject.service(),
-  classNames: ['level', 'box-label'],
-  classNameBindings: ['isMenu:is-mobile'],
+  classNameBindings: ['isMenu::box', 'isMenu::level'],
   attributeBindings: ['href', 'target'],
   display: 'banner',
   isMenu: computed.equal('display', 'menu'),
@@ -26,8 +25,7 @@ export default Component.extend({
       return this.get('router').urlFor(
         'vault.cluster.replication.mode.index',
         this.get('cluster.name'),
-        mode,
-        { queryParams: { namespace: this.get('namespace.path') } }
+        mode
       );
     }
     return null;
@@ -38,6 +36,7 @@ export default Component.extend({
     }
     return null;
   }),
+  internalLink: false,
   isPerformance: computed.equal('mode', 'performance'),
   replicationEnabled: replicationAttr('replicationEnabled'),
   replicationUnsupported: computed.equal('cluster.mode', 'unsupported'),

@@ -2,9 +2,10 @@ import Ember from 'ember';
 import DS from 'ember-data';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 
-const { RSVP } = Ember;
+const { RSVP, inject } = Ember;
 export default Ember.Route.extend(UnloadModelRoute, {
   modelPath: 'model.model',
+  wizard: inject.service(),
   modelType(backendType, section) {
     const MODELS = {
       'aws-client': 'auth-config/aws/client',
@@ -26,6 +27,11 @@ export default Ember.Route.extend(UnloadModelRoute, {
     const backend = this.modelFor('vault.cluster.settings.auth.configure');
     const { section_name: section } = params;
     if (section === 'options') {
+      this.get('wizard').transitionFeatureMachine(
+        this.get('wizard.featureState'),
+        'EDIT',
+        backend.get('type')
+      );
       return RSVP.hash({
         model: backend,
         section,
@@ -39,6 +45,11 @@ export default Ember.Route.extend(UnloadModelRoute, {
     }
     const model = this.store.peekRecord(modelType, backend.id);
     if (model) {
+      this.get('wizard').transitionFeatureMachine(
+        this.get('wizard.featureState'),
+        'EDIT',
+        backend.get('type')
+      );
       return RSVP.hash({
         model,
         section,
@@ -47,6 +58,11 @@ export default Ember.Route.extend(UnloadModelRoute, {
     return this.store
       .findRecord(modelType, backend.id)
       .then(config => {
+        this.get('wizard').transitionFeatureMachine(
+          this.get('wizard.featureState'),
+          'EDIT',
+          backend.get('type')
+        );
         config.set('backend', backend);
         return RSVP.hash({
           model: config,

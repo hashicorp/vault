@@ -53,6 +53,8 @@ type Config struct {
 
 	PluginDirectory string `hcl:"plugin_directory"`
 
+	LogLevel string `hcl:"log_level"`
+
 	PidFile              string      `hcl:"pid_file"`
 	EnableRawEndpoint    bool        `hcl:"-"`
 	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
@@ -61,6 +63,9 @@ type Config struct {
 	ClusterAddr          string      `hcl:"cluster_addr"`
 	DisableClustering    bool        `hcl:"-"`
 	DisableClusteringRaw interface{} `hcl:"disable_clustering"`
+
+	DisablePerformanceStandby    bool        `hcl:"-"`
+	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby"`
 
 	DisableSealWrap    bool        `hcl:"-"`
 	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
@@ -296,6 +301,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DefaultMaxRequestDuration = c2.DefaultMaxRequestDuration
 	}
 
+	result.LogLevel = c.LogLevel
+	if c2.LogLevel != "" {
+		result.LogLevel = c2.LogLevel
+	}
+
 	result.ClusterName = c.ClusterName
 	if c2.ClusterName != "" {
 		result.ClusterName = c2.ClusterName
@@ -324,6 +334,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.PidFile = c.PidFile
 	if c2.PidFile != "" {
 		result.PidFile = c2.PidFile
+	}
+
+	result.DisablePerformanceStandby = c.DisablePerformanceStandby
+	if c2.DisablePerformanceStandby {
+		result.DisablePerformanceStandby = c2.DisablePerformanceStandby
 	}
 
 	result.DisableSealWrap = c.DisableSealWrap
@@ -420,6 +435,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 
 	if result.DisableClusteringRaw != nil {
 		if result.DisableClustering, err = parseutil.ParseBool(result.DisableClusteringRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisablePerformanceStandbyRaw != nil {
+		if result.DisablePerformanceStandby, err = parseutil.ParseBool(result.DisablePerformanceStandbyRaw); err != nil {
 			return nil, err
 		}
 	}

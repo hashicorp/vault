@@ -26,15 +26,20 @@ export default Component.extend(DEFAULTS, {
   buttonText: 'Submit',
   thresholdPath: 'required',
   generateAction: false,
-  encoded_token: null,
 
   init() {
+    this._super(...arguments);
     if (this.get('fetchOnInit')) {
       this.attemptProgress();
     }
-    return this._super(...arguments);
   },
 
+  didInsertElement() {
+    this._super(...arguments);
+    this.onUpdate(this.getProperties(Object.keys(DEFAULTS)));
+  },
+
+  onUpdate() {},
   onShamirSuccess() {},
   // can be overridden w/an attr
   isComplete(data) {
@@ -56,17 +61,23 @@ export default Component.extend(DEFAULTS, {
   hasProgress: computed.gt('progress', 0),
 
   actionSuccess(resp) {
-    const { isComplete, onShamirSuccess, thresholdPath } = this.getProperties(
+    let { onUpdate, isComplete, onShamirSuccess, thresholdPath } = this.getProperties(
+      'onUpdate',
       'isComplete',
       'onShamirSuccess',
       'thresholdPath'
     );
+    let threshold = get(resp, thresholdPath);
+    let props = {
+      ...resp,
+      threshold,
+    };
     this.stopLoading();
-    this.set('threshold', get(resp, thresholdPath));
-    this.setProperties(resp);
-    if (isComplete(resp)) {
+    this.setProperties(props);
+    onUpdate(props);
+    if (isComplete(props)) {
       this.reset();
-      onShamirSuccess(resp);
+      onShamirSuccess(props);
     }
   },
 

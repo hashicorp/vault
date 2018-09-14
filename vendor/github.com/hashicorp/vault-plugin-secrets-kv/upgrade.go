@@ -55,7 +55,7 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 
 	// If we are a replication secondary, wait until the primary has finished
 	// upgrading.
-	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 		b.Logger().Info("upgrade not running on performace replication secondary")
 
 		go func() {

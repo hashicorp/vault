@@ -236,6 +236,7 @@ $ curl \
   "renewable": false,
   "lease_duration": 0,
   "data": {
+      "disable": false,
       "expiry": "72h"
     },
   "auth": null
@@ -245,7 +246,15 @@ $ curl \
 ## Set CRL Configuration
 
 This endpoint allows setting the duration for which the generated CRL should be
-marked valid.
+marked valid. If the CRL is disabled, it will return a signed but zero-length
+CRL for any request. If enabled, it will re-build the CRL.
+
+  ~> Note: Disabling the CRL does not affect whether revoked certificates are
+  stored internally. Certificates that have been revoked when a role's
+  certificate storage is enabled will continue to be marked and stored as
+  revoked until `tidy` has been run with the desired safety buffer. Re-enabling
+  CRL generation will then result in all such certificates becoming a part of
+  the CRL.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -254,6 +263,7 @@ marked valid.
 ### Parameters
 
 - `expiry` `(string: "72h")` – Specifies the time until expiration.
+- `disable` `(bool: false)` – Disables or enables CRL building.
 
 ### Sample Payload
 
@@ -1529,12 +1539,10 @@ expiration time.
 - `tidy_cert_store` `(bool: false)` Specifies whether to tidy up the certificate
   store.
 
-- `tidy_revocation_list` `(bool: false)` Specifies whether to tidy up the
-  revocation list (CRL).
-
 - `tidy_revoked_certs` `(bool: false)` Set to true to expire all revoked
-  certificates, even if their duration has not yet passed. This will cause these
-  certificates to be removed from the CRL the next time the CRL is generated.
+  certificates, even if their duration has not yet passed, removing them both
+  from the CRL and from storage. The CRL will be rotated if this causes any
+  values to be removed.
 
 - `safety_buffer` `(string: "")` Specifies  A duration (given as an integer
   number of seconds or a string; defaults to `72h`) used as a safety buffer to

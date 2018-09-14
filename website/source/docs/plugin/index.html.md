@@ -11,7 +11,7 @@ description: |-
 Plugin backends are the components in Vault that can be implemented separately from Vault's
 builtin backends. These backends can be either authentication or secrets engines.
 
-The [`api_addr`][api_addr] must be set in order for the plugin process establish
+The [`api_addr`][api_addr] must be set in order for the plugin process to establish
 communication with the Vault server during mount time. If the storage backend
 has HA enabled and supports automatic host address detection (e.g. Consul),
 Vault will automatically attempt to determine the `api_addr` as well.

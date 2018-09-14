@@ -11,6 +11,7 @@ func (c *Sys) Health() (*HealthResponse, error) {
 	r.Params.Add("sealedcode", "299")
 	r.Params.Add("standbycode", "299")
 	r.Params.Add("drsecondarycode", "299")
+	r.Params.Add("performancestandbycode", "299")
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()

@@ -35,21 +35,13 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
-			"init_no_args",
-			[]string{
-				"-init",
-			},
-			"must specify either -otp or -pgp-key",
-			1,
-		},
-		{
 			"init_invalid_otp",
 			[]string{
 				"-init",
 				"-otp", "not-a-valid-otp",
 			},
-			"Error initializing: invalid OTP:",
-			1,
+			"illegal base64 data at input",
+			2,
 		},
 		{
 			"init_pgp_multi",
@@ -99,12 +91,12 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
-					t.Errorf("expected %d to be %d", code, tc.code)
+					t.Errorf("%s: expected %d to be %d", tc.name, code, tc.code)
 				}
 
 				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 				if !strings.Contains(combined, tc.out) {
-					t.Errorf("expected %q to contain %q", combined, tc.out)
+					t.Errorf("%s: expected %q to contain %q", tc.name, combined, tc.out)
 				}
 			})
 		}
@@ -116,7 +108,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testOperatorGenerateRootCommand(t)
+		_, cmd := testOperatorGenerateRootCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -124,11 +116,6 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		output := ui.OutputWriter.String() + ui.ErrorWriter.String()
-		if err := cmd.verifyOTP(output); err != nil {
-			t.Fatal(err)
 		}
 	})
 

@@ -3,7 +3,7 @@ import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { fragment } from 'ember-data-model-fragments/attributes';
 
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
 const { computed } = Ember;
@@ -16,12 +16,22 @@ export default DS.Model.extend({
   path: attr('string'),
   accessor: attr('string'),
   name: attr('string'),
-  type: attr('string'),
-  description: attr('string'),
+  type: attr('string', {
+    label: 'Secret engine type',
+  }),
+  description: attr('string', {
+    editType: 'textarea',
+  }),
   config: fragment('mount-config', { defaultValue: {} }),
   options: fragment('mount-options', { defaultValue: {} }),
-  local: attr('boolean'),
-  sealWrap: attr('boolean'),
+  local: attr('boolean', {
+    helpText:
+      'When replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
+  }),
+  sealWrap: attr('boolean', {
+    helpText:
+      'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For K/V mounts, all values will be seal wrapped.) This can only be specified at mount time.',
+  }),
 
   modelTypeForKV: computed('engineType', 'options.version', function() {
     let type = this.get('engineType');
@@ -33,19 +43,49 @@ export default DS.Model.extend({
     return modelType;
   }),
 
-  formFields: [
-    'type',
-    'path',
-    'description',
-    'accessor',
-    'local',
-    'sealWrap',
-    'config.{defaultLeaseTtl,maxLeaseTtl}',
-    'options.{version}',
-  ],
+  formFields: computed('engineType', function() {
+    let type = this.get('engineType');
+    let fields = [
+      'type',
+      'path',
+      'description',
+      'accessor',
+      'local',
+      'sealWrap',
+      'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+    ];
+    if (type === 'kv' || type === 'generic') {
+      fields.push('options.{version}');
+    }
+    return fields;
+  }),
+
+  formFieldGroups: computed('engineType', function() {
+    let type = this.get('engineType');
+    let defaultGroup = { default: ['path'] };
+    if (type === 'kv' || type === 'generic') {
+      defaultGroup.default.push('options.{version}');
+    }
+    return [
+      defaultGroup,
+      {
+        'Method Options': [
+          'description',
+          'config.listingVisibility',
+          'local',
+          'sealWrap',
+          'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+        ],
+      },
+    ];
+  }),
 
   attrs: computed('formFields', function() {
     return expandAttributeMeta(this, this.get('formFields'));
+  }),
+
+  fieldGroups: computed('formFieldGroups', function() {
+    return fieldToAttrs(this, this.get('formFieldGroups'));
   }),
 
   // namespaces introduced types with a `ns_` prefix for built-in engines

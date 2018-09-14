@@ -1,13 +1,18 @@
 import Ember from 'ember';
 
+const { typeOf, guidFor } = Ember;
+
 export default Ember.ArrayProxy.extend({
   fromJSON(json) {
-    const contents = Object.keys(json || []).map(key => {
+    if (json && typeOf(json) !== 'object') {
+      throw new Error('Vault expects data to be formatted as an JSON object.');
+    }
+    let contents = Object.keys(json || []).map(key => {
       let obj = {
         name: key,
         value: json[key],
       };
-      Ember.guidFor(obj);
+      guidFor(obj);
       return obj;
     });
     this.setObjects(

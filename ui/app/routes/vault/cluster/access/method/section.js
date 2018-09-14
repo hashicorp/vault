@@ -2,6 +2,7 @@ import Ember from 'ember';
 import DS from 'ember-data';
 
 export default Ember.Route.extend({
+  wizard: Ember.inject.service(),
   model(params) {
     const { section_name: section } = params;
     if (section !== 'configuration') {
@@ -9,7 +10,13 @@ export default Ember.Route.extend({
       Ember.set(error, 'httpStatus', 404);
       throw error;
     }
-    return this.modelFor('vault.cluster.access.method');
+    let backend = this.modelFor('vault.cluster.access.method');
+    this.get('wizard').transitionFeatureMachine(
+      this.get('wizard.featureState'),
+      'DETAILS',
+      backend.get('type')
+    );
+    return backend;
   },
 
   setupController(controller) {

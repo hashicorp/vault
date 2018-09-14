@@ -1,9 +1,10 @@
 import Ember from 'ember';
 
-export default Ember.Component.extend({
-  auth: Ember.inject.service(),
-
-  routing: Ember.inject.service('-routing'),
+const { Component, inject, computed, run } = Ember;
+export default Component.extend({
+  auth: inject.service(),
+  wizard: inject.service(),
+  routing: inject.service('-routing'),
 
   transitionToRoute: function() {
     var router = this.get('routing.router');
@@ -12,12 +13,15 @@ export default Ember.Component.extend({
 
   classNames: 'user-menu auth-info',
 
-  isRenewing: Ember.computed.or('fakeRenew', 'auth.isRenewing'),
+  isRenewing: computed.or('fakeRenew', 'auth.isRenewing'),
 
   actions: {
+    restartGuide() {
+      this.get('wizard').restartGuide();
+    },
     renewToken() {
       this.set('fakeRenew', true);
-      Ember.run.later(() => {
+      run.later(() => {
         this.set('fakeRenew', false);
         this.get('auth').renew();
       }, 200);

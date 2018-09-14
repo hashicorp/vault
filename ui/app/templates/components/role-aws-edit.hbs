@@ -13,7 +13,7 @@
       {{#if (eq mode "create") }}
         Create an AWS Role
       {{else if (eq mode 'edit')}}
-        Edit AWS Role
+        Edit AWS Role <code>{{model.id}}</code>
       {{else}}
         AWS Role <code>{{model.id}}</code>
       {{/if}}
@@ -43,22 +43,8 @@
               class="button has-icon-right is-ghost is-compact"
               data-test-backend-credentials="iam"
             }}
-             Generate IAM
+             Generate credentials
              {{i-con glyph="chevron-right" size=11}}
-            {{/secret-link}}
-          </div>
-        {{/if}}
-        {{#if model.canGenerateSTS}}
-          <div class="control">
-            {{#secret-link
-              mode="credentials"
-              secret=model.id
-              queryParams=(query-params action="sts")
-              class="button has-icon-right is-ghost is-compact"
-              data-test-backend-credentials="sts"
-            }}
-              Generate IAM with STS
-              {{i-con glyph="chevron-right" size=11}}
             {{/secret-link}}
           </div>
         {{/if}}

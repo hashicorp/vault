@@ -12,7 +12,9 @@ export default Ember.Route.extend(UnloadModel, {
   },
 
   model(params) {
-    return this.get('version.isOSS') ? null : this.store.findRecord('control-group', params.accessor);
+    return this.get('version').hasFeature('Control Groups')
+      ? this.store.findRecord('control-group', params.accessor)
+      : null;
   },
 
   actions: {

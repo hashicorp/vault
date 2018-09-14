@@ -14,7 +14,7 @@ Everything in Vault is path-based, and often uses the terms `path` and
 `namespace` interchangeably. The application namespace pattern is a useful
 construct for providing Vault as a service to internal customers, giving them
 the ability to implement secure multi-tenancy within Vault in order to provide
-isolation and ensure teams can self-manage their own environments. 
+isolation and ensure teams can self-manage their own environments.
 
 
 ## Reference Material
@@ -446,6 +446,8 @@ over.
 -> This step only demonstrates CLI commands and Web UI to create
 entities and groups.  Refer to the [Identity - Entities and
 Groups](/guides/identity/identity.html) guide if you need the full details.
+Also, read the [Additional Discussion](#additional-discussion) section for
+an example of setting up external groups.
 
 #### CLI Command
 
@@ -476,7 +478,7 @@ $ vault write -namespace=education/training identity/group \
         member_entity_ids=$(cat entity_id.txt)
 
 # Enable userpass auth method in training namespace
-$ vault auth enable -namespace=education/namespace userpass
+$ vault auth enable -namespace=education/training userpass
 
 # Create a user 'bsmith'
 $ vault write -namespace=education/training \
@@ -817,10 +819,11 @@ $ curl --header "X-Vault-Token: 5YNNjDDl6D8iW3eGQIlU0q.9dKXw" \
 1. Open a web browser and launch the Vault UI (e.g. http://127.0.01:8200/ui). If
 you are already logged in, sign out.
 
-1. At the **Sign in to Vault**, set the **Namespace** to **`education/training`**.
+1. At the **Sign in to Vault**, set the **Namespace** to
+**`education/training`**.
 
-1. Select the **Userpass** tab, and enter **`bsmith`** in the **Username** field,
-and **`password`** in the **Password** field.
+1. Select the **Userpass** tab, and enter **`bsmith`** in the **Username**
+field, and **`password`** in the **Password** field.
 
 1. Click **Sign in**.  
 
@@ -837,7 +840,6 @@ and **`password`** in the **Password** field.
 
 1. Click **Enable Engine** to finish.
 
-
 <br>
 
 ~> **Summary:** As this guide demonstrated, each namespace you created behaves
@@ -846,6 +848,62 @@ no visibility into other namespaces regardless of its hierarchical relationship.
 Tokens, policies, and secrets engines are tied to its namespace; therefore, each
 client must acquire a valid token for each namespace to access their secrets.
 
+
+## Additional Discussion
+
+For the simplicity, this guide used the username and password (`userpass`) auth
+method which was enabled at the education namespace.  However, most likely, your
+organization uses LDAP auth method which is enabled in the root namespace
+instead.
+
+In such as case, here are the steps to create the "Training Admin" group as
+described in this guide.
+
+1. Enable and configure the desired auth method (e.g. LDAP) in the root
+namespace.
+
+    ```plaintext
+    $ vault auth enable ldap
+
+    $ vault write auth/ldap/config \
+            url="ldap://ldap.example.com" \
+            userdn="ou=Users,dc=example,dc=com" \
+            groupdn="ou=Groups,dc=example,dc=com" \
+            groupfilter="(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))" \
+            groupattr="cn" \
+            upndomain="example.com" \
+            certificate=@ldap_ca_cert.pem \
+            insecure_tls=false \
+            starttls=true
+    ```
+
+1. Create an _external_ group in the root namespace.
+
+    ```shell
+    # Get the mount accessor for ldap auth method and save it in accessor.txt file
+    $ vault auth list -format=json \
+            | jq -r '.["ldap/"].accessor' > accessor.txt
+
+    # Create an external group and save the generated group ID in group_id.txt
+    $ vault write -format=json identity/group name="training_admin_root" \
+            type="external" \
+            | jq -r ".data.id" > group_id.txt    
+
+    # Create a group alias - assuming that the group name in LDAP is "ops_training"
+    $ vault write -format=json identity/group-alias name="ops_training" \
+            mount_accessor=$(cat accessor.txt) \
+            canonical_id=$(cat group_id.txt)             
+    ```
+
+1. In the `education/training` namespace, create an _internal_ group which has
+the external group (`training_admin_root`) as its member.
+
+    ```plaintext
+    $ vault write -namespace=education/training identity/group \
+            name="Training Admin" \
+            policies="training-admin" \
+            member_group_ids=$(cat group_id.txt)
+    ```
 
 ## Next steps
 
