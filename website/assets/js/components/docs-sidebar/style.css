@@ -2,6 +2,7 @@
 
 .g-docs-sidebar {
   width: 275px;
+  padding-left: 5px;
 
   & ul {
     list-style: none;

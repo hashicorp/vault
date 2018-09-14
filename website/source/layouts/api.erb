@@ -1,6 +1,6 @@
 <% wrap_layout :inner do %>
   <% content_for :sidebar do %>
-    <ul class="nav docs-nav">
+    <div class="nav docs-nav">
       <hashi-docs-sidebar
         category='api'
         current_page='<%= current_page.path %>'
@@ -138,7 +138,7 @@
           }
         ]) %>")
       ></hashi-docs-sidebar>
-    </ul>
+    </div>
   <% end %>
 
   <%= yield %>
