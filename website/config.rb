@@ -30,7 +30,9 @@ dato.tap do |dato|
       if page.metadata[:options][:layout]
         proxy "#{page.path}", "/content", {
           layout: page.metadata[:options][:layout],
-          locals: page.metadata[:page].merge({ content: render(page) })
+          locals: page.metadata[:page].merge({
+            content: render(page)
+          })
         }
       end
     end
@@ -141,20 +143,41 @@ helpers do
   end
 end
 
-# A modified version of middleman's render that skips the layout, required in
-# order to pass content into views as a local
+# custom version of middleman's render that renders only a file's contents
+# without front matter or layouts
+def render(page)
+  full_path = page.file_descriptor[:full_path]
+  relative_path = page.file_descriptor[:relative_path]
+  content = File.read(full_path).to_s
+  locals = {}
+  options = {}
 
-def render(page, opts = {}, locs = {})
-  return ::Middleman::FileRenderer.new(@app, page.file_descriptor[:full_path].to_s).template_data_for_file unless page.template?
+  data = @app.extensions[:front_matter].data(relative_path.to_s)
+  frontmatter = data[0]
+  content = data[1]
 
-  md   = page.metadata
-  opts = md[:options].deep_merge(opts)
-  locs = md[:locals].deep_merge(locs)
-  locs[:current_path] ||= page.destination_path
+  context = @app.template_context_class.new(@app, locals, options)
+  _render_with_all_renderers(relative_path.to_s, locals, context, options)
+end
 
-  # Remove layout, we're only rendering the content
-  opts.delete(:layout)
+# pirated from middleman source, its protected there sadly
+def _render_with_all_renderers(path, locs, context, opts, &block)
+  # Keep rendering template until we've used up all extensions. This
+  # handles cases like `style.css.sass.erb`
+  content = nil
 
-  renderer = ::Middleman::TemplateRenderer.new(@app, page.file_descriptor[:full_path].to_s)
-  renderer.render(locs, opts)
+  while ::Middleman::Util.tilt_class(path)
+    begin
+      opts[:template_body] = content if content
+
+      content_renderer = ::Middleman::FileRenderer.new(@app, path)
+      content = content_renderer.render(locs, opts, context, &block)
+
+      path = path.sub(/\.[^.]*\z/, '')
+    rescue LocalJumpError
+      raise "Tried to render a layout (calls yield) at #{path} like it was a template. Non-default layouts need to be in #{@app.config[:source]}/#{@app.config[:layouts_dir]}."
+    end
+  end
+
+  content
 end
