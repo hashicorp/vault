@@ -148,15 +148,13 @@ func pathUserRollback(ctx context.Context, req *logical.Request, _kind string, d
 		// minimum age is 5 minutes, and AWS eventual consistency is, in
 		// practice, never that long), but it could happen if a lease holder
 		// asks immediately after getting a user to revoke the lease, causing
-		// Vault to leake the secret, which would be a Very Bad Thing to allow.
+		// Vault to leak the secret, which would be a Very Bad Thing to allow.
 		// So we make sure that, if there's an associated lease, it must be at
 		// least 5 minutes old as well.
 		if aerr, ok := err.(awserr.Error); ok {
 			acceptMissingIamUsers := false
-			if req.Secret == nil {
+			if req.Secret == nil || time.Since(req.Secret.IssueTime) > time.Duration(minAwsUserRollbackAge) {
 				// WAL rollback
-				acceptMissingIamUsers = true
-			} else if time.Since(req.Secret.IssueTime) > time.Duration(5*time.Minute) {
 				acceptMissingIamUsers = true
 			}
 			if aerr.Code() == iam.ErrCodeNoSuchEntityException && acceptMissingIamUsers {

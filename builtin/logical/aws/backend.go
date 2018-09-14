@@ -45,7 +45,7 @@ func Backend() *backend {
 		},
 
 		WALRollback:       b.walRollback,
-		WALRollbackMinAge: 5 * time.Minute,
+		WALRollbackMinAge: minAwsUserRollbackAge,
 		BackendType:       logical.TypeLogical,
 	}
 
@@ -68,3 +68,5 @@ After mounting this backend, credentials to generate IAM keys must
 be configured with the "root" path and policies must be written using
 the "roles/" endpoints before any access keys can be generated.
 `
+
+const minAwsUserRollbackAge = 5 * time.Minute
