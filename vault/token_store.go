@@ -150,13 +150,13 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 
 	// Initialize the store
 	t := &TokenStore{
-		view:                  view,
-		cubbyholeDestroyer:    destroyCubbyhole,
-		logger:                logger,
-		tokenLocks:            locksutil.CreateLocks(),
-		tokensPendingDeletion: &sync.Map{},
-		saltLock:              sync.RWMutex{},
-		core:                  c,
+		view:                        view,
+		cubbyholeDestroyer:          destroyCubbyhole,
+		logger:                      logger,
+		tokenLocks:                  locksutil.CreateLocks(),
+		tokensPendingDeletion:       &sync.Map{},
+		saltLock:                    sync.RWMutex{},
+		core:                        c,
 		identityPoliciesDeriverFunc: c.fetchEntityAndDerivedPolicies,
 		tidyLock:                    new(uint32),
 		quitContext:                 c.activeContext,
@@ -1221,6 +1221,10 @@ func (ts *TokenStore) revokeTreeSalted(ctx context.Context, saltedID string) err
 			if _, seen := seenIDs[child]; !seen {
 				children = append(children, child)
 			} else {
+				if err = ts.view.Delete(ctx, path+child); err != nil {
+					return errwrap.Wrapf("failed to delete entry: {{err}}", err)
+				}
+
 				ts.Logger().Warn("token cycle found", "token", child)
 			}
 		}

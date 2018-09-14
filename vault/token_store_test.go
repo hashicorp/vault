@@ -970,10 +970,13 @@ func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64, injectCy
 	ts := c.tokenStore
 	root, children := buildTokenTree(t, ts, depth)
 
+	var cyclePaths []string
 	if injectCycles {
 		// Make the root the parent of itself
 		saltedRoot, _ := ts.SaltID(context.Background(), root.ID)
-		le := &logical.StorageEntry{Key: fmt.Sprintf("parent/%s/%s", saltedRoot, saltedRoot)}
+		key := fmt.Sprintf("parent/%s/%s", saltedRoot, saltedRoot)
+		cyclePaths = append(cyclePaths, key)
+		le := &logical.StorageEntry{Key: key}
 
 		if err := ts.view.Put(context.Background(), le); err != nil {
 			t.Fatalf("err: %v", err)
@@ -982,7 +985,9 @@ func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64, injectCy
 		// Make a deep child the parent of a shallow child
 		shallow, _ := ts.SaltID(context.Background(), children[0].ID)
 		deep, _ := ts.SaltID(context.Background(), children[len(children)-1].ID)
-		le = &logical.StorageEntry{Key: fmt.Sprintf("parent/%s/%s", deep, shallow)}
+		key = fmt.Sprintf("parent/%s/%s", deep, shallow)
+		cyclePaths = append(cyclePaths, key)
+		le = &logical.StorageEntry{Key: key}
 
 		if err := ts.view.Put(context.Background(), le); err != nil {
 			t.Fatalf("err: %v", err)
@@ -1011,6 +1016,16 @@ func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64, injectCy
 		}
 		if out != nil {
 			t.Fatalf("bad: %#v", out)
+		}
+	}
+
+	for _, path := range cyclePaths {
+		entry, err := ts.view.Get(context.Background(), path)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if entry != nil {
+			t.Fatalf("expected reference to be deleted: %v", entry)
 		}
 	}
 }
