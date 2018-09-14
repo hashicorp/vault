@@ -17,4 +17,5 @@
 @import '@hashicorp/hashi-newsletter-signup-form/dist/style.css';
 @import '@hashicorp/hashi-button/dist/style.css';
 @import '@hashicorp/hashi-product-subnav/dist/style.css';
+@import '@hashicorp/hashi-content/dist/style.css';
 @import '../js/components/docs-sidebar/style.css';
