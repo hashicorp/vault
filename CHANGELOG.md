@@ -7,6 +7,7 @@ BUG FIXES:
    storage engine's per-item limit
  * core: Improve WAL deletion rate
  * core: Fix token creation on performance standby nodes
+ * core: Fix unwrapping inside a namespace
 
 IMPROVEMENTS:
 
