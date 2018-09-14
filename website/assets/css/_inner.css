@@ -20,4 +20,8 @@
   @media (min-width: 768px) {
     margin: 0;
   }
+
+  & .g-content > h1:first-child {
+    margin-top: 0;
+  }
 }
