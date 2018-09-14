@@ -9,7 +9,6 @@ import {
   text,
   triggerable,
 } from 'ember-cli-page-object';
-import { getter } from 'ember-cli-page-object/macros';
 
 export default {
   hasStringList: isPresent('[data-test-component=string-list]'),
@@ -26,7 +25,7 @@ export default {
 
   fields: collection('[data-test-field]', {
     clickLabel: clickable('label'),
-    for: attribute('for', 'label'),
+    for: attribute('for', 'label', { multiple: true }),
     labelText: text('label', { multiple: true }),
     input: fillable('input'),
     select: fillable('select'),
@@ -38,13 +37,17 @@ export default {
     selectValue: value('select'),
   }),
   fillInTextarea: async function(name, value) {
-    let field = this.fields.filterBy('for', name)[0];
-    return field.textarea(value);
+    return this.fields
+      .filter(field => {
+        return field.for.includes(name);
+      })[0]
+      .textarea(value);
   },
   fillIn: async function(name, value) {
-    return this.fields.filterBy('for', name)[0].input(value);
+    return this.fields
+      .filter(field => {
+        return field.for.includes(name);
+      })[0]
+      .input(value);
   },
-  field: getter(function() {
-    return this.fields(0);
-  }),
 };
