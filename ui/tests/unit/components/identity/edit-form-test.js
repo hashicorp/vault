@@ -59,7 +59,7 @@ module('Unit | Component | identity/edit-form', function(hooks) {
       rollbackAttributes: sinon.spy(),
     });
     test(`it computes cancelLink properly: ${testCase.identityType} ${testCase.mode}`, function(assert) {
-      let component = this.subject();
+      let component = this.owner.lookup('component:identity/edit-form');
 
       component.set('mode', testCase.mode);
       component.set('model', model);

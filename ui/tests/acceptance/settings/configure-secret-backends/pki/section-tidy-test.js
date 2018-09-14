@@ -21,10 +21,7 @@ module('Acceptance | settings/configure/secrets/pki/tidy', function(hooks) {
     await page.form.fields.objectAt(0).clickLabel();
 
     await withFlash(page.form.submit(), () => {
-      assert.equal(
-        page.lastMessage,
-        "Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs."
-      );
+      assert.equal(page.lastMessage, 'The tidy config for this backend has been updated.');
     });
   });
 });
