@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -26,10 +27,10 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	// have to get the client config first because that takes out a read lock
 	client, err := b.clientIAM(ctx, req.Storage)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error retrieving IAM client: %v", err)), nil
+		return nil, err
 	}
 	if client == nil {
-		return logical.ErrorResponse("nil IAM client"), nil
+		return nil, fmt.Errorf("nil IAM client")
 	}
 
 	b.rootMutex.Lock()
@@ -39,30 +40,30 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, err
 	}
 	if rawRootConfig == nil {
-		return logical.ErrorResponse("no configuration found for config/root"), nil
+		return nil, fmt.Errorf("No configuration found for config/root")
 	}
 	var config rootConfig
 	if err := rawRootConfig.DecodeJSON(&config); err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error reading root configuration: %v", err)), nil
+		return nil, errwrap.Wrapf("Error reading root configuration: {{err}}", err)
 	}
 
 	if config.AccessKey == "" || config.SecretKey == "" {
-		return logical.ErrorResponse("cannot call config/rotate-root when either access_key or secret_key is empty"), nil
+		return logical.ErrorResponse("Cannot call config/rotate-root when either access_key or secret_key is empty"), nil
 	}
 
 	var getUserInput iam.GetUserInput // empty input means get current user
 	getUserRes, err := client.GetUser(&getUserInput)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error calling GetUser: %v", err)), nil
+		return nil, errwrap.Wrapf("error calling GetUser: {{err}}", err)
 	}
 	if getUserRes == nil {
-		return logical.ErrorResponse("nil response from GetUser"), nil
+		return nil, fmt.Errorf("nil response from GetUser")
 	}
 	if getUserRes.User == nil {
-		return logical.ErrorResponse("nil user returned from GetUser"), nil
+		return nil, fmt.Errorf("nil user returned from GetUser")
 	}
 	if getUserRes.User.UserName == nil {
-		return logical.ErrorResponse("nil UserName returnjd from GetUser"), nil
+		return nil, fmt.Errorf("nil UserName returned from GetUser")
 	}
 
 	createAccessKeyInput := iam.CreateAccessKeyInput{
@@ -70,13 +71,13 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	}
 	createAccessKeyRes, err := client.CreateAccessKey(&createAccessKeyInput)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error calling CreateAccessKey: %v", err)), nil
+		return nil, errwrap.Wrapf("error calling CreateAccessKey: {{err}}", err)
 	}
 	if createAccessKeyRes.AccessKey == nil {
-		return logical.ErrorResponse("nil response from CreateAccessKey"), nil
+		return nil, fmt.Errorf("nil response from CreateAccessKey")
 	}
 	if createAccessKeyRes.AccessKey.AccessKeyId == nil || createAccessKeyRes.AccessKey.SecretAccessKey == nil {
-		return logical.ErrorResponse("nil AccessKeyId or SecretAccessKey returned from CreateAccessKey"), nil
+		return nil, fmt.Errorf("nil AccessKeyId or SecretAccessKey returned from CreateAccessKey")
 	}
 
 	oldAccessKey := config.AccessKey
@@ -86,12 +87,10 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 
 	newEntry, err := logical.StorageEntryJSON("config/root", config)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error generating new root config: %v", err)), nil
+		return nil, errwrap.Wrapf("error generating new config/root JSON: {{err}}", err)
 	}
-	// TODO: Should we return the full error message? Are there any scenarios in which it could expose
-	// the underlying creds? (The idea of rotate-root is that it should never expose credentials.)
 	if err := req.Storage.Put(ctx, newEntry); err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error saving new root config: %v", err)), nil
+		return nil, errwrap.Wrapf("error saving new config/root: {{err}}", err)
 	}
 
 	deleteAccessKeyInput := iam.DeleteAccessKeyInput{
@@ -100,7 +99,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	}
 	_, err = client.DeleteAccessKey(&deleteAccessKeyInput)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error deleting old access key: %v", err)), nil
+		return nil, errwrap.Wrapf("Error deleting old access key: {{err}}", err)
 	}
 
 	return &logical.Response{

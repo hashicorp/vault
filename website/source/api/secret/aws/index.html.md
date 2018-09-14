@@ -91,7 +91,7 @@ to AWS may fail for a few seconds until AWS becomes consistent again.
 In order to call this endpoint, Vault's AWS access key MUST be the only access
 key on the IAM user; otherwise, generation of a new access key will fail. Once
 this method is called, Vault will now be the only entity that knows the AWS
-secret key is uses to access AWS.
+secret key is used to access AWS.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
