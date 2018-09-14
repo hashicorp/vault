@@ -45,7 +45,7 @@ module('Integration | Component | masked input', function(hooks) {
     await render(hbs`{{masked-input value=value}}`);
     assert.ok(hasClass(component.wrapperClass, 'masked'));
 
-    await component.focus();
+    await component.focusField();
     assert.notOk(hasClass(component.wrapperClass, 'masked'));
   });
 
@@ -55,8 +55,8 @@ module('Integration | Component | masked input', function(hooks) {
 
     assert.ok(hasClass(component.wrapperClass, 'masked'));
 
-    await component.focus();
-    await component.blur();
+    await component.focusField();
+    await component.blurField();
 
     assert.ok(hasClass(component.wrapperClass, 'masked'));
   });

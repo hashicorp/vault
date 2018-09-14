@@ -5,8 +5,7 @@ import Mixin from '@ember/object/mixin';
 
 export default Mixin.create({
   store: service(),
-  routing: service('-routing'),
-  router: alias('routing.router'),
+  router: service(),
   submitHandler(action, clusterMode, data, event) {
     let replicationMode = (data && data.replicationMode) || this.get('replicationMode');
     if (event && event.preventDefault) {
@@ -74,18 +73,18 @@ export default Mixin.create({
     }
     const router = this.get('router');
     if (action === 'disable') {
-      return router.transitionTo.call(router, 'vault.cluster.replication.mode', replicationMode);
+      return router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
     return cluster
       .reload()
       .then(() => {
         cluster.rollbackAttributes();
         if (action === 'enable') {
-          return router.transitionTo.call(router, 'vault.cluster.replication.mode', replicationMode);
+          return router.transitionTo('vault.cluster.replication.mode', replicationMode);
         }
 
         if (mode === 'secondary' && replicationMode === 'dr') {
-          return router.transitionTo.call(router, 'vault.cluster');
+          return router.transitionTo('vault.cluster');
         }
       })
       .finally(() => {
