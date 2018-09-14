@@ -2,7 +2,6 @@ import { click, fillIn, findAll, currentURL, find } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | ssh secret backend', function(hooks) {

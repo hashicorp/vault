@@ -1,3 +1,4 @@
+import { run } from '@ember/runloop';
 import Service from '@ember/service';
 import { resolve } from 'rsvp';
 import { module, test } from 'qunit';
@@ -27,8 +28,11 @@ module('Integration | Component | shamir flow', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    this.owner.register('service:store', storeStub);
-    this.storeService = this.owner.lookup('service:store');
+    run(() => {
+      this.owner.unregister('service:store');
+      this.owner.register('service:store', storeStub);
+      this.storeService = this.owner.lookup('service:store');
+    });
   });
 
   test('it renders', async function(assert) {

@@ -19,7 +19,7 @@ module('Integration | Component | masked input', function(hooks) {
   });
 
   const hasClass = (classString = '', classToFind) => {
-    return classString.split(' ').contains(classToFind);
+    return classString.split(' ').includes(classToFind);
   };
 
   test('it renders', async function(assert) {
@@ -43,10 +43,9 @@ module('Integration | Component | masked input', function(hooks) {
   test('it unmasks text on focus', async function(assert) {
     this.set('value', 'value');
     await render(hbs`{{masked-input value=value}}`);
-
     assert.ok(hasClass(component.wrapperClass, 'masked'));
 
-    component.focus();
+    await component.focus();
     assert.notOk(hasClass(component.wrapperClass, 'masked'));
   });
 
@@ -56,8 +55,8 @@ module('Integration | Component | masked input', function(hooks) {
 
     assert.ok(hasClass(component.wrapperClass, 'masked'));
 
-    component.focus();
-    component.blur();
+    await component.focus();
+    await component.blur();
 
     assert.ok(hasClass(component.wrapperClass, 'masked'));
   });
@@ -68,7 +67,7 @@ module('Integration | Component | masked input', function(hooks) {
 
     assert.ok(hasClass(component.wrapperClass, 'masked'));
 
-    component.toggleMasked();
+    await component.toggleMasked();
 
     assert.notOk(hasClass(component.wrapperClass, 'masked'));
   });
@@ -77,8 +76,8 @@ module('Integration | Component | masked input', function(hooks) {
     this.set('value', 'value');
     await render(hbs`{{masked-input value=value}}`);
 
-    component.toggleMasked();
-    component.toggleMasked();
+    await component.toggleMasked();
+    await component.toggleMasked();
 
     assert.ok(hasClass(component.wrapperClass, 'masked'));
   });

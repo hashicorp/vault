@@ -17,12 +17,10 @@ export default {
     mountType: value(),
   }),
   type: fillable('[name="mount-type"]'),
-  selectType: async function(type) {
-    let types = this.types;
-    let thing = types.filterBy('mountType', type)[0];
-    return thing.select();
+  async selectType(type) {
+    return this.types.filterBy('mountType', type)[0].select();
   },
-  mount: async function(type, path) {
+  async mount(type, path) {
     await this.selectType(type);
     if (path) {
       return this.next()

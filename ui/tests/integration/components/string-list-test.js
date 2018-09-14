@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, find, findAll, fillIn } from '@ember/test-helpers';
+import { render, click, find, findAll, fillIn, triggerKeyEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 module('Integration | Component | string list', function(hooks) {
@@ -34,75 +34,77 @@ module('Integration | Component | string list', function(hooks) {
 
     await render(hbs`{{string-list}}`);
     assert.equal(findAll('[data-test-string-list-label]').length, 0, 'does not render the label');
-    assertBlank.call(this, assert);
+    assertBlank(assert);
   });
 
   test('it renders inputValue from empty string', async function(assert) {
     await render(hbs`{{string-list inputValue=""}}`);
-    assertBlank.call(this, assert);
+    assertBlank(assert);
   });
 
   test('it renders inputValue from string with one value', async function(assert) {
     await render(hbs`{{string-list inputValue="foo"}}`);
-    assertFoo.call(this, assert);
+    assertFoo(assert);
   });
 
   test('it renders inputValue from comma-separated string', async function(assert) {
     await render(hbs`{{string-list inputValue="foo,bar"}}`);
-    assertFooBar.call(this, assert);
+    assertFooBar(assert);
   });
 
   test('it renders inputValue from a blank array', async function(assert) {
     this.set('inputValue', []);
     await render(hbs`{{string-list inputValue=inputValue}}`);
-    assertBlank.call(this, assert);
+    assertBlank(assert);
   });
 
   test('it renders inputValue array with a single item', async function(assert) {
     this.set('inputValue', ['foo']);
     await render(hbs`{{string-list inputValue=inputValue}}`);
-    assertFoo.call(this, assert);
+    assertFoo(assert);
   });
 
   test('it renders inputValue array with a multiple items', async function(assert) {
     this.set('inputValue', ['foo', 'bar']);
     await render(hbs`{{string-list inputValue=inputValue}}`);
-    assertFooBar.call(this, assert);
+    assertFooBar(assert);
   });
 
   test('it adds a new row only when the last row is not blank', async function(assert) {
     await render(hbs`{{string-list inputValue=""}}`);
     await click('[data-test-string-list-button="add"]');
-    assertBlank.call(this, assert);
-    await fillIn('[data-test-string-list-input="0"]', 'foo').keyup();
+    assertBlank(assert);
+    await fillIn('[data-test-string-list-input="0"]', 'foo');
+    await triggerKeyEvent('[data-test-string-list-input="0"]', 'keyup', 14);
     await click('[data-test-string-list-button="add"]');
-    assertFoo.call(this, assert);
+    assertFoo(assert);
   });
 
   test('it trims input values', async function(assert) {
     await render(hbs`{{string-list inputValue=""}}`);
-    await fillIn('[data-test-string-list-input="0"]', ' foo ').keyup();
+    await fillIn('[data-test-string-list-input="0"]', 'foo');
+    await triggerKeyEvent('[data-test-string-list-input="0"]', 'keyup', 14);
     assert.equal(find('[data-test-string-list-input="0"]').value, 'foo');
   });
 
   test('it calls onChange with array when editing', async function(assert) {
-    assert.expect(1);
     this.set('inputValue', ['foo']);
     this.set('onChange', function(val) {
       assert.deepEqual(val, ['foo', 'bar'], 'calls onChange with expected value');
     });
     await render(hbs`{{string-list inputValue=inputValue onChange=(action onChange)}}`);
-    await fillIn('[data-test-string-list-input="1"]', 'bar').keyup();
+    await fillIn('[data-test-string-list-input="1"]', 'bar');
+    await triggerKeyEvent('[data-test-string-list-input="1"]', 'keyup', 14);
   });
 
   test('it calls onChange with string when editing', async function(assert) {
-    assert.expect(1);
     this.set('inputValue', 'foo');
     this.set('onChange', function(val) {
       assert.equal(val, 'foo,bar', 'calls onChange with expected value');
     });
     await render(hbs`{{string-list inputValue=inputValue onChange=(action onChange)}}`);
-    await fillIn('[data-test-string-list-input="1"]', 'bar').keyup();
+    await fillIn('[data-test-string-list-input="1"]', 'bar');
+    await triggerKeyEvent('[data-test-string-list-input="1"]', 'keyup', 14);
   });
 
   test('it removes a row', async function(assert) {
