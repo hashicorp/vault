@@ -1,3 +1,4 @@
+import { run } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import { assign } from '@ember/polyfills';
 import Service from '@ember/service';
@@ -6,6 +7,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, find, findAll, fillIn, blur, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';
+import waitForError from 'vault/tests/helpers/wait-for-error';
 
 const storeStub = Service.extend({
   callArgs: null,
@@ -34,16 +36,18 @@ module('Integration | Component | transit key actions', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    this.owner.register('service:store', storeStub);
-    this.storeService = this.owner.lookup('service:store');
+    run(() => {
+      this.owner.unregister('service:store');
+      this.owner.register('service:store', storeStub);
+      this.storeService = this.owner.lookup('service:store');
+    });
   });
 
-  test('it requires `key`', function(assert) {
-    assert.expectAssertion(
-      () => this.render(hbs`{{transit-key-actions}}`),
-      /`key` is required for/,
-      'asserts without key'
-    );
+  test('it requires `key`', async function(assert) {
+    let promise = waitForError();
+    render(hbs`{{transit-key-actions}}`);
+    let err = await promise;
+    assert.ok(err.message.includes('`key` is required for'), 'asserts without key');
   });
 
   test('it renders', async function(assert) {
@@ -113,11 +117,11 @@ module('Integration | Component | transit key actions', function(hooks) {
     this.set('key', key);
     this.set('selectedAction', 'encrypt');
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
-    this.render(hbs`{{transit-key-actions selectedAction=selectedAction key=key}}`);
+    await render(hbs`{{transit-key-actions selectedAction=selectedAction key=key}}`);
 
     await fillIn('#plaintext', 'plaintext');
     await click('[data-test-transit-b64-toggle="plaintext"]');
-    this.$('button:submit').click();
+    await click('button[type="submit"]');
     assert.deepEqual(
       this.get('storeService.callArgs'),
       {
@@ -149,7 +153,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     assert.equal(findAll('#key_version').length, 1, 'it renders the key version selector');
 
     await triggerEvent('#key_version', 'change');
-    this.$('button:submit').click();
+    await click('button[type="submit"]');
     assert.deepEqual(
       this.get('storeService.callArgs'),
       {
@@ -183,19 +187,19 @@ module('Integration | Component | transit key actions', function(hooks) {
     );
   });
 
-  test('it carries ciphertext value over to decrypt', function(assert) {
+  test('it carries ciphertext value over to decrypt', async function(assert) {
     const plaintext = 'not so secret';
-    doEncrypt.call(this, assert, ['decrypt']);
+    await doEncrypt.call(this, assert, ['decrypt']);
 
     this.set('storeService.keyActionReturnVal', { plaintext });
     this.set('selectedAction', 'decrypt');
     assert.equal(find('#ciphertext').value, 'secret', 'keeps ciphertext value');
 
-    this.$('button:submit').click();
+    await click('button[type="submit"]');
     assert.equal(find('#plaintext').value, plaintext, 'renders decrypted value');
   });
 
-  const setupExport = function() {
+  const setupExport = async function() {
     this.set('key', {
       backend: 'transit',
       id: 'akey',
@@ -203,13 +207,13 @@ module('Integration | Component | transit key actions', function(hooks) {
       exportKeyTypes: ['encryption'],
       validKeyVersions: [1],
     });
-    this.render(hbs`{{transit-key-actions key=key}}`);
+    await render(hbs`{{transit-key-actions key=key}}`);
   };
 
-  test('it can export a key:default behavior', function(assert) {
+  test('it can export a key:default behavior', async function(assert) {
     this.set('storeService.rootKeyActionReturnVal', { wrap_info: { token: 'wrapped-token' } });
-    setupExport.call(this);
-    this.$('button:submit').click();
+    await setupExport.call(this);
+    await click('button[type="submit"]');
 
     assert.deepEqual(
       this.get('storeService.callArgs'),
@@ -230,9 +234,10 @@ module('Integration | Component | transit key actions', function(hooks) {
   test('it can export a key:unwrapped behavior', async function(assert) {
     const response = { keys: { a: 'key' } };
     this.set('storeService.keyActionReturnVal', response);
-    setupExport.call(this);
-    await click('#wrap-response').change();
-    this.$('button:submit').click();
+    await setupExport.call(this);
+    await click('#wrap-response');
+    await triggerEvent('#wrap-response', 'change');
+    await click('button[type="submit"]');
     assert.deepEqual(
       JSON.parse(findAll('.CodeMirror')[0].CodeMirror.getValue()),
       response,
@@ -243,10 +248,12 @@ module('Integration | Component | transit key actions', function(hooks) {
   test('it can export a key: unwrapped, single version', async function(assert) {
     const response = { keys: { a: 'key' } };
     this.set('storeService.keyActionReturnVal', response);
-    setupExport.call(this);
-    await click('#wrap-response').change();
-    await click('#exportVersion').change();
-    this.$('button:submit').click();
+    await setupExport.call(this);
+    await click('#wrap-response');
+    await triggerEvent('#wrap-response', 'change');
+    await click('#exportVersion');
+    await triggerEvent('#exportVersion', 'change');
+    await click('button[type="submit"]');
     assert.deepEqual(
       JSON.parse(findAll('.CodeMirror')[0].CodeMirror.getValue()),
       response,
@@ -276,7 +283,7 @@ module('Integration | Component | transit key actions', function(hooks) {
     await render(hbs`{{transit-key-actions key=key}}`);
     await fillIn('#algorithm', 'sha2-384');
     await blur('#algorithm');
-    this.$('button:submit').click();
+    await click('button[type="submit"]');
     assert.deepEqual(
       this.get('storeService.callArgs'),
       {

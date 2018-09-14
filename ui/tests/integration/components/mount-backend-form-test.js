@@ -1,3 +1,4 @@
+import { later, run } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
@@ -33,24 +34,22 @@ module('Integration | Component | mount backend form', function(hooks) {
 
   test('it changes path when type is changed', async function(assert) {
     await render(hbs`{{mount-backend-form}}`);
-    component.selectType('aws').next();
+    await component.selectType('aws');
+    await component.next();
     assert.equal(component.pathValue, 'aws', 'sets the value of the type');
-    component
-      .back()
-      .selectType('approle')
-      .next();
+    await component.back().selectType('approle');
+    await component.next();
     assert.equal(component.pathValue, 'approle', 'updates the value of the type');
   });
 
   test('it keeps path value if the user has changed it', async function(assert) {
     await render(hbs`{{mount-backend-form}}`);
-    component.selectType('approle').next();
+    await component.selectType('approle');
+    await component.next();
     assert.equal(component.pathValue, 'approle', 'defaults to approle (first in the list)');
-    component.path('newpath');
-    component
-      .back()
-      .selectType('aws')
-      .next();
+    await component.path('newpath');
+    await component.back().selectType('aws');
+    await component.next();
     assert.equal(component.pathValue, 'newpath', 'updates to the value of the type');
   });
 
@@ -59,11 +58,9 @@ module('Integration | Component | mount backend form', function(hooks) {
     this.set('onMountSuccess', spy);
     await render(hbs`{{mount-backend-form onMountSuccess=onMountSuccess}}`);
 
-    component.mount('approle', 'foo').submit();
-    return settled().then(() => {
-      assert.equal(this.server.db.authMethods.length, 1, 'it enables an auth method');
-      assert.ok(spy.calledOnce, 'calls the passed success method');
-    });
+    await component.mount('approle', 'foo');
+    assert.equal(this.server.db.authMethods.length, 1, 'it enables an auth method');
+    assert.ok(spy.calledOnce, 'calls the passed success method');
   });
 
   test('it calls mount config error', async function(assert) {
@@ -73,17 +70,15 @@ module('Integration | Component | mount backend form', function(hooks) {
     this.set('onConfigError', spy2);
     await render(hbs`{{mount-backend-form onMountSuccess=onMountSuccess onConfigError=onConfigError}}`);
 
-    component
-      .selectType('kubernetes')
-      .next()
-      .path('bar');
+    await component.selectType('kubernetes');
+    await component.next().path('bar');
     // kubernetes requires a host + a cert / pem, so only filling the host will error
-    component.fields().fillIn('kubernetesHost', 'host');
+    await component.fillIn('kubernetesHost', 'host');
     component.submit();
-    return settled().then(() => {
-      assert.equal(this.server.db.authMethods.length, 1, 'it still enables an auth method');
-      assert.equal(spy.callCount, 0, 'does not call the success method');
-      assert.ok(spy2.calledOnce, 'calls the passed error method');
-    });
+    later(() => run.cancelTimers(), 50);
+    await settled();
+    assert.equal(this.server.db.authMethods.length, 1, 'it still enables an auth method');
+    assert.equal(spy.callCount, 0, 'does not call the success method');
+    assert.ok(spy2.calledOnce, 'calls the passed error method');
   });
 });

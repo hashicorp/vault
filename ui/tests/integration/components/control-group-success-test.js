@@ -37,8 +37,10 @@ module('Integration | Component | control group success', function(hooks) {
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:control-group', controlGroupService);
+      this.controlGroup = this.owner.lookup('service:control-group');
       this.owner.register('service:router', routerService);
       this.owner.register('service:store', storeService);
+      this.router = this.owner.lookup('service:router');
       component.setContext(this);
     });
   });
@@ -63,11 +65,11 @@ module('Integration | Component | control group success', function(hooks) {
     this.set('response', response);
     await render(hbs`{{control-group-success model=model controlGroupResponse=response }}`);
     assert.ok(component.showsNavigateMessage, 'shows unwrap message');
-    component.navigate();
+    await component.navigate();
     later(() => run.cancelTimers(), 50);
     return settled().then(() => {
-      assert.ok(this.get('controlGroup').markTokenForUnwrap.calledOnce, 'marks token for unwrap');
-      assert.ok(this.get('router').transitionTo.calledOnce, 'calls router transition');
+      assert.ok(this.controlGroup.markTokenForUnwrap.calledOnce, 'marks token for unwrap');
+      assert.ok(this.router.transitionTo.calledOnce, 'calls router transition');
     });
   });
 
