@@ -105,7 +105,7 @@ module('Unit | Service | control group', function(hooks) {
       if (setup) {
         setup(this);
       }
-      let service = this.subject();
+      let service = this.owner.lookup('service:control-group');
       let result = service.checkForControlGroup(...args);
       return expectation(assert, result);
     });

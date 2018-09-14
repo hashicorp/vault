@@ -1,10 +1,9 @@
 import { module, test, skip } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, waitUntil, getContext } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import hbs from 'htmlbars-inline-precompile';
 import copyButton from 'vault/tests/pages/components/hover-copy-button';
-import { triggerSuccess } from '../../helpers/ember-cli-clipboard';
 const component = create(copyButton);
 
 module('Integration | Component | hover copy button', function(hooks) {
@@ -18,18 +17,20 @@ module('Integration | Component | hover copy button', function(hooks) {
     component.removeContext();
   });
 
+  // ember-cli-clipboard helpers don't like the new style
   skip('it shows success message in tooltip', async function(assert) {
     this.set('copyValue', 'foo');
     await render(
-      hbs`<div class="has-copy-button" tabindex="-1">{{hover-copy-button copyValue=copyValue}}</div>`
+      hbs`<div class="has-copy-button" tabindex="-1">
+      <HoverCopyButton @copyValue={{copyValue}} />
+      </div>`
     );
 
     await component.focusContainer();
     assert.ok(component.buttonIsVisible);
-    // TODO: this doesn't seem to fire properly
     await component.mouseEnter();
     assert.equal(component.tooltipText, 'Copy', 'shows copy');
-    await triggerSuccess(this, '[data-test-hover-copy-button]');
+    await component.click();
     assert.equal(component.tooltipText, 'Copied!', 'shows success message');
   });
 

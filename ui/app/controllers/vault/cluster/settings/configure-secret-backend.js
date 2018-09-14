@@ -20,7 +20,7 @@ export default Controller.extend(CONFIG_ATTRS, {
   flashMessages: service(),
   loading: false,
   reset() {
-    this.get('model').rollbackAttributes();
+    //this.get('model').rollbackAttributes();
     this.setProperties(CONFIG_ATTRS);
   },
   actions: {
@@ -28,16 +28,18 @@ export default Controller.extend(CONFIG_ATTRS, {
       const isDelete = options.delete;
       if (this.get('model.type') === 'ssh') {
         this.set('loading', true);
-        this.get('model').saveCA({ isDelete }).then(() => {
-          this.set('loading', false);
-          this.send('refreshRoute');
-          this.set('configured', !isDelete);
-          if (isDelete) {
-            this.get('flashMessages').success('SSH Certificate Authority Configuration deleted!');
-          } else {
-            this.get('flashMessages').success('SSH Certificate Authority Configuration saved!');
-          }
-        });
+        this.get('model')
+          .saveCA({ isDelete })
+          .then(() => {
+            this.set('loading', false);
+            this.send('refreshRoute');
+            this.set('configured', !isDelete);
+            if (isDelete) {
+              this.get('flashMessages').success('SSH Certificate Authority Configuration deleted!');
+            } else {
+              this.get('flashMessages').success('SSH Certificate Authority Configuration saved!');
+            }
+          });
       }
     },
 
