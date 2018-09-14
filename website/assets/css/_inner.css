@@ -8,14 +8,7 @@
 
   @media (min-width: 768px) {
     flex-direction: row;
-    max-width: var(--medium-grid-max-width);
-    margin: 72px auto;
-    position: static;
-    padding-left: var(--medium-grid-container-padding);
-  }
-
-  @media (min-width: 1120px) {
-    max-width: var(--site-max-width);
+    margin-top: 72px;
   }
 }
 

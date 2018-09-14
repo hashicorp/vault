@@ -1,32 +1,12 @@
 <% wrap_layout :layout do %>
-	<aside id="secondary-nav" class="light" role="navigation">
-		<div class="g-container">
-			<ul class="breadcrumbs">
-				<li>Docs</li>
-				<li class="active">Vault</li>
-			</ul>
-			<ul class="doc-links">
-				<li <%= sidebar_current("intro") %>>
-					<a href="/intro">Intro</a>
-				</li>
-				<li <%= sidebar_current("guides") %>>
-					<a href="/guides">Guides</a>
-				</li>
-				<li <%= sidebar_current("docs") %>>
-					<a href="/docs">Docs</a>
-				</li>
-				<li <%= sidebar_current("api") %>>
-					<a href="/api">API</a>
-				</li>
-				<li <%= sidebar_current("download") %>>
-					<a href="/downloads.html">
-						<%= inline_svg "download.svg" %> Download
-					</a>
-				</li>
-			</ul>
-		</div>
-	</aside>
-	<div class="content-wrap">
+	<hashi-product-subnav _data="<%= encode({
+		current_path: current_page.path,
+		dark: false,
+		products: dato.enterprise_products.map(&:to_hash),
+		subnav: dato.vault_product_page.subnav.to_hash
+	}) %>"></hashi-product-subnav>
+
+	<div class="content-wrap g-container">
 		<div id="sidebar" role="complementary">
 			<%= yield_content :sidebar %>
 		</div>

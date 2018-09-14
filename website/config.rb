@@ -24,6 +24,20 @@ activate :external_pipeline,
 activate :dato,
   token: '78d2968c99a076419fbb'
 
+dato.tap do |dato|
+  sitemap.resources.each do |page|
+    if page.path.match(/\.html$/)
+      if page.metadata[:options][:layout]
+        proxy "#{page.path}", "/content", {
+          layout: page.metadata[:options][:layout],
+          locals: page.metadata[:page].merge({ content: render(page) })
+        }
+      end
+    end
+
+  end
+end
+
 helpers do
   # Formats and filters a category of docs for the sidebar component
   def sidebar_data(category)
@@ -108,8 +122,6 @@ helpers do
   def body_classes_for(page)
     classes = []
 
-    puts page.inspect
-
     if !(layout = page.data.layout).blank?
       classes << "layout-#{page.data.layout}"
     end
@@ -127,4 +139,22 @@ helpers do
 
     return classes.join(" ")
   end
+end
+
+# A modified version of middleman's render that skips the layout, required in
+# order to pass content into views as a local
+
+def render(page, opts = {}, locs = {})
+  return ::Middleman::FileRenderer.new(@app, page.file_descriptor[:full_path].to_s).template_data_for_file unless page.template?
+
+  md   = page.metadata
+  opts = md[:options].deep_merge(opts)
+  locs = md[:locals].deep_merge(locs)
+  locs[:current_path] ||= page.destination_path
+
+  # Remove layout, we're only rendering the content
+  opts.delete(:layout)
+
+  renderer = ::Middleman::TemplateRenderer.new(@app, page.file_descriptor[:full_path].to_s)
+  renderer.render(locs, opts)
 end
