@@ -150,13 +150,13 @@ func NewTokenStore(ctx context.Context, logger log.Logger, c *Core, config *logi
 
 	// Initialize the store
 	t := &TokenStore{
-		view:                  view,
-		cubbyholeDestroyer:    destroyCubbyhole,
-		logger:                logger,
-		tokenLocks:            locksutil.CreateLocks(),
-		tokensPendingDeletion: &sync.Map{},
-		saltLock:              sync.RWMutex{},
-		core:                  c,
+		view:                        view,
+		cubbyholeDestroyer:          destroyCubbyhole,
+		logger:                      logger,
+		tokenLocks:                  locksutil.CreateLocks(),
+		tokensPendingDeletion:       &sync.Map{},
+		saltLock:                    sync.RWMutex{},
+		core:                        c,
 		identityPoliciesDeriverFunc: c.fetchEntityAndDerivedPolicies,
 		tidyLock:                    new(uint32),
 		quitContext:                 c.activeContext,

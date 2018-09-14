@@ -1,12 +1,12 @@
 ---
 layout: "guides"
-page_title: "ACL Policy Templating - Guides"
+page_title: "ACL Policy Path Templating - Guides"
 sidebar_current: "guides-identity-policy-templating"
 description: |-
   As of 0.11, ACL policies support templating to allow non-static policy paths.
 ---
 
-# ACL Policy Templating
+# ACL Policy Path Templating
 
 Vault operates on a **secure by default** standard, and as such, an empty policy
 grants **no permissions** in the system. Therefore, policies must be created to
@@ -26,8 +26,13 @@ creation of ACL policies in Vault.
 
 - [Templated Policies](/docs/concepts/policies.html#templated-policies)
 - [Policy API](/api/system/policy.html)
-- [Identity Secrets Engine](/docs/secrets/identity/index.html)
 - [Identity: Entities and Groups](/guides/identity/identity.html)
+- [Streamline Secrets Management with Vault Agent and Vault 0.11](https://youtu.be/zDnIqSB4tyA?t=24m37s)
+
+~> **NOTE:** An [interactive
+tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-policy-templating)
+is also available if you do not have a Vault environment to perform the steps
+described in this guide.
 
 ## Estimated Time to Complete
 
@@ -577,7 +582,7 @@ the **Username** field, and **`training`** in the **Password** field.
 translates to "**`user-kv/data/bob_smith/*`**". Select **`user-kv`** secrets
 engine, and then select **Create secret**.
 
-1. Enter **`bob_smith/apikey`** in the **PATH FOR THIS SECRET** field, 
+1. Enter **`bob_smith/apikey`** in the **PATH FOR THIS SECRET** field,
 **`webapp`** in the key field, and **`12344567890`** in its value field.
 
 1. Click **Save**. You should be able to perform this successfully.

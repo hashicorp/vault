@@ -20,6 +20,10 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
 
+const testVaultHeaderValue = "VaultAcceptanceTesting"
+const testValidRoleName = "valid-role"
+const testInvalidRoleName = "invalid-role"
+
 func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	// create a backend
 	config := logical.TestBackendConfig()
@@ -1510,9 +1514,6 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	//    it allows us to login to our role
 	// 6. Pass in a request that has a validly signed request, asking for
 	//    the other role, ensure it fails
-	const testVaultHeaderValue = "VaultAcceptanceTesting"
-	const testValidRoleName = "valid-role"
-	const testInvalidRoleName = "invalid-role"
 
 	clientConfigData := map[string]interface{}{
 		"iam_server_id_header_value": testVaultHeaderValue,
