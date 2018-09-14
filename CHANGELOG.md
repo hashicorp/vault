@@ -1,8 +1,59 @@
-## 0.11.1 (Unreleased)
+## 0.11.2 (Unreleased)
 
 BUG FIXES:
 
+ * agent: Fix auth handler-based wrapping of output tokens [GH-5316]
+
+IMPROVEMENTS:
+
+ * auth/aws: add support for key/value pairs or JSON values for 
+   `iam_request_headers` with IAM auth method [GH-5320]
+
+## 0.11.1 (September 6th, 2018)
+
+SECURITY:
+
+ * Random Byte Reading in Barrier: Prior to this release, Vault was not
+   properly checking the error code when reading random bytes for the IV for
+   AES operations in its cryptographic barrier. Specifically, this means that
+   such an IV could potentially be zero multiple times, causing nonce re-use
+   and weakening the security of the key. On most platforms this should never
+   happen because reading from kernel random sources is non-blocking and always
+   successful, but there may be platform-specific behavior that has not been
+   accounted for. (Vault has tests to check exactly this, and the tests have
+   never seen nonce re-use.)
+
+FEATURES:
+
+ * AliCloud Agent Support: Vault Agent can now authenticate against the
+   AliCloud auth method.
+ * UI: Enable AliCloud auth method and Azure secrets engine via the UI.
+
+IMPROVEMENTS:
+
+ * core: Logging level for most logs (not including secrets/auth plugins) can
+   now be changed on-the-fly via `SIGHUP`, reading the desired value from
+   Vault's config file [GH-5280]
+
+BUG FIXES:
+
+ * core: Ensure we use a background context when stepping down [GH-5290]
+ * core: Properly check error return from random byte reading [GH-5277]
+ * core: Re-add `sys/` top-route injection for now [GH-5241]
+ * core: Properly store the replication checkpoint file if it's larger than the
+   storage engine's per-item limit
+ * core: Policies stored in minified JSON would return an error [GH-5229]
+ * core: Evaluate templated policies in capabilities check [GH-5250]
+ * identity: Update MemDB with identity group alias while loading groups [GH-5289]
+ * secrets/database: Fix nil pointer when revoking some leases [GH-5262]
  * secrets/pki: Fix sign-verbatim losing extra Subject attributes [GH-5245]
+ * secrets/pki: Remove certificates from store when tidying revoked
+   certificates and simplify API [GH-5231]
+ * ui: JSON editor will not coerce input to an object, and will now show an 
+   error about Vault expecting an object [GH-5271]
+ * ui: authentication form will now default to any methods that have been tuned
+   to show up for unauthenticated users [GH-5281]
+ 
 
 ## 0.11.0 (August 28th, 2018)
 

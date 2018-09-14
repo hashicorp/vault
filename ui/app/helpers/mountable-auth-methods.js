@@ -2,6 +2,12 @@ import Ember from 'ember';
 
 const MOUNTABLE_AUTH_METHODS = [
   {
+    displayName: 'AliCloud',
+    value: 'alicloud',
+    type: 'alicloud',
+    category: 'cloud',
+  },
+  {
     displayName: 'AppRole',
     value: 'approle',
     type: 'approle',
@@ -79,7 +85,7 @@ const MOUNTABLE_AUTH_METHODS = [
 ];
 
 export function methods() {
-  return MOUNTABLE_AUTH_METHODS;
+  return MOUNTABLE_AUTH_METHODS.slice();
 }
 
 export default Ember.Helper.helper(methods);

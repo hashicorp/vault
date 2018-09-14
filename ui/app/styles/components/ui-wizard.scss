@@ -8,6 +8,8 @@
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+  transition: padding $speed;
+  will-change: padding;
 }
 
 .ui-wizard-container .app-content.wizard-open {
@@ -32,7 +34,7 @@
   overflow: auto;
 
   p {
-    line-height: 1.2;
+    line-height: 1.33;
   }
 
   .dismiss-collapsed {
@@ -64,23 +66,32 @@
 }
 
 .wizard-header {
-  margin-bottom: $size-5;
+  border-bottom: $light-border;
+  padding: $size-8 $size-4 $size-8 2rem;
+  margin: $size-4 0;
   position: relative;
 
-  .icon {
-    margin-right: $size-11;
-    vertical-align: -0.33rem;
+  @include until($tablet) {
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .title .icon {
+    left: 0;
+    position: absolute;
+    top: 0.7rem;
   }
 }
 
 .wizard-dismiss-menu {
   position: absolute;
-  right: $size-6;
-  top: $size-6;
+  right: 0;
+  top: -$size-11;
   z-index: 10;
 }
 
 .ui-wizard.collapsed {
+  animation: drop-fade-above $speed-slow;
   color: $white;
   background: $black;
   bottom: auto;
@@ -103,10 +114,25 @@
 
   .title {
     color: $white;
+
+    .icon {
+      top: -0.1rem;
+    }
   }
 
   .wizard-header {
-    margin-bottom: $size-10;
+    margin: 0 0 $size-10;
+    padding-top: 0;
+  }
+
+  .wizard-dismiss-menu {
+    svg {
+      color: $white;
+    }
+
+    &:hover svg {
+      color: $black;
+    }
   }
 }
 
@@ -141,4 +167,8 @@
   padding-top: $size-4;
   margin-top: $size-4;
   border-top: 1px solid $grey-light;
+}
+
+.wizard-instructions {
+  margin: $size-4 0;
 }

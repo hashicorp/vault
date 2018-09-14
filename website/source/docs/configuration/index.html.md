@@ -105,6 +105,13 @@ to specify where the configuration is.
 - `telemetry` <tt>([Telemetry][telemetry]: &lt;none&gt;)</tt> – Specifies the telemetry
   reporting system.
 
+- `log_level` `(string: "")` – Specifies the log level to use; overridden by
+  CLI and env var parameters. On SIGHUP, Vault will update the log level to the
+  current value specified here (including overriding the CLI/env var
+  parameters). Not all parts of Vault's logging can have its level be changed
+  dynamically this way; in particular, secrets/auth plugins are currently not
+  updated dynamically.
+
 - `default_lease_ttl` `(string: "768h")` – Specifies the default lease duration
   for tokens and secrets. This is specified using a label suffix like `"30s"` or
   `"1h"`. This value cannot be larger than `max_lease_ttl`.

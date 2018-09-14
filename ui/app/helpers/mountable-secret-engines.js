@@ -5,13 +5,18 @@ const MOUNTABLE_SECRET_ENGINES = [
     displayName: 'Active Directory',
     value: 'ad',
     type: 'ad',
-    glyph: 'azure',
     category: 'cloud',
   },
   {
     displayName: 'AWS',
     value: 'aws',
     type: 'aws',
+    category: 'cloud',
+  },
+  {
+    displayName: 'Azure',
+    value: 'azure',
+    type: 'azure',
     category: 'cloud',
   },
   {
@@ -77,7 +82,7 @@ const MOUNTABLE_SECRET_ENGINES = [
 ];
 
 export function engines() {
-  return MOUNTABLE_SECRET_ENGINES;
+  return MOUNTABLE_SECRET_ENGINES.slice();
 }
 
 export default Ember.Helper.helper(engines);

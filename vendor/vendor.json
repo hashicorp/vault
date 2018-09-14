@@ -1351,16 +1351,16 @@
 			"revisionTime": "2018-05-30T15:59:58Z"
 		},
 		{
-			"checksumSHA1": "76udfjuAEmd4JFZP8LhTLTKZ6gk=",
+			"checksumSHA1": "pqkqaBRFKL2P/64xpuxj/3J/+sQ=",
 			"path": "github.com/hashicorp/vault-plugin-auth-alicloud",
-			"revision": "90acf238c385792939aade0286fcb941d9899435",
-			"revisionTime": "2018-08-22T21:26:04Z"
+			"revision": "1a078292f70a4c9e366a13d3c725d105bd5be1af",
+			"revisionTime": "2018-09-04T20:26:51Z"
 		},
 		{
 			"checksumSHA1": "xdrSQoX7B7Hr4iWm9T2+5wHVpHQ=",
 			"path": "github.com/hashicorp/vault-plugin-auth-alicloud/tools",
-			"revision": "90acf238c385792939aade0286fcb941d9899435",
-			"revisionTime": "2018-08-22T21:26:04Z"
+			"revision": "1a078292f70a4c9e366a13d3c725d105bd5be1af",
+			"revisionTime": "2018-09-04T20:26:51Z"
 		},
 		{
 			"checksumSHA1": "ojr0r/jmutGEhftDXiHthCCwpIA=",
@@ -1417,22 +1417,22 @@
 			"revisionTime": "2018-08-21T21:57:39Z"
 		},
 		{
-			"checksumSHA1": "zkmWfxanMFQXWQIAboXj/jqF12g=",
+			"checksumSHA1": "91ydauzZu3czIjeQM9IAgvy7B7o=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin",
-			"revision": "ba74744a1fcfcd9c5f3635571a0734e6a13ce349",
-			"revisionTime": "2018-08-17T20:56:55Z"
+			"revision": "e3f5ad9f075ab1b18fa665a64bdec5411a14a4bb",
+			"revisionTime": "2018-09-05T16:00:51Z"
 		},
 		{
 			"checksumSHA1": "zwKMP2eBB2fKeOXMf0afsbw1bS0=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil",
-			"revision": "ba74744a1fcfcd9c5f3635571a0734e6a13ce349",
-			"revisionTime": "2018-08-17T20:56:55Z"
+			"revision": "e3f5ad9f075ab1b18fa665a64bdec5411a14a4bb",
+			"revisionTime": "2018-09-05T16:00:51Z"
 		},
 		{
 			"checksumSHA1": "81kYL49zTBoj1NYczxB2Xbr2d6Y=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util",
-			"revision": "ba74744a1fcfcd9c5f3635571a0734e6a13ce349",
-			"revisionTime": "2018-08-17T20:56:55Z"
+			"revision": "e3f5ad9f075ab1b18fa665a64bdec5411a14a4bb",
+			"revisionTime": "2018-09-05T16:00:51Z"
 		},
 		{
 			"checksumSHA1": "FkppDRdkWTF4Ry+olqZT8L0Stb8=",

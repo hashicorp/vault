@@ -5,6 +5,7 @@ sidebar_current: "guides-operations-reference-architecture"
 description: |-
   This guide provides guidance in the best practices of Vault
   implementations through use of a reference architecture.
+product_version: 0.11
 ---
 
 # Vault Reference Architecture
@@ -79,7 +80,7 @@ CPU" in AWS terms, such as T-series instances.
 | Size  | CPU      | Memory          | Disk      | Typical Cloud Instance Types               |
 |-------|----------|-----------------|-----------|--------------------------------------------|
 | Small | 2 core   | 4-8 GB RAM      | 25 GB     | **AWS:** m5.large                          |
-|       |          |                 |           | **Azure:** Standard_A2_v2, Standard_A4_v2  |
+|       |          |                 |           | **Azure:** Standard_D2_v3                  |
 |       |          |                 |           | **GCE:** n1-standard-2, n1-standard-4      |
 | Large | 4-8 core | 16-32 GB RAM    | 50 GB     | **AWS:** m5.xlarge, m5.2xlarge             |
 |       |          |                 |           | **Azure:** Standard_D4_v3, Standard_D8_v3  |
@@ -90,10 +91,10 @@ CPU" in AWS terms, such as T-series instances.
 | Size  | CPU      | Memory          | Disk      | Typical Cloud Instance Types               |
 |-------|----------|-----------------|-----------|--------------------------------------------|
 | Small | 2 core   | 8-16 GB RAM     | 50 GB     | **AWS:** m5.large, m5.xlarge               |
-|       |          |                 |           | **Azure:** Standard_A4_v2, Standard_A8_v2  |
+|       |          |                 |           | **Azure:** Standard_D2_v3, Standard_D4_v3  |
 |       |          |                 |           | **GCE:** n1-standard-4, n1-standard-8      |
 | Large | 4-8 core | 32-64+ GB RAM   | 100 GB    | **AWS:** m5.2xlarge, m5.4xlarge            |
-|       |          |                 |           | **Azure:** Standard_D4_v3, Standard_D5_v3  |
+|       |          |                 |           | **Azure:** Standard_D4_v3, Standard_D8_v3  |
 |       |          |                 |           | **GCE:** n1-standard-16, n1-standard-32    |
 
 ### Hardware Considerations
@@ -206,15 +207,17 @@ adhere to security best practices.
 
 ### High Availability
 
-A Vault cluster is the highly-available unit of deployment within one datacenter.
-A recommended approach is three Vault servers with a Consul storage backend.
-With this configuration, during a Vault server outage, failover is handled
-immediately without human intervention. To learn more about setting up your
-Vault servers in HA mode, read [_Vault HA with
-Consul_](/guides/operations/vault-ha-consul.html) guide.
+A Vault cluster is the highly-available unit of deployment within one
+datacenter. A recommended approach is three Vault servers with a Consul storage
+backend. With this configuration, during a Vault server outage, failover is
+handled immediately without human intervention.
 
-High-availability and data-locality across datacenters requires
-Vault Enterprise.
+To learn more about setting up your Vault servers in HA mode, read [_Vault HA
+with Consul_](/guides/operations/vault-ha-consul.html) guide.
+
+> High-availability with [Performance Standby
+Nodes](/guides/operations/performance-nodes.html) and data-locality across
+datacenters requires Vault Enterprise.
 
 
 ## <a name="multi-dc"></a>Deployment Topology for Multiple Datacenters

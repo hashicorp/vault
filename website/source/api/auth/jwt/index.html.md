@@ -1,6 +1,6 @@
 ---
 layout: "api"
-page_title: "JWT/OIDC - Auth Methods - HTTP API"
+page_title: "JWT - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-jwt"
 description: |-
   This is the API documentation for the Vault JWT authentication

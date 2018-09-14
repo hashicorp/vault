@@ -107,7 +107,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		subjKeyID, err = certutil.GetSubjKeyID(rak)
+		_, err = certutil.GetSubjKeyID(rak)
 		if err != nil {
 			panic(err)
 		}
@@ -437,6 +437,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 	}
 
 	verifyRevocation := func(t *testing.T, serial string, shouldFind bool) {
+		t.Helper()
 		// Verify it is now revoked
 		{
 			resp, err := client.Logical().Read(rootName + "cert/" + intSerialNumber)

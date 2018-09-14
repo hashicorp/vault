@@ -30,6 +30,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   // use a named action here so we don't have to pass one in
   // this will bubble to the route
   toggleAdvancedEdit: 'toggleAdvancedEdit',
+  error: null,
 
   codemirrorString: null,
 
@@ -79,7 +80,8 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     'key.isFolder',
     'key.isError',
     'key.flagsIsInvalid',
-    'hasLintError'
+    'hasLintError',
+    'error'
   ),
 
   basicModeDisabled: computed('secretDataIsAdvanced', 'showAdvancedMode', function() {
@@ -242,10 +244,15 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     },
 
     codemirrorUpdated(val, codemirror) {
+      this.set('error', null);
       codemirror.performLint();
       const noErrors = codemirror.state.lint.marked.length === 0;
       if (noErrors) {
-        this.get('secretData').fromJSONString(val);
+        try {
+          this.get('secretData').fromJSONString(val);
+        } catch (e) {
+          this.set('error', e.message);
+        }
       }
       this.set('hasLintError', !noErrors);
       this.set('codemirrorString', val);

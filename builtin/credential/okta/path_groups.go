@@ -62,7 +62,7 @@ func (b *backend) Group(ctx context.Context, s logical.Storage, n string) (*Grou
 			return nil, "", err
 		}
 		for _, groupName := range entries {
-			if strings.ToLower(groupName) == strings.ToLower(n) {
+			if strings.EqualFold(groupName, n) {
 				entry, err = s.Get(ctx, "group/"+groupName)
 				if err != nil {
 					return nil, "", err

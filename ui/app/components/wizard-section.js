@@ -5,4 +5,5 @@ export default outerHTMLComponent.extend({
   headerIcon: null,
   docText: null,
   docPath: null,
+  instructions: null,
 });

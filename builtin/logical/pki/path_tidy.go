@@ -24,16 +24,16 @@ the certificate store`,
 			},
 
 			"tidy_revocation_list": &framework.FieldSchema{
-				Type: framework.TypeBool,
-				Description: `Set to true to enable tidying up
-the revocation list`,
+				Type:        framework.TypeBool,
+				Description: `Deprecated; synonym for 'tidy_revoked_certs`,
 			},
 
 			"tidy_revoked_certs": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `Set to true to expire all revoked
-certificates, even if their duration has not yet passed. This will cause these
-certificates to be removed from the CRL the next time the CRL is generated.`,
+certificates, even if their duration has not yet passed, removing
+them both from the CRL and from storage. The CRL will be rotated
+if this causes any values to be removed.`,
 			},
 
 			"safety_buffer": &framework.FieldSchema{
@@ -58,8 +58,8 @@ Defaults to 72 hours.`,
 func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	safetyBuffer := d.Get("safety_buffer").(int)
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
-	tidyRevocationList := d.Get("tidy_revocation_list").(bool)
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool)
+	tidyRevocationList := d.Get("tidy_revocation_list").(bool)
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
@@ -127,7 +127,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 				}
 			}
 
-			if tidyRevocationList {
+			if tidyRevokedCerts || tidyRevocationList {
 				b.revokeStorageLock.Lock()
 				defer b.revokeStorageLock.Unlock()
 
@@ -169,9 +169,12 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						return errwrap.Wrapf(fmt.Sprintf("unable to parse stored revoked certificate with serial %q: {{err}}", serial), err)
 					}
 
-					if tidyRevokedCerts || time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
+					if time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
 						if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from revoked list: {{err}}", serial), err)
+						}
+						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
+							return errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from store when tidying revoked: {{err}}", serial), err)
 						}
 						tidiedRevoked = true
 					}

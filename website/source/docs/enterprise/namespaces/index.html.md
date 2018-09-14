@@ -20,7 +20,7 @@ There are two common challenges when implementing this architecture in Vault:
 **Tenant Isolation**
 
 Frequently teams within a VaaS environment require strong isolation from other
-users in their policies, secrets, and identitys. Tenant isolation is typically a 
+users in their policies, secrets, and identities. Tenant isolation is typically a 
 result of compliance regulations such as [GDPR](https://www.eugdpr.org/), though it may 
 be necessitated by corporate or organizational infosec requirements.
 
