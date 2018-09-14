@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/SermoDigital/jose/jws"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -217,7 +218,9 @@ func (b *GcpAuthBackend) getSigningKey(ctx context.Context, token *jwt.JSONWebTo
 			// Attempt to get a normal Google Oauth cert in case of GCE inferrence.
 			key, err := b.getGoogleOauthCert(ctx, keyId, s)
 			if err != nil {
-				return nil, errors.New("could not find service account key or Google Oauth cert with given 'kid' id")
+				return nil, errwrap.Wrapf(
+					fmt.Sprintf("could not find service account key or Google Oauth cert with given 'kid' id %s: {{err}}", keyId),
+					err)
 			}
 			return key, nil
 		}

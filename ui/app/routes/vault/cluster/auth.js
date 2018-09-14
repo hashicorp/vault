@@ -7,6 +7,7 @@ const { inject } = Ember;
 export default ClusterRouteBase.extend({
   flashMessages: inject.service(),
   version: inject.service(),
+  wizard: inject.service(),
   beforeModel() {
     return this._super().then(() => {
       return this.get('version').fetchFeatures();
@@ -24,5 +25,16 @@ export default ClusterRouteBase.extend({
     if (config.welcomeMessage) {
       this.get('flashMessages').stickyInfo(config.welcomeMessage);
     }
+  },
+  activate() {
+    this.get('wizard').set('initEvent', 'LOGIN');
+    this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'TOLOGIN');
+  },
+  actions: {
+    willTransition(transition) {
+      if (transition.targetName !== this.routeName) {
+        this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'INITDONE');
+      }
+    },
   },
 });

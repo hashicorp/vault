@@ -1,0 +1,19 @@
+<div class="app-content {{if (and shouldRender featureComponent) "wizard-open"}}">
+  {{yield}}
+</div>
+{{#component
+  (if shouldRender tutorialComponent)
+  onAdvance=(action "advanceWizard")
+  onDismiss=(action "dismissWizard")
+}}
+  {{component
+    featureComponent
+    componentState=componentState
+    nextFeature=nextFeature
+    nextStep=nextStep
+    onDone=(action "finishFeature")
+    onRepeat=(action "repeatStep")
+    onReset=(action "resetFeature")
+    onAdvance=(action "advanceFeature")
+  }}
+{{/component}}

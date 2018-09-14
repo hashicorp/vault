@@ -15,12 +15,13 @@
   version = "1.1"
 
 [[projects]]
-  digest = "1:73d72ad4ed3ffc0ae85442ff1ce0884423efa6c666566c13d90d75242a038f85"
+  digest = "1:cde027e8bb29425770dd8ddc87789e0139f2dc53a80e248c8d6a0698c7e3f0bc"
   name = "github.com/aliyun/alibaba-cloud-sdk-go"
   packages = [
     "sdk",
     "sdk/auth",
     "sdk/auth/credentials",
+    "sdk/auth/credentials/providers",
     "sdk/auth/signers",
     "sdk/endpoints",
     "sdk/errors",
@@ -30,8 +31,8 @@
     "services/sts",
   ]
   pruneopts = "UT"
-  revision = "0e5371c0881225da7ef9f41ca50402a025eddd93"
-  version = "1.25.5"
+  revision = "ef9535c490beb6b59620d93f6c7ba88e9b3b1ad0"
+  version = "1.26.2"
 
 [[projects]]
   branch = "master"
@@ -406,7 +407,8 @@
   analyzer-version = 1
   input-imports = [
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk",
-    "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials",
+    "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth",
+    "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk/endpoints",
     "github.com/aliyun/alibaba-cloud-sdk-go/services/sts",
     "github.com/hashicorp/errwrap",

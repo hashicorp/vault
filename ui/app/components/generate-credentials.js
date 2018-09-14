@@ -26,6 +26,7 @@ const MODEL_TYPES = {
 };
 
 export default Component.extend({
+  wizard: inject.service(),
   store: inject.service(),
   routing: inject.service('-routing'),
   // set on the component
@@ -57,6 +58,16 @@ export default Component.extend({
     this.createOrReplaceModel();
   },
 
+  didReceiveAttrs() {
+    if (this.get('wizard.featureState') === 'displayRole') {
+      this.get('wizard').transitionFeatureMachine(
+        this.get('wizard.featureState'),
+        'CONTINUE',
+        this.get('backend.type')
+      );
+    }
+  },
+
   willDestroy() {
     this.get('model').unloadRecord();
     this._super(...arguments);
@@ -84,10 +95,21 @@ export default Component.extend({
     create() {
       let model = this.get('model');
       this.set('loading', true);
-      model.save().finally(() => {
-        model.set('hasGenerated', true);
-        this.set('loading', false);
-      });
+      this.model
+        .save()
+        .catch(() => {
+          if (this.get('wizard.featureState') === 'credentials') {
+            this.get('wizard').transitionFeatureMachine(
+              this.get('wizard.featureState'),
+              'ERROR',
+              this.get('backend.type')
+            );
+          }
+        })
+        .finally(() => {
+          model.set('hasGenerated', true);
+          this.set('loading', false);
+        });
     },
 
     codemirrorUpdated(attr, val, codemirror) {

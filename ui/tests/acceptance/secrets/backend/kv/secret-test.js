@@ -42,7 +42,10 @@ test('version 1 performs the correct capabilities lookup', function(assert) {
   let enginePath = `kv-${new Date().getTime()}`;
   let secretPath = 'foo/bar';
   // mount version 1 engine
-  mountSecrets.visit().path(enginePath).type('kv').version(1).submit();
+  mountSecrets.visit();
+  andThen(() => {
+    mountSecrets.selectType('kv').next().path(enginePath).version(1).submit();
+  });
 
   listPage.create();
   editPage.createSecret(secretPath, 'foo', 'bar');

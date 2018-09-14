@@ -114,6 +114,10 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 			}
 		}
 
+		if len(claims.Audience) > 0 && len(role.BoundAudiences) == 0 {
+			return logical.ErrorResponse("audience claim found in JWT but no audiences bound to the role"), nil
+		}
+
 		expected := jwt.Expected{
 			Issuer:   config.BoundIssuer,
 			Subject:  role.BoundSubject,

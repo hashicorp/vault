@@ -40,12 +40,16 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		core:   core,
 	}
 
-	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, iStore.logger, "")
+	entitiesPackerLogger := iStore.logger.Named("storagepacker").Named("entities")
+	core.AddLogger(entitiesPackerLogger)
+	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
+	core.AddLogger(groupsPackerLogger)
+	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, entitiesPackerLogger, "")
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create entity packer: {{err}}", err)
 	}
 
-	iStore.groupPacker, err = storagepacker.NewStoragePacker(iStore.view, iStore.logger, groupBucketsPrefix)
+	iStore.groupPacker, err = storagepacker.NewStoragePacker(iStore.view, groupsPackerLogger, groupBucketsPrefix)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create group packer: {{err}}", err)
 	}
@@ -210,15 +214,6 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 					err := i.MemDBDeleteAliasByIDInTxn(txn, groupFetched.Alias.ID, true)
 					if err != nil {
 						i.logger.Error("failed to delete old group alias from MemDB", "error", err)
-						return
-					}
-				}
-
-				// Update MemDB with new group alias information
-				if group.Alias != nil {
-					err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
-					if err != nil {
-						i.logger.Error("failed to update group alias in MemDB", "error", err)
 						return
 					}
 				}

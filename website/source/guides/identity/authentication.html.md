@@ -623,9 +623,9 @@ exists on the virtual machine.
 
 ![AppRole auth method workflow](/assets/images/vault-approle-workflow2.png)
 
-Secret ID is like a password. To keep the Secret ID confidential, use
-[**response wrapping**](/docs/concepts/response-wrapping.html) so that only the
-expected client can unwrap the Secret ID.
+The secret ID can be delivered using [**response
+wrapping**](/docs/concepts/response-wrapping.html) to transmit the _reference_
+to the secret ID rather than the actual value.
 
 In [Step 3](#step3), you executed the following command to retrieve the Secret
 ID:
@@ -673,7 +673,7 @@ b07d7a47-1d0d-741d-20b4-ae0de7c6d964
 
 Read the [_AppRole with Terraform and
 Chef_](/guides/identity/approle-trusted-entities.html) guide to better
-understand the role of trusted entities using Terraform and Chef as an example. 
+understand the role of trusted entities using Terraform and Chef as an example.
 
 To learn more about response wrapping, go to the [Cubbyhole Response
 Wrapping](/guides/secret-mgmt/cubbyhole.html) guide.

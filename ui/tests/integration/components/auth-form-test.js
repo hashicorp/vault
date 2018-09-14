@@ -104,11 +104,21 @@ test('it renders AdapterError style errors', function(assert) {
 });
 
 test('it renders all the supported tabs when no methods are passed', function(assert) {
+  let replaceSpy = sinon.spy(this.get('router'), 'replaceWith');
   this.render(hbs`{{auth-form cluster=cluster}}`);
-  assert.equal(component.tabs.length, BACKENDS.length, 'renders a tab for every backend');
+
+  return wait().then(() => {
+    assert.equal(component.tabs.length, BACKENDS.length, 'renders a tab for every backend');
+    assert.equal(
+      replaceSpy.getCall(0).args[0].queryParams.with,
+      'token',
+      'calls router replaceWith properly'
+    );
+  });
 });
 
 test('it renders all the supported methods and Other tab when methods are present', function(assert) {
+  let replaceSpy = sinon.spy(this.get('router'), 'replaceWith');
   let methods = {
     'foo/': {
       type: 'userpass',
@@ -128,7 +138,9 @@ test('it renders all the supported methods and Other tab when methods are presen
     assert.equal(component.tabs.length, 2, 'renders a tab for userpass and Other');
     assert.equal(component.tabs.objectAt(0).name, 'foo', 'uses the path in the label');
     assert.equal(component.tabs.objectAt(1).name, 'Other', 'second tab is the Other tab');
+    assert.equal(replaceSpy.getCall(0).args[0].queryParams.with, 'foo/', 'calls router replaceWith properly');
     server.shutdown();
+    replaceSpy.restore();
   });
 });
 

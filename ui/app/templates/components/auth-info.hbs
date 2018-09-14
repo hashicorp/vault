@@ -47,6 +47,11 @@
           {{/if}}
         {{/if}}
         <li class="action">
+          <button type="button" class="button link" onclick={{action "restartGuide"}}>
+            Restart guide
+          </button>
+        </li>
+        <li class="action">
           {{#link-to "vault.cluster.logout" activeClusterName id="logout"}}
             Sign out
           {{/link-to}}

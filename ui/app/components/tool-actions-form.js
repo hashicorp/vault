@@ -22,6 +22,7 @@ const WRAPPING_ENDPOINTS = ['lookup', 'wrap', 'unwrap', 'rewrap'];
 
 export default Ember.Component.extend(DEFAULTS, {
   store: Ember.inject.service(),
+  wizard: Ember.inject.service(),
   // putting these attrs here so they don't get reset when you click back
   //random
   bytes: 32,
@@ -76,10 +77,12 @@ export default Ember.Component.extend(DEFAULTS, {
       props = Ember.assign({}, props, { unwrap_data: secret });
     }
     props = Ember.assign({}, props, secret);
-
     if (resp && resp.wrap_info) {
       const keyName = action === 'rewrap' ? 'rewrap_token' : 'token';
       props = Ember.assign({}, props, { [keyName]: resp.wrap_info.token });
+    }
+    if (props.token || props.rewrap_token || props.unwrap_data || action === 'lookup') {
+      this.get('wizard').transitionFeatureMachine(this.get('wizard.featureState'), 'CONTINUE');
     }
     setProperties(this, props);
   },

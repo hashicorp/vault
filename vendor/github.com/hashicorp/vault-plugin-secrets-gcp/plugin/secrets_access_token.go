@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"time"
 
+	"strings"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -16,7 +18,6 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iam/v1"
-	"strings"
 )
 
 const (
@@ -95,6 +96,7 @@ func (b *backend) secretAccessTokenRevoke(ctx context.Context, req *logical.Requ
 	}
 
 	resp, err := http.Get(revokeAccessTokenEndpoint + fmt.Sprintf("?token=%s", url.QueryEscape(tokenRaw.(string))))
+	defer googleapi.CloseBody(resp)
 	if err == nil {
 		err = googleapi.CheckResponse(resp)
 	}

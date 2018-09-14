@@ -82,7 +82,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 			NotBefore:             time.Now().Add(-30 * time.Second),
 			NotAfter:              time.Now().Add(262980 * time.Hour),
 			BasicConstraintsValid: true,
-			IsCA: true,
+			IsCA:                  true,
 		}
 		caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, cak.Public(), cak)
 		if err != nil {
@@ -107,7 +107,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		subjKeyID, err = certutil.GetSubjKeyID(rak)
+		_, err = certutil.GetSubjKeyID(rak)
 		if err != nil {
 			panic(err)
 		}
@@ -437,6 +437,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 	}
 
 	verifyRevocation := func(t *testing.T, serial string, shouldFind bool) {
+		t.Helper()
 		// Verify it is now revoked
 		{
 			resp, err := client.Logical().Read(rootName + "cert/" + intSerialNumber)

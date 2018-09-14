@@ -923,15 +923,15 @@ along with its RSA digest can be supplied to this endpoint.
   `QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==` which is the
   base64 encoding of `Action=GetCallerIdentity&Version=2011-06-15`. This is
   required when using the iam auth method.
-- `iam_request_headers` `(string: <required-iam>)` - Base64-encoded,
-  JSON-serialized representation of the sts:GetCallerIdentity HTTP request
-  headers. The JSON serialization assumes that each header key maps to either a
-  string value or an array of string values (though the length of that array
-  will probably only be one). If the `iam_server_id_header_value` is configured
-  in Vault for the aws auth mount, then the headers must include the
-  X-Vault-AWS-IAM-Server-ID header, its value must match the value configured,
-  and the header must be included in the signed headers.  This is required when
-  using the iam auth method.
+- `iam_request_headers` `(string: <required-iam>)` - Key/value pairs of headers
+  for use in the `sts:GetCallerIdentity` HTTP requests headers. Can be either a
+  Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. The
+  JSON serialization assumes that each header key maps to either a string value or
+  an array of string values (though the length of that array will probably only be
+  one). If the `iam_server_id_header_value` is configured in Vault for the aws
+  auth mount, then the headers must include the X-Vault-AWS-IAM-Server-ID header,
+  its value must match the value configured, and the header must be included in
+  the signed headers.  This is required when using the iam auth method.
 
 
 ### Sample Payload

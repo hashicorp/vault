@@ -1,0 +1,21 @@
+<WizardContent @headerText="Initialization" @glyph="tour">
+  <WizardSection 
+    @headerText="Unsealing your vault" 
+    @docText="Learn: Initialization"
+    @docPath="/intro/getting-started/deploy.html#initializing-the-vault"
+  >
+    <p>
+      Now we will provide the {{pluralize componentState.threshold 'key'}} that
+      you copied or downloaded to unseal the vault so that we can get started
+      using it. You'll need {{pluralize componentState.threshold 'key'}} total,
+      and {{#with (pluralize componentState.progress 'key' without-count=true) as |word|}}
+      {{if (eq word 'key')
+        (concat componentState.progress " " word " has ")
+        (concat componentState.progress " " word " have ")
+        }}
+      {{/with}} already been provided.
+      Please provide
+      {{pluralize (dec componentState.progress componentState.threshold) 'more key'}} to unseal.
+    </p>
+  </WizardSection>
+</WizardContent>

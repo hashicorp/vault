@@ -132,7 +132,9 @@ func (c *Core) setupExpiration() error {
 	view := c.systemBarrierView.SubView(expirationSubPath)
 
 	// Create the manager
-	mgr := NewExpirationManager(c, view, c.baseLogger.Named("expiration"))
+	expLogger := c.baseLogger.Named("expiration")
+	c.AddLogger(expLogger)
+	mgr := NewExpirationManager(c, view, expLogger)
 	c.expiration = mgr
 
 	// Link the token store to this
@@ -194,6 +196,7 @@ func (m *ExpirationManager) Tidy() error {
 	var tidyErrors *multierror.Error
 
 	logger := m.logger.Named("tidy")
+	m.core.AddLogger(logger)
 
 	if !atomic.CompareAndSwapInt32(m.tidyLock, 0, 1) {
 		logger.Warn("tidy operation on leases is already in progress")

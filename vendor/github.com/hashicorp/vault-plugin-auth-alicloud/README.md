@@ -1,4 +1,4 @@
-# Vault Plugin: AliCloud Auth Backend
+# Vault Plugin: AliCloud Auth Backend [![Build Status](https://travis-ci.org/hashicorp/vault-plugin-auth-alicloud.svg?branch=master)](https://travis-ci.org/hashicorp/vault-plugin-auth-alicloud)
 
 This is a standalone backend plugin for use with [Hashicorp Vault](https://www.github.com/hashicorp/vault).
 This plugin allows authentication to Vault using Resource Access Management (RAM).
