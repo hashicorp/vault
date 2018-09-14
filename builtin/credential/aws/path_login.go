@@ -1114,16 +1114,14 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, d
 func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	identityConfigEntryRaw, err := req.Storage.Get(ctx, "config/identity")
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to retrieve config/identity path: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to retrieve identity config: {{err}}", err)
 	}
 	var identityConfigEntry identityConfig
 	if identityConfigEntryRaw == nil {
 		identityConfigEntry.IAMAlias = identityAliasIAMUniqueID
 	} else {
 		if err = identityConfigEntryRaw.DecodeJSON(&identityConfigEntry); err != nil {
-			// NOT wrapping the error here since the client is unauthenticated and it could expose data
-			// to an unauthenticated client
-			return nil, fmt.Errorf("failed to parse stored config/identity")
+			return nil, errwrap.Wrapf("failed to parse stored config/identity: {{err}}", err)
 		}
 	}
 

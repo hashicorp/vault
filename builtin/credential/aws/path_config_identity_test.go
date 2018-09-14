@@ -33,7 +33,7 @@ func TestBackend_pathConfigIdentity(t *testing.T) {
 	if resp != nil {
 		if resp.IsError() {
 			t.Fatalf("failed to read identity config entry")
-		} else if resp.Data["alias"] != nil && resp.Data["alias"] != "" {
+		} else if resp.Data["iam_alias"] != nil && resp.Data["iam_alias"] != "" {
 			t.Fatalf("returned alias is non-empty: %q", resp.Data["alias"])
 		}
 	}

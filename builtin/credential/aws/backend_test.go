@@ -1681,7 +1681,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatalf("bad: nil auth Alias")
 	}
 	if resp.Auth.Alias.Name != *testIdentity.Arn {
-		t.Fatalf("bad: expected identty alias of %q, got %q instead", *testIdentity.Arn, resp.Auth.Alias.Name)
+		t.Fatalf("bad: expected identity alias of %q, got %q instead", *testIdentity.Arn, resp.Auth.Alias.Name)
 	}
 
 	renewReq := generateRenewRequest(storage, resp.Auth)
