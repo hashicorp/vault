@@ -43,7 +43,7 @@ func TestBackend_pathConfigIdentity(t *testing.T) {
 	}
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.CreateOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "config/identity",
 		Data:      data,
 		Storage:   storage,

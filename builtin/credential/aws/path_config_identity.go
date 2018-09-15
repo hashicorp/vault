@@ -22,8 +22,7 @@ func pathConfigIdentity(b *backend) *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   pathConfigIdentityRead,
-			logical.CreateOperation: pathConfigIdentityCreateUpdate,
-			logical.UpdateOperation: pathConfigIdentityCreateUpdate,
+			logical.UpdateOperation: pathConfigIdentityUpdate,
 		},
 
 		HelpSynopsis:    pathConfigIdentityHelpSyn,
@@ -50,7 +49,7 @@ func pathConfigIdentityRead(ctx context.Context, req *logical.Request, data *fra
 	}, nil
 }
 
-func pathConfigIdentityCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var configEntry identityConfig
 
 	iamAliasRaw, ok := data.GetOk("iam_alias")
