@@ -1,4 +1,6 @@
-import Ember from 'ember';
+import { isPresent } from '@ember/utils';
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 
 const CONFIG_ATTRS = {
   // ssh
@@ -12,10 +14,10 @@ const CONFIG_ATTRS = {
   region: '',
 };
 
-export default Ember.Controller.extend(CONFIG_ATTRS, {
+export default Controller.extend(CONFIG_ATTRS, {
   queryParams: ['tab'],
   tab: '',
-  flashMessages: Ember.inject.service(),
+  flashMessages: service(),
   loading: false,
   reset() {
     this.get('model').rollbackAttributes();
@@ -42,7 +44,7 @@ export default Ember.Controller.extend(CONFIG_ATTRS, {
     save(method, data) {
       this.set('loading', true);
       const hasData = Object.keys(data).some(key => {
-        return Ember.isPresent(data[key]);
+        return isPresent(data[key]);
       });
       if (!hasData) {
         return;

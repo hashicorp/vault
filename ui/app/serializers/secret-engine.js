@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { assign } from '@ember/polyfills';
 import ApplicationSerializer from './application';
 
 export default ApplicationSerializer.extend({
@@ -13,7 +13,7 @@ export default ApplicationSerializer.extend({
     }
 
     if (struct.data) {
-      struct = Ember.assign({}, struct, struct.data);
+      struct = assign({}, struct, struct.data);
       delete struct.data;
     }
     // strip the trailing slash off of the path so we

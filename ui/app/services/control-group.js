@@ -1,10 +1,11 @@
-import Ember from 'ember';
+import { get } from '@ember/object';
+import Service, { inject as service } from '@ember/service';
+import RSVP from 'rsvp';
 import ControlGroupError from 'vault/lib/control-group-error';
 import getStorage from 'vault/lib/token-storage';
 
 const CONTROL_GROUP_PREFIX = 'vault:cg-';
 const TOKEN_SEPARATOR = '☃';
-const { Service, inject, RSVP } = Ember;
 
 // list of endpoints that return wrapped responses
 // without `wrap-ttl`
@@ -21,8 +22,8 @@ const storageKey = (accessor, path) => {
 
 export { storageKey, CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR };
 export default Service.extend({
-  version: inject.service(),
-  router: inject.service(),
+  version: service(),
+  router: service(),
 
   storage() {
     return getStorage();
@@ -80,7 +81,7 @@ export default Service.extend({
   },
 
   checkForControlGroup(callbackArgs, response, wasWrapTTLRequested) {
-    let creationPath = response && Ember.get(response, 'wrap_info.creation_path');
+    let creationPath = response && get(response, 'wrap_info.creation_path');
     if (
       this.get('version.isOSS') ||
       wasWrapTTLRequested ||

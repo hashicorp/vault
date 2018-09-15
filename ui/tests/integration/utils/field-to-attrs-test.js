@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { run } from '@ember/runloop';
 import { moduleForModel, test } from 'ember-qunit';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
@@ -32,7 +32,7 @@ const OTHER_MAX_LEASE_ATTR = {
 
 test('it extracts attrs', function(assert) {
   const model = this.subject();
-  Ember.run(() => {
+  run(() => {
     const [attr] = expandAttributeMeta(model, ['path']);
     assert.deepEqual(attr, PATH_ATTR, 'returns attribute meta');
   });
@@ -40,7 +40,7 @@ test('it extracts attrs', function(assert) {
 
 test('it extracts more than one attr', function(assert) {
   const model = this.subject();
-  Ember.run(() => {
+  run(() => {
     const [path, desc] = expandAttributeMeta(model, ['path', 'description']);
     assert.deepEqual(path, PATH_ATTR, 'returns attribute meta');
     assert.deepEqual(desc, DESCRIPTION_ATTR, 'returns attribute meta');
@@ -49,7 +49,7 @@ test('it extracts more than one attr', function(assert) {
 
 test('it extracts fieldGroups', function(assert) {
   const model = this.subject();
-  Ember.run(() => {
+  run(() => {
     const groups = fieldToAttrs(model, [{ default: ['path'] }, { Options: ['description'] }]);
     const expected = [{ default: [PATH_ATTR] }, { Options: [DESCRIPTION_ATTR] }];
     assert.deepEqual(groups, expected, 'expands all given groups');
@@ -58,7 +58,7 @@ test('it extracts fieldGroups', function(assert) {
 
 test('it extracts arrays as fieldGroups', function(assert) {
   const model = this.subject();
-  Ember.run(() => {
+  run(() => {
     const groups = fieldToAttrs(model, [{ default: ['path', 'description'] }, { Options: ['description'] }]);
     const expected = [{ default: [PATH_ATTR, DESCRIPTION_ATTR] }, { Options: [DESCRIPTION_ATTR] }];
     assert.deepEqual(groups, expected, 'expands all given groups');
@@ -67,12 +67,12 @@ test('it extracts arrays as fieldGroups', function(assert) {
 
 test('it extracts model-fragment attributes with brace expansion', function(assert) {
   const model = this.subject();
-  Ember.run(() => {
+  run(() => {
     const [attr] = expandAttributeMeta(model, ['config.{defaultLeaseTtl}']);
     assert.deepEqual(attr, DEFAULT_LEASE_ATTR, 'properly extracts model fragment attr');
   });
 
-  Ember.run(() => {
+  run(() => {
     const [defaultLease, maxLease] = expandAttributeMeta(model, ['config.{defaultLeaseTtl,maxLeaseTtl}']);
     assert.deepEqual(defaultLease, DEFAULT_LEASE_ATTR, 'properly extracts default lease');
     assert.deepEqual(maxLease, MAX_LEASE_ATTR, 'properly extracts max lease');
@@ -81,7 +81,7 @@ test('it extracts model-fragment attributes with brace expansion', function(asse
 
 test('it extracts model-fragment attributes with double brace expansion', function(assert) {
   const model = this.subject();
-  Ember.run(() => {
+  run(() => {
     const [configDefault, configMax, otherConfigDefault, otherConfigMax] = expandAttributeMeta(model, [
       '{config,otherConfig}.{defaultLeaseTtl,maxLeaseTtl}',
     ]);
@@ -99,12 +99,12 @@ test('it extracts model-fragment attributes with double brace expansion', functi
 
 test('it extracts model-fragment attributes with dot notation', function(assert) {
   const model = this.subject();
-  Ember.run(() => {
+  run(() => {
     const [attr] = expandAttributeMeta(model, ['config.defaultLeaseTtl']);
     assert.deepEqual(attr, DEFAULT_LEASE_ATTR, 'properly extracts model fragment attr');
   });
 
-  Ember.run(() => {
+  run(() => {
     const [defaultLease, maxLease] = expandAttributeMeta(model, [
       'config.defaultLeaseTtl',
       'config.maxLeaseTtl',
@@ -120,7 +120,7 @@ test('it extracts fieldGroups from model-fragment attributes with brace expansio
     { default: [PATH_ATTR, DEFAULT_LEASE_ATTR, MAX_LEASE_ATTR] },
     { Options: [DESCRIPTION_ATTR] },
   ];
-  Ember.run(() => {
+  run(() => {
     const groups = fieldToAttrs(model, [
       { default: ['path', 'config.{defaultLeaseTtl,maxLeaseTtl}'] },
       { Options: ['description'] },
@@ -135,7 +135,7 @@ test('it extracts fieldGroups from model-fragment attributes with dot notation',
     { default: [DEFAULT_LEASE_ATTR, PATH_ATTR, MAX_LEASE_ATTR] },
     { Options: [DESCRIPTION_ATTR] },
   ];
-  Ember.run(() => {
+  run(() => {
     const groups = fieldToAttrs(model, [
       { default: ['config.defaultLeaseTtl', 'path', 'config.maxLeaseTtl'] },
       { Options: ['description'] },

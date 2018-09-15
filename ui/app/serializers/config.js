@@ -1,6 +1,6 @@
+import { assign } from '@ember/polyfills';
+import { decamelize } from '@ember/string';
 import DS from 'ember-data';
-import Ember from 'ember';
-const { decamelize } = Ember.String;
 
 export default DS.RESTSerializer.extend({
   keyForAttribute: function(attr) {
@@ -9,7 +9,7 @@ export default DS.RESTSerializer.extend({
 
   normalizeAll(payload) {
     if (payload.data) {
-      const data = Ember.assign({}, payload, payload.data);
+      const data = assign({}, payload, payload.data);
       return [data];
     }
     return [payload];

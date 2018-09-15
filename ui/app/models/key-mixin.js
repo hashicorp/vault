@@ -1,24 +1,25 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import Mixin from '@ember/object/mixin';
 import utils from '../lib/key-utils';
 
-export default Ember.Mixin.create({
+export default Mixin.create({
   flags: null,
 
   initialParentKey: null,
 
-  isCreating: Ember.computed('initialParentKey', function() {
+  isCreating: computed('initialParentKey', function() {
     return this.get('initialParentKey') != null;
   }),
 
-  isFolder: Ember.computed('id', function() {
+  isFolder: computed('id', function() {
     return utils.keyIsFolder(this.get('id'));
   }),
 
-  keyParts: Ember.computed('id', function() {
+  keyParts: computed('id', function() {
     return utils.keyPartsForKey(this.get('id'));
   }),
 
-  parentKey: Ember.computed('id', 'isCreating', {
+  parentKey: computed('id', 'isCreating', {
     get: function() {
       return this.get('isCreating') ? this.get('initialParentKey') : utils.parentKeyForKey(this.get('id'));
     },
@@ -27,7 +28,7 @@ export default Ember.Mixin.create({
     },
   }),
 
-  keyWithoutParent: Ember.computed('id', 'parentKey', {
+  keyWithoutParent: computed('id', 'parentKey', {
     get: function() {
       var key = this.get('id');
       return key ? key.replace(this.get('parentKey'), '') : null;

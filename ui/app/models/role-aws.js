@@ -1,10 +1,10 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
-const { computed } = Ember;
 
 const CREDENTIAL_TYPES = [
   {
@@ -64,10 +64,10 @@ export default DS.Model.extend({
   }),
 
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),
-  canDelete: computed.alias('updatePath.canDelete'),
-  canEdit: computed.alias('updatePath.canUpdate'),
-  canRead: computed.alias('updatePath.canRead'),
+  canDelete: alias('updatePath.canDelete'),
+  canEdit: alias('updatePath.canUpdate'),
+  canRead: alias('updatePath.canRead'),
 
   generatePath: lazyCapabilities(apiPath`${'backend'}/creds/${'id'}`, 'backend', 'id'),
-  canGenerate: computed.alias('generatePath.canUpdate'),
+  canGenerate: alias('generatePath.canUpdate'),
 });

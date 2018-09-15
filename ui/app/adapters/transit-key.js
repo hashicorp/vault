@@ -1,5 +1,5 @@
-import Ember from 'ember';
 import ApplicationAdapter from './application';
+import { pluralize } from 'ember-inflector';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -40,7 +40,7 @@ export default ApplicationAdapter.extend({
         path = 'secrets';
         break;
       default:
-        path = Ember.String.pluralize(type);
+        path = pluralize(type);
         break;
     }
     return path;

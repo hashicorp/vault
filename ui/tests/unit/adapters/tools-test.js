@@ -1,5 +1,5 @@
+import { resolve } from 'rsvp';
 import { moduleFor, test } from 'ember-qunit';
-import Ember from 'ember';
 import needs from 'vault/tests/unit/adapters/_adapter-needs';
 
 moduleFor('adapter:tools', 'Unit | Adapter | tools', {
@@ -11,7 +11,7 @@ test('wrapping api urls', function(assert) {
   let adapter = this.subject({
     ajax: (...args) => {
       [url, method, options] = args;
-      return Ember.RSVP.resolve();
+      return resolve();
     },
   });
 
@@ -44,7 +44,7 @@ test('tools api urls', function(assert) {
   let adapter = this.subject({
     ajax: (...args) => {
       [url, method] = args;
-      return Ember.RSVP.resolve();
+      return resolve();
     },
   });
 

@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import Component from '@ember/component';
 import keys from 'vault/lib/keycodes';
 
-export default Ember.Component.extend({
+export default Component.extend({
   onExecuteCommand() {},
   onFullscreen() {},
   onValueUpdate() {},

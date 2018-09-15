@@ -1,21 +1,10 @@
-import Ember from 'ember';
 import { test } from 'qunit';
 import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
 import page from 'vault/tests/pages/policies/index';
 
-let adapterException;
-let loggerError;
 moduleForAcceptance('Acceptance | policies (old)', {
   beforeEach() {
-    loggerError = Ember.Logger.error;
-    adapterException = Ember.Test.adapter.exception;
-    Ember.Test.adapter.exception = () => {};
-    Ember.Logger.error = () => {};
     return authLogin();
-  },
-  afterEach() {
-    Ember.Test.adapter.exception = adapterException;
-    Ember.Logger.error = loggerError;
   },
 });
 
@@ -32,7 +21,9 @@ test('policies', function(assert) {
   click('[data-test-policy-save]');
   andThen(function() {
     assert.dom('[data-test-error]').exists({ count: 1 }, 'renders error messages on save');
-    find('.CodeMirror').get(0).CodeMirror.setValue(policyString);
+    find('.CodeMirror')
+      .get(0)
+      .CodeMirror.setValue(policyString);
   });
   click('[data-test-policy-save]');
   andThen(function() {
@@ -75,7 +66,9 @@ test('it properly fetches policies when the name ends in a ,', function(assert) 
   click('[data-test-policy-create-link]');
   fillIn('[data-test-policy-input="name"]', policyName);
   andThen(function() {
-    find('.CodeMirror').get(0).CodeMirror.setValue(policyString);
+    find('.CodeMirror')
+      .get(0)
+      .CodeMirror.setValue(policyString);
   });
   click('[data-test-policy-save]');
   andThen(function() {

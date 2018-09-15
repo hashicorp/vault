@@ -1,9 +1,7 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import { alias, and, equal } from '@ember/object/computed';
 import DS from 'ember-data';
 const { attr } = DS;
-
-const { computed } = Ember;
-const { equal, and, alias } = computed;
 
 export default DS.Model.extend({
   name: attr('string'),
@@ -32,7 +30,7 @@ export default DS.Model.extend({
   isSelf: attr('boolean'),
   leaderAddress: attr('string'),
 
-  type: Ember.computed(function() {
+  type: computed(function() {
     return this.constructor.modelName;
   }),
 });

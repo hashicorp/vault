@@ -1,9 +1,8 @@
-import Ember from 'ember';
-
-const { set } = Ember;
+import Component from '@ember/component';
+import { set } from '@ember/object';
 const BASE_64_REGEX = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/gi;
 
-export default Ember.Component.extend({
+export default Component.extend({
   classNames: ['box', 'is-fullwidth', 'is-marginless', 'is-shadowless'],
   key: null,
   index: null,

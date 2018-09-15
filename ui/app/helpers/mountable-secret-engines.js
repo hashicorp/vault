@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 const MOUNTABLE_SECRET_ENGINES = [
   {
@@ -85,4 +85,4 @@ export function engines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
 }
 
-export default Ember.Helper.helper(engines);
+export default buildHelper(engines);

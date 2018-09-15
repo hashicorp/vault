@@ -1,8 +1,9 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+import { get, computed } from '@ember/object';
+import Component from '@ember/component';
 import decodeConfigFromJWT from 'vault/utils/decode-config-from-jwt';
 import ReplicationActions from 'vault/mixins/replication-actions';
-
-const { computed, get, Component, inject } = Ember;
 
 const DEFAULTS = {
   mode: 'primary',
@@ -18,8 +19,8 @@ const DEFAULTS = {
 };
 
 export default Component.extend(ReplicationActions, DEFAULTS, {
-  wizard: inject.service(),
-  version: inject.service(),
+  wizard: service(),
+  version: service(),
   didReceiveAttrs() {
     this._super(...arguments);
     const initialReplicationMode = this.get('initialReplicationMode');
@@ -31,7 +32,7 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
   initialReplicationMode: null,
   cluster: null,
 
-  replicationAttrs: computed.alias('cluster.replicationAttrs'),
+  replicationAttrs: alias('cluster.replicationAttrs'),
 
   tokenIncludesAPIAddr: computed('token', function() {
     const config = decodeConfigFromJWT(get(this, 'token'));

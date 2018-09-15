@@ -1,7 +1,5 @@
-import Ember from 'ember';
+import { getWithDefault, computed } from '@ember/object';
 import FlashMessage from 'ember-cli-flash/components/flash-message';
-
-const { computed, getWithDefault } = Ember;
 
 export default FlashMessage.extend({
   // override alertType to get Bulma specific prefix

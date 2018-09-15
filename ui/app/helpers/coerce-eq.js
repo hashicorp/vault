@@ -1,8 +1,8 @@
 /*jshint eqeqeq: false */
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 export function coerceEq(params) {
   return params[0] == params[1];
 }
 
-export default Ember.Helper.helper(coerceEq);
+export default buildHelper(coerceEq);

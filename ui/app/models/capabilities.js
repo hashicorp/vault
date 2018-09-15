@@ -2,7 +2,7 @@
 // `path` is also the primaryId
 // https://www.vaultproject.io/docs/concepts/policies.html#capabilities
 
-import Ember from 'ember';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 
 const { attr } = DS;
@@ -20,7 +20,7 @@ const SUDO_PATH_PREFIXES = ['sys/leases/revoke-prefix', 'sys/leases/revoke-force
 export { SUDO_PATHS, SUDO_PATH_PREFIXES };
 
 const computedCapability = function(capability) {
-  return Ember.computed('path', 'capabilities', 'capabilities.[]', function() {
+  return computed('path', 'capabilities', 'capabilities.[]', function() {
     const capabilities = this.get('capabilities');
     const path = this.get('path');
     if (!capabilities) {

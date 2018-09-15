@@ -162,8 +162,9 @@
   <p>
     {{transit-key-actions
       key=key
-      selectedAction='rotate'
+      selectedAction="rotate"
       capabilities=capabilities
+      onRefresh=(action "refresh")
     }}
   </p>
 {{else}}
