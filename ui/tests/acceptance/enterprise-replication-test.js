@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL, find, visit } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, find, visit, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -13,7 +13,7 @@ const disableReplication = async (type, assert) => {
     await click('[data-test-disable-replication] button');
     await withFlash(click('[data-test-confirm-button]'), () => {
       if (assert) {
-        assert.equal(currentURL(), `/vault/replication/${type}`, 'redirects to the replication page');
+        assert.equal(currentURL(), `/vault/replication/${type}/manage`, 'redirects to the replication page');
         assert.equal(
           // TODO better test selectors for flash messages
           find('[data-test-flash-message-body]').textContent.trim(),
@@ -22,6 +22,7 @@ const disableReplication = async (type, assert) => {
         );
       }
     });
+    await settled();
   }
 };
 
@@ -111,10 +112,11 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     );
 
     // disable performance replication
-    await disableReplication('replication', assert);
+    await disableReplication('performance', assert);
+    await pollCluster(this.owner);
 
     // enable dr replication
-    await visit('/vault/replication/dr');
+    await visit('vault/replication/dr');
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
     await withFlash(click('button[type="submit"]'));
 
@@ -134,6 +136,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await fillIn('[data-test-replication-secondary-id]', secondaryName);
     await click('[data-test-secondary-add]');
     await pollCluster(this.owner);
+    await pollCluster(this.owner);
     await click('[data-test-replication-link="secondaries"]');
     assert
       .dom('[data-test-secondary-name]')
@@ -141,7 +144,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
   });
 
   test('disabling dr primary when perf replication is enabled', async function(assert) {
-    await visit('/vault/replication/performance');
+    await visit('vault/replication/performance');
     // enable perf replication
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
 

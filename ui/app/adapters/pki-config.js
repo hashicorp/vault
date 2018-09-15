@@ -32,8 +32,9 @@ export default ApplicationAdapter.extend({
       return data;
     }, {});
     return this.ajax(url, 'POST', { data }).then(resp => {
-      resp.id = `${snapshot.record.get('backend')}-${snapshot.adapterOptions.method}`;
-      return resp;
+      let response = resp || {};
+      response.id = `${snapshot.record.get('backend')}-${snapshot.adapterOptions.method}`;
+      return response;
     });
   },
 
