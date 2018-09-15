@@ -56,6 +56,8 @@ module.exports = function(environment) {
       enabled: false,
     };
     ENV.APP.autoboot = false;
+
+    ENV.flashMessageDefaults.flashMessageDefaults = 50;
   }
   if (environment !== 'production') {
     ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
