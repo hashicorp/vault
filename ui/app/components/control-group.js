@@ -1,12 +1,13 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { alias, or } from '@ember/object/computed';
+import Component from '@ember/component';
+import { computed, get } from '@ember/object';
 import { task } from 'ember-concurrency';
 
-const { get, computed, inject } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   tagName: '',
-  auth: inject.service(),
-  controlGroup: inject.service(),
+  auth: service(),
+  controlGroup: service(),
 
   // public API
   model: null,
@@ -18,7 +19,7 @@ export default Ember.Component.extend({
     this.set('controlGroupResponse', data);
   },
 
-  currentUserEntityId: computed.alias('auth.authData.entity_id'),
+  currentUserEntityId: alias('auth.authData.entity_id'),
 
   currentUserIsRequesting: computed('currentUserEntityId', 'model.requestEntity.id', function() {
     return this.get('currentUserEntityId') === this.get('model.requestEntity.id');
@@ -29,7 +30,7 @@ export default Ember.Component.extend({
     return Boolean(authorizations.findBy('id', this.get('currentUserEntityId')));
   }),
 
-  isSuccess: computed.or('currentUserHasAuthorized', 'model.approved'),
+  isSuccess: or('currentUserHasAuthorized', 'model.approved'),
   requestorName: computed('currentUserIsRequesting', 'model.requestEntity', function() {
     let entity = this.get('model.requestEntity');
 

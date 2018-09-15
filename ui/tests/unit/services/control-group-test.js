@@ -1,11 +1,12 @@
+import { set } from '@ember/object';
+import Service from '@ember/service';
 import { moduleFor, test } from 'ember-qunit';
 import sinon from 'sinon';
 
-import Ember from 'ember';
 import { storageKey, CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR } from 'vault/services/control-group';
 
-let versionStub = Ember.Service.extend();
-let routerStub = Ember.Service.extend({
+let versionStub = Service.extend();
+let routerStub = Service.extend({
   transitionTo: sinon.stub(),
   urlFor: sinon.stub().returns('/ui/vault/foo'),
 });
@@ -42,8 +43,8 @@ moduleFor('service:control-group', 'Unit | Service | control group', {
   afterEach() {},
 });
 
-let isOSS = context => Ember.set(context, 'version.isOSS', true);
-let isEnt = context => Ember.set(context, 'version.isOSS', false);
+let isOSS = context => set(context, 'version.isOSS', true);
+let isEnt = context => set(context, 'version.isOSS', false);
 let resolvesArgs = (assert, result, expectedArgs) => {
   return result.then((...args) => {
     return assert.deepEqual(args, expectedArgs, 'resolves with the passed args');

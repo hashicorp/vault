@@ -1,11 +1,11 @@
-import Ember from 'ember';
+import { registerAsyncHelper } from '@ember/test';
 
-export default Ember.Test.registerAsyncHelper('authLogin', function(app, token) {
+export default registerAsyncHelper('authLogin', function(app, token) {
   visit('/vault/auth?with=token');
   fillIn('[data-test-token]', token || 'root');
   click('[data-test-auth-submit]');
   // get rid of the root warning flash
   if (find('[data-test-flash-message-body]').length) {
-    click('[data-test-flash-message-body]');
+    return click('[data-test-flash-message-body]');
   }
 });

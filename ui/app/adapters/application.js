@@ -1,18 +1,20 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { assign } from '@ember/polyfills';
+import { set } from '@ember/object';
+import RSVP from 'rsvp';
 import DS from 'ember-data';
 import fetch from 'fetch';
 import config from '../config/environment';
 
 const { APP } = config;
 const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
-const { inject, assign, set, RSVP } = Ember;
 
 export default DS.RESTAdapter.extend({
-  auth: inject.service(),
-  namespaceService: inject.service('namespace'),
-  controlGroup: inject.service(),
+  auth: service(),
+  namespaceService: service('namespace'),
+  controlGroup: service(),
 
-  flashMessages: inject.service(),
+  flashMessages: service(),
 
   namespace: 'v1/sys',
 

@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { isEmpty } from '@ember/utils';
 import SecretAdapter from './secret';
 
 export default SecretAdapter.extend({
@@ -14,7 +14,7 @@ export default SecretAdapter.extend({
 
   urlForSecret(backend, id, infix = 'data') {
     let url = `${this.buildURL()}/${backend}/${infix}/`;
-    if (!Ember.isEmpty(id)) {
+    if (!isEmpty(id)) {
       url = url + id;
     }
     return url;

@@ -1,6 +1,6 @@
-import Ember from 'ember';
+import Component from '@ember/component';
 
-const SectionTabs = Ember.Component.extend({
+const SectionTabs = Component.extend({
   tagName: '',
 
   model: null,

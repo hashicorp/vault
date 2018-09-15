@@ -1,4 +1,5 @@
-import Ember from 'ember';
+import { assign } from '@ember/polyfills';
+import EmberObject from '@ember/object';
 import ClusterRouteMixin from 'vault/mixins/cluster-route';
 import { INIT, UNSEAL, AUTH, CLUSTER, DR_REPLICATION_SECONDARY } from 'vault/mixins/cluster-route';
 import { module, test } from 'qunit';
@@ -6,9 +7,9 @@ import { module, test } from 'qunit';
 module('Unit | Mixin | cluster route');
 
 function createClusterRoute(clusterModel = {}, methods = { hasKeyData: () => false, authToken: () => null }) {
-  let ClusterRouteObject = Ember.Object.extend(
+  let ClusterRouteObject = EmberObject.extend(
     ClusterRouteMixin,
-    Ember.assign(methods, { clusterModel: () => clusterModel })
+    assign(methods, { clusterModel: () => clusterModel })
   );
   return ClusterRouteObject.create();
 }

@@ -1,12 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+import Component from '@ember/component';
 
-const { computed, inject } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   // public
   model: null,
 
   tagName: '',
-  routing: inject.service('-routing'),
-  path: computed.alias('routing.router.currentURL'),
+  routing: service('-routing'),
+  path: alias('routing.router.currentURL'),
 });

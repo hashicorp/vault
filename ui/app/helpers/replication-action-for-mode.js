@@ -1,4 +1,5 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
+import { get } from '@ember/object';
 const ACTIONS = {
   performance: {
     primary: ['disable', 'demote', 'recover', 'reindex'],
@@ -13,7 +14,7 @@ const ACTIONS = {
 };
 
 export function replicationActionForMode([replicationMode, clusterMode] /*, hash*/) {
-  return Ember.get(ACTIONS, `${replicationMode}.${clusterMode}`);
+  return get(ACTIONS, `${replicationMode}.${clusterMode}`);
 }
 
-export default Ember.Helper.helper(replicationActionForMode);
+export default buildHelper(replicationActionForMode);

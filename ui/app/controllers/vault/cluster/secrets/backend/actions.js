@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import Controller from '@ember/controller';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 
-export default Ember.Controller.extend(BackendCrumbMixin, {
+export default Controller.extend(BackendCrumbMixin, {
   queryParams: {
     selectedAction: 'action',
   },

@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { get } from '@ember/object';
 import ApplicationSerializer from './application';
 
 export default ApplicationSerializer.extend({
@@ -25,7 +25,7 @@ export default ApplicationSerializer.extend({
     let path = this.get('secretDataPath');
     // move response that is the contents of the secret from the dataPath
     // to `secret_data` so it will be `secretData` in the model
-    payload.secret_data = Ember.get(payload, path);
+    payload.secret_data = get(payload, path);
     delete payload[path];
     // return the payload if it's expecting a single object or wrap
     // it as an array if not

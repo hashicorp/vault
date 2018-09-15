@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { isArray, A } from '@ember/array';
 import DS from 'ember-data';
 /*
   This should go inside a globally available place for all apps
@@ -7,17 +7,17 @@ import DS from 'ember-data';
 */
 export default DS.Transform.extend({
   deserialize(value) {
-    if (Ember.isArray(value)) {
-      return Ember.A(value);
+    if (isArray(value)) {
+      return A(value);
     } else {
-      return Ember.A();
+      return A();
     }
   },
   serialize(value) {
-    if (Ember.isArray(value)) {
-      return Ember.A(value);
+    if (isArray(value)) {
+      return A(value);
     } else {
-      return Ember.A();
+      return A();
     }
   },
 });

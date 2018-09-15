@@ -1,9 +1,11 @@
+import { resolve } from 'rsvp';
+import { assign } from '@ember/polyfills';
+import Service from '@ember/service';
 import { moduleForComponent, test } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
-import Ember from 'ember';
 import { encodeString } from 'vault/utils/b64';
 
-const storeStub = Ember.Service.extend({
+const storeStub = Service.extend({
   callArgs: null,
   keyActionReturnVal: null,
   rootKeyActionReturnVal: null,
@@ -13,14 +15,14 @@ const storeStub = Ember.Service.extend({
       keyAction(action, { backend, id, payload }, options) {
         self.set('callArgs', { action, backend, id, payload });
         self.set('callArgsOptions', options);
-        const rootResp = Ember.assign({}, self.get('rootKeyActionReturnVal'));
+        const rootResp = assign({}, self.get('rootKeyActionReturnVal'));
         const resp =
           Object.keys(rootResp).length > 0
             ? rootResp
             : {
-                data: Ember.assign({}, self.get('keyActionReturnVal')),
+                data: assign({}, self.get('keyActionReturnVal')),
               };
-        return Ember.RSVP.resolve(resp);
+        return resolve(resp);
       },
     };
   },
@@ -105,7 +107,7 @@ test('it renders: rotate', function(assert) {
 function doEncrypt(assert, actions = [], keyattrs = {}) {
   let keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat(actions) };
 
-  const key = Ember.assign({}, keyDefaults, keyattrs);
+  const key = assign({}, keyDefaults, keyattrs);
   this.set('key', key);
   this.set('selectedAction', 'encrypt');
   this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
@@ -135,7 +137,7 @@ test('it encrypts', doEncrypt);
 test('it shows key version selection', function(assert) {
   let keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
   let keyattrs = { keysForEncryption: [3, 2, 1], latestVersion: 3 };
-  const key = Ember.assign({}, keyDefaults, keyattrs);
+  const key = assign({}, keyDefaults, keyattrs);
   this.set('key', key);
   this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
   this.render(hbs`{{transit-key-actions selectedAction="encrypt" key=key}}`);
@@ -164,7 +166,7 @@ test('it shows key version selection', function(assert) {
 test('it hides key version selection', function(assert) {
   let keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
   let keyattrs = { keysForEncryption: [1] };
-  const key = Ember.assign({}, keyDefaults, keyattrs);
+  const key = assign({}, keyDefaults, keyattrs);
   this.set('key', key);
   this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
   this.render(hbs`{{transit-key-actions selectedAction="encrypt" key=key}}`);

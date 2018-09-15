@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 const TABS_FOR_SETTINGS = {
   aws: [
@@ -88,4 +88,4 @@ export function tabsForAuthSection([methodType, sectionType = 'authSettings']) {
   return tabs;
 }
 
-export default Ember.Helper.helper(tabsForAuthSection);
+export default buildHelper(tabsForAuthSection);

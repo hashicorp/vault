@@ -1,6 +1,11 @@
+import { later, run } from '@ember/runloop';
+import EmberObject from '@ember/object';
+import { getOwner } from '@ember/application';
+import { resolve } from 'rsvp';
+import $ from 'jquery';
+import Service from '@ember/service';
 import { moduleForComponent, test } from 'ember-qunit';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-import Ember from 'ember';
 import wait from 'ember-test-helpers/wait';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
@@ -11,39 +16,39 @@ import authForm from '../../pages/components/auth-form';
 const component = create(authForm);
 const BACKENDS = supportedAuthBackends();
 
-const authService = Ember.Service.extend({
+const authService = Service.extend({
   authenticate() {
-    return Ember.$.getJSON('http://localhost:2000');
+    return $.getJSON('http://localhost:2000');
   },
   setLastFetch() {},
 });
 
-const workingAuthService = Ember.Service.extend({
+const workingAuthService = Service.extend({
   authenticate() {
-    return Ember.RSVP.resolve({});
+    return resolve({});
   },
   setLastFetch() {},
 });
 
-const routerService = Ember.Service.extend({
+const routerService = Service.extend({
   transitionTo() {
-    return Ember.RSVP.resolve();
+    return resolve();
   },
   replaceWith() {
-    return Ember.RSVP.resolve();
+    return resolve();
   },
 });
 moduleForComponent('auth-form', 'Integration | Component | auth form', {
   integration: true,
   beforeEach() {
-    Ember.getOwner(this).lookup('service:csp-event').attach();
+    getOwner(this).lookup('service:csp-event').attach();
     component.setContext(this);
     this.register('service:router', routerService);
     this.inject.service('router');
   },
 
   afterEach() {
-    Ember.getOwner(this).lookup('service:csp-event').remove();
+    getOwner(this).lookup('service:csp-event').remove();
     component.removeContext();
   },
 });
@@ -52,14 +57,14 @@ const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate w
 test('it renders error on CSP violation', function(assert) {
   this.register('service:auth', authService);
   this.inject.service('auth');
-  this.set('cluster', Ember.Object.create({ standby: true }));
+  this.set('cluster', EmberObject.create({ standby: true }));
   this.set('selectedAuth', 'token');
   this.render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
   assert.equal(component.errorText, '');
   component.login();
   // because this is an ember-concurrency backed service,
   // we have to manually force settling the run queue
-  Ember.run.later(() => Ember.run.cancelTimers(), 50);
+  later(() => run.cancelTimers(), 50);
   return wait().then(() => {
     assert.equal(component.errorText, CSP_ERR_TEXT);
   });
@@ -78,7 +83,7 @@ test('it renders with vault style errors', function(assert) {
     });
   });
 
-  this.set('cluster', Ember.Object.create({}));
+  this.set('cluster', EmberObject.create({}));
   this.set('selectedAuth', 'token');
   this.render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
   return component.login().then(() => {
@@ -94,7 +99,7 @@ test('it renders AdapterError style errors', function(assert) {
     });
   });
 
-  this.set('cluster', Ember.Object.create({}));
+  this.set('cluster', EmberObject.create({}));
   this.set('selectedAuth', 'token');
   this.render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
   return component.login().then(() => {
@@ -210,7 +215,7 @@ test('it makes a request to unwrap if passed a wrappedToken and logs in', functi
   let wrappedToken = '54321';
   this.set('wrappedToken', wrappedToken);
   this.render(hbs`{{auth-form cluster=cluster wrappedToken=wrappedToken}}`);
-  Ember.run.later(() => Ember.run.cancelTimers(), 50);
+  later(() => run.cancelTimers(), 50);
   return wait().then(() => {
     assert.equal(server.handledRequests[0].url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');
     assert.equal(
@@ -239,7 +244,7 @@ test('it shows an error if unwrap errors', function(assert) {
 
   this.set('wrappedToken', '54321');
   this.render(hbs`{{auth-form cluster=cluster wrappedToken=wrappedToken}}`);
-  Ember.run.later(() => Ember.run.cancelTimers(), 50);
+  later(() => run.cancelTimers(), 50);
 
   return wait().then(() => {
     assert.equal(

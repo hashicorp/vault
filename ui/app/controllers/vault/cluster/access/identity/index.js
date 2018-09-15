@@ -1,10 +1,9 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 import ListController from 'vault/mixins/list-controller';
 
-const { inject } = Ember;
-
-export default Ember.Controller.extend(ListController, {
-  flashMessages: inject.service(),
+export default Controller.extend(ListController, {
+  flashMessages: service(),
 
   actions: {
     delete(model) {

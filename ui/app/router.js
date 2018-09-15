@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import EmberRouter from '@ember/routing/router';
 import config from './config/environment';
 
-const Router = Ember.Router.extend({
+const Router = EmberRouter.extend({
   location: config.locationType,
   rootURL: config.rootURL,
 });
@@ -32,7 +32,7 @@ Router.map(function() {
       });
       this.route('unseal');
       this.route('tools', function() {
-        this.route('tool', { path: '/:selectedAction' });
+        this.route('tool', { path: '/:selected_action' });
       });
       this.route('access', function() {
         this.route('methods', { path: '/' });

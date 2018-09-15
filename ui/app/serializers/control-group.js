@@ -1,8 +1,6 @@
+import { get } from '@ember/object';
 import DS from 'ember-data';
 import ApplicationSerializer from './application';
-import Ember from 'ember';
-
-const { get } = Ember;
 
 export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
   attrs: {

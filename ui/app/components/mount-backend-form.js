@@ -1,17 +1,17 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 import { engines } from 'vault/helpers/mountable-secret-engines';
 
-const { inject, computed, Component } = Ember;
 const METHODS = methods();
 const ENGINES = engines();
 
 export default Component.extend({
-  store: inject.service(),
-  wizard: inject.service(),
-  flashMessages: inject.service(),
-  routing: inject.service('-routing'),
+  store: service(),
+  wizard: service(),
+  flashMessages: service(),
 
   /*
    * @param Function
@@ -20,8 +20,8 @@ export default Component.extend({
    * Optional param to call a function upon successfully mounting a backend
    *
    */
-  onMountSuccess: () => {},
-  onConfigError: () => {},
+  onMountSuccess() {},
+  onConfigError() {},
   /*
    * @param String
    * @public
@@ -81,7 +81,7 @@ export default Component.extend({
       return;
     }
     let configRef = mount.hasMany('authConfigs').value();
-    let currentConfig = configRef.get('firstObject');
+    let currentConfig = configRef && configRef.get('firstObject');
     if (currentConfig) {
       // rollbackAttributes here will remove the the config model from the store
       // because `isNew` will be true
@@ -125,18 +125,26 @@ export default Component.extend({
     yield this.get('saveConfig').perform(mountModel);
   }).drop(),
 
+  advanceWizard() {
+    this.get('wizard').transitionFeatureMachine(
+      this.get('wizard.featureState'),
+      'CONTINUE',
+      this.get('mountModel').get('type')
+    );
+  },
   saveConfig: task(function*(mountModel) {
     const configRef = mountModel.hasMany('authConfigs').value();
-    const config = configRef.get('firstObject');
     const { type, path } = mountModel.getProperties('type', 'path');
+    if (!configRef) {
+      this.advanceWizard();
+      yield this.get('onMountSuccess')(type, path);
+      return;
+    }
+    const config = configRef.get('firstObject');
     try {
       if (config && Object.keys(config.changedAttributes()).length) {
         yield config.save();
-        this.get('wizard').transitionFeatureMachine(
-          this.get('wizard.featureState'),
-          'CONTINUE',
-          this.get('mountModel').get('type')
-        );
+        this.advanceWizard();
         this.get('flashMessages').success(
           `The config for ${type} ${this.get('mountType')} method at ${path} was saved successfully.`
         );

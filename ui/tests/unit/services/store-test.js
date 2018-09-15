@@ -1,7 +1,8 @@
+import { resolve } from 'rsvp';
+import { run } from '@ember/runloop';
 import { moduleFor, test } from 'ember-qunit';
 import { normalizeModelName, keyForCache } from 'vault/services/store';
 import clamp from 'vault/utils/clamp';
-import Ember from 'ember';
 
 moduleFor('service:store', 'Unit | Service | store', {
   // Specify the other units that are required for this test.
@@ -106,7 +107,7 @@ test('store.fetchPage', function(assert) {
   store.storeDataset('transit-key', query, data, keys);
 
   let result;
-  Ember.run(() => {
+  run(() => {
     store.fetchPage('transit-key', query).then(r => {
       result = r;
       done();
@@ -128,7 +129,7 @@ test('store.fetchPage', function(assert) {
     'returns correct meta values'
   );
 
-  Ember.run(() => {
+  run(() => {
     store
       .fetchPage('transit-key', {
         size: pageSize,
@@ -149,7 +150,7 @@ test('store.fetchPage', function(assert) {
     'returns the third page of items'
   );
 
-  Ember.run(() => {
+  run(() => {
     store
       .fetchPage('transit-key', {
         size: pageSize,
@@ -168,7 +169,7 @@ test('store.fetchPage', function(assert) {
     'returns the last page when the page value is beyond the of bounds'
   );
 
-  Ember.run(() => {
+  run(() => {
     store
       .fetchPage('transit-key', {
         size: pageSize,
@@ -195,7 +196,7 @@ test('store.lazyPaginatedQuery', function(assert) {
     adapterFor() {
       return {
         query() {
-          return Ember.RSVP.resolve(response);
+          return resolve(response);
         },
       };
     },
@@ -203,7 +204,7 @@ test('store.lazyPaginatedQuery', function(assert) {
   });
 
   const query = { page: 1, size: 1, responsePath: 'data' };
-  Ember.run(function() {
+  run(function() {
     store.lazyPaginatedQuery('transit-key', query);
   });
   assert.deepEqual(

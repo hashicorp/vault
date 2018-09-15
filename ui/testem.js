@@ -1,5 +1,4 @@
-/*jshint node:true*/
-
+/* eslint-env node */
 module.exports = {
   framework: 'qunit',
   test_page: 'tests/index.html?hidepassed',

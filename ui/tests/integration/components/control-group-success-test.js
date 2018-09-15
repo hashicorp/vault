@@ -1,5 +1,7 @@
+import { later, run } from '@ember/runloop';
+import { resolve } from 'rsvp';
+import Service from '@ember/service';
 import { moduleForComponent, test } from 'ember-qunit';
-import Ember from 'ember';
 import wait from 'ember-test-helpers/wait';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
@@ -8,20 +10,20 @@ import controlGroupSuccess from '../../pages/components/control-group-success';
 
 const component = create(controlGroupSuccess);
 
-const controlGroupService = Ember.Service.extend({
+const controlGroupService = Service.extend({
   deleteControlGroupToken: sinon.stub(),
   markTokenForUnwrap: sinon.stub(),
 });
 
-const routerService = Ember.Service.extend({
-  transitionTo: sinon.stub().returns(Ember.RSVP.resolve()),
+const routerService = Service.extend({
+  transitionTo: sinon.stub().returns(resolve()),
 });
 
-const storeService = Ember.Service.extend({
+const storeService = Service.extend({
   adapterFor() {
     return {
       toolAction() {
-        return Ember.RSVP.resolve({ data: { foo: 'bar' } });
+        return resolve({ data: { foo: 'bar' } });
       },
     };
   },
@@ -61,7 +63,7 @@ test('render with saved token', function(assert) {
   this.render(hbs`{{control-group-success model=model controlGroupResponse=response }}`);
   assert.ok(component.showsNavigateMessage, 'shows unwrap message');
   component.navigate();
-  Ember.run.later(() => Ember.run.cancelTimers(), 50);
+  later(() => run.cancelTimers(), 50);
   return wait().then(() => {
     assert.ok(this.get('controlGroup').markTokenForUnwrap.calledOnce, 'marks token for unwrap');
     assert.ok(this.get('router').transitionTo.calledOnce, 'calls router transition');
@@ -75,7 +77,7 @@ test('render without token', function(assert) {
   component.token('token');
   component.unwrap();
 
-  Ember.run.later(() => Ember.run.cancelTimers(), 50);
+  later(() => run.cancelTimers(), 50);
   return wait().then(() => {
     assert.ok(component.showsJsonViewer, 'shows unwrapped data');
   });

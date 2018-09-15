@@ -1,6 +1,7 @@
+import Service from '@ember/service';
+import { resolve } from 'rsvp';
 import { moduleForComponent, test } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
-import Ember from 'ember';
 
 let response = {
   progress: 1,
@@ -10,11 +11,11 @@ let response = {
 
 let adapter = {
   foo() {
-    return Ember.RSVP.resolve(response);
+    return resolve(response);
   },
 };
 
-const storeStub = Ember.Service.extend({
+const storeStub = Service.extend({
   adapterFor() {
     return adapter;
   },
