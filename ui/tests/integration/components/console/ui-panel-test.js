@@ -1,6 +1,6 @@
-import { module, skip, test } from 'qunit';
+import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import uiPanel from 'vault/tests/pages/components/console/ui-panel';
 import hbs from 'htmlbars-inline-precompile';

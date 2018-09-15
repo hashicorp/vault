@@ -1,4 +1,4 @@
-import { attribute, clickable, isVisible, triggerable, focusable, text } from 'ember-cli-page-object';
+import { attribute, clickable, isVisible, focusable, text } from 'ember-cli-page-object';
 import { triggerEvent, focus } from '@ember/test-helpers';
 
 export default {

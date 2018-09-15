@@ -1,6 +1,6 @@
 import { module, test, skip } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, waitUntil, getContext } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import hbs from 'htmlbars-inline-precompile';
 import copyButton from 'vault/tests/pages/components/hover-copy-button';
