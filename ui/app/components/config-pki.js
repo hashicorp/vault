@@ -1,7 +1,6 @@
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { get } from '@ember/object';
-import { run } from '@ember/runloop';
 
 export default Component.extend({
   classNames: 'config-pki',
@@ -56,7 +55,7 @@ export default Component.extend({
           }
           this.send('refresh');
         })
-        .catch(e => {
+        .catch(() => {
           // handle promise rejection - error will be shown by message-error component
         })
         .finally(() => {

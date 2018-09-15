@@ -4,6 +4,7 @@ import { get, computed } from '@ember/object';
 import Component from '@ember/component';
 import decodeConfigFromJWT from 'vault/utils/decode-config-from-jwt';
 import ReplicationActions from 'vault/mixins/replication-actions';
+import { task } from 'ember-concurrency';
 
 const DEFAULTS = {
   mode: 'primary',
@@ -65,14 +66,15 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
+  submit: task(function*() {
+    yield this.submitHandler(...arguments);
+    let wizard = this.get('wizard');
+    wizard.transitionFeatureMachine(wizard.get('featureState'), 'ENABLEREPLICATION');
+  }),
+
   actions: {
     onSubmit(/*action, mode, data, event*/) {
-      let promise = this.submitHandler(...arguments);
-      let wizard = this.get('wizard');
-      promise.then(() => {
-        wizard.transitionFeatureMachine(wizard.get('featureState'), 'ENABLEREPLICATION');
-      });
-      return promise;
+      this.get('submit').perform(...arguments);
     },
 
     clear() {
