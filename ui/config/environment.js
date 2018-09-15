@@ -1,4 +1,5 @@
-/* jshint node: true */
+/* eslint-env node */
+'use strict';
 
 module.exports = function(environment) {
   var ENV = {
@@ -54,6 +55,7 @@ module.exports = function(environment) {
     ENV['ember-cli-mirage'] = {
       enabled: false,
     };
+    ENV.APP.autoboot = false;
   }
   if (environment !== 'production') {
     ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
@@ -67,8 +69,6 @@ module.exports = function(environment) {
     };
   }
 
-  if (environment === 'production') {
-  }
   ENV.welcomeMessage = process.env.UI_AUTH_WELCOME;
 
   return ENV;

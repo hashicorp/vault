@@ -1,9 +1,10 @@
-import Ember from 'ember';
+import { resolve } from 'rsvp';
+import Route from '@ember/routing/route';
 import UnloadModel from 'vault/mixins/unload-model-route';
 
 const SUPPORTED_DYNAMIC_BACKENDS = ['ssh', 'aws', 'pki'];
 
-export default Ember.Route.extend(UnloadModel, {
+export default Route.extend(UnloadModel, {
   templateName: 'vault/cluster/secrets/backend/credentials',
 
   backendModel() {
@@ -18,7 +19,7 @@ export default Ember.Route.extend(UnloadModel, {
     if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendModel.get('type'))) {
       return this.transitionTo('vault.cluster.secrets.backend.list-root', backend);
     }
-    return Ember.RSVP.resolve({
+    return resolve({
       backend,
       id: role,
       name: role,

@@ -1,6 +1,6 @@
+import EmberObject from '@ember/object';
 import { moduleForComponent, test } from 'ember-qunit';
 import sinon from 'sinon';
-import Ember from 'ember';
 
 moduleForComponent('identity/edit-form', 'Unit | Component | identity/edit-form', {
   unit: true,
@@ -55,7 +55,7 @@ let testCases = [
   },
 ];
 testCases.forEach(function(testCase) {
-  let model = Ember.Object.create({
+  let model = EmberObject.create({
     identityType: testCase.identityType,
     rollbackAttributes: sinon.spy(),
   });

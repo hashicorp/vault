@@ -1,4 +1,7 @@
-import Ember from 'ember';
+import { getOwner } from '@ember/application';
+import { resolve } from 'rsvp';
+import EmberObject from '@ember/object';
+import Service from '@ember/service';
 import { moduleForComponent, test } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
@@ -6,11 +9,11 @@ import configPki from '../../pages/components/config-pki-ca';
 
 const component = create(configPki);
 
-const storeStub = Ember.Service.extend({
+const storeStub = Service.extend({
   createRecord(type, args) {
-    return Ember.Object.create(args, {
+    return EmberObject.create(args, {
       save() {
-        return Ember.RSVP.resolve(this);
+        return resolve(this);
       },
       destroyRecord() {},
       send() {},
@@ -23,7 +26,7 @@ moduleForComponent('config-pki-ca', 'Integration | Component | config pki ca', {
   integration: true,
   beforeEach() {
     component.setContext(this);
-    Ember.getOwner(this).lookup('service:flash-messages').registerTypes(['success']);
+    getOwner(this).lookup('service:flash-messages').registerTypes(['success']);
     this.register('service:store', storeStub);
     this.inject.service('store', { as: 'storeService' });
   },
@@ -34,7 +37,7 @@ moduleForComponent('config-pki-ca', 'Integration | Component | config pki ca', {
 });
 
 const config = function(pem) {
-  return Ember.Object.create({
+  return EmberObject.create({
     pem: pem,
     backend: 'pki',
     caChain: 'caChain',

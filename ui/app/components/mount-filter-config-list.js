@@ -1,13 +1,14 @@
-import Ember from 'ember';
+import Component from '@ember/component';
+import { set, get, computed } from '@ember/object';
 
-const { get, set } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   config: null,
   mounts: null,
 
   // singleton mounts are not eligible for per-mount-filtering
-  singletonMountTypes: ['cubbyhole', 'system', 'token', 'identity', 'ns_system', 'ns_identity'],
+  singletonMountTypes: computed(function() {
+    return ['cubbyhole', 'system', 'token', 'identity', 'ns_system', 'ns_identity'];
+  }),
 
   actions: {
     addOrRemovePath(path, e) {

@@ -1,13 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { underscore } from 'vault/helpers/underscore';
 
-const { inject } = Ember;
-
-export default Ember.Component.extend({
-  store: inject.service(),
-  flashMessages: inject.service(),
-  routing: inject.service('-routing'),
+export default Component.extend({
+  store: service(),
+  flashMessages: service(),
+  routing: service('-routing'),
 
   // Public API - either 'entity' or 'group'
   // this will determine which adapter is used to make the lookup call

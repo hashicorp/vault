@@ -1,8 +1,8 @@
-import Ember from 'ember';
+import ArrayProxy from '@ember/array/proxy';
+import Component from '@ember/component';
+import { set, computed } from '@ember/object';
 
-const { computed, set } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   'data-test-component': 'string-list',
   classNames: ['field', 'string-list', 'form-section'],
 
@@ -33,7 +33,9 @@ export default Ember.Component.extend({
    * Defaults to an empty array.
    *
    */
-  inputValue: [],
+  inputValue: computed(function() {
+    return [];
+  }),
 
   /*
     *
@@ -60,7 +62,7 @@ export default Ember.Component.extend({
     *
     */
   inputList: computed(function() {
-    return Ember.ArrayProxy.create({
+    return ArrayProxy.create({
       content: [],
       // trim the `value` when accessing objects
       objectAtContent: function(idx) {
@@ -89,7 +91,9 @@ export default Ember.Component.extend({
   },
 
   toVal() {
-    const inputs = this.get('inputList').filter(x => x.value).mapBy('value');
+    const inputs = this.get('inputList')
+      .filter(x => x.value)
+      .mapBy('value');
     if (this.get('format') === 'string') {
       return inputs.join(',');
     }

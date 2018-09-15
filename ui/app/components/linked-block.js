@@ -1,12 +1,13 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 import hbs from 'htmlbars-inline-precompile';
 
-let LinkedBlockComponent = Ember.Component.extend({
+let LinkedBlockComponent = Component.extend({
   layout: hbs`{{yield}}`,
 
   classNames: 'linked-block',
 
-  routing: Ember.inject.service('-routing'),
+  routing: service('-routing'),
   queryParams: null,
 
   click(event) {

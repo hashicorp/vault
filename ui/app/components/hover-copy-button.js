@@ -1,6 +1,6 @@
-import Ember from 'ember';
+import Component from '@ember/component';
 
-export default Ember.Component.extend({
+export default Component.extend({
   'data-test-hover-copy': true,
   classNameBindings: 'alwaysShow:hover-copy-button-static:hover-copy-button',
   copyValue: null,

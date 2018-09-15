@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { run } from '@ember/runloop';
 import { moduleForModel, test } from 'ember-qunit';
 
 moduleForModel('transit-key', 'Unit | Model | transit key');
@@ -27,7 +27,7 @@ test('encryption key versions', function(assert) {
     latestVersion: 5,
   });
   assert.deepEqual([5, 4, 3, 2, 1], model.get('encryptionKeyVersions'), 'lists all available versions');
-  Ember.run(() => {
+  run(() => {
     model.set('minDecryptionVersion', 3);
     assert.deepEqual(
       [5, 4, 3],
@@ -52,7 +52,7 @@ test('keys for encryption', function(assert) {
     'lists all available versions when no min is set'
   );
 
-  Ember.run(() => {
+  run(() => {
     model.set('minEncryptionVersion', 4);
     assert.deepEqual([5, 4], model.get('keysForEncryption'), 'calculates using minEncryptionVersion');
     done();

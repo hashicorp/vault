@@ -1,8 +1,8 @@
-import Ember from 'ember';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 import { pluralize } from 'ember-inflector';
 
-const { computed } = Ember;
-export default Ember.Component.extend({
+export default Component.extend({
   tagName: '',
   items: null,
   itemNoun: 'item',

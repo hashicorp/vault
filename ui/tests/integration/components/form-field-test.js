@@ -1,7 +1,7 @@
+import EmberObject from '@ember/object';
 import { moduleForComponent, test } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
-import Ember from 'ember';
 import sinon from 'sinon';
 import formFields from '../../pages/components/form-field';
 
@@ -27,7 +27,7 @@ const createAttr = (name, type, options) => {
 };
 
 const setup = function(attr) {
-  let model = Ember.Object.create({});
+  let model = EmberObject.create({});
   let spy = sinon.spy();
   this.set('onChange', spy);
   this.set('model', model);
@@ -37,7 +37,7 @@ const setup = function(attr) {
 };
 
 test('it renders', function(assert) {
-  let model = Ember.Object.create({});
+  let model = EmberObject.create({});
   this.set('attr', { name: 'foo' });
   this.set('model', model);
   this.render(hbs`{{form-field attr=attr model=model}}`);

@@ -1,6 +1,6 @@
-import Ember from 'ember';
-
-const { get, set, computed, Component, inject } = Ember;
+import { inject as service } from '@ember/service';
+import { computed, set, get } from '@ember/object';
+import Component from '@ember/component';
 
 const MODEL_TYPES = {
   'ssh-sign': {
@@ -26,9 +26,9 @@ const MODEL_TYPES = {
 };
 
 export default Component.extend({
-  wizard: inject.service(),
-  store: inject.service(),
-  routing: inject.service('-routing'),
+  wizard: service(),
+  store: service(),
+  routing: service('-routing'),
   // set on the component
   backend: null,
   action: null,

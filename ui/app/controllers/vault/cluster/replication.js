@@ -1,4 +1,7 @@
-import Ember from 'ember';
+import { isPresent } from '@ember/utils';
+import { alias } from '@ember/object/computed';
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 
 const DEFAULTS = {
   token: null,
@@ -14,10 +17,10 @@ const DEFAULTS = {
   },
 };
 
-export default Ember.Controller.extend(DEFAULTS, {
-  store: Ember.inject.service(),
-  rm: Ember.inject.service('replication-mode'),
-  replicationMode: Ember.computed.alias('rm.mode'),
+export default Controller.extend(DEFAULTS, {
+  store: service(),
+  rm: service('replication-mode'),
+  replicationMode: alias('rm.mode'),
 
   submitError(e) {
     if (e.errors) {
@@ -75,7 +78,7 @@ export default Ember.Controller.extend(DEFAULTS, {
     if (event && event.preventDefault) {
       event.preventDefault();
     }
-    if (data && Ember.isPresent(data.saveFilterConfig)) {
+    if (data && isPresent(data.saveFilterConfig)) {
       saveFilterConfig = data.saveFilterConfig;
       delete data.saveFilterConfig;
     }
@@ -86,7 +89,7 @@ export default Ember.Controller.extend(DEFAULTS, {
     if (data) {
       data = Object.keys(data).reduce((newData, key) => {
         var val = data[key];
-        if (Ember.isPresent(val)) {
+        if (isPresent(val)) {
           newData[key] = val;
         }
         return newData;

@@ -1,5 +1,5 @@
-import Ember from 'ember';
+import { registerAsyncHelper } from '@ember/test';
 
-export default Ember.Test.registerAsyncHelper('authLogout', function() {
+export default registerAsyncHelper('authLogout', function() {
   visit('/vault/logout');
 });

@@ -1,9 +1,11 @@
-import Ember from 'ember';
+import { set } from '@ember/object';
+import { hash } from 'rsvp';
+import Route from '@ember/routing/route';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 
 import utils from 'vault/lib/key-utils';
 
-export default Ember.Route.extend(UnloadModelRoute, {
+export default Route.extend(UnloadModelRoute, {
   beforeModel() {
     const { lease_id: leaseId } = this.paramsFor(this.routeName);
     const parentKey = utils.parentKeyForKey(leaseId);
@@ -18,11 +20,11 @@ export default Ember.Route.extend(UnloadModelRoute, {
 
   model(params) {
     const { lease_id } = params;
-    return Ember.RSVP.hash({
+    return hash({
       lease: this.store.queryRecord('lease', {
         lease_id,
       }),
-      capabilities: Ember.RSVP.hash({
+      capabilities: hash({
         renew: this.store.findRecord('capabilities', 'sys/leases/renew'),
         revoke: this.store.findRecord('capabilities', 'sys/leases/revoke'),
         leases: this.modelFor('vault.cluster.access.leases'),
@@ -43,7 +45,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
   actions: {
     error(error) {
       const { lease_id } = this.paramsFor(this.routeName);
-      Ember.set(error, 'keyId', lease_id);
+      set(error, 'keyId', lease_id);
       return true;
     },
 

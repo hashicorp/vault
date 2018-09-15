@@ -1,9 +1,9 @@
-import Ember from 'ember';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 
 import { messageTypes } from 'vault/helpers/message-types';
-const { computed } = Ember;
 
-export default Ember.Component.extend({
+export default Component.extend({
   type: null,
 
   yieldWithoutColumn: false,

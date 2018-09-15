@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import { registerAsyncHelper } from '@ember/test';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 
-export default Ember.Test.registerAsyncHelper('mountSupportedSecretBackend', function(_, assert, type, path) {
+export default registerAsyncHelper('mountSupportedSecretBackend', function(_, assert, type, path) {
   mountSecrets.visit();
   andThen(() => {
     return mountSecrets.mount(type, path);

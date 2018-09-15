@@ -1,13 +1,14 @@
+import { next } from '@ember/runloop';
+import $ from 'jquery';
 import { moduleForComponent, test } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
-import Ember from 'ember';
 import wait from 'ember-test-helpers/wait';
 
 let file;
 const fileEvent = () => {
   const data = { some: 'content' };
   file = new File([JSON.stringify(data, null, 2)], 'file.json', { type: 'application/json' });
-  return Ember.$.Event('change', {
+  return $.Event('change', {
     target: {
       files: [file],
     },
@@ -47,7 +48,7 @@ test('it accepts files', function(assert) {
 
   return wait().then(() => {
     // FileReader is async, but then we need extra run loop wait to re-render
-    Ember.run.next(() => {
+    next(() => {
       assert.equal(
         this.$('[data-test-pgp-file-input-label]').text().trim(),
         file.name,
@@ -86,7 +87,7 @@ test('toggling back and forth', function(assert) {
   this.render(hbs`{{pgp-file index=index key=key onChange=(action change)}}`);
   this.$('[data-test-pgp-file-input]').trigger(event);
   return wait().then(() => {
-    Ember.run.next(() => {
+    next(() => {
       this.$('[data-test-text-toggle]').click();
       wait().then(() => {
         assert.equal(this.$('[data-test-pgp-file-textarea]').length, 1, 'renders the textarea on toggle');

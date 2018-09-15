@@ -1,8 +1,8 @@
-import Ember from 'ember';
+import EmberError from '@ember/error';
 
-export default class ControlGroupError extends Ember.Error {
+export default class ControlGroupError extends EmberError {
   constructor(wrapInfo) {
-    let {accessor, creation_path, creation_time, token, ttl} = wrapInfo;
+    let { accessor, creation_path, creation_time, token, ttl } = wrapInfo;
     super();
     this.message = 'Control Group encountered';
 

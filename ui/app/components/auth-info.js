@@ -1,10 +1,11 @@
-import Ember from 'ember';
-
-const { Component, inject, computed, run } = Ember;
+import { inject as service } from '@ember/service';
+import { or } from '@ember/object/computed';
+import Component from '@ember/component';
+import { run } from '@ember/runloop';
 export default Component.extend({
-  auth: inject.service(),
-  wizard: inject.service(),
-  routing: inject.service('-routing'),
+  auth: service(),
+  wizard: service(),
+  routing: service('-routing'),
 
   transitionToRoute: function() {
     var router = this.get('routing.router');
@@ -13,7 +14,7 @@ export default Component.extend({
 
   classNames: 'user-menu auth-info',
 
-  isRenewing: computed.or('fakeRenew', 'auth.isRenewing'),
+  isRenewing: or('fakeRenew', 'auth.isRenewing'),
 
   actions: {
     restartGuide() {

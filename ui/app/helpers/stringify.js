@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 export function stringify([target], { skipFormat }) {
   if (skipFormat) {
@@ -7,4 +7,4 @@ export function stringify([target], { skipFormat }) {
   return JSON.stringify(target, null, 2);
 }
 
-export default Ember.Helper.helper(stringify);
+export default buildHelper(stringify);

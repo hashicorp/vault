@@ -1,8 +1,9 @@
-import Ember from 'ember';
+import { run } from '@ember/runloop';
+import { registerAsyncHelper } from '@ember/test';
 
-export default Ember.Test.registerAsyncHelper('pollCluster', function(app) {
+export default registerAsyncHelper('pollCluster', function(app) {
   const clusterRoute = app.__container__.cache['route:vault/cluster'];
-  return Ember.run(() => {
+  return run(() => {
     return clusterRoute.controller.model.reload();
   });
 });

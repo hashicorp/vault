@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import { readOnly, match, not } from '@ember/object/computed';
+import Service, { inject as service } from '@ember/service';
+import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
-
-const { Service, inject, computed } = Ember;
 
 const hasFeatureMethod = (context, featureKey) => {
   const features = context.get('features');
@@ -17,9 +17,9 @@ const hasFeature = featureKey => {
 };
 export default Service.extend({
   _features: null,
-  features: computed.readOnly('_features'),
+  features: readOnly('_features'),
   version: null,
-  store: inject.service(),
+  store: service(),
 
   hasPerfReplication: hasFeature('Performance Replication'),
 
@@ -28,9 +28,9 @@ export default Service.extend({
   hasSentinel: hasFeature('Sentinel'),
   hasNamespaces: hasFeature('Namespaces'),
 
-  isEnterprise: computed.match('version', /\+.+$/),
+  isEnterprise: match('version', /\+.+$/),
 
-  isOSS: computed.not('isEnterprise'),
+  isOSS: not('isEnterprise'),
 
   setVersion(resp) {
     this.set('version', resp.version);
