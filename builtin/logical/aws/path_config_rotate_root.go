@@ -40,11 +40,11 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, err
 	}
 	if rawRootConfig == nil {
-		return nil, fmt.Errorf("No configuration found for config/root")
+		return nil, fmt.Errorf("no configuration found for config/root")
 	}
 	var config rootConfig
 	if err := rawRootConfig.DecodeJSON(&config); err != nil {
-		return nil, errwrap.Wrapf("Error reading root configuration: {{err}}", err)
+		return nil, errwrap.Wrapf("error reading root configuration: {{err}}", err)
 	}
 
 	if config.AccessKey == "" || config.SecretKey == "" {
@@ -99,7 +99,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	}
 	_, err = client.DeleteAccessKey(&deleteAccessKeyInput)
 	if err != nil {
-		return nil, errwrap.Wrapf("Error deleting old access key: {{err}}", err)
+		return nil, errwrap.Wrapf("error deleting old access key: {{err}}", err)
 	}
 
 	return &logical.Response{
