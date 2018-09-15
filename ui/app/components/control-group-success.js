@@ -25,9 +25,7 @@ export default Component.extend({
     } catch (e) {
       this.set('error', `Token unwrap failed: ${e.errors[0]}`);
     }
-  })
-    .drop()
-    .debug(),
+  }).drop(),
 
   markAndNavigate: task(function*() {
     this.get('controlGroup').markTokenForUnwrap(this.get('model.id'));
