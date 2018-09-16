@@ -1,3 +1,4 @@
+import { run } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
 import { assign } from '@ember/polyfills';
@@ -28,6 +29,7 @@ export default Component.extend(DEFAULTS, {
   cluster: null,
   redirectTo: null,
   namespace: null,
+  wrappedToken: null,
   // internal
   oldNamespace: null,
   didReceiveAttrs() {
@@ -54,6 +56,7 @@ export default Component.extend(DEFAULTS, {
 
   didRender() {
     this._super(...arguments);
+    let firstMethod = this.firstMethod();
     // on very narrow viewports the active tab may be overflowed, so we scroll it into view here
     let activeEle = this.element.querySelector('li.is-active');
     if (activeEle) {
@@ -62,22 +65,23 @@ export default Component.extend(DEFAULTS, {
     // this is here because we're changing the `with` attr and there's no way to short-circuit rendering,
     // so we'll just nav -> get new attrs -> re-render
     if (
-      (this.get('fetchMethods.isIdle') && !this.get('selectedAuth')) ||
+      (this.get('fetchMethods.isIdle') && firstMethod && !this.get('selectedAuth')) ||
       (this.get('selectedAuth') && !this.get('selectedAuthBackend'))
     ) {
-      this.set('selectedAuth', this.firstMethod());
-      this.get('router').replaceWith({
-        queryParams: {
-          with: this.firstMethod(),
-          wrapped_token: this.get('wrappedToken'),
-          namespace: this.get('namespace'),
-        },
+      run.next(() => {
+        this.set('selectedAuth', firstMethod);
+        this.get('router').replaceWith({
+          queryParams: {
+            with: this.firstMethod(),
+          },
+        });
       });
     }
   },
 
   firstMethod() {
     let firstMethod = this.get('methodsToShow.firstObject');
+    if (!firstMethod) return;
     // prefer backends with a path over those with a type
     return get(firstMethod, 'path') || get(firstMethod, 'type');
   },
