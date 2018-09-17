@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -35,6 +36,11 @@ expiration, before it is removed from the backend storage.`,
 
 // tidyWhitelistIdentity is used to delete entries in the whitelist that are expired.
 func (b *backend) tidyWhitelistIdentity(ctx context.Context, req *logical.Request, safetyBuffer int) (*logical.Response, error) {
+	// If we are a performance standby forward the request to the active node
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
+	}
+
 	if !atomic.CompareAndSwapUint32(b.tidyWhitelistCASGuard, 0, 1) {
 		resp := &logical.Response{}
 		resp.AddWarning("Tidy operation already in progress.")
