@@ -20,7 +20,7 @@ export default Controller.extend(CONFIG_ATTRS, {
   flashMessages: service(),
   loading: false,
   reset() {
-    //this.get('model').rollbackAttributes();
+    this.get('model').rollbackAttributes();
     this.setProperties(CONFIG_ATTRS);
   },
   actions: {
