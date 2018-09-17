@@ -1,4 +1,4 @@
-## 0.11.2 (Unreleased)
+## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
 BUG FIXES:
 
