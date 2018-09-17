@@ -30,6 +30,7 @@ module.exports = {
         'blueprints/*/index.js',
         'config/**/*.js',
         'lib/*/index.js',
+        'scripts/start-vault.js',
       ],
       parserOptions: {
         sourceType: 'script',
