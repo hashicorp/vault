@@ -954,17 +954,46 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 // This was the original function name, and now it just calls
 // the non recursive version for a variety of depths.
 func TestTokenStore_RevokeTree(t *testing.T) {
-	testTokenStore_RevokeTree_NonRecursive(t, 1)
-	testTokenStore_RevokeTree_NonRecursive(t, 2)
-	testTokenStore_RevokeTree_NonRecursive(t, 10)
+	testTokenStore_RevokeTree_NonRecursive(t, 1, false)
+	testTokenStore_RevokeTree_NonRecursive(t, 2, false)
+	testTokenStore_RevokeTree_NonRecursive(t, 10, false)
+
+	// corrupted trees with cycles
+	testTokenStore_RevokeTree_NonRecursive(t, 1, true)
+	testTokenStore_RevokeTree_NonRecursive(t, 10, true)
 }
 
 // Revokes a given Token Store tree non recursively.
 // The second parameter refers to the depth of the tree.
-func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
+func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64, injectCycles bool) {
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	root, children := buildTokenTree(t, ts, depth)
+
+	var cyclePaths []string
+	if injectCycles {
+		// Make the root the parent of itself
+		saltedRoot, _ := ts.SaltID(context.Background(), root.ID)
+		key := fmt.Sprintf("parent/%s/%s", saltedRoot, saltedRoot)
+		cyclePaths = append(cyclePaths, key)
+		le := &logical.StorageEntry{Key: key}
+
+		if err := ts.view.Put(context.Background(), le); err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Make a deep child the parent of a shallow child
+		shallow, _ := ts.SaltID(context.Background(), children[0].ID)
+		deep, _ := ts.SaltID(context.Background(), children[len(children)-1].ID)
+		key = fmt.Sprintf("parent/%s/%s", deep, shallow)
+		cyclePaths = append(cyclePaths, key)
+		le = &logical.StorageEntry{Key: key}
+
+		if err := ts.view.Put(context.Background(), le); err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
 	err := ts.revokeTree(context.Background(), "")
 
 	if err.Error() != "cannot tree-revoke blank token" {
@@ -989,6 +1018,16 @@ func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
 			t.Fatalf("bad: %#v", out)
 		}
 	}
+
+	for _, path := range cyclePaths {
+		entry, err := ts.view.Get(context.Background(), path)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if entry != nil {
+			t.Fatalf("expected reference to be deleted: %v", entry)
+		}
+	}
 }
 
 // A benchmark function that tests testTokenStore_RevokeTree_NonRecursive
@@ -998,7 +1037,7 @@ func BenchmarkTokenStore_RevokeTree(b *testing.B) {
 	for _, depth := range benchmarks {
 		b.Run(fmt.Sprintf("Tree of Depth %d", depth), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				testTokenStore_RevokeTree_NonRecursive(b, depth)
+				testTokenStore_RevokeTree_NonRecursive(b, depth, false)
 			}
 		})
 	}
