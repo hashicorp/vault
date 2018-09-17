@@ -50,7 +50,6 @@
     "cool-checkboxes-for-bulma.io": "^1.1.0",
     "deepmerge": "^2.1.1",
     "ember-ajax": "^3.1.0",
-    "ember-angle-bracket-invocation-polyfill": "^1.2.2",
     "ember-api-actions": "^0.1.8",
     "ember-auto-import": "^1.2.3",
     "ember-basic-dropdown": "^1.0.0",

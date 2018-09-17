@@ -3385,14 +3385,6 @@ ember-ajax@^3.1.0:
     ember-cli-babel "^6.16.0"
     najax "^1.0.3"
 
-ember-angle-bracket-invocation-polyfill@^1.2.2:
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/ember-angle-bracket-invocation-polyfill/-/ember-angle-bracket-invocation-polyfill-1.2.2.tgz#bbb404aa6394216b6213fcc3664a90566e0997a5"
-  dependencies:
-    ember-cli-babel "^6.6.0"
-    ember-cli-version-checker "^2.1.2"
-    ember-compatibility-helpers "^1.0.0"
-
 ember-api-actions@^0.1.8:
   version "0.1.9"
   resolved "https://registry.yarnpkg.com/ember-api-actions/-/ember-api-actions-0.1.9.tgz#6a90af17bf79c42daa9b3b06b86a6f60bc098e7f"
