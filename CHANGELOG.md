@@ -9,6 +9,7 @@ BUG FIXES:
  * core: Fix token creation on performance standby nodes
  * core: Fix unwrapping inside a namespace
  * core: Fix handling of cyclic token relationships [GH-4803]
+ * core: Always forward tidy operations from performance standby nodes
 
 IMPROVEMENTS:
 
