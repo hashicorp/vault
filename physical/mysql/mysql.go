@@ -620,7 +620,7 @@ func (i *MySQLLock) becomeLeader() error {
 func (i *MySQLLock) Lock() error {
 	defer metrics.MeasureSince([]string{"mysql", "get_lock"}, time.Now())
 
-	rows, err := i.in.Query("SELECT GET_LOCK(?, -1), IS_USED_LOCK(?)", i.key, i.key)
+	rows, err := i.in.Query("SELECT GET_LOCK(?, 4294967295), IS_USED_LOCK(?)", i.key, i.key)
 	if err != nil {
 		return err
 	}
