@@ -8,6 +8,7 @@ BUG FIXES:
  * core: Improve WAL deletion rate
  * core: Fix token creation on performance standby nodes
  * core: Fix unwrapping inside a namespace
+ * core: Fix handling of cyclic token relationships [GH-4803]
 
 IMPROVEMENTS:
 
