@@ -1200,35 +1200,16 @@ func (ts *TokenStore) revokeTree(ctx context.Context, id string) error {
 // Updated to be non-recursive and revoke child tokens
 // before parent tokens(DFS).
 func (ts *TokenStore) revokeTreeSalted(ctx context.Context, saltedID string) error {
-	dfs := []string{saltedID}
-	seenIDs := map[string]struct{}{
-		saltedID: struct{}{},
-	}
+	var dfs []string
+	dfs = append(dfs, saltedID)
 
 	for l := len(dfs); l > 0; l = len(dfs) {
 		id := dfs[0]
 		path := parentPrefix + id + "/"
-
-		childrenRaw, err := ts.view.List(ctx, path)
+		children, err := ts.view.List(ctx, path)
 		if err != nil {
 			return errwrap.Wrapf("failed to scan for children: {{err}}", err)
 		}
-
-		// Filter the child list to remove any items that have ever been in the dfs queue.
-		// This is a robustness check, as a parent/child cycle can lead to an OOM crash.
-		children := make([]string, 0, len(childrenRaw))
-		for _, child := range childrenRaw {
-			if _, seen := seenIDs[child]; !seen {
-				children = append(children, child)
-			} else {
-				if err = ts.view.Delete(ctx, path+child); err != nil {
-					return errwrap.Wrapf("failed to delete entry: {{err}}", err)
-				}
-
-				ts.Logger().Warn("token cycle found", "token", child)
-			}
-		}
-
 		// If the length of the children array is zero,
 		// then we are at a leaf node.
 		if len(children) == 0 {
@@ -1250,9 +1231,6 @@ func (ts *TokenStore) revokeTreeSalted(ctx context.Context, saltedID string) err
 			// If we make it here, there are children and they must
 			// be prepended.
 			dfs = append(children, dfs...)
-			for _, child := range children {
-				seenIDs[child] = struct{}{}
-			}
 		}
 	}
 
