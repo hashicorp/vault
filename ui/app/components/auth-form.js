@@ -1,4 +1,3 @@
-import { run } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
 import { assign } from '@ember/polyfills';
@@ -62,20 +61,12 @@ export default Component.extend(DEFAULTS, {
     if (activeEle) {
       activeEle.scrollIntoView();
     }
-    // this is here because we're changing the `with` attr and there's no way to short-circuit rendering,
-    // so we'll just nav -> get new attrs -> re-render
+    // set `with` to the first method
     if (
       (this.get('fetchMethods.isIdle') && firstMethod && !this.get('selectedAuth')) ||
       (this.get('selectedAuth') && !this.get('selectedAuthBackend'))
     ) {
-      run.next(() => {
-        this.set('selectedAuth', firstMethod);
-        this.get('router').replaceWith({
-          queryParams: {
-            with: this.firstMethod(),
-          },
-        });
-      });
+      this.set('selectedAuth', firstMethod);
     }
   },
 

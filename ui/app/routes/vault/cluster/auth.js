@@ -3,6 +3,11 @@ import ClusterRouteBase from './cluster-route-base';
 import config from 'vault/config/environment';
 
 export default ClusterRouteBase.extend({
+  queryParams: {
+    authMethod: {
+      replace: true,
+    },
+  },
   flashMessages: service(),
   version: service(),
   wizard: service(),
