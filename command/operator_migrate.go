@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -50,7 +51,7 @@ Usage: vault operator migrate [options]
   from one backend to another. This operates directly on encrypted data and
   does not require a Vault server, nor any unsealing.
 
-  Start an migration with a configuration file:
+  Start a migration with a configuration file:
 
       $ vault operator migrate -config=migrate.hcl
 
@@ -152,13 +153,13 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 		return errwrap.Wrapf("error mounting 'storage_destination': {{err}}", err)
 	}
 
-	startTime, err := CheckMigration(from)
+	migrationStatus, err := CheckMigration(from)
 	if err != nil {
 		return errors.New("error checking migration status")
 	}
 
-	if startTime != "" {
-		return fmt.Errorf("Storage migration in progress (started: %s).", startTime)
+	if migrationStatus != nil {
+		return fmt.Errorf("Storage migration in progress (started: %s).", migrationStatus.Start.Format(time.RFC3339))
 	}
 
 	if err := SetMigration(from, true); err != nil {

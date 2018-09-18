@@ -36,6 +36,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/gated-writer"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -50,7 +51,7 @@ import (
 var _ cli.Command = (*ServerCommand)(nil)
 var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
 
-const migrationLock = "sys/migration"
+const migrationLock = "core/migration"
 
 type ServerCommand struct {
 	*BaseCommand
@@ -468,13 +469,14 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	startTime, err := CheckMigration(backend)
+	migrationStatus, err := CheckMigration(backend)
 	if err != nil {
 		c.UI.Error("Error checking migration status")
 		return 1
 	}
 
-	if startTime != "" {
+	if migrationStatus != nil {
+		startTime := migrationStatus.Start.Format(time.RFC3339)
 		if !c.flagIgnoreMigration {
 			c.UI.Error(wrapAtLength(fmt.Sprintf("Storage migration in progress (started: %s). "+
 				"Use -ignore-migration to override this check.", startTime)))
@@ -482,8 +484,6 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 		c.UI.Warn(fmt.Sprintf("WARNING! Storage migration in progress (started: %s).", startTime))
 	}
-
-	backend.List(context.Background(), "")
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
@@ -1759,20 +1759,27 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 	return os.Remove(pidPath)
 }
 
-func CheckMigration(b physical.Backend) (string, error) {
-	startTime := ""
+type MigrationStatus struct {
+	Start time.Time `json:"start"`
+}
 
+func CheckMigration(b physical.Backend) (*MigrationStatus, error) {
 	entry, err := b.Get(context.Background(), migrationLock)
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	if entry != nil {
-		startTime = string(entry.Value)
+	if entry == nil {
+		return nil, nil
 	}
 
-	return startTime, nil
+	var status MigrationStatus
+	if err := jsonutil.DecodeJSON(entry.Value, &status); err != nil {
+		return nil, err
+	}
+
+	return &status, nil
 }
 
 func SetMigration(b physical.Backend, active bool) error {
@@ -1780,12 +1787,20 @@ func SetMigration(b physical.Backend, active bool) error {
 		return b.Delete(context.Background(), migrationLock)
 	}
 
-	now := time.Now().Format(time.RFC3339)
+	status := MigrationStatus{
+		Start: time.Now(),
+	}
+
+	enc, err := jsonutil.EncodeJSON(status)
+	if err != nil {
+		return err
+	}
 
 	entry := &physical.Entry{
 		Key:   migrationLock,
-		Value: []byte(now),
+		Value: enc,
 	}
+
 	return b.Put(context.Background(), entry)
 }
 
