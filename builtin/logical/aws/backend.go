@@ -91,6 +91,13 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IA
 	// Upgrade the lock for writing
 	b.clientMutex.RUnlock()
 	b.clientMutex.Lock()
+	defer b.clientMutex.Unlock()
+
+	// check client again, in the event that a client was being created while we
+	// waited for Lock()
+	if b.iamClient != nil {
+		return b.iamClient, nil
+	}
 
 	iamClient, err := clientIAM(ctx, s)
 	if err != nil {
@@ -111,6 +118,13 @@ func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsiface.ST
 	// Upgrade the lock for writing
 	b.clientMutex.RUnlock()
 	b.clientMutex.Lock()
+	defer b.clientMutex.Unlock()
+
+	// check client again, in the event that a client was being created while we
+	// waited for Lock()
+	if b.stsClient != nil {
+		return b.stsClient, nil
+	}
 
 	stsClient, err := clientSTS(ctx, s)
 	if err != nil {
