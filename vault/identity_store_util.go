@@ -1154,6 +1154,19 @@ func (i *IdentityStore) UpsertGroupInTxn(txn *memdb.Txn, group *identity.Group, 
 	// Increment the modify index of the group
 	group.ModifyIndex++
 
+	// Clear the old alias from memdb
+	groupClone, err := i.MemDBGroupByID(group.ID, true)
+	if err != nil {
+		return err
+	}
+	if groupClone != nil && groupClone.Alias != nil {
+		err = i.MemDBDeleteAliasByIDInTxn(txn, groupClone.Alias.ID, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add the new alias to memdb
 	if group.Alias != nil {
 		err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
 		if err != nil {
