@@ -56,7 +56,7 @@ module.exports = function(environment) {
     };
     ENV.APP.autoboot = false;
 
-    ENV.flashMessageDefaults.flashMessageDefaults = 50;
+    ENV.flashMessageDefaults.timeout = 50;
   }
   if (environment !== 'production') {
     ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
