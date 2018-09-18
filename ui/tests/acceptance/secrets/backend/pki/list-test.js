@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/secrets/backend/list';
@@ -36,6 +36,7 @@ module('Acceptance | secrets/pki/list', function(hooks) {
   test('it navigates to the configure page', async function(assert) {
     await mountAndNav(assert);
     await page.configure();
+    await settled();
     assert.equal(
       currentRouteName(),
       'vault.cluster.settings.configure-secret-backend.section',
