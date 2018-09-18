@@ -20,7 +20,6 @@ module.exports = {
       ].filter(Boolean),
     },
   },
-  launch_in_dev: ['Chrome'],
   on_exit:
     '[ -e ../../vault-ui-integration-server.pid ] && node ../../scripts/start-vault.js `cat ../../vault-ui-integration-server.pid`; [ -e ../../vault-ui-integration-server.pid ] && rm ../../vault-ui-integration-server.pid',
 
