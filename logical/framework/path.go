@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/license"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -68,6 +69,10 @@ type Path struct {
 	// also true. If not specified, the Update action is forced and the user
 	// must have UpdateCapability on the path.
 	ExistenceCheck ExistenceFunc
+
+	// FeatureRequired, if implemented, will validate if the given feature is
+	// enabled for the set of paths
+	FeatureRequired license.Features
 
 	// Help is text describing how to use this path. This will be used
 	// to auto-generate the help operation. The Path will automatically

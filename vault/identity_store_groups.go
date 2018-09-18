@@ -7,8 +7,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
-	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -132,7 +132,7 @@ func (i *IdentityStore) pathGroupRegister() framework.OperationFunc {
 		i.groupLock.Lock()
 		defer i.groupLock.Unlock()
 
-		return i.handleGroupUpdateCommon(req, d, nil)
+		return i.handleGroupUpdateCommon(ctx, req, d, nil)
 	}
 }
 
@@ -154,15 +154,14 @@ func (i *IdentityStore) pathGroupIDUpdate() framework.OperationFunc {
 			return logical.ErrorResponse("invalid group ID"), nil
 		}
 
-		return i.handleGroupUpdateCommon(req, d, group)
+		return i.handleGroupUpdateCommon(ctx, req, d, group)
 	}
 }
 
-func (i *IdentityStore) handleGroupUpdateCommon(req *logical.Request, d *framework.FieldData, group *identity.Group) (*logical.Response, error) {
-	var err error
+func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, group *identity.Group) (*logical.Response, error) {
 	var newGroup bool
 	if group == nil {
-		group = &identity.Group{}
+		group = new(identity.Group)
 		newGroup = true
 	}
 
@@ -199,7 +198,7 @@ func (i *IdentityStore) handleGroupUpdateCommon(req *logical.Request, d *framewo
 	groupName := d.Get("name").(string)
 	if groupName != "" {
 		// Check if there is a group already existing for the given name
-		groupByName, err := i.MemDBGroupByName(groupName, false)
+		groupByName, err := i.MemDBGroupByName(ctx, groupName, false)
 		if err != nil {
 			return nil, err
 		}
@@ -209,7 +208,11 @@ func (i *IdentityStore) handleGroupUpdateCommon(req *logical.Request, d *framewo
 		// modified into something which is already tied to a different group,
 		// error out.
 		switch {
-		case (newGroup && groupByName != nil), (groupByName != nil && group.ID != "" && groupByName.ID != group.ID):
+		case groupByName == nil:
+			// Allowed
+		case newGroup:
+			return logical.ErrorResponse("updating a group by name is not currently supported"), nil
+		case group.ID != "" && groupByName.ID != group.ID:
 			return logical.ErrorResponse("group name is already in use"), nil
 		}
 		group.Name = groupName
@@ -243,7 +246,7 @@ func (i *IdentityStore) handleGroupUpdateCommon(req *logical.Request, d *framewo
 		memberGroupIDs = memberGroupIDsRaw.([]string)
 	}
 
-	err = i.sanitizeAndUpsertGroup(group, memberGroupIDs)
+	err = i.sanitizeAndUpsertGroup(ctx, group, memberGroupIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -268,13 +271,24 @@ func (i *IdentityStore) pathGroupIDRead() framework.OperationFunc {
 		if err != nil {
 			return nil, err
 		}
+		if group == nil {
+			return nil, nil
+		}
 
-		return i.handleGroupReadCommon(group)
+		return i.handleGroupReadCommon(ctx, group)
 	}
 }
 
-func (i *IdentityStore) handleGroupReadCommon(group *identity.Group) (*logical.Response, error) {
+func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identity.Group) (*logical.Response, error) {
 	if group == nil {
+		return nil, nil
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ns.ID != group.NamespaceID {
 		return nil, nil
 	}
 
@@ -354,6 +368,14 @@ func (i *IdentityStore) pathGroupIDDelete() framework.OperationFunc {
 			return nil, nil
 		}
 
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if group.NamespaceID != ns.ID {
+			return nil, logical.ErrUnsupportedPath
+		}
+
 		// Delete group alias from memdb
 		if group.Type == groupTypeExternal && group.Alias != nil {
 			err = i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
@@ -384,16 +406,17 @@ func (i *IdentityStore) pathGroupIDDelete() framework.OperationFunc {
 // pathGroupIDList lists the IDs of all the groups in the identity store
 func (i *IdentityStore) pathGroupIDList() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		ws := memdb.NewWatchSet()
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
 
 		txn := i.db.Txn(false)
 
-		iter, err := txn.Get(groupsTable, "id")
+		iter, err := txn.Get(groupsTable, "namespace_id", ns.ID)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to fetch iterator for group in memdb: {{err}}", err)
+			return nil, errwrap.Wrapf("failed to lookup groups using namespace ID: {{err}}", err)
 		}
-
-		ws.Add(iter.WatchCh())
 
 		var groupIDs []string
 		groupInfo := map[string]interface{}{}
@@ -404,12 +427,8 @@ func (i *IdentityStore) pathGroupIDList() framework.OperationFunc {
 		}
 		mountAccessorMap := map[string]mountInfo{}
 
-		for {
-			raw := iter.Next()
-			if raw == nil {
-				break
-			}
-			group := raw.(*identity.Group)
+		for entry := iter.Next(); entry != nil; entry = iter.Next() {
+			group := entry.(*identity.Group)
 			groupIDs = append(groupIDs, group.ID)
 			groupInfoEntry := map[string]interface{}{
 				"name":                group.Name,

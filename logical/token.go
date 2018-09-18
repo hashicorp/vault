@@ -65,6 +65,15 @@ type TokenEntry struct {
 
 	// The set of CIDRs that this token can be used with
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
+
+	// NamespaceID is the identifier of the namespace to which this token is
+	// confined to. Do not return this value over the API when the token is
+	// being looked up.
+	NamespaceID string `json:"namespace_id" mapstructure:"namespace_id" structs:"namespace_id" sentinel:""`
+
+	// CubbyholeID is the identifier of the cubbyhole storage belonging to this
+	// token
+	CubbyholeID string `json:"cubbyhole_id" mapstructure:"cubbyhole_id" structs:"cubbyhole_id" sentinel:""`
 }
 
 func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {

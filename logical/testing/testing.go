@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical/inmem"
@@ -249,7 +250,7 @@ func Test(tt TestT, c TestCase) {
 		req.Path = fmt.Sprintf("%s/%s", prefix, req.Path)
 
 		// Make the request
-		resp, err := core.HandleRequest(context.Background(), req)
+		resp, err := core.HandleRequest(namespace.TestContext(), req)
 		if resp != nil && resp.Secret != nil {
 			// Revoke this secret later
 			revoke = append(revoke, &logical.Request{
@@ -303,7 +304,7 @@ func Test(tt TestT, c TestCase) {
 			logger.Warn("Revoking secret", "secret", fmt.Sprintf("%#v", req))
 		}
 		req.ClientToken = client.Token()
-		resp, err := core.HandleRequest(context.Background(), req)
+		resp, err := core.HandleRequest(namespace.TestContext(), req)
 		if err == nil && resp.IsError() {
 			err = fmt.Errorf("erroneous response:\n\n%#v", resp)
 		}
@@ -320,7 +321,7 @@ func Test(tt TestT, c TestCase) {
 	req := logical.RollbackRequest(prefix + "/")
 	req.Data["immediate"] = true
 	req.ClientToken = client.Token()
-	resp, err := core.HandleRequest(context.Background(), req)
+	resp, err := core.HandleRequest(namespace.TestContext(), req)
 	if err == nil && resp.IsError() {
 		err = fmt.Errorf("erroneous response:\n\n%#v", resp)
 	}

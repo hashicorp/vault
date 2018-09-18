@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"time"
@@ -9,6 +10,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -123,38 +125,40 @@ func (m *RollbackManager) triggerRollbacks() {
 		}
 
 		// When the mount is filtered, the backend will be nil
-		backend := m.router.MatchingBackend(path)
+		ctx := namespace.ContextWithNamespace(m.quitContext, e.namespace)
+		backend := m.router.MatchingBackend(ctx, path)
 		if backend == nil {
 			continue
 		}
+		fullPath := e.namespace.Path + path
 
 		m.inflightLock.RLock()
-		_, ok := m.inflight[path]
+		_, ok := m.inflight[fullPath]
 		m.inflightLock.RUnlock()
 		if !ok {
-			m.startRollback(path, true)
+			m.startRollback(ctx, fullPath, true)
 		}
 	}
 }
 
 // startRollback is used to start an async rollback attempt.
 // This must be called with the inflightLock held.
-func (m *RollbackManager) startRollback(path string, grabStatelock bool) *rollbackState {
+func (m *RollbackManager) startRollback(ctx context.Context, fullPath string, grabStatelock bool) *rollbackState {
 	rs := &rollbackState{}
 	rs.Add(1)
 	m.inflightAll.Add(1)
 	m.inflightLock.Lock()
-	m.inflight[path] = rs
+	m.inflight[fullPath] = rs
 	m.inflightLock.Unlock()
-	go m.attemptRollback(m.quitContext, path, rs, grabStatelock)
+	go m.attemptRollback(ctx, fullPath, rs, grabStatelock)
 	return rs
 }
 
 // attemptRollback invokes a RollbackOperation for the given path
-func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *rollbackState, grabStatelock bool) (err error) {
-	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(path, "/", "-", -1)}, time.Now())
+func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, rs *rollbackState, grabStatelock bool) (err error) {
+	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(fullPath, "/", "-", -1)}, time.Now())
 	if m.logger.IsDebug() {
-		m.logger.Debug("attempting rollback", "path", path)
+		m.logger.Debug("attempting rollback", "path", fullPath)
 	}
 
 	defer func() {
@@ -162,20 +166,33 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *
 		rs.Done()
 		m.inflightAll.Done()
 		m.inflightLock.Lock()
-		delete(m.inflight, path)
+		delete(m.inflight, fullPath)
 		m.inflightLock.Unlock()
 	}()
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if ns == nil {
+		return namespace.ErrNoNamespace
+	}
 
 	// Invoke a RollbackOperation
 	req := &logical.Request{
 		Operation: logical.RollbackOperation,
-		Path:      path,
+		Path:      ns.TrimmedPath(fullPath),
 	}
+
+	if grabStatelock {
+		// Grab the statelock or stop
+		if stopped := grabLockOrStop(m.core.stateLock.RLock, m.core.stateLock.RUnlock, m.shutdownCh); stopped {
+			return errors.New("rollback shutting down")
+		}
+	}
+
 	var cancelFunc context.CancelFunc
 	ctx, cancelFunc = context.WithTimeout(ctx, DefaultMaxRequestDuration)
-	if grabStatelock {
-		m.core.stateLock.RLock()
-	}
 	_, err = m.router.Route(ctx, req)
 	if grabStatelock {
 		m.core.stateLock.RUnlock()
@@ -192,7 +209,7 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *
 		err = nil
 	}
 	if err != nil {
-		m.logger.Error("error rolling back", "path", path, "error", err)
+		m.logger.Error("error rolling back", "path", fullPath, "error", err)
 	}
 	return
 }
@@ -200,13 +217,19 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *
 // Rollback is used to trigger an immediate rollback of the path,
 // or to join an existing rollback operation if in flight. Caller should have
 // core's statelock held
-func (m *RollbackManager) Rollback(path string) error {
+func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+	fullPath := ns.Path + path
+
 	// Check for an existing attempt and start one if none
 	m.inflightLock.RLock()
-	rs, ok := m.inflight[path]
+	rs, ok := m.inflight[fullPath]
 	m.inflightLock.RUnlock()
 	if !ok {
-		rs = m.startRollback(path, false)
+		rs = m.startRollback(ctx, fullPath, false)
 	}
 
 	// Wait for the attempt to finish

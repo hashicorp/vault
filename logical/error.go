@@ -76,3 +76,15 @@ type ReplicationCodedError struct {
 func (r *ReplicationCodedError) Error() string {
 	return r.Msg
 }
+
+type KeyNotFoundError struct {
+	Err error
+}
+
+func (e *KeyNotFoundError) WrappedErrors() []error {
+	return []error{e.Err}
+}
+
+func (e *KeyNotFoundError) Error() string {
+	return e.Err.Error()
+}
