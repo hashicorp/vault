@@ -110,21 +110,24 @@ module('Integration | Component | auth form', function(hooks) {
   });
 
   test('it renders all the supported tabs when no methods are passed', async function(assert) {
-    let replaceSpy = sinon.spy(this.get('router'), 'replaceWith');
+    let methods = {
+      'approle/': {
+        type: 'approle',
+      },
+    };
+    let server = new Pretender(function() {
+      this.get('/v1/sys/internal/ui/mounts', () => {
+        return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
+      });
+    });
     await render(hbs`{{auth-form cluster=cluster}}`);
 
-    return settled().then(() => {
-      assert.equal(component.tabs.length, BACKENDS.length, 'renders a tab for every backend');
-      assert.equal(
-        replaceSpy.getCall(0).args[0].queryParams.with,
-        'token',
-        'calls router replaceWith properly'
-      );
-    });
+    await settled();
+    assert.equal(component.tabs.length, BACKENDS.length, 'renders a tab for every backend');
+    server.shutdown();
   });
 
   test('it renders all the supported methods and Other tab when methods are present', async function(assert) {
-    let replaceSpy = sinon.spy(this.get('router'), 'replaceWith');
     let methods = {
       'foo/': {
         type: 'userpass',
@@ -140,18 +143,11 @@ module('Integration | Component | auth form', function(hooks) {
     });
 
     await render(hbs`{{auth-form cluster=cluster }}`);
-    return settled().then(() => {
-      assert.equal(component.tabs.length, 2, 'renders a tab for userpass and Other');
-      assert.equal(component.tabs.objectAt(0).name, 'foo', 'uses the path in the label');
-      assert.equal(component.tabs.objectAt(1).name, 'Other', 'second tab is the Other tab');
-      assert.equal(
-        replaceSpy.getCall(0).args[0].queryParams.with,
-        'foo/',
-        'calls router replaceWith properly'
-      );
-      server.shutdown();
-      replaceSpy.restore();
-    });
+    await settled();
+    assert.equal(component.tabs.length, 2, 'renders a tab for userpass and Other');
+    assert.equal(component.tabs.objectAt(0).name, 'foo', 'uses the path in the label');
+    assert.equal(component.tabs.objectAt(1).name, 'Other', 'second tab is the Other tab');
+    server.shutdown();
   });
 
   test('it calls authorize with the correct path', async function(assert) {
@@ -171,17 +167,14 @@ module('Integration | Component | auth form', function(hooks) {
 
     this.set('selectedAuth', 'foo/');
     await render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
-    settled().then(() => {
-      return component.login();
-    });
+    await component.login();
 
-    return settled().then(() => {
-      assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
-      let { data } = authSpy.getCall(0).args[0];
-      assert.equal(data.path, 'foo', 'uses the id for the path');
-      authSpy.restore();
-      server.shutdown();
-    });
+    await settled();
+    assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
+    let { data } = authSpy.getCall(0).args[0];
+    assert.equal(data.path, 'foo', 'uses the id for the path');
+    authSpy.restore();
+    server.shutdown();
   });
 
   test('it renders all the supported methods when no supported methods are present in passed methods', async function(assert) {
@@ -223,21 +216,16 @@ module('Integration | Component | auth form', function(hooks) {
     this.set('wrappedToken', wrappedToken);
     await render(hbs`{{auth-form cluster=cluster wrappedToken=wrappedToken}}`);
     later(() => run.cancelTimers(), 50);
-    return settled().then(() => {
-      assert.equal(
-        server.handledRequests[0].url,
-        '/v1/sys/wrapping/unwrap',
-        'makes call to unwrap the token'
-      );
-      assert.equal(
-        server.handledRequests[0].requestHeaders['X-Vault-Token'],
-        wrappedToken,
-        'uses passed wrapped token for the unwrap'
-      );
-      assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
-      server.shutdown();
-      authSpy.restore();
-    });
+    await settled();
+    assert.equal(server.handledRequests[0].url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');
+    assert.equal(
+      server.handledRequests[0].requestHeaders['X-Vault-Token'],
+      wrappedToken,
+      'uses passed wrapped token for the unwrap'
+    );
+    assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
+    server.shutdown();
+    authSpy.restore();
   });
 
   test('it shows an error if unwrap errors', async function(assert) {
@@ -257,13 +245,12 @@ module('Integration | Component | auth form', function(hooks) {
     await render(hbs`{{auth-form cluster=cluster wrappedToken=wrappedToken}}`);
     later(() => run.cancelTimers(), 50);
 
-    return settled().then(() => {
-      assert.equal(
-        component.errorText,
-        'Error Token unwrap failed: There was an error unwrapping!',
-        'shows the error'
-      );
-      server.shutdown();
-    });
+    await settled();
+    assert.equal(
+      component.errorText,
+      'Error Token unwrap failed: There was an error unwrapping!',
+      'shows the error'
+    );
+    server.shutdown();
   });
 });

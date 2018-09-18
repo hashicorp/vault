@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, find } from '@ember/test-helpers';
+import { render, find, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 module('Integration | Component | secret edit', function(hooks) {
@@ -51,6 +51,7 @@ module('Integration | Component | secret edit', function(hooks) {
     await render(hbs`{{secret-edit mode=mode key=key preferAdvancedEdit=true }}`);
     let instance = this.codeMirror.instanceFor(find('[data-test-component=json-editor]').id);
     instance.setValue(JSON.stringify([{ foo: 'bar' }]));
+    await settled();
     assert.dom('[data-test-error]').includesText('Vault expects data to be formatted as an JSON object');
   });
 
@@ -70,6 +71,7 @@ module('Integration | Component | secret edit', function(hooks) {
     await render(hbs`{{secret-edit capabilities=capabilities mode=mode key=key preferAdvancedEdit=true }}`);
     let instance = this.codeMirror.instanceFor(find('[data-test-component=json-editor]').id);
     instance.setValue(JSON.stringify([{ foo: 'bar' }]));
+    await settled();
     assert.dom('[data-test-error]').includesText('Vault expects data to be formatted as an JSON object');
   });
 });

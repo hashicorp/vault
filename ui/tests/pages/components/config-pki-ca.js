@@ -21,7 +21,7 @@ export default {
   back: clickable('[data-test-back-button]'),
 
   signedIntermediate: fillable('[data-test-signed-intermediate]'),
-  downloadLinks: collection({ itemScope: '[data-test-ca-download-link]' }),
+  downloadLinks: collection('[data-test-ca-download-link]'),
   rows: collection('[data-test-table-row]'),
   rowValues: collection('[data-test-row-value]'),
   csr: text('[data-test-row-value="CSR"]', { normalize: false }),

@@ -87,7 +87,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
 
   test('cert config: upload', async function(assert) {
     await mountAndNav(assert);
-    assert.equal(page.form.downloadLinks().count, 0, 'there are no download links');
+    assert.equal(page.form.downloadLinks.length, 0, 'there are no download links');
 
     await withFlash(page.form.uploadCA(PEM_BUNDLE), () => {
       assert.ok(
@@ -114,19 +114,9 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     intermediateCert = page.form.certificate;
     await page.form.back();
     await page.visit({ backend: intermediatePath });
+    await page.form.setSignedIntermediateBtn().signedIntermediate(intermediateCert);
 
-    await withFlash(
-      page.form
-        .setSignedIntermediateBtn()
-        .signedIntermediate(intermediateCert)
-        .submit(),
-      () => {
-        assert.ok(
-          page.flash.latestMessage.startsWith('The certificate for this backend has been updated'),
-          'flash message displays properly'
-        );
-      }
-    );
-    assert.equal(page.form.downloadLinks().count, 3, 'includes the caChain download link');
+    await page.form.submit(),
+      assert.equal(page.form.downloadLinks.length, 3, 'includes the caChain download link');
   });
 });

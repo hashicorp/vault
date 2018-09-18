@@ -34,7 +34,7 @@ module('Integration | Component | identity/item details', function(hooks) {
     this.set('model', model);
     await render(hbs`{{identity/item-details model=model}}`);
     assert.dom('[data-test-disabled-warning]').exists();
-    component.enable();
+    await component.enable();
 
     assert.ok(model.save.calledOnce, 'clicking enable calls model save');
   });

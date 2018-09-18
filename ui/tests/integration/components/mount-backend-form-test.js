@@ -37,7 +37,8 @@ module('Integration | Component | mount backend form', function(hooks) {
     await component.selectType('aws');
     await component.next();
     assert.equal(component.pathValue, 'aws', 'sets the value of the type');
-    await component.back().selectType('approle');
+    await component.back();
+    await component.selectType('approle');
     await component.next();
     assert.equal(component.pathValue, 'approle', 'updates the value of the type');
   });
@@ -48,7 +49,8 @@ module('Integration | Component | mount backend form', function(hooks) {
     await component.next();
     assert.equal(component.pathValue, 'approle', 'defaults to approle (first in the list)');
     await component.path('newpath');
-    await component.back().selectType('aws');
+    await component.back();
+    await component.selectType('aws');
     await component.next();
     assert.equal(component.pathValue, 'newpath', 'updates to the value of the type');
   });
