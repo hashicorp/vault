@@ -46,7 +46,7 @@ type Config struct {
 	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
 
 	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
-	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_time"`
+	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
 
 	ClusterName         string `hcl:"cluster_name"`
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
