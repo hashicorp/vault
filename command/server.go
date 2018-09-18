@@ -1681,10 +1681,9 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metrics.InmemSin
 
 	var telConfig *server.Telemetry
 	if config.Telemetry == nil {
-		telConfig = &server.Telemetry{}
-	} else {
-		telConfig = config.Telemetry
+		config.Telemetry = &server.Telemetry{}
 	}
+	telConfig = config.Telemetry
 
 	metricsConf := metrics.DefaultConfig("vault")
 	metricsConf.EnableHostname = !telConfig.DisableHostname
