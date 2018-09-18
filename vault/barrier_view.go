@@ -21,6 +21,7 @@ type BarrierView struct {
 	prefix          string
 	readOnlyErr     error
 	readOnlyErrLock sync.RWMutex
+	iCheck          interface{}
 }
 
 var (
@@ -34,6 +35,10 @@ func NewBarrierView(barrier BarrierStorage, prefix string) *BarrierView {
 		barrier: barrier,
 		prefix:  prefix,
 	}
+}
+
+func (v *BarrierView) setICheck(iCheck interface{}) {
+	v.iCheck = iCheck
 }
 
 func (v *BarrierView) setReadOnlyErr(readOnlyErr error) {
@@ -101,7 +106,9 @@ func (v *BarrierView) Put(ctx context.Context, entry *logical.StorageEntry) erro
 
 	roErr := v.getReadOnlyErr()
 	if roErr != nil {
-		return roErr
+		if runICheck(v, expandedKey, roErr) {
+			return roErr
+		}
 	}
 
 	nested := &Entry{
@@ -122,7 +129,9 @@ func (v *BarrierView) Delete(ctx context.Context, key string) error {
 
 	roErr := v.getReadOnlyErr()
 	if roErr != nil {
-		return roErr
+		if runICheck(v, expandedKey, roErr) {
+			return roErr
+		}
 	}
 
 	return v.barrier.Delete(ctx, expandedKey)
@@ -131,7 +140,7 @@ func (v *BarrierView) Delete(ctx context.Context, key string) error {
 // SubView constructs a nested sub-view using the given prefix
 func (v *BarrierView) SubView(prefix string) *BarrierView {
 	sub := v.expandKey(prefix)
-	return &BarrierView{barrier: v.barrier, prefix: sub, readOnlyErr: v.getReadOnlyErr()}
+	return &BarrierView{barrier: v.barrier, prefix: sub, readOnlyErr: v.getReadOnlyErr(), iCheck: v.iCheck}
 }
 
 // expandKey is used to expand to the full key path with the prefix
