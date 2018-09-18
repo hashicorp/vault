@@ -14,6 +14,8 @@ IMPROVEMENTS:
 
  * auth/aws: add support for key/value pairs or JSON values for
    `iam_request_headers` with IAM auth method [GH-5320]
+ * auth/aws, secret/aws: Throttling errors from the AWS API will now be
+   reported as 502 errors by Vault, along with the original error [GH-5270]
  * replication: Start fetching during a sync from where it previously errored
 
 ## 0.11.1 (September 6th, 2018)
