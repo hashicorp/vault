@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -131,7 +132,7 @@ func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName str
 		InstanceProfileName: aws.String(instanceProfileName),
 	})
 	if err != nil {
-		return "", err
+		return "", awsutil.AppendLogicalError(err)
 	}
 	if profile == nil {
 		return "", fmt.Errorf("nil output while getting instance profile details")
@@ -167,7 +168,8 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 		},
 	})
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("error fetching description for instance ID %q: {{err}}", instanceID), err)
+		errW := errwrap.Wrapf(fmt.Sprintf("error fetching description for instance ID %q: {{err}}", instanceID), err)
+		return nil, errwrap.Wrap(errW, awsutil.CheckAWSError(err))
 	}
 	if status == nil {
 		return nil, fmt.Errorf("nil output from describe instances")
