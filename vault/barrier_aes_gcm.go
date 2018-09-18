@@ -74,9 +74,9 @@ type AESGCMBarrier struct {
 // the provided physical backend for storage.
 func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 	b := &AESGCMBarrier{
-		backend:                  physical,
-		sealed:                   true,
-		cache:                    make(map[uint32]cipher.AEAD),
+		backend: physical,
+		sealed:  true,
+		cache:   make(map[uint32]cipher.AEAD),
 		currentAESGCMVersionByte: byte(AESGCMVersion2),
 	}
 	return b, nil
@@ -165,8 +165,14 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 		Key:   keyringPath,
 		Value: value,
 	}
-	if err := b.backend.Put(ctx, pe); err != nil {
-		return errwrap.Wrapf("failed to persist keyring: {{err}}", err)
+	if c, ok := b.backend.(physical.CASBackend); ok {
+		if err := c.PutCAS(ctx, pe); err != nil {
+			return errwrap.Wrapf("failed to persist keyring: {{err}}", err)
+		}
+	} else {
+		if err := b.backend.Put(ctx, pe); err != nil {
+			return errwrap.Wrapf("failed to persist keyring: {{err}}", err)
+		}
 	}
 
 	// Serialize the master key value
