@@ -32,6 +32,14 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "ID of the group to which this is an alias.",
 				},
+				"metadata": {
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the alias.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+					`,
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.pathGroupAliasRegister(),
@@ -58,6 +66,14 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 				"canonical_id": {
 					Type:        framework.TypeString,
 					Description: "ID of the group to which this is an alias.",
+				},
+				"metadata": {
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the entity alias.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+					`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -147,6 +163,12 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 		return logical.ErrorResponse("missing alias name"), nil
 	}
 
+	// Get group alias metadata
+	metadata, isMetadataSet, err := d.GetOkErr("metadata")
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
+	}
+
 	mountAccessor := d.Get("mount_accessor").(string)
 	if mountAccessor == "" {
 		return logical.ErrorResponse("missing mount_accessor"), nil
@@ -209,6 +231,9 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 	}
 
 	group.Alias.Name = groupAliasName
+	if isMetadataSet {
+		group.Alias.Metadata = metadata.(map[string]string)
+	}
 	group.Alias.MountAccessor = mountValidationResp.MountAccessor
 	// Explicitly correct for previous versions that persisted this
 	group.Alias.MountType = ""
