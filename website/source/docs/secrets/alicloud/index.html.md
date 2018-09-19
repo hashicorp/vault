@@ -63,39 +63,39 @@ AliCloud to generate credentials:
 
     To generate access tokens using only policies that have already been created in AliCloud:
     
-        ```text
-        $ vault write alicloud/role/policy-based \
-            remote_policies='name:AliyunOSSReadOnlyAccess,type:System' \
-            remote_policies='name:AliyunRDSReadOnlyAccess,type:System'
-        ```
+    ```text
+    $ vault write alicloud/role/policy-based \
+        remote_policies='name:AliyunOSSReadOnlyAccess,type:System' \
+        remote_policies='name:AliyunRDSReadOnlyAccess,type:System'
+    ```
     To generate access tokens using only policies that will be dynamically created in AliCloud by
     Vault:
     
-        ```text
-        $ vault write alicloud/role/policy-based \
-            inline_policies=-<<EOF
-        [
+    ```text
+    $ vault write alicloud/role/policy-based \
+        inline_policies=-<<EOF
+    [
+        {
+          "Statement": [
             {
-              "Statement": [
-                {
-                  "Action": "rds:Describe*",
-                  "Effect": "Allow",
-                  "Resource": "*"
-                }
-              ],
-              "Version": "1"
-            },
-            {...}
-        ]
-        EOF
-        ```
+              "Action": "rds:Describe*",
+              "Effect": "Allow",
+              "Resource": "*"
+            }
+          ],
+          "Version": "1"
+        },
+        {...}
+    ]
+    EOF
+    ```
     Both `inline_policies` and `remote_policies` may be used together. However, neither may be
     used configuring how to generate STS credentials, like so:
     
-        ```text
-        $ vault write alibaba/role/role-based \
-              role_arn='acs:ram::5138828231865461:role/hastrustedactors'
-        ```
+    ```text
+    $ vault write alibaba/role/role-based \
+          role_arn='acs:ram::5138828231865461:role/hastrustedactors'
+    ```
     Any `role_arn` specified must have added "trusted actors" when it was being created. These
     can only be added at role creation time. Trusted actors are entities that can assume the role.
     Since we will be assuming the role to gain credentials, the `access_key` and `secret_key` in
