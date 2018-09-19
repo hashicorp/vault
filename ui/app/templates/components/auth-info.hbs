@@ -52,6 +52,11 @@
           </button>
         </li>
         <li class="action">
+          {{#link-to "vault.cluster.license" activeClusterName id="license"}}
+            License
+          {{/link-to}}
+        </li>
+        <li class="action">
           {{#link-to "vault.cluster.logout" activeClusterName id="logout"}}
             Sign out
           {{/link-to}}
