@@ -269,7 +269,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing command value"), nil
 	}
 
-	// For backwards compatibility, also accept args as part of command.  Don't
+	// For backwards compatibility, also accept args as part of command. Don't
 	// accepts args in both command and args.
 	args := d.Get("args").([]string)
 	parts := strings.Split(command, " ")

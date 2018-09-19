@@ -70,6 +70,13 @@ supplied name.
   plugin. This is relative to the plugin directory. e.g. `"myplugin
   --my_flag=1"`
 
+- `args` `(array: [])` – Specifies the arguments used to execute the plugin. If
+  the arguments are provided here, the `command` parameter should only contain
+  the named program.
+
+- `env` `(array: [])` – Specifies the environment variables used during the
+  execution of the plugin. Each entry is of the form "key=value".
+
 ### Sample Payload
 
 ```json
