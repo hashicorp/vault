@@ -1,3 +1,9 @@
+## 0.11.2 (Unreleased)
+
+BUG FIXES:
+
+ * core: Re-add deprecated capabilities information for now [GH-5360]
+
 ## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
 BUG FIXES:
