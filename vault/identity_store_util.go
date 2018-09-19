@@ -581,12 +581,20 @@ func (i *IdentityStore) MemDBEntityByName(ctx context.Context, entityName string
 		return nil, fmt.Errorf("missing entity name")
 	}
 
+	txn := i.db.Txn(false)
+
+	return i.MemDBEntityByNameInTxn(txn, ctx, entityName, clone)
+}
+
+func (i *IdentityStore) MemDBEntityByNameInTxn(txn *memdb.Txn, ctx context.Context, entityName string, clone bool) (*identity.Entity, error) {
+	if entityName == "" {
+		return nil, fmt.Errorf("missing entity name")
+	}
+
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	txn := i.db.Txn(false)
 
 	entityRaw, err := txn.First(entitiesTable, "name", ns.ID, entityName)
 	if err != nil {

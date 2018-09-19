@@ -218,6 +218,158 @@ $ curl \
 }
 ```
 
+## Create/Update Entity by Name
+
+This endpoint is used to create or update an entity by a given name.
+
+| Method   | Path                             | Produces               |
+| :------- | :------------------------------- | :--------------------- |
+| `POST`   | `/identity/entity/name/:name`    | `200 application/json` |
+
+### Parameters
+
+- `name` `(string: entity-<UUID>)` – Name of the entity.
+
+- `metadata` `(key-value-map: {})` – Metadata to be associated with the entity.
+
+- `policies` `(list of strings: [])` – Policies to be tied to the entity.
+
+- `disabled` `(bool: false)` – Whether the entity is disabled. Disabled
+  entities' associated tokens cannot be used, but are not revoked.
+
+### Sample Payload
+
+```json
+{
+  "metadata": {
+  "organization": "hashi",
+    "team": "nomad"
+  },
+  "policies": ["eng-developers", "infra-developers"]
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/identity/entity/name/testentityname
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "aliases": null,
+    "id": "0826be06-577c-a076-3942-2f92da0310ce"
+  }
+}
+```
+
+## Read Entity by Name
+
+This endpoint queries the entity by its name.
+
+| Method   | Path                             | Produces               |
+| :------- | :------------------------------- | :--------------------- |
+| `GET`    | `/identity/entity/name/:name`    | `200 application/json` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Name of the entity.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/identity/entity/id/testentityname
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "aliases": [],
+    "creation_time": "2018-09-19T17:20:27.705389973Z",
+    "direct_group_ids": [],
+    "disabled": false,
+    "group_ids": [],
+    "id": "0826be06-577c-a076-3942-2f92da0310ce",
+    "inherited_group_ids": [],
+    "last_update_time": "2018-09-19T17:20:27.705389973Z",
+    "merged_entity_ids": null,
+    "metadata": {
+      "organization": "hashi",
+      "team": "nomad"
+    },
+    "name": "testentityname",
+    "policies": [
+      "eng-developers",
+      "infra-developers"
+    ]
+  }
+}
+```
+
+## Delete Entity by Name
+
+This endpoint deletes an entity and all its associated aliases, given the
+entity name.
+
+| Method     | Path                            | Produces               |
+| :--------- | :------------------------------ | :----------------------|
+| `DELETE`   | `/identity/entity/name/:name`   | `204 (empty body)`     |
+
+## Parameters
+
+- `name` `(string: <required>)` – Name of the entity.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/identity/entity/name/testentityname
+```
+
+## List Entities by Name
+
+This endpoint returns a list of available entities by their names.
+
+| Method   | Path                              | Produces               |
+| :------- | :-------------------------------- | :--------------------- |
+| `LIST`   | `/identity/entity/name`           | `200 application/json` |
+| `GET`    | `/identity/entity/name?list=true` | `200 application/json` |
+
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/identity/entity/name
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "keys": [
+      "testentityname",
+    ]
+  }
+}
+```
+
 ## Merge Entities
 
 This endpoint merges many entities into one entity.
