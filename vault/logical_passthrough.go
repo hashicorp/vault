@@ -41,7 +41,7 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 		},
 
 		Paths: []*framework.Path{
-			&framework.Path{
+			{
 				Pattern: ".*",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{

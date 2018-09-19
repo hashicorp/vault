@@ -21,7 +21,7 @@ var (
 	// authorizations
 	ErrMultiAuthzPending = errors.New("request needs further approval")
 
-	// ErrUpstreamRateLimited is returned when Vault recieves a rate limited
+	// ErrUpstreamRateLimited is returned when Vault receives a rate limited
 	// response from an upstream
 	ErrUpstreamRateLimited = errors.New("upstream rate limited")
 )
@@ -75,4 +75,16 @@ type ReplicationCodedError struct {
 
 func (r *ReplicationCodedError) Error() string {
 	return r.Msg
+}
+
+type KeyNotFoundError struct {
+	Err error
+}
+
+func (e *KeyNotFoundError) WrappedErrors() []error {
+	return []error{e.Err}
+}
+
+func (e *KeyNotFoundError) Error() string {
+	return e.Err.Error()
 }

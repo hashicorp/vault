@@ -3,7 +3,6 @@ package namespace
 import (
 	"context"
 	"errors"
-	"net/http"
 	"strings"
 )
 
@@ -26,10 +25,6 @@ var (
 		Path: "",
 	}
 )
-
-var AdjustRequest = func(r *http.Request) (*http.Request, int) {
-	return r.WithContext(ContextWithNamespace(r.Context(), RootNamespace)), 0
-}
 
 func (n *Namespace) HasParent(possibleParent *Namespace) bool {
 	switch {
@@ -104,4 +99,16 @@ func Canonicalize(nsPath string) string {
 	}
 
 	return nsPath
+}
+
+func SplitIDFromString(input string) (string, string) {
+	idx := strings.LastIndex(input, ".")
+	if idx == -1 {
+		return input, ""
+	}
+	if idx == len(input)-1 {
+		return input, ""
+	}
+
+	return input[:idx], input[idx+1:]
 }

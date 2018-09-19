@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 	"reflect"
 	"strings"
 	"testing"
@@ -15,6 +16,93 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
+
+func TestHandler_parseMFAHandler(t *testing.T) {
+	var err error
+	var expectedMFACreds logical.MFACreds
+	req := &logical.Request{
+		Headers: make(map[string][]string),
+	}
+
+	headerName := textproto.CanonicalMIMEHeaderKey(MFAHeaderName)
+
+	// Set TOTP passcode in the MFA header
+	req.Headers[headerName] = []string{
+		"my_totp:123456",
+		"my_totp:111111",
+		"my_second_mfa:hi=hello",
+		"my_third_mfa",
+	}
+	err = parseMFAHeader(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify that it is being parsed properly
+	expectedMFACreds = logical.MFACreds{
+		"my_totp": []string{
+			"123456",
+			"111111",
+		},
+		"my_second_mfa": []string{
+			"hi=hello",
+		},
+		"my_third_mfa": []string{},
+	}
+	if !reflect.DeepEqual(expectedMFACreds, req.MFACreds) {
+		t.Fatalf("bad: parsed MFACreds; expected: %#v\n actual: %#v\n", expectedMFACreds, req.MFACreds)
+	}
+
+	// Split the creds of a method type in different headers and check if they
+	// all get merged together
+	req.Headers[headerName] = []string{
+		"my_mfa:passcode=123456",
+		"my_mfa:month=july",
+		"my_mfa:day=tuesday",
+	}
+	err = parseMFAHeader(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedMFACreds = logical.MFACreds{
+		"my_mfa": []string{
+			"passcode=123456",
+			"month=july",
+			"day=tuesday",
+		},
+	}
+	if !reflect.DeepEqual(expectedMFACreds, req.MFACreds) {
+		t.Fatalf("bad: parsed MFACreds; expected: %#v\n actual: %#v\n", expectedMFACreds, req.MFACreds)
+	}
+
+	// Header without method name should error out
+	req.Headers[headerName] = []string{
+		":passcode=123456",
+	}
+	err = parseMFAHeader(req)
+	if err == nil {
+		t.Fatalf("expected an error; actual: %#v\n", req.MFACreds)
+	}
+
+	// Header without method name and method value should error out
+	req.Headers[headerName] = []string{
+		":",
+	}
+	err = parseMFAHeader(req)
+	if err == nil {
+		t.Fatalf("expected an error; actual: %#v\n", req.MFACreds)
+	}
+
+	// Header without method name and method value should error out
+	req.Headers[headerName] = []string{
+		"my_totp:",
+	}
+	err = parseMFAHeader(req)
+	if err == nil {
+		t.Fatalf("expected an error; actual: %#v\n", req.MFACreds)
+	}
+}
 
 func TestHandler_cors(t *testing.T) {
 	core, _, _ := vault.TestCoreUnsealed(t)
@@ -106,7 +194,7 @@ func TestHandler_CacheControlNoStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set(consts.AuthHeaderName, token)
 	req.Header.Set(WrapTTLHeaderName, "60s")
 
 	client := cleanhttp.DefaultClient()
@@ -139,7 +227,7 @@ func TestHandler_Accepted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set(consts.AuthHeaderName, token)
 
 	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)
@@ -160,7 +248,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set(consts.AuthHeaderName, token)
 
 	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)
@@ -310,7 +398,7 @@ func TestSysMounts_headerAuth_Wrapped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set(consts.AuthHeaderName, token)
 	req.Header.Set(WrapTTLHeaderName, "60s")
 
 	client := cleanhttp.DefaultClient()
@@ -379,6 +467,30 @@ func TestHandler_sealed(t *testing.T) {
 	testResponseStatus(t, resp, 503)
 }
 
+func TestHandler_ui_default(t *testing.T) {
+	core := vault.TestCoreUI(t, false)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	resp, err := http.Get(addr + "/ui/")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 404)
+}
+
+func TestHandler_ui_enabled(t *testing.T) {
+	core := vault.TestCoreUI(t, true)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	resp, err := http.Get(addr + "/ui/")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 200)
+}
+
 func TestHandler_error(t *testing.T) {
 	w := httptest.NewRecorder()
 
@@ -429,7 +541,7 @@ func testNonPrintable(t *testing.T, disable bool) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set(consts.AuthHeaderName, token)
 
 	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)
