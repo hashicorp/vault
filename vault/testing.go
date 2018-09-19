@@ -347,60 +347,25 @@ func TestDynamicSystemView(c *Core) *dynamicSystemView {
 }
 
 // TestAddTestPlugin registers the testFunc as part of the plugin command to the
-// plugin catalog.
-func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
+// plugin catalog. If provided, uses tmpDir as the plugin directory.
+func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string, env []string, tempDir string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer file.Close()
 
-	hash := sha256.New()
+	dirPath := filepath.Dir(os.Args[0])
+	fileName := filepath.Base(os.Args[0])
 
-	_, err = io.Copy(hash, file)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sum := hash.Sum(nil)
-
-	// Determine plugin directory path
-	fullPath, err := filepath.EvalSymlinks(os.Args[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	directoryPath := filepath.Dir(fullPath)
-
-	// Set core's plugin directory and plugin catalog directory
-	c.pluginDirectory = directoryPath
-	c.pluginCatalog.directory = directoryPath
-
-	command := fmt.Sprintf("%s", filepath.Base(os.Args[0]))
-	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), name, command, args, []string{}, sum)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-// TestAddTestPluginTempDir registers the testFunc as part of the plugin command to the
-// plugin catalog. It uses tmpDir as the plugin directory.
-func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc string, env []string, tempDir string) {
-	file, err := os.Open(os.Args[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-
-	fi, err := file.Stat()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	filePath := os.Args[0]
 	if tempDir != "" {
+		fi, err := file.Stat()
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		// Copy over the file to the temp dir
-		dst := filepath.Join(tempDir, filepath.Base(os.Args[0]))
+		dst := filepath.Join(tempDir, fileName)
 		out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
 		if err != nil {
 			t.Fatal(err)
@@ -415,16 +380,16 @@ func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc string, env [
 			t.Fatal(err)
 		}
 
-		filePath = tempDir
+		dirPath = tempDir
 	}
 
-	// Determine plugin directory full path
-	fullPath, err := filepath.EvalSymlinks(filePath)
+	// Determine plugin directory full path, evaluating potential symlink path
+	fullPath, err := filepath.EvalSymlinks(dirPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	reader, err := os.Open(filepath.Join(fullPath, filepath.Base(os.Args[0])))
+	reader, err := os.Open(filepath.Join(fullPath, fileName))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -444,9 +409,8 @@ func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc string, env [
 	c.pluginDirectory = fullPath
 	c.pluginCatalog.directory = fullPath
 
-	command := fmt.Sprintf("%s", filepath.Base(os.Args[0]))
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), name, command, args, env, sum)
+	err = c.pluginCatalog.Set(context.Background(), name, fileName, args, env, sum)
 	if err != nil {
 		t.Fatal(err)
 	}
