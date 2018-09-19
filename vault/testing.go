@@ -377,7 +377,7 @@ func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 
 	command := fmt.Sprintf("%s", filepath.Base(os.Args[0]))
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), name, command, args, sum)
+	err = c.pluginCatalog.Set(context.Background(), name, command, args, []string{}, sum)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -385,7 +385,7 @@ func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 
 // TestAddTestPluginTempDir registers the testFunc as part of the plugin command to the
 // plugin catalog. It uses tmpDir as the plugin directory.
-func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir string) {
+func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc string, env []string, tempDir string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
 		t.Fatal(err)
@@ -397,24 +397,29 @@ func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir stri
 		t.Fatal(err)
 	}
 
-	// Copy over the file to the temp dir
-	dst := filepath.Join(tempDir, filepath.Base(os.Args[0]))
-	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer out.Close()
+	filePath := os.Args[0]
+	if tempDir != "" {
+		// Copy over the file to the temp dir
+		dst := filepath.Join(tempDir, filepath.Base(os.Args[0]))
+		out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer out.Close()
 
-	if _, err = io.Copy(out, file); err != nil {
-		t.Fatal(err)
-	}
-	err = out.Sync()
-	if err != nil {
-		t.Fatal(err)
+		if _, err = io.Copy(out, file); err != nil {
+			t.Fatal(err)
+		}
+		err = out.Sync()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		filePath = tempDir
 	}
 
 	// Determine plugin directory full path
-	fullPath, err := filepath.EvalSymlinks(tempDir)
+	fullPath, err := filepath.EvalSymlinks(filePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -441,7 +446,7 @@ func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir stri
 
 	command := fmt.Sprintf("%s", filepath.Base(os.Args[0]))
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), name, command, args, sum)
+	err = c.pluginCatalog.Set(context.Background(), name, command, args, env, sum)
 	if err != nil {
 		t.Fatal(err)
 	}
