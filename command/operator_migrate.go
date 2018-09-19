@@ -168,48 +168,32 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 	defer SetMigration(from, false)
 
-	return c.migratePath(context.Background(), "", from, to)
+	return c.migrateAll(context.Background(), from, to)
 }
 
-// migratePath copies all keys at at given level in lexicographic order.
-// It will call itself recursively to traverse the entire subtree.
-func (c *OperatorMigrateCommand) migratePath(ctx context.Context, path string, from physical.Backend, to physical.Backend) error {
-	keys, err := from.List(ctx, path)
-	if err != nil {
-		return err
-	}
-
-	sort.Strings(keys)
-	for _, key := range keys {
-		if strings.HasSuffix(key, "/") {
-			err := c.migratePath(ctx, path+key, from, to)
-			if err != nil {
-				return err
-			}
-			continue
+// migrateAll copies all keys in lexicographic order.
+func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
+	return dfsScan(from, func(path string) error {
+		if path < c.flagStart || path == migrationLock {
+			return nil
 		}
 
-		fullKey := path + key
-		if fullKey < c.flagStart || fullKey == migrationLock {
-			continue
-		}
-
-		c.logger.Info("moving key: " + fullKey)
-		entry, err := from.Get(ctx, fullKey)
+		entry, err := from.Get(context.Background(), path)
 
 		if err != nil {
 			return errwrap.Wrapf("error reading entry: {{err}}", err)
 		}
 
 		if entry == nil {
-			continue
+			return nil
 		}
 
-		if err := to.Put(ctx, entry); err != nil {
+		if err := to.Put(context.Background(), entry); err != nil {
 			return errwrap.Wrapf("error writing entry: {{err}}", err)
 		}
-	}
-	return nil
+		c.logger.Info("moved key: " + path)
+		return nil
+	})
 }
 
 func (c *OperatorMigrateCommand) newBackend(kind string, conf map[string]string) (physical.Backend, error) {
@@ -284,5 +268,36 @@ func parseStorage(result *migratorConfig, list *ast.ObjectList, name string) err
 		return fmt.Errorf("unknown storage name: %s", name)
 	}
 
+	return nil
+}
+
+// dfsScan will invoke cb with every key from source.
+// Keys will be traversed in lexicographic, depth-first order.
+func dfsScan(source physical.Backend, cb func(path string) error) error {
+	dfs := []string{""}
+
+	for l := len(dfs); l > 0; l = len(dfs) {
+		key := dfs[len(dfs)-1]
+		if key == "" || strings.HasSuffix(key, "/") {
+			children, err := source.List(context.Background(), key)
+			if err != nil {
+				return errwrap.Wrapf("failed to scan for children: {{err}}", err)
+			}
+			sort.Strings(children)
+
+			// remove List-triggering key and add children in reverse order
+			dfs = dfs[:len(dfs)-1]
+			for i := len(children) - 1; i >= 0; i-- {
+				dfs = append(dfs, key+children[i])
+			}
+		} else {
+			err := cb(key)
+			if err != nil {
+				return err
+			}
+
+			dfs = dfs[:len(dfs)-1]
+		}
+	}
 	return nil
 }

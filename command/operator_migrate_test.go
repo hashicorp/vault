@@ -8,6 +8,8 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -54,7 +56,7 @@ func TestMigration(t *testing.T) {
 		cmd := OperatorMigrateCommand{
 			logger: log.NewNullLogger(),
 		}
-		if err := cmd.migratePath(context.Background(), "", from, to); err != nil {
+		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
 			t.Fatal(err)
 		}
 
@@ -94,7 +96,7 @@ func TestMigration(t *testing.T) {
 			logger:    log.NewNullLogger(),
 			flagStart: start,
 		}
-		if err := cmd.migratePath(context.Background(), "", from, to); err != nil {
+		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
 			t.Fatal(err)
 		}
 
@@ -188,6 +190,73 @@ storage_destination "dest_type2" {
 }`)
 
 	})
+	t.Run("DFS Scan", func(t *testing.T) {
+		s, _ := physicalBackends["inmem"](map[string]string{}, nil)
+
+		data := generateData()
+		data["cc"] = []byte{}
+		data["c/d/e/f"] = []byte{}
+		data["c/d/e/g"] = []byte{}
+		data["c"] = []byte{}
+		storeData(s, data)
+
+		var keys []string
+		for key := range data {
+			keys = append(keys, key)
+		}
+
+		for _, key := range keys {
+			entry := physical.Entry{
+				Key:   key,
+				Value: nil,
+			}
+
+			err := s.Put(context.Background(), &entry)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		l := randomLister{s}
+
+		var out []string
+		dfsScan(l, func(path string) error {
+			out = append(out, path)
+			return nil
+		})
+		sort.Strings(keys)
+		if !reflect.DeepEqual(keys, out) {
+			t.Fatalf("expected equal: %v, %v", keys, out)
+		}
+	})
+}
+
+// randomLister wraps a physical backend, providing a List method
+// that returns results in a random order.
+type randomLister struct {
+	b physical.Backend
+}
+
+func (l randomLister) List(ctx context.Context, path string) ([]string, error) {
+	result, err := l.b.List(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	rand.Shuffle(len(result), func(i, j int) {
+		result[i], result[j] = result[j], result[i]
+	})
+	return result, err
+}
+
+func (l randomLister) Get(ctx context.Context, path string) (*physical.Entry, error) {
+	return l.b.Get(ctx, path)
+}
+
+func (l randomLister) Put(ctx context.Context, entry *physical.Entry) error {
+	return l.b.Put(ctx, entry)
+}
+
+func (l randomLister) Delete(ctx context.Context, path string) error {
+	return l.b.Delete(ctx, path)
 }
 
 // generateData creates a map of 500 random keys and values
