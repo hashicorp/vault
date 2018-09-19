@@ -9,7 +9,17 @@ import DS from 'ember-data';
 
 const { AdapterError } = DS;
 
-const ENDPOINTS = ['health', 'seal-status', 'tokens', 'token', 'seal', 'unseal', 'init', 'capabilities-self'];
+const ENDPOINTS = [
+  'health',
+  'seal-status',
+  'tokens',
+  'token',
+  'seal',
+  'unseal',
+  'init',
+  'capabilities-self',
+  'license',
+];
 
 const REPLICATION_ENDPOINTS = {
   reindex: 'reindex',
@@ -31,12 +41,13 @@ export default ApplicationAdapter.extend({
   findRecord(store, type, id, snapshot) {
     let fetches = {
       health: this.health(),
+      license: this.license(),
       sealStatus: this.sealStatus().catch(e => e),
     };
     if (this.get('version.isEnterprise') && this.get('namespaceService.inRootNamespace')) {
       fetches.replicationStatus = this.replicationStatus().catch(e => e);
     }
-    return hash(fetches).then(({ health, sealStatus, replicationStatus }) => {
+    return hash(fetches).then(({ health, license, sealStatus, replicationStatus }) => {
       let ret = {
         id,
         name: snapshot.attr('name'),
@@ -47,6 +58,9 @@ export default ApplicationAdapter.extend({
       }
       if (replicationStatus && replicationStatus instanceof AdapterError === false) {
         ret = assign(ret, replicationStatus.data);
+      }
+      if (license instanceof AdapterError === false) {
+        ret = assign(ret, license.data);
       }
       return resolve(ret);
     });
@@ -63,8 +77,12 @@ export default ApplicationAdapter.extend({
     });
   },
 
+  license() {
+    return this.ajax(this.urlFor('license'), 'GET');
+  },
+
   features() {
-    return this.ajax(`${this.buildURL()}/license/features`, 'GET', {
+    return this.ajax(`${this.urlFor('license')}/features`, 'GET', {
       unauthenticated: true,
     });
   },
