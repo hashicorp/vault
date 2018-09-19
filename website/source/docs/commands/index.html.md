@@ -243,6 +243,11 @@ each invocation of the `vault` CLI typically only makes a few requests,
 this enviroment variable is most useful when using the Go 
 [Vault client API](https://www.vaultproject.io/api/libraries.html#go).
 
+### `VAULT_NAMESPACE`
+
+The namespace to use for the command. Setting this is not necessary
+but allows using relative paths.
+
 ### `VAULT_MFA`
 
 **ENTERPRISE ONLY**
@@ -252,3 +257,14 @@ optional). Note that when using the environment variable, only one credential
 can be supplied. If a MFA method expects multiple credential values, or if there
 are multiple MFA methods specified on a path, then the CLI flag `-mfa` should be
 used.
+
+## Flags
+
+There are diffrent CLI flags that are avaialble depending on subcommands. Some
+flags, such as those used for setting HTTP and output options, are available
+globally, while others are specific to a particular subcommand. For a completely
+list of available flags, run:
+
+```text
+$ vault <subcommand> -h
+```
