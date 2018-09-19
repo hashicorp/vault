@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/url"
 	"sort"
 	"strconv"
@@ -620,7 +621,9 @@ func (i *MySQLLock) becomeLeader() error {
 func (i *MySQLLock) Lock() error {
 	defer metrics.MeasureSince([]string{"mysql", "get_lock"}, time.Now())
 
-	rows, err := i.in.Query("SELECT GET_LOCK(?, 4294967295), IS_USED_LOCK(?)", i.key, i.key)
+	// Lock timeout math.MaxUint32 instead of -1 solves compatibility issues with
+	// different MySQL flavours i.e. MariaDB
+	rows, err := i.in.Query("SELECT GET_LOCK(?, ?), IS_USED_LOCK(?)", i.key, math.MaxUint32, i.key)
 	if err != nil {
 		return err
 	}
