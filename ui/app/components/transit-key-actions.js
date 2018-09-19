@@ -1,5 +1,5 @@
 import { assign } from '@ember/polyfills';
-import { copy } from '@ember/object/internals';
+import { copy } from 'ember-copy';
 import { assert } from '@ember/debug';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';

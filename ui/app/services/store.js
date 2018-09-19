@@ -1,5 +1,5 @@
 import { schedule } from '@ember/runloop';
-import { copy } from '@ember/object/internals';
+import { copy } from 'ember-copy';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
@@ -15,10 +15,12 @@ export function keyForCache(query) {
   /*eslint no-unused-vars: ["error", { "ignoreRestSiblings": true }]*/
   // we want to ignore size, page, responsePath, and pageFilter in the cacheKey
   const { size, page, responsePath, pageFilter, ...queryForCache } = query;
-  const cacheKeyObject = Object.keys(queryForCache).sort().reduce((result, key) => {
-    result[key] = queryForCache[key];
-    return result;
-  }, {});
+  const cacheKeyObject = Object.keys(queryForCache)
+    .sort()
+    .reduce((result, key) => {
+      result[key] = queryForCache[key];
+      return result;
+    }, {});
   return JSON.stringify(cacheKeyObject);
 }
 
