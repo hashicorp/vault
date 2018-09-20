@@ -101,7 +101,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core)
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", "TestBackend_PluginMain")
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", "TestBackend_PluginMain", []string{}, "")
 
 	return cluster, sys
 }
