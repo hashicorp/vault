@@ -40,7 +40,7 @@ $ curl \
     "type": "file",
     "description": "Store logs in a file",
     "options": {
-      "path": "/var/log/vault.log"
+      "file_path": "/var/log/vault.log"
     }
   }
 }
@@ -83,7 +83,7 @@ relevant functionality is only supported in Vault Enterprise:
 {
   "type": "file",
   "options": {
-    "path": "/var/log/vault/log"
+    "file_path": "/var/log/vault/log"
   }
 }
 ```
