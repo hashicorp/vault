@@ -21,7 +21,7 @@ const { attr } = DS;
 */
 
 export default DS.Model.extend({
-  expireTime: attr('string'),
+  expirationTime: attr('string'),
   features: attr('array'),
   licenseId: attr('string'),
   startTime: attr('string'),
