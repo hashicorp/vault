@@ -210,7 +210,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 		}
 	}()
 
-	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(req)
+	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
 		if errwrap.ContainsType(err, new(TemplateError)) {
 			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
@@ -222,13 +222,14 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
-		ClientToken:      req.ClientToken,
-		Policies:         identityPolicies,
-		IdentityPolicies: identityPolicies,
+		ClientToken: req.ClientToken,
 	}
 	if te != nil {
+		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
+		delete(identityPolicies, te.NamespaceID)
+		auth.ExternalNamespacePolicies = identityPolicies
 		auth.TokenPolicies = te.Policies
-		auth.Policies = append(te.Policies, identityPolicies...)
+		auth.Policies = append(te.Policies, identityPolicies[te.NamespaceID]...)
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
@@ -477,6 +478,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 				metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 				continue
 			}
+
 		}
 		// Advertise as leader
 		if err := c.advertiseLeader(activeCtx, uuid, leaderLostCh); err != nil {
@@ -490,7 +492,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		}
 
 		// Attempt the post-unseal process
-		err = c.postUnseal(activeCtx, activeCtxCancel)
+		err = c.postUnseal(activeCtx, activeCtxCancel, standardUnsealStrategy{})
 		if err == nil {
 			c.standby = false
 		}

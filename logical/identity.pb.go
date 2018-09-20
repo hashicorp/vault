@@ -20,13 +20,13 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Entity struct {
 	// ID is the unique identifier for the entity
-	ID string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
+	ID string `sentinel:"" protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
 	// Name is the human-friendly unique identifier for the entity
-	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Name string `sentinel:"" protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// Aliases contains thhe alias mappings for the given entity
-	Aliases []*Alias `protobuf:"bytes,3,rep,name=aliases,proto3" json:"aliases,omitempty"`
+	Aliases []*Alias `sentinel:"" protobuf:"bytes,3,rep,name=aliases,proto3" json:"aliases,omitempty"`
 	// Metadata represents the custom data tied to this entity
-	Metadata             map[string]string `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Metadata             map[string]string `sentinel:"" protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
@@ -86,14 +86,14 @@ func (m *Entity) GetMetadata() map[string]string {
 
 type Alias struct {
 	// MountType is the backend mount's type to which this identity belongs
-	MountType string `protobuf:"bytes,1,opt,name=mount_type,json=mountType,proto3" json:"mount_type,omitempty"`
+	MountType string `sentinel:"" protobuf:"bytes,1,opt,name=mount_type,json=mountType,proto3" json:"mount_type,omitempty"`
 	// MountAccessor is the identifier of the mount entry to which this
 	// identity belongs
-	MountAccessor string `protobuf:"bytes,2,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty"`
+	MountAccessor string `sentinel:"" protobuf:"bytes,2,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty"`
 	// Name is the identifier of this identity in its authentication source
-	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Name string `sentinel:"" protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	// Metadata represents the custom data tied to this alias
-	Metadata             map[string]string `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Metadata             map[string]string `sentinel:"" protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`

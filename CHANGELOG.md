@@ -2,12 +2,28 @@
 
 BUG FIXES:
 
+ * core: Re-add deprecated capabilities information for now [GH-5360]
+ * storage/mysql: Fix locking on MariaDB [GH-5343]
+
+## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
+
+BUG FIXES:
+
  * agent: Fix auth handler-based wrapping of output tokens [GH-5316]
+ * core: Properly store the replication checkpoint file if it's larger than the
+   storage engine's per-item limit
+ * core: Improve WAL deletion rate
+ * core: Fix token creation on performance standby nodes
+ * core: Fix unwrapping inside a namespace
+ * core: Always forward tidy operations from performance standby nodes
 
 IMPROVEMENTS:
 
- * auth/aws: add support for key/value pairs or JSON values for 
+ * auth/aws: add support for key/value pairs or JSON values for
    `iam_request_headers` with IAM auth method [GH-5320]
+ * auth/aws, secret/aws: Throttling errors from the AWS API will now be
+   reported as 502 errors by Vault, along with the original error [GH-5270]
+ * replication: Start fetching during a sync from where it previously errored
 
 ## 0.11.1 (September 6th, 2018)
 
@@ -40,8 +56,6 @@ BUG FIXES:
  * core: Ensure we use a background context when stepping down [GH-5290]
  * core: Properly check error return from random byte reading [GH-5277]
  * core: Re-add `sys/` top-route injection for now [GH-5241]
- * core: Properly store the replication checkpoint file if it's larger than the
-   storage engine's per-item limit
  * core: Policies stored in minified JSON would return an error [GH-5229]
  * core: Evaluate templated policies in capabilities check [GH-5250]
  * identity: Update MemDB with identity group alias while loading groups [GH-5289]

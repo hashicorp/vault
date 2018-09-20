@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
@@ -102,24 +103,46 @@ func TestCoreNewSeal(t testing.T) *Core {
 	return TestCoreWithSeal(t, seal, false)
 }
 
+// TestCoreWithConfig returns a pure in-memory, uninitialized core with the
+// specified core configurations overriden for testing.
+func TestCoreWithConfig(t testing.T, conf *CoreConfig) *Core {
+	return TestCoreWithSealAndUI(t, conf)
+}
+
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
 func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
+	conf := &CoreConfig{
+		Seal:      testSeal,
+		EnableUI:  false,
+		EnableRaw: enableRaw,
+	}
+	return TestCoreWithSealAndUI(t, conf)
+}
+
+func TestCoreUI(t testing.T, enableUI bool) *Core {
+	conf := &CoreConfig{
+		EnableUI:  enableUI,
+		EnableRaw: true,
+	}
+	return TestCoreWithSealAndUI(t, conf)
+}
+
+func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	logger := logging.NewVaultLogger(log.Trace)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// Start off with base test core config
 	conf := testCoreConfig(t, physicalBackend, logger)
 
-	if enableRaw {
-		conf.EnableRaw = true
-	}
-
-	if testSeal != nil {
-		conf.Seal = testSeal
-	}
+	// Override config values with ones that gets passed in
+	conf.EnableUI = opts.EnableUI
+	conf.EnableRaw = opts.EnableRaw
+	conf.Seal = opts.Seal
+	conf.LicensingConfig = opts.LicensingConfig
 
 	c, err := NewCore(conf)
 	if err != nil {
@@ -248,6 +271,14 @@ func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
 func TestCoreUnsealedRaw(t testing.T) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCoreRaw(t)
+	return testCoreUnsealed(t, core)
+}
+
+// TestCoreUnsealedWithConfig returns a pure in-memory core that is already
+// initialized, unsealed, with the any provided core config values overriden.
+func TestCoreUnsealedWithConfig(t testing.T, conf *CoreConfig) (*Core, [][]byte, string) {
+	t.Helper()
+	core := TestCoreWithConfig(t, conf)
 	return testCoreUnsealed(t, core)
 }
 
@@ -774,18 +805,56 @@ func (c *TestCluster) EnsureCoresSealed(t testing.T) {
 	}
 }
 
+func CleanupClusters(clusters []*TestCluster) {
+	wg := &sync.WaitGroup{}
+	for _, cluster := range clusters {
+		wg.Add(1)
+		lc := cluster
+		go func() {
+			defer wg.Done()
+			lc.Cleanup()
+		}()
+	}
+	wg.Wait()
+}
+
 func (c *TestCluster) Cleanup() {
 	// Close listeners
+	wg := &sync.WaitGroup{}
 	for _, core := range c.Cores {
-		if core.Listeners != nil {
-			for _, ln := range core.Listeners {
-				ln.Close()
+		wg.Add(1)
+		lc := core
+
+		go func() {
+			defer wg.Done()
+			if lc.Listeners != nil {
+				for _, ln := range lc.Listeners {
+					ln.Close()
+				}
 			}
-		}
+			if lc.licensingStopCh != nil {
+				close(lc.licensingStopCh)
+				lc.licensingStopCh = nil
+			}
+
+			if err := lc.Shutdown(); err != nil {
+				lc.Logger().Error("error during shutdown; abandoning sealing", "error", err)
+			} else {
+				timeout := time.Now().Add(60 * time.Second)
+				for {
+					if time.Now().After(timeout) {
+						lc.Logger().Error("timeout waiting for core to seal")
+					}
+					if lc.Sealed() {
+						break
+					}
+					time.Sleep(250 * time.Millisecond)
+				}
+			}
+		}()
 	}
 
-	// Seal the cores
-	c.ensureCoresSealed()
+	wg.Wait()
 
 	// Remove any temp dir that exists
 	if c.TempDir != "" {
@@ -833,6 +902,10 @@ func (c *TestCluster) UnsealWithStoredKeys(t testing.T) error {
 		}
 	}
 	return nil
+}
+
+func SetReplicationFailureMode(core *TestClusterCore, mode uint32) {
+	atomic.StoreUint32(core.Core.replicationFailure, mode)
 }
 
 type TestListener struct {
@@ -1146,6 +1219,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.Seal = base.Seal
 		coreConfig.DevToken = base.DevToken
 		coreConfig.EnableRaw = base.EnableRaw
+		coreConfig.DisableSealWrap = base.DisableSealWrap
+		coreConfig.DevLicenseDuration = base.DevLicenseDuration
+		coreConfig.DisableCache = base.DisableCache
 
 		if !coreConfig.DisableMlock {
 			base.DisableMlock = false
@@ -1208,6 +1284,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.HAPhysical = haPhys.(physical.HABackend)
 	}
 
+	pubKey, priKey, err := testGenerateCoreKeys()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	cores := []*Core{}
 	for i := 0; i < numCores; i++ {
 		coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port)
@@ -1223,6 +1304,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if opts != nil && opts.Logger != nil {
 			coreConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
 		}
+
+		coreConfig.LicensingConfig = testGetLicensingConfig(pubKey)
 
 		c, err := NewCore(coreConfig)
 		if err != nil {
@@ -1408,9 +1491,15 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		tcc.ReloadFuncsLock.Lock()
 		(*tcc.ReloadFuncs)["listener|tcp"] = []reload.ReloadFunc{certGetters[i].Reload}
 		tcc.ReloadFuncsLock.Unlock()
+
+		testAdjustTestCore(base, tcc)
+
 		ret = append(ret, tcc)
 	}
 
 	testCluster.Cores = ret
+
+	testExtraClusterCoresTestSetup(t, priKey, testCluster.Cores)
+
 	return &testCluster
 }

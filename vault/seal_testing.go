@@ -16,12 +16,16 @@ type TestSealOpts struct {
 	RecoveryKeysDisabled bool
 }
 
-func NewTestSeal(t testing.T, opts *TestSealOpts) Seal {
-	return NewDefaultSeal()
-}
-
 func testCoreUnsealedWithConfigs(t testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
-	seal := NewTestSeal(t, nil)
+	t.Helper()
+	var opts *TestSealOpts
+	if recoveryConf == nil {
+		opts = &TestSealOpts{
+			StoredKeysDisabled:   true,
+			RecoveryKeysDisabled: true,
+		}
+	}
+	seal := NewTestSeal(t, opts)
 	core := TestCoreWithSeal(t, seal, false)
 	result, err := core.Initialize(context.Background(), &InitParams{
 		BarrierConfig:  barrierConf,
@@ -66,14 +70,20 @@ func TestCoreUnsealedWithConfigSealOpts(t testing.T, barrierConf, recoveryConf *
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	for _, key := range result.SecretShares {
-		if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
-			t.Fatalf("unseal err: %s", err)
-		}
+	err = core.UnsealWithStoredKeys(context.Background())
+	if err != nil {
+		t.Fatalf("err: %s", err)
 	}
-
 	if core.Sealed() {
-		t.Fatal("should not be sealed")
+		for _, key := range result.SecretShares {
+			if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+				t.Fatalf("unseal err: %s", err)
+			}
+		}
+
+		if core.Sealed() {
+			t.Fatal("should not be sealed")
+		}
 	}
 
 	return core, result.SecretShares, result.RecoveryShares, result.RootToken

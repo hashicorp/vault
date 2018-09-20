@@ -34,6 +34,10 @@ type Auth struct {
 	TokenPolicies    []string `json:"token_policies" mapstructure:"token_policies" structs:"token_policies"`
 	IdentityPolicies []string `json:"identity_policies" mapstructure:"identity_policies" structs:"identity_policies"`
 
+	// ExternalNamespacePolicies represent the policies authorized from
+	// different namespaces indexed by respective namespace identifiers
+	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies" mapstructure:"external_namespace_policies" structs:"external_namespace_policies"`
+
 	// Metadata is used to attach arbitrary string-type metadata to
 	// an authenticated user. This metadata will be outputted into the
 	// audit log.

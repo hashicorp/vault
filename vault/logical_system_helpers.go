@@ -2,9 +2,88 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
+
+	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
+)
+
+var (
+	invalidateMFAConfig = func(context.Context, *SystemBackend, string) {}
+
+	sysInvalidate = func(b *SystemBackend) func(context.Context, string) {
+		return nil
+	}
+
+	getSystemSchemas = func() []func() *memdb.TableSchema { return nil }
+
+	getEGPListResponseKeyInfo = func(*SystemBackend, *namespace.Namespace) map[string]interface{} { return nil }
+	addSentinelPolicyData     = func(map[string]interface{}, *Policy) {}
+	inputSentinelPolicyData   = func(*framework.FieldData, *Policy) *logical.Response { return nil }
+
+	controlGroupUnwrap = func(context.Context, *SystemBackend, string, bool) (string, error) {
+		return "", errors.New("control groups unavailable")
+	}
+
+	pathInternalUINamespacesRead = func(b *SystemBackend) framework.OperationFunc {
+		return func(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+			// Short-circuit here if there's no client token provided
+			if req.ClientToken == "" {
+				return nil, fmt.Errorf("client token empty")
+			}
+
+			// Load the ACL policies so we can check for access and filter namespaces
+			_, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+			if err != nil {
+				return nil, err
+			}
+			if entity != nil && entity.Disabled {
+				b.logger.Warn("permission denied as the entity on the token is disabled")
+				return nil, logical.ErrPermissionDenied
+			}
+			if te != nil && te.EntityID != "" && entity == nil {
+				b.logger.Warn("permission denied as the entity on the token is invalid")
+				return nil, logical.ErrPermissionDenied
+			}
+
+			return logical.ListResponse([]string{""}), nil
+		}
+	}
+
+	pathLicenseRead = func(b *SystemBackend) framework.OperationFunc {
+		return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+			return nil, nil
+		}
+	}
+
+	pathLicenseUpdate = func(b *SystemBackend) framework.OperationFunc {
+		return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+			return nil, nil
+		}
+	}
+
+	entPaths = func(b *SystemBackend) []*framework.Path {
+		return []*framework.Path{
+			{
+				Pattern: "replication/status",
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+						resp := &logical.Response{
+							Data: map[string]interface{}{
+								"mode": "disabled",
+							},
+						}
+						return resp, nil
+					},
+				},
+			},
+		}
+	}
 )
 
 // tuneMount is used to set config on a mount point

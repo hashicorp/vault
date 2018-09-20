@@ -75,6 +75,13 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		return nil, err
 	}
 
+	// clear possible cached IAM / STS clients after successfully updating
+	// config/root
+	b.clientMutex.Lock()
+	defer b.clientMutex.Unlock()
+	b.iamClient = nil
+	b.stsClient = nil
+
 	return nil, nil
 }
 
