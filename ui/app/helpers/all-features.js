@@ -1,7 +1,6 @@
 import Ember from 'ember';
 
 const ALL_FEATURES = [
-  'UI',
   'HSM',
   'Performance Replication',
   'DR Replication',
