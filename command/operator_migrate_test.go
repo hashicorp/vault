@@ -200,22 +200,6 @@ storage_destination "dest_type2" {
 		data["c"] = []byte{}
 		storeData(s, data)
 
-		var keys []string
-		for key := range data {
-			keys = append(keys, key)
-		}
-
-		for _, key := range keys {
-			entry := physical.Entry{
-				Key:   key,
-				Value: nil,
-			}
-
-			err := s.Put(context.Background(), &entry)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
 		l := randomLister{s}
 
 		var out []string
@@ -223,6 +207,11 @@ storage_destination "dest_type2" {
 			out = append(out, path)
 			return nil
 		})
+
+		var keys []string
+		for key := range data {
+			keys = append(keys, key)
+		}
 		sort.Strings(keys)
 		if !reflect.DeepEqual(keys, out) {
 			t.Fatalf("expected equal: %v, %v", keys, out)
