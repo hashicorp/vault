@@ -1404,8 +1404,8 @@ func (ts *TokenStore) revokeTree(ctx context.Context, le *leaseEntry) error {
 // Updated to be non-recursive and revoke child tokens
 // before parent tokens(DFS).
 func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
-	var dfs []string
-	dfs = append(dfs, id)
+	dfs := []string{id}
+	seenIDs := make(map[string]struct{})
 
 	var ns *namespace.Namespace
 
@@ -1429,7 +1429,8 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 	}
 
 	for l := len(dfs); l > 0; l = len(dfs) {
-		id := dfs[0]
+		id := dfs[len(dfs)-1]
+		seenIDs[id] = struct{}{}
 
 		saltedCtx := ctx
 		saltedNS := ns
@@ -1444,9 +1445,24 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 		}
 
 		path := saltedID + "/"
-		children, err := ts.parentView(saltedNS).List(saltedCtx, path)
+		childrenRaw, err := ts.parentView(saltedNS).List(saltedCtx, path)
 		if err != nil {
 			return errwrap.Wrapf("failed to scan for children: {{err}}", err)
+		}
+
+		// Filter the child list to remove any items that have ever been in the dfs stack.
+		// This is a robustness check, as a parent/child cycle can lead to an OOM crash.
+		children := make([]string, 0, len(childrenRaw))
+		for _, child := range childrenRaw {
+			if _, seen := seenIDs[child]; !seen {
+				children = append(children, child)
+			} else {
+				if err = ts.parentView(saltedNS).Delete(saltedCtx, path+child); err != nil {
+					return errwrap.Wrapf("failed to delete entry: {{err}}", err)
+				}
+
+				ts.Logger().Warn("token cycle found", "token", child)
+			}
 		}
 
 		// If the length of the children array is zero,
@@ -1464,11 +1480,10 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 			if l == 1 {
 				return nil
 			}
-			dfs = dfs[1:]
+			dfs = dfs[:len(dfs)-1]
 		} else {
-			// If we make it here, there are children and they must
-			// be prepended.
-			dfs = append(children, dfs...)
+			// If we make it here, there are children and they must be appended.
+			dfs = append(dfs, children...)
 		}
 	}
 
