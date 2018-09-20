@@ -3,6 +3,6 @@ import ClusterRoute from 'vault/mixins/cluster-route';
 
 export default Ember.Route.extend(ClusterRoute, {
   model() {
-    this.store.findRecord('license');
+    return this.store.queryRecord('license', {});
   },
 });
