@@ -5,6 +5,11 @@ BUG FIXES:
  * core: Re-add deprecated capabilities information for now [GH-5360]
  * storage/mysql: Fix locking on MariaDB [GH-5343]
 
+IMPROVEMENTS:
+
+ * plugins: Add `env` parameter when registering plugins to the catalog to allow
+   operators to include environment variables during plugin execution. [GH-5359]
+
 ## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
 BUG FIXES:
