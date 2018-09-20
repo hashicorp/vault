@@ -11,13 +11,13 @@ const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default Component.extend(FocusOnInsertMixin, {
+  router: service(),
+  wizard: service(),
   mode: null,
   onDataChange() {},
   onRefresh() {},
   key: null,
-  routing: service('-routing'),
   requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
-  wizard: service(),
 
   init() {
     this._super(...arguments);
@@ -38,8 +38,7 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   transitionToRoute() {
-    const router = this.get('routing.router');
-    router.transitionTo.apply(router, arguments);
+    this.get('router').transitionTo(...arguments);
   },
 
   onEscape(e) {

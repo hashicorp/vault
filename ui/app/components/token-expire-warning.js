@@ -2,14 +2,12 @@ import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 
 export default Component.extend({
-  classNames: 'token-expire-warning',
   auth: service(),
-
-  routing: service('-routing'),
+  router: service(),
+  classNames: 'token-expire-warning',
 
   transitionToRoute: function() {
-    var router = this.get('routing.router');
-    router.transitionTo.apply(router, arguments);
+    this.get('router').transitionTo(...arguments);
   },
 
   isDismissed: false,

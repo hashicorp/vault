@@ -13,6 +13,9 @@ const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default Component.extend(FocusOnInsertMixin, {
+  wizard: service(),
+  router: service(),
+
   // a key model
   key: null,
 
@@ -41,8 +44,6 @@ export default Component.extend(FocusOnInsertMixin, {
   codemirrorString: null,
 
   hasLintError: false,
-
-  wizard: service(),
 
   init() {
     this._super(...arguments);
@@ -81,8 +82,6 @@ export default Component.extend(FocusOnInsertMixin, {
   partialName: computed('mode', function() {
     return `partials/secret-form-${this.get('mode')}`;
   }),
-
-  routing: service('-routing'),
 
   showPrefix: or('key.initialParentKey', 'key.parentKey'),
 
@@ -124,8 +123,7 @@ export default Component.extend(FocusOnInsertMixin, {
   }),
 
   transitionToRoute() {
-    const router = this.get('routing.router');
-    router.transitionTo.apply(router, arguments);
+    this.get('router').transitionTo(...arguments);
   },
 
   onEscape(e) {
