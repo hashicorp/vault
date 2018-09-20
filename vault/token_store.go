@@ -1405,9 +1405,7 @@ func (ts *TokenStore) revokeTree(ctx context.Context, le *leaseEntry) error {
 // before parent tokens(DFS).
 func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 	dfs := []string{id}
-	seenIDs := map[string]struct{}{
-		id: struct{}{},
-	}
+	seenIDs := make(map[string]struct{})
 
 	var ns *namespace.Namespace
 
@@ -1432,6 +1430,7 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 
 	for l := len(dfs); l > 0; l = len(dfs) {
 		id := dfs[len(dfs)-1]
+		seenIDs[id] = struct{}{}
 
 		saltedCtx := ctx
 		saltedNS := ns
@@ -1485,9 +1484,6 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 		} else {
 			// If we make it here, there are children and they must be appended.
 			dfs = append(dfs, children...)
-			for _, child := range children {
-				seenIDs[child] = struct{}{}
-			}
 		}
 	}
 
