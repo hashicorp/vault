@@ -5,11 +5,10 @@ import { run } from '@ember/runloop';
 export default Component.extend({
   auth: service(),
   wizard: service(),
-  routing: service('-routing'),
+  router: service(),
 
   transitionToRoute: function() {
-    var router = this.get('routing.router');
-    router.transitionTo.apply(router, arguments);
+    this.get('router').transitionTo(...arguments);
   },
 
   classNames: 'user-menu auth-info',
@@ -29,9 +28,11 @@ export default Component.extend({
     },
 
     revokeToken() {
-      this.get('auth').revokeCurrentToken().then(() => {
-        this.transitionToRoute('vault.cluster.logout');
-      });
+      this.get('auth')
+        .revokeCurrentToken()
+        .then(() => {
+          this.transitionToRoute('vault.cluster.logout');
+        });
     },
   },
 });

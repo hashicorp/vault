@@ -26,6 +26,8 @@ const routeFor = function(type, mode) {
 };
 
 export default Component.extend(FocusOnInsertMixin, {
+  router: service(),
+
   classNames: ['navigate-filter'],
 
   // these get passed in from the outside
@@ -41,11 +43,8 @@ export default Component.extend(FocusOnInsertMixin, {
   filterMatchesKey: null,
   firstPartialMatch: null,
 
-  routing: service('-routing'),
-
   transitionToRoute: function() {
-    var router = this.get('routing.router');
-    router.transitionTo.apply(router, arguments);
+    this.get('router').transitionTo(...arguments);
   },
 
   shouldFocus: false,

@@ -7,6 +7,6 @@ export default Component.extend({
   model: null,
 
   tagName: '',
-  routing: service('-routing'),
-  path: alias('routing.router.currentURL'),
+  router: service(),
+  path: alias('router.currentURL'),
 });
