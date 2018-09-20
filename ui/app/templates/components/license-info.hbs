@@ -1,14 +1,54 @@
+{{#if isTemporary}}
+  <MessageInPage data-test-cluster-status @type="warning" @class="license-warning">
+    Your temporary license expires in {{moment-from-now expirationTime precision="seconds" hideSuffix=true}} and your vault will seal. Please enter a valid license below.
+  </MessageInPage>
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3">
+        {{#link-to "vault.cluster.license" }}
+          Temporary License
+        {{/link-to}}
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+{{else}}
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3">
+        {{#link-to "vault.cluster.license" }}
+          Details
+        {{/link-to}}
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+  <div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{info-table-row label="License ID" value=licenseId}}
+    {{#if startTime}}
+      {{#info-table-row label="Start time" value=startTime}}
+        {{moment-format model.startTime 'MMM DD, YYYY hh:mm:ss A'}}
+      {{/info-table-row}}
+    {{/if}}
+    {{#if expirationTime}}
+      {{#info-table-row label="Expiration time" value=expirationTime}}
+        {{moment-format expirationTime 'MMM DD, YYYY hh:mm:ss A'}}
+      {{/info-table-row}}
+      {{info-table-row label="Expires in" value=(moment-from-now expirationTime interval=1000 hideSuffix=true)}}
+    {{/if}}
+  </div>
+{{/if}}
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">Features</h1>
+  </p.levelLeft>
+</PageHeader>
 <div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{info-table-row label="License ID" value=licenseId}}
-  {{#if startTime}}
-    {{#info-table-row label="Start time" value=startTime}}
-      {{moment-format model.startTime 'MMM DD, YYYY hh:mm:ss A'}}
+  {{#each featuresInfo as |info|}}
+    {{#info-table-row label=info.name value=info.active}}
+      {{#if info.active}}
+        <ICon @size=28 @glyph="checkmark" /> Active
+      {{else}}
+        <ICon @size=28 @glyph="close" /> Not Active
+      {{/if}}
     {{/info-table-row}}
-  {{/if}}
-  {{#if expirationTime}}
-    {{#info-table-row label="Expiration time" value=expirationTime}}
-      {{moment-format expirationTime 'MMM DD, YYYY hh:mm:ss A'}}
-    {{/info-table-row}}
-    {{info-table-row label="Expires in" value=(moment-from-now expirationTime interval=1000 hideSuffix=true)}}
-  {{/if}}
+  {{/each}}
 </div>
