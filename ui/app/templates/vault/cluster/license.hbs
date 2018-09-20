@@ -7,25 +7,4 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-<div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{info-table-row label="License ID" value=model.licenseId}}
-  {{#if model.startTime}}
-    {{#info-table-row label="Start time" value=model.startTime}}
-      {{moment-format model.startTime 'MMM DD, YYYY hh:mm:ss A'}}
-      <br/>
-      <code>
-        {{model.startTime}}
-      </code>
-    {{/info-table-row}}
-  {{/if}}
-  {{#if model.expirationTime}}
-    {{#info-table-row label="Expiration time" value=model.expirationTime}}
-      {{moment-format model.expirationTime 'MMM DD, YYYY hh:mm:ss A'}}
-      <br/>
-      <code>
-        {{model.expirationTime}}
-      </code>
-    {{/info-table-row}}
-    {{info-table-row label="Expires in" value=(moment-from-now model.expirationTime interval=1000 hideSuffix=true)}}
-  {{/if}}
-</div>
+{{component 'license-info' startTime=model.startTime expirationTime=model.expirationTime licenseId=model.licenseId features=model.features}}
