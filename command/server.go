@@ -96,7 +96,6 @@ type ServerCommand struct {
 	flagDevTransactional bool
 	flagTestVerifyOnly   bool
 	flagCombineLogs      bool
-	flagIgnoreMigration  bool
 }
 
 type ServerListener struct {
@@ -188,13 +187,6 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Default: "127.0.0.1:8200",
 		EnvVar:  "VAULT_DEV_LISTEN_ADDRESS",
 		Usage:   "Address to bind to in \"dev\" mode.",
-	})
-
-	f.BoolVar(&BoolVar{
-		Name:    "ignore-migration",
-		Target:  &c.flagIgnoreMigration,
-		Default: false,
-		Usage:   "Start server even if storage migration is in progress.",
 	})
 
 	// Internal-only flags to follow.
@@ -477,12 +469,9 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if migrationStatus != nil {
 		startTime := migrationStatus.Start.Format(time.RFC3339)
-		if !c.flagIgnoreMigration {
-			c.UI.Error(wrapAtLength(fmt.Sprintf("Storage migration in progress (started: %s). "+
-				"Use -ignore-migration to override this check.", startTime)))
-			return 1
-		}
-		c.UI.Warn(fmt.Sprintf("WARNING! Storage migration in progress (started: %s).", startTime))
+		c.UI.Error(wrapAtLength(fmt.Sprintf("Storage migration in progress (started: %s). "+
+			"Use 'vault operator migrate -reset' to force clear the migration lock.", startTime)))
+		return 1
 	}
 
 	infoKeys := make([]string, 0, 10)
