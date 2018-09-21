@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -12,21 +13,17 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
-type PrepareRequestFunc func(*vault.Core, *logical.Request) error
-
 func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, int, error) {
-	// Determine the path...
-	if !strings.HasPrefix(r.URL.Path, "/v1/") {
-		return nil, http.StatusNotFound, nil
+	ns, err := namespace.FromContext(r.Context())
+	if err != nil {
+		return nil, http.StatusBadRequest, nil
 	}
-	path := r.URL.Path[len("/v1/"):]
-	if path == "" {
-		return nil, http.StatusNotFound, nil
-	}
+	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 
 	var data map[string]interface{}
 
@@ -103,13 +100,12 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusMethodNotAllowed, nil
 	}
 
-	var err error
 	request_id, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
 	}
 
-	req := requestAuth(core, r, &logical.Request{
+	req, err := requestAuth(core, r, &logical.Request{
 		ID:         request_id,
 		Operation:  op,
 		Path:       path,
@@ -117,24 +113,40 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		Connection: getConnection(r),
 		Headers:    r.Header,
 	})
+	if err != nil {
+		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+			return nil, http.StatusForbidden, nil
+		}
+		return nil, http.StatusBadRequest, errwrap.Wrapf("error performing token check: {{err}}", err)
+	}
 
 	req, err = requestWrapInfo(r, req)
 	if err != nil {
 		return nil, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err)
 	}
 
+	err = parseMFAHeader(req)
+	if err != nil {
+		return nil, http.StatusBadRequest, errwrap.Wrapf("failed to parse X-Vault-MFA header: {{err}}", err)
+	}
+
+	err = requestPolicyOverride(r, req)
+	if err != nil {
+		return nil, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf(`failed to parse %s header: {{err}}`, PolicyOverrideHeaderName), err)
+	}
+
 	return req, 0, nil
 }
 
-func handleLogical(core *vault.Core, prepareRequestCallback PrepareRequestFunc) http.Handler {
-	return handleLogicalInternal(core, false, prepareRequestCallback)
+func handleLogical(core *vault.Core) http.Handler {
+	return handleLogicalInternal(core, false)
 }
 
-func handleLogicalWithInjector(core *vault.Core, prepareRequestCallback PrepareRequestFunc) http.Handler {
-	return handleLogicalInternal(core, true, prepareRequestCallback)
+func handleLogicalWithInjector(core *vault.Core) http.Handler {
+	return handleLogicalInternal(core, true)
 }
 
-func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, prepareRequestCallback PrepareRequestFunc) http.Handler {
+func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
@@ -142,13 +154,52 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, prepar
 			return
 		}
 
-		// Certain endpoints may require changes to the request object. They
-		// will have a callback registered to do the needed operations, so
-		// invoke it before proceeding.
-		if prepareRequestCallback != nil {
-			if err := prepareRequestCallback(core, req); err != nil {
-				respondError(w, http.StatusBadRequest, err)
+		// Always forward requests that are using a limited use count token
+		if core.PerfStandby() && req.ClientTokenRemainingUses > 0 {
+			forwardRequest(core, w, r)
+			return
+		}
+
+		// req.Path will be relative by this point. The prefix check is first
+		// to fail faster if we're not in this situation since it's a hot path
+		switch {
+		case strings.HasPrefix(req.Path, "sys/wrapping/"), strings.HasPrefix(req.Path, "auth/token/"):
+			// Get the token ns info; if we match the paths below we want to
+			// swap in the token context (but keep the relative path)
+			if err != nil {
+				core.Logger().Warn("error looking up just-set context", "error", err)
+				respondError(w, http.StatusInternalServerError, err)
 				return
+			}
+			te := req.TokenEntry()
+			newCtx := r.Context()
+			if te != nil {
+				ns, err := vault.NamespaceByID(newCtx, te.NamespaceID, core)
+				if err != nil {
+					core.Logger().Warn("error looking up namespace from the token's namespace ID", "error", err)
+					respondError(w, http.StatusInternalServerError, err)
+					return
+				}
+				if ns != nil {
+					newCtx = namespace.ContextWithNamespace(newCtx, ns)
+				}
+			}
+			switch req.Path {
+			case "sys/wrapping/lookup", "sys/wrapping/rewrap", "sys/wrapping/unwrap":
+				r = r.WithContext(newCtx)
+				if err := wrappingVerificationFunc(r.Context(), core, req); err != nil {
+					if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+						respondError(w, http.StatusForbidden, err)
+					} else {
+						respondError(w, http.StatusBadRequest, err)
+					}
+					return
+				}
+
+			// The -self paths have no meaning outside of the token NS, so
+			// requests for these paths always go to the token NS
+			case "auth/token/lookup-self", "auth/token/renew-self", "auth/token/revoke-self":
+				r = r.WithContext(newCtx)
 			}
 		}
 

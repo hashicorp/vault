@@ -51,6 +51,8 @@ func (r *RequestWrapInfo) SentinelKeys() []string {
 // by the router after policy checks; the token namespace would be the right
 // place to access them via Sentinel
 type Request struct {
+	entReq
+
 	// Id is the uuid associated with each request
 	ID string `json:"id" structs:"id" mapstructure:"id" sentinel:""`
 
@@ -139,6 +141,10 @@ type Request struct {
 	// attached. Useful in some situations where the client token is not made
 	// accessible.
 	Unauthenticated bool `json:"unauthenticated" structs:"unauthenticated" mapstructure:"unauthenticated"`
+
+	// MFACreds holds the parsed MFA information supplied over the API as part of
+	// X-Vault-MFA header
+	MFACreds MFACreds `json:"mfa_creds" structs:"mfa_creds" mapstructure:"mfa_creds" sentinel:""`
 
 	// Cached token entry. This avoids another lookup in request handling when
 	// we've already looked it up at http handling time. Note that this token
@@ -272,3 +278,5 @@ const (
 	RenewOperation              = "renew"
 	RollbackOperation           = "rollback"
 )
+
+type MFACreds map[string][]string

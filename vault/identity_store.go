@@ -9,7 +9,9 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -17,6 +19,12 @@ import (
 
 const (
 	groupBucketsPrefix = "packer/group/buckets/"
+)
+
+var (
+	sendGroupUpgrade             = func(*IdentityStore, *identity.Group) (bool, error) { return false, nil }
+	parseExtraEntityFromBucket   = func(context.Context, *IdentityStore, *identity.Entity) (bool, error) { return false, nil }
+	addExtraEntityDataToResponse = func(*identity.Entity, map[string]interface{}) {}
 )
 
 func (c *Core) IdentityStore() *IdentityStore {
@@ -56,15 +64,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 
 	iStore.Backend = &framework.Backend{
 		BackendType: logical.TypeLogical,
-		Paths: framework.PathAppend(
-			entityPaths(iStore),
-			aliasPaths(iStore),
-			groupAliasPaths(iStore),
-			groupPaths(iStore),
-			lookupPaths(iStore),
-			upgradePaths(iStore),
-		),
-		Invalidate: iStore.Invalidate,
+		Paths:       iStore.paths(),
+		Invalidate:  iStore.Invalidate,
 	}
 
 	err = iStore.Setup(ctx, config)
@@ -75,12 +76,26 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	return iStore, nil
 }
 
+func (i *IdentityStore) paths() []*framework.Path {
+	return framework.PathAppend(
+		entityPaths(i),
+		aliasPaths(i),
+		groupAliasPaths(i),
+		groupPaths(i),
+		lookupPaths(i),
+		upgradePaths(i),
+	)
+}
+
 // Invalidate is a callback wherein the backend is informed that the value at
 // the given key is updated. In identity store's case, it would be the entity
 // storage entries that get updated. The value needs to be read and MemDB needs
 // to be updated accordingly.
 func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	i.logger.Debug("invalidate notification received", "key", key)
+
+	i.lock.Lock()
+	defer i.lock.Unlock()
 
 	switch {
 	// Check if the key is a storage entry key for an entity bucket
@@ -146,7 +161,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 				}
 
 				// Only update MemDB and don't touch the storage
-				err = i.upsertEntityInTxn(txn, entity, nil, false)
+				err = i.upsertEntityInTxn(ctx, txn, entity, nil, false)
 				if err != nil {
 					i.logger.Error("failed to update entity in MemDB", "error", err)
 					return
@@ -237,10 +252,81 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		return nil, fmt.Errorf("nil item")
 	}
 
+	persistNeeded := false
+
 	var entity identity.Entity
 	err := ptypes.UnmarshalAny(item.Message, &entity)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to decode entity from storage bucket item: {{err}}", err)
+		// If we encounter an error, it would mean that the format of the
+		// entity is an older one. Try decoding using the older format and if
+		// successful, upgrage the storage with the newer format.
+		var oldEntity identity.EntityStorageEntry
+		oldEntityErr := ptypes.UnmarshalAny(item.Message, &oldEntity)
+		if oldEntityErr != nil {
+			return nil, errwrap.Wrapf("failed to decode entity from storage bucket item: {{err}}", err)
+		}
+
+		i.logger.Debug("upgrading the entity using patch introduced with vault 0.8.2.1", "entity_id", oldEntity.ID)
+
+		// Successfully decoded entity using older format. Entity is stored
+		// with older format. Upgrade it.
+		entity.ID = oldEntity.ID
+		entity.Name = oldEntity.Name
+		entity.Metadata = oldEntity.Metadata
+		entity.CreationTime = oldEntity.CreationTime
+		entity.LastUpdateTime = oldEntity.LastUpdateTime
+		entity.MergedEntityIDs = oldEntity.MergedEntityIDs
+		entity.Policies = oldEntity.Policies
+		entity.BucketKeyHash = oldEntity.BucketKeyHash
+		entity.MFASecrets = oldEntity.MFASecrets
+		// Copy each alias individually since the format of aliases were
+		// also different
+		for _, oldAlias := range oldEntity.Personas {
+			var newAlias identity.Alias
+			newAlias.ID = oldAlias.ID
+			newAlias.Name = oldAlias.Name
+			newAlias.CanonicalID = oldAlias.EntityID
+			newAlias.MountType = oldAlias.MountType
+			newAlias.MountAccessor = oldAlias.MountAccessor
+			newAlias.MountPath = oldAlias.MountPath
+			newAlias.Metadata = oldAlias.Metadata
+			newAlias.CreationTime = oldAlias.CreationTime
+			newAlias.LastUpdateTime = oldAlias.LastUpdateTime
+			newAlias.MergedFromCanonicalIDs = oldAlias.MergedFromEntityIDs
+			entity.Aliases = append(entity.Aliases, &newAlias)
+		}
+
+		persistNeeded = true
+	}
+
+	pN, err := parseExtraEntityFromBucket(ctx, i, &entity)
+	if err != nil {
+		return nil, err
+	}
+	if pN {
+		persistNeeded = true
+	}
+
+	if persistNeeded && !i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		entityAsAny, err := ptypes.MarshalAny(&entity)
+		if err != nil {
+			return nil, err
+		}
+
+		item := &storagepacker.Item{
+			ID:      entity.ID,
+			Message: entityAsAny,
+		}
+
+		// Store the entity with new format
+		err = i.entityPacker.PutItem(item)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if entity.NamespaceID == "" {
+		entity.NamespaceID = namespace.RootNamespaceID
 	}
 
 	return &entity, nil
@@ -255,6 +341,10 @@ func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*ide
 	err := ptypes.UnmarshalAny(item.Message, &group)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to decode group from storage bucket item: {{err}}", err)
+	}
+
+	if group.NamespaceID == "" {
+		group.NamespaceID = namespace.RootNamespaceID
 	}
 
 	return &group, nil
@@ -305,7 +395,7 @@ func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor,
 
 // CreateOrFetchEntity creates a new entity. This is used by core to
 // associate each login attempt by an alias to a unified entity in Vault.
-func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Entity, error) {
+func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.Alias) (*identity.Entity, error) {
 	var entity *identity.Entity
 	var err error
 
@@ -355,9 +445,8 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 		return entity, nil
 	}
 
-	entity = &identity.Entity{}
-
-	err = i.sanitizeEntity(entity)
+	entity = new(identity.Entity)
+	err = i.sanitizeEntity(ctx, entity)
 	if err != nil {
 		return nil, err
 	}
@@ -372,7 +461,7 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 		MountType:     mountValidationResp.MountType,
 	}
 
-	err = i.sanitizeAlias(newAlias)
+	err = i.sanitizeAlias(ctx, newAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -385,7 +474,7 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 	}
 
 	// Update MemDB and persist entity object
-	err = i.upsertEntityInTxn(txn, entity, nil, true)
+	err = i.upsertEntityInTxn(ctx, txn, entity, nil, true)
 	if err != nil {
 		return nil, err
 	}

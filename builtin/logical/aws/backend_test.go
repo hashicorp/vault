@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"reflect"
 	"testing"
@@ -16,12 +17,21 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
 )
+
+type mockIAMClient struct {
+	iamiface.IAMAPI
+}
+
+func (m *mockIAMClient) CreateUser(input *iam.CreateUserInput) (*iam.CreateUserOutput, error) {
+	return nil, awserr.New("Throttling", "", nil)
+}
 
 func getBackend(t *testing.T) logical.Backend {
 	be, _ := Factory(context.Background(), logical.TestBackendConfig())
@@ -89,6 +99,61 @@ func TestBackend_policyCrud(t *testing.T) {
 	})
 }
 
+func TestBackend_throttled(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend()
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+
+	connData := map[string]interface{}{
+		"credential_type": "iam_user",
+	}
+
+	confReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/something",
+		Storage:   config.StorageView,
+		Data:      connData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), confReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
+	}
+
+	// Mock the IAM API call to return a throttled response to the CreateUser API
+	// call
+	b.iamClient = &mockIAMClient{}
+
+	credReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "creds/something",
+		Storage:   config.StorageView,
+	}
+
+	credResp, err := b.HandleRequest(context.Background(), credReq)
+	if err == nil {
+		t.Fatalf("failed to trigger expected throttling error condition: resp:%#v", credResp)
+	}
+	rErr := credResp.Error()
+	expected := "Error creating IAM user: Throttling: "
+	if rErr.Error() != expected {
+		t.Fatalf("error message did not match, expected (%s), got (%s)", expected, rErr.Error())
+	}
+
+	// verify the error we got back is returned with a http.StatusBadGateway
+	code, err := logical.RespondErrorCommon(credReq, credResp, err)
+	if err == nil {
+		t.Fatal("expected error after running req/resp/err through RespondErrorCommon, got nil")
+	}
+	if code != http.StatusBadGateway {
+		t.Fatalf("expected HTTP status 'bad gateway', got: (%d)", code)
+	}
+}
+
 func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
 		log.Println("[INFO] Test: Using us-west-2 as test region")
@@ -96,17 +161,17 @@ func testAccPreCheck(t *testing.T) {
 	}
 
 	if v := os.Getenv("AWS_ACCOUNT_ID"); v == "" {
-		accountId, err := getAccountId()
+		accountID, err := getAccountID()
 		if err != nil {
 			t.Logf("Unable to retrive user via iam:GetUser: %#v", err)
 			t.Skip("AWS_ACCOUNT_ID not explicitly set and could not be read from iam:GetUser for acceptance tests, skipping")
 		}
-		log.Printf("[INFO] Test: Used %s as AWS_ACCOUNT_ID", accountId)
-		os.Setenv("AWS_ACCOUNT_ID", accountId)
+		log.Printf("[INFO] Test: Used %s as AWS_ACCOUNT_ID", accountID)
+		os.Setenv("AWS_ACCOUNT_ID", accountID)
 	}
 }
 
-func getAccountId() (string, error) {
+func getAccountID() (string, error) {
 	awsConfig := &aws.Config{
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
@@ -251,7 +316,7 @@ func createUser(t *testing.T, accessKey *awsAccessKey) {
 	}
 	genAccessKey := createAccessKeyOutput.AccessKey
 
-	accessKey.AccessKeyId = *genAccessKey.AccessKeyId
+	accessKey.AccessKeyID = *genAccessKey.AccessKeyId
 	accessKey.SecretAccessKey = *genAccessKey.SecretAccessKey
 }
 
@@ -308,7 +373,7 @@ func teardown(accessKey *awsAccessKey) error {
 	}
 
 	deleteAccessKeyInput := &iam.DeleteAccessKeyInput{
-		AccessKeyId: aws.String(accessKey.AccessKeyId),
+		AccessKeyId: aws.String(accessKey.AccessKeyID),
 		UserName:    aws.String(testUserName),
 	}
 	_, err = svc.DeleteAccessKey(deleteAccessKeyInput)
@@ -361,7 +426,7 @@ func testAccStepConfigWithCreds(t *testing.T, accessKey *awsAccessKey) logicalte
 			// In particular, they get evaluated before accessKey gets set by CreateUser
 			// and thus would fail. By moving to a closure in a PreFlight, we ensure that
 			// the creds get evaluated lazily after they've been properly set
-			req.Data["access_key"] = accessKey.AccessKeyId
+			req.Data["access_key"] = accessKey.AccessKeyID
 			req.Data["secret_key"] = accessKey.SecretAccessKey
 			return nil
 		},
@@ -731,7 +796,7 @@ func testAccStepWriteArnRoleRef(t *testing.T, roleName string) logicaltest.TestS
 }
 
 type awsAccessKey struct {
-	AccessKeyId     string
+	AccessKeyID     string
 	SecretAccessKey string
 }
 

@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/license"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
@@ -121,6 +122,11 @@ func (s *gRPCSystemViewClient) MlockEnabled() bool {
 	}
 
 	return reply.Enabled
+}
+
+func (s *gRPCSystemViewClient) HasFeature(feature license.Features) bool {
+	// Not implemented
+	return false
 }
 
 func (s *gRPCSystemViewClient) LocalMount() bool {
