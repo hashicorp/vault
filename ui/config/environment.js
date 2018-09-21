@@ -28,6 +28,7 @@ module.exports = function(environment) {
     flashMessageDefaults: {
       timeout: 7000,
       sticky: false,
+      preventDuplicates: true,
     },
   };
   if (environment === 'development') {

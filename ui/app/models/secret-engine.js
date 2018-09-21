@@ -137,9 +137,6 @@ export default DS.Model.extend({
     });
   },
 
-  zeroAddressPath: lazyCapabilities(apiPath`${'id'}/config/zeroaddress`, 'id'),
-  canEditZeroAddress: alias('zeroAddressPath.canUpdate'),
-
   // aws backend attrs
   lease: attr('string'),
   leaseMax: attr('string'),
