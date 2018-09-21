@@ -61,9 +61,7 @@ type backend struct {
 	// Mutex to protect access to reading and writing policies
 	roleMutex sync.RWMutex
 
-	// Mutex to protect access to reading and writing root creds
-	rootMutex sync.RWMutex
-	// Mutex to protect access to iam/sts clients
+	// Mutex to protect access to iam/sts clients and client configs
 	clientMutex sync.RWMutex
 
 	// iamClient and stsClient hold configured iam and sts clients for reuse, and
@@ -102,7 +100,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IA
 		return b.iamClient, nil
 	}
 
-	iamClient, err := b.nonCachedClientIAM(ctx, s)
+	iamClient, err := nonCachedClientIAM(ctx, s)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +127,7 @@ func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsiface.ST
 		return b.stsClient, nil
 	}
 
-	stsClient, err := b.nonCachedClientSTS(ctx, s)
+	stsClient, err := nonCachedClientSTS(ctx, s)
 	if err != nil {
 		return nil, err
 	}

@@ -56,8 +56,8 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	stsendpoint := data.Get("sts_endpoint").(string)
 	maxretries := data.Get("max_retries").(int)
 
-	b.rootMutex.Lock()
-	defer b.rootMutex.Unlock()
+	b.clientMutex.Lock()
+	defer b.clientMutex.Unlock()
 
 	entry, err := logical.StorageEntryJSON("config/root", rootConfig{
 		AccessKey:   data.Get("access_key").(string),
@@ -77,8 +77,6 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	// clear possible cached IAM / STS clients after successfully updating
 	// config/root
-	b.clientMutex.Lock()
-	defer b.clientMutex.Unlock()
 	b.iamClient = nil
 	b.stsClient = nil
 

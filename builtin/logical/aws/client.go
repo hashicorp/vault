@@ -15,13 +15,12 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientType string) (*aws.Config, error) {
+// NOTE: The caller is required to ensure that b.clientMutex is at least read locked
+func getRootConfig(ctx context.Context, s logical.Storage, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{}
 	var endpoint string
 	var maxRetries int = aws.UseServiceDefaultRetries
 
-	b.rootMutex.RLock()
-	defer b.rootMutex.RUnlock()
 	entry, err := s.Get(ctx, "config/root")
 	if err != nil {
 		return nil, err
@@ -70,8 +69,8 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 	}, nil
 }
 
-func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error) {
-	awsConfig, err := b.getRootConfig(ctx, s, "iam")
+func nonCachedClientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error) {
+	awsConfig, err := getRootConfig(ctx, s, "iam")
 	if err != nil {
 		return nil, err
 	}
@@ -84,8 +83,8 @@ func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage) (*i
 	return client, nil
 }
 
-func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage) (*sts.STS, error) {
-	awsConfig, err := b.getRootConfig(ctx, s, "sts")
+func nonCachedClientSTS(ctx context.Context, s logical.Storage) (*sts.STS, error) {
+	awsConfig, err := getRootConfig(ctx, s, "sts")
 	if err != nil {
 		return nil, err
 	}

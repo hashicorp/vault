@@ -33,8 +33,9 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("nil IAM client")
 	}
 
-	b.rootMutex.Lock()
-	defer b.rootMutex.Unlock()
+	b.clientMutex.Lock()
+	defer b.clientMutex.Unlock()
+
 	rawRootConfig, err := req.Storage.Get(ctx, "config/root")
 	if err != nil {
 		return nil, err
@@ -92,6 +93,9 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	if err := req.Storage.Put(ctx, newEntry); err != nil {
 		return nil, errwrap.Wrapf("error saving new config/root: {{err}}", err)
 	}
+
+	b.iamClient = nil
+	b.stsClient = nil
 
 	deleteAccessKeyInput := iam.DeleteAccessKeyInput{
 		AccessKeyId: aws.String(oldAccessKey),
