@@ -102,7 +102,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (iamiface.IA
 		return b.iamClient, nil
 	}
 
-	iamClient, err := clientIAM(ctx, s)
+	iamClient, err := b.nonCachedClientIAM(ctx, s)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsiface.ST
 		return b.stsClient, nil
 	}
 
-	stsClient, err := clientSTS(ctx, s)
+	stsClient, err := b.nonCachedClientSTS(ctx, s)
 	if err != nil {
 		return nil, err
 	}

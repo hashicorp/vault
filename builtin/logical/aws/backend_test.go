@@ -442,17 +442,17 @@ func testAccStepRotateRoot(oldAccessKey *awsAccessKey) logicaltest.TestStep {
 			if resp == nil {
 				return fmt.Errorf("received nil response from config/rotate-root")
 			}
-			newAccessKeyId := resp.Data["access_key"].(string)
-			if newAccessKeyId == oldAccessKey.AccessKeyId {
+			newAccessKeyID := resp.Data["access_key"].(string)
+			if newAccessKeyID == oldAccessKey.AccessKeyID {
 				return fmt.Errorf("rotate-root didn't rotate access key")
 			}
 			awsConfig := &aws.Config{
 				Region:      aws.String("us-east-1"),
 				HTTPClient:  cleanhttp.DefaultClient(),
-				Credentials: credentials.NewStaticCredentials(oldAccessKey.AccessKeyId, oldAccessKey.SecretAccessKey, ""),
+				Credentials: credentials.NewStaticCredentials(oldAccessKey.AccessKeyID, oldAccessKey.SecretAccessKey, ""),
 			}
 			// sigh....
-			oldAccessKey.AccessKeyId = newAccessKeyId
+			oldAccessKey.AccessKeyID = newAccessKeyID
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 			svc := sts.New(session.New(awsConfig))

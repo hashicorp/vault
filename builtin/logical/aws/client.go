@@ -70,7 +70,7 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 	}, nil
 }
 
-func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error) {
+func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error) {
 	awsConfig, err := b.getRootConfig(ctx, s, "iam")
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, e
 	return client, nil
 }
 
-func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (*sts.STS, error) {
+func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage) (*sts.STS, error) {
 	awsConfig, err := b.getRootConfig(ctx, s, "sts")
 	if err != nil {
 		return nil, err
