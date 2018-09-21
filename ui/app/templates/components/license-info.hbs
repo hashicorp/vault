@@ -1,6 +1,6 @@
 {{#if isTemporary}}
   <MessageInPage data-test-cluster-status @type="warning" @class="license-warning">
-    Your temporary license expires in {{moment-from-now expirationTime precision="seconds" hideSuffix=true}} and your vault will seal. Please enter a valid license below.
+    Your temporary license expiresn {{moment-from-now expirationTime interval=1000}} and your vault will seal. Please enter a valid license below.
   </MessageInPage>
   <PageHeader as |p|>
     <p.levelLeft>
@@ -11,6 +11,21 @@
       </h1>
     </p.levelLeft>
   </PageHeader>
+  <form {{action "saveLicense" licenseId on="submit"}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <div class="field">
+        <label for="license-id" class="is-label">License</label>
+        <div class="control">
+          {{input id="license-id" class="input"}}
+        </div>
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="submit" class="button is-primary">Save</button>
+      </div>
+    </div>
+  </form>
 {{else}}
   <PageHeader as |p|>
     <p.levelLeft>
