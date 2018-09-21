@@ -2,10 +2,11 @@ import Ember from 'ember';
 import { allFeatures } from 'vault/helpers/all-features';
 
 export default Ember.Component.extend({
-  expirationTime: null,
-  startTime: null,
-  licenseId: null,
+  expirationTime: '',
+  startTime: '',
+  licenseId: '',
   features: null,
+  licenseText: '',
   isTemporary: Ember.computed('licenseId', function() {
     return this.get('licenseId') === 'temporary';
   }),
@@ -18,18 +19,14 @@ export default Ember.Component.extend({
     return info;
   }),
 
-  init() {
-    this._super(...arguments);
-    this.setProperties(this.get('model'));
-  },
-
   actions: {
-    saveLicense(text) {
+    saveLicense() {
+      debugger;
       let model = this.get('model');
-      model = model.createRecord(text);
-      this.set('model', model);
-      this.get('model').save().then(() => {
+      model.store.createRecord('license', { text: this.get('licenseText') });
+      model.save().then(() => {
         this.setProperties(this.get('model'));
+        this.set('licenseText', '');
       });
     },
   },

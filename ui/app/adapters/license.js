@@ -8,9 +8,13 @@ export default ClusterAdapter.extend({
     });
   },
 
-  // urlForUpdateRecord(){
-  //   return this.buildURL() + '/license';
-  // },
+  createRecord(text) {
+    return this.ajax(this.buildURL() + '/license', 'PUT', { text: text });
+  },
+
+  urlForCreateRecord() {
+    return this.buildURL() + '/license';
+  },
 
   urlForQueryRecord() {
     return this.buildURL() + '/license';
