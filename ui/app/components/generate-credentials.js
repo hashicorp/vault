@@ -1,5 +1,5 @@
 import { inject as service } from '@ember/service';
-import { computed, set, get } from '@ember/object';
+import { computed, set } from '@ember/object';
 import Component from '@ember/component';
 
 const MODEL_TYPES = {
@@ -30,9 +30,10 @@ export default Component.extend({
   store: service(),
   router: service(),
   // set on the component
-  backend: null,
+  backendType: null,
+  backendPath: null,
+  roleName: null,
   action: null,
-  role: null,
 
   model: null,
   loading: false,
@@ -44,12 +45,12 @@ export default Component.extend({
       return type.model;
     }
     // if we don't have a mode for that type then redirect them back to the backend list
-    this.get('router').transitionTo('vault.cluster.secrets.backend.list-root', this.get('model.backend'));
+    this.get('router').transitionTo('vault.cluster.secrets.backend.list-root', this.get('backendPath'));
   },
 
-  options: computed('action', 'backend.type', function() {
+  options: computed('action', 'backendType', function() {
     const action = this.get('action') || 'creds';
-    return MODEL_TYPES[`${this.get('backend.type')}-${action}`];
+    return MODEL_TYPES[`${this.get('backendType')}-${action}`];
   }),
 
   init() {
@@ -62,7 +63,7 @@ export default Component.extend({
       this.get('wizard').transitionFeatureMachine(
         this.get('wizard.featureState'),
         'CONTINUE',
-        this.get('backend.type')
+        this.get('backendType')
       );
     }
   },
@@ -75,7 +76,8 @@ export default Component.extend({
   createOrReplaceModel() {
     const modelType = this.modelForType();
     const model = this.get('model');
-    const roleModel = this.get('role');
+    const roleName = this.get('roleName');
+    const backendPath = this.get('backendPath');
     if (!modelType) {
       return;
     }
@@ -83,8 +85,11 @@ export default Component.extend({
       model.unloadRecord();
     }
     const attrs = {
-      role: roleModel,
-      id: `${get(roleModel, 'backend')}-${get(roleModel, 'name')}`,
+      role: {
+        backend: backendPath,
+        name: roleName,
+      },
+      id: `${backendPath}-${roleName}`,
     };
     const newModel = this.get('store').createRecord(modelType, attrs);
     this.set('model', newModel);
@@ -101,7 +106,7 @@ export default Component.extend({
             this.get('wizard').transitionFeatureMachine(
               this.get('wizard.featureState'),
               'ERROR',
-              this.get('backend.type')
+              this.get('backendType')
             );
           }
         })
