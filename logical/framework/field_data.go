@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/mitchellh/mapstructure"
@@ -188,9 +189,18 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 
 	case TypeMap:
 		var result map[string]interface{}
-		if err := mapstructure.WeakDecode(raw, &result); err != nil {
-			return nil, true, err
+
+		switch inp := raw.(type) {
+		case string:
+			if err := jsonutil.DecodeJSON([]byte(inp), &result); err != nil {
+				return nil, true, err
+			}
+		default:
+			if err := mapstructure.WeakDecode(raw, &result); err != nil {
+				return nil, true, err
+			}
 		}
+
 		return result, true, nil
 
 	case TypeDurationSecond:
@@ -252,9 +262,18 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 
 	case TypeSlice:
 		var result []interface{}
-		if err := mapstructure.WeakDecode(raw, &result); err != nil {
-			return nil, true, err
+
+		switch inp := raw.(type) {
+		case string:
+			if err := jsonutil.DecodeJSON([]byte(inp), &result); err != nil {
+				return nil, true, err
+			}
+		default:
+			if err := mapstructure.WeakDecode(raw, &result); err != nil {
+				return nil, true, err
+			}
 		}
+
 		return result, true, nil
 
 	case TypeStringSlice:
