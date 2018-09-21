@@ -269,7 +269,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing command value"), nil
 	}
 
-	// For backwards compatibility, also accept args as part of command.  Don't
+	// For backwards compatibility, also accept args as part of command. Don't
 	// accepts args in both command and args.
 	args := d.Get("args").([]string)
 	parts := strings.Split(command, " ")
@@ -281,12 +281,14 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		args = parts[1:]
 	}
 
+	env := d.Get("env").([]string)
+
 	sha256Bytes, err := hex.DecodeString(sha256)
 	if err != nil {
 		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
 	}
 
-	err = b.Core.pluginCatalog.Set(ctx, pluginName, parts[0], args, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(ctx, pluginName, parts[0], args, env, sha256Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -3524,6 +3526,11 @@ plugin directory.`,
 	},
 	"plugin-catalog_args": {
 		`The args passed to plugin command.`,
+		"",
+	},
+	"plugin-catalog_env": {
+		`The environment variables passed to plugin command.
+Each entry is of the form "key=value".`,
 		"",
 	},
 	"leases": {

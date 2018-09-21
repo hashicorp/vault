@@ -513,7 +513,7 @@ type Auth struct {
 	GroupAliases []*logical.Alias `sentinel:"" protobuf:"bytes,12,rep,name=group_aliases,json=groupAliases,proto3" json:"group_aliases,omitempty"`
 	// If set, restricts usage of the certificates to client IPs falling within
 	// the range of the specified CIDR(s).
-	BoundCidrs []string `sentinel:"" protobuf:"bytes,13,rep,name=bound_cidrs,json=boundCidrs,proto3" json:"bound_cidrs,omitempty"`
+	BoundCIDRs []string `sentinel:"" protobuf:"bytes,13,rep,name=bound_cidrs,json=boundCidrs,proto3" json:"bound_cidrs,omitempty"`
 	// TokenPolicies and IdentityPolicies break down the list in Policies to
 	// help determine where a policy was sourced
 	TokenPolicies        []string `sentinel:"" protobuf:"bytes,14,rep,name=token_policies,json=tokenPolicies,proto3" json:"token_policies,omitempty"`
@@ -631,9 +631,9 @@ func (m *Auth) GetGroupAliases() []*logical.Alias {
 	return nil
 }
 
-func (m *Auth) GetBoundCidrs() []string {
+func (m *Auth) GetBoundCIDRs() []string {
 	if m != nil {
-		return m.BoundCidrs
+		return m.BoundCIDRs
 	}
 	return nil
 }
@@ -667,7 +667,7 @@ type TokenEntry struct {
 	Role                 string            `sentinel:"" protobuf:"bytes,12,opt,name=role,proto3" json:"role,omitempty"`
 	Period               int64             `sentinel:"" protobuf:"varint,13,opt,name=period,proto3" json:"period,omitempty"`
 	EntityID             string            `sentinel:"" protobuf:"bytes,14,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
-	BoundCidrs           []string          `sentinel:"" protobuf:"bytes,15,rep,name=bound_cidrs,json=boundCidrs,proto3" json:"bound_cidrs,omitempty"`
+	BoundCIDRs           []string          `sentinel:"" protobuf:"bytes,15,rep,name=bound_cidrs,json=boundCidrs,proto3" json:"bound_cidrs,omitempty"`
 	NamespaceID          string            `sentinel:"" protobuf:"bytes,16,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
 	CubbyholeID          string            `sentinel:"" protobuf:"bytes,17,opt,name=cubbyhole_id,json=cubbyholeId,proto3" json:"cubbyhole_id,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
@@ -797,9 +797,9 @@ func (m *TokenEntry) GetEntityID() string {
 	return ""
 }
 
-func (m *TokenEntry) GetBoundCidrs() []string {
+func (m *TokenEntry) GetBoundCIDRs() []string {
 	if m != nil {
-		return m.BoundCidrs
+		return m.BoundCIDRs
 	}
 	return nil
 }

@@ -274,7 +274,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 1. Generate an one time password (OTP) to use:
 
     ```plaintext
-    $ vault operator generate-root -generate-otp
+    $ vault operator generate-root -dr-token -generate-otp
     HenFLWmt0AgrjWJp/RECzQ==
     ```
 
@@ -361,7 +361,7 @@ entered by each key holder via **`/sys/replication/dr/secondary/generate-operati
     **Example:**
 
     ```plaintext
-    $ vault operator generate-root \
+    $ vault operator generate-root -dr-token \
             -decode="dKNQqNmh3JfJcSZdGlkttQ==" \
             -otp="HenFLWmt0AgrjWJp/RECzQ=="
 
@@ -426,7 +426,7 @@ using the OTP generated earlier. (Be sure to enter your OTP in the command.)
     **Example:**
 
     ```
-    $ vault operator generate-root \
+    $ vault operator generate-root -dr-token \
             -otp="vZpZZf5UI1nvB3A5/7Xq9A==" \          
             -decode="cuplaFGYduDEY6ZVC5IfaA=="
 

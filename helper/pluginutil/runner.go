@@ -43,6 +43,7 @@ type PluginRunner struct {
 	Name           string                      `json:"name" structs:"name"`
 	Command        string                      `json:"command" structs:"command"`
 	Args           []string                    `json:"args" structs:"args"`
+	Env            []string                    `json:"env" structs:"env"`
 	Sha256         []byte                      `json:"sha256" structs:"sha256"`
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
@@ -65,6 +66,10 @@ func (r *PluginRunner) RunMetadataMode(ctx context.Context, wrapper RunnerUtil, 
 
 func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger, isMetadataMode bool) (*plugin.Client, error) {
 	cmd := exec.Command(r.Command, r.Args...)
+
+	// `env` should always go last to avoid overwriting internal values that might
+	// have been provided externally.
+	cmd.Env = append(cmd.Env, r.Env...)
 	cmd.Env = append(cmd.Env, env...)
 
 	// Add the mlock setting to the ENV of the plugin
