@@ -31,6 +31,6 @@ module('Acceptance | settings/auth/enable', function(hooks) {
       'vault.cluster.access.methods',
       'redirects to the auth backend list page'
     );
-    assert.ok(listPage.backendLinks().findById(path), 'mount is present in the list');
+    assert.ok(listPage.findLinkById(path), 'mount is present in the list');
   });
 });

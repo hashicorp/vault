@@ -13,18 +13,14 @@ module('Acceptance | policies/acl', function(hooks) {
 
   test('it lists default and root acls', async function(assert) {
     await page.visit({ type: 'acl' });
-    let policies = page.policies();
     assert.equal(currentURL(), '/vault/policies/acl');
-    assert.ok(policies.findByName('root'), 'root policy shown in the list');
-    assert.ok(policies.findByName('default'), 'default policy shown in the list');
+    assert.ok(page.findPolicyByName('root'), 'root policy shown in the list');
+    assert.ok(page.findPolicyByName('default'), 'default policy shown in the list');
   });
 
   test('it navigates to show when clicking on the link', async function(assert) {
     await page.visit({ type: 'acl' });
-    await page
-      .policies()
-      .findByName('default')
-      .click();
+    await page.findPolicyByName('default').click();
     assert.equal(currentRouteName(), 'vault.cluster.policy.show');
     assert.equal(currentURL(), '/vault/policy/acl/default');
   });
