@@ -79,7 +79,8 @@ func (lm *LockManager) InvalidatePolicy(name string) {
 
 // RestorePolicy acquires an exclusive lock on the policy name and restores the
 // given policy along with the archive.
-func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storage, name, backup string) error {
+func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storage, name, backup string, force bool) error {
+	//q.Q("force in RestorePolicy=", force)
 	backupBytes, err := base64.StdEncoding.DecodeString(backup)
 	if err != nil {
 		return err
@@ -106,9 +107,14 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	// If the policy is in cache, error out. Anywhere that would put it in the
 	// cache will also be protected by the mutex above, so we don't need to
 	// re-check the cache later.
-	_, ok := lm.cache.Load(name)
+	//q.Q("lm.useCache=", lm.useCache)
+	pRaw, ok := lm.cache.Load(name)
 	if ok {
-		return fmt.Errorf(fmt.Sprintf("key %q already exists", name))
+		//q.Q("found key in cache lookup")
+		if !force {
+			return fmt.Errorf(fmt.Sprintf("key %q already exists", name))
+		}
+		//q.Q("continuing due to force")
 	}
 
 	// If the policy exists in storage, error out
@@ -117,7 +123,32 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 		return err
 	}
 	if p != nil {
-		return fmt.Errorf(fmt.Sprintf("key %q already exists", name))
+		//q.Q("found key in storage lookup")
+		if !force {
+			return fmt.Errorf(fmt.Sprintf("key %q already exists", name))
+		}
+		//q.Q("continuing from load storage")
+	}
+
+	if force {
+		if pRaw != nil {
+			p = pRaw.(*Policy)
+			//q.Q("locking from pRaw")
+			p.l.Lock()
+			defer func() {
+				//q.Q("unlocking from pRaw")
+				p.l.Unlock()
+			}()
+		} else if p != nil {
+			//q.Q("locking from p")
+			p.l.Lock()
+			defer func() {
+				//q.Q("unlocking from p")
+				p.l.Unlock()
+			}()
+		} else {
+			//q.Q("p and pRaw were both nil")
+		}
 	}
 
 	// We don't need to grab policy locks as we have ensured it doesn't already
