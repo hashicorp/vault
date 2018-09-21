@@ -120,10 +120,6 @@ export default Route.extend(UnloadModelRoute, {
     },
 
     willTransition(transition) {
-      const mode = this.routeName.split('.').pop();
-      if (mode === 'show') {
-        return transition;
-      }
       if (this.get('hasChanges')) {
         if (
           window.confirm(
@@ -132,12 +128,13 @@ export default Route.extend(UnloadModelRoute, {
         ) {
           this.unloadModel();
           this.set('hasChanges', false);
-          return transition;
+          return true;
         } else {
           transition.abort();
           return false;
         }
       }
+      return this._super(...arguments);
     },
 
     hasDataChanges(hasChanges) {
