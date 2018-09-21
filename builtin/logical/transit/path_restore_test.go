@@ -129,6 +129,7 @@ func TestTransit_Restore(t *testing.T) {
 			ExpectedErr: keyExitsError,
 		},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			var resp *logical.Response
@@ -176,7 +177,6 @@ func TestTransit_Restore(t *testing.T) {
 			if err != nil && tc.ExpectedErr == nil {
 				t.Fatalf("unexpected error:%s", err)
 			}
-			// TODO Check errors match
 
 			if err != nil && tc.ExpectedErr != nil {
 				if err.Error() != tc.ExpectedErr.Error() {
