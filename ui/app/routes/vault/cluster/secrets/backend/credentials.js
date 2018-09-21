@@ -11,23 +11,19 @@ export default Route.extend({
   },
 
   model(params) {
-    const role = params.secret;
-    const backendModel = this.backendModel();
-    const backend = backendModel.get('id');
+    let role = params.secret;
+    let backendModel = this.backendModel();
+    let backendPath = backendModel.get('id');
+    let backendType = backendModel.get('type');
 
     if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendModel.get('type'))) {
-      return this.transitionTo('vault.cluster.secrets.backend.list-root', backend);
+      return this.transitionTo('vault.cluster.secrets.backend.list-root', backendPath);
     }
     return resolve({
-      backend,
-      id: role,
-      name: role,
+      backendPath,
+      backendType,
+      roleName: role,
     });
-  },
-
-  setupController(controller) {
-    this._super(...arguments);
-    controller.set('backend', this.backendModel());
   },
 
   resetController(controller) {
