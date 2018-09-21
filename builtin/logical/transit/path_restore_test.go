@@ -78,9 +78,12 @@ func TestTransit_Restore(t *testing.T) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
 	}
 
+	// helper func to get a pointer value for a boolean
 	boolPtr := func(b bool) *bool {
 		return &b
 	}
+
+	keyExitsError := fmt.Errorf("key \"%s\" already exists", keyName)
 
 	testCases := []struct {
 		Name string
@@ -100,7 +103,7 @@ func TestTransit_Restore(t *testing.T) {
 			// key already exists
 			Name:        "Restore-without-force",
 			Seed:        true,
-			ExpectedErr: fmt.Errorf("key \"%s\" already exists", keyName),
+			ExpectedErr: keyExitsError,
 		},
 		{
 			// key already exists, use force to force a restore
@@ -112,6 +115,18 @@ func TestTransit_Restore(t *testing.T) {
 			// using force shouldn't matter if the key doesn't exist
 			Name:  "Restore-with-force-no-seed",
 			Force: boolPtr(true),
+		},
+		{
+			// using force shouldn't matter if the key doesn't exist
+			Name:  "Restore-force-false",
+			Force: boolPtr(false),
+		},
+		{
+			// using false force should still error
+			Name:        "Restore-force-false",
+			Seed:        true,
+			Force:       boolPtr(false),
+			ExpectedErr: keyExitsError,
 		},
 	}
 	for _, tc := range testCases {
