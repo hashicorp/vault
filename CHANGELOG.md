@@ -8,6 +8,7 @@ BUG FIXES:
 
 IMPROVEMENTS:
 
+ * cli: Format TTLs for non-secret responses [GH-5367] 
  * plugins: Add `env` parameter when registering plugins to the catalog to allow
    operators to include environment variables during plugin execution. [GH-5359]
 
