@@ -80,7 +80,6 @@ func (lm *LockManager) InvalidatePolicy(name string) {
 // RestorePolicy acquires an exclusive lock on the policy name and restores the
 // given policy along with the archive.
 func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storage, name, backup string, force bool) error {
-	//q.Q("force in RestorePolicy=", force)
 	backupBytes, err := base64.StdEncoding.DecodeString(backup)
 	if err != nil {
 		return err
@@ -104,55 +103,49 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	lock.Lock()
 	defer lock.Unlock()
 
-	// If the policy is in cache, error out. Anywhere that would put it in the
-	// cache will also be protected by the mutex above, so we don't need to
-	// re-check the cache later.
-	//q.Q("lm.useCache=", lm.useCache)
+	// If the policy is in cache and 'force' is not specified, error out. Anywhere
+	// that would put it in the cache will also be protected by the mutex above,
+	// so we don't need to re-check the cache later.
 	pRaw, ok := lm.cache.Load(name)
-	if ok {
-		//q.Q("found key in cache lookup")
-		if !force {
-			return fmt.Errorf(fmt.Sprintf("key %q already exists", name))
-		}
-		//q.Q("continuing due to force")
+	if ok && !force {
+		return fmt.Errorf(fmt.Sprintf("key %q already exists", name))
 	}
 
-	// If the policy exists in storage, error out
-	p, err := lm.getPolicyFromStorage(ctx, storage, name)
-	if err != nil {
-		return err
+	// Conditionally look up the policy from storage, depending on the use of
+	// 'force' and if the policy was found in cache.
+	//
+	// - If was not found in cache and we are not using 'force', look for it in
+	// storage. If found, error out.
+	//
+	// - If it was found in cache and we are using 'force', pRaw will not be nil
+	// and we do not look the policy up from storage
+	//
+	// - If it was found in cache and we are not using 'force', we should have
+	// returned above wih error
+	var p *Policy
+	if pRaw == nil {
+		p, err = lm.getPolicyFromStorage(ctx, storage, name)
+		if err != nil {
+			return err
+		}
+		if p != nil && !force {
+			return fmt.Errorf(fmt.Sprintf("key %q already exists", name))
+		}
+	}
+
+	// If both pRaw and p above are nil and 'force' is specified, we don't need to
+	// grab policy locks as we have ensured it doesn't already exist, so there
+	// will be no races as nothing else has this pointer. If 'force' was not used,
+	// an error would have been returned by now if the policy already existed
+	if pRaw != nil {
+		p = pRaw.(*Policy)
 	}
 	if p != nil {
-		//q.Q("found key in storage lookup")
-		if !force {
-			return fmt.Errorf(fmt.Sprintf("key %q already exists", name))
-		}
-		//q.Q("continuing from load storage")
+		p.l.Lock()
+		defer func() {
+			p.l.Unlock()
+		}()
 	}
-
-	if force {
-		if pRaw != nil {
-			p = pRaw.(*Policy)
-			//q.Q("locking from pRaw")
-			p.l.Lock()
-			defer func() {
-				//q.Q("unlocking from pRaw")
-				p.l.Unlock()
-			}()
-		} else if p != nil {
-			//q.Q("locking from p")
-			p.l.Lock()
-			defer func() {
-				//q.Q("unlocking from p")
-				p.l.Unlock()
-			}()
-		} else {
-			//q.Q("p and pRaw were both nil")
-		}
-	}
-
-	// We don't need to grab policy locks as we have ensured it doesn't already
-	// exist, so there will be no races as nothing else has this pointer.
 
 	// Restore the archived keys
 	if keyData.ArchivedKeys != nil {
