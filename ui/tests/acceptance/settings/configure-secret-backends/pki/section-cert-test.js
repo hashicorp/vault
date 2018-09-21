@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
@@ -116,7 +116,8 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await page.visit({ backend: intermediatePath });
     await page.form.setSignedIntermediateBtn().signedIntermediate(intermediateCert);
 
-    await page.form.submit(),
-      assert.equal(page.form.downloadLinks.length, 3, 'includes the caChain download link');
+    await page.form.submit();
+    await settled();
+    assert.equal(page.form.downloadLinks.length, 3, 'includes the caChain download link');
   });
 });

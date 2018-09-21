@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL, find } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, find, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -126,6 +126,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
       await click(`[data-test-ssh-role-delete="${role.name}"] button`);
       await click(`[data-test-confirm-button]`);
 
+      await settled();
       assert
         .dom(`[data-test-secret-link="${role.name}"]`)
         .doesNotExist(`${role.type}: role is no longer in the list`);

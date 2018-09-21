@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL, find } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, find, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -88,6 +88,7 @@ module('Acceptance | aws secret backend', function(hooks) {
     await click(`[data-test-aws-role-delete="${roleName}"] button`);
 
     await withFlash(click(`[data-test-confirm-button]`));
+    await settled();
     assert.dom(`[data-test-secret-link="${roleName}"]`).doesNotExist(`aws: role is no longer in the list`);
   });
 });
