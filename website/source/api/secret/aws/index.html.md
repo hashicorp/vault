@@ -325,39 +325,19 @@ $ curl \
     http://127.0.0.1:8200/v1/aws/roles/example-role
 ```
 
-## Generate Credentials
+## Generate IAM Credentials
 
-This endpoint generates credentials based on the named role. This role must be
+This endpoint generates IAM credentials based on the named role. This role must be
 created before queried.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `GET`    | `/aws/creds/:name`           | `200 application/json` |
-| `GET`    | `/aws/sts/:name`             | `200 application/json` |
-
-The `/aws/creds` and `/aws/sts` endpoints are almost identical. The exception is
-when retrieving credentials for a role that was specified with the legacy `arn`
-or `policy` parameter. In this case, credentials retrieved through `/aws/sts`
-must be of either the `assumed_role` or `federation_token` types, and
-credentials retrieved through `/aws/creds` must be of the `iam_user` type.
 
 ### Parameters
 
 - `name` `(string: <required>)` – Specifies the name of the role to generate
   credentials against. This is part of the request URL.
-- `role_arn` `(string)` – The ARN of the role to assume if `credential_type` on
-  the Vault role is `assumed_role`. Must match one of the allowed role ARNs in
-  the Vault role. Optional if the Vault role only allows a single AWS role ARN;
-  required otherwise.
-- `ttl` `(string: "3600s")` – Specifies the TTL for the use of the STS token.
-  This is specified as a string with a duration suffix. Valid only when
-  `credential_type` is `assumed_role` or `federation_token`. AWS places limits
-  on the maximum TTL allowed. See the AWS documentation on the `DurationSeconds`
-  parameter for
-  [AssumeRole](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html)
-  (for `assumed_role` credential types) and
-  [GetFederationToken](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html)
-  (for `federation_token` credential types) for more details.
 
 ### Sample Request
 
@@ -378,3 +358,63 @@ $ curl \
   }
 }
 ```
+
+## Generate IAM Credentials with STS
+
+This endpoint generates IAM credentials with an STS token based on the named role. This role must be
+created before queried.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`    | `/aws/creds/:name`           | `200 application/json` |
+| `POST`    | `/aws/sts/:name`             | `200 application/json` |
+
+The `/aws/sts` endpoint is deprecated but available for backwards compatibility with roles that were specified with the legacy `arn` or `policy` parameters. 
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the role to generate
+  credentials against. This is part of the request URL.
+- `role_arn` `(string)` – The ARN of the role to assume if `credential_type` on
+  the Vault role is `assumed_role`. Must match one of the allowed role ARNs in
+  the Vault role. Optional if the Vault role only allows a single AWS role ARN;
+  required otherwise.
+- `ttl` `(string: "3600s")` – Specifies the TTL for the use of the STS token.
+  This is specified as a string with a duration suffix. AWS places limits
+  on the maximum TTL allowed. See the AWS documentation on the `DurationSeconds`
+  parameter for
+  [AssumeRole](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html)
+  (for `assumed_role` credential types) and
+  [GetFederationToken](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html)
+  (for `federation_token` credential types) for more details.
+
+### Sample Payload
+
+```json
+{
+  "ttl": "900s"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/aws/creds/example-role
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "access_key": "AKIA...",
+    "secret_key": "xlCs...",
+    "security_token": "429255"
+  }
+}
+```
+
