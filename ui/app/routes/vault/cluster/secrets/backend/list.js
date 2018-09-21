@@ -31,6 +31,7 @@ export default Route.extend({
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
       return this.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
+    this.store.unloadAll('capabilities');
   },
 
   getModelType(backend, tab) {
