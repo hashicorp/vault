@@ -9,6 +9,7 @@ export default ApplicationSerializer.extend({
         payload.data.key_info[role].zero_address = true;
       });
     }
+    if (!payload.data.key_info) return payload.data.keys;
     ret = payload.data.keys.map(key => {
       let model = {
         id: key,
