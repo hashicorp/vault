@@ -66,14 +66,15 @@ export default ApplicationAdapter.extend({
         id,
         name: id,
         backend,
+        data: {},
       };
 
       results.forEach(result => {
         if (result.value) {
           if (result.value.data.roles) {
-            resp = assign({}, resp, { zero_address_roles: result.value.data.roles });
+            resp.data = assign({}, resp.data, { zero_address_roles: result.value.data.roles });
           } else {
-            resp = assign({}, resp, result.value);
+            resp.data = assign({}, resp.data, result.value.data);
           }
         }
       });
