@@ -11,12 +11,12 @@
       </h1>
     </p.levelLeft>
   </PageHeader>
-  <form {{action "saveLicense" licenseId on="submit"}}>
+  <form {{action "saveLicense" on="submit"}}>
     <div class="box is-sideless is-fullwidth is-marginless">
       <div class="field">
         <label for="license-id" class="is-label">License</label>
         <div class="control">
-          {{input id="license-id" class="input"}}
+          {{input id="license-id" valueBinding="licenseText" class="input"}}
         </div>
       </div>
     </div>
