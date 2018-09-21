@@ -22,4 +22,15 @@ export default Ember.Component.extend({
     this._super(...arguments);
     this.setProperties(this.get('model'));
   },
+
+  actions: {
+    saveLicense(text) {
+      let model = this.get('model');
+      model = model.createRecord(text);
+      this.set('model', model);
+      this.get('model').save().then(() => {
+        this.setProperties(this.get('model'));
+      });
+    },
+  },
 });
