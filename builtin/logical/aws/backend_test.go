@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"reflect"
@@ -52,13 +53,15 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_basicSTS(t *testing.T) {
+	roleName := generateUniqueRoleName()
+	t.Parallel()
 	accessKey := &awsAccessKey{}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createUser(t, accessKey)
-			createRole(t)
+			createRole(t, roleName)
 			// Sleep sometime because AWS is eventually consistent
 			// Both the createUser and createRole depend on this
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
@@ -71,11 +74,11 @@ func TestBackend_basicSTS(t *testing.T) {
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest}),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
 			testAccStepReadSTSWithArnPolicy(t, "test"),
-			testAccStepWriteArnRoleRef(t, testRoleName),
-			testAccStepRead(t, "sts", testRoleName, []credentialTestFunc{describeInstancesTest}),
+			testAccStepWriteArnRoleRef(t, roleName),
+			testAccStepRead(t, "sts", roleName, []credentialTestFunc{describeInstancesTest}),
 		},
 		Teardown: func() error {
-			return teardown(accessKey)
+			return teardown(accessKey, roleName)
 		},
 	})
 }
@@ -191,9 +194,7 @@ func getAccountID() (string, error) {
 	return *res.Account, nil
 }
 
-const testRoleName = "Vault-Acceptance-Test-AWS-Assume-Role"
-
-func createRole(t *testing.T) {
+func createRole(t *testing.T, roleName string) {
 	const testRoleAssumePolicy = `{
       "Version": "2012-10-17",
       "Statement": [
@@ -216,11 +217,11 @@ func createRole(t *testing.T) {
 
 	params := &iam.CreateRoleInput{
 		AssumeRolePolicyDocument: aws.String(trustPolicy),
-		RoleName:                 aws.String(testRoleName),
+		RoleName:                 aws.String(roleName),
 		Path:                     aws.String("/"),
 	}
 
-	log.Printf("[INFO] AWS CreateRole: %s", testRoleName)
+	log.Printf("[INFO] AWS CreateRole: %s", roleName)
 	_, err := svc.CreateRole(params)
 
 	if err != nil {
@@ -229,7 +230,7 @@ func createRole(t *testing.T) {
 
 	attachment := &iam.AttachRolePolicyInput{
 		PolicyArn: aws.String(ec2PolicyArn),
-		RoleName:  aws.String(testRoleName), // Required
+		RoleName:  aws.String(roleName), // Required
 	}
 	_, err = svc.AttachRolePolicy(attachment)
 
@@ -320,7 +321,7 @@ func createUser(t *testing.T, accessKey *awsAccessKey) {
 	accessKey.SecretAccessKey = *genAccessKey.SecretAccessKey
 }
 
-func deleteTestRole() error {
+func deleteTestRole(roleName string) error {
 	awsConfig := &aws.Config{
 		Region:     aws.String("us-east-1"),
 		HTTPClient: cleanhttp.DefaultClient(),
@@ -329,7 +330,7 @@ func deleteTestRole() error {
 
 	attachment := &iam.DetachRolePolicyInput{
 		PolicyArn: aws.String(ec2PolicyArn),
-		RoleName:  aws.String(testRoleName), // Required
+		RoleName:  aws.String(roleName), // Required
 	}
 	_, err := svc.DetachRolePolicy(attachment)
 	if err != nil {
@@ -338,10 +339,10 @@ func deleteTestRole() error {
 	}
 
 	params := &iam.DeleteRoleInput{
-		RoleName: aws.String(testRoleName),
+		RoleName: aws.String(roleName),
 	}
 
-	log.Printf("[INFO] AWS DeleteRole: %s", testRoleName)
+	log.Printf("[INFO] AWS DeleteRole: %s", roleName)
 	_, err = svc.DeleteRole(params)
 
 	if err != nil {
@@ -351,9 +352,9 @@ func deleteTestRole() error {
 	return nil
 }
 
-func teardown(accessKey *awsAccessKey) error {
+func teardown(accessKey *awsAccessKey, roleName string) error {
 
-	if err := deleteTestRole(); err != nil {
+	if err := deleteTestRole(roleName); err != nil {
 		return err
 	}
 	awsConfig := &aws.Config{
@@ -702,6 +703,8 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 }
 
 func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
+	roleName := generateUniqueRoleName()
+	t.Parallel()
 	// This looks a bit curious. The policy document and the role document act
 	// as a logical intersection of policies. The role allows ec2:Describe*
 	// (among other permissions). This policy allows everything BUT
@@ -720,14 +723,14 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 `
 	roleData := map[string]interface{}{
 		"policy_document": allowAllButDescribeAzs,
-		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", os.Getenv("AWS_ACCOUNT_ID"), testRoleName)},
+		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", os.Getenv("AWS_ACCOUNT_ID"), roleName)},
 		"credential_type": assumedRoleCred,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t)
+			createRole(t, roleName)
 			// Sleep sometime because AWS is eventually consistent
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
@@ -739,7 +742,9 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
 			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, describeAzsTestUnauthorized}),
 		},
-		Teardown: deleteTestRole,
+		Teardown: func() error {
+			return deleteTestRole(roleName)
+		},
 	})
 }
 
@@ -793,6 +798,10 @@ func testAccStepWriteArnRoleRef(t *testing.T, roleName string) logicaltest.TestS
 			"arn": fmt.Sprintf("arn:aws:iam::%s:role/%s", os.Getenv("AWS_ACCOUNT_ID"), roleName),
 		},
 	}
+}
+
+func generateUniqueRoleName() string {
+	return fmt.Sprintf("Vault-Acceptance-Test-%d", rand.Intn(1000000))
 }
 
 type awsAccessKey struct {
