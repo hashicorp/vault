@@ -54,13 +54,14 @@ func TestBackend_basic(t *testing.T) {
 
 func TestBackend_basicSTS(t *testing.T) {
 	roleName := generateUniqueRoleName()
+	userName := gneerateUniqueUserName()
 	t.Parallel()
 	accessKey := &awsAccessKey{}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createUser(t, accessKey)
+			createUser(t,  userName, accessKey)
 			createRole(t, roleName)
 			// Sleep sometime because AWS is eventually consistent
 			// Both the createUser and createRole depend on this
@@ -78,7 +79,7 @@ func TestBackend_basicSTS(t *testing.T) {
 			testAccStepRead(t, "sts", roleName, []credentialTestFunc{describeInstancesTest}),
 		},
 		Teardown: func() error {
-			return teardown(accessKey, roleName)
+			return teardown(accessKey, roleName, userName)
 		},
 	})
 }
@@ -239,9 +240,7 @@ func createRole(t *testing.T, roleName string) {
 	}
 }
 
-const testUserName = "Vault-Acceptance-Test-AWS-FederationToken"
-
-func createUser(t *testing.T, accessKey *awsAccessKey) {
+func createUser(t *testing.T, userName string, accessKey *awsAccessKey) {
 	// The sequence of user creation actions is carefully chosen to minimize
 	// impact of stolen IAM user credentials
 	// 1. Create user, without any permissions or credentials. At this point,
@@ -278,9 +277,9 @@ func createUser(t *testing.T, accessKey *awsAccessKey) {
 	svc := iam.New(session.New(awsConfig))
 
 	createUserInput := &iam.CreateUserInput{
-		UserName: aws.String(testUserName),
+		UserName: aws.String(userName),
 	}
-	log.Printf("[INFO] AWS CreateUser: %s", testUserName)
+	log.Printf("[INFO] AWS CreateUser: %s", userName)
 	_, err := svc.CreateUser(createUserInput)
 	if err != nil {
 		t.Fatalf("AWS CreateUser failed: %v", err)
@@ -289,7 +288,7 @@ func createUser(t *testing.T, accessKey *awsAccessKey) {
 	putPolicyInput := &iam.PutUserPolicyInput{
 		PolicyDocument: aws.String(timebombPolicy),
 		PolicyName:     aws.String("SelfDestructionTimebomb"),
-		UserName:       aws.String(testUserName),
+		UserName:       aws.String(userName),
 	}
 	_, err = svc.PutUserPolicy(putPolicyInput)
 	if err != nil {
@@ -298,7 +297,7 @@ func createUser(t *testing.T, accessKey *awsAccessKey) {
 
 	attachUserPolicyInput := &iam.AttachUserPolicyInput{
 		PolicyArn: aws.String("arn:aws:iam::aws:policy/AdministratorAccess"),
-		UserName:  aws.String(testUserName),
+		UserName:  aws.String(userName),
 	}
 	_, err = svc.AttachUserPolicy(attachUserPolicyInput)
 	if err != nil {
@@ -306,7 +305,7 @@ func createUser(t *testing.T, accessKey *awsAccessKey) {
 	}
 
 	createAccessKeyInput := &iam.CreateAccessKeyInput{
-		UserName: aws.String(testUserName),
+		UserName: aws.String(userName),
 	}
 	createAccessKeyOutput, err := svc.CreateAccessKey(createAccessKeyInput)
 	if err != nil {
@@ -352,7 +351,7 @@ func deleteTestRole(roleName string) error {
 	return nil
 }
 
-func teardown(accessKey *awsAccessKey, roleName string) error {
+func teardown(accessKey *awsAccessKey, roleName, userName string) error {
 
 	if err := deleteTestRole(roleName); err != nil {
 		return err
@@ -365,7 +364,7 @@ func teardown(accessKey *awsAccessKey, roleName string) error {
 
 	userDetachment := &iam.DetachUserPolicyInput{
 		PolicyArn: aws.String("arn:aws:iam::aws:policy/AdministratorAccess"),
-		UserName:  aws.String(testUserName),
+		UserName:  aws.String(userName),
 	}
 	_, err := svc.DetachUserPolicy(userDetachment)
 	if err != nil {
@@ -375,7 +374,7 @@ func teardown(accessKey *awsAccessKey, roleName string) error {
 
 	deleteAccessKeyInput := &iam.DeleteAccessKeyInput{
 		AccessKeyId: aws.String(accessKey.AccessKeyID),
-		UserName:    aws.String(testUserName),
+		UserName:    aws.String(userName),
 	}
 	_, err = svc.DeleteAccessKey(deleteAccessKeyInput)
 	if err != nil {
@@ -385,7 +384,7 @@ func teardown(accessKey *awsAccessKey, roleName string) error {
 
 	deleteUserPolicyInput := &iam.DeleteUserPolicyInput{
 		PolicyName: aws.String("SelfDestructionTimebomb"),
-		UserName:   aws.String(testUserName),
+		UserName:   aws.String(userName),
 	}
 	_, err = svc.DeleteUserPolicy(deleteUserPolicyInput)
 	if err != nil {
@@ -393,9 +392,9 @@ func teardown(accessKey *awsAccessKey, roleName string) error {
 		return err
 	}
 	deleteUserInput := &iam.DeleteUserInput{
-		UserName: aws.String(testUserName),
+		UserName: aws.String(userName),
 	}
-	log.Printf("[INFO] AWS DeleteUser: %s", testUserName)
+	log.Printf("[INFO] AWS DeleteUser: %s", userName)
 	_, err = svc.DeleteUser(deleteUserInput)
 	if err != nil {
 		log.Printf("[WARN] AWS DeleteUser failed: %v", err)
@@ -802,6 +801,11 @@ func testAccStepWriteArnRoleRef(t *testing.T, roleName string) logicaltest.TestS
 
 func generateUniqueRoleName() string {
 	return fmt.Sprintf("Vault-Acceptance-Test-%d", rand.Intn(1000000))
+}
+
+func gneerateUniqueUserName() string {
+	return fmt.Sprintf("Vault-Acceptance-Test-%d", rand.Intn(1000000))
+
 }
 
 type awsAccessKey struct {
