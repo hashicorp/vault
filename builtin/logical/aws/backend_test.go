@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,6 +27,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+var initSetup sync.Once
+
 type mockIAMClient struct {
 	iamiface.IAMAPI
 }
@@ -40,6 +43,7 @@ func getBackend(t *testing.T) logical.Backend {
 }
 
 func TestBackend_basic(t *testing.T) {
+	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
@@ -53,16 +57,21 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_basicSTS(t *testing.T) {
-	roleName := generateUniqueRoleName()
-	userName := gneerateUniqueUserName()
 	t.Parallel()
+	awsAccountID, err := getAccountID()
+	if err != nil {
+		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
+	}
+	roleName := generateUniqueRoleName(t.Name())
+	userName := generateUniqueUserName(t.Name())
 	accessKey := &awsAccessKey{}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createUser(t,  userName, accessKey)
-			createRole(t, roleName)
+			createUser(t, userName, accessKey)
+			createRole(t, roleName, awsAccountID)
 			// Sleep sometime because AWS is eventually consistent
 			// Both the createUser and createRole depend on this
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
@@ -75,8 +84,8 @@ func TestBackend_basicSTS(t *testing.T) {
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest}),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
 			testAccStepReadSTSWithArnPolicy(t, "test"),
-			testAccStepWriteArnRoleRef(t, roleName),
-			testAccStepRead(t, "sts", roleName, []credentialTestFunc{describeInstancesTest}),
+			testAccStepWriteArnRoleRef(t, "test2", roleName, awsAccountID),
+			testAccStepRead(t, "sts", "test2", []credentialTestFunc{describeInstancesTest}),
 		},
 		Teardown: func() error {
 			return teardown(accessKey, roleName, userName)
@@ -85,6 +94,7 @@ func TestBackend_basicSTS(t *testing.T) {
 }
 
 func TestBackend_policyCrud(t *testing.T) {
+	t.Parallel()
 	compacted, err := compactJSON(testDynamoPolicy)
 	if err != nil {
 		t.Fatalf("bad: %s", err)
@@ -104,6 +114,7 @@ func TestBackend_policyCrud(t *testing.T) {
 }
 
 func TestBackend_throttled(t *testing.T) {
+	t.Parallel()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -159,20 +170,12 @@ func TestBackend_throttled(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
-		log.Println("[INFO] Test: Using us-west-2 as test region")
-		os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
-	}
-
-	if v := os.Getenv("AWS_ACCOUNT_ID"); v == "" {
-		accountID, err := getAccountID()
-		if err != nil {
-			t.Logf("Unable to retrive user via iam:GetUser: %#v", err)
-			t.Skip("AWS_ACCOUNT_ID not explicitly set and could not be read from iam:GetUser for acceptance tests, skipping")
+	initSetup.Do(func() {
+		if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
+			log.Println("[INFO] Test: Using us-west-2 as test region")
+			os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 		}
-		log.Printf("[INFO] Test: Used %s as AWS_ACCOUNT_ID", accountID)
-		os.Setenv("AWS_ACCOUNT_ID", accountID)
-	}
+	})
 }
 
 func getAccountID() (string, error) {
@@ -195,7 +198,7 @@ func getAccountID() (string, error) {
 	return *res.Account, nil
 }
 
-func createRole(t *testing.T, roleName string) {
+func createRole(t *testing.T, roleName, awsAccountID string) {
 	const testRoleAssumePolicy = `{
       "Version": "2012-10-17",
       "Statement": [
@@ -214,7 +217,7 @@ func createRole(t *testing.T, roleName string) {
 		HTTPClient: cleanhttp.DefaultClient(),
 	}
 	svc := iam.New(session.New(awsConfig))
-	trustPolicy := fmt.Sprintf(testRoleAssumePolicy, os.Getenv("AWS_ACCOUNT_ID"))
+	trustPolicy := fmt.Sprintf(testRoleAssumePolicy, awsAccountID)
 
 	params := &iam.CreateRoleInput{
 		AssumeRolePolicyDocument: aws.String(trustPolicy),
@@ -659,6 +662,7 @@ func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) logical
 }
 
 func TestBackend_basicPolicyArnRef(t *testing.T) {
+	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
@@ -672,6 +676,7 @@ func TestBackend_basicPolicyArnRef(t *testing.T) {
 }
 
 func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
+	t.Parallel()
 	compacted, err := compactJSON(testDynamoPolicy)
 	if err != nil {
 		t.Fatalf("bad: %#v", err)
@@ -702,8 +707,8 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 }
 
 func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
-	roleName := generateUniqueRoleName()
 	t.Parallel()
+	roleName := generateUniqueRoleName(t.Name())
 	// This looks a bit curious. The policy document and the role document act
 	// as a logical intersection of policies. The role allows ec2:Describe*
 	// (among other permissions). This policy allows everything BUT
@@ -720,16 +725,21 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	}]
 }
 `
+	awsAccountID, err := getAccountID()
+	if err != nil {
+		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
+	}
 	roleData := map[string]interface{}{
 		"policy_document": allowAllButDescribeAzs,
-		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", os.Getenv("AWS_ACCOUNT_ID"), roleName)},
+		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
 		"credential_type": assumedRoleCred,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t, roleName)
+			createRole(t, roleName, awsAccountID)
 			// Sleep sometime because AWS is eventually consistent
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
@@ -748,6 +758,7 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 }
 
 func TestBackend_policyArnCrud(t *testing.T) {
+	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		Backend:        getBackend(t),
@@ -789,22 +800,22 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 	}
 }
 
-func testAccStepWriteArnRoleRef(t *testing.T, roleName string) logicaltest.TestStep {
+func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAccountID string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/" + roleName,
+		Path:      "roles/" + vaultRoleName,
 		Data: map[string]interface{}{
-			"arn": fmt.Sprintf("arn:aws:iam::%s:role/%s", os.Getenv("AWS_ACCOUNT_ID"), roleName),
+			"arn": fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, awsRoleName),
 		},
 	}
 }
 
-func generateUniqueRoleName() string {
-	return fmt.Sprintf("Vault-Acceptance-Test-%d", rand.Intn(1000000))
+func generateUniqueRoleName(prefix string) string {
+	return fmt.Sprintf("Vault-%s-%d", prefix, rand.Intn(1000000))
 }
 
-func gneerateUniqueUserName() string {
-	return fmt.Sprintf("Vault-Acceptance-Test-%d", rand.Intn(1000000))
+func generateUniqueUserName(prefix string) string {
+	return fmt.Sprintf("Vault-%s-%d", prefix, rand.Intn(1000000))
 
 }
 
