@@ -518,6 +518,7 @@ type Auth struct {
 	// help determine where a policy was sourced
 	TokenPolicies        []string `sentinel:"" protobuf:"bytes,14,rep,name=token_policies,json=tokenPolicies,proto3" json:"token_policies,omitempty"`
 	IdentityPolicies     []string `sentinel:"" protobuf:"bytes,15,rep,name=identity_policies,json=identityPolicies,proto3" json:"identity_policies,omitempty"`
+	ExplicitMaxTTL       int64    `sentinel:"" protobuf:"varint,16,opt,name=explicit_max_ttl,json=explicitMaxTtl,proto3" json:"explicit_max_ttl,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -650,6 +651,13 @@ func (m *Auth) GetIdentityPolicies() []string {
 		return m.IdentityPolicies
 	}
 	return nil
+}
+
+func (m *Auth) GetExplicitMaxTTL() int64 {
+	if m != nil {
+		return m.ExplicitMaxTTL
+	}
+	return 0
 }
 
 type TokenEntry struct {
