@@ -183,8 +183,8 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     .icon {
       &,
       &:first-child:last-child {
-        margin-left: -$size-10;
-        margin-right: $size-11;
+        position: relative;
+        left: -$size-10;
       }
     }
   }
