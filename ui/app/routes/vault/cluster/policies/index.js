@@ -1,18 +1,11 @@
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
+import ListRoute from 'vault/mixins/list-route';
 
-export default Route.extend(ClusterRoute, {
+export default Route.extend(ClusterRoute, ListRoute, {
   version: service(),
   wizard: service(),
-  queryParams: {
-    page: {
-      refreshModel: true,
-    },
-    pageFilter: {
-      refreshModel: true,
-    },
-  },
 
   activate() {
     if (this.get('wizard.featureState') === 'details') {
@@ -76,6 +69,10 @@ export default Route.extend(ClusterRoute, {
         this.store.clearAllDatasets();
       }
       return true;
+    },
+    reload() {
+      this.store.clearAllDatasets();
+      this.refresh();
     },
   },
 
