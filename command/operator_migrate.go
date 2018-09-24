@@ -173,12 +173,12 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 // migrateAll copies all keys in lexicographic order.
 func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
-	return dfsScan(from, func(path string) error {
+	return dfsScan(ctx, from, func(path string) error {
 		if path < c.flagStart || path == migrationLock {
 			return nil
 		}
 
-		entry, err := from.Get(context.Background(), path)
+		entry, err := from.Get(ctx, path)
 
 		if err != nil {
 			return errwrap.Wrapf("error reading entry: {{err}}", err)
@@ -188,7 +188,7 @@ func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.B
 			return nil
 		}
 
-		if err := to.Put(context.Background(), entry); err != nil {
+		if err := to.Put(ctx, entry); err != nil {
 			return errwrap.Wrapf("error writing entry: {{err}}", err)
 		}
 		c.logger.Info("moved key: " + path)
@@ -273,13 +273,13 @@ func parseStorage(result *migratorConfig, list *ast.ObjectList, name string) err
 
 // dfsScan will invoke cb with every key from source.
 // Keys will be traversed in lexicographic, depth-first order.
-func dfsScan(source physical.Backend, cb func(path string) error) error {
+func dfsScan(ctx context.Context, source physical.Backend, cb func(path string) error) error {
 	dfs := []string{""}
 
 	for l := len(dfs); l > 0; l = len(dfs) {
 		key := dfs[len(dfs)-1]
 		if key == "" || strings.HasSuffix(key, "/") {
-			children, err := source.List(context.Background(), key)
+			children, err := source.List(ctx, key)
 			if err != nil {
 				return errwrap.Wrapf("failed to scan for children: {{err}}", err)
 			}
