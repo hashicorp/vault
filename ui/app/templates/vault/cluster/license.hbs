@@ -1,7 +1,9 @@
-{{component 'license-info'
+{{license-info
   startTime=model.startTime
   expirationTime=model.expirationTime
   licenseId=model.licenseId
   features=model.features
+  text=model.text
   model=model
+  saveModel=(action "saveModel")
 }}

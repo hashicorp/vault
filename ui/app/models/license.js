@@ -25,4 +25,5 @@ export default DS.Model.extend({
   features: attr('array'),
   licenseId: attr('string'),
   startTime: attr('string'),
+  text: attr('string'),
 });
