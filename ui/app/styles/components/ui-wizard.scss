@@ -143,6 +143,7 @@
   padding: 0 $size-8;
   border-top: solid 1px $white;
   border-image: $dark-vault-gradient 1;
+  border-width: 1px 0 0;
   button {
     font-size: $size-7;
     font-weight: $font-weight-semibold;
