@@ -2142,7 +2142,7 @@
 			"revisionTime": "2018-06-28T10:27:55Z"
 		},
 		{
-			"path": "gitub.com/hashicorp/vault-plugin-auth-jwt",
+			"path": "github.com/hashicorp/vault-plugin-auth-jwt",
 			"revision": ""
 		},
 		{
