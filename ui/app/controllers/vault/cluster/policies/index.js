@@ -55,12 +55,12 @@ export default Controller.extend({
       model
         .destroyRecord()
         .then(() => {
+          // this will clear the dataset cache on the store
+          this.send('reload');
           flash.success(`${policyType.toUpperCase()} policy "${name}" was successfully deleted.`);
           if (this.get('wizard.featureState') === 'delete') {
             this.get('wizard').transitionFeatureMachine('delete', 'CONTINUE', policyType);
           }
-          // this will clear the dataset cache on the store
-          this.send('willTransition');
         })
         .catch(e => {
           let errors = e.errors ? e.errors.join('') : e.message;
