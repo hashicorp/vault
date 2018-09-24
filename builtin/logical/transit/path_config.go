@@ -33,6 +33,11 @@ to be used for signing. If set to zero, only
 the latest version of the key is allowed.`,
 			},
 
+			"trimmed_min_version": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Description: `If set, permanently deletes all the key versions before the given version. This should always be greater than both 'min_decryption_version' and 'min_encryption_version'. This is not allowed to be set when either 'min_encryption_version' or 'min_decryption_version' is set to zero.`,
+			},
+
 			"deletion_allowed": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: "Whether to allow deletion of the key",
@@ -58,7 +63,7 @@ the latest version of the key is allowed.`,
 	}
 }
 
-func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (resp *logical.Response, retErr error) {
 	name := d.Get("name").(string)
 
 	// Check if the policy already exists before we lock everything
@@ -79,7 +84,25 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	}
 	defer p.Unlock()
 
-	resp := &logical.Response{}
+	originalMinDecryptionVersion := p.MinDecryptionVersion
+	originalMinEncryptionVersion := p.MinEncryptionVersion
+	originalTrimmedMinVersion := p.TrimmedMinVersion
+	originalDeletionAllowed := p.DeletionAllowed
+	originalExportable := p.Exportable
+	originalAllowPlaintextBackup := p.AllowPlaintextBackup
+
+	defer func() {
+		if retErr != nil || (resp != nil && resp.IsError()) {
+			p.MinDecryptionVersion = originalMinDecryptionVersion
+			p.MinEncryptionVersion = originalMinEncryptionVersion
+			p.TrimmedMinVersion = originalTrimmedMinVersion
+			p.DeletionAllowed = originalDeletionAllowed
+			p.Exportable = originalExportable
+			p.AllowPlaintextBackup = originalAllowPlaintextBackup
+		}
+	}()
+
+	resp = &logical.Response{}
 
 	persistNeeded := false
 
@@ -122,6 +145,31 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 			p.MinEncryptionVersion = minEncryptionVersion
 			persistNeeded = true
 		}
+	}
+
+	trimmedMinVersionRaw, ok := d.GetOk("trimmed_min_version")
+	if ok {
+		trimmedMinVersion := trimmedMinVersionRaw.(int)
+
+		switch {
+		case p.MinEncryptionVersion == 0:
+			return logical.ErrorResponse("trimmed min version cannot be set when min encryption version is not set"), nil
+		case p.MinDecryptionVersion == 0:
+			return logical.ErrorResponse("trimmed min version cannot be set when min decryption version is not set"), nil
+		case trimmedMinVersion > p.MinEncryptionVersion:
+			return logical.ErrorResponse("trimmed min version cannot be greater than min encryption version"), nil
+		case trimmedMinVersion > p.MinDecryptionVersion:
+			return logical.ErrorResponse("trimmed min version cannot be greater than min decryption version"), nil
+		case trimmedMinVersion < 0:
+			return logical.ErrorResponse("trimmed min version cannot be negative"), nil
+		case trimmedMinVersion == 0:
+			return logical.ErrorResponse("trimmed min version should be positive"), nil
+		case trimmedMinVersion < p.TrimmedMinVersion:
+			return logical.ErrorResponse(fmt.Sprintf("trimmed min version cannot be less than the already set value of %d", p.TrimmedMinVersion)), nil
+		}
+
+		p.TrimmedMinVersion = trimmedMinVersion
+		persistNeeded = true
 	}
 
 	// Check here to get the final picture after the logic on each
@@ -171,6 +219,16 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 
 	if !persistNeeded {
 		return nil, nil
+	}
+
+	// Do these checks after 'min_encryption_version', 'min_decryption_version'
+	// and 'trim_before_version' fields are processed. These are applicable
+	// even if one of them is being modified.
+	switch {
+	case p.TrimmedMinVersion > p.MinEncryptionVersion:
+		return logical.ErrorResponse("min encryption version should not be less than trimmed min version"), nil
+	case p.TrimmedMinVersion > p.MinDecryptionVersion:
+		return logical.ErrorResponse("min decryption version should not be less then trimmed min version"), nil
 	}
 
 	if len(resp.Warnings) == 0 {
