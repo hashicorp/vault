@@ -6,7 +6,8 @@ export default Ember.Component.extend({
   startTime: '',
   licenseId: '',
   features: null,
-  licenseText: '',
+  text: '',
+  showForm: false,
   isTemporary: Ember.computed('licenseId', function() {
     return this.get('licenseId') === 'temporary';
   }),
@@ -18,16 +19,13 @@ export default Ember.Component.extend({
     });
     return info;
   }),
-
+  saveModel() {},
   actions: {
-    saveLicense() {
-      debugger;
-      let model = this.get('model');
-      model.store.createRecord('license', { text: this.get('licenseText') });
-      model.save().then(() => {
-        this.setProperties(this.get('model'));
-        this.set('licenseText', '');
-      });
+    createModel(text) {
+      this.get('saveModel')(text);
+    },
+    toggleForm() {
+      this.toggleProperty('showForm');
     },
   },
 });
