@@ -1,14 +1,15 @@
-import Ember from 'ember';
-
-const { Controller, computed, observer, inject } = Ember;
+import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+import Controller from '@ember/controller';
+import { observer, computed } from '@ember/object';
 export default Controller.extend({
-  auth: inject.service(),
-  store: inject.service(),
-  media: inject.service(),
-  namespaceService: inject.service('namespace'),
+  auth: service(),
+  store: service(),
+  media: service(),
+  namespaceService: service('namespace'),
 
-  vaultVersion: inject.service('version'),
-  console: inject.service(),
+  vaultVersion: service('version'),
+  console: service(),
 
   queryParams: [
     {
@@ -25,7 +26,7 @@ export default Controller.extend({
     this.get('namespaceService').setNamespace(this.get('namespaceQueryParam'));
   }),
 
-  consoleOpen: computed.alias('console.isOpen'),
+  consoleOpen: alias('console.isOpen'),
 
   activeCluster: computed('auth.activeCluster', function() {
     return this.get('store').peekRecord('cluster', this.get('auth.activeCluster'));
@@ -39,8 +40,7 @@ export default Controller.extend({
   showNav: computed(
     'activeClusterName',
     'auth.currentToken',
-    'activeCluster.dr.isSecondary',
-    'activeCluster.{needsInit,sealed}',
+    'activeCluster.{dr.isSecondary,needsInit,sealed}',
     function() {
       if (
         this.get('activeCluster.dr.isSecondary') ||

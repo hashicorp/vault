@@ -1,8 +1,8 @@
-import Ember from 'ember';
-const { get } = Ember;
+import Mixin from '@ember/object/mixin';
+import { get } from '@ember/object';
 
 // this mixin relies on `unload-model-route` also being used
-export default Ember.Mixin.create({
+export default Mixin.create({
   actions: {
     willTransition(transition) {
       const model = this.controller.get('model');

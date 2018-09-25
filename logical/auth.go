@@ -62,7 +62,7 @@ type Auth struct {
 
 	// ExplicitMaxTTL is the max TTL that constrains periodic tokens. For normal
 	// tokens, this value is constrained by the configured max ttl.
-	ExplicitMaxTTL time.Duration `json:"-" mapstructure:"-" structs:"-"`
+	ExplicitMaxTTL time.Duration `json:"explicit_max_ttl" mapstructure:"explicit_max_ttl" structs:"explicit_max_ttl"`
 
 	// Number of allowed uses of the issued token
 	NumUses int `json:"num_uses" mapstructure:"num_uses" structs:"num_uses"`

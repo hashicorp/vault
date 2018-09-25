@@ -1,11 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { computed } from '@ember/object';
+import Controller, { inject as controller } from '@ember/controller';
 import utils from 'vault/lib/key-utils';
 
-const { inject, computed, Controller } = Ember;
 export default Controller.extend({
-  flashMessages: inject.service(),
-  store: inject.service(),
-  clusterController: inject.controller('vault.cluster'),
+  flashMessages: service(),
+  store: service(),
+  clusterController: controller('vault.cluster'),
   queryParams: {
     page: 'page',
     pageFilter: 'pageFilter',

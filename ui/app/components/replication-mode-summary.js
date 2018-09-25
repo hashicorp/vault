@@ -1,5 +1,7 @@
-import Ember from 'ember';
-const { computed, get, getProperties, Component, inject } = Ember;
+import { inject as service } from '@ember/service';
+import { equal } from '@ember/object/computed';
+import { getProperties, get, computed } from '@ember/object';
+import Component from '@ember/component';
 
 const replicationAttr = function(attr) {
   return computed('mode', `cluster.{dr,performance}.${attr}`, function() {
@@ -8,13 +10,13 @@ const replicationAttr = function(attr) {
   });
 };
 export default Component.extend({
-  version: inject.service(),
-  router: inject.service(),
-  namespace: inject.service(),
+  version: service(),
+  router: service(),
+  namespace: service(),
   classNameBindings: ['isMenu::box', 'isMenu::level'],
   attributeBindings: ['href', 'target'],
   display: 'banner',
-  isMenu: computed.equal('display', 'menu'),
+  isMenu: equal('display', 'menu'),
   href: computed('display', 'mode', 'replicationEnabled', 'version.hasPerfReplication', function() {
     const display = this.get('display');
     const mode = this.get('mode');
@@ -37,9 +39,9 @@ export default Component.extend({
     return null;
   }),
   internalLink: false,
-  isPerformance: computed.equal('mode', 'performance'),
+  isPerformance: equal('mode', 'performance'),
   replicationEnabled: replicationAttr('replicationEnabled'),
-  replicationUnsupported: computed.equal('cluster.mode', 'unsupported'),
+  replicationUnsupported: equal('cluster.mode', 'unsupported'),
   replicationDisabled: replicationAttr('replicationDisabled'),
   syncProgressPercent: replicationAttr('syncProgressPercent'),
   syncProgress: replicationAttr('syncProgress'),

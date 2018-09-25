@@ -1,10 +1,10 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 
-const { inject, computed } = Ember;
-
-export default Ember.Component.extend({
-  wizard: inject.service(),
-  version: inject.service(),
+export default Component.extend({
+  wizard: service(),
+  version: service(),
   init() {
     this._super(...arguments);
     this.maybeHideFeatures();
@@ -36,7 +36,12 @@ export default Ember.Component.extend({
       {
         key: 'policies',
         name: 'Policies',
-        steps: ['Choosing a policy type', 'Creating a policy', 'Deleting your policy', 'Other types of policies'],
+        steps: [
+          'Choosing a policy type',
+          'Creating a policy',
+          'Deleting your policy',
+          'Other types of policies',
+        ],
         selected: false,
         show: true,
       },
@@ -57,12 +62,14 @@ export default Ember.Component.extend({
     ];
   }),
 
-  showReplication: computed('version.hasPerfReplication', 'version.hasDRReplication', function() {
+  showReplication: computed('version.{hasPerfReplication,hasDRReplication}', function() {
     return this.get('version.hasPerfReplication') || this.get('version.hasDRReplication');
   }),
 
   selectedFeatures: computed('allFeatures.@each.selected', function() {
-    return this.get('allFeatures').filterBy('selected').mapBy('key');
+    return this.get('allFeatures')
+      .filterBy('selected')
+      .mapBy('key');
   }),
 
   actions: {

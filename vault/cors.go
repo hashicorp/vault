@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -22,10 +23,10 @@ var StdAllowedHeaders = []string{
 	"X-Vault-AWS-IAM-Server-ID",
 	"X-Vault-MFA",
 	"X-Vault-No-Request-Forwarding",
-	"X-Vault-Token",
 	"X-Vault-Wrap-Format",
 	"X-Vault-Wrap-TTL",
 	"X-Vault-Policy-Override",
+	consts.AuthHeaderName,
 }
 
 // CORSConfig stores the state of the CORS configuration.

@@ -1,7 +1,8 @@
-import Ember from 'ember';
+import Controller, { inject as controller } from '@ember/controller';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 
-export default Ember.Controller.extend(BackendCrumbMixin, {
+export default Controller.extend(BackendCrumbMixin, {
+  backendController: controller('vault.cluster.secrets.backend'),
   queryParams: ['tab'],
   tab: '',
   reset() {
@@ -16,6 +17,11 @@ export default Ember.Controller.extend(BackendCrumbMixin, {
 
     hasChanges(hasChanges) {
       this.send('hasDataChanges', hasChanges);
+    },
+
+    toggleAdvancedEdit(bool) {
+      this.set('preferAdvancedEdit', bool);
+      this.get('backendController').set('preferAdvancedEdit', bool);
     },
   },
 });

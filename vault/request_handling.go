@@ -1072,16 +1072,17 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		return err
 	}
 	te := logical.TokenEntry{
-		Path:         path,
-		Meta:         auth.Metadata,
-		DisplayName:  auth.DisplayName,
-		CreationTime: time.Now().Unix(),
-		TTL:          tokenTTL,
-		NumUses:      auth.NumUses,
-		EntityID:     auth.EntityID,
-		BoundCIDRs:   auth.BoundCIDRs,
-		Policies:     auth.TokenPolicies,
-		NamespaceID:  ns.ID,
+		Path:           path,
+		Meta:           auth.Metadata,
+		DisplayName:    auth.DisplayName,
+		CreationTime:   time.Now().Unix(),
+		TTL:            tokenTTL,
+		NumUses:        auth.NumUses,
+		EntityID:       auth.EntityID,
+		BoundCIDRs:     auth.BoundCIDRs,
+		Policies:       auth.TokenPolicies,
+		NamespaceID:    ns.ID,
+		ExplicitMaxTTL: auth.ExplicitMaxTTL,
 	}
 
 	if err := c.tokenStore.create(ctx, &te); err != nil {

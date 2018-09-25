@@ -1,17 +1,19 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { alias, gt } from '@ember/object/computed';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 import keyUtils from 'vault/lib/key-utils';
 import pathToTree from 'vault/lib/path-to-tree';
 import { task, timeout } from 'ember-concurrency';
 
 const { ancestorKeysForKey } = keyUtils;
-const { Component, computed, inject } = Ember;
 const DOT_REPLACEMENT = '☃';
 const ANIMATION_DURATION = 250;
 
 export default Component.extend({
   tagName: '',
-  namespaceService: inject.service('namespace'),
-  auth: inject.service(),
+  namespaceService: service('namespace'),
+  auth: service(),
   namespace: null,
 
   init() {
@@ -55,14 +57,14 @@ export default Component.extend({
     this.set('lastMenuLeaves', leaves);
   }).drop(),
 
-  isAnimating: computed.alias('setForAnimation.isRunning'),
+  isAnimating: alias('setForAnimation.isRunning'),
 
-  namespacePath: computed.alias('namespaceService.path'),
+  namespacePath: alias('namespaceService.path'),
 
   // this is an array of namespace paths that the current user
   // has access to
-  accessibleNamespaces: computed.alias('namespaceService.accessibleNamespaces'),
-  inRootNamespace: computed.alias('namespaceService.inRootNamespace'),
+  accessibleNamespaces: alias('namespaceService.accessibleNamespaces'),
+  inRootNamespace: alias('namespaceService.inRootNamespace'),
 
   namespaceTree: computed('accessibleNamespaces', function() {
     let nsList = this.get('accessibleNamespaces');
@@ -124,8 +126,8 @@ export default Component.extend({
     return leaves;
   }),
 
-  currentLeaf: computed.alias('lastMenuLeaves.lastObject'),
-  canAccessMultipleNamespaces: computed.gt('accessibleNamespaces.length', 1),
+  currentLeaf: alias('lastMenuLeaves.lastObject'),
+  canAccessMultipleNamespaces: gt('accessibleNamespaces.length', 1),
   isUserRootNamespace: computed('auth.authData.userRootNamespace', 'namespacePath', function() {
     return this.get('auth.authData.userRootNamespace') === this.get('namespacePath');
   }),

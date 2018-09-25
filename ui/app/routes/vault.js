@@ -1,8 +1,12 @@
+import { later } from '@ember/runloop';
+import { Promise } from 'rsvp';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 import Ember from 'ember';
 const SPLASH_DELAY = Ember.testing ? 0 : 300;
 
-export default Ember.Route.extend({
-  version: Ember.inject.service(),
+export default Route.extend({
+  version: service(),
   beforeModel() {
     return this.get('version').fetchVersion();
   },
@@ -18,8 +22,8 @@ export default Ember.Route.extend({
       },
     };
     this.store.push(fixture);
-    return new Ember.RSVP.Promise(resolve => {
-      Ember.run.later(() => {
+    return new Promise(resolve => {
+      later(() => {
         resolve(this.store.peekAll('cluster'));
       }, SPLASH_DELAY);
     });

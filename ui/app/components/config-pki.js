@@ -1,10 +1,10 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
+import { get } from '@ember/object';
 
-const { get, inject } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   classNames: 'config-pki',
-  flashMessages: inject.service(),
+  flashMessages: service(),
 
   /*
    *
@@ -32,7 +32,7 @@ export default Ember.Component.extend({
    * function that gets called to refresh the config model
    *
    */
-  onRefresh: () => {},
+  onRefresh() {},
 
   loading: false,
 
@@ -54,6 +54,9 @@ export default Ember.Component.extend({
             config.rollbackAttributes();
           }
           this.send('refresh');
+        })
+        .catch(() => {
+          // handle promise rejection - error will be shown by message-error component
         })
         .finally(() => {
           this.set('loading', false);

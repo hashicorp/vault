@@ -1,9 +1,9 @@
-import Ember from 'ember';
+import { assert } from '@ember/debug';
+import Component from '@ember/component';
+import { set, get, computed } from '@ember/object';
 import hbs from 'htmlbars-inline-precompile';
 
-const { computed, get, set } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   // passed from outside
   onChange: null,
   wrapResponse: true,
@@ -22,10 +22,7 @@ export default Ember.Component.extend({
 
   init() {
     this._super(...arguments);
-    Ember.assert(
-      '`onChange` handler is a required attr in `' + this.toString() + '`.',
-      get(this, 'onChange')
-    );
+    assert('`onChange` handler is a required attr in `' + this.toString() + '`.', get(this, 'onChange'));
   },
 
   layout: hbs`

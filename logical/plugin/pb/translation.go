@@ -499,7 +499,8 @@ func LogicalAuthToProtoAuth(a *logical.Auth) (*Auth, error) {
 		EntityID:         a.EntityID,
 		Alias:            a.Alias,
 		GroupAliases:     a.GroupAliases,
-		BoundCidrs:       boundCIDRs,
+		BoundCIDRs:       boundCIDRs,
+		ExplicitMaxTTL:   int64(a.ExplicitMaxTTL),
 	}, nil
 }
 
@@ -519,7 +520,7 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 		return nil, err
 	}
 
-	boundCIDRs, err := parseutil.ParseAddrs(a.BoundCidrs)
+	boundCIDRs, err := parseutil.ParseAddrs(a.BoundCIDRs)
 	if err != nil {
 		return nil, err
 	}
@@ -545,6 +546,7 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 		Alias:            a.Alias,
 		GroupAliases:     a.GroupAliases,
 		BoundCIDRs:       boundCIDRs,
+		ExplicitMaxTTL:   time.Duration(a.ExplicitMaxTTL),
 	}, nil
 }
 
@@ -573,7 +575,7 @@ func LogicalTokenEntryToProtoTokenEntry(t *logical.TokenEntry) *TokenEntry {
 		Role:           t.Role,
 		Period:         int64(t.Period),
 		EntityID:       t.EntityID,
-		BoundCidrs:     boundCIDRs,
+		BoundCIDRs:     boundCIDRs,
 		NamespaceID:    t.NamespaceID,
 		CubbyholeID:    t.CubbyholeID,
 	}
@@ -584,7 +586,7 @@ func ProtoTokenEntryToLogicalTokenEntry(t *TokenEntry) (*logical.TokenEntry, err
 		return nil, nil
 	}
 
-	boundCIDRs, err := parseutil.ParseAddrs(t.BoundCidrs)
+	boundCIDRs, err := parseutil.ParseAddrs(t.BoundCIDRs)
 	if err != nil {
 		return nil, err
 	}

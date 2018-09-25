@@ -293,6 +293,10 @@ func (b *SystemBackend) pluginsCatalogPath() *framework.Path {
 				Type:        framework.TypeStringSlice,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_args"][0]),
 			},
+			"env": &framework.FieldSchema{
+				Type:        framework.TypeStringSlice,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_env"][0]),
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{

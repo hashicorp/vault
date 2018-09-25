@@ -1,10 +1,11 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { humanize } from 'vault/helpers/humanize';
 
-const { computed, inject } = Ember;
-export default Ember.Component.extend({
-  flashMessages: inject.service(),
+export default Component.extend({
+  flashMessages: service(),
   'data-test-component': 'identity-edit-form',
   model: null,
 
