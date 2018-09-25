@@ -108,7 +108,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	// so we don't need to re-check the cache later.
 	pRaw, ok := lm.cache.Load(name)
 	if ok && !force {
-		return fmt.Errorf(fmt.Sprintf("key %q already exists", name))
+		return fmt.Errorf("key %q already exists", name)
 	}
 
 	// Conditionally look up the policy from storage, depending on the use of
@@ -129,7 +129,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 			return err
 		}
 		if p != nil && !force {
-			return fmt.Errorf(fmt.Sprintf("key %q already exists", name))
+			return fmt.Errorf("key %q already exists", name)
 		}
 	}
 
@@ -142,9 +142,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	}
 	if p != nil {
 		p.l.Lock()
-		defer func() {
-			p.l.Unlock()
-		}()
+		defer p.l.Unlock()
 	}
 
 	// Restore the archived keys
