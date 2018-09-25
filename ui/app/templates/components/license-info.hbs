@@ -1,22 +1,23 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{#link-to "vault.cluster.license" }}
+        License
+      {{/link-to}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
 {{#if isTemporary}}
   <MessageInPage data-test-cluster-status @type="warning" @class="license-warning">
-    Your temporary license expires {{moment-from-now expirationTime interval=1000}} and your vault will seal. Please enter a valid license below.
+    Your temporary license expires {{moment-from-now expirationTime}} and your vault will seal. Please enter a valid license below.
   </MessageInPage>
-  <PageHeader as |p|>
-    <p.levelLeft>
-      <h1 class="title is-3">
-        {{#link-to "vault.cluster.license" }}
-          Temporary License
-        {{/link-to}}
-      </h1>
-    </p.levelLeft>
-  </PageHeader>
+  <span class="title is-5">Temporary License</span>
   <form {{action "createModel" text on="submit"}}>
     <div class="box is-sideless is-fullwidth is-marginless">
       <div class="field">
         <label for="license-id" class="is-label">License</label>
         <div class="control">
-          {{input id="license-id" value=text class="input"}}
+          {{input id="license-id" value=text autocomplete="off" class="input"}}
         </div>
       </div>
     </div>
@@ -27,22 +28,14 @@
     </div>
   </form>
 {{else}}
-  <PageHeader as |p|>
-    <p.levelLeft>
-      <h1 class="title is-3">
-        {{#link-to "vault.cluster.license" }}
-          Details
-        {{/link-to}}
-      </h1>
-    </p.levelLeft>
-  </PageHeader>
+  <span class="title is-5">Details</span>
   {{#if showForm}}
     <form {{action "createModel" text on="submit"}}>
       <div class="box is-sideless is-fullwidth is-marginless">
         <div class="field">
           <label for="license-id" class="is-label">License</label>
           <div class="control">
-            {{input id="license-id" value=text class="input"}}
+            {{input id="license-id" value=text autocomplete="off" class="input"}}
           </div>
         </div>
       </div>
@@ -77,11 +70,7 @@
     </div>
   {{/if}}
 {{/if}}
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">Features</h1>
-  </p.levelLeft>
-</PageHeader>
+<span class="title is-5">Features</span>
 <div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#each featuresInfo as |info|}}
     {{#info-table-row label=info.name value=info.active}}
