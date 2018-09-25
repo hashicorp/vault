@@ -1,4 +1,5 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import { queryRecord } from 'ember-computed-query';
@@ -7,7 +8,6 @@ import { memberAction } from 'ember-api-actions';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const { attr, hasMany } = DS;
-const { computed } = Ember;
 
 const configPath = function configPath(strings, key) {
   return function(...values) {
@@ -61,28 +61,32 @@ export default DS.Model.extend({
     urlType: 'updateRecord',
   }),
 
-  formFields: [
-    'type',
-    'path',
-    'description',
-    'accessor',
-    'local',
-    'sealWrap',
-    'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-  ],
+  formFields: computed(function() {
+    return [
+      'type',
+      'path',
+      'description',
+      'accessor',
+      'local',
+      'sealWrap',
+      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+    ];
+  }),
 
-  formFieldGroups: [
-    { default: ['path'] },
-    {
-      'Method Options': [
-        'description',
-        'config.listingVisibility',
-        'local',
-        'sealWrap',
-        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-      ],
-    },
-  ],
+  formFieldGroups: computed(function() {
+    return [
+      { default: ['path'] },
+      {
+        'Method Options': [
+          'description',
+          'config.listingVisibility',
+          'local',
+          'sealWrap',
+          'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+        ],
+      },
+    ];
+  }),
 
   attrs: computed('formFields', function() {
     return expandAttributeMeta(this, this.get('formFields'));
@@ -114,6 +118,6 @@ export default DS.Model.extend({
   ),
 
   deletePath: lazyCapabilities(apiPath`sys/auth/${'id'}`, 'id'),
-  canDisable: computed.alias('deletePath.canDelete'),
-  canEdit: computed.alias('configPath.canUpdate'),
+  canDisable: alias('deletePath.canDelete'),
+  canEdit: alias('configPath.canUpdate'),
 });

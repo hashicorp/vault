@@ -1,4 +1,8 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { alias, or } from '@ember/object/computed';
+import Component from '@ember/component';
+import { getOwner } from '@ember/application';
+import { run } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 import ControlGroupError from 'vault/lib/control-group-error';
 import {
@@ -10,19 +14,17 @@ import {
   executeUICommand,
 } from 'vault/lib/console-helpers';
 
-const { inject, computed, getOwner, run } = Ember;
-
-export default Ember.Component.extend({
-  console: inject.service(),
-  router: inject.service(),
-  controlGroup: inject.service(),
-  store: inject.service(),
+export default Component.extend({
+  console: service(),
+  router: service(),
+  controlGroup: service(),
+  store: service(),
 
   classNames: 'console-ui-panel-scroller',
   classNameBindings: ['isFullscreen:fullscreen'],
   isFullscreen: false,
   inputValue: null,
-  log: computed.alias('console.log'),
+  log: alias('console.log'),
 
   didRender() {
     this._super(...arguments);
@@ -34,7 +36,7 @@ export default Ember.Component.extend({
     run.schedule('afterRender', () => this.scrollToBottom());
   },
 
-  isRunning: computed.or('executeCommand.isRunning', 'refreshRoute.isRunning'),
+  isRunning: or('executeCommand.isRunning', 'refreshRoute.isRunning'),
 
   executeCommand: task(function*(command, shouldThrow = false) {
     this.set('inputValue', '');

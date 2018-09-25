@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import { next } from '@ember/runloop';
+import { typeOf } from '@ember/utils';
+import Service, { inject as service } from '@ember/service';
 import { Machine } from 'xstate';
-
-const { Service, inject } = Ember;
 
 import getStorage from 'vault/lib/token-storage';
 
@@ -44,7 +44,7 @@ const DEFAULTS = {
 };
 
 export default Service.extend(DEFAULTS, {
-  router: inject.service(),
+  router: service(),
   showWhenUnauthenticated: false,
 
   init() {
@@ -103,7 +103,7 @@ export default Service.extend(DEFAULTS, {
       state = state.value;
     }
     let stateKey = '';
-    while (Ember.typeOf(state) === 'object') {
+    while (typeOf(state) === 'object') {
       let newState = Object.keys(state);
       stateKey += newState + '.';
       state = state[newState];
@@ -178,7 +178,7 @@ export default Service.extend(DEFAULTS, {
         case 'routeTransition':
           expectedRouteName = action.params[0];
           transitionURL = router.urlFor(...action.params).replace(/^\/ui/, '');
-          Ember.run.next(() => {
+          next(() => {
             router.transitionTo(...action.params);
           });
           break;
@@ -239,12 +239,15 @@ export default Service.extend(DEFAULTS, {
     if (!resumeURL) {
       return;
     }
-    this.get('router').transitionTo(resumeURL).followRedirects().then(() => {
-      this.set('expectedRouteName', this.storage().getItem(RESUME_ROUTE));
-      this.set('expectedURL', resumeURL);
-      this.initializeMachines();
-      this.storage().removeItem(RESUME_URL);
-    });
+    this.get('router')
+      .transitionTo(resumeURL)
+      .followRedirects()
+      .then(() => {
+        this.set('expectedRouteName', this.storage().getItem(RESUME_ROUTE));
+        this.set('expectedURL', resumeURL);
+        this.initializeMachines();
+        this.storage().removeItem(RESUME_URL);
+      });
   },
 
   handleDismissed() {
@@ -269,7 +272,11 @@ export default Service.extend(DEFAULTS, {
     }
     this.saveExtState(FEATURE_STATE, this.get('featureState'));
     let nextFeature =
-      this.get('featureList').length > 1 ? this.get('featureList').objectAt(1).capitalize() : 'Finish';
+      this.get('featureList').length > 1
+        ? this.get('featureList')
+            .objectAt(1)
+            .capitalize()
+        : 'Finish';
     this.set('nextFeature', nextFeature);
     let next;
     if (this.get('currentMachine') === 'secrets' && this.get('featureState') === 'display') {
@@ -297,7 +304,12 @@ export default Service.extend(DEFAULTS, {
       completed.push(done);
       this.saveExtState(COMPLETED_FEATURES, completed);
     } else {
-      this.saveExtState(COMPLETED_FEATURES, this.getExtState(COMPLETED_FEATURES).toArray().addObject(done));
+      this.saveExtState(
+        COMPLETED_FEATURES,
+        this.getExtState(COMPLETED_FEATURES)
+          .toArray()
+          .addObject(done)
+      );
     }
 
     this.saveExtState(FEATURE_LIST, features.length ? features : null);

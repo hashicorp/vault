@@ -74,7 +74,7 @@
           </li>
         {{/if}}
       {{/if}}
-      {{#if backendModel.canEditZeroAddress}}
+      {{#if item.canEditZeroAddress}}
         {{#if item.zeroAddress}}
           <li class="action">
             <button type="button" disabled={{get this (concat "loading-" item.id)}} class="link button is-transparent
@@ -84,7 +84,12 @@
           </li>
         {{else}}
           <li class="action">
-            <button type="button" disabled={{get this (concat "loading-" item.id)}} class="link button is-transparent {{if (get this (concat "loading-" item.id)) 'is-loading'}}" {{action "toggleZeroAddress" item backendModel}}>
+            <button
+              type="button"
+              disabled={{get this (concat "loading-" item.id)}}
+              class="link button is-transparent {{if (get this (concat "loading-" item.id)) 'is-loading'}}"
+              {{action "toggleZeroAddress" item backendModel}}
+            >
               Enable Zero Address
             </button>
           </li>

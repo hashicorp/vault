@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
@@ -27,7 +27,7 @@ export default ApplicationAdapter.extend({
     return this.ajax(this.url(path), 'POST', { data }).then(() => {
       // ember data doesn't like 204s if it's not a DELETE
       return {
-        data: Ember.assign({}, data, { path: path + '/', id: path }),
+        data: assign({}, data, { path: path + '/', id: path }),
       };
     });
   },
@@ -76,7 +76,11 @@ export default ApplicationAdapter.extend({
 
   saveZeroAddressConfig(store, type, snapshot) {
     const path = snapshot.id;
-    const roles = store.peekAll('role-ssh').filterBy('zeroAddress').mapBy('id').join(',');
+    const roles = store
+      .peekAll('role-ssh')
+      .filterBy('zeroAddress')
+      .mapBy('id')
+      .join(',');
     const url = `/v1/${path}/config/zeroaddress`;
     const data = { roles };
     if (roles === '') {

@@ -52,18 +52,14 @@
     {{else}}
       <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
         {{info-table-row label="License ID" value=licenseId}}
-        {{#if startTime}}
-          {{#info-table-row label="Start time" value=startTime}}
-            {{moment-format model.startTime 'MMM DD, YYYY hh:mm:ss A'}}
-          {{/info-table-row}}
-        {{/if}}
-        {{#if expirationTime}}
-          {{#info-table-row label="Expiration time" value=expirationTime}}
-            {{moment-format expirationTime 'MMM DD, YYYY hh:mm:ss A'}}
-          {{/info-table-row}}
-          {{info-table-row label="Expires in" value=(moment-from-now expirationTime interval=1000 hideSuffix=true)}}
-        {{/if}}
-        <button type="button" {{action "toggleForm"}} class="button">Enter new license</button>
+        {{#info-table-row label="Valid from" value=startTime}}
+          {{moment-format model.startTime 'MMM DD, YYYY hh:mm:ss A'}} to {{moment-format expirationTime 'MMM DD, YYYY hh:mm:ss A'}}
+        {{/info-table-row}}
+      </div>
+      <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
+        <div class="control">
+          <button type="button" {{action "toggleForm"}} class="button">Enter new license</button>
+        </div>
       </div>
     {{/if}}
     </section>

@@ -1,3 +1,4 @@
 source "https://rubygems.org"
 
+gem "ffi", "~> 1.9.24"
 gem "middleman-hashicorp", "0.3.34"

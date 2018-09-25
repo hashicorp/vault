@@ -1,5 +1,5 @@
+import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
-import Ember from 'ember';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -55,7 +55,7 @@ export default ApplicationAdapter.extend({
         backend,
       };
 
-      return Ember.assign({}, resp, data);
+      return assign({}, resp, data);
     });
   },
 

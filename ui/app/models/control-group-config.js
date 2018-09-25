@@ -1,9 +1,9 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const { attr } = DS;
-const { computed } = Ember;
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export default DS.Model.extend({
@@ -12,7 +12,7 @@ export default DS.Model.extend({
   }),
 
   configurePath: lazyCapabilities(apiPath`sys/config/control-group`),
-  canDelete: computed.alias('configurePath.canDelete'),
+  canDelete: alias('configurePath.canDelete'),
   maxTtl: attr({
     defaultValue: 0,
     editType: 'ttl',

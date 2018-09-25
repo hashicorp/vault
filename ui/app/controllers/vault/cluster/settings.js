@@ -1,6 +1,5 @@
-import Ember from 'ember';
-
-const { inject, Controller } = Ember;
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 export default Controller.extend({
-  namespaceService: inject.service('namespace'),
+  namespaceService: service('namespace'),
 });

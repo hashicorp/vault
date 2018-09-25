@@ -1,6 +1,7 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import Mixin from '@ember/object/mixin';
 
-export default Ember.Mixin.create({
+export default Mixin.create({
   queryParams: {
     page: 'page',
     pageFilter: 'pageFilter',
@@ -12,13 +13,13 @@ export default Ember.Mixin.create({
 
   isLoading: false,
 
-  filterMatchesKey: Ember.computed('filter', 'model', 'model.[]', function() {
+  filterMatchesKey: computed('filter', 'model', 'model.[]', function() {
     var filter = this.get('filter');
     var content = this.get('model');
     return !!(content.length && content.findBy('id', filter));
   }),
 
-  firstPartialMatch: Ember.computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
+  firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
     var filter = this.get('filter');
     var content = this.get('model');
     var filterMatchesKey = this.get('filterMatchesKey');

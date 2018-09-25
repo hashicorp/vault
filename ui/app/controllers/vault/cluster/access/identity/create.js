@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import Controller from '@ember/controller';
 import { task } from 'ember-concurrency';
 
-export default Ember.Controller.extend({
+export default Controller.extend({
   showRoute: 'vault.cluster.access.identity.show',
   showTab: 'details',
   navAfterSave: task(function*({ saveType, model }) {

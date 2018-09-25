@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 const ALL_FEATURES = [
   'HSM',
@@ -19,4 +19,4 @@ export function allFeatures() {
   return ALL_FEATURES;
 }
 
-export default Ember.Helper.helper(allFeatures);
+export default buildHelper(allFeatures);

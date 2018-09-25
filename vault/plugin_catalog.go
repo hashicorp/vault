@@ -87,7 +87,7 @@ func (c *PluginCatalog) Get(ctx context.Context, name string) (*pluginutil.Plugi
 
 // Set registers a new external plugin with the catalog, or updates an existing
 // external plugin. It takes the name, command and SHA256 of the plugin.
-func (c *PluginCatalog) Set(ctx context.Context, name, command string, args []string, sha256 []byte) error {
+func (c *PluginCatalog) Set(ctx context.Context, name, command string, args []string, env []string, sha256 []byte) error {
 	if c.directory == "" {
 		return ErrDirectoryNotConfigured
 	}
@@ -122,6 +122,7 @@ func (c *PluginCatalog) Set(ctx context.Context, name, command string, args []st
 		Name:    name,
 		Command: command,
 		Args:    args,
+		Env:     env,
 		Sha256:  sha256,
 		Builtin: false,
 	}

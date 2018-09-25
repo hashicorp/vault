@@ -1163,7 +1163,7 @@ $ curl \
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/identity-whitelist
 ```
 
 ### Sample Response

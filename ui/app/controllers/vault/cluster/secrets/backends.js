@@ -1,10 +1,11 @@
-import Ember from 'ember';
+import { filterBy } from '@ember/object/computed';
+import { computed } from '@ember/object';
+import Controller from '@ember/controller';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-const { computed, Controller } = Ember;
 const LINKED_BACKENDS = supportedSecretBackends();
 
 export default Controller.extend({
-  displayableBackends: computed.filterBy('model', 'shouldIncludeInList'),
+  displayableBackends: filterBy('model', 'shouldIncludeInList'),
 
   supportedBackends: computed('displayableBackends', 'displayableBackends.[]', function() {
     return (this.get('displayableBackends') || [])

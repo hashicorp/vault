@@ -1,8 +1,10 @@
-import Ember from 'ember';
+import { hash } from 'rsvp';
+import { set } from '@ember/object';
+import Route from '@ember/routing/route';
 import DS from 'ember-data';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
 
-export default Ember.Route.extend({
+export default Route.extend({
   model(params) {
     let { section } = params;
     let itemType = this.modelFor('vault.cluster.access.identity') + '-alias';
@@ -10,11 +12,11 @@ export default Ember.Route.extend({
     let modelType = `identity/${itemType}`;
     if (!tabs.includes(section)) {
       const error = new DS.AdapterError();
-      Ember.set(error, 'httpStatus', 404);
+      set(error, 'httpStatus', 404);
       throw error;
     }
     // TODO peekRecord here to see if we have the record already
-    return Ember.RSVP.hash({
+    return hash({
       model: this.store.findRecord(modelType, params.item_alias_id),
       section,
     });
