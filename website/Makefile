@@ -1,25 +1,30 @@
-build:
+configure_cache:
+	mkdir -p tmp/cache
+
+build: configure_cache
 	@echo "==> Starting build in Docker..."
 	@docker run \
 		--interactive \
 		--rm \
 		--tty \
-		--volume "$(shell pwd):/website" \
-		-e "ENV=production" \
+		--volume "$(shell pwd):/opt/buildhome/repo" \
+		--volume "$(shell pwd)/tmp/cache:/opt/buildhome/cache" \
+		--env "ENV=production" \
 		netlify/build \
-		build cd website && middleman build --verbose
+		build middleman build --verbose
 
-website:
+website: configure_cache
 	@echo "==> Starting website in Docker..."
 	@docker run \
 		--interactive \
 		--rm \
 		--tty \
-		--volume "$(shell pwd):/website" \
+		--volume "$(shell pwd):/opt/buildhome/repo" \
+		--volume "$(shell pwd)/tmp/cache:/opt/buildhome/cache" \
 		--publish "4567:4567" \
 		--publish "35729:35729" \
-		-e "ENV=production" \
+		--env "ENV=production" \
 		netlify/build \
-		build cd website && middleman
+		build middleman
 
 .PHONY: build website
