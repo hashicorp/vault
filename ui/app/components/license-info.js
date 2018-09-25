@@ -1,17 +1,18 @@
-import Ember from 'ember';
+import Component from '@ember/component';
 import { allFeatures } from 'vault/helpers/all-features';
+import { computed } from '@ember/object';
 
-export default Ember.Component.extend({
+export default Component.extend({
   expirationTime: '',
   startTime: '',
   licenseId: '',
   features: null,
   text: '',
   showForm: false,
-  isTemporary: Ember.computed('licenseId', function() {
+  isTemporary: computed('licenseId', function() {
     return this.get('licenseId') === 'temporary';
   }),
-  featuresInfo: Ember.computed('features', function() {
+  featuresInfo: computed('features', function() {
     let info = [];
     allFeatures().forEach(feature => {
       let active = this.get('features').includes(feature) ? true : false;
