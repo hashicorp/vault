@@ -213,7 +213,7 @@ func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.B
 		if err := to.Put(ctx, entry); err != nil {
 			return errwrap.Wrapf("error writing entry: {{err}}", err)
 		}
-		c.logger.Info("moved key: " + path)
+		c.logger.Info("copied key: " + path)
 		return nil
 	})
 }
