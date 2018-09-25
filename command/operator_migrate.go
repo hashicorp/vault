@@ -24,6 +24,8 @@ import (
 var _ cli.Command = (*OperatorMigrateCommand)(nil)
 var _ cli.CommandAutocomplete = (*OperatorMigrateCommand)(nil)
 
+var errAbort = errors.New("Migration aborted")
+
 type OperatorMigrateCommand struct {
 	*BaseCommand
 
@@ -32,6 +34,7 @@ type OperatorMigrateCommand struct {
 	flagStart        string
 	flagReset        bool
 	logger           log.Logger
+	ShutdownCh       chan struct{}
 }
 
 type migratorConfig struct {
@@ -120,6 +123,9 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 	}
 
 	if err := c.migrate(config); err != nil {
+		if err == errAbort {
+			return 0
+		}
 		c.UI.Error(fmt.Sprintf("Error migrating: %s", err))
 		return 2
 	}
@@ -168,7 +174,23 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 	defer SetMigration(from, false)
 
-	return c.migrateAll(context.Background(), from, to)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	doneCh := make(chan error)
+	go func() {
+		doneCh <- c.migrateAll(ctx, from, to)
+	}()
+
+	select {
+	case err := <-doneCh:
+		return err
+	case <-c.ShutdownCh:
+		c.UI.Output("==> Migration shutdown triggered\n")
+		cancelFunc()
+		<-doneCh
+		return errAbort
+	}
+	return nil
 }
 
 // migrateAll copies all keys in lexicographic order.
@@ -297,6 +319,12 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(path string) 
 			}
 
 			dfs = dfs[:len(dfs)-1]
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
 		}
 	}
 	return nil
