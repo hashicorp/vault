@@ -19,44 +19,48 @@ const (
 	groupTypeExternal = "external"
 )
 
-func groupPaths(i *IdentityStore) []*framework.Path {
-	return []*framework.Path{
-		{
-			Pattern: "group$",
-			Fields: map[string]*framework.FieldSchema{
-				"id": {
-					Type:        framework.TypeString,
-					Description: "ID of the group. If set, updates the corresponding existing group.",
-				},
-				"type": {
-					Type:        framework.TypeString,
-					Description: "Type of the group, 'internal' or 'external'. Defaults to 'internal'",
-				},
-				"name": {
-					Type:        framework.TypeString,
-					Description: "Name of the group.",
-				},
-				"metadata": {
-					Type: framework.TypeKVPairs,
-					Description: `Metadata to be associated with the group.
+func groupPathFields() map[string]*framework.FieldSchema {
+	return map[string]*framework.FieldSchema{
+		"id": {
+			Type:        framework.TypeString,
+			Description: "ID of the group. If set, updates the corresponding existing group.",
+		},
+		"type": {
+			Type:        framework.TypeString,
+			Description: "Type of the group, 'internal' or 'external'. Defaults to 'internal'",
+		},
+		"name": {
+			Type:        framework.TypeString,
+			Description: "Name of the group.",
+		},
+		"metadata": {
+			Type: framework.TypeKVPairs,
+			Description: `Metadata to be associated with the group.
 In CLI, this parameter can be repeated multiple times, and it all gets merged together.
 For example:
 vault <command> <path> metadata=key1=value1 metadata=key2=value2
 					`,
-				},
-				"policies": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: "Policies to be tied to the group.",
-				},
-				"member_group_ids": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: "Group IDs to be assigned as group members.",
-				},
-				"member_entity_ids": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: "Entity IDs to be assigned as group members.",
-				},
-			},
+		},
+		"policies": {
+			Type:        framework.TypeCommaStringSlice,
+			Description: "Policies to be tied to the group.",
+		},
+		"member_group_ids": {
+			Type:        framework.TypeCommaStringSlice,
+			Description: "Group IDs to be assigned as group members.",
+		},
+		"member_entity_ids": {
+			Type:        framework.TypeCommaStringSlice,
+			Description: "Entity IDs to be assigned as group members.",
+		},
+	}
+}
+
+func groupPaths(i *IdentityStore) []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "group$",
+			Fields:  groupPathFields(),
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.pathGroupRegister(),
 			},
@@ -66,41 +70,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 		},
 		{
 			Pattern: "group/id/" + framework.GenericNameRegex("id"),
-			Fields: map[string]*framework.FieldSchema{
-				"id": {
-					Type:        framework.TypeString,
-					Description: "ID of the group.",
-				},
-				"type": {
-					Type:        framework.TypeString,
-					Default:     groupTypeInternal,
-					Description: "Type of the group, 'internal' or 'external'. Defaults to 'internal'",
-				},
-				"name": {
-					Type:        framework.TypeString,
-					Description: "Name of the group.",
-				},
-				"metadata": {
-					Type: framework.TypeKVPairs,
-					Description: `Metadata to be associated with the group.
-In CLI, this parameter can be repeated multiple times, and it all gets merged together.
-For example:
-vault <command> <path> metadata=key1=value1 metadata=key2=value2
-					`,
-				},
-				"policies": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: "Policies to be tied to the group.",
-				},
-				"member_group_ids": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: "Group IDs to be assigned as group members.",
-				},
-				"member_entity_ids": {
-					Type:        framework.TypeCommaStringSlice,
-					Description: "Entity IDs to be assigned as group members.",
-				},
-			},
+			Fields:  groupPathFields(),
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.pathGroupIDUpdate(),
 				logical.ReadOperation:   i.pathGroupIDRead(),
@@ -118,6 +88,27 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["group-id-list"][0]),
 			HelpDescription: strings.TrimSpace(groupHelp["group-id-list"][1]),
+		},
+		{
+			Pattern: "group/name/" + framework.GenericNameRegex("name"),
+			Fields:  groupPathFields(),
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: i.pathGroupNameUpdate(),
+				logical.ReadOperation:   i.pathGroupNameRead(),
+				logical.DeleteOperation: i.pathGroupNameDelete(),
+			},
+
+			HelpSynopsis:    strings.TrimSpace(groupHelp["group-by-name"][0]),
+			HelpDescription: strings.TrimSpace(groupHelp["group-by-name"][1]),
+		},
+		{
+			Pattern: "group/name/?$",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ListOperation: i.pathGroupNameList(),
+			},
+
+			HelpSynopsis:    strings.TrimSpace(groupHelp["group-name-list"][0]),
+			HelpDescription: strings.TrimSpace(groupHelp["group-name-list"][1]),
 		},
 	}
 }
@@ -154,6 +145,24 @@ func (i *IdentityStore) pathGroupIDUpdate() framework.OperationFunc {
 			return logical.ErrorResponse("invalid group ID"), nil
 		}
 
+		return i.handleGroupUpdateCommon(ctx, req, d, group)
+	}
+}
+
+func (i *IdentityStore) pathGroupNameUpdate() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		groupName := d.Get("name").(string)
+		if groupName == "" {
+			return logical.ErrorResponse("empty group name"), nil
+		}
+
+		i.groupLock.Lock()
+		defer i.groupLock.Unlock()
+
+		group, err := i.MemDBGroupByName(ctx, groupName, true)
+		if err != nil {
+			return nil, err
+		}
 		return i.handleGroupUpdateCommon(ctx, req, d, group)
 	}
 }
@@ -210,8 +219,8 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		switch {
 		case groupByName == nil:
 			// Allowed
-		case newGroup:
-			return logical.ErrorResponse("updating a group by name is not currently supported"), nil
+		case group.ID == "":
+			group = groupByName
 		case group.ID != "" && groupByName.ID != group.ID:
 			return logical.ErrorResponse("group name is already in use"), nil
 		}
@@ -251,6 +260,10 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		return nil, err
 	}
 
+	if !newGroup {
+		return nil, nil
+	}
+
 	respData := map[string]interface{}{
 		"id":   group.ID,
 		"name": group.Name,
@@ -268,6 +281,25 @@ func (i *IdentityStore) pathGroupIDRead() framework.OperationFunc {
 		}
 
 		group, err := i.MemDBGroupByID(groupID, false)
+		if err != nil {
+			return nil, err
+		}
+		if group == nil {
+			return nil, nil
+		}
+
+		return i.handleGroupReadCommon(ctx, group)
+	}
+}
+
+func (i *IdentityStore) pathGroupNameRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		groupName := d.Get("name").(string)
+		if groupName == "" {
+			return logical.ErrorResponse("empty group name"), nil
+		}
+
+		group, err := i.MemDBGroupByName(ctx, groupName, false)
 		if err != nil {
 			return nil, err
 		}
@@ -346,124 +378,160 @@ func (i *IdentityStore) pathGroupIDDelete() framework.OperationFunc {
 			return logical.ErrorResponse("empty group ID"), nil
 		}
 
-		if groupID == "" {
-			return nil, fmt.Errorf("missing group ID")
+		return i.handleGroupDeleteCommon(ctx, groupID, true)
+	}
+}
+
+func (i *IdentityStore) pathGroupNameDelete() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		groupName := d.Get("name").(string)
+		if groupName == "" {
+			return logical.ErrorResponse("empty group name"), nil
 		}
 
-		// Acquire the lock to modify the group storage entry
-		i.groupLock.Lock()
-		defer i.groupLock.Unlock()
+		return i.handleGroupDeleteCommon(ctx, groupName, false)
+	}
+}
 
-		// Create a MemDB transaction to delete group
-		txn := i.db.Txn(true)
-		defer txn.Abort()
+func (i *IdentityStore) handleGroupDeleteCommon(ctx context.Context, key string, byID bool) (*logical.Response, error) {
+	// Acquire the lock to modify the group storage entry
+	i.groupLock.Lock()
+	defer i.groupLock.Unlock()
 
-		group, err := i.MemDBGroupByIDInTxn(txn, groupID, false)
+	// Create a MemDB transaction to delete group
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+
+	var group *identity.Group
+	var err error
+	switch byID {
+	case true:
+		group, err = i.MemDBGroupByIDInTxn(txn, key, false)
 		if err != nil {
 			return nil, err
 		}
-
-		// If there is no group for the ID, do nothing
-		if group == nil {
-			return nil, nil
-		}
-
-		ns, err := namespace.FromContext(ctx)
+	default:
+		group, err = i.MemDBGroupByNameInTxn(ctx, txn, key, false)
 		if err != nil {
 			return nil, err
 		}
-		if group.NamespaceID != ns.ID {
-			return nil, logical.ErrUnsupportedPath
-		}
-
-		// Delete group alias from memdb
-		if group.Type == groupTypeExternal && group.Alias != nil {
-			err = i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		// Delete the group using the same transaction
-		err = i.MemDBDeleteGroupByIDInTxn(txn, group.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		// Delete the group from storage
-		err = i.groupPacker.DeleteItem(group.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		// Committing the transaction *after* successfully deleting group
-		txn.Commit()
-
+	}
+	if group == nil {
 		return nil, nil
 	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if group.NamespaceID != ns.ID {
+		return nil, nil
+	}
+
+	// Delete group alias from memdb
+	if group.Type == groupTypeExternal && group.Alias != nil {
+		err = i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Delete the group using the same transaction
+	err = i.MemDBDeleteGroupByIDInTxn(txn, group.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Delete the group from storage
+	err = i.groupPacker.DeleteItem(group.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Committing the transaction *after* successfully deleting group
+	txn.Commit()
+
+	return nil, nil
 }
 
 // pathGroupIDList lists the IDs of all the groups in the identity store
 func (i *IdentityStore) pathGroupIDList() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		ns, err := namespace.FromContext(ctx)
-		if err != nil {
-			return nil, err
+		return i.handleGroupListCommon(ctx, true)
+	}
+}
+
+// pathGroupNameList lists the names of all the groups in the identity store
+func (i *IdentityStore) pathGroupNameList() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		return i.handleGroupListCommon(ctx, false)
+	}
+}
+
+func (i *IdentityStore) handleGroupListCommon(ctx context.Context, byID bool) (*logical.Response, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	txn := i.db.Txn(false)
+
+	iter, err := txn.Get(groupsTable, "namespace_id", ns.ID)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to lookup groups using namespace ID: {{err}}", err)
+	}
+
+	var keys []string
+	groupInfo := map[string]interface{}{}
+
+	type mountInfo struct {
+		MountType string
+		MountPath string
+	}
+	mountAccessorMap := map[string]mountInfo{}
+
+	for entry := iter.Next(); entry != nil; entry = iter.Next() {
+		group := entry.(*identity.Group)
+
+		if byID {
+			keys = append(keys, group.ID)
+		} else {
+			keys = append(keys, group.Name)
 		}
 
-		txn := i.db.Txn(false)
-
-		iter, err := txn.Get(groupsTable, "namespace_id", ns.ID)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to lookup groups using namespace ID: {{err}}", err)
+		groupInfoEntry := map[string]interface{}{
+			"name":                group.Name,
+			"num_member_entities": len(group.MemberEntityIDs),
+			"num_parent_groups":   len(group.ParentGroupIDs),
 		}
-
-		var groupIDs []string
-		groupInfo := map[string]interface{}{}
-
-		type mountInfo struct {
-			MountType string
-			MountPath string
-		}
-		mountAccessorMap := map[string]mountInfo{}
-
-		for entry := iter.Next(); entry != nil; entry = iter.Next() {
-			group := entry.(*identity.Group)
-			groupIDs = append(groupIDs, group.ID)
-			groupInfoEntry := map[string]interface{}{
-				"name":                group.Name,
-				"num_member_entities": len(group.MemberEntityIDs),
-				"num_parent_groups":   len(group.ParentGroupIDs),
+		if group.Alias != nil {
+			entry := map[string]interface{}{
+				"id":             group.Alias.ID,
+				"name":           group.Alias.Name,
+				"mount_accessor": group.Alias.MountAccessor,
 			}
-			if group.Alias != nil {
-				entry := map[string]interface{}{
-					"id":             group.Alias.ID,
-					"name":           group.Alias.Name,
-					"mount_accessor": group.Alias.MountAccessor,
-				}
 
-				mi, ok := mountAccessorMap[group.Alias.MountAccessor]
-				if ok {
+			mi, ok := mountAccessorMap[group.Alias.MountAccessor]
+			if ok {
+				entry["mount_type"] = mi.MountType
+				entry["mount_path"] = mi.MountPath
+			} else {
+				mi = mountInfo{}
+				if mountValidationResp := i.core.router.validateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
+					mi.MountType = mountValidationResp.MountType
+					mi.MountPath = mountValidationResp.MountPath
 					entry["mount_type"] = mi.MountType
 					entry["mount_path"] = mi.MountPath
-				} else {
-					mi = mountInfo{}
-					if mountValidationResp := i.core.router.validateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
-						mi.MountType = mountValidationResp.MountType
-						mi.MountPath = mountValidationResp.MountPath
-						entry["mount_type"] = mi.MountType
-						entry["mount_path"] = mi.MountPath
-					}
-					mountAccessorMap[group.Alias.MountAccessor] = mi
 				}
-
-				groupInfoEntry["alias"] = entry
+				mountAccessorMap[group.Alias.MountAccessor] = mi
 			}
-			groupInfo[group.ID] = groupInfoEntry
-		}
 
-		return logical.ListResponseWithInfo(groupIDs, groupInfo), nil
+			groupInfoEntry["alias"] = entry
+		}
+		groupInfo[group.ID] = groupInfoEntry
 	}
+
+	return logical.ListResponseWithInfo(keys, groupInfo), nil
 }
 
 var groupHelp = map[string][2]string{
