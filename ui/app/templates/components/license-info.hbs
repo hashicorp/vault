@@ -84,9 +84,9 @@
   {{#each featuresInfo as |info|}}
     {{#info-table-row label=info.name value=info.active}}
       {{#if info.active}}
-        <ICon @size=28 @glyph="checkmark" /> Active
+        <ICon @size=28 @glyph="true" /> Active
       {{else}}
-        <ICon @size=28 @glyph="close" /> Not Active
+        <ICon @size=28 @glyph="false" /> Not Active
       {{/if}}
     {{/info-table-row}}
   {{/each}}
