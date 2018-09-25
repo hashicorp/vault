@@ -11,6 +11,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/namespace"
+
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
@@ -519,6 +523,78 @@ func TestHandler_error(t *testing.T) {
 	if w3.Code != 503 {
 		t.Fatalf("expected 503, got %d", w3.Code)
 	}
+}
+
+func TestHandler_requestAuth(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+
+	rootCtx := namespace.RootContext(nil)
+	te, err := core.LookupToken(rootCtx, token)
+
+	if err != nil {
+		t.Fatalf("err: %s, te: %s", err, spew.Sdump(te))
+	}
+
+	rWithAuthorization, err := http.NewRequest("GET", "v1/test/path", nil)
+	rWithAuthorization.Header.Set("Authorization", "Bearer "+token)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	rWithVault, err := http.NewRequest("GET", "v1/test/path", nil)
+	rWithVault.Header.Set("X-Vault-Token", token)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	for _, r := range []*http.Request{rWithVault, rWithAuthorization} {
+		req := logical.TestRequest(t, logical.ReadOperation, "test/path")
+		r = r.WithContext(rootCtx)
+		req, err = requestAuth(core, r, req)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+
+		if req.ClientToken != token {
+			t.Fatalf("client token should be filled with %s, got %s", token, req.ClientToken)
+		}
+		if req.TokenEntry() == nil {
+			t.Fatal("token entry should not be nil")
+		}
+		if !reflect.DeepEqual(req.TokenEntry(), te) {
+			t.Fatalf("token entry should be the same as the core")
+		}
+		if req.ClientTokenAccessor == "" {
+			t.Fatal("token accessor should not be empty")
+		}
+	}
+
+	rInvalidScheme, err := http.NewRequest("GET", "v1/test/path", nil)
+	rInvalidScheme.Header.Set("Authorization", "invalid_scheme something")
+	req := logical.TestRequest(t, logical.ReadOperation, "test/path")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	_, err = requestAuth(core, rInvalidScheme, req)
+	if err == nil {
+		t.Fatalf("expected an error, got none")
+	}
+
+	rNothing, err := http.NewRequest("GET", "v1/test/path", nil)
+	req = logical.TestRequest(t, logical.ReadOperation, "test/path")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	req, err = requestAuth(core, rNothing, req)
+	if err != nil {
+		t.Fatalf("expected no error, got %s", err)
+	}
+	if req.ClientToken != "" {
+		t.Fatalf("client token should not be filled, got %s", req.ClientToken)
+	}
+
 }
 
 func TestHandler_getTokenFromReq(t *testing.T) {
