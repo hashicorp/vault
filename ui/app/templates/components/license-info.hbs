@@ -8,30 +8,13 @@
   </p.levelLeft>
 </PageHeader>
 {{#if isTemporary}}
-  <MessageInPage data-test-cluster-status @type="warning" @class="license-warning">
-    Your temporary license expires {{moment-from-now expirationTime}} and your vault will seal. Please enter a valid license below.
-  </MessageInPage>
-  <span class="title is-5">Temporary License</span>
-  <form {{action "createModel" text on="submit"}}>
-    <div class="box is-sideless is-fullwidth is-marginless">
-      <div class="field">
-        <label for="license-id" class="is-label">License</label>
-        <div class="control">
-          {{input id="license-id" value=text autocomplete="off" class="input"}}
-        </div>
-      </div>
-    </div>
-    <div class="field is-grouped box is-fullwidth is-bottomless">
-      <div class="control">
-        <button type="submit" class="button is-primary">Save</button>
-      </div>
-    </div>
-  </form>
-{{else}}
-  <span class="title is-5">Details</span>
-  {{#if showForm}}
+  <section class="box is-sideless">
+    <MessageInPage data-test-cluster-status @type="warning" @class="license-warning">
+      Your temporary license expires {{moment-from-now expirationTime}} and your vault will seal. Please enter a valid license below.
+    </MessageInPage>
+    <span class="title is-5">Temporary License</span>
     <form {{action "createModel" text on="submit"}}>
-      <div class="box is-sideless is-fullwidth is-marginless">
+      <div class="box is-shadowless is-fullwidth is-marginless">
         <div class="field">
           <label for="license-id" class="is-label">License</label>
           <div class="control">
@@ -39,46 +22,63 @@
           </div>
         </div>
       </div>
-      <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="field">
         <div class="control">
           <button type="submit" class="button is-primary">Save</button>
         </div>
-        <div class="control">
-          <button type="button" {{action "toggleForm"}} class="button">Cancel</button>
-        </div>
       </div>
     </form>
-  {{else}}
-    <div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
-      {{info-table-row label="License ID" value=licenseId}}
-      {{#if startTime}}
-        {{#info-table-row label="Start time" value=startTime}}
-          {{moment-format model.startTime 'MMM DD, YYYY hh:mm:ss A'}}
-        {{/info-table-row}}
-      {{/if}}
-      {{#if expirationTime}}
-        {{#info-table-row label="Expiration time" value=expirationTime}}
-          {{moment-format expirationTime 'MMM DD, YYYY hh:mm:ss A'}}
-        {{/info-table-row}}
-        {{info-table-row label="Expires in" value=(moment-from-now expirationTime interval=1000 hideSuffix=true)}}
-      {{/if}}
-    </div>
-    <div class="field is-grouped box is-fullwidth is-bottomless">
-      <div class="control">
+  </section>
+{{else}}
+  <section class="box is-sideless">
+    <span class="title is-5">Details</span>
+    {{#if showForm}}
+      <form {{action "createModel" text on="submit"}}>
+        <div class="field">
+          <label for="license-id" class="is-label">License</label>
+          <div class="control">
+            {{input id="license-id" value=text autocomplete="off" class="input"}}
+          </div>
+        </div>
+        <div class="field is-grouped">
+          <div class="control">
+            <button type="submit" class="button is-primary">Save</button>
+          </div>
+          <div class="control">
+            <button type="button" {{action "toggleForm"}} class="button">Cancel</button>
+          </div>
+        </div>
+      </form>
+    {{else}}
+      <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
+        {{info-table-row label="License ID" value=licenseId}}
+        {{#if startTime}}
+          {{#info-table-row label="Start time" value=startTime}}
+            {{moment-format model.startTime 'MMM DD, YYYY hh:mm:ss A'}}
+          {{/info-table-row}}
+        {{/if}}
+        {{#if expirationTime}}
+          {{#info-table-row label="Expiration time" value=expirationTime}}
+            {{moment-format expirationTime 'MMM DD, YYYY hh:mm:ss A'}}
+          {{/info-table-row}}
+          {{info-table-row label="Expires in" value=(moment-from-now expirationTime interval=1000 hideSuffix=true)}}
+        {{/if}}
         <button type="button" {{action "toggleForm"}} class="button">Enter new license</button>
       </div>
-    </div>
+    {{/if}}
+    </section>
   {{/if}}
-{{/if}}
-<span class="title is-5">Features</span>
-<div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{#each featuresInfo as |info|}}
-    {{#info-table-row label=info.name value=info.active}}
-      {{#if info.active}}
-        <ICon @size=28 @glyph="true" /> Active
-      {{else}}
-        <ICon @size=28 @glyph="false" /> Not Active
-      {{/if}}
-    {{/info-table-row}}
-  {{/each}}
-</div>
+<section class="box is-sideless is-marginless is-shadowless">
+  <span class="title is-5">Features</span>
+  <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
+    {{#each featuresInfo as |info|}}
+      {{#info-table-row label=info.name value=info.active}}
+        {{#if info.active}}
+          <ICon @size=28 @glyph="true" /> Active
+        {{else}}
+          <ICon @size=28 @glyph="false" /> Not Active
+        {{/if}}
+      {{/info-table-row}}
+    {{/each}}
+  </div>
+</section>
