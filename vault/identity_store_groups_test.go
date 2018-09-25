@@ -11,6 +11,122 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestIdentityStore_GroupByName(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	i, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	// Create an entity using the "name" endpoint
+	resp, err := i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/testgroupname",
+		Operation: logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp == nil {
+		t.Fatalf("expected a non-nil response")
+	}
+
+	// Test the read by name endpoint
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/testgroupname",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp == nil || resp.Data["name"].(string) != "testgroupname" {
+		t.Fatalf("bad entity response: %#v", resp)
+	}
+
+	// Update group metadata using the name endpoint
+	groupMetadata := map[string]string{
+		"foo": "bar",
+	}
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/testgroupname",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"metadata": groupMetadata,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Check the updated result
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/testgroupname",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp == nil || !reflect.DeepEqual(resp.Data["metadata"].(map[string]string), groupMetadata) {
+		t.Fatalf("bad group response: %#v", resp)
+	}
+
+	// Delete the group using the name endpoint
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/testgroupname",
+		Operation: logical.DeleteOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Check if deletion was successful
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/testgroupname",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	// Create 2 entities
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/testgroupname",
+		Operation: logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp == nil {
+		t.Fatalf("expected a non-nil response")
+	}
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/testgroupname2",
+		Operation: logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp == nil {
+		t.Fatalf("expected a non-nil response")
+	}
+
+	// List the entities by name
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name",
+		Operation: logical.ListOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	expected := []string{"testgroupname2", "testgroupname"}
+	sort.Strings(expected)
+	actual := resp.Data["keys"].([]string)
+	sort.Strings(actual)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: group list response; expected: %#v\nactual: %#v", expected, actual)
+	}
+}
+
 func TestIdentityStore_Groups_TypeMembershipAdditions(t *testing.T) {
 	var err error
 	var resp *logical.Response

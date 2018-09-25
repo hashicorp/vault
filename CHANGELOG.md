@@ -5,10 +5,12 @@ BUG FIXES:
  * core: Re-add deprecated capabilities information for now [GH-5360]
  * core: Fix handling of cyclic token relationships [GH-4803]
  * storage/mysql: Fix locking on MariaDB [GH-5343]
+ * replication: Fix DR API when using a token [GH-5398]
 
 IMPROVEMENTS:
 
  * cli: Format TTLs for non-secret responses [GH-5367] 
+ * identity: Support operating on entities and groups by their names [GH-5355]
  * plugins: Add `env` parameter when registering plugins to the catalog to allow
    operators to include environment variables during plugin execution. [GH-5359]
 
