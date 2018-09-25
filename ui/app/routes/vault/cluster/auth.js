@@ -1,13 +1,16 @@
+import { inject as service } from '@ember/service';
 import ClusterRouteBase from './cluster-route-base';
-import Ember from 'ember';
 import config from 'vault/config/environment';
 
-const { inject } = Ember;
-
 export default ClusterRouteBase.extend({
-  flashMessages: inject.service(),
-  version: inject.service(),
-  wizard: inject.service(),
+  queryParams: {
+    authMethod: {
+      replace: true,
+    },
+  },
+  flashMessages: service(),
+  version: service(),
+  wizard: service(),
   beforeModel() {
     return this._super().then(() => {
       return this.get('version').fetchFeatures();

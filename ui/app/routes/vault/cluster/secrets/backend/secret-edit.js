@@ -1,8 +1,10 @@
-import Ember from 'ember';
+import { set } from '@ember/object';
+import { hash } from 'rsvp';
+import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 
-export default Ember.Route.extend(UnloadModelRoute, {
+export default Route.extend(UnloadModelRoute, {
   capabilities(secret) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let backendModel = this.modelFor('vault.cluster.secrets.backend');
@@ -69,7 +71,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
     if (modelType === 'pki-certificate') {
       secret = secret.replace('cert/', '');
     }
-    return Ember.RSVP.hash({
+    return hash({
       secret: this.store.queryRecord(modelType, { id: secret, backend }),
       capabilities: this.capabilities(secret),
     });
@@ -88,7 +90,10 @@ export default Ember.Route.extend(UnloadModelRoute, {
       capabilities: model.capabilities,
       baseKey: { id: secret },
       // mode will be 'show', 'edit', 'create'
-      mode: this.routeName.split('.').pop().replace('-root', ''),
+      mode: this.routeName
+        .split('.')
+        .pop()
+        .replace('-root', ''),
       backend,
       preferAdvancedEdit,
       backendType,
@@ -105,8 +110,8 @@ export default Ember.Route.extend(UnloadModelRoute, {
     error(error) {
       const { secret } = this.paramsFor(this.routeName);
       const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-      Ember.set(error, 'keyId', backend + '/' + secret);
-      Ember.set(error, 'backend', backend);
+      set(error, 'keyId', backend + '/' + secret);
+      set(error, 'backend', backend);
       return true;
     },
 
@@ -115,10 +120,6 @@ export default Ember.Route.extend(UnloadModelRoute, {
     },
 
     willTransition(transition) {
-      const mode = this.routeName.split('.').pop();
-      if (mode === 'show') {
-        return transition;
-      }
       if (this.get('hasChanges')) {
         if (
           window.confirm(
@@ -127,21 +128,17 @@ export default Ember.Route.extend(UnloadModelRoute, {
         ) {
           this.unloadModel();
           this.set('hasChanges', false);
-          return transition;
+          return true;
         } else {
           transition.abort();
           return false;
         }
       }
+      return this._super(...arguments);
     },
 
     hasDataChanges(hasChanges) {
       this.set('hasChanges', hasChanges);
-    },
-
-    toggleAdvancedEdit(bool) {
-      this.controller.set('preferAdvancedEdit', bool);
-      this.controllerFor('vault.cluster.secrets.backend').set('preferAdvancedEdit', bool);
     },
   },
 });

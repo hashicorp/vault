@@ -1,6 +1,7 @@
-import Ember from 'ember';
-import { moduleForComponent, test } from 'ember-qunit';
-import wait from 'ember-test-helpers/wait';
+import { later, run } from '@ember/runloop';
+import { module, test } from 'qunit';
+import { setupRenderingTest } from 'ember-qunit';
+import { render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 import { create } from 'ember-cli-page-object';
@@ -11,67 +12,73 @@ import sinon from 'sinon';
 
 const component = create(mountBackendForm);
 
-moduleForComponent('mount-backend-form', 'Integration | Component | mount backend form', {
-  integration: true,
-  beforeEach() {
-    component.setContext(this);
-    Ember.getOwner(this).lookup('service:flash-messages').registerTypes(['success', 'danger']);
-    this.server = startMirage();
-  },
+module('Integration | Component | mount backend form', function(hooks) {
+  setupRenderingTest(hooks);
 
-  afterEach() {
+  hooks.beforeEach(function() {
+    component.setContext(this);
+    this.owner.lookup('service:flash-messages').registerTypes(['success', 'danger']);
+    this.server = startMirage();
+  });
+
+  hooks.afterEach(function() {
     component.removeContext();
     this.server.shutdown();
-  },
-});
+  });
 
-test('it renders', function(assert) {
-  this.render(hbs`{{mount-backend-form}}`);
-  assert.equal(component.header, 'Enable an authentication method', 'renders auth header in default state');
-  assert.ok(component.types.length > 0, 'renders type picker');
-});
+  test('it renders', async function(assert) {
+    await render(hbs`{{mount-backend-form}}`);
+    assert.equal(component.header, 'Enable an authentication method', 'renders auth header in default state');
+    assert.ok(component.types.length > 0, 'renders type picker');
+  });
 
-test('it changes path when type is changed', function(assert) {
-  this.render(hbs`{{mount-backend-form}}`);
-  component.selectType('aws').next();
-  assert.equal(component.pathValue, 'aws', 'sets the value of the type');
-  component.back().selectType('approle').next();
-  assert.equal(component.pathValue, 'approle', 'updates the value of the type');
-});
+  test('it changes path when type is changed', async function(assert) {
+    await render(hbs`{{mount-backend-form}}`);
+    await component.selectType('aws');
+    await component.next();
+    assert.equal(component.pathValue, 'aws', 'sets the value of the type');
+    await component.back();
+    await component.selectType('approle');
+    await component.next();
+    assert.equal(component.pathValue, 'approle', 'updates the value of the type');
+  });
 
-test('it keeps path value if the user has changed it', function(assert) {
-  this.render(hbs`{{mount-backend-form}}`);
-  component.selectType('approle').next();
-  assert.equal(component.pathValue, 'approle', 'defaults to approle (first in the list)');
-  component.path('newpath');
-  component.back().selectType('aws').next();
-  assert.equal(component.pathValue, 'newpath', 'updates to the value of the type');
-});
+  test('it keeps path value if the user has changed it', async function(assert) {
+    await render(hbs`{{mount-backend-form}}`);
+    await component.selectType('approle');
+    await component.next();
+    assert.equal(component.pathValue, 'approle', 'defaults to approle (first in the list)');
+    await component.path('newpath');
+    await component.back();
+    await component.selectType('aws');
+    await component.next();
+    assert.equal(component.pathValue, 'newpath', 'updates to the value of the type');
+  });
 
-test('it calls mount success', function(assert) {
-  const spy = sinon.spy();
-  this.set('onMountSuccess', spy);
-  this.render(hbs`{{mount-backend-form onMountSuccess=onMountSuccess}}`);
+  test('it calls mount success', async function(assert) {
+    const spy = sinon.spy();
+    this.set('onMountSuccess', spy);
+    await render(hbs`{{mount-backend-form onMountSuccess=onMountSuccess}}`);
 
-  component.mount('approle', 'foo').submit();
-  return wait().then(() => {
+    await component.mount('approle', 'foo');
     assert.equal(this.server.db.authMethods.length, 1, 'it enables an auth method');
     assert.ok(spy.calledOnce, 'calls the passed success method');
   });
-});
 
-test('it calls mount mount config error', function(assert) {
-  const spy = sinon.spy();
-  const spy2 = sinon.spy();
-  this.set('onMountSuccess', spy);
-  this.set('onConfigError', spy2);
-  this.render(hbs`{{mount-backend-form onMountSuccess=onMountSuccess onConfigError=onConfigError}}`);
+  test('it calls mount config error', async function(assert) {
+    const spy = sinon.spy();
+    const spy2 = sinon.spy();
+    this.set('onMountSuccess', spy);
+    this.set('onConfigError', spy2);
+    await render(hbs`{{mount-backend-form onMountSuccess=onMountSuccess onConfigError=onConfigError}}`);
 
-  component.selectType('kubernetes').next().path('bar');
-  // kubernetes requires a host + a cert / pem, so only filling the host will error
-  component.fields().fillIn('kubernetesHost', 'host');
-  component.submit();
-  return wait().then(() => {
+    await component.selectType('kubernetes');
+    await component.next().path('bar');
+    // kubernetes requires a host + a cert / pem, so only filling the host will error
+    await component.fillIn('kubernetesHost', 'host');
+    component.submit();
+    later(() => run.cancelTimers(), 50);
+    await settled();
     assert.equal(this.server.db.authMethods.length, 1, 'it still enables an auth method');
     assert.equal(spy.callCount, 0, 'does not call the success method');
     assert.ok(spy2.calledOnce, 'calls the passed error method');

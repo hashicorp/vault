@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 //list from http://docs.aws.amazon.com/general/latest/gr/rande.html#sts_region
 const REGIONS = [
@@ -22,4 +22,4 @@ export function regions() {
   return REGIONS.slice(0);
 }
 
-export default Ember.Helper.helper(regions);
+export default buildHelper(regions);

@@ -1,7 +1,9 @@
-import Ember from 'ember';
+import { match } from '@ember/object/computed';
+import { assign } from '@ember/polyfills';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
+import { setProperties, computed, set, get } from '@ember/object';
 import moment from 'moment';
-
-const { get, set, computed, setProperties } = Ember;
 
 const DEFAULTS = {
   token: null,
@@ -20,9 +22,9 @@ const DEFAULTS = {
 
 const WRAPPING_ENDPOINTS = ['lookup', 'wrap', 'unwrap', 'rewrap'];
 
-export default Ember.Component.extend(DEFAULTS, {
-  store: Ember.inject.service(),
-  wizard: Ember.inject.service(),
+export default Component.extend(DEFAULTS, {
+  store: service(),
+  wizard: service(),
   // putting these attrs here so they don't get reset when you click back
   //random
   bytes: 32,
@@ -56,7 +58,7 @@ export default Ember.Component.extend(DEFAULTS, {
     set(this, 'oldSelectedAction', currentAction);
   },
 
-  dataIsEmpty: computed.match('data', new RegExp(DEFAULTS.data)),
+  dataIsEmpty: match('data', new RegExp(DEFAULTS.data)),
 
   expirationDate: computed('creation_time', 'creation_ttl', function() {
     const { creation_time, creation_ttl } = this.getProperties('creation_time', 'creation_ttl');
@@ -74,12 +76,12 @@ export default Ember.Component.extend(DEFAULTS, {
     let props = {};
     let secret = (resp && resp.data) || resp.auth;
     if (secret && action === 'unwrap') {
-      props = Ember.assign({}, props, { unwrap_data: secret });
+      props = assign({}, props, { unwrap_data: secret });
     }
-    props = Ember.assign({}, props, secret);
+    props = assign({}, props, secret);
     if (resp && resp.wrap_info) {
       const keyName = action === 'rewrap' ? 'rewrap_token' : 'token';
-      props = Ember.assign({}, props, { [keyName]: resp.wrap_info.token });
+      props = assign({}, props, { [keyName]: resp.wrap_info.token });
     }
     if (props.token || props.rewrap_token || props.unwrap_data || action === 'lookup') {
       this.get('wizard').transitionFeatureMachine(this.get('wizard.featureState'), 'CONTINUE');

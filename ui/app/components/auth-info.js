@@ -1,19 +1,19 @@
-import Ember from 'ember';
-
-const { Component, inject, computed, run } = Ember;
+import { inject as service } from '@ember/service';
+import { or } from '@ember/object/computed';
+import Component from '@ember/component';
+import { run } from '@ember/runloop';
 export default Component.extend({
-  auth: inject.service(),
-  wizard: inject.service(),
-  routing: inject.service('-routing'),
+  auth: service(),
+  wizard: service(),
+  router: service(),
 
   transitionToRoute: function() {
-    var router = this.get('routing.router');
-    router.transitionTo.apply(router, arguments);
+    this.get('router').transitionTo(...arguments);
   },
 
   classNames: 'user-menu auth-info',
 
-  isRenewing: computed.or('fakeRenew', 'auth.isRenewing'),
+  isRenewing: or('fakeRenew', 'auth.isRenewing'),
 
   actions: {
     restartGuide() {
@@ -28,9 +28,11 @@ export default Component.extend({
     },
 
     revokeToken() {
-      this.get('auth').revokeCurrentToken().then(() => {
-        this.transitionToRoute('vault.cluster.logout');
-      });
+      this.get('auth')
+        .revokeCurrentToken()
+        .then(() => {
+          this.transitionToRoute('vault.cluster.logout');
+        });
     },
   },
 });
