@@ -422,7 +422,7 @@ func (i *IdentityStore) pathEntityIDDelete() framework.OperationFunc {
 			return nil, err
 		}
 		if entity.NamespaceID != ns.ID {
-			return nil, logical.ErrUnsupportedPath
+			return nil, nil
 		}
 
 		// Delete all the aliases in the entity. This function will also remove
@@ -481,7 +481,7 @@ func (i *IdentityStore) pathEntityNameDelete() framework.OperationFunc {
 			return nil, err
 		}
 		if entity.NamespaceID != ns.ID {
-			return nil, logical.ErrUnsupportedPath
+			return nil, nil
 		}
 
 		// Delete all the aliases in the entity. This function will also remove

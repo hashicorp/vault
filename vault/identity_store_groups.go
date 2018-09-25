@@ -425,7 +425,7 @@ func (i *IdentityStore) handleGroupDeleteCommon(ctx context.Context, key string,
 		return nil, err
 	}
 	if group.NamespaceID != ns.ID {
-		return nil, logical.ErrUnsupportedPath
+		return nil, nil
 	}
 
 	// Delete group alias from memdb
