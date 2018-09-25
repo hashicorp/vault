@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 export function pathOrArray([maybeArray, target]) {
   if (Array.isArray(maybeArray)) {
@@ -7,4 +7,4 @@ export function pathOrArray([maybeArray, target]) {
   return target.get(maybeArray);
 }
 
-export default Ember.Helper.helper(pathOrArray);
+export default buildHelper(pathOrArray);

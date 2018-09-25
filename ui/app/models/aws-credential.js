@@ -2,7 +2,6 @@ import { computed } from '@ember/object';
 import DS from 'ember-data';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 const { attr } = DS;
-const CREATE_FIELDS = ['credentialType', 'ttl', 'roleArn'];
 const CREDENTIAL_TYPES = [
   {
     value: 'iam_user',
