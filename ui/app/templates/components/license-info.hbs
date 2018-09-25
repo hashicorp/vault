@@ -70,8 +70,10 @@
         {{info-table-row label="Expires in" value=(moment-from-now expirationTime interval=1000 hideSuffix=true)}}
       {{/if}}
     </div>
-    <div class="control">
-      <button type="button" {{action "toggleForm"}} class="button">Enter new license</button>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="button" {{action "toggleForm"}} class="button">Enter new license</button>
+      </div>
     </div>
   {{/if}}
 {{/if}}
