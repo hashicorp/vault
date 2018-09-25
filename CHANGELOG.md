@@ -5,6 +5,7 @@ BUG FIXES:
  * core: Re-add deprecated capabilities information for now [GH-5360]
  * core: Fix handling of cyclic token relationships [GH-4803]
  * storage/mysql: Fix locking on MariaDB [GH-5343]
+ * replication: Fix DR API when using a token [GH-5398]
 
 IMPROVEMENTS:
 
