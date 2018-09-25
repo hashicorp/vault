@@ -38,7 +38,7 @@ func Serve(opts *ServeOpts) error {
 	}
 
 	// pluginMap is the map of plugins we can dispense.
-	var pluginMap = map[string]plugin.Plugin{
+	pluginMap := plugin.PluginSet{
 		"backend": &BackendPlugin{
 			Factory: opts.BackendFactoryFunc,
 			Logger:  logger,
@@ -64,10 +64,6 @@ func Serve(opts *ServeOpts) error {
 		},
 	}
 
-	if !pluginutil.GRPCSupport() {
-		serveOpts.GRPCServer = nil
-	}
-
 	// If FetchMetadata is true, run without TLSProvider
 	plugin.Serve(serveOpts)
 
@@ -79,7 +75,7 @@ func Serve(opts *ServeOpts) error {
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  3,
+	ProtocolVersion:  4,
 	MagicCookieKey:   "VAULT_BACKEND_PLUGIN",
 	MagicCookieValue: "6669da05-b1c8-4f49-97d9-c8e5bed98e20",
 }

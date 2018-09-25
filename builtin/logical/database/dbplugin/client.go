@@ -33,11 +33,13 @@ func (dc *DatabasePluginClient) Close() error {
 // plugin is killed on call of Close().
 func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (Database, error) {
 	// pluginMap is the map of plugins we can dispense.
-	var pluginMap = map[string]plugin.Plugin{
-		"database": new(DatabasePlugin),
+	pluginSet := map[int]plugin.PluginSet{
+		3: plugin.PluginSet{
+			"database": new(DatabasePlugin),
+		},
 	}
 
-	client, err := pluginRunner.Run(ctx, sys, pluginMap, handshakeConfig, []string{}, logger)
+	client, err := pluginRunner.Run(ctx, sys, pluginSet, handshakeConfig, []string{}, logger)
 	if err != nil {
 		return nil, err
 	}

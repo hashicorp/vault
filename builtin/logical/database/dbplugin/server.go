@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
 // Serve is called from within a plugin and wraps the provided
@@ -29,10 +28,6 @@ func ServeConfig(db Database, tlsProvider func() (*tls.Config, error)) *plugin.S
 		Plugins:         pluginMap,
 		TLSProvider:     tlsProvider,
 		GRPCServer:      plugin.DefaultGRPCServer,
-	}
-
-	if !pluginutil.GRPCSupport() {
-		conf.GRPCServer = nil
 	}
 
 	return conf

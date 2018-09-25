@@ -96,9 +96,11 @@ func NewBackend(ctx context.Context, pluginName string, sys pluginutil.LookRunne
 
 func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (logical.Backend, error) {
 	// pluginMap is the map of plugins we can dispense.
-	pluginMap := map[string]plugin.Plugin{
-		"backend": &BackendPlugin{
-			metadataMode: isMetadataMode,
+	pluginSet := map[int]plugin.PluginSet{
+		3: plugin.PluginSet{
+			"backend": &BackendPlugin{
+				metadataMode: isMetadataMode,
+			},
 		},
 	}
 
@@ -107,9 +109,9 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	var client *plugin.Client
 	var err error
 	if isMetadataMode {
-		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginMap, handshakeConfig, []string{}, namedLogger)
+		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginSet, handshakeConfig, []string{}, namedLogger)
 	} else {
-		client, err = pluginRunner.Run(ctx, sys, pluginMap, handshakeConfig, []string{}, namedLogger)
+		client, err = pluginRunner.Run(ctx, sys, pluginSet, handshakeConfig, []string{}, namedLogger)
 	}
 	if err != nil {
 		return nil, err

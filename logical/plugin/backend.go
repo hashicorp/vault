@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"net/rpc"
 	"sync/atomic"
 
@@ -13,6 +14,9 @@ import (
 	"github.com/hashicorp/vault/logical/plugin/pb"
 )
 
+var _ plugin.Plugin = (*BackendPlugin)(nil)
+var _ plugin.GRPCPlugin = (*BackendPlugin)(nil)
+
 // BackendPlugin is the plugin.Plugin implementation
 type BackendPlugin struct {
 	Factory      logical.Factory
@@ -22,18 +26,16 @@ type BackendPlugin struct {
 
 // Server gets called when on plugin.Serve()
 func (b *BackendPlugin) Server(broker *plugin.MuxBroker) (interface{}, error) {
-	return &backendPluginServer{
-		factory: b.Factory,
-		broker:  broker,
-		// We pass the logger down into the backend so go-plugin will forward
-		// logs for us.
-		logger: b.Logger,
-	}, nil
+	return nil, errors.New("net/rpc plugin protocol not supported")
 }
 
 // Client gets called on plugin.NewClient()
 func (b BackendPlugin) Client(broker *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
-	return &backendPluginClient{client: c, broker: broker, metadataMode: b.metadataMode}, nil
+	return &backendPluginClient{
+		client:       c,
+		broker:       broker,
+		metadataMode: b.metadataMode,
+	}, nil
 }
 
 func (b BackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
@@ -47,13 +49,14 @@ func (b BackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) err
 	return nil
 }
 
-func (p *BackendPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (b *BackendPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	ret := &backendGRPCPluginClient{
-		client:     pb.NewBackendClient(c),
-		clientConn: c,
-		broker:     broker,
-		cleanupCh:  make(chan struct{}),
-		doneCtx:    ctx,
+		client:       pb.NewBackendClient(c),
+		clientConn:   c,
+		broker:       broker,
+		cleanupCh:    make(chan struct{}),
+		doneCtx:      ctx,
+		metadataMode: b.metadataMode,
 	}
 
 	// Create the value and set the type
