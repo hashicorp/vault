@@ -345,7 +345,7 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Add("X-Vault-Token", rootToken)
+	req.Header.Add(consts.AuthHeaderName, rootToken)
 	req = req.WithContext(context.WithValue(req.Context(), "original_request_path", req.URL.Path))
 
 	statusCode, header, respBytes, err := c.ForwardRequest(req)
