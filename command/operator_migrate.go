@@ -195,7 +195,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 // migrateAll copies all keys in lexicographic order.
 func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
-	return dfsScan(ctx, from, func(path string) error {
+	return dfsScan(ctx, from, func(ctx context.Context, path string) error {
 		if path < c.flagStart || path == migrationLock {
 			return nil
 		}
@@ -295,7 +295,7 @@ func parseStorage(result *migratorConfig, list *ast.ObjectList, name string) err
 
 // dfsScan will invoke cb with every key from source.
 // Keys will be traversed in lexicographic, depth-first order.
-func dfsScan(ctx context.Context, source physical.Backend, cb func(path string) error) error {
+func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.Context, path string) error) error {
 	dfs := []string{""}
 
 	for l := len(dfs); l > 0; l = len(dfs) {
@@ -313,7 +313,7 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(path string) 
 				dfs = append(dfs, key+children[i])
 			}
 		} else {
-			err := cb(key)
+			err := cb(ctx, key)
 			if err != nil {
 				return err
 			}

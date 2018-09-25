@@ -203,7 +203,7 @@ storage_destination "dest_type2" {
 		l := randomLister{s}
 
 		var out []string
-		dfsScan(context.Background(), l, func(path string) error {
+		dfsScan(context.Background(), l, func(ctx context.Context, path string) error {
 			out = append(out, path)
 			return nil
 		})
