@@ -170,7 +170,7 @@ func TestHandler_cors(t *testing.T) {
 		"Access-Control-Allow-Origin":  addr,
 		"Access-Control-Allow-Headers": strings.Join(vault.StdAllowedHeaders, ","),
 		"Access-Control-Max-Age":       "300",
-		"Vary":                         "Origin",
+		"Vary": "Origin",
 	}
 
 	for expHeader, expected := range expHeaders {
@@ -519,6 +519,41 @@ func TestHandler_error(t *testing.T) {
 	if w3.Code != 503 {
 		t.Fatalf("expected 503, got %d", w3.Code)
 	}
+}
+
+func TestHandler_getTokenFromReq(t *testing.T) {
+	r := http.Request{Header: http.Header{}}
+
+	if tok, err := getTokenFromReq(&r); err != nil {
+		t.Fatalf("expected no error, got %s", err)
+	} else if tok != "" {
+		t.Fatalf("expected '' as result, got '%s'", tok)
+	}
+
+	r.Header.Set("Authorization", "Bearer TOKEN NOT_GOOD_TOKEN")
+	if tok, err := getTokenFromReq(&r); err != nil {
+		t.Fatalf("expected no error, got %s", err)
+	} else if tok != "TOKEN" {
+		t.Fatalf("expected 'TOKEN' as result, got '%s'", tok)
+	}
+
+	r.Header.Set("X-Vault-Token", "NEWTOKEN")
+	if tok, err := getTokenFromReq(&r); err != nil {
+		t.Fatalf("expected no error, got %s", err)
+	} else if tok == "TOKEN" {
+		t.Fatalf("X-Vault-Token header should be prioritized")
+	} else if tok != "NEWTOKEN" {
+		t.Fatalf("expected 'NEWTOKEN' as result, got '%s'", tok)
+	}
+
+	r.Header = http.Header{}
+	r.Header.Set("Authorization", "Basic TOKEN")
+	if tok, err := getTokenFromReq(&r); err == nil {
+		t.Fatal("expected error, got none")
+	} else if tok != "" {
+		t.Fatalf("expected '' as result, got '%s'", tok)
+	}
+
 }
 
 func TestHandler_nonPrintableChars(t *testing.T) {

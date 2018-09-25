@@ -101,7 +101,6 @@ func testHttpData(t *testing.T, method string, token string, addr string, body i
 		t.Fatalf("err: %s", err)
 	}
 
-	return resp
 }
 
 func testResponseStatus(t *testing.T, resp *http.Response, code int) {
