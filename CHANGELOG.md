@@ -1,5 +1,9 @@
 ## 0.11.2 (Unreleased)
 
+FEATURES:
+  * Storage Backend Migrator: A new `operator migrate` command allows offline
+    migration of data between two storage backends.
+
 BUG FIXES:
 
  * core: Re-add deprecated capabilities information for now [GH-5360]
