@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"reflect"
@@ -22,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
@@ -63,8 +63,8 @@ func TestBackend_basicSTS(t *testing.T) {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
-	roleName := generateUniqueRoleName(t.Name())
-	userName := generateUniqueUserName(t.Name())
+	roleName := generateUniqueName(t.Name())
+	userName := generateUniqueName(t.Name())
 	accessKey := &awsAccessKey{}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -708,7 +708,7 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 
 func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueRoleName(t.Name())
+	roleName := generateUniqueName(t.Name())
 	// This looks a bit curious. The policy document and the role document act
 	// as a logical intersection of policies. The role allows ec2:Describe*
 	// (among other permissions). This policy allows everything BUT
@@ -810,13 +810,8 @@ func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAcc
 	}
 }
 
-func generateUniqueRoleName(prefix string) string {
-	return fmt.Sprintf("Vault-%s-%d", prefix, rand.Intn(1000000))
-}
-
-func generateUniqueUserName(prefix string) string {
-	return fmt.Sprintf("Vault-%s-%d", prefix, rand.Intn(1000000))
-
+func generateUniqueName(prefix string) string {
+	return testhelpers.RandomWithPrefix(prefix)
 }
 
 type awsAccessKey struct {
