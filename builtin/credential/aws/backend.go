@@ -116,6 +116,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			pathRoleTag(b),
 			pathConfigClient(b),
 			pathConfigCertificate(b),
+			pathConfigIdentity(b),
 			pathConfigSts(b),
 			pathListSts(b),
 			pathConfigTidyRoletagBlacklist(b),
