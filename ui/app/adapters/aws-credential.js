@@ -11,7 +11,7 @@ export default ApplicationAdapter.extend({
     if (roleType === 'iam_user') {
       method = 'GET';
     } else {
-      if (ttl) {
+      if (ttl !== undefined) {
         data.ttl = ttl;
       }
       if (roleType === 'assumed_role' && roleArn) {
