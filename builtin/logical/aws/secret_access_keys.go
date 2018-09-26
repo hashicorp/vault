@@ -68,7 +68,6 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
-
 	stsClient, err := b.clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -114,7 +113,6 @@ func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
-
 	stsClient, err := b.clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -164,7 +162,6 @@ func (b *backend) secretAccessKeysCreate(
 	ctx context.Context,
 	s logical.Storage,
 	displayName, policyName string, role *awsRoleEntry) (*logical.Response, error) {
-
 	iamClient, err := b.clientIAM(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -313,7 +310,7 @@ func (b *backend) secretAccessKeysRevoke(ctx context.Context, req *logical.Reque
 	}
 
 	// Use the user rollback mechanism to delete this user
-	err := pathUserRollback(ctx, req, "user", map[string]interface{}{
+	err := b.pathUserRollback(ctx, req, "user", map[string]interface{}{
 		"username": username,
 	})
 	if err != nil {

@@ -80,6 +80,7 @@ func TestBackend_basicSTS(t *testing.T) {
 		Backend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigWithCreds(t, accessKey),
+			testAccStepRotateRoot(accessKey),
 			testAccStepWritePolicy(t, "test", testDynamoPolicy),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest}),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
@@ -432,6 +433,44 @@ func testAccStepConfigWithCreds(t *testing.T, accessKey *awsAccessKey) logicalte
 			req.Data["access_key"] = accessKey.AccessKeyID
 			req.Data["secret_key"] = accessKey.SecretAccessKey
 			return nil
+		},
+	}
+}
+
+func testAccStepRotateRoot(oldAccessKey *awsAccessKey) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config/rotate-root",
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				return fmt.Errorf("received nil response from config/rotate-root")
+			}
+			newAccessKeyID := resp.Data["access_key"].(string)
+			if newAccessKeyID == oldAccessKey.AccessKeyID {
+				return fmt.Errorf("rotate-root didn't rotate access key")
+			}
+			awsConfig := &aws.Config{
+				Region:      aws.String("us-east-1"),
+				HTTPClient:  cleanhttp.DefaultClient(),
+				Credentials: credentials.NewStaticCredentials(oldAccessKey.AccessKeyID, oldAccessKey.SecretAccessKey, ""),
+			}
+			// sigh....
+			oldAccessKey.AccessKeyID = newAccessKeyID
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+			svc := sts.New(session.New(awsConfig))
+			params := &sts.GetCallerIdentityInput{}
+			_, err := svc.GetCallerIdentity(params)
+			if err == nil {
+				return fmt.Errorf("bad: old credentials succeeded after rotate")
+			}
+			if aerr, ok := err.(awserr.Error); ok {
+				if aerr.Code() != "InvalidClientTokenId" {
+					return fmt.Errorf("Unknown error returned from AWS: %#v", aerr)
+				}
+				return nil
+			}
+			return err
 		},
 	}
 }
