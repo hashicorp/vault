@@ -8,7 +8,7 @@ description: |-
   level, with no decryption involved.
 ---
 
-# migrate
+# operator migrate
 
 The `operator migrate` command copies data between storage backends to facilitate
 migrating Vault between configurations. It operates directly at the storage
