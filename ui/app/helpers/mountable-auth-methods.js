@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 const MOUNTABLE_AUTH_METHODS = [
   {
@@ -88,4 +88,4 @@ export function methods() {
   return MOUNTABLE_AUTH_METHODS.slice();
 }
 
-export default Ember.Helper.helper(methods);
+export default buildHelper(methods);

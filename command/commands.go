@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	ad "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
+	alicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
 	azure "github.com/hashicorp/vault-plugin-secrets-azure"
 	gcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -121,6 +122,7 @@ var (
 
 	logicalBackends = map[string]logical.Factory{
 		"ad":         ad.Factory,
+		"alicloud":   alicloud.Factory,
 		"aws":        aws.Factory,
 		"azure":      azure.Factory,
 		"cassandra":  cassandra.Factory,
@@ -371,6 +373,13 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"operator key-status": func() (cli.Command, error) {
 			return &OperatorKeyStatusCommand{
 				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator migrate": func() (cli.Command, error) {
+			return &OperatorMigrateCommand{
+				BaseCommand:      getBaseCommand(),
+				PhysicalBackends: physicalBackends,
+				ShutdownCh:       MakeShutdownCh(),
 			}, nil
 		},
 		"operator rekey": func() (cli.Command, error) {

@@ -80,6 +80,47 @@ $ curl \
     http://127.0.0.1:8200/v1/aws/config/root
 ```
 
+## Rotate Root IAM Credentials
+
+When you have configured Vault with static credentials, you can use this
+endpoint to have Vault rotate the access key it used. Note that, due to AWS
+eventual consistency, after calling this endpoint, subsequent calls from Vault
+to AWS may fail for a few seconds until AWS becomes consistent again.
+
+
+In order to call this endpoint, Vault's AWS access key MUST be the only access
+key on the IAM user; otherwise, generation of a new access key will fail. Once
+this method is called, Vault will now be the only entity that knows the AWS
+secret key is used to access AWS.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/aws/config/rotate-root`    | `200 application/json` |
+
+### Parameters
+
+There are no parameters to this operation.
+
+### Sample Request
+
+```$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8211/v1/aws/config/rotate-root
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "access_key": "AKIA..."
+  }
+}
+```
+
+The new access key Vault uses is returned by this operation.
+
 ## Configure Lease
 
 This endpoint configures lease settings for the AWS secrets engine. It is

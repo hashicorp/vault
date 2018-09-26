@@ -1,8 +1,8 @@
-import Ember from 'ember';
+import Mixin from '@ember/object/mixin';
 
 // removes Ember Data records from the cache when the model
 // changes or you move away from the current route
-export default Ember.Mixin.create({
+export default Mixin.create({
   modelPath: 'model',
   unloadModel() {
     const model = this.controller.get(this.get('modelPath'));

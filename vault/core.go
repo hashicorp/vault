@@ -17,6 +17,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	cache "github.com/patrickmn/go-cache"
 
 	"google.golang.org/grpc"
 
@@ -27,12 +28,12 @@ import (
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
-	cache "github.com/patrickmn/go-cache"
 )
 
 const (
@@ -86,6 +87,7 @@ var (
 	startReplication     = startReplicationImpl
 	stopReplication      = stopReplicationImpl
 	LastRemoteWAL        = lastRemoteWALImpl
+	WaitUntilWALShipped  = waitUntilWALShippedImpl
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -113,6 +115,8 @@ func (e *ErrInvalidKey) Error() string {
 	return fmt.Sprintf("invalid key: %v", e.Reason)
 }
 
+type RegisterAuthFunc func(context.Context, time.Duration, string, *logical.Auth) error
+
 type activeAdvertisement struct {
 	RedirectAddr     string            `json:"redirect_addr"`
 	ClusterAddr      string            `json:"cluster_addr,omitempty"`
@@ -129,6 +133,8 @@ type unlockInformation struct {
 // interface for API handlers and is responsible for managing the logical and physical
 // backends, router, security barrier, and audit trails.
 type Core struct {
+	entCore
+
 	// N.B.: This is used to populate a dev token down replication, as
 	// otherwise, after replication is started, a dev would have to go through
 	// the generate-root process simply to talk to the new follower cluster.
@@ -226,6 +232,9 @@ type Core struct {
 
 	// systemBackend is the backend which is used to manage internal operations
 	systemBackend *SystemBackend
+
+	// cubbyholeBackend is the backend which manages the per-token storage
+	cubbyholeBackend *CubbyholeBackend
 
 	// systemBarrierView is the barrier view for the system backend
 	systemBarrierView *BarrierView
@@ -338,6 +347,7 @@ type Core struct {
 	atomicPrimaryClusterAddrs *atomic.Value
 
 	atomicPrimaryFailoverAddrs *atomic.Value
+
 	// replicationState keeps the current replication state cached for quick
 	// lookup; activeNodeReplicationState stores the active value on standbys
 	replicationState           *uint32
@@ -367,6 +377,16 @@ type Core struct {
 
 	// Stores any funcs that should be run on successful postUnseal
 	postUnsealFuncs []func()
+
+	// replicationFailure is used to mark when replication has entered an
+	// unrecoverable failure.
+	replicationFailure *uint32
+
+	// disablePerfStanby is used to tell a standby not to attempt to become a
+	// perf standby
+	disablePerfStandby bool
+
+	licensingStopCh chan struct{}
 
 	// Stores loggers so we can reset the level
 	allLoggers     []log.Logger
@@ -422,8 +442,17 @@ type CoreConfig struct {
 
 	PluginDirectory string `json:"plugin_directory" structs:"plugin_directory" mapstructure:"plugin_directory"`
 
+	DisableSealWrap bool `json:"disable_sealwrap" structs:"disable_sealwrap" mapstructure:"disable_sealwrap"`
+
 	ReloadFuncs     *map[string][]reload.ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
+
+	// Licensing
+	LicensingConfig *LicensingConfig
+	// Don't set this unless in dev mode, ideally only when using inmem
+	DevLicenseDuration time.Duration
+
+	DisablePerformanceStandby bool
 
 	AllLoggers []log.Logger
 }
@@ -465,6 +494,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
+		entCore:                          entCore{},
 		devToken:                         conf.DevToken,
 		physical:                         conf.Physical,
 		redirectAddr:                     conf.RedirectAddr,
@@ -493,6 +523,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		localClusterParsedCert:           new(atomic.Value),
 		activeNodeReplicationState:       new(uint32),
 		keepHALockOnStepDown:             new(uint32),
+		replicationFailure:               new(uint32),
+		disablePerfStandby:               true,
 		activeContextCancelFunc:          new(atomic.Value),
 		allLoggers:                       conf.AllLoggers,
 	}
@@ -521,28 +553,14 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		Enabled: new(uint32),
 	}
 
-	phys := conf.Physical
-	_, txnOK := conf.Physical.(physical.Transactional)
 	if c.seal == nil {
 		c.seal = NewDefaultSeal()
 	}
 	c.seal.SetCore(c)
 
-	unwrapperLogger := c.baseLogger.Named("storage.sealunwrapper")
-	c.allLoggers = append(c.allLoggers, unwrapperLogger)
-	c.sealUnwrapper = NewSealUnwrapper(phys, unwrapperLogger)
-
-	var ok bool
-
-	// Wrap the physical backend in a cache layer if enabled
-	cacheLogger := c.baseLogger.Named("storage.cache")
-	c.allLoggers = append(c.allLoggers, cacheLogger)
-	if txnOK {
-		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, cacheLogger)
-	} else {
-		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, cacheLogger)
+	if err := coreInit(c, conf); err != nil {
+		return nil, err
 	}
-	c.physicalCache = c.physical.(physical.ToggleablePurgemonster)
 
 	if !conf.DisableMlock {
 		// Ensure our memory usage is locked into physical RAM
@@ -561,6 +579,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	var err error
+	var ok bool
+
 	if conf.PluginDirectory != "" {
 		c.pluginDirectory, err = filepath.Abs(conf.PluginDirectory)
 		if err != nil {
@@ -573,6 +593,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, errwrap.Wrapf("barrier setup failed: {{err}}", err)
 	}
+
+	createSecondaries(c, conf)
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
 		c.ha = conf.HAPhysical
@@ -596,7 +618,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		logicalBackends["kv"] = PassthroughBackendFactory
 	}
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
-	logicalBackends["system"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+	logicalBackends[systemMountType] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		sysBackendLogger := conf.Logger.Named("system")
 		c.AddLogger(sysBackendLogger)
 		b := NewSystemBackend(c, sysBackendLogger)
@@ -605,13 +627,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 		return b, nil
 	}
-
 	logicalBackends["identity"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		identityLogger := conf.Logger.Named("identity")
 		c.AddLogger(identityLogger)
 		return NewIdentityStore(ctx, c, config, identityLogger)
 	}
-
+	addExtraLogicalBackends(c, logicalBackends)
 	c.logicalBackends = logicalBackends
 
 	credentialBackends := make(map[string]logical.Factory)
@@ -623,6 +644,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.AddLogger(tsLogger)
 		return NewTokenStore(ctx, tsLogger, c, config)
 	}
+	addExtraCredentialBackends(c, credentialBackends)
 	c.credentialBackends = credentialBackends
 
 	auditBackends := make(map[string]audit.Factory)
@@ -655,7 +677,7 @@ func (c *Core) GetContext() (context.Context, context.CancelFunc) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 
-	return context.WithCancel(c.activeContext)
+	return context.WithCancel(namespace.RootContext(c.activeContext))
 }
 
 // Sealed checks if the Vault is current sealed
@@ -882,6 +904,10 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		c.logger.Info("vault is unsealed")
 	}
 
+	if err := preUnsealInternal(ctx, c); err != nil {
+		return false, err
+	}
+
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
 		// We still need to set up cluster info even if it's not part of a
@@ -893,8 +919,8 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 			return false, err
 		}
 
-		ctx, ctxCancel := context.WithCancel(context.Background())
-		if err := c.postUnseal(ctx, ctxCancel); err != nil {
+		ctx, ctxCancel := context.WithCancel(namespace.RootContext(nil))
+		if err := c.postUnseal(ctx, ctxCancel, standardUnsealStrategy{}); err != nil {
 			c.logger.Error("post-unseal setup failed", "error", err)
 			c.barrier.Seal()
 			c.logger.Warn("vault is sealed")
@@ -944,7 +970,7 @@ func (c *Core) SealWithRequest(httpCtx context.Context, req *logical.Request) er
 
 	// This will unlock the read lock
 	// We use background context since we may not be active
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(namespace.RootContext(nil))
 	defer cancel()
 
 	go func() {
@@ -978,7 +1004,7 @@ func (c *Core) Seal(token string) error {
 
 	// This will unlock the read lock
 	// We use background context since we may not be active
-	return c.sealInitCommon(context.Background(), req)
+	return c.sealInitCommon(namespace.RootContext(nil), req)
 }
 
 // sealInitCommon is common logic for Seal and SealWithRequest and is used to
@@ -1005,7 +1031,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		return retErr
 	}
 
-	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(req)
+	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
 		if errwrap.ContainsType(err, new(TemplateError)) {
 			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
@@ -1016,15 +1042,18 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		return retErr
 	}
 
+	req.SetTokenEntry(te)
+
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
-		ClientToken:      req.ClientToken,
-		Policies:         identityPolicies,
-		IdentityPolicies: identityPolicies,
+		ClientToken: req.ClientToken,
 	}
 	if te != nil {
+		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
+		delete(identityPolicies, te.NamespaceID)
+		auth.ExternalNamespacePolicies = identityPolicies
 		auth.TokenPolicies = te.Policies
-		auth.Policies = append(te.Policies, identityPolicies...)
+		auth.Policies = append(te.Policies, identityPolicies[te.NamespaceID]...)
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
@@ -1222,62 +1251,37 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
 		}
 	}
 
+	postSealInternal(c)
+
 	c.logger.Info("vault is sealed")
 
 	return nil
 }
 
-// postUnseal is invoked after the barrier is unsealed, but before
-// allowing any user operations. This allows us to setup any state that
-// requires the Vault to be unsealed such as mount tables, logical backends,
-// credential stores, etc.
-func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc) (retErr error) {
-	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
+type UnsealStrategy interface {
+	unseal(context.Context, log.Logger, *Core) error
+}
 
-	// Clear any out
-	c.postUnsealFuncs = nil
+type standardUnsealStrategy struct{}
 
-	// Create a new request context
-	c.activeContext = ctx
-	c.activeContextCancelFunc.Store(ctxCancelFunc)
-
-	defer func() {
-		if retErr != nil {
-			ctxCancelFunc()
-			c.preSeal()
-		}
-	}()
-	c.logger.Info("post-unseal setup starting")
-
+func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c *Core) error {
 	// Clear forwarding clients; we're active
 	c.requestForwardingConnectionLock.Lock()
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
-	// Enable the cache
-	c.physicalCache.Purge(ctx)
-	if !c.cachingDisabled {
-		c.physicalCache.SetEnabled(true)
-	}
-
-	switch c.sealUnwrapper.(type) {
-	case *sealUnwrapper:
-		c.sealUnwrapper.(*sealUnwrapper).runUnwraps()
-	case *transactionalSealUnwrapper:
-		c.sealUnwrapper.(*transactionalSealUnwrapper).runUnwraps()
-	}
-
-	// Purge these for safety in case of a rekey
-	c.seal.SetBarrierConfig(ctx, nil)
-	if c.seal.RecoveryKeySupported() {
-		c.seal.SetRecoveryConfig(ctx, nil)
+	if err := postUnsealPhysical(c); err != nil {
+		return err
 	}
 
 	if err := enterprisePostUnseal(c); err != nil {
 		return err
 	}
-	if err := c.ensureWrappingKey(ctx); err != nil {
-		return err
+
+	if !c.IsDRSecondary() {
+		if err := c.ensureWrappingKey(ctx); err != nil {
+			return err
+		}
 	}
 	if err := c.setupPluginCatalog(); err != nil {
 		return err
@@ -1300,30 +1304,85 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc)
 	if err := c.setupCredentials(ctx); err != nil {
 		return err
 	}
-	if err := c.startRollback(); err != nil {
-		return err
-	}
-	if err := c.setupExpiration(); err != nil {
-		return err
-	}
-	if err := c.loadAudits(ctx); err != nil {
-		return err
-	}
-	if err := c.setupAudits(ctx); err != nil {
-		return err
-	}
-	if err := c.loadIdentityStoreArtifacts(ctx); err != nil {
-		return err
-	}
-	if err := c.setupAuditedHeadersConfig(ctx); err != nil {
-		return err
+	if !c.IsDRSecondary() {
+		if err := c.startRollback(); err != nil {
+			return err
+		}
+		if err := c.setupExpiration(expireLeaseStrategyRevoke); err != nil {
+			return err
+		}
+		if err := c.loadAudits(ctx); err != nil {
+			return err
+		}
+		if err := c.setupAudits(ctx); err != nil {
+			return err
+		}
+		if err := c.loadIdentityStoreArtifacts(ctx); err != nil {
+			return err
+		}
+		if err := loadMFAConfigs(ctx, c); err != nil {
+			return err
+		}
+		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
+			return err
+		}
+	} else {
+		c.auditBroker = NewAuditBroker(c.logger)
 	}
 
-	if c.ha != nil {
+	if c.ha != nil || shouldStartClusterListener(c) {
 		if err := c.startClusterListener(ctx); err != nil {
 			return err
 		}
 	}
+
+	c.clusterParamsLock.Lock()
+	defer c.clusterParamsLock.Unlock()
+	if err := startReplication(c); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// postUnseal is invoked after the barrier is unsealed, but before
+// allowing any user operations. This allows us to setup any state that
+// requires the Vault to be unsealed such as mount tables, logical backends,
+// credential stores, etc.
+func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc, unsealer UnsealStrategy) (retErr error) {
+	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
+
+	// Clear any out
+	c.postUnsealFuncs = nil
+
+	// Create a new request context
+	c.activeContext = ctx
+	c.activeContextCancelFunc.Store(ctxCancelFunc)
+
+	defer func() {
+		if retErr != nil {
+			ctxCancelFunc()
+			c.preSeal()
+		}
+	}()
+	c.logger.Info("post-unseal setup starting")
+
+	// Enable the cache
+	c.physicalCache.Purge(ctx)
+	if !c.cachingDisabled {
+		c.physicalCache.SetEnabled(true)
+	}
+
+	// Purge these for safety in case of a rekey
+	c.seal.SetBarrierConfig(ctx, nil)
+	if c.seal.RecoveryKeySupported() {
+		c.seal.SetRecoveryConfig(ctx, nil)
+	}
+
+	if err := unsealer.unseal(ctx, c.logger, c); err != nil {
+		return err
+	}
+
 	c.metricsCh = make(chan struct{})
 	go c.emitMetrics(c.metricsCh)
 
@@ -1357,6 +1416,12 @@ func (c *Core) preSeal() error {
 	}
 	var result error
 
+	c.clusterParamsLock.Lock()
+	if err := stopReplication(c); err != nil {
+		result = multierror.Append(result, errwrap.Wrapf("error stopping replication: {{err}}", err))
+	}
+	c.clusterParamsLock.Unlock()
+
 	c.stopClusterListener()
 
 	if err := c.teardownAudits(); err != nil {
@@ -1381,16 +1446,7 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, err)
 	}
 
-	switch c.sealUnwrapper.(type) {
-	case *sealUnwrapper:
-		c.sealUnwrapper.(*sealUnwrapper).stopUnwraps()
-	case *transactionalSealUnwrapper:
-		c.sealUnwrapper.(*transactionalSealUnwrapper).stopUnwraps()
-	}
-
-	// Purge the cache
-	c.physicalCache.SetEnabled(false)
-	c.physicalCache.Purge(context.Background())
+	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")
 	return result
@@ -1452,6 +1508,10 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 
 func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
 	return c.auditedHeaders
+}
+
+func waitUntilWALShippedImpl(ctx context.Context, c *Core, index uint64) bool {
+	return true
 }
 
 func lastRemoteWALImpl(c *Core) uint64 {

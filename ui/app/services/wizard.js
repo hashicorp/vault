@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import { next } from '@ember/runloop';
+import { typeOf } from '@ember/utils';
+import Service, { inject as service } from '@ember/service';
 import { Machine } from 'xstate';
-
-const { Service, inject } = Ember;
 
 import getStorage from 'vault/lib/token-storage';
 
@@ -44,7 +44,7 @@ const DEFAULTS = {
 };
 
 export default Service.extend(DEFAULTS, {
-  router: inject.service(),
+  router: service(),
   showWhenUnauthenticated: false,
 
   init() {
@@ -103,7 +103,7 @@ export default Service.extend(DEFAULTS, {
       state = state.value;
     }
     let stateKey = '';
-    while (Ember.typeOf(state) === 'object') {
+    while (typeOf(state) === 'object') {
       let newState = Object.keys(state);
       stateKey += newState + '.';
       state = state[newState];
@@ -178,7 +178,7 @@ export default Service.extend(DEFAULTS, {
         case 'routeTransition':
           expectedRouteName = action.params[0];
           transitionURL = router.urlFor(...action.params).replace(/^\/ui/, '');
-          Ember.run.next(() => {
+          next(() => {
             router.transitionTo(...action.params);
           });
           break;

@@ -6,6 +6,7 @@
           secret=key.id
           mode="show"
           replace=true
+          queryParams=(query-params tab='')
           data-test-transit-link="details"
           }}
             Details
@@ -162,8 +163,9 @@
   <p>
     {{transit-key-actions
       key=key
-      selectedAction='rotate'
+      selectedAction="rotate"
       capabilities=capabilities
+      onRefresh=(action "refresh")
     }}
   </p>
 {{else}}

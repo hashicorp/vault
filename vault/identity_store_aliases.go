@@ -6,9 +6,8 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/errwrap"
-	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -237,7 +236,7 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 		// ID creation and other validations; This is more useful for new entities
 		// and may not perform anything for the existing entities. Placing the
 		// check here to make the flow common for both new and existing entities.
-		err = i.sanitizeEntity(entity)
+		err = i.sanitizeEntity(ctx, entity)
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +250,7 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 		alias.CanonicalID = entity.ID
 
 		// ID creation and other validations
-		err = i.sanitizeAlias(alias)
+		err = i.sanitizeAlias(ctx, alias)
 		if err != nil {
 			return nil, err
 		}
@@ -260,7 +259,7 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 		// aliases in storage. If the alias is being transferred over from
 		// one entity to another, previous entity needs to get refreshed in MemDB
 		// and persisted in storage as well.
-		if err := i.upsertEntity(entity, previousEntity, true); err != nil {
+		if err := i.upsertEntity(ctx, entity, previousEntity, true); err != nil {
 			return nil, err
 		}
 
@@ -288,12 +287,20 @@ func (i *IdentityStore) pathAliasIDRead() framework.OperationFunc {
 			return nil, err
 		}
 
-		return i.handleAliasReadCommon(alias)
+		return i.handleAliasReadCommon(ctx, alias)
 	}
 }
 
-func (i *IdentityStore) handleAliasReadCommon(alias *identity.Alias) (*logical.Response, error) {
+func (i *IdentityStore) handleAliasReadCommon(ctx context.Context, alias *identity.Alias) (*logical.Response, error) {
 	if alias == nil {
+		return nil, nil
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ns.ID != alias.NamespaceID {
 		return nil, nil
 	}
 
@@ -343,6 +350,14 @@ func (i *IdentityStore) pathAliasIDDelete() framework.OperationFunc {
 		// If there is no alias for the ID, do nothing
 		if alias == nil {
 			return nil, nil
+		}
+
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if ns.ID != alias.NamespaceID {
+			return nil, logical.ErrUnsupportedPath
 		}
 
 		// Fetch the associated entity
@@ -399,53 +414,7 @@ func (i *IdentityStore) pathAliasIDDelete() framework.OperationFunc {
 // store
 func (i *IdentityStore) pathAliasIDList() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		ws := memdb.NewWatchSet()
-		iter, err := i.MemDBAliases(ws, false)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to fetch iterator for aliases in memdb: {{err}}", err)
-		}
-
-		var aliasIDs []string
-		aliasInfo := map[string]interface{}{}
-
-		type mountInfo struct {
-			MountType string
-			MountPath string
-		}
-		mountAccessorMap := map[string]mountInfo{}
-
-		for {
-			raw := iter.Next()
-			if raw == nil {
-				break
-			}
-			alias := raw.(*identity.Alias)
-			aliasIDs = append(aliasIDs, alias.ID)
-			aliasInfoEntry := map[string]interface{}{
-				"name":           alias.Name,
-				"canonical_id":   alias.CanonicalID,
-				"mount_accessor": alias.MountAccessor,
-			}
-
-			mi, ok := mountAccessorMap[alias.MountAccessor]
-			if ok {
-				aliasInfoEntry["mount_type"] = mi.MountType
-				aliasInfoEntry["mount_path"] = mi.MountPath
-			} else {
-				mi = mountInfo{}
-				if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
-					mi.MountType = mountValidationResp.MountType
-					mi.MountPath = mountValidationResp.MountPath
-					aliasInfoEntry["mount_type"] = mi.MountType
-					aliasInfoEntry["mount_path"] = mi.MountPath
-				}
-				mountAccessorMap[alias.MountAccessor] = mi
-			}
-
-			aliasInfo[alias.ID] = aliasInfoEntry
-		}
-
-		return logical.ListResponseWithInfo(aliasIDs, aliasInfo), nil
+		return i.handleAliasListCommon(ctx, false)
 	}
 }
 

@@ -1,4 +1,5 @@
-import Ember from 'ember';
+import { set } from '@ember/object';
+import Route from '@ember/routing/route';
 import DS from 'ember-data';
 
 const MODEL_FROM_PARAM = {
@@ -6,12 +7,12 @@ const MODEL_FROM_PARAM = {
   groups: 'group',
 };
 
-export default Ember.Route.extend({
+export default Route.extend({
   model(params) {
     let model = MODEL_FROM_PARAM[params.item_type];
     if (!model) {
       const error = new DS.AdapterError();
-      Ember.set(error, 'httpStatus', 404);
+      set(error, 'httpStatus', 404);
       throw error;
     }
     return model;

@@ -46,7 +46,7 @@ type Config struct {
 	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
 
 	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
-	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_time"`
+	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
 
 	ClusterName         string `hcl:"cluster_name"`
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
@@ -458,12 +458,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
-		if err := parseStorage(&result, o, "storage"); err != nil {
+		if err := ParseStorage(&result, o, "storage"); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'storage': {{err}}", err)
 		}
 	} else {
 		if o := list.Filter("backend"); len(o.Items) > 0 {
-			if err := parseStorage(&result, o, "backend"); err != nil {
+			if err := ParseStorage(&result, o, "backend"); err != nil {
 				return nil, errwrap.Wrapf("error parsing 'backend': {{err}}", err)
 			}
 		}
@@ -583,7 +583,7 @@ func isTemporaryFile(name string) bool {
 		(strings.HasPrefix(name, "#") && strings.HasSuffix(name, "#")) // emacs
 }
 
-func parseStorage(result *Config, list *ast.ObjectList, name string) error {
+func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 	if len(list.Items) > 1 {
 		return fmt.Errorf("only one %q block is permitted", name)
 	}

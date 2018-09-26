@@ -1,10 +1,10 @@
-import Ember from 'ember';
-
-const { computed, inject, Controller } = Ember;
+import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+import Controller from '@ember/controller';
 export default Controller.extend({
-  namespaceService: inject.service('namespace'),
-  accessibleNamespaces: computed.alias('namespaceService.accessibleNamespaces'),
-  currentNamespace: computed.alias('namespaceService.path'),
+  namespaceService: service('namespace'),
+  accessibleNamespaces: alias('namespaceService.accessibleNamespaces'),
+  currentNamespace: alias('namespaceService.path'),
   actions: {
     refreshNamespaceList() {
       // fetch new namespaces for the namespace picker

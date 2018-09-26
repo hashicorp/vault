@@ -35,9 +35,12 @@ import (
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
+	serverseal "github.com/hashicorp/vault/command/server/seal"
 	"github.com/hashicorp/vault/helper/gated-writer"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/reload"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -49,6 +52,8 @@ import (
 
 var _ cli.Command = (*ServerCommand)(nil)
 var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
+
+const migrationLock = "core/migration"
 
 type ServerCommand struct {
 	*BaseCommand
@@ -458,12 +463,43 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	migrationStatus, err := CheckMigration(backend)
+	if err != nil {
+		c.UI.Error("Error checking migration status")
+		return 1
+	}
+
+	if migrationStatus != nil {
+		startTime := migrationStatus.Start.Format(time.RFC3339)
+		c.UI.Error(wrapAtLength(fmt.Sprintf("Storage migration in progress (started: %s). "+
+			"Use 'vault operator migrate -reset' to force clear the migration lock.", startTime)))
+		return 1
+	}
+
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	info["log level"] = c.flagLogLevel
 	infoKeys = append(infoKeys, "log level")
 
-	var seal vault.Seal = vault.NewDefaultSeal()
+	sealType := "shamir"
+	if config.Seal != nil || os.Getenv("VAULT_SEAL_TYPE") != "" {
+		if config.Seal == nil {
+			sealType = os.Getenv("VAULT_SEAL_TYPE")
+		} else {
+			sealType = config.Seal.Type
+		}
+	}
+
+	sealLogger := c.logger.Named(sealType)
+	allLoggers = append(allLoggers, sealLogger)
+	seal, sealConfigError := serverseal.ConfigureSeal(config, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
+	if sealConfigError != nil {
+		if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+			c.UI.Error(fmt.Sprintf(
+				"Error parsing Seal configuration: %s", sealConfigError))
+			return 1
+		}
+	}
 
 	// Ensure that the seal finalizer is called, even if using verify-only
 	defer func() {
@@ -481,24 +517,26 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	coreConfig := &vault.CoreConfig{
-		Physical:           backend,
-		RedirectAddr:       config.Storage.RedirectAddr,
-		HAPhysical:         nil,
-		Seal:               seal,
-		AuditBackends:      c.AuditBackends,
-		CredentialBackends: c.CredentialBackends,
-		LogicalBackends:    c.LogicalBackends,
-		Logger:             c.logger,
-		DisableCache:       config.DisableCache,
-		DisableMlock:       config.DisableMlock,
-		MaxLeaseTTL:        config.MaxLeaseTTL,
-		DefaultLeaseTTL:    config.DefaultLeaseTTL,
-		ClusterName:        config.ClusterName,
-		CacheSize:          config.CacheSize,
-		PluginDirectory:    config.PluginDirectory,
-		EnableUI:           config.EnableUI,
-		EnableRaw:          config.EnableRawEndpoint,
-		AllLoggers:         allLoggers,
+		Physical:                  backend,
+		RedirectAddr:              config.Storage.RedirectAddr,
+		HAPhysical:                nil,
+		Seal:                      seal,
+		AuditBackends:             c.AuditBackends,
+		CredentialBackends:        c.CredentialBackends,
+		LogicalBackends:           c.LogicalBackends,
+		Logger:                    c.logger,
+		DisableCache:              config.DisableCache,
+		DisableMlock:              config.DisableMlock,
+		MaxLeaseTTL:               config.MaxLeaseTTL,
+		DefaultLeaseTTL:           config.DefaultLeaseTTL,
+		ClusterName:               config.ClusterName,
+		CacheSize:                 config.CacheSize,
+		PluginDirectory:           config.PluginDirectory,
+		EnableUI:                  config.EnableUI,
+		EnableRaw:                 config.EnableRawEndpoint,
+		DisableSealWrap:           config.DisableSealWrap,
+		DisablePerformanceStandby: config.DisablePerformanceStandby,
+		AllLoggers:                allLoggers,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -520,6 +558,10 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if c.flagDevThreeNode {
 		return c.enableThreeNodeDevCluster(coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+	}
+
+	if c.flagDevFourCluster {
+		return c.enableFourClusterDev(coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	var disableClustering bool
@@ -887,7 +929,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				return false
 			}
 
-			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed); err != nil {
+			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed, core.PerfStandby); err != nil {
 				c.UI.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
 				return 1
 			}
@@ -1014,6 +1056,18 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		go server.Serve(ln.Listener)
 	}
 
+	if sealConfigError != nil {
+		init, err := core.Initialized(context.Background())
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
+			return 1
+		}
+		if init {
+			c.UI.Error("Vault is initialized but no Seal key could be loaded")
+			return 1
+		}
+	}
+
 	if newCoreError != nil {
 		c.UI.Warn(wrapAtLength(
 			"WARNING! A non-fatal error occurred during initialization. Please " +
@@ -1126,6 +1180,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 }
 
 func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig) (*vault.InitResult, error) {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+
 	var recoveryConfig *vault.SealConfig
 	barrierConfig := &vault.SealConfig{
 		SecretShares:    1,
@@ -1142,8 +1198,6 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	if core.SealAccess().StoredKeysSupported() {
 		barrierConfig.StoredShares = 1
 	}
-
-	ctx := context.Background()
 
 	// Initialize it with a basic single key
 	init, err := core.Initialize(ctx, &vault.InitParams{
@@ -1210,7 +1264,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 				"no_default_policy": true,
 			},
 		}
-		resp, err := core.HandleRequest(context.Background(), req)
+		resp, err := core.HandleRequest(ctx, req)
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create root token with ID %q: {{err}}", coreConfig.DevToken), err)
 		}
@@ -1226,7 +1280,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(ctx, req)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to revoke initial root token: {{err}}", err)
 		}
@@ -1253,7 +1307,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 				},
 			},
 		}
-		resp, err := core.HandleRequest(context.Background(), req)
+		resp, err := core.HandleRequest(ctx, req)
 		if err != nil {
 			return nil, errwrap.Wrapf("error upgrading default K/V store: {{err}}", err)
 		}
@@ -1317,6 +1371,8 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 
 	testCluster.Start()
 
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+
 	if base.DevToken != "" {
 		req := &logical.Request{
 			ID:          "dev-gen-root",
@@ -1330,7 +1386,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 				"no_default_policy": true,
 			},
 		}
-		resp, err := testCluster.Cores[0].HandleRequest(context.Background(), req)
+		resp, err := testCluster.Cores[0].HandleRequest(ctx, req)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("failed to create root token with ID %s: %s", base.DevToken, err))
 			return 1
@@ -1349,7 +1405,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
-		resp, err = testCluster.Cores[0].HandleRequest(context.Background(), req)
+		resp, err = testCluster.Cores[0].HandleRequest(ctx, req)
 		if err != nil {
 			c.UI.Output(fmt.Sprintf("failed to revoke initial root token: %s", err))
 			return 1
@@ -1482,7 +1538,8 @@ func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 			"command": name,
 		},
 	}
-	if _, err := core.HandleRequest(context.Background(), req); err != nil {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	if _, err := core.HandleRequest(ctx, req); err != nil {
 		return err
 	}
 
@@ -1730,6 +1787,51 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
+}
+
+type MigrationStatus struct {
+	Start time.Time `json:"start"`
+}
+
+func CheckMigration(b physical.Backend) (*MigrationStatus, error) {
+	entry, err := b.Get(context.Background(), migrationLock)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if entry == nil {
+		return nil, nil
+	}
+
+	var status MigrationStatus
+	if err := jsonutil.DecodeJSON(entry.Value, &status); err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+}
+
+func SetMigration(b physical.Backend, active bool) error {
+	if !active {
+		return b.Delete(context.Background(), migrationLock)
+	}
+
+	status := MigrationStatus{
+		Start: time.Now(),
+	}
+
+	enc, err := jsonutil.EncodeJSON(status)
+	if err != nil {
+		return err
+	}
+
+	entry := &physical.Entry{
+		Key:   migrationLock,
+		Value: enc,
+	}
+
+	return b.Put(context.Background(), entry)
 }
 
 type grpclogFaker struct {

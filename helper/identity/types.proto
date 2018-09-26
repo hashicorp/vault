@@ -5,6 +5,7 @@ option go_package = "github.com/hashicorp/vault/helper/identity";
 package identity;
 
 import "google/protobuf/timestamp.proto";
+import "helper/identity/mfa/types.proto";
 
 // Group represents an identity group.
 message Group {
@@ -56,13 +57,11 @@ message Group {
 	// will be set-- will be managed automatically.
 	string type = 12;
 
-	// **Enterprise only**
-	// NamespaceID is the identifier of the namespace to which this group
+	// NamespaceID is the identifier of the namespace to which this group 
 	// belongs to. Do not return this value over the API when reading the
 	// group.
-	//string namespace_id = 13;
+	string namespace_id = 13;
 }
-
 
 // Entity represents an entity that gets persisted and indexed.
 // Entity is fundamentally composed of zero or many aliases.
@@ -114,20 +113,18 @@ message Entity {
 	// storage key.
 	string bucket_key_hash = 9;
 
-	// **Enterprise only**
 	// MFASecrets holds the MFA secrets indexed by the identifier of the MFA
 	// method configuration.
-	//map<string, mfa.Secret> mfa_secrets = 10;
+	map<string, mfa.Secret> mfa_secrets = 10;
 
 	// Disabled indicates whether tokens associated with the account should not
 	// be able to be used
 	bool disabled = 11;
 
-	// **Enterprise only**
 	// NamespaceID is the identifier of the namespace to which this entity
 	// belongs to. Do not return this value over the API when reading the
 	// entity.
-	//string namespace_id = 12;
+	string namespace_id = 12;
 }
 
 // Alias represents the alias that gets stored inside of the
@@ -175,4 +172,36 @@ message Alias {
 
 	// MergedFromCanonicalIDs is the FIFO history of merging activity
 	repeated string merged_from_canonical_ids = 10;
+
+	// NamespaceID is the identifier of the namespace to which this alias
+	// belongs.
+	string namespace_id = 11;
+}
+
+// Deprecated. Retained for backwards compatibility.
+message EntityStorageEntry {
+	repeated PersonaIndexEntry personas = 1;
+	string id = 2;
+	string name = 3;
+	map<string, string> metadata = 4;
+	google.protobuf.Timestamp creation_time = 5;
+	google.protobuf.Timestamp last_update_time= 6;
+	repeated string merged_entity_ids = 7;
+	repeated string policies = 8;
+	string bucket_key_hash = 9;
+	map<string, mfa.Secret> mfa_secrets = 10;
+}
+
+// Deprecated. Retained for backwards compatibility.
+message PersonaIndexEntry {
+	string id = 1;
+	string entity_id = 2;
+	string mount_type = 3;
+	string mount_accessor = 4;
+	string mount_path = 5;
+	map<string, string> metadata = 6;
+	string name = 7;
+	google.protobuf.Timestamp creation_time = 8;
+	google.protobuf.Timestamp last_update_time = 9;
+	repeated string merged_from_entity_ids = 10;
 }

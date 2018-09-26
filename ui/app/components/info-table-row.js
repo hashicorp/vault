@@ -1,9 +1,12 @@
-import Ember from 'ember';
+import { typeOf } from '@ember/utils';
+import { computed } from '@ember/object';
+import { or } from '@ember/object/computed';
+import Component from '@ember/component';
 
-export default Ember.Component.extend({
+export default Component.extend({
   'data-test-component': 'info-table-row',
   classNames: ['info-table-row'],
-  isVisible: Ember.computed.or('alwaysRender', 'value'),
+  isVisible: or('alwaysRender', 'value'),
 
   /*
    * @param boolean
@@ -25,7 +28,7 @@ export default Ember.Component.extend({
    */
   value: null,
 
-  valueIsBoolean: Ember.computed('value', function() {
-    return Ember.typeOf(this.get('value')) === 'boolean';
+  valueIsBoolean: computed('value', function() {
+    return typeOf(this.get('value')) === 'boolean';
   }),
 });

@@ -1,158 +1,130 @@
-import { moduleForComponent, test } from 'ember-qunit';
+import { run } from '@ember/runloop';
+import { resolve } from 'rsvp';
+import Service from '@ember/service';
+import { module, test } from 'qunit';
+import { setupRenderingTest } from 'ember-qunit';
+import { click, fillIn, blur, render, find } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import Ember from 'ember';
+import sinon from 'sinon';
 
-const CapabilitiesStub = Ember.Object.extend({
-  canUpdate: Ember.computed('capabilities', function() {
-    return (this.get('capabilities') || []).includes('root');
-  }),
-});
-
-const storeStub = Ember.Service.extend({
+const storeStub = Service.extend({
   callArgs: null,
-  capabilitiesReturnVal: null,
-  findRecord(_, path) {
-    const self = this;
-    self.set('callArgs', { path });
-    const caps = CapabilitiesStub.create({
-      path,
-      capabilities: self.get('capabilitiesReturnVal') || [],
-    });
-    return Ember.RSVP.resolve(caps);
+  adapterFor() {
+    return {
+      replicationAction() {
+        return {
+          then(cb) {
+            cb();
+          },
+        };
+      },
+    };
   },
 });
 
-moduleForComponent('replication-actions', 'Integration | Component | replication actions', {
-  integration: true,
-  beforeEach: function() {
-    this.register('service:store', storeStub);
-    this.inject.service('store', { as: 'storeService' });
-  },
+const routerService = Service.extend({
+  transitionTo: sinon.stub().returns(resolve()),
 });
 
-function testAction(
-  assert,
-  replicationMode,
-  clusterMode,
-  action,
-  headerText,
-  capabilitiesPath,
-  fillInFn,
-  expectedOnSubmit
-) {
-  const testKey = `${replicationMode}-${clusterMode}-${action}`;
-  if (replicationMode) {
-    this.set('model', {
-      replicationAttrs: {
-        modeForUrl: clusterMode,
-      },
-      [replicationMode]: {
-        mode: clusterMode,
-        modeForUrl: clusterMode,
-      },
+module('Integration | Component | replication actions', function(hooks) {
+  setupRenderingTest(hooks);
+
+  hooks.beforeEach(function() {
+    run(() => {
+      this.owner.register('service:router', routerService);
+      this.owner.unregister('service:store');
+      this.owner.register('service:store', storeStub);
+      this.storeService = this.owner.lookup('service:store');
     });
-    this.set('replicationMode', replicationMode);
-  } else {
-    this.set('model', { mode: clusterMode });
-  }
-  this.set('selectedAction', action);
-  this.set('onSubmit', (...actual) => {
-    assert.deepEqual(
-      JSON.stringify(actual),
-      JSON.stringify(expectedOnSubmit),
-      `${testKey}: submitted values match expected`
-    );
-    return Ember.RSVP.resolve();
   });
-  this.set('storeService.capabilitiesReturnVal', ['root']);
-  this.render(
-    hbs`{{replication-actions model=model replicationMode=replicationMode selectedAction=selectedAction onSubmit=(action onSubmit)}}`
-  );
 
-  assert.equal(
-    this.$(`h4:contains(${headerText})`).length,
-    1,
-    `${testKey}: renders the correct partial as default`
-  );
+  let testCases = [
+    ['dr', 'primary', 'disable', 'Disable replication', null, ['disable', 'primary']],
+    ['performance', 'primary', 'disable', 'Disable replication', null, ['disable', 'primary']],
+    ['dr', 'secondary', 'disable', 'Disable replication', null, ['disable', 'secondary']],
+    ['performance', 'secondary', 'disable', 'Disable replication', null, ['disable', 'secondary']],
+    ['dr', 'primary', 'recover', 'Recover', null, ['recover']],
+    ['performance', 'primary', 'recover', 'Recover', null, ['recover']],
+    ['performance', 'secondary', 'recover', 'Recover', null, ['recover']],
 
-  if (typeof fillInFn === 'function') {
-    fillInFn.call(this);
+    ['dr', 'primary', 'reindex', 'Reindex', null, ['reindex']],
+    ['performance', 'primary', 'reindex', 'Reindex', null, ['reindex']],
+    ['dr', 'secondary', 'reindex', 'Reindex', null, ['reindex']],
+    ['performance', 'secondary', 'reindex', 'Reindex', null, ['reindex']],
+
+    ['dr', 'primary', 'demote', 'Demote cluster', null, ['demote', 'primary']],
+    ['performance', 'primary', 'demote', 'Demote cluster', null, ['demote', 'primary']],
+    // we don't do dr secondary promote in this component so just test perf
+    [
+      'performance',
+      'secondary',
+      'promote',
+      'Promote cluster',
+      async function() {
+        await fillIn('[name="primary_cluster_addr"]', 'cluster addr');
+        await blur('[name="primary_cluster_addr"]');
+      },
+      ['promote', 'secondary', { primary_cluster_addr: 'cluster addr' }],
+    ],
+
+    // don't yet update-primary for dr
+    [
+      'performance',
+      'secondary',
+      'update-primary',
+      'Update primary',
+      async function() {
+        await fillIn('#secondary-token', 'token');
+        await blur('#secondary-token');
+        await fillIn('#primary_api_addr', 'addr');
+        await blur('#primary_api_addr');
+      },
+      ['update-primary', 'secondary', { token: 'token', primary_api_addr: 'addr' }],
+    ],
+  ];
+
+  for (let [replicationMode, clusterMode, action, headerText, fillInFn, expectedOnSubmit] of testCases) {
+    test(`replication mode ${replicationMode}, cluster mode: ${clusterMode}, action: ${action}`, async function(assert) {
+      const testKey = `${replicationMode}-${clusterMode}-${action}`;
+      this.set('model', {
+        replicationAttrs: {
+          modeForUrl: clusterMode,
+        },
+        [replicationMode]: {
+          mode: clusterMode,
+          modeForUrl: clusterMode,
+        },
+        reload() {
+          return resolve();
+        },
+        rollbackAttributes() {},
+      });
+      this.set('replicationMode', replicationMode);
+      this.set('selectedAction', action);
+      this.set('onSubmit', (...actual) => {
+        assert.deepEqual(
+          JSON.stringify(actual),
+          JSON.stringify(expectedOnSubmit),
+          `${testKey}: submitted values match expected`
+        );
+        return resolve();
+      });
+      this.set('storeService.capabilitiesReturnVal', ['root']);
+      await render(
+        hbs`{{replication-actions model=model replicationMode=replicationMode selectedAction=selectedAction onSubmit=(action onSubmit)}}`
+      );
+
+      assert.equal(
+        find('h4').textContent.trim(),
+        headerText,
+        `${testKey}: renders the correct partial as default`
+      );
+
+      if (typeof fillInFn === 'function') {
+        await fillInFn.call(this);
+      }
+      await click('[data-test-confirm-action-trigger]');
+      await click('[data-test-confirm-button]');
+    });
   }
-  this.$('button').click();
-  this.$('button.red').click();
-}
-
-function callTest(context, assert) {
-  return function() {
-    testAction.call(context, assert, ...arguments);
-  };
-}
-
-test('actions', function(assert) {
-  const t = callTest(this, assert);
-  //TODO move to table test so we don't share the same store
-  //t('dr', 'primary', 'disable', 'Disable dr replication', 'sys/replication/dr/primary/disable', null, ['disable', 'primary']);
-  //t('performance', 'primary', 'disable', 'Disable performance replication', 'sys/replication/performance/primary/disable', null, ['disable', 'primary']);
-  t('dr', 'secondary', 'disable', 'Disable replication', 'sys/replication/dr/secondary/disable', null, [
-    'disable',
-    'secondary',
-  ]);
-  t(
-    'performance',
-    'secondary',
-    'disable',
-    'Disable replication',
-    'sys/replication/performance/secondary/disable',
-    null,
-    ['disable', 'secondary']
-  );
-
-  t('dr', 'primary', 'recover', 'Recover', 'sys/replication/recover', null, ['recover']);
-  t('performance', 'primary', 'recover', 'Recover', 'sys/replication/recover', null, ['recover']);
-  t('performance', 'secondary', 'recover', 'Recover', 'sys/replication/recover', null, ['recover']);
-
-  t('dr', 'primary', 'reindex', 'Reindex', 'sys/replication/reindex', null, ['reindex']);
-  t('performance', 'primary', 'reindex', 'Reindex', 'sys/replication/reindex', null, ['reindex']);
-  t('dr', 'secondary', 'reindex', 'Reindex', 'sys/replication/reindex', null, ['reindex']);
-  t('performance', 'secondary', 'reindex', 'Reindex', 'sys/replication/reindex', null, ['reindex']);
-
-  t('dr', 'primary', 'demote', 'Demote cluster', 'sys/replication/dr/primary/demote', null, [
-    'demote',
-    'primary',
-  ]);
-  t(
-    'performance',
-    'primary',
-    'demote',
-    'Demote cluster',
-    'sys/replication/performance/primary/demote',
-    null,
-    ['demote', 'primary']
-  );
-  // we don't do dr secondary promote in this component so just test perf
-  t(
-    'performance',
-    'secondary',
-    'promote',
-    'Promote cluster',
-    'sys/replication/performance/secondary/promote',
-    function() {
-      this.$('[name="primary_cluster_addr"]').val('cluster addr').change();
-    },
-    ['promote', 'secondary', { primary_cluster_addr: 'cluster addr' }]
-  );
-
-  // don't yet update-primary for dr
-  t(
-    'performance',
-    'secondary',
-    'update-primary',
-    'Update primary',
-    'sys/replication/performance/secondary/update-primary',
-    function() {
-      this.$('#secondary-token').val('token').change();
-      this.$('#primary_api_addr').val('addr').change();
-    },
-    ['update-primary', 'secondary', { token: 'token', primary_api_addr: 'addr' }]
-  );
 });

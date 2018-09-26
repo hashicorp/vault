@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/license"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
@@ -107,6 +108,11 @@ func (s *SystemViewClient) ResponseWrapData(ctx context.Context, data map[string
 
 func (s *SystemViewClient) LookupPlugin(ctx context.Context, name string) (*pluginutil.PluginRunner, error) {
 	return nil, fmt.Errorf("cannot call LookupPlugin from a plugin backend")
+}
+
+func (s *SystemViewClient) HasFeature(feature license.Features) bool {
+	// Not implemented
+	return false
 }
 
 func (s *SystemViewClient) MlockEnabled() bool {

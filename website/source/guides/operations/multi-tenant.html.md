@@ -19,6 +19,8 @@ isolation and ensure teams can self-manage their own environments.
 
 ## Reference Material
 
+- [Namespaces](/docs/enterprise/namespaces/index.html)
+- [Streamline Secrets Management with Vault Agent and Vault 0.11](https://youtu.be/zDnIqSB4tyA)
 - [Vault Deployment Reference Architecture](/guides/operations/reference-architecture.html)
 - [Policies](/guides/identity/policies.html) guide
 
@@ -55,7 +57,8 @@ they can perform all necessary tasks within their tenant namespace.
 Each namespace can have its own:
 
 - Policies
-- Mounts
+- Auth Methods
+- Secret Engines
 - Tokens
 - Identity entities and groups
 
@@ -329,6 +332,9 @@ path "sys/mounts" {
 
 Now, let's deploy the policies!
 
+-> Also, refer to the [Additional Discussion](#policy-with-namespaces) section
+to learn more about policy authoring with namespaces.
+
 
 #### CLI command
 
@@ -386,7 +392,7 @@ $ curl --header "X-Vault-Token: ..." \
        --header "X-Vault-Namespace: education" \
        --request PUT \
        --data @edu-payload.json \
-       https://vault.rocks/v1/sys/policies/acl/edu-admin
+       https://127.0.0.1:8200/v1/sys/policies/acl/edu-admin
 
 # Create a request payload
 $ tee training-payload.json <<EOF
@@ -400,7 +406,7 @@ EOF
 $ curl --header "X-Vault-Token: ..." \
        --request PUT \
        --data @training-payload.json \
-       https://vault.rocks/v1/education/training/sys/policies/acl/training-admin
+       https://127.0.0.1:8200/v1/education/training/sys/policies/acl/training-admin
 ```
 
 
@@ -852,12 +858,12 @@ client must acquire a valid token for each namespace to access their secrets.
 ## Additional Discussion
 
 For the simplicity, this guide used the username and password (`userpass`) auth
-method which was enabled at the education namespace.  However, most likely, your
-organization uses LDAP auth method which is enabled in the root namespace
+method which was enabled in the education namespace.  However, most likely, your
+organization uses LDAP auth method which is enabled in the **root** namespace
 instead.
 
-In such as case, here are the steps to create the "Training Admin" group as
-described in this guide.
+Here are the steps to create the "Training Admin" group as described in this
+guide using the LDAP auth method enabled in the root namespace.
 
 1. Enable and configure the desired auth method (e.g. LDAP) in the root
 namespace.
@@ -904,6 +910,72 @@ the external group (`training_admin_root`) as its member.
             policies="training-admin" \
             member_group_ids=$(cat group_id.txt)
     ```
+
+### Policy with namespaces
+
+In this guide, you created policies in each namespace (`education` and
+`education/training`).  Therefore, you did not have to specify the target
+namespace in the policy paths.  
+
+If you want to create policies in the root namespace to control `education` and
+`education/training` namespaces, prepend the namespace in the paths.
+
+For example:
+
+```hcl
+# Manage policies in the 'education' namespace
+path "education/sys/policies/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage tokens in the 'education' namespace
+path "education/auth/token/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage policies under 'education/training' namespace
+path "education/training/sys/policies/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage tokens in the 'education/training' namespace
+path "education/training/auth/token/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+...
+```
+
+In [Step 2](#step2), you deployed the `training-admin` policy in the
+`education/training` namespace. The path is relative to the working namespace.
+So, if you want to create the `training-admin` policy in the **`education`**
+namespace instead, the paths starts with `training/` rather than
+`education/training/`.
+
+```hcl
+# Manage namespaces
+path "training/sys/namespaces/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage policies via API
+path "training/sys/policies/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage policies via CLI
+path "training/sys/policy/*" {
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+...
+```
+
+~> **NOTE:** Important to remember that tokens are local to the namespace.
+Therefore, you need a valid token for the namespace you want to operate in. The
+token created in the `education` namespace is not valid in the
+`education/training` namespace. This is so that each namespace is completely
+isolated from one another to ensure a secure multi-tenant environment.
+
+
 
 ## Next steps
 

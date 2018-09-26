@@ -1,33 +1,41 @@
-import { moduleForComponent, test } from 'ember-qunit';
+import Service from '@ember/service';
+import { module, test } from 'qunit';
+import { setupRenderingTest } from 'ember-qunit';
+import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import Ember from 'ember';
+import waitForError from 'vault/tests/helpers/wait-for-error';
 
-const versionStub = Ember.Service.extend({
+const versionStub = Service.extend({
   features: null,
 });
 
-moduleForComponent('has-feature', 'helper:has-feature', {
-  integration: true,
-  beforeEach: function() {
-    this.register('service:version', versionStub);
-    this.inject.service('version', { as: 'versionService' });
-  },
-});
+module('helper:has-feature', function(hooks) {
+  setupRenderingTest(hooks);
 
-test('it asserts on unknown features', function(assert) {
-  assert.expectAssertion(() => {
-    this.render(hbs`{{has-feature 'New Feature'}}`);
-  }, 'New Feature is not one of the available values for Vault Enterprise features.');
-});
+  hooks.beforeEach(function() {
+    this.owner.register('service:version', versionStub);
+    this.versionService = this.owner.lookup('service:version');
+  });
 
-test('it is true with existing features', function(assert) {
-  this.set('versionService.features', ['HSM']);
-  this.render(hbs`{{if (has-feature 'HSM') 'It works' null}}`);
-  assert.dom(this._element).hasText('It works', 'present features evaluate to true');
-});
+  test('it asserts on unknown features', async function(assert) {
+    let promise = waitForError();
+    render(hbs`{{has-feature 'New Feature'}}`);
+    let err = await promise;
+    assert.ok(
+      err.message.includes('New Feature is not one of the available values for Vault Enterprise features.'),
+      'asserts when an unknown feature is passed as an arg'
+    );
+  });
 
-test('it is false with missing features', function(assert) {
-  this.set('versionService.features', ['MFA']);
-  this.render(hbs`{{if (has-feature 'HSM') 'It works' null}}`);
-  assert.dom(this._element).hasText('', 'missing features evaluate to false');
+  test('it is true with existing features', async function(assert) {
+    this.set('versionService.features', ['HSM']);
+    await render(hbs`{{if (has-feature 'HSM') 'It works' null}}`);
+    assert.dom(this.element).hasText('It works', 'present features evaluate to true');
+  });
+
+  test('it is false with missing features', async function(assert) {
+    this.set('versionService.features', ['MFA']);
+    await render(hbs`{{if (has-feature 'HSM') 'It works' null}}`);
+    assert.dom(this.element).hasText('', 'missing features evaluate to false');
+  });
 });

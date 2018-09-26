@@ -3,6 +3,8 @@ package identity
 import (
 	"errors"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/namespace"
 )
 
 func TestPopulate_Basic(t *testing.T) {
@@ -165,9 +167,10 @@ func TestPopulate_Basic(t *testing.T) {
 		var groups []*Group
 		if test.groupName != "" {
 			groups = append(groups, &Group{
-				ID:       "groupID",
-				Name:     test.groupName,
-				Metadata: test.groupMetadata,
+				ID:          "groupID",
+				Name:        test.groupName,
+				Metadata:    test.groupMetadata,
+				NamespaceID: namespace.RootNamespace.ID,
 			})
 		}
 		subst, out, err := PopulateString(&PopulateStringInput{
@@ -175,6 +178,7 @@ func TestPopulate_Basic(t *testing.T) {
 			String:            test.input,
 			Entity:            entity,
 			Groups:            groups,
+			Namespace:         namespace.RootNamespace,
 		})
 		if err != nil {
 			if test.err == nil {

@@ -1,18 +1,23 @@
-import { test } from 'qunit';
-import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import { currentRouteName } from '@ember/test-helpers';
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 import generatePage from 'vault/tests/pages/secrets/backend/pki/generate-cert';
 import showPage from 'vault/tests/pages/secrets/backend/pki/show';
 import configPage from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
+import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
+import authPage from 'vault/tests/pages/auth';
 
-moduleForAcceptance('Acceptance | secrets/pki/list?tab=certs', {
-  beforeEach() {
-    return authLogin();
-  },
-});
+module('Acceptance | secrets/pki/list?tab=certs', function(hooks) {
+  setupApplicationTest(hooks);
 
-const CSR = `-----BEGIN CERTIFICATE REQUEST-----
+  hooks.beforeEach(function() {
+    return authPage.login();
+  });
+  // important for this comment to stay here otherwise the formatting mangles the CSR
+  // prettier-ignore
+  const CSR = `-----BEGIN CERTIFICATE REQUEST-----
 MIICdDCCAVwCAQAwDjEMMAoGA1UEAxMDbG9sMIIBIjANBgkqhkiG9w0BAQEFAAOC
 AQ8AMIIBCgKCAQEA4Dz2b/nAP/M6bqyk5mctqqYAAcoME//xPBy0wREHuZ776Pu4
 l45kDL3dPXiY8U2P9pn8WIr2KpLK6oWUfSsiG2P082bpWDL20UymkWqDhhrA4unf
@@ -29,50 +34,41 @@ XA2ZOCA7s34/szr2FczXtIoKiYmv3UzPyO9/4mc0Q2+/nR4CG8NU9WW/XJCne9ID
 elRplAzrMF4=
 -----END CERTIFICATE REQUEST-----`;
 
-// mount, generate CA, nav to create role page
-const setup = (assert, action = 'issue') => {
-  const path = `pki-${new Date().getTime()}`;
-  const roleName = 'role';
-  mountSupportedSecretBackend(assert, 'pki', path);
-  configPage.visit({ backend: path }).form.generateCA();
-  editPage.visitRoot({ backend: path });
-  editPage.createRole('role', 'example.com');
-  generatePage.visit({ backend: path, id: roleName, action });
-  return path;
-};
+  // mount, generate CA, nav to create role page
+  const setup = async (assert, action = 'issue') => {
+    const path = `pki-${new Date().getTime()}`;
+    const roleName = 'role';
+    await enablePage.enable('pki', path);
+    await configPage.visit({ backend: path }).form.generateCA();
+    await editPage.visitRoot({ backend: path });
+    await editPage.createRole('role', 'example.com');
+    await generatePage.visit({ backend: path, id: roleName, action });
+    return path;
+  };
 
-test('it issues a cert', function(assert) {
-  setup(assert);
+  test('it issues a cert', async function(assert) {
+    await setup(assert);
 
-  generatePage.issueCert('foo');
-  andThen(() => {
+    await generatePage.issueCert('foo');
     assert.ok(generatePage.hasCert, 'displays the cert');
-  });
 
-  generatePage.back();
-  andThen(() => {
+    await generatePage.back();
     assert.notOk(generatePage.commonNameValue, 'the form is cleared');
   });
-});
 
-test('it signs a csr', function(assert) {
-  setup(assert, 'sign');
-  generatePage.sign('common', CSR);
-  andThen(() => {
+  test('it signs a csr', async function(assert) {
+    await setup(assert, 'sign');
+    await generatePage.sign('common', CSR);
     assert.ok(generatePage.hasCert, 'displays the cert');
   });
-});
 
-test('it views a cert', function(assert) {
-  const path = setup(assert);
-  generatePage.issueCert('foo');
-  listPage.visitRoot({ backend: path, tab: 'certs' });
-  andThen(() => {
+  test('it views a cert', async function(assert) {
+    const path = await setup(assert);
+    await generatePage.issueCert('foo');
+    await listPage.visitRoot({ backend: path, tab: 'certs' });
     assert.ok(listPage.secrets.length > 0, 'lists certs');
-  });
 
-  listPage.secrets.objectAt(0).click();
-  andThen(() => {
+    await listPage.secrets.objectAt(0).click();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'navigates to the show page');
     assert.ok(showPage.hasCert, 'shows the cert');
   });

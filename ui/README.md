@@ -9,6 +9,7 @@ You will need the following things properly installed on your computer.
 
 * [Node.js](https://nodejs.org/) (with NPM)
 * [Yarn](https://yarnpkg.com/en/)
+* [Git](https://git-scm.com/)
 * [Ember CLI](https://ember-cli.com/)
 
 
@@ -46,6 +47,12 @@ acceptance tests then run, proxing requests back to that server.
 * `yarn run test-oss -s` to keep the test server running after the initial run.
 * `yarn run test -f="policies"` to filter the tests that are run. `-f` gets passed into
 [QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
+
+### Linting
+
+* `yarn lint:hbs`
+* `yarn lint:js`
+* `yarn lint:js -- --fix`
 
 ### Building Vault UI into a Vault Binary
 We use `go-bindata-assetfs` to build the static assets of the

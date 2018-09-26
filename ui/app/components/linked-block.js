@@ -1,12 +1,14 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 import hbs from 'htmlbars-inline-precompile';
 
-let LinkedBlockComponent = Ember.Component.extend({
+let LinkedBlockComponent = Component.extend({
+  router: service(),
+
   layout: hbs`{{yield}}`,
 
   classNames: 'linked-block',
 
-  routing: Ember.inject.service('-routing'),
   queryParams: null,
 
   click(event) {
@@ -17,13 +19,12 @@ let LinkedBlockComponent = Ember.Component.extend({
       $target.closest('button', event.currentTarget).length > 0 ||
       $target.closest('a', event.currentTarget).length > 0;
     if (!isAnchorOrButton) {
-      const router = this.get('routing.router');
       const params = this.get('params');
       const queryParams = this.get('queryParams');
       if (queryParams) {
         params.push({ queryParams });
       }
-      router.transitionTo.apply(router, params);
+      this.get('router').transitionTo(...params);
     }
   },
 });

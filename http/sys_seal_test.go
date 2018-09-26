@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -10,6 +9,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -27,12 +27,13 @@ func TestSysSealStatus(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"sealed":   true,
-		"t":        json.Number("3"),
-		"n":        json.Number("3"),
-		"progress": json.Number("0"),
-		"nonce":    "",
-		"type":     "shamir",
+		"sealed":        true,
+		"t":             json.Number("3"),
+		"n":             json.Number("3"),
+		"progress":      json.Number("0"),
+		"nonce":         "",
+		"type":          "shamir",
+		"recovery_seal": false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -108,12 +109,13 @@ func TestSysUnseal(t *testing.T) {
 
 		var actual map[string]interface{}
 		expected := map[string]interface{}{
-			"sealed":   true,
-			"t":        json.Number("3"),
-			"n":        json.Number("3"),
-			"progress": json.Number(fmt.Sprintf("%d", i+1)),
-			"nonce":    "",
-			"type":     "shamir",
+			"sealed":        true,
+			"t":             json.Number("3"),
+			"n":             json.Number("3"),
+			"progress":      json.Number(fmt.Sprintf("%d", i+1)),
+			"nonce":         "",
+			"type":          "shamir",
+			"recovery_seal": false,
 		}
 		if i == len(keys)-1 {
 			expected["sealed"] = false
@@ -187,11 +189,12 @@ func TestSysUnseal_Reset(t *testing.T) {
 
 		var actual map[string]interface{}
 		expected := map[string]interface{}{
-			"sealed":   true,
-			"t":        json.Number("3"),
-			"n":        json.Number("5"),
-			"progress": json.Number(strconv.Itoa(i + 1)),
-			"type":     "shamir",
+			"sealed":        true,
+			"t":             json.Number("3"),
+			"n":             json.Number("5"),
+			"progress":      json.Number(strconv.Itoa(i + 1)),
+			"type":          "shamir",
+			"recovery_seal": false,
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
@@ -224,11 +227,12 @@ func TestSysUnseal_Reset(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected := map[string]interface{}{
-		"sealed":   true,
-		"t":        json.Number("3"),
-		"n":        json.Number("5"),
-		"progress": json.Number("0"),
-		"type":     "shamir",
+		"sealed":        true,
+		"t":             json.Number("3"),
+		"n":             json.Number("5"),
+		"progress":      json.Number("0"),
+		"type":          "shamir",
+		"recovery_seal": false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -274,7 +278,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err := core.HandleRequest(context.Background(), req)
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -289,7 +293,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 		"policies": []string{"test"},
 	}
 
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
 	}
@@ -312,7 +316,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -333,7 +337,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -354,7 +358,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

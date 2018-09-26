@@ -8,40 +8,45 @@
 // route will cause all `datacenter` models to get unloaded when the
 // infrastructure route is navigated away from.
 
-import Ember from 'ember';
+import Route from '@ember/routing/route';
 
-export default Ember.Mixin.create({
+import { isPresent } from '@ember/utils';
+import { warn } from '@ember/debug';
+import { on } from '@ember/object/evented';
+import Mixin from '@ember/object/mixin';
+
+export default Mixin.create({
   modelType: null,
   modelTypes: null,
 
-  verifyProps: Ember.on('init', function() {
+  verifyProps: on('init', function() {
     var modelType = this.get('modelType');
     var modelTypes = this.get('modelTypes');
-    Ember.warn(
+    warn(
       'No `modelType` or `modelTypes` specified for `' +
         this.toString() +
         '`. Check to make sure you still need to use the `model-boundary-route` mixin.',
-      Ember.isPresent(modelType) || Ember.isPresent(modelTypes),
+      isPresent(modelType) || isPresent(modelTypes),
       { id: 'model-boundary-init' }
     );
 
-    Ember.warn(
+    warn(
       'Expected `model-boundary-route` to be used on an Ember.Route, not `' + this.toString() + '`.',
-      this instanceof Ember.Route,
+      this instanceof Route,
       { id: 'mode-boundary-is-route' }
     );
   }),
 
-  clearModelCache: Ember.on('deactivate', function() {
+  clearModelCache: on('deactivate', function() {
     var modelType = this.get('modelType');
     var modelTypes = this.get('modelTypes');
 
     if (!modelType && !modelTypes) {
-      Ember.warn(
+      warn(
         'Attempted to clear store clear store cache when leaving `' +
           this.routeName +
           '`, but no `modelType` or `modelTypes` was specified.',
-        Ember.isPresent(modelType),
+        isPresent(modelType),
         { id: 'model-boundary-clear' }
       );
       return;
