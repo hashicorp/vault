@@ -13,8 +13,6 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
@@ -532,7 +530,7 @@ func TestHandler_requestAuth(t *testing.T) {
 	te, err := core.LookupToken(rootCtx, token)
 
 	if err != nil {
-		t.Fatalf("err: %s, te: %s", err, spew.Sdump(te))
+		t.Fatalf("err: %s", err)
 	}
 
 	rWithAuthorization, err := http.NewRequest("GET", "v1/test/path", nil)
