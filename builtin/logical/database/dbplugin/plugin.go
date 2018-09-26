@@ -2,6 +2,7 @@ package dbplugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/rpc"
 	"time"
@@ -25,9 +26,6 @@ type Database interface {
 
 	Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
 	Close() error
-
-	// DEPRECATED, will be removed in 0.12
-	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (err error)
 }
 
 // PluginFactory is used to build plugin database types. It wraps the database
@@ -104,7 +102,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  3,
+	ProtocolVersion:  4,
 	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
@@ -119,11 +117,7 @@ type DatabasePlugin struct {
 }
 
 func (d DatabasePlugin) Server(*plugin.MuxBroker) (interface{}, error) {
-	impl := &DatabaseErrorSanitizerMiddleware{
-		next: d.impl,
-	}
-
-	return &databasePluginRPCServer{impl: impl}, nil
+	return nil, errors.New("net/rpc plugin protocol not supported")
 }
 
 func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {

@@ -37,6 +37,9 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		3: plugin.PluginSet{
 			"database": new(DatabasePlugin),
 		},
+		4: plugin.PluginSet{
+			"database": new(DatabasePlugin),
+		},
 	}
 
 	client, err := pluginRunner.Run(ctx, sys, pluginSet, handshakeConfig, []string{}, logger)
