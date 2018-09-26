@@ -1,8 +1,12 @@
 ## 0.11.2 (Unreleased)
 
 FEATURES:
-  * Storage Backend Migrator: A new `operator migrate` command allows offline
-    migration of data between two storage backends.
+
+ * AWS Secret Engine Root Credential Rotation: The credential used by the AWS
+   secret engine can now be rotated, to ensure that only Vault knows the
+   credentials its using. [GH-5140]
+ * Storage Backend Migrator: A new `operator migrate` command allows offline
+   migration of data between two storage backends.
 
 BUG FIXES:
 
