@@ -1,9 +1,11 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 import utils from 'vault/lib/key-utils';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 
-export default Ember.Controller.extend(BackendCrumbMixin, {
-  flashMessages: Ember.inject.service(),
+export default Controller.extend(BackendCrumbMixin, {
+  flashMessages: service(),
   queryParams: ['page', 'pageFilter', 'tab'],
 
   tab: '',
@@ -14,13 +16,13 @@ export default Ember.Controller.extend(BackendCrumbMixin, {
   // set via the route `loading` action
   isLoading: false,
 
-  filterMatchesKey: Ember.computed('filter', 'model', 'model.[]', function() {
+  filterMatchesKey: computed('filter', 'model', 'model.[]', function() {
     var filter = this.get('filter');
     var content = this.get('model');
     return !!(content.length && content.findBy('id', filter));
   }),
 
-  firstPartialMatch: Ember.computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
+  firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
     var filter = this.get('filter');
     var content = this.get('model');
     var filterMatchesKey = this.get('filterMatchesKey');
@@ -32,7 +34,7 @@ export default Ember.Controller.extend(BackendCrumbMixin, {
         });
   }),
 
-  filterIsFolder: Ember.computed('filter', function() {
+  filterIsFolder: computed('filter', function() {
     return !!utils.keyIsFolder(this.get('filter'));
   }),
 

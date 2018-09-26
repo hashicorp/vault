@@ -5,7 +5,7 @@ export default create({
   ...Base,
   path: fillable('[data-test-secret-path]'),
   secretKey: fillable('[data-test-secret-key]'),
-  secretValue: fillable('[data-test-secret-value]'),
+  secretValue: fillable('[data-test-secret-value] textarea'),
   save: clickable('[data-test-secret-save]'),
   deleteBtn: clickable('[data-test-secret-delete] button'),
   confirmBtn: clickable('[data-test-confirm-button]'),
@@ -15,7 +15,10 @@ export default create({
     return this.deleteBtn().confirmBtn();
   },
 
-  createSecret(path, key, value) {
-    return this.path(path).secretKey(key).secretValue(value).save();
+  createSecret: async function(path, key, value) {
+    return this.path(path)
+      .secretKey(key)
+      .secretValue(value)
+      .save();
   },
 });

@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 import ReplicationActions from 'vault/mixins/replication-actions';
-
-const { computed } = Ember;
 
 const DEFAULTS = {
   token: null,
@@ -12,7 +12,7 @@ const DEFAULTS = {
   replicationMode: null,
 };
 
-export default Ember.Component.extend(ReplicationActions, DEFAULTS, {
+export default Component.extend(ReplicationActions, DEFAULTS, {
   replicationMode: null,
   selectedAction: null,
   tagName: 'form',
@@ -22,7 +22,7 @@ export default Ember.Component.extend(ReplicationActions, DEFAULTS, {
   },
 
   model: null,
-  cluster: computed.alias('model'),
+  cluster: alias('model'),
   loading: false,
   onSubmit: null,
 

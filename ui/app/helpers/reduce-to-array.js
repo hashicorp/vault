@@ -1,11 +1,12 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
+import { isNone, typeOf } from '@ember/utils';
 
 export function reduceToArray(params) {
   return params.reduce(function(result, param) {
-    if (Ember.isNone(param)) {
+    if (isNone(param)) {
       return result;
     }
-    if (Ember.typeOf(param) === 'array') {
+    if (typeOf(param) === 'array') {
       return result.concat(param);
     } else {
       return result.concat([param]);
@@ -13,4 +14,4 @@ export function reduceToArray(params) {
   }, []);
 }
 
-export default Ember.Helper.helper(reduceToArray);
+export default buildHelper(reduceToArray);

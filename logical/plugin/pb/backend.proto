@@ -203,6 +203,10 @@ message Auth {
 	// help determine where a policy was sourced
 	repeated string token_policies = 14;
 	repeated string identity_policies = 15;
+
+	// Explicit maximum lifetime for the token. Unlike normal TTLs, the maximum
+	// TTL is a hard limit and cannot be exceeded, also counts for periodic tokens.
+	int64 explicit_max_ttl = 16;
 }
 
 message TokenEntry {

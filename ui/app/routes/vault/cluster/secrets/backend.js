@@ -1,7 +1,7 @@
-import Ember from 'ember';
-const { inject } = Ember;
-export default Ember.Route.extend({
-  flashMessages: inject.service(),
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
+export default Route.extend({
+  flashMessages: service(),
   model(params) {
     let { backend } = params;
     return this.store

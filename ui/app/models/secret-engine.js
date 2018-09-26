@@ -1,12 +1,10 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
-import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { fragment } from 'ember-data-model-fragments/attributes';
 
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
-const { computed } = Ember;
 
 //identity will be managed separately and the inclusion
 //of the system backend is an implementation detail
@@ -98,7 +96,7 @@ export default DS.Model.extend({
     return !LIST_EXCLUDED_BACKENDS.includes(this.get('engineType'));
   }),
 
-  localDisplay: Ember.computed('local', function() {
+  localDisplay: computed('local', function() {
     return this.get('local') ? 'local' : 'replicated';
   }),
 
@@ -136,9 +134,6 @@ export default DS.Model.extend({
       },
     });
   },
-
-  zeroAddressPath: lazyCapabilities(apiPath`${'id'}/config/zeroaddress`, 'id'),
-  canEditZeroAddress: computed.alias('zeroAddressPath.canUpdate'),
 
   // aws backend attrs
   lease: attr('string'),

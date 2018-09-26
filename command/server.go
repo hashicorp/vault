@@ -37,6 +37,7 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	serverseal "github.com/hashicorp/vault/command/server/seal"
 	"github.com/hashicorp/vault/helper/gated-writer"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -51,6 +52,8 @@ import (
 
 var _ cli.Command = (*ServerCommand)(nil)
 var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
+
+const migrationLock = "core/migration"
 
 type ServerCommand struct {
 	*BaseCommand
@@ -457,6 +460,19 @@ func (c *ServerCommand) Run(args []string) int {
 	backend, err := factory(config.Storage.Config, namedStorageLogger)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
+		return 1
+	}
+
+	migrationStatus, err := CheckMigration(backend)
+	if err != nil {
+		c.UI.Error("Error checking migration status")
+		return 1
+	}
+
+	if migrationStatus != nil {
+		startTime := migrationStatus.Start.Format(time.RFC3339)
+		c.UI.Error(wrapAtLength(fmt.Sprintf("Storage migration in progress (started: %s). "+
+			"Use 'vault operator migrate -reset' to force clear the migration lock.", startTime)))
 		return 1
 	}
 
@@ -1771,6 +1787,51 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
+}
+
+type MigrationStatus struct {
+	Start time.Time `json:"start"`
+}
+
+func CheckMigration(b physical.Backend) (*MigrationStatus, error) {
+	entry, err := b.Get(context.Background(), migrationLock)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if entry == nil {
+		return nil, nil
+	}
+
+	var status MigrationStatus
+	if err := jsonutil.DecodeJSON(entry.Value, &status); err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+}
+
+func SetMigration(b physical.Backend, active bool) error {
+	if !active {
+		return b.Delete(context.Background(), migrationLock)
+	}
+
+	status := MigrationStatus{
+		Start: time.Now(),
+	}
+
+	enc, err := jsonutil.EncodeJSON(status)
+	if err != nil {
+		return err
+	}
+
+	entry := &physical.Entry{
+		Key:   migrationLock,
+		Value: enc,
+	}
+
+	return b.Put(context.Background(), entry)
 }
 
 type grpclogFaker struct {

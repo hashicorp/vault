@@ -1,9 +1,11 @@
-import Ember from 'ember';
+import { set } from '@ember/object';
+import { hash, all } from 'rsvp';
+import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
-export default Ember.Route.extend({
+export default Route.extend({
   queryParams: {
     page: {
       refreshModel: true,
@@ -29,6 +31,7 @@ export default Ember.Route.extend({
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
       return this.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
+    this.store.unloadAll('capabilities');
   },
 
   getModelType(backend, tab) {
@@ -51,7 +54,7 @@ export default Ember.Route.extend({
     const secret = params.secret ? params.secret : '';
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
-    return Ember.RSVP.hash({
+    return hash({
       secret,
       secrets: this.store
         .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
@@ -82,23 +85,21 @@ export default Ember.Route.extend({
     if (!tab || tab !== 'certs') {
       return;
     }
-    return Ember.RSVP
-      .all(
-        // these ids are treated specially by vault's api, but it's also
-        // possible that there is no certificate for them in order to know,
-        // we fetch them specifically on the list page, and then unload the
-        // records if there is no `certificate` attribute on the resultant model
-        ['ca', 'crl', 'ca_chain'].map(id => this.store.queryRecord('pki-certificate', { id, backend }))
-      )
-      .then(
-        results => {
-          results.rejectBy('certificate').forEach(record => record.unloadRecord());
-          return model;
-        },
-        () => {
-          return model;
-        }
-      );
+    return all(
+      // these ids are treated specially by vault's api, but it's also
+      // possible that there is no certificate for them in order to know,
+      // we fetch them specifically on the list page, and then unload the
+      // records if there is no `certificate` attribute on the resultant model
+      ['ca', 'crl', 'ca_chain'].map(id => this.store.queryRecord('pki-certificate', { id, backend }))
+    ).then(
+      results => {
+        results.rejectBy('certificate').forEach(record => record.unloadRecord());
+        return model;
+      },
+      () => {
+        return model;
+      }
+    );
   },
 
   setupController(controller, resolvedModel) {
@@ -144,9 +145,9 @@ export default Ember.Route.extend({
       const { secret } = this.paramsFor(this.routeName);
       const { backend } = this.paramsFor('vault.cluster.secrets.backend');
 
-      Ember.set(error, 'secret', secret);
-      Ember.set(error, 'isRoot', true);
-      Ember.set(error, 'backend', backend);
+      set(error, 'secret', secret);
+      set(error, 'isRoot', true);
+      set(error, 'backend', backend);
       const hasModel = this.controllerFor(this.routeName).get('hasModel');
       // only swallow the error if we have a previous model
       if (hasModel && error.httpStatus === 404) {

@@ -1,9 +1,9 @@
-import Ember from 'ember';
+import { copy } from 'ember-copy';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 import Certificate from './pki-certificate';
 
 const { attr } = DS;
-const { computed } = Ember;
 
 export default Certificate.extend({
   signVerbatim: attr('boolean', {
@@ -27,6 +27,6 @@ export default Certificate.extend({
       groups.push(options);
     }
 
-    return this.fieldsToAttrs(Ember.copy(groups, true));
+    return this.fieldsToAttrs(copy(groups, true));
   }),
 });

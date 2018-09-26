@@ -647,14 +647,15 @@ func TestBackend_PluginMainCredentials(t *testing.T) {
 
 // TestBackend_PluginMainEnv is a mock plugin that simply checks for the existence of FOO env var.
 func TestBackend_PluginMainEnv(t *testing.T) {
-	actual := os.Getenv(expectedEnvKey)
-	if actual != expectedEnvValue {
-		t.Fatalf("expected: %q, got: %q", expectedEnvValue, actual)
-	}
-
 	args := []string{}
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadataModeEnv) != "true" {
 		return
+	}
+
+	// Check on actual vs expected env var
+	actual := os.Getenv(expectedEnvKey)
+	if actual != expectedEnvValue {
+		t.Fatalf("expected: %q, got: %q", expectedEnvValue, actual)
 	}
 
 	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)

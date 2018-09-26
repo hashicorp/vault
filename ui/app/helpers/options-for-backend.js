@@ -1,4 +1,6 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
+import { capitalize } from '@ember/string';
+import { assign } from '@ember/polyfills';
 
 const DEFAULT_DISPLAY = {
   searchPlaceholder: 'Filter secrets',
@@ -70,15 +72,15 @@ export function optionsForBackend([backend, tab]) {
   if (selected && selected.tabs) {
     let tabData =
       selected.tabs.findBy('name', tab) || selected.tabs.findBy('modelPrefix', tab) || selected.tabs[0];
-    backendOptions = Ember.assign({}, selected, tabData);
+    backendOptions = assign({}, selected, tabData);
   } else if (selected) {
     backendOptions = selected;
   } else {
-    backendOptions = Ember.assign({}, DEFAULT_DISPLAY, {
-      displayName: backend === 'kv' ? 'KV' : Ember.String.capitalize(backend),
+    backendOptions = assign({}, DEFAULT_DISPLAY, {
+      displayName: backend === 'kv' ? 'KV' : capitalize(backend),
     });
   }
   return backendOptions;
 }
 
-export default Ember.Helper.helper(optionsForBackend);
+export default buildHelper(optionsForBackend);

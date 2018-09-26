@@ -1,8 +1,9 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { gt } from '@ember/object/computed';
+import { camelize } from '@ember/string';
+import Component from '@ember/component';
+import { get, computed } from '@ember/object';
 import base64js from 'base64-js';
-
-const { Component, inject, computed, get } = Ember;
-const { camelize } = Ember.String;
 
 const DEFAULTS = {
   key: null,
@@ -20,7 +21,7 @@ const DEFAULTS = {
 
 export default Component.extend(DEFAULTS, {
   tagName: '',
-  store: inject.service(),
+  store: service(),
   formText: null,
   fetchOnInit: false,
   buttonText: 'Submit',
@@ -58,7 +59,7 @@ export default Component.extend(DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
-  hasProgress: computed.gt('progress', 0),
+  hasProgress: gt('progress', 0),
 
   actionSuccess(resp) {
     let { onUpdate, isComplete, onShamirSuccess, thresholdPath } = this.getProperties(

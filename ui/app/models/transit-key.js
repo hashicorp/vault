@@ -1,10 +1,10 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
+import { set, get, computed } from '@ember/object';
 import DS from 'ember-data';
 import clamp from 'vault/utils/clamp';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const { attr } = DS;
-const { computed, get, set } = Ember;
 
 const ACTION_VALUES = {
   encrypt: 'supportsEncryption',
@@ -121,5 +121,5 @@ export default DS.Model.extend({
   }),
 
   rotatePath: lazyCapabilities(apiPath`${'backend'}/keys/${'id'}/rotate`, 'backend', 'id'),
-  canRotate: computed.alias('rotatePath.canUpdate'),
+  canRotate: alias('rotatePath.canUpdate'),
 });

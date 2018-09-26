@@ -1,7 +1,6 @@
-import Ember from 'ember';
+import { assign } from '@ember/polyfills';
+import { decamelize } from '@ember/string';
 import DS from 'ember-data';
-
-const { decamelize } = Ember.String;
 
 export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
   keyForAttribute: function(attr) {
@@ -26,7 +25,7 @@ export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     // FIXME when multiple clusters lands
     const transformedPayload = {
-      clusters: Ember.assign({ id: '1' }, payload.data || payload),
+      clusters: assign({ id: '1' }, payload.data || payload),
     };
 
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);

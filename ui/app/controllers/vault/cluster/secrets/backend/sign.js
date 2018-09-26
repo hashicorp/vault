@@ -1,8 +1,9 @@
-import Ember from 'ember';
-const { get, set } = Ember;
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
+import { set, get } from '@ember/object';
 
-export default Ember.Controller.extend({
-  store: Ember.inject.service(),
+export default Controller.extend({
+  store: service(),
   loading: false,
   emptyData: '{\n}',
   actions: {
