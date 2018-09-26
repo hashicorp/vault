@@ -4,7 +4,7 @@ import Component from '@ember/component';
 import { set, computed } from '@ember/object';
 import Duration from 'Duration.js';
 
-const ERROR_MESSAGE = 'TTLs must be specified in whole number increments, please enter a number.';
+const ERROR_MESSAGE = 'TTLs must be specified in whole number increments, please enter a whole number.';
 
 export default Component.extend({
   'data-test-component': 'ttl-picker',
