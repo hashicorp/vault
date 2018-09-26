@@ -14,6 +14,7 @@
     "@hashicorp/hashi-global-styles": "^1.0.4",
     "@hashicorp/hashi-image": "1.0.3",
     "@hashicorp/hashi-logo-grid": "1.0.3",
+    "@hashicorp/hashi-mega-nav": "^0.0.4",
     "@hashicorp/hashi-nav": "1.0.5",
     "@hashicorp/hashi-newsletter-signup-form": "1.0.2",
     "@hashicorp/hashi-product-subnav": "^0.1.2",
