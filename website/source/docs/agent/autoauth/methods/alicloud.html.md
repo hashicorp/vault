@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth AliCloud Method"
-sidebar_title: "Alicloud"
+sidebar_title: "AliCloud"
 sidebar_current: "docs-agent-autoauth-methods-alicloud"
 description: |-
   AliCloud Method for Vault Agent Auto-Auth
