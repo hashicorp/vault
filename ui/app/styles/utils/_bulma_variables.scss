@@ -69,9 +69,8 @@ $menu-item-hover-color: $white;
 
 $progress-bar-background-color: lighten($grey-light, 15%);
 
-$base-border: 1px solid $grey-light;
-$component-border: 1px solid $grey;
-$layout-border: $base-border;
+$base-border: 1px solid $ui-gray-300;
+$light-border: 1px solid $ui-gray-200;
 
 //menu
 $menu-item-hover-color: $text;

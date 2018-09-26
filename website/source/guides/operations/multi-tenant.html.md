@@ -14,11 +14,13 @@ Everything in Vault is path-based, and often uses the terms `path` and
 `namespace` interchangeably. The application namespace pattern is a useful
 construct for providing Vault as a service to internal customers, giving them
 the ability to implement secure multi-tenancy within Vault in order to provide
-isolation and ensure teams can self-manage their own environments. 
+isolation and ensure teams can self-manage their own environments.
 
 
 ## Reference Material
 
+- [Namespaces](/docs/enterprise/namespaces/index.html)
+- [Streamline Secrets Management with Vault Agent and Vault 0.11](https://youtu.be/zDnIqSB4tyA)
 - [Vault Deployment Reference Architecture](/guides/operations/reference-architecture.html)
 - [Policies](/guides/identity/policies.html) guide
 
@@ -55,7 +57,8 @@ they can perform all necessary tasks within their tenant namespace.
 Each namespace can have its own:
 
 - Policies
-- Mounts
+- Auth Methods
+- Secret Engines
 - Tokens
 - Identity entities and groups
 
@@ -329,6 +332,9 @@ path "sys/mounts" {
 
 Now, let's deploy the policies!
 
+-> Also, refer to the [Additional Discussion](#policy-with-namespaces) section
+to learn more about policy authoring with namespaces.
+
 
 #### CLI command
 
@@ -386,7 +392,7 @@ $ curl --header "X-Vault-Token: ..." \
        --header "X-Vault-Namespace: education" \
        --request PUT \
        --data @edu-payload.json \
-       https://vault.rocks/v1/sys/policies/acl/edu-admin
+       https://127.0.0.1:8200/v1/sys/policies/acl/edu-admin
 
 # Create a request payload
 $ tee training-payload.json <<EOF
@@ -400,7 +406,7 @@ EOF
 $ curl --header "X-Vault-Token: ..." \
        --request PUT \
        --data @training-payload.json \
-       https://vault.rocks/v1/education/training/sys/policies/acl/training-admin
+       https://127.0.0.1:8200/v1/education/training/sys/policies/acl/training-admin
 ```
 
 
@@ -446,6 +452,8 @@ over.
 -> This step only demonstrates CLI commands and Web UI to create
 entities and groups.  Refer to the [Identity - Entities and
 Groups](/guides/identity/identity.html) guide if you need the full details.
+Also, read the [Additional Discussion](#additional-discussion) section for
+an example of setting up external groups.
 
 #### CLI Command
 
@@ -476,7 +484,7 @@ $ vault write -namespace=education/training identity/group \
         member_entity_ids=$(cat entity_id.txt)
 
 # Enable userpass auth method in training namespace
-$ vault auth enable -namespace=education/namespace userpass
+$ vault auth enable -namespace=education/training userpass
 
 # Create a user 'bsmith'
 $ vault write -namespace=education/training \
@@ -817,10 +825,11 @@ $ curl --header "X-Vault-Token: 5YNNjDDl6D8iW3eGQIlU0q.9dKXw" \
 1. Open a web browser and launch the Vault UI (e.g. http://127.0.01:8200/ui). If
 you are already logged in, sign out.
 
-1. At the **Sign in to Vault**, set the **Namespace** to **`education/training`**.
+1. At the **Sign in to Vault**, set the **Namespace** to
+**`education/training`**.
 
-1. Select the **Userpass** tab, and enter **`bsmith`** in the **Username** field,
-and **`password`** in the **Password** field.
+1. Select the **Userpass** tab, and enter **`bsmith`** in the **Username**
+field, and **`password`** in the **Password** field.
 
 1. Click **Sign in**.  
 
@@ -837,7 +846,6 @@ and **`password`** in the **Password** field.
 
 1. Click **Enable Engine** to finish.
 
-
 <br>
 
 ~> **Summary:** As this guide demonstrated, each namespace you created behaves
@@ -845,6 +853,128 @@ as an **isolated** Vault environment. Once you sign into a namespace, there is
 no visibility into other namespaces regardless of its hierarchical relationship.
 Tokens, policies, and secrets engines are tied to its namespace; therefore, each
 client must acquire a valid token for each namespace to access their secrets.
+
+
+## Additional Discussion
+
+For the simplicity, this guide used the username and password (`userpass`) auth
+method which was enabled in the education namespace.  However, most likely, your
+organization uses LDAP auth method which is enabled in the **root** namespace
+instead.
+
+Here are the steps to create the "Training Admin" group as described in this
+guide using the LDAP auth method enabled in the root namespace.
+
+1. Enable and configure the desired auth method (e.g. LDAP) in the root
+namespace.
+
+    ```plaintext
+    $ vault auth enable ldap
+
+    $ vault write auth/ldap/config \
+            url="ldap://ldap.example.com" \
+            userdn="ou=Users,dc=example,dc=com" \
+            groupdn="ou=Groups,dc=example,dc=com" \
+            groupfilter="(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))" \
+            groupattr="cn" \
+            upndomain="example.com" \
+            certificate=@ldap_ca_cert.pem \
+            insecure_tls=false \
+            starttls=true
+    ```
+
+1. Create an _external_ group in the root namespace.
+
+    ```shell
+    # Get the mount accessor for ldap auth method and save it in accessor.txt file
+    $ vault auth list -format=json \
+            | jq -r '.["ldap/"].accessor' > accessor.txt
+
+    # Create an external group and save the generated group ID in group_id.txt
+    $ vault write -format=json identity/group name="training_admin_root" \
+            type="external" \
+            | jq -r ".data.id" > group_id.txt    
+
+    # Create a group alias - assuming that the group name in LDAP is "ops_training"
+    $ vault write -format=json identity/group-alias name="ops_training" \
+            mount_accessor=$(cat accessor.txt) \
+            canonical_id=$(cat group_id.txt)             
+    ```
+
+1. In the `education/training` namespace, create an _internal_ group which has
+the external group (`training_admin_root`) as its member.
+
+    ```plaintext
+    $ vault write -namespace=education/training identity/group \
+            name="Training Admin" \
+            policies="training-admin" \
+            member_group_ids=$(cat group_id.txt)
+    ```
+
+### Policy with namespaces
+
+In this guide, you created policies in each namespace (`education` and
+`education/training`).  Therefore, you did not have to specify the target
+namespace in the policy paths.  
+
+If you want to create policies in the root namespace to control `education` and
+`education/training` namespaces, prepend the namespace in the paths.
+
+For example:
+
+```hcl
+# Manage policies in the 'education' namespace
+path "education/sys/policies/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage tokens in the 'education' namespace
+path "education/auth/token/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage policies under 'education/training' namespace
+path "education/training/sys/policies/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage tokens in the 'education/training' namespace
+path "education/training/auth/token/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+...
+```
+
+In [Step 2](#step2), you deployed the `training-admin` policy in the
+`education/training` namespace. The path is relative to the working namespace.
+So, if you want to create the `training-admin` policy in the **`education`**
+namespace instead, the paths starts with `training/` rather than
+`education/training/`.
+
+```hcl
+# Manage namespaces
+path "training/sys/namespaces/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage policies via API
+path "training/sys/policies/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage policies via CLI
+path "training/sys/policy/*" {
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+...
+```
+
+~> **NOTE:** Important to remember that tokens are local to the namespace.
+Therefore, you need a valid token for the namespace you want to operate in. The
+token created in the `education` namespace is not valid in the
+`education/training` namespace. This is so that each namespace is completely
+isolated from one another to ensure a secure multi-tenant environment.
+
 
 
 ## Next steps

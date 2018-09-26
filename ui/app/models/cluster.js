@@ -1,12 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { not, gte, alias, and, or } from '@ember/object/computed';
+import { get, computed } from '@ember/object';
 import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
 const { hasMany, attr } = DS;
-const { computed, get, inject } = Ember;
-const { alias, gte, not } = computed;
 
 export default DS.Model.extend({
-  version: inject.service(),
+  version: service(),
 
   nodes: hasMany('nodes', { async: false }),
   name: attr('string'),
@@ -22,7 +22,7 @@ export default DS.Model.extend({
     return this.constructor.modelName;
   }),
 
-  unsealed: computed('nodes', 'nodes.[]', 'nodes.@each.sealed', function() {
+  unsealed: computed('nodes', 'nodes.{[],@each.sealed}', function() {
     // unsealed if there's at least one unsealed node
     return !!this.get('nodes').findBy('sealed', false);
   }),
@@ -45,9 +45,9 @@ export default DS.Model.extend({
   //replication mode - will only ever be 'unsupported'
   //otherwise the particular mode will have the relevant mode attr through replication-attributes
   mode: attr('string'),
-  allReplicationDisabled: computed.and('{dr,performance}.replicationDisabled'),
+  allReplicationDisabled: and('{dr,performance}.replicationDisabled'),
 
-  anyReplicationEnabled: computed.or('{dr,performance}.replicationEnabled'),
+  anyReplicationEnabled: or('{dr,performance}.replicationEnabled'),
 
   stateDisplay(state) {
     if (!state) {
@@ -95,8 +95,8 @@ export default DS.Model.extend({
   performance: fragment('replication-attributes'),
   // this service exposes what mode the UI is currently viewing
   // replicationAttrs will then return the relevant `replication-attributes` fragment
-  rm: Ember.inject.service('replication-mode'),
-  replicationMode: computed.alias('rm.mode'),
+  rm: service('replication-mode'),
+  replicationMode: alias('rm.mode'),
   replicationAttrs: computed('dr.mode', 'performance.mode', 'replicationMode', function() {
     const replicationMode = this.get('replicationMode');
     return replicationMode ? get(this, replicationMode) : null;

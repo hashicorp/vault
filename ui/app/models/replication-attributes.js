@@ -1,9 +1,7 @@
-import Ember from 'ember';
+import { match, not } from '@ember/object/computed';
+import { computed } from '@ember/object';
 import attr from 'ember-data/attr';
 import Fragment from 'ember-data-model-fragments/fragment';
-
-const { computed } = Ember;
-const { match } = computed;
 
 export default Fragment.extend({
   clusterId: attr('string'),
@@ -14,7 +12,7 @@ export default Fragment.extend({
   mode: attr('string'),
   replicationDisabled: match('mode', /disabled|unsupported/),
   replicationUnsupported: match('mode', /unsupported/),
-  replicationEnabled: computed.not('replicationDisabled'),
+  replicationEnabled: not('replicationDisabled'),
 
   // primary attrs
   isPrimary: match('mode', /primary/),

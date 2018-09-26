@@ -1,11 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { not } from '@ember/object/computed';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 
-const { computed, inject } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   classNames: 'config-pki-ca',
-  store: inject.service('store'),
-  flashMessages: inject.service(),
+  store: service('store'),
+  flashMessages: service(),
 
   /*
    * @param boolean
@@ -34,7 +35,7 @@ export default Ember.Component.extend({
    *
    * true when there's no CA cert currently configured
    */
-  needsConfig: computed.not('config.pem'),
+  needsConfig: not('config.pem'),
 
   /*
    * @param DS.Model
@@ -62,7 +63,7 @@ export default Ember.Component.extend({
    * function that gets called to refresh the config model
    *
    */
-  onRefresh: () => {},
+  onRefresh() {},
 
   loading: false,
 
@@ -147,6 +148,9 @@ export default Ember.Component.extend({
               'You tried to generate a new root CA, but one currently exists. To replace the existing one, delete it first and then generate again.'
             );
           }
+        })
+        .catch(() => {
+          // handle promise rejection - error will be shown by message-error component
         })
         .finally(() => {
           this.set('loading', false);

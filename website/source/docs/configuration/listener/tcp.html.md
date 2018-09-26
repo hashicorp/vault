@@ -38,6 +38,10 @@ advertise the correct address to other nodes.
   request size, in bytes. Defaults to 32 MB. Specifying a number less than or
   equal to `0` turns off limiting altogether.
 
+- `max_request_duration` `(string: "90s")` – Specifies the maximum
+  request duration allowed before Vault cancels the request. This overrides
+  `default_max_request_duration` for this listener.
+
 - `proxy_protocol_behavior` `(string: "") – When specified, turns on the PROXY
   protocol for the listener.
   Accepted Values:

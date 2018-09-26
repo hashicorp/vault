@@ -67,10 +67,13 @@ func (c *TokenCapabilitiesCommand) Run(args []string) int {
 	token := ""
 	path := ""
 	args = f.Args()
-	switch {
-	case len(args) == 1:
+	switch len(args) {
+	case 0:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1-2, got 0)"))
+		return 1
+	case 1:
 		path = args[0]
-	case len(args) == 2:
+	case 2:
 		token, path = args[0], args[1]
 	default:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1-2, got %d)", len(args)))

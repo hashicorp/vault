@@ -3,14 +3,15 @@
 package command
 
 import (
+	"encoding/base64"
 	"io"
 	"os"
 	"regexp"
 	"strings"
 	"testing"
 
-	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/xor"
+	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
@@ -35,21 +36,13 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
-			"init_no_args",
-			[]string{
-				"-init",
-			},
-			"must specify either -otp or -pgp-key",
-			1,
-		},
-		{
 			"init_invalid_otp",
 			[]string{
 				"-init",
 				"-otp", "not-a-valid-otp",
 			},
-			"Error initializing: invalid OTP:",
-			1,
+			"OTP string is wrong length",
+			2,
 		},
 		{
 			"init_pgp_multi",
@@ -99,12 +92,12 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
-					t.Errorf("expected %d to be %d", code, tc.code)
+					t.Errorf("%s: expected %d to be %d", tc.name, code, tc.code)
 				}
 
 				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 				if !strings.Contains(combined, tc.out) {
-					t.Errorf("expected %q to contain %q", combined, tc.out)
+					t.Errorf("%s: expected %q to contain %q", tc.name, combined, tc.out)
 				}
 			})
 		}
@@ -116,7 +109,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testOperatorGenerateRootCommand(t)
+		_, cmd := testOperatorGenerateRootCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -125,18 +118,13 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
-
-		output := ui.OutputWriter.String() + ui.ErrorWriter.String()
-		if err := cmd.verifyOTP(output); err != nil {
-			t.Fatal(err)
-		}
 	})
 
 	t.Run("decode", func(t *testing.T) {
 		t.Parallel()
 
-		encoded := "L9MaZ/4mQanpOV6QeWd84g=="
-		otp := "dIeeezkjpDUv3fy7MYPOLQ=="
+		encoded := "Bxg9JQQqOCNKBRICNwMIRzo2J3cWCBRi"
+		otp := "3JhHkONiyiaNYj14nnD9xZQS"
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -163,7 +151,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		w.Close()
 		os.Stdout = old
 
-		expected := "5b54841c-c705-e59c-c6e4-a22b48e4b2cf"
+		expected := "4RUmoevJ3lsLni9sTXcNnRE1"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if combined != expected {
 			t.Errorf("expected %q to be %q", combined, expected)
@@ -173,7 +161,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 	t.Run("cancel", func(t *testing.T) {
 		t.Parallel()
 
-		otp := "dIeeezkjpDUv3fy7MYPOLQ=="
+		otp := "3JhHkONiyiaNYj14nnD9xZQS"
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -212,7 +200,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 	t.Run("init_otp", func(t *testing.T) {
 		t.Parallel()
 
-		otp := "dIeeezkjpDUv3fy7MYPOLQ=="
+		otp := "3JhHkONiyiaNYj14nnD9xZQS"
 
 		client, closer := testVaultServer(t)
 		defer closer()
@@ -309,17 +297,16 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 	t.Run("provide_arg", func(t *testing.T) {
 		t.Parallel()
 
-		otp := "dIeeezkjpDUv3fy7MYPOLQ=="
-
 		client, keys, closer := testVaultServerUnseal(t)
 		defer closer()
 
 		// Initialize a generation
-		status, err := client.Sys().GenerateRootInit(otp, "")
+		status, err := client.Sys().GenerateRootInit("", "")
 		if err != nil {
 			t.Fatal(err)
 		}
 		nonce := status.Nonce
+		otp := status.OTP
 
 		// Supply the first n-1 unseal keys
 		for _, key := range keys[:len(keys)-1] {
@@ -353,16 +340,17 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Fatalf("no match: %#v", match)
 		}
 
-		tokenBytes, err := xor.XORBase64(match[0][1], otp)
-		if err != nil {
-			t.Fatal(err)
-		}
-		token, err := uuid.FormatUUID(tokenBytes)
+		tokenBytes, err := base64.RawStdEncoding.DecodeString(match[0][1])
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(token), 36; l != exp {
+		token, err := xor.XORBytes(tokenBytes, []byte(otp))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if l, exp := len(token), vault.TokenLength; l != exp {
 			t.Errorf("expected %d to be %d: %s", l, exp, token)
 		}
 	})
@@ -370,17 +358,16 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 	t.Run("provide_stdin", func(t *testing.T) {
 		t.Parallel()
 
-		otp := "dIeeezkjpDUv3fy7MYPOLQ=="
-
 		client, keys, closer := testVaultServerUnseal(t)
 		defer closer()
 
 		// Initialize a generation
-		status, err := client.Sys().GenerateRootInit(otp, "")
+		status, err := client.Sys().GenerateRootInit("", "")
 		if err != nil {
 			t.Fatal(err)
 		}
 		nonce := status.Nonce
+		otp := status.OTP
 
 		// Supply the first n-1 unseal keys
 		for _, key := range keys[:len(keys)-1] {
@@ -428,16 +415,28 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Fatalf("no match: %#v", match)
 		}
 
-		tokenBytes, err := xor.XORBase64(match[0][1], otp)
-		if err != nil {
-			t.Fatal(err)
-		}
-		token, err := uuid.FormatUUID(tokenBytes)
+		// encodedOTP := base64.RawStdEncoding.EncodeToString([]byte(otp))
+
+		// tokenBytes, err := xor.XORBase64(match[0][1], encodedOTP)
+		// if err != nil {
+		// 	t.Fatal(err)
+		// }
+		// token, err := uuid.FormatUUID(tokenBytes)
+		// if err != nil {
+		// 	t.Fatal(err)
+		// }
+
+		tokenBytes, err := base64.RawStdEncoding.DecodeString(match[0][1])
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(token), 36; l != exp {
+		token, err := xor.XORBytes(tokenBytes, []byte(otp))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if l, exp := len(token), vault.TokenLength; l != exp {
 			t.Errorf("expected %d to be %d: %s", l, exp, token)
 		}
 	})

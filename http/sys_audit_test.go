@@ -38,6 +38,13 @@ func TestSysAudit(t *testing.T) {
 				"local":       false,
 			},
 		},
+		"noop/": map[string]interface{}{
+			"path":        "noop/",
+			"type":        "noop",
+			"description": "",
+			"options":     map[string]interface{}{},
+			"local":       false,
+		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -112,6 +119,7 @@ func TestSysAuditHash(t *testing.T) {
 		"data": map[string]interface{}{
 			"hash": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 		},
+		"hash": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

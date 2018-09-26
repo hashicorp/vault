@@ -1,30 +1,32 @@
-import { moduleForComponent, test } from 'ember-qunit';
+import { module, test } from 'qunit';
+import { setupRenderingTest } from 'ember-qunit';
+import { render, click, find } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-moduleForComponent('toggle-button', 'Integration | Component | toggle button', {
-  integration: true,
-});
+module('Integration | Component | toggle button', function(hooks) {
+  setupRenderingTest(hooks);
 
-test('toggle functionality', function(assert) {
-  this.set('toggleTarget', {});
+  test('toggle functionality', async function(assert) {
+    this.set('toggleTarget', {});
 
-  this.render(hbs`{{toggle-button toggleTarget=toggleTarget toggleAttr="toggled"}}`);
+    await render(hbs`{{toggle-button toggleTarget=toggleTarget toggleAttr="toggled"}}`);
 
-  assert.equal(this.$('button').text().trim(), 'More options', 'renders default closedLabel');
+    assert.equal(find('button').textContent.trim(), 'More options', 'renders default closedLabel');
 
-  this.$('button').click();
-  assert.equal(this.get('toggleTarget.toggled'), true, 'it toggles the attr on the target');
-  assert.equal(this.$('button').text().trim(), 'Hide options', 'renders default openLabel');
-  this.$('button').click();
-  assert.equal(this.get('toggleTarget.toggled'), false, 'it toggles the attr on the target');
+    await click('button');
+    assert.equal(this.get('toggleTarget.toggled'), true, 'it toggles the attr on the target');
+    assert.equal(find('button').textContent.trim(), 'Hide options', 'renders default openLabel');
+    await click('button');
+    assert.equal(this.get('toggleTarget.toggled'), false, 'it toggles the attr on the target');
 
-  this.set('closedLabel', 'Open the options!');
-  this.set('openLabel', 'Close the options!');
-  this.render(
-    hbs`{{toggle-button toggleTarget=toggleTarget toggleAttr="toggled" closedLabel=closedLabel openLabel=openLabel}}`
-  );
+    this.set('closedLabel', 'Open the options!');
+    this.set('openLabel', 'Close the options!');
+    await render(
+      hbs`{{toggle-button toggleTarget=toggleTarget toggleAttr="toggled" closedLabel=closedLabel openLabel=openLabel}}`
+    );
 
-  assert.equal(this.$('button').text().trim(), 'Open the options!', 'renders passed closedLabel');
-  this.$('button').click();
-  assert.equal(this.$('button').text().trim(), 'Close the options!', 'renders passed openLabel');
+    assert.equal(find('button').textContent.trim(), 'Open the options!', 'renders passed closedLabel');
+    await click('button');
+    assert.equal(find('button').textContent.trim(), 'Close the options!', 'renders passed openLabel');
+  });
 });

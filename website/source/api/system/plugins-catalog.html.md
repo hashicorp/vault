@@ -67,8 +67,15 @@ supplied name.
   they do not match the plugin can not be run.
 
 - `command` `(string: <required>)` – Specifies the command used to execute the
-  plugin. This is relative to the plugin directory. e.g. `"myplugin
-  --my_flag=1"`
+  plugin. This is relative to the plugin directory. e.g. `"myplugin"`.
+
+- `args` `(array: [])` – Specifies the arguments used to execute the plugin. If
+  the arguments are provided here, the `command` parameter should only contain
+  the named program. e.g. `"--my_flag=1"`.
+
+- `env` `(array: [])` – Specifies the environment variables used during the
+  execution of the plugin. Each entry is of the form "key=value". e.g
+  `"FOO=BAR"`.
 
 ### Sample Payload
 

@@ -1,8 +1,7 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 
 const { attr } = DS;
-const { computed } = Ember;
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export default DS.Model.extend({

@@ -1,8 +1,9 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { gt } from '@ember/object/computed';
+import { camelize } from '@ember/string';
+import Component from '@ember/component';
+import { get, computed } from '@ember/object';
 import base64js from 'base64-js';
-
-const { Component, inject, computed, get } = Ember;
-const { camelize } = Ember.String;
 
 const DEFAULTS = {
   key: null,
@@ -20,21 +21,26 @@ const DEFAULTS = {
 
 export default Component.extend(DEFAULTS, {
   tagName: '',
-  store: inject.service(),
+  store: service(),
   formText: null,
   fetchOnInit: false,
   buttonText: 'Submit',
   thresholdPath: 'required',
   generateAction: false,
-  encoded_token: null,
 
   init() {
+    this._super(...arguments);
     if (this.get('fetchOnInit')) {
       this.attemptProgress();
     }
-    return this._super(...arguments);
   },
 
+  didInsertElement() {
+    this._super(...arguments);
+    this.onUpdate(this.getProperties(Object.keys(DEFAULTS)));
+  },
+
+  onUpdate() {},
   onShamirSuccess() {},
   // can be overridden w/an attr
   isComplete(data) {
@@ -53,20 +59,26 @@ export default Component.extend(DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
-  hasProgress: computed.gt('progress', 0),
+  hasProgress: gt('progress', 0),
 
   actionSuccess(resp) {
-    const { isComplete, onShamirSuccess, thresholdPath } = this.getProperties(
+    let { onUpdate, isComplete, onShamirSuccess, thresholdPath } = this.getProperties(
+      'onUpdate',
       'isComplete',
       'onShamirSuccess',
       'thresholdPath'
     );
+    let threshold = get(resp, thresholdPath);
+    let props = {
+      ...resp,
+      threshold,
+    };
     this.stopLoading();
-    this.set('threshold', get(resp, thresholdPath));
-    this.setProperties(resp);
-    if (isComplete(resp)) {
+    this.setProperties(props);
+    onUpdate(props);
+    if (isComplete(props)) {
       this.reset();
-      onShamirSuccess(resp);
+      onShamirSuccess(props);
     }
   },
 

@@ -7,10 +7,8 @@ export default create({
   visit: visitable('/vault/settings/secrets/configure/:backend/:section'),
   form: ConfigPKI,
   lastMessage: getter(function() {
-    const count = this.flashMessages().count;
-    return this.flashMessages(count - 1).text;
+    const count = this.flashMessages.length;
+    return this.flashMessages.objectAt(count - 1).text;
   }),
-  flashMessages: collection({
-    itemScope: '[data-test-flash-message-body]',
-  }),
+  flashMessages: collection('[data-test-flash-message-body]'),
 });

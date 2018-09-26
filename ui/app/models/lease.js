@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { match } from '@ember/object/computed';
 import DS from 'ember-data';
 import KeyMixin from './key-mixin';
 const { attr } = DS;
@@ -21,5 +21,5 @@ export default DS.Model.extend(KeyMixin, {
   lastRenewal: attr('string'),
   renewable: attr('boolean'),
   ttl: attr('number'),
-  isAuthLease: Ember.computed.match('id', /^auth/),
+  isAuthLease: match('id', /^auth/),
 });

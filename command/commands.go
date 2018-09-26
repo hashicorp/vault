@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	ad "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
+	alicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
 	azure "github.com/hashicorp/vault-plugin-secrets-azure"
 	gcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -121,6 +122,7 @@ var (
 
 	logicalBackends = map[string]logical.Factory{
 		"ad":         ad.Factory,
+		"alicloud":   alicloud.Factory,
 		"aws":        aws.Factory,
 		"azure":      azure.Factory,
 		"cassandra":  cassandra.Factory,
@@ -198,7 +200,7 @@ func (c *DeprecatedCommand) Run(args []string) int {
 func (c *DeprecatedCommand) warn() {
 	c.UI.Warn(wrapAtLength(fmt.Sprintf(
 		"WARNING! The \"vault %s\" command is deprecated. Please use \"vault %s\" "+
-			"instead. This command will be removed in Vault 0.11 (or later).",
+			"instead. This command will be removed in Vault 0.12.",
 		c.Old,
 		c.New)))
 	c.UI.Warn("")
@@ -371,6 +373,13 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"operator key-status": func() (cli.Command, error) {
 			return &OperatorKeyStatusCommand{
 				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator migrate": func() (cli.Command, error) {
+			return &OperatorMigrateCommand{
+				BaseCommand:      getBaseCommand(),
+				PhysicalBackends: physicalBackends,
+				ShutdownCh:       MakeShutdownCh(),
 			}, nil
 		},
 		"operator rekey": func() (cli.Command, error) {

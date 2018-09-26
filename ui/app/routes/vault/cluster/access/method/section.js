@@ -1,15 +1,24 @@
-import Ember from 'ember';
+import { set } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 import DS from 'ember-data';
 
-export default Ember.Route.extend({
+export default Route.extend({
+  wizard: service(),
   model(params) {
     const { section_name: section } = params;
     if (section !== 'configuration') {
       const error = new DS.AdapterError();
-      Ember.set(error, 'httpStatus', 404);
+      set(error, 'httpStatus', 404);
       throw error;
     }
-    return this.modelFor('vault.cluster.access.method');
+    let backend = this.modelFor('vault.cluster.access.method');
+    this.get('wizard').transitionFeatureMachine(
+      this.get('wizard.featureState'),
+      'DETAILS',
+      backend.get('type')
+    );
+    return backend;
   },
 
   setupController(controller) {

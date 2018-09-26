@@ -1,15 +1,17 @@
-import { moduleForComponent, test } from 'ember-qunit';
+import { module, test } from 'qunit';
+import { setupRenderingTest } from 'ember-qunit';
+import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-moduleForComponent('console/log-command', 'Integration | Component | console/log command', {
-  integration: true,
-});
+module('Integration | Component | console/log command', function(hooks) {
+  setupRenderingTest(hooks);
 
-test('it renders', function(assert) {
-  const commandText = 'list this/path';
-  this.set('content', commandText);
+  test('it renders', async function(assert) {
+    const commandText = 'list this/path';
+    this.set('content', commandText);
 
-  this.render(hbs`{{console/log-command content=content}}`);
+    await render(hbs`{{console/log-command content=content}}`);
 
-  assert.dom('pre').includesText(commandText);
+    assert.dom('pre').includesText(commandText);
+  });
 });

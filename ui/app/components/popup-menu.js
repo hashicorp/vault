@@ -1,5 +1,5 @@
-import Ember from 'ember';
+import Component from '@ember/component';
 
-export default Ember.Component.extend({
-  tagName: '',
+export default Component.extend({
+  tagName: 'span',
 });

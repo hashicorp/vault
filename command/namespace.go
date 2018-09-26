@@ -21,9 +21,9 @@ func (c *NamespaceCommand) Help() string {
 Usage: vault namespace <subcommand> [options] [args]
 
   This command groups subcommands for interacting with Vault namespaces.
-  These set of subcommands operate on the context of the namespace that the
-  current logged in token belongs to.
-  
+  These subcommands operate in the context of the namespace that the
+  currently logged in token belongs to.
+
   List enabled child namespaces:
 
       $ vault namespace list

@@ -1,7 +1,4 @@
-// +build !ent
-// +build !prem
-// +build !pro
-// +build !hsm
+// +build !enterprise
 
 package vault
 

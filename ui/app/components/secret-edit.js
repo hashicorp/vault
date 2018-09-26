@@ -1,4 +1,9 @@
-import Ember from 'ember';
+import { or } from '@ember/object/computed';
+import { isBlank, isNone } from '@ember/utils';
+import $ from 'jquery';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
+import { computed, get } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
@@ -6,9 +11,11 @@ import KVObject from 'vault/lib/kv-object';
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
-const { get, computed } = Ember;
 
-export default Ember.Component.extend(FocusOnInsertMixin, {
+export default Component.extend(FocusOnInsertMixin, {
+  wizard: service(),
+  router: service(),
+
   // a key model
   key: null,
 
@@ -22,7 +29,9 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   secretData: null,
 
   // called with a bool indicating if there's been a change in the secretData
-  onDataChange: () => {},
+  onDataChange() {},
+  onRefresh() {},
+  onToggleAdvancedEdit() {},
 
   // did user request advanced mode
   preferAdvancedEdit: false,
@@ -30,6 +39,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   // use a named action here so we don't have to pass one in
   // this will bubble to the route
   toggleAdvancedEdit: 'toggleAdvancedEdit',
+  error: null,
 
   codemirrorString: null,
 
@@ -45,34 +55,45 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
       this.set('preferAdvancedEdit', true);
     }
     this.checkRows();
+    if (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') {
+      let engine = this.get('key').backend.includes('kv') ? 'kv' : this.get('key').backend;
+      this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', engine);
+    }
+
     if (this.get('mode') === 'edit') {
       this.send('addRow');
     }
   },
 
+  didInsertElement() {
+    this._super(...arguments);
+    $(document).on('keyup.keyEdit', this.onEscape.bind(this));
+  },
+
   willDestroyElement() {
+    this._super(...arguments);
     const key = this.get('key');
     if (get(key, 'isError') && !key.isDestroyed) {
       key.rollbackAttributes();
     }
+    $(document).off('keyup.keyEdit');
   },
 
-  partialName: Ember.computed('mode', function() {
+  partialName: computed('mode', function() {
     return `partials/secret-form-${this.get('mode')}`;
   }),
 
-  routing: Ember.inject.service('-routing'),
+  showPrefix: or('key.initialParentKey', 'key.parentKey'),
 
-  showPrefix: computed.or('key.initialParentKey', 'key.parentKey'),
+  requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
 
-  requestInFlight: computed.or('key.isLoading', 'key.isReloading', 'key.isSaving'),
-
-  buttonDisabled: computed.or(
+  buttonDisabled: or(
     'requestInFlight',
     'key.isFolder',
     'key.isError',
     'key.flagsIsInvalid',
-    'hasLintError'
+    'hasLintError',
+    'error'
   ),
 
   basicModeDisabled: computed('secretDataIsAdvanced', 'showAdvancedMode', function() {
@@ -102,17 +123,8 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   }),
 
   transitionToRoute() {
-    const router = this.get('routing.router');
-    router.transitionTo.apply(router, arguments);
+    this.get('router').transitionTo(...arguments);
   },
-
-  bindKeys: Ember.on('didInsertElement', function() {
-    Ember.$(document).on('keyup.keyEdit', this.onEscape.bind(this));
-  }),
-
-  unbindKeys: Ember.on('willDestroyElement', function() {
-    Ember.$(document).off('keyup.keyEdit');
-  }),
 
   onEscape(e) {
     if (e.keyCode !== keys.ESC || this.get('mode') !== 'show') {
@@ -143,7 +155,10 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     }
 
     return model[method]().then(() => {
-      if (!Ember.get(model, 'isError')) {
+      if (!get(model, 'isError')) {
+        if (this.get('wizard.featureState') === 'secret') {
+          this.get('wizard').transitionFeatureMachine('secret', 'CONTINUE');
+        }
         successCallback(key);
       }
     });
@@ -180,7 +195,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
 
       // prevent from submitting if there's no key
       // maybe do something fancier later
-      if (type === 'create' && Ember.isBlank(this.get('key.id'))) {
+      if (type === 'create' && isBlank(this.get('key.id'))) {
         return;
       }
 
@@ -201,12 +216,12 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     },
 
     refresh() {
-      this.attrs.onRefresh();
+      this.get('onRefresh')();
     },
 
     addRow() {
       const data = this.get('secretData');
-      if (Ember.isNone(data.findBy('name', ''))) {
+      if (isNone(data.findBy('name', ''))) {
         data.pushObject({ name: '', value: '' });
         this.set('codemirrorString', data.toJSONString(true));
       }
@@ -217,7 +232,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     deleteRow(name) {
       const data = this.get('secretData');
       const item = data.findBy('name', name);
-      if (Ember.isBlank(item.name)) {
+      if (isBlank(item.name)) {
         return;
       }
       data.removeObject(item);
@@ -228,14 +243,19 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     },
 
     toggleAdvanced(bool) {
-      this.sendAction('toggleAdvancedEdit', bool);
+      this.get('onToggleAdvancedEdit')(bool);
     },
 
     codemirrorUpdated(val, codemirror) {
+      this.set('error', null);
       codemirror.performLint();
       const noErrors = codemirror.state.lint.marked.length === 0;
       if (noErrors) {
-        this.get('secretData').fromJSONString(val);
+        try {
+          this.get('secretData').fromJSONString(val);
+        } catch (e) {
+          this.set('error', e.message);
+        }
       }
       this.set('hasLintError', !noErrors);
       this.set('codemirrorString', val);

@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -337,6 +338,10 @@ func (b *FileBackend) ListInternal(ctx context.Context, prefix string) ([]string
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
+	}
+
+	if len(names) > 0 {
+		sort.Strings(names)
 	}
 
 	return names, nil

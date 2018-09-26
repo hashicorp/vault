@@ -1,11 +1,10 @@
-import Ember from 'ember';
+import Controller from '@ember/controller';
 import trimRight from 'vault/utils/trim-right';
 import PolicyEditController from 'vault/mixins/policy-edit-controller';
 
-export default Ember.Controller.extend(PolicyEditController, {
+export default Controller.extend(PolicyEditController, {
   showFileUpload: false,
   file: null,
-
   actions: {
     setPolicyFromFile(index, fileInfo) {
       let { value, fileName } = fileInfo;

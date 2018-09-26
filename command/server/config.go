@@ -46,12 +46,14 @@ type Config struct {
 	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
 
 	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
-	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_time"`
+	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
 
 	ClusterName         string `hcl:"cluster_name"`
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
 	PluginDirectory string `hcl:"plugin_directory"`
+
+	LogLevel string `hcl:"log_level"`
 
 	PidFile              string      `hcl:"pid_file"`
 	EnableRawEndpoint    bool        `hcl:"-"`
@@ -61,6 +63,9 @@ type Config struct {
 	ClusterAddr          string      `hcl:"cluster_addr"`
 	DisableClustering    bool        `hcl:"-"`
 	DisableClusteringRaw interface{} `hcl:"disable_clustering"`
+
+	DisablePerformanceStandby    bool        `hcl:"-"`
+	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby"`
 
 	DisableSealWrap    bool        `hcl:"-"`
 	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
@@ -296,6 +301,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DefaultMaxRequestDuration = c2.DefaultMaxRequestDuration
 	}
 
+	result.LogLevel = c.LogLevel
+	if c2.LogLevel != "" {
+		result.LogLevel = c2.LogLevel
+	}
+
 	result.ClusterName = c.ClusterName
 	if c2.ClusterName != "" {
 		result.ClusterName = c2.ClusterName
@@ -324,6 +334,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.PidFile = c.PidFile
 	if c2.PidFile != "" {
 		result.PidFile = c2.PidFile
+	}
+
+	result.DisablePerformanceStandby = c.DisablePerformanceStandby
+	if c2.DisablePerformanceStandby {
+		result.DisablePerformanceStandby = c2.DisablePerformanceStandby
 	}
 
 	result.DisableSealWrap = c.DisableSealWrap
@@ -424,6 +439,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
+	if result.DisablePerformanceStandbyRaw != nil {
+		if result.DisablePerformanceStandby, err = parseutil.ParseBool(result.DisablePerformanceStandbyRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	if result.DisableSealWrapRaw != nil {
 		if result.DisableSealWrap, err = parseutil.ParseBool(result.DisableSealWrapRaw); err != nil {
 			return nil, err
@@ -437,12 +458,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
-		if err := parseStorage(&result, o, "storage"); err != nil {
+		if err := ParseStorage(&result, o, "storage"); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'storage': {{err}}", err)
 		}
 	} else {
 		if o := list.Filter("backend"); len(o.Items) > 0 {
-			if err := parseStorage(&result, o, "backend"); err != nil {
+			if err := ParseStorage(&result, o, "backend"); err != nil {
 				return nil, errwrap.Wrapf("error parsing 'backend': {{err}}", err)
 			}
 		}
@@ -562,7 +583,7 @@ func isTemporaryFile(name string) bool {
 		(strings.HasPrefix(name, "#") && strings.HasSuffix(name, "#")) // emacs
 }
 
-func parseStorage(result *Config, list *ast.ObjectList, name string) error {
+func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 	if len(list.Items) > 1 {
 		return fmt.Errorf("only one %q block is permitted", name)
 	}

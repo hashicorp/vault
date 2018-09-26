@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 	"reflect"
 	"strings"
 	"testing"
@@ -15,6 +16,93 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
+
+func TestHandler_parseMFAHandler(t *testing.T) {
+	var err error
+	var expectedMFACreds logical.MFACreds
+	req := &logical.Request{
+		Headers: make(map[string][]string),
+	}
+
+	headerName := textproto.CanonicalMIMEHeaderKey(MFAHeaderName)
+
+	// Set TOTP passcode in the MFA header
+	req.Headers[headerName] = []string{
+		"my_totp:123456",
+		"my_totp:111111",
+		"my_second_mfa:hi=hello",
+		"my_third_mfa",
+	}
+	err = parseMFAHeader(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify that it is being parsed properly
+	expectedMFACreds = logical.MFACreds{
+		"my_totp": []string{
+			"123456",
+			"111111",
+		},
+		"my_second_mfa": []string{
+			"hi=hello",
+		},
+		"my_third_mfa": []string{},
+	}
+	if !reflect.DeepEqual(expectedMFACreds, req.MFACreds) {
+		t.Fatalf("bad: parsed MFACreds; expected: %#v\n actual: %#v\n", expectedMFACreds, req.MFACreds)
+	}
+
+	// Split the creds of a method type in different headers and check if they
+	// all get merged together
+	req.Headers[headerName] = []string{
+		"my_mfa:passcode=123456",
+		"my_mfa:month=july",
+		"my_mfa:day=tuesday",
+	}
+	err = parseMFAHeader(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedMFACreds = logical.MFACreds{
+		"my_mfa": []string{
+			"passcode=123456",
+			"month=july",
+			"day=tuesday",
+		},
+	}
+	if !reflect.DeepEqual(expectedMFACreds, req.MFACreds) {
+		t.Fatalf("bad: parsed MFACreds; expected: %#v\n actual: %#v\n", expectedMFACreds, req.MFACreds)
+	}
+
+	// Header without method name should error out
+	req.Headers[headerName] = []string{
+		":passcode=123456",
+	}
+	err = parseMFAHeader(req)
+	if err == nil {
+		t.Fatalf("expected an error; actual: %#v\n", req.MFACreds)
+	}
+
+	// Header without method name and method value should error out
+	req.Headers[headerName] = []string{
+		":",
+	}
+	err = parseMFAHeader(req)
+	if err == nil {
+		t.Fatalf("expected an error; actual: %#v\n", req.MFACreds)
+	}
+
+	// Header without method name and method value should error out
+	req.Headers[headerName] = []string{
+		"my_totp:",
+	}
+	err = parseMFAHeader(req)
+	if err == nil {
+		t.Fatalf("expected an error; actual: %#v\n", req.MFACreds)
+	}
+}
 
 func TestHandler_cors(t *testing.T) {
 	core, _, _ := vault.TestCoreUnsealed(t)
@@ -82,7 +170,7 @@ func TestHandler_cors(t *testing.T) {
 		"Access-Control-Allow-Origin":  addr,
 		"Access-Control-Allow-Headers": strings.Join(vault.StdAllowedHeaders, ","),
 		"Access-Control-Max-Age":       "300",
-		"Vary": "Origin",
+		"Vary":                         "Origin",
 	}
 
 	for expHeader, expected := range expHeaders {
@@ -106,7 +194,7 @@ func TestHandler_CacheControlNoStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set(consts.AuthHeaderName, token)
 	req.Header.Set(WrapTTLHeaderName, "60s")
 
 	client := cleanhttp.DefaultClient()
@@ -139,7 +227,7 @@ func TestHandler_Accepted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set(consts.AuthHeaderName, token)
 
 	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)
@@ -160,7 +248,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set(consts.AuthHeaderName, token)
 
 	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)
@@ -230,6 +318,58 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"options":   interface{}(nil),
 			},
 		},
+		"secret/": map[string]interface{}{
+			"description": "key/value secret storage",
+			"type":        "kv",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
+				"plugin_name":       "",
+			},
+			"local":     false,
+			"seal_wrap": false,
+			"options":   map[string]interface{}{"version": "1"},
+		},
+		"sys/": map[string]interface{}{
+			"description": "system endpoints used for control, policy and debugging",
+			"type":        "system",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
+				"plugin_name":       "",
+			},
+			"local":     false,
+			"seal_wrap": false,
+			"options":   interface{}(nil),
+		},
+		"cubbyhole/": map[string]interface{}{
+			"description": "per-token private secret storage",
+			"type":        "cubbyhole",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
+				"plugin_name":       "",
+			},
+			"local":     true,
+			"seal_wrap": false,
+			"options":   interface{}(nil),
+		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
+				"plugin_name":       "",
+			},
+			"local":     false,
+			"seal_wrap": false,
+			"options":   interface{}(nil),
+		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -239,6 +379,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
@@ -257,7 +398,7 @@ func TestSysMounts_headerAuth_Wrapped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set(consts.AuthHeaderName, token)
 	req.Header.Set(WrapTTLHeaderName, "60s")
 
 	client := cleanhttp.DefaultClient()
@@ -326,6 +467,30 @@ func TestHandler_sealed(t *testing.T) {
 	testResponseStatus(t, resp, 503)
 }
 
+func TestHandler_ui_default(t *testing.T) {
+	core := vault.TestCoreUI(t, false)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	resp, err := http.Get(addr + "/ui/")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 404)
+}
+
+func TestHandler_ui_enabled(t *testing.T) {
+	core := vault.TestCoreUI(t, true)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	resp, err := http.Get(addr + "/ui/")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 200)
+}
+
 func TestHandler_error(t *testing.T) {
 	w := httptest.NewRecorder()
 
@@ -376,7 +541,7 @@ func testNonPrintable(t *testing.T, disable bool) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set(consts.AuthHeaderName, token)
 
 	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)

@@ -73,6 +73,7 @@
   }}
 {{else if (eq attr.options.editType 'ttl')}}
   {{ttl-picker
+    data-test-input=attr.name
     initialValue=(or (get model valuePath) attr.options.defaultValue)
     labelText=labelString
     warning=attr.options.warning
@@ -97,6 +98,22 @@
         oninput={{action (action "setAndBroadcast" valuePath) value="target.value"}}
         class="textarea"
         ></textarea>
+    {{else if (eq attr.options.editType 'json')}}
+
+      <label for="{{attr.name}}" class="is-label">
+        {{labelString}}
+        {{#if attr.options.helpText}}
+          {{#info-tooltip}}
+          <span data-test-help-text>
+            {{attr.options.helpText}}
+          </span>
+          {{/info-tooltip}}
+        {{/if}}
+      </label>
+      {{json-editor
+        value=(if (get model valuePath) (stringify (jsonify (get model valuePath))))
+        valueUpdated=(action "codemirrorUpdated" attr.name 'string')
+      }}
     {{else}}
       <input
         data-test-input={{attr.name}}
@@ -136,6 +153,6 @@
 {{else if (eq attr.type 'object')}}
   {{json-editor
     value=(if (get model valuePath) (stringify (get model valuePath)) emptyData)
-    valueUpdated=(action "codemirrorUpdated" attr.name)
+    valueUpdated=(action "codemirrorUpdated" attr.name false)
   }}
 {{/if}}

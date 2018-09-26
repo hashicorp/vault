@@ -1,9 +1,9 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 import UnloadModel from 'vault/mixins/unload-model-route';
-const { inject } = Ember;
 
-export default Ember.Route.extend(UnloadModel, {
-  version: inject.service(),
+export default Route.extend(UnloadModel, {
+  version: service(),
 
   beforeModel() {
     return this.get('version').fetchFeatures().then(() => {
@@ -13,9 +13,8 @@ export default Ember.Route.extend(UnloadModel, {
 
   model() {
     let type = 'control-group-config';
-    return this.get('version.isOSS')
-      ? null
-      : this.store.findRecord(type, 'config').catch(e => {
+    return this.get('version').hasFeature('Control Groups')
+      ? this.store.findRecord(type, 'config').catch(e => {
           // if you haven't saved a config, the API 404s, so create one here to edit and return it
           if (e.httpStatus === 404) {
             return this.store.createRecord(type, {
@@ -23,7 +22,8 @@ export default Ember.Route.extend(UnloadModel, {
             });
           }
           throw e;
-        });
+        })
+      : null;
   },
 
   actions: {

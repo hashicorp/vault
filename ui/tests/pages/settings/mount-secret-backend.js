@@ -1,14 +1,17 @@
-import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
+import { create, visitable, fillable } from 'ember-cli-page-object';
+import mountForm from 'vault/tests/pages/components/mount-backend-form';
+import withFlash from 'vault/tests/helpers/with-flash';
 
 export default create({
   visit: visitable('/vault/settings/mount-secret-backend'),
-  type: fillable('[data-test-secret-backend-type]'),
-  path: fillable('[data-test-secret-backend-path]'),
-  submit: clickable('[data-test-secret-backend-submit]'),
-  toggleOptions: clickable('[data-test-secret-backend-options]'),
-  version: fillable('[data-test-secret-backend-version]'),
-  maxTTLVal: fillable('[data-test-ttl-value]', { scope: '[data-test-secret-backend-max-ttl]' }),
-  maxTTLUnit: fillable('[data-test-ttl-unit]', { scope: '[data-test-secret-backend-max-ttl]' }),
-  defaultTTLVal: fillable('[data-test-ttl-value]', { scope: '[data-test-secret-backend-default-ttl]' }),
-  defaultTTLUnit: fillable('[data-test-ttl-unit]', { scope: '[data-test-secret-backend-default-ttl]' }),
+  ...mountForm,
+  version: fillable('[data-test-input="options.version"]'),
+  maxTTLVal: fillable('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-value]'),
+  maxTTLUnit: fillable('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-unit]'),
+  defaultTTLVal: fillable('[data-test-input="config.defaultLeaseTtl"] [data-test-ttl-value]'),
+  defaultTTLUnit: fillable('[data-test-input="config.defaultLeaseTtl"] [data-test-ttl-unit]'),
+  enable: async function(type, path) {
+    await this.visit();
+    return withFlash(this.mount(type, path));
+  },
 });

@@ -1,7 +1,17 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 
-export default Ember.Route.extend({
+export default Route.extend({
+  wizard: service(),
   model() {
-    return this.modelFor('vault.cluster.secrets.backend');
+    let backend = this.modelFor('vault.cluster.secrets.backend');
+    if (this.get('wizard.featureState') === 'list') {
+      this.get('wizard').transitionFeatureMachine(
+        this.get('wizard.featureState'),
+        'CONTINUE',
+        backend.get('type')
+      );
+    }
+    return backend;
   },
 });
