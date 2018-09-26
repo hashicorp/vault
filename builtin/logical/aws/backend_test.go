@@ -777,9 +777,16 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 }
 
 func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
+	t.Parallel()
+	roleName := generateUniqueName(t.Name())
 	minAwsAssumeRoleDuration := 900
+	awsAccountID, err := getAccountID()
+	if err != nil {
+		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
+	}
 	roleData := map[string]interface{}{
-		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", os.Getenv("AWS_ACCOUNT_ID"), testRoleName)},
+		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
 		"credential_type": assumedRoleCred,
 		"default_sts_ttl": minAwsAssumeRoleDuration,
 	}
@@ -787,7 +794,7 @@ func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createRole(t)
+			createRole(t, roleName, awsAccountID)
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
@@ -797,7 +804,9 @@ func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepReadTTL("test", time.Duration(minAwsAssumeRoleDuration)*time.Second), // allow a little slack
 		},
-		Teardown: deleteTestRole,
+		Teardown: func() error {
+			return deleteTestRole(roleName)
+		},
 	})
 }
 
