@@ -104,6 +104,10 @@
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-logo-grid/-/hashi-logo-grid-1.0.3.tgz#75703b8f2ec71a636eda57343627a877c5dbb037"
 
+"@hashicorp/hashi-mega-nav@^0.0.4":
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-mega-nav/-/hashi-mega-nav-0.0.4.tgz#d1f1be559469ea3926d3f23423a130c92e131ab9"
+
 "@hashicorp/hashi-nav@1.0.5":
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-nav/-/hashi-nav-1.0.5.tgz#876355a2a10b4b22d324e8cc858f24d6895cbcb9"
