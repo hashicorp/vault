@@ -24,35 +24,40 @@ activate :external_pipeline,
 activate :dato,
   token: '78d2968c99a076419fbb'
 
-dato.tap do |dato|
-  sitemap.resources.each do |page|
-    if page.path.match(/\.html$/)
-      if page.metadata[:options][:layout]
-        proxy "#{page.path}", "/content", {
-          layout: page.metadata[:options][:layout],
-          locals: page.metadata[:page].merge({
-            content: render(page)
-          })
-        }
+ready do
+  dato.tap do |dato|
+    sitemap.resources.each do |page|
+      if page.path.match(/\.html$/)
+        if page.metadata[:options][:layout]
+          # get the page category from the url
+          match = page.path.match(/^(.*?)\//)
+          # proxy the page route
+          proxy "#{page.path}", "/content", {
+            layout: page.metadata[:options][:layout],
+            locals: page.metadata[:page].merge({
+              content: render(page),
+              sidebar_data: get_sidebar_data(match ? match[1] : nil)
+            })
+          }
+        end
       end
     end
-
   end
 end
 
-helpers do
-  # Formats and filters a category of docs for the sidebar component
-  def sidebar_data(category)
-    sitemap.resources.select { |resource|
-      Regexp.new("^#{category}").match(resource.path)
-    }.map { |resource|
-      {
-        path: resource.path,
-        data: resource.data.to_hash.tap { |a| a.delete 'description'; a }
-      }
+# Formats and filters a category of docs for the sidebar component
+def get_sidebar_data(category)
+  sitemap.resources.select { |resource|
+    !!Regexp.new("^#{category}").match(resource.path)
+  }.map { |resource|
+    {
+      path: resource.path,
+      data: resource.data.to_hash.tap { |a| a.delete 'description'; a }
     }
-  end
+  }
+end
 
+helpers do
   # Returns the FQDN of the image URL.
   # @param [String] path
   # @return [String]
