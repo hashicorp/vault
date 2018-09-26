@@ -17,6 +17,8 @@ BUG FIXES:
 
 IMPROVEMENTS:
 
+ * auth/aws: The identity alias name can now configured to be either IAM unique
+   ID of the IAM Principal, or ARN of the caller identity [GH-5247]
  * cli: Format TTLs for non-secret responses [GH-5367] 
  * identity: Support operating on entities and groups by their names [GH-5355]
  * plugins: Add `env` parameter when registering plugins to the catalog to allow
