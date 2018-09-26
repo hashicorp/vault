@@ -150,22 +150,22 @@ func Decompress(data []byte) ([]byte, bool, error) {
 	canary := data[0]
 	cData := data[1:]
 
-	switch {
+	switch canary {
 	// If the first byte matches the canary byte, remove the canary
 	// byte and try to decompress the data that is after the canary.
-	case canary == CompressionCanaryGzip:
+	case CompressionCanaryGzip:
 		if len(data) < 2 {
 			return nil, false, fmt.Errorf("invalid 'data' after the canary")
 		}
 		reader, err = gzip.NewReader(bytes.NewReader(cData))
 
-	case canary == CompressionCanaryLZW:
+	case CompressionCanaryLZW:
 		if len(data) < 2 {
 			return nil, false, fmt.Errorf("invalid 'data' after the canary")
 		}
 		reader = lzw.NewReader(bytes.NewReader(cData), lzw.LSB, 8)
 
-	case canary == CompressionCanarySnappy:
+	case CompressionCanarySnappy:
 		if len(data) < 2 {
 			return nil, false, fmt.Errorf("invalid 'data' after the canary")
 		}
@@ -173,7 +173,7 @@ func Decompress(data []byte) ([]byte, bool, error) {
 			Reader: snappy.NewReader(bytes.NewReader(cData)),
 		}
 
-	case canary == CompressionCanaryLZ4:
+	case CompressionCanaryLZ4:
 		if len(data) < 2 {
 			return nil, false, fmt.Errorf("invalid 'data' after the canary")
 		}
