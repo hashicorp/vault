@@ -1,5 +1,11 @@
 ## 0.11.2 (Unreleased)
 
+CHANGES:
+
+ * `sys/seal-status` now includes an `initialized` boolean in the output. If
+   Vault is not initialized, it will return a `200` with this bool `false`
+   instead of a `400`.
+
 FEATURES:
 
  * AWS Secret Engine Root Credential Rotation: The credential used by the AWS
