@@ -49,7 +49,7 @@ export default Component.extend({
     return outputSeconds ? this.convertToSeconds(time, unit) : timeString;
   }),
 
-  didRender() {
+  didInsertElement() {
     this._super(...arguments);
     if (this.setDefaultValue === false) {
       return;
@@ -68,8 +68,13 @@ export default Component.extend({
   },
 
   parseAndSetTime() {
-    const value = this.initialValue;
-    const seconds = typeOf(value) === 'number' ? value : Duration.parse(value).seconds();
+    let value = this.initialValue;
+    let seconds = typeOf(value) === 'number' ? value : 30;
+    try {
+      seconds = Duration.parse(value).seconds();
+    } catch (e) {
+      // if parsing fails leave as default 30
+    }
 
     this.set('time', seconds);
     this.set('unit', 's');
