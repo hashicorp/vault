@@ -9,6 +9,66 @@ import (
 	"time"
 )
 
+// ---- RPC server domain ----
+
+// databasePluginRPCServer implements an RPC version of Database and is run
+// inside a plugin. It wraps an underlying implementation of Database.
+type databasePluginRPCServer struct {
+	impl Database
+}
+
+func (ds *databasePluginRPCServer) Type(_ struct{}, resp *string) error {
+	var err error
+	*resp, err = ds.impl.Type()
+	return err
+}
+
+func (ds *databasePluginRPCServer) CreateUser(args *CreateUserRequestRPC, resp *CreateUserResponse) error {
+	var err error
+	resp.Username, resp.Password, err = ds.impl.CreateUser(context.Background(), args.Statements, args.UsernameConfig, args.Expiration)
+	return err
+}
+
+func (ds *databasePluginRPCServer) RenewUser(args *RenewUserRequestRPC, _ *struct{}) error {
+	err := ds.impl.RenewUser(context.Background(), args.Statements, args.Username, args.Expiration)
+	return err
+}
+
+func (ds *databasePluginRPCServer) RevokeUser(args *RevokeUserRequestRPC, _ *struct{}) error {
+	err := ds.impl.RevokeUser(context.Background(), args.Statements, args.Username)
+	return err
+}
+
+func (ds *databasePluginRPCServer) RotateRootCredentials(args *RotateRootCredentialsRequestRPC, resp *RotateRootCredentialsResponse) error {
+	config, err := ds.impl.RotateRootCredentials(context.Background(), args.Statements)
+	if err != nil {
+		return err
+	}
+	resp.Config, err = json.Marshal(config)
+	return err
+}
+
+func (ds *databasePluginRPCServer) Initialize(args *InitializeRequestRPC, _ *struct{}) error {
+	return ds.Init(&InitRequestRPC{
+		Config:           args.Config,
+		VerifyConnection: args.VerifyConnection,
+	}, &InitResponse{})
+}
+
+func (ds *databasePluginRPCServer) Init(args *InitRequestRPC, resp *InitResponse) error {
+	config, err := ds.impl.Init(context.Background(), args.Config, args.VerifyConnection)
+	if err != nil {
+		return err
+	}
+	resp.Config, err = json.Marshal(config)
+	return err
+}
+
+func (ds *databasePluginRPCServer) Close(_ struct{}, _ *struct{}) error {
+	ds.impl.Close()
+	return nil
+}
+
 // ---- RPC client domain ----
 // databasePluginRPCClient implements Database and is used on the client to
 // make RPC calls to a plugin.
