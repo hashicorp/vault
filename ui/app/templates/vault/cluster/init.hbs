@@ -39,7 +39,7 @@
           </div>
         </div>
         {{#each (or keyData.recovery_keys_base64 keyData.recovery_keys keyData.keys_base64 keyData.keys) as |key index| }}
-          <div class="message is-list has-copy-button" tabindex="-1">
+          <div data-test-key-box class="message is-list has-copy-button" tabindex="-1">
             <HoverCopyButton @copyValue={{key}} />
             <div class="message-body">
               <h4 class="title is-7 is-marginless">
@@ -53,13 +53,13 @@
       <div class="box is-marginless is-shadowless">
         <div class="field is-grouped-split">
           {{#if (and model.sealed (not keyData.recovery_keys))}}
-            <div class="control">
+            <div data-test-advance-button class="control">
               {{#link-to 'vault.cluster.unseal' model.name class="button is-primary"}}
                 Continue to Unseal
               {{/link-to}}
             </div>
           {{else}}
-            <div class="control">
+            <div data-test-advance-button class="control">
               {{#link-to 'vault.cluster.auth' model.name class=(concat (if model.sealed 'is-loading ' '') 'button is-primary') disabled=model.sealed}}
                 Continue to Authenticate
               {{/link-to}}
@@ -98,7 +98,7 @@
               Key Shares
             </label>
             <div class="control">
-              {{input class="input" autocomplete="off" name="key-shares" type="number" step="1" min="1" pattern="[0-9]*" value=secret_shares}}
+              {{input data-test-key-shares="true" class="input" autocomplete="off" name="key-shares" type="number" step="1" min="1" pattern="[0-9]*" value=secret_shares}}
             </div>
             <p class="help has-text-grey">
               The number of key shares to split the master key into
@@ -109,7 +109,7 @@
               Key Threshold
             </label>
             <div class="control">
-              {{input class="input" autocomplete="off" name="key-threshold" type="number" step="1" min="1" pattern="[0-9]*" value=secret_threshold}}
+              {{input data-test-key-threshold="true" class="input" autocomplete="off" name="key-threshold" type="number" step="1" min="1" pattern="[0-9]*" value=secret_threshold}}
             </div>
             <p class="help has-text-grey">
               The number of key shares required to reconstruct the master key
@@ -138,7 +138,7 @@
           {{/if}}
         </div>
         <div class="box is-marginless is-shadowless">
-          <button type="submit" class="button is-primary {{if loading 'is-loading'}}" disabled={{loading}}>
+          <button data-test-init-submit type="submit" class="button is-primary {{if loading 'is-loading'}}" disabled={{loading}}>
             Initialize
           </button>
 
