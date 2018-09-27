@@ -2,9 +2,64 @@ package plugin
 
 import (
 	"context"
+	"net/rpc"
 
 	"github.com/hashicorp/vault/logical"
 )
+
+// StorageClient is an implementation of logical.Storage that communicates
+// over RPC.
+type StorageClient struct {
+	client *rpc.Client
+}
+
+func (s *StorageClient) List(_ context.Context, prefix string) ([]string, error) {
+	var reply StorageListReply
+	err := s.client.Call("Plugin.List", prefix, &reply)
+	if err != nil {
+		return reply.Keys, err
+	}
+	if reply.Error != nil {
+		return reply.Keys, reply.Error
+	}
+	return reply.Keys, nil
+}
+
+func (s *StorageClient) Get(_ context.Context, key string) (*logical.StorageEntry, error) {
+	var reply StorageGetReply
+	err := s.client.Call("Plugin.Get", key, &reply)
+	if err != nil {
+		return nil, err
+	}
+	if reply.Error != nil {
+		return nil, reply.Error
+	}
+	return reply.StorageEntry, nil
+}
+
+func (s *StorageClient) Put(_ context.Context, entry *logical.StorageEntry) error {
+	var reply StoragePutReply
+	err := s.client.Call("Plugin.Put", entry, &reply)
+	if err != nil {
+		return err
+	}
+	if reply.Error != nil {
+		return reply.Error
+	}
+	return nil
+}
+
+func (s *StorageClient) Delete(_ context.Context, key string) error {
+	var reply StorageDeleteReply
+	err := s.client.Call("Plugin.Delete", key, &reply)
+	if err != nil {
+		return err
+	}
+	if reply.Error != nil {
+		return reply.Error
+	}
+	return nil
+}
 
 // StorageServer is a net/rpc compatible structure for serving
 type StorageServer struct {
