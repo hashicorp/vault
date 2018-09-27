@@ -129,9 +129,9 @@ The expectation for vendors is to respond to all critical issues within 48 hours
 <ul>
 <p><li>Complete the <a href="https://docs.google.com/forms/d/e/1FAIpQLSfQL1uj-mL59bd2EyCPI31LT9uvVT-xKyoHAb5FKIwWwwJ1qQ/viewform">Vault Integration webform</a></li></p>
 <p><li>Develop and test your Vault integration following examples, documentation and best practices</li></p>
-<p><li>When the integration is completed and ready for HashiCorp review, send the Vault and other relevant logs to us for review and certification at: <a href="vault-integration-dev@hashicorp.com">vault-integration-dev@hashicorp.com</a></li></p>
+<p><li>When the integration is completed and ready for HashiCorp review, send the Vault and other relevant logs to us for review and certification at: <a href="mailto:vault-integration-dev@hashicorp.com">vault-integration-dev@hashicorp.com</a></li></p>
 <p><li>Once released, plan to support the integration with additional functionality and responding to customer issues </li></p>
 </ul>
 
 ## Contact Us
-<p>For any questions or feedback, please contact us at: <a href="vault-integration-dev@hashicorp.com">vault-integration-dev@hashicorp.com</a></p>
+<p>For any questions or feedback, please contact us at: <a href="mailto:vault-integration-dev@hashicorp.com">vault-integration-dev@hashicorp.com</a></p>
