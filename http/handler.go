@@ -447,7 +447,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			return
 		}
 		if leaderAddr == "" {
-			respondError(w, http.StatusInternalServerError, fmt.Errorf("local node not active but active cluster node not found"))
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("local node not active but active cluster node not found\nThis can happen when a leader failed without releasing the lock.\nIf you know the leader will not come back, check in the storage backend and release the lock if needed"))
 			return
 		}
 
