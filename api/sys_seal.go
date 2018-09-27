@@ -57,6 +57,7 @@ func sealStatusRequest(c *Sys, r *Request) (*SealStatusResponse, error) {
 
 type SealStatusResponse struct {
 	Type         string `json:"type"`
+	Initialized  bool   `json:"initialized"`
 	Sealed       bool   `json:"sealed"`
 	T            int    `json:"t"`
 	N            int    `json:"n"`
