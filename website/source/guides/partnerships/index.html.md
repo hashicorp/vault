@@ -92,8 +92,10 @@ Here are links to resources, documentation, examples and best practices to guide
 <p><a href="https://www.vaultproject.io/docs/audit/index.html">Audit devices documentation</a></p>
 
 <p><strong>HSM Integration</strong></p>
-<p><a href="https://www.vaultproject.io/docs/enterprise/hsm/index.html">HSM documentation</a></p>
-<p><a href="https://www.vaultproject.io/docs/configuration/seal/pkcs11.html">Configuration information</a></p>
+<ul>
+<li><a href="https://www.vaultproject.io/docs/enterprise/hsm/index.html">HSM documentation</a></li>
+<li><a href="https://www.vaultproject.io/docs/configuration/seal/pkcs11.html">Configuration information</a></li>
+</ul>
 
 <p><strong>Storage Backends</strong></p>
 <p><a href="https://www.vaultproject.io/docs/configuration/storage/index.html">Storage configuration documentation</a></p>
