@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -130,6 +132,35 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 		MaxItems: aws.Int64(1000),
 	})
 	if err != nil {
+		// This isn't guaranteed to be perfect; for example, an IAM user
+		// might have gotten put into the WAL but then the IAM user creation
+		// failed (e.g., Vault didn't have permissions) and then the WAL
+		// deletion failed as well. Then, if Vault doesn't have access to
+		// call iam:ListGroupsForUser, AWS will return an access denied error
+		// and the WAL will never get cleaned up. But this is better than
+		// just having Vault "forget" about a user it actually created.
+		//
+		// BEWARE a potential race condition -- where this is called
+		// immediately after a user is created. AWS eventual consistency
+		// might say the user doesn't exist when the user does in fact
+		// exist, and this could cause Vault to forget about the user.
+		// This won't happen if the user creation fails (because the WAL
+		// minimum age is 5 minutes, and AWS eventual consistency is, in
+		// practice, never that long), but it could happen if a lease holder
+		// asks immediately after getting a user to revoke the lease, causing
+		// Vault to leak the secret, which would be a Very Bad Thing to allow.
+		// So we make sure that, if there's an associated lease, it must be at
+		// least 5 minutes old as well.
+		if aerr, ok := err.(awserr.Error); ok {
+			acceptMissingIamUsers := false
+			if req.Secret == nil || time.Since(req.Secret.IssueTime) > time.Duration(minAwsUserRollbackAge) {
+				// WAL rollback
+				acceptMissingIamUsers = true
+			}
+			if aerr.Code() == iam.ErrCodeNoSuchEntityException && acceptMissingIamUsers {
+				return nil
+			}
+		}
 		return err
 	}
 	groups := groupsResp.Groups

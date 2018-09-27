@@ -48,7 +48,7 @@ func Backend() *backend {
 		},
 
 		WALRollback:       b.walRollback,
-		WALRollbackMinAge: 5 * time.Minute,
+		WALRollbackMinAge: minAwsUserRollbackAge,
 		BackendType:       logical.TypeLogical,
 	}
 
@@ -135,3 +135,5 @@ func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsiface.ST
 
 	return b.stsClient, nil
 }
+
+const minAwsUserRollbackAge = 5 * time.Minute
