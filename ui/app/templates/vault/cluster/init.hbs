@@ -52,7 +52,7 @@
       </div>
       <div class="box is-marginless is-shadowless">
         <div class="field is-grouped-split">
-          {{#if model.sealed}}
+          {{#if (and model.sealed (not keyData.recovery_keys))}}
             <div class="control">
               {{#link-to 'vault.cluster.unseal' model.name class="button is-primary"}}
                 Continue to Unseal
@@ -60,7 +60,7 @@
             </div>
           {{else}}
             <div class="control">
-              {{#link-to 'vault.cluster.auth' model.name class="button is-primary"}}
+              {{#link-to 'vault.cluster.auth' model.name class=(concat (if model.sealed 'is-loading ' '') 'button is-primary') disabled=model.sealed}}
                 Continue to Authenticate
               {{/link-to}}
             </div>
