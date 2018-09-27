@@ -41,12 +41,12 @@ export default Controller.extend(DEFAULTS, {
 
   actions: {
     initCluster(data) {
-      let isCloudSeal = this.model.sealType !== 'shamir';
+      let isCloudSeal = !!this.model.sealType && this.model.sealType !== 'shamir';
       if (data.secret_shares) {
         let shares = parseInt(data.secret_shares, 10);
         data.secret_shares = shares;
         if (isCloudSeal) {
-          data.stored_shares = shares;
+          data.stored_shares = 1;
           data.recovery_shares = shares;
         }
       }
