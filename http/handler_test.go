@@ -540,7 +540,7 @@ func TestHandler_requestAuth(t *testing.T) {
 	}
 
 	rWithVault, err := http.NewRequest("GET", "v1/test/path", nil)
-	rWithVault.Header.Set("X-Vault-Token", token)
+	rWithVault.Header.Set(consts.AuthHeaderName, token)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -611,11 +611,11 @@ func TestHandler_getTokenFromReq(t *testing.T) {
 		t.Fatalf("expected 'TOKEN' as result, got '%s'", tok)
 	}
 
-	r.Header.Set("X-Vault-Token", "NEWTOKEN")
+	r.Header.Set(consts.AuthHeaderName, "NEWTOKEN")
 	if tok, err := getTokenFromReq(&r); err != nil {
 		t.Fatalf("expected no error, got %s", err)
 	} else if tok == "TOKEN" {
-		t.Fatalf("X-Vault-Token header should be prioritized")
+		t.Fatalf("%s header should be prioritized", consts.AuthHeaderName)
 	} else if tok != "NEWTOKEN" {
 		t.Fatalf("expected 'NEWTOKEN' as result, got '%s'", tok)
 	}
