@@ -1,4 +1,3 @@
-import { computed } from '@ember/object';
 import { alias, and, equal } from '@ember/object/computed';
 import DS from 'ember-data';
 const { attr } = DS;
