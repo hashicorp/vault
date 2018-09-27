@@ -1,11 +1,11 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import UnsavedModelRoute from 'vault/mixins/unsaved-model-route';
 
-const { inject } = Ember;
-export default Ember.Route.extend(UnloadModelRoute, UnsavedModelRoute, {
-  version: inject.service(),
-  wizard: inject.service(),
+export default Route.extend(UnloadModelRoute, UnsavedModelRoute, {
+  version: service(),
+  wizard: service(),
   model() {
     let policyType = this.policyType();
     if (

@@ -14,36 +14,19 @@ import (
 
 // CubbyholeBackendFactory constructs a new cubbyhole backend
 func CubbyholeBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	var b CubbyholeBackend
+	b := &CubbyholeBackend{}
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(cubbyholeHelp),
-
-		Paths: []*framework.Path{
-			&framework.Path{
-				Pattern: ".*",
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handleRead,
-					logical.CreateOperation: b.handleWrite,
-					logical.UpdateOperation: b.handleWrite,
-					logical.DeleteOperation: b.handleDelete,
-					logical.ListOperation:   b.handleList,
-				},
-
-				ExistenceCheck: b.handleExistenceCheck,
-
-				HelpSynopsis:    strings.TrimSpace(cubbyholeHelpSynopsis),
-				HelpDescription: strings.TrimSpace(cubbyholeHelpDescription),
-			},
-		},
 	}
+
+	b.Backend.Paths = append(b.Backend.Paths, b.paths()...)
 
 	if conf == nil {
 		return nil, fmt.Errorf("configuration passed into backend is nil")
 	}
 	b.Backend.Setup(ctx, conf)
 
-	return &b, nil
+	return b, nil
 }
 
 // CubbyholeBackend is used for storing secrets directly into the physical
@@ -55,6 +38,27 @@ type CubbyholeBackend struct {
 
 	saltUUID    string
 	storageView logical.Storage
+}
+
+func (b *CubbyholeBackend) paths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: ".*",
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation:   b.handleRead,
+				logical.CreateOperation: b.handleWrite,
+				logical.UpdateOperation: b.handleWrite,
+				logical.DeleteOperation: b.handleDelete,
+				logical.ListOperation:   b.handleList,
+			},
+
+			ExistenceCheck: b.handleExistenceCheck,
+
+			HelpSynopsis:    strings.TrimSpace(cubbyholeHelpSynopsis),
+			HelpDescription: strings.TrimSpace(cubbyholeHelpDescription),
+		},
+	}
 }
 
 func (b *CubbyholeBackend) revoke(ctx context.Context, saltedToken string) error {

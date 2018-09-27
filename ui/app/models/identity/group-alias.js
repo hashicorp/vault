@@ -1,14 +1,16 @@
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
 import DS from 'ember-data';
-import Ember from 'ember';
 import identityCapabilities from 'vault/macros/identity-capabilities';
 
 const { attr, belongsTo } = DS;
-const { computed } = Ember;
 
 export default IdentityModel.extend({
   parentType: 'group',
-  formFields: ['name', 'mountAccessor'],
+  formFields: computed(function() {
+    return ['name', 'mountAccessor'];
+  }),
   group: belongsTo('identity/group', { readOnly: true, async: false }),
 
   name: attr('string'),
@@ -33,6 +35,6 @@ export default IdentityModel.extend({
   }),
 
   updatePath: identityCapabilities(),
-  canDelete: computed.alias('updatePath.canDelete'),
-  canEdit: computed.alias('updatePath.canUpdate'),
+  canDelete: alias('updatePath.canDelete'),
+  canEdit: alias('updatePath.canUpdate'),
 });

@@ -1,26 +1,28 @@
-import { test } from 'qunit';
-import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import { currentRouteName } from '@ember/test-helpers';
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section';
+import authPage from 'vault/tests/pages/auth';
+import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
+import withFlash from 'vault/tests/helpers/with-flash';
 
-moduleForAcceptance('Acceptance | settings/configure/secrets/pki/crl', {
-  beforeEach() {
-    return authLogin();
-  },
-});
+module('Acceptance | settings/configure/secrets/pki/crl', function(hooks) {
+  setupApplicationTest(hooks);
 
-test('it saves crl config', function(assert) {
-  const path = `pki-${new Date().getTime()}`;
-  mountSupportedSecretBackend(assert, 'pki', path);
-  page.visit({ backend: path, section: 'crl' });
-  andThen(() => {
-    assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
+  hooks.beforeEach(function() {
+    return authPage.login();
   });
 
-  page.form.fillInField('time', 3);
-  page.form.fillInField('unit', 'h');
-  page.form.submit();
+  test('it saves crl config', async function(assert) {
+    const path = `pki-${new Date().getTime()}`;
+    await enablePage.enable('pki', path);
+    await page.visit({ backend: path, section: 'crl' });
+    assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
 
-  andThen(() => {
-    assert.equal(page.lastMessage, 'The crl config for this backend has been updated.');
+    await page.form.fillInField('time', 3);
+    await page.form.fillInField('unit', 'h');
+    await withFlash(page.form.submit(), () => {
+      assert.equal(page.lastMessage, 'The crl config for this backend has been updated.');
+    });
   });
 });

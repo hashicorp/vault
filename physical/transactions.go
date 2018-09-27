@@ -21,6 +21,11 @@ type Transactional interface {
 	Transaction(context.Context, []*TxnEntry) error
 }
 
+type TransactionalBackend interface {
+	Backend
+	Transactional
+}
+
 type PseudoTransactional interface {
 	// An internal function should do no locking or permit pool acquisition.
 	// Depending on the backend and if it natively supports transactions, these

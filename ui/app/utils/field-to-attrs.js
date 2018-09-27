@@ -1,5 +1,5 @@
-import Ember from 'ember';
-
+import { get } from '@ember/object';
+import { expandProperties } from '@ember/object/computed';
 /*
  *
  * @param modelClass DS.Model
@@ -38,11 +38,11 @@ import Ember from 'ember';
 export const expandAttributeMeta = function(modelClass, attributeNames, namePrefix, map) {
   let fields = [];
   // expand all attributes
-  attributeNames.forEach(field => Ember.expandProperties(field, x => fields.push(x)));
+  attributeNames.forEach(field => expandProperties(field, x => fields.push(x)));
   let attributeMap = map || new Map();
   modelClass.eachAttribute((name, meta) => {
     let fieldName = namePrefix ? namePrefix + name : name;
-    let maybeFragment = Ember.get(modelClass, fieldName);
+    let maybeFragment = get(modelClass, fieldName);
     if (meta.isFragment && maybeFragment) {
       // pass the fragment and all fields that start with
       // the fragment name down to get extracted from the Fragment

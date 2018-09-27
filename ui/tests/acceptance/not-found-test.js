@@ -1,52 +1,53 @@
-import { test } from 'qunit';
-import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import { findAll, visit } from '@ember/test-helpers';
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
+import authPage from 'vault/tests/pages/auth';
+import logout from 'vault/tests/pages/logout';
 import Ember from 'ember';
 
 let adapterException;
 let loggerError;
 
-moduleForAcceptance('Acceptance | not-found', {
-  beforeEach() {
+module('Acceptance | not-found', function(hooks) {
+  setupApplicationTest(hooks);
+
+  hooks.beforeEach(function() {
     loggerError = Ember.Logger.error;
     adapterException = Ember.Test.adapter.exception;
     Ember.Test.adapter.exception = () => {};
     Ember.Logger.error = () => {};
-    return authLogin();
-  },
-  afterEach() {
+    return authPage.login();
+  });
+
+  hooks.afterEach(function() {
     Ember.Test.adapter.exception = adapterException;
     Ember.Logger.error = loggerError;
-    return authLogout();
-  },
-});
-
-test('top-level not-found', function(assert) {
-  visit('/404');
-  andThen(() => {
-    assert.ok(find('[data-test-not-found]').length, 'renders the not found component');
-    assert.ok(find('[data-test-header-without-nav]').length, 'renders the not found component with a header');
+    return logout.visit();
   });
-});
 
-test('vault route not-found', function(assert) {
-  visit('/vault/404');
-  andThen(() => {
+  test('top-level not-found', async function(assert) {
+    await visit('/404');
+    assert.ok(findAll('[data-test-not-found]').length, 'renders the not found component');
+    assert.ok(
+      findAll('[data-test-header-without-nav]').length,
+      'renders the not found component with a header'
+    );
+  });
+
+  test('vault route not-found', async function(assert) {
+    await visit('/vault/404');
     assert.dom('[data-test-not-found]').exists('renders the not found component');
-    assert.ok(find('[data-test-header-with-nav]').length, 'renders header with nav');
+    assert.ok(findAll('[data-test-header-with-nav]').length, 'renders header with nav');
   });
-});
 
-test('cluster route not-found', function(assert) {
-  visit('/vault/secrets/secret/404/show');
-  andThen(() => {
+  test('cluster route not-found', async function(assert) {
+    await visit('/vault/secrets/secret/404/show');
     assert.dom('[data-test-not-found]').exists('renders the not found component');
-    assert.ok(find('[data-test-header-with-nav]').length, 'renders header with nav');
+    assert.ok(findAll('[data-test-header-with-nav]').length, 'renders header with nav');
   });
-});
 
-test('secret not-found', function(assert) {
-  visit('/vault/secrets/secret/show/404');
-  andThen(() => {
+  test('secret not-found', async function(assert) {
+    await visit('/vault/secrets/secret/show/404');
     assert.dom('[data-test-secret-not-found]').exists('renders the message about the secret not being found');
   });
 });

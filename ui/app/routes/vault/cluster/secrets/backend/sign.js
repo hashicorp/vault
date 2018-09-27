@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import Route from '@ember/routing/route';
 import UnloadModel from 'vault/mixins/unload-model-route';
 
-export default Ember.Route.extend(UnloadModel, {
+export default Route.extend(UnloadModel, {
   templateName: 'vault/cluster/secrets/backend/sign',
 
   backendModel() {

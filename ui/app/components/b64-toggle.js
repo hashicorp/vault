@@ -1,10 +1,12 @@
-import Ember from 'ember';
+import { equal } from '@ember/object/computed';
+import { isBlank } from '@ember/utils';
+import Component from '@ember/component';
+import { set, get, computed } from '@ember/object';
 import { encodeString, decodeString } from 'vault/utils/b64';
 
-const { computed, get, set } = Ember;
 const B64 = 'base64';
 const UTF8 = 'utf-8';
-export default Ember.Component.extend({
+export default Component.extend({
   tagName: 'button',
   attributeBindings: ['type'],
   type: 'button',
@@ -72,7 +74,7 @@ export default Ember.Component.extend({
    * @private
    * @type boolean
    */
-  isBase64: computed.equal('currentEncoding', B64),
+  isBase64: equal('currentEncoding', B64),
 
   /*
    * Does the current value match the cached _value, i.e. has the input been mutated since we encoded.
@@ -82,7 +84,7 @@ export default Ember.Component.extend({
    */
   valuesMatch: computed('value', '_value', function() {
     const { value, _value } = this.getProperties('value', '_value');
-    const anyBlank = Ember.isBlank(value) || Ember.isBlank(_value);
+    const anyBlank = isBlank(value) || isBlank(_value);
     return !anyBlank && value === _value;
   }),
 

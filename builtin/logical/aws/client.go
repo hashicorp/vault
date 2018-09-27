@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+// NOTE: The caller is required to ensure that b.clientMutex is at least read locked
 func getRootConfig(ctx context.Context, s logical.Storage, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{}
 	var endpoint string
@@ -68,7 +69,7 @@ func getRootConfig(ctx context.Context, s logical.Storage, clientType string) (*
 	}, nil
 }
 
-func clientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error) {
+func nonCachedClientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error) {
 	awsConfig, err := getRootConfig(ctx, s, "iam")
 	if err != nil {
 		return nil, err
@@ -82,7 +83,7 @@ func clientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error) {
 	return client, nil
 }
 
-func clientSTS(ctx context.Context, s logical.Storage) (*sts.STS, error) {
+func nonCachedClientSTS(ctx context.Context, s logical.Storage) (*sts.STS, error) {
 	awsConfig, err := getRootConfig(ctx, s, "sts")
 	if err != nil {
 		return nil, err

@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
@@ -51,6 +52,17 @@ const (
 	ListingVisibilityHidden ListingVisibilityType = "hidden"
 	// ListingVisibilityUnauth is the unauth type for listing visibility
 	ListingVisibilityUnauth ListingVisibilityType = "unauth"
+
+	systemMountPath    = "sys/"
+	identityMountPath  = "identity/"
+	cubbyholeMountPath = "cubbyhole/"
+
+	systemMountType    = "system"
+	identityMountType  = "identity"
+	cubbyholeMountType = "cubbyhole"
+
+	MountTableUpdateStorage   = true
+	MountTableNoUpdateStorage = false
 )
 
 var (
@@ -61,44 +73,31 @@ var (
 	protectedMounts = []string{
 		"audit/",
 		"auth/",
-		"sys/",
-		"cubbyhole/",
-		"identity/",
+		systemMountPath,
+		cubbyholeMountPath,
+		identityMountPath,
 	}
 
 	untunableMounts = []string{
-		"cubbyhole/",
-		"sys/",
+		cubbyholeMountPath,
+		systemMountPath,
 		"audit/",
-		"identity/",
+		identityMountPath,
 	}
 
 	// singletonMounts can only exist in one location and are
 	// loaded by default. These are types, not paths.
 	singletonMounts = []string{
-		"cubbyhole",
-		"system",
+		cubbyholeMountType,
+		systemMountType,
 		"token",
-		"identity",
+		identityMountType,
 	}
 
 	// mountAliases maps old backend names to new backend names, allowing us
 	// to move/rename backends but maintain backwards compatibility
 	mountAliases = map[string]string{"generic": "kv"}
 )
-
-func collectBackendLocalPaths(backend logical.Backend, viewPath string) []string {
-	if backend == nil || backend.SpecialPaths() == nil || len(backend.SpecialPaths().LocalStorage) == 0 {
-		return nil
-	}
-
-	var paths []string
-	for _, path := range backend.SpecialPaths().LocalStorage {
-		paths = append(paths, viewPath+path)
-	}
-
-	return paths
-}
 
 func (c *Core) generateMountAccessor(entryType string) (string, error) {
 	var accessor string
@@ -137,30 +136,40 @@ func (t *MountTable) shallowClone() *MountTable {
 	return mt
 }
 
-// setTaint is used to set the taint on given entry
-func (t *MountTable) setTaint(path string, value bool) *MountEntry {
+// setTaint is used to set the taint on given entry Accepts either the mount
+// entry's path or namespace + path, i.e. <ns-path>/secret/ or <ns-path>/token/
+func (t *MountTable) setTaint(ctx context.Context, path string, value bool) (*MountEntry, error) {
 	n := len(t.Entries)
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	for i := 0; i < n; i++ {
-		if t.Entries[i].Path == path {
+		if entry := t.Entries[i]; entry.Path == path && entry.Namespace().ID == ns.ID {
 			t.Entries[i].Tainted = value
-			return t.Entries[i]
+			return t.Entries[i], nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // remove is used to remove a given path entry; returns the entry that was
 // removed
-func (t *MountTable) remove(path string) *MountEntry {
+func (t *MountTable) remove(ctx context.Context, path string) (*MountEntry, error) {
 	n := len(t.Entries)
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	for i := 0; i < n; i++ {
-		if entry := t.Entries[i]; entry.Path == path {
+		if entry := t.Entries[i]; entry.Path == path && entry.Namespace().ID == ns.ID {
 			t.Entries[i], t.Entries[n-1] = t.Entries[n-1], nil
 			t.Entries = t.Entries[:n-1]
-			return entry
+			return entry, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // sortEntriesByPath sorts the entries in the table by path and returns the
@@ -168,6 +177,15 @@ func (t *MountTable) remove(path string) *MountEntry {
 func (t *MountTable) sortEntriesByPath() *MountTable {
 	sort.Slice(t.Entries, func(i, j int) bool {
 		return t.Entries[i].Path < t.Entries[j].Path
+	})
+	return t
+}
+
+// sortEntriesByPath sorts the entries in the table by path and returns the
+// table; this is useful for tests
+func (t *MountTable) sortEntriesByPathDepth() *MountTable {
+	sort.Slice(t.Entries, func(i, j int) bool {
+		return len(strings.Split(t.Entries[i].Namespace().Path+t.Entries[i].Path, "/")) < len(strings.Split(t.Entries[j].Namespace().Path+t.Entries[j].Path, "/"))
 	})
 	return t
 }
@@ -186,6 +204,10 @@ type MountEntry struct {
 	Local            bool              `json:"local"`              // Local mounts are not replicated or affected by replication
 	SealWrap         bool              `json:"seal_wrap"`          // Whether to wrap CSPs
 	Tainted          bool              `json:"tainted,omitempty"`  // Set as a Write-Ahead flag for unmount/remount
+	NamespaceID      string            `json:"namespace_id"`
+
+	// namespace contains the populated namespace
+	namespace *namespace.Namespace
 
 	// synthesizedConfigCache is used to cache configuration values. These
 	// particular values are cached since we want to get them at a point-in-time
@@ -227,6 +249,20 @@ func (e *MountEntry) Clone() (*MountEntry, error) {
 	return cp.(*MountEntry), nil
 }
 
+// Namespace returns the namespace for the mount entry
+func (e *MountEntry) Namespace() *namespace.Namespace {
+	return e.namespace
+}
+
+// APIPath returns the full API Path for the given mount entry
+func (e *MountEntry) APIPath() string {
+	path := e.Path
+	if e.Table == credentialTableType {
+		path = credentialRoutePrefix + path
+	}
+	return e.namespace.Path + path
+}
+
 // SyncCache syncs tunable configuration values to the cache. In the case of
 // cached values, they should be retrieved via synthesizedConfigCache.Load()
 // instead of accessing them directly through MountConfig.
@@ -250,6 +286,38 @@ func (e *MountEntry) SyncCache() {
 	}
 }
 
+func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
+	// Decode into mount table
+	mountTable := new(MountTable)
+	if err := jsonutil.DecodeJSON(raw, mountTable); err != nil {
+		return nil, err
+	}
+
+	// Populate the namespace in memory
+	var mountEntries []*MountEntry
+	for _, entry := range mountTable.Entries {
+		if entry.NamespaceID == "" {
+			entry.NamespaceID = namespace.RootNamespaceID
+		}
+		ns, err := NamespaceByID(ctx, entry.NamespaceID, c)
+		if err != nil {
+			return nil, err
+		}
+		if ns == nil {
+			c.logger.Error("namespace on mount entry not found", "namespace_id", entry.NamespaceID, "mount_path", entry.Path, "mount_description", entry.Description)
+			continue
+		}
+
+		entry.namespace = ns
+		mountEntries = append(mountEntries, entry)
+	}
+
+	return &MountTable{
+		Type:    mountTable.Type,
+		Entries: mountEntries,
+	}, nil
+}
+
 // Mount is used to mount a new backend to the mount table.
 func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 	// Ensure we end the path in a slash
@@ -259,26 +327,41 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 
 	// Prevent protected paths from being mounted
 	for _, p := range protectedMounts {
-		if strings.HasPrefix(entry.Path, p) {
-			return logical.CodedError(403, fmt.Sprintf("cannot mount '%s'", entry.Path))
+		if strings.HasPrefix(entry.Path, p) && entry.namespace == nil {
+			return logical.CodedError(403, fmt.Sprintf("cannot mount %q", entry.Path))
 		}
 	}
 
 	// Do not allow more than one instance of a singleton mount
 	for _, p := range singletonMounts {
 		if entry.Type == p {
-			return logical.CodedError(403, fmt.Sprintf("Cannot mount more than one instance of '%s'", entry.Type))
+			return logical.CodedError(403, fmt.Sprintf("mount type of %q is not mountable", entry.Type))
 		}
 	}
-	return c.mountInternal(ctx, entry)
+	return c.mountInternal(ctx, entry, MountTableUpdateStorage)
 }
 
-func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
+func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStorage bool) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := verifyNamespace(c, ns, entry); err != nil {
+		return err
+	}
+
+	entry.NamespaceID = ns.ID
+	entry.namespace = ns
+
+	// Ensure the cache is populated, don't need the result
+	NamespaceByID(ctx, ns.ID, c)
+
 	// Verify there are no conflicting mounts
-	if match := c.router.MountConflict(entry.Path); match != "" {
+	if match := c.router.MountConflict(ctx, entry.Path); match != "" {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
 	}
 
@@ -307,8 +390,20 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 	// Sync values to the cache
 	entry.SyncCache()
 
-	viewPath := backendBarrierPrefix + entry.UUID + "/"
+	viewPath := entry.ViewPath()
 	view := NewBarrierView(c.barrier, viewPath)
+
+	// Singleton mounts cannot be filtered on a per-secondary basis
+	// from replication
+	if strutil.StrListContains(singletonMounts, entry.Type) {
+		addFilterablePath(c, viewPath)
+	}
+
+	nilMount, err := preprocessMount(c, entry, view)
+	if err != nil {
+		return err
+	}
+	origReadOnlyErr := view.getReadOnlyErr()
 
 	// Mark the view as read-only until the mounting is complete and
 	// ensure that it is reset after. This ensures that there will be no
@@ -316,11 +411,14 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 	view.setReadOnlyErr(logical.ErrSetupReadOnly)
 	// We defer this because we're already up and running so we don't need to
 	// time it for after postUnseal
-	defer view.setReadOnlyErr(nil)
+	defer view.setReadOnlyErr(origReadOnlyErr)
 
 	var backend logical.Backend
-	var err error
 	sysView := c.mountEntrySysView(entry)
+	conf := make(map[string]string)
+	if entry.Config.PluginName != "" {
+		conf["plugin_name"] = entry.Config.PluginName
+	}
 
 	// Consider having plugin name under entry.Options
 	backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
@@ -337,13 +435,29 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 		return fmt.Errorf("cannot mount %q of type %q as a logical backend", entry.Config.PluginName, backendType)
 	}
 
+	addPathCheckers(c, entry, backend, viewPath)
+
 	c.setCoreBackend(entry, backend, view)
+
+	// If the mount is filtered or we are on a DR secondary we don't want to
+	// keep the actual backend running, so we clean it up and set it to nil
+	// so the router does not have a pointer to the object.
+	if nilMount {
+		backend.Cleanup(ctx)
+		backend = nil
+	}
 
 	newTable := c.mounts.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
-	if err := c.persistMounts(ctx, newTable, &entry.Local); err != nil {
-		c.logger.Error("failed to update mount table", "error", err)
-		return logical.CodedError(500, "failed to update mount table")
+	if updateStorage {
+		if err := c.persistMounts(ctx, newTable, &entry.Local); err != nil {
+			c.logger.Error("failed to update mount table", "error", err)
+			if err == logical.ErrReadOnly && c.perfStandby {
+				return err
+			}
+
+			return logical.CodedError(500, "failed to update mount table")
+		}
 	}
 	c.mounts = newTable
 
@@ -352,7 +466,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("successful mount", "path", entry.Path, "type", entry.Type)
+		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type)
 	}
 	return nil
 }
@@ -371,47 +485,56 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 			return fmt.Errorf("cannot unmount %q", path)
 		}
 	}
-	return c.unmountInternal(ctx, path)
+	return c.unmountInternal(ctx, path, MountTableUpdateStorage)
 }
 
-func (c *Core) unmountInternal(ctx context.Context, path string) error {
+func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage bool) error {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	// Verify exact match of the route
-	match := c.router.MatchingMount(path)
-	if match == "" || path != match {
+	match := c.router.MatchingMount(ctx, path)
+	if match == "" || ns.Path+path != match {
 		return fmt.Errorf("no matching mount")
 	}
 
 	// Get the view for this backend
-	view := c.router.MatchingStorageByAPIPath(path)
+	view := c.router.MatchingStorageByAPIPath(ctx, path)
 
 	// Get the backend/mount entry for this path, used to remove ignored
 	// replication prefixes
-	backend := c.router.MatchingBackend(path)
-	entry := c.router.MatchingMountEntry(path)
+	backend := c.router.MatchingBackend(ctx, path)
+	entry := c.router.MatchingMountEntry(ctx, path)
 
 	// Mark the entry as tainted
-	if err := c.taintMountEntry(ctx, path); err != nil {
+	if err := c.taintMountEntry(ctx, path, updateStorage); err != nil {
 		c.logger.Error("failed to taint mount entry for path being unmounted", "error", err, "path", path)
 		return err
 	}
 
 	// Taint the router path to prevent routing. Note that in-flight requests
 	// are uncertain, right now.
-	if err := c.router.Taint(path); err != nil {
+	if err := c.router.Taint(ctx, path); err != nil {
 		return err
 	}
 
-	if backend != nil {
+	rCtx := namespace.ContextWithNamespace(c.activeContext, ns)
+	if backend != nil && c.rollback != nil {
 		// Invoke the rollback manager a final time
-		if err := c.rollback.Rollback(path); err != nil {
+		if err := c.rollback.Rollback(rCtx, path); err != nil {
 			return err
 		}
-
+	}
+	if backend != nil && c.expiration != nil && updateStorage {
 		// Revoke all the dynamic keys
-		if err := c.expiration.RevokePrefix(c.activeContext, path, true); err != nil {
+		if err := c.expiration.RevokePrefix(rCtx, path, true); err != nil {
 			return err
 		}
+	}
 
+	if backend != nil {
 		// Call cleanup function if it exists
 		backend.Cleanup(ctx)
 	}
@@ -421,35 +544,48 @@ func (c *Core) unmountInternal(ctx context.Context, path string) error {
 		return err
 	}
 
+	viewPath := entry.ViewPath()
 	switch {
-	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+	case !updateStorage:
+		// Don't attempt to clear data, replication will handle this
+	case c.IsDRSecondary(), entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
 		// Have writable storage, remove the whole thing
 		if err := logical.ClearView(ctx, view); err != nil {
 			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
 			return err
 		}
-	}
 
+	case !entry.Local && c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+		if err := clearIgnoredPaths(ctx, c, backend, viewPath); err != nil {
+			return err
+		}
+	}
 	// Remove the mount table entry
-	if err := c.removeMountEntry(ctx, path); err != nil {
+	if err := c.removeMountEntry(ctx, path, updateStorage); err != nil {
 		c.logger.Error("failed to remove mount entry for path being unmounted", "error", err, "path", path)
 		return err
 	}
 
+	removePathCheckers(c, entry, viewPath)
+
 	if c.logger.IsInfo() {
-		c.logger.Info("successfully unmounted", "path", path)
+		c.logger.Info("successfully unmounted", "path", path, "namespace", ns.Path)
 	}
+
 	return nil
 }
 
 // removeMountEntry is used to remove an entry from the mount table
-func (c *Core) removeMountEntry(ctx context.Context, path string) error {
+func (c *Core) removeMountEntry(ctx context.Context, path string, updateStorage bool) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
 	// Remove the entry from the mount table
 	newTable := c.mounts.shallowClone()
-	entry := newTable.remove(path)
+	entry, err := newTable.remove(ctx, path)
+	if err != nil {
+		return err
+	}
 	if entry == nil {
 		c.logger.Error("nil entry found removing entry in mounts table", "path", path)
 		return logical.CodedError(500, "failed to remove entry in mounts table")
@@ -461,10 +597,12 @@ func (c *Core) removeMountEntry(ctx context.Context, path string) error {
 		newTable.Entries = nil
 	}
 
-	// Update the mount table
-	if err := c.persistMounts(ctx, newTable, &entry.Local); err != nil {
-		c.logger.Error("failed to remove entry from mounts table", "error", err)
-		return logical.CodedError(500, "failed to remove entry from mounts table")
+	if updateStorage {
+		// Update the mount table
+		if err := c.persistMounts(ctx, newTable, &entry.Local); err != nil {
+			c.logger.Error("failed to remove entry from mounts table", "error", err)
+			return logical.CodedError(500, "failed to remove entry from mounts table")
+		}
 	}
 
 	c.mounts = newTable
@@ -472,22 +610,31 @@ func (c *Core) removeMountEntry(ctx context.Context, path string) error {
 }
 
 // taintMountEntry is used to mark an entry in the mount table as tainted
-func (c *Core) taintMountEntry(ctx context.Context, path string) error {
+func (c *Core) taintMountEntry(ctx context.Context, path string, updateStorage bool) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
 	// As modifying the taint of an entry affects shallow clones,
 	// we simply use the original
-	entry := c.mounts.setTaint(path, true)
+	entry, err := c.mounts.setTaint(ctx, path, true)
+	if err != nil {
+		return err
+	}
 	if entry == nil {
 		c.logger.Error("nil entry found tainting entry in mounts table", "path", path)
 		return logical.CodedError(500, "failed to taint entry in mounts table")
 	}
 
-	// Update the mount table
-	if err := c.persistMounts(ctx, c.mounts, &entry.Local); err != nil {
-		c.logger.Error("failed to taint entry in mounts table", "error", err)
-		return logical.CodedError(500, "failed to taint entry in mounts table")
+	if updateStorage {
+		// Update the mount table
+		if err := c.persistMounts(ctx, c.mounts, &entry.Local); err != nil {
+			if err == logical.ErrReadOnly && c.perfStandby {
+				return err
+			}
+
+			c.logger.Error("failed to taint entry in mounts table", "error", err)
+			return logical.CodedError(500, "failed to taint entry in mounts table")
+		}
 	}
 
 	return nil
@@ -496,7 +643,7 @@ func (c *Core) taintMountEntry(ctx context.Context, path string) error {
 // remountForce takes a copy of the mount entry for the path and fully unmounts
 // and remounts the backend to pick up any changes, such as filtered paths
 func (c *Core) remountForce(ctx context.Context, path string) error {
-	me := c.router.MatchingMountEntry(path)
+	me := c.router.MatchingMountEntry(ctx, path)
 	if me == nil {
 		return fmt.Errorf("cannot find mount for path %q", path)
 	}
@@ -514,6 +661,11 @@ func (c *Core) remountForce(ctx context.Context, path string) error {
 
 // Remount is used to remount a path at a new mount point.
 func (c *Core) remount(ctx context.Context, src, dst string) error {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(src, "/") {
 		src += "/"
@@ -530,33 +682,41 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	}
 
 	// Verify exact match of the route
-	match := c.router.MatchingMount(src)
-	if match == "" || src != match {
+	match := c.router.MatchingMount(ctx, src)
+	if match == "" || ns.Path+src != match {
 		return fmt.Errorf("no matching mount at %q", src)
 	}
 
-	if match := c.router.MatchingMount(dst); match != "" {
+	if match := c.router.MatchingMount(ctx, dst); match != "" {
 		return fmt.Errorf("existing mount at %q", match)
 	}
 
 	// Mark the entry as tainted
-	if err := c.taintMountEntry(ctx, src); err != nil {
+	if err := c.taintMountEntry(ctx, src, true); err != nil {
 		return err
 	}
 
 	// Taint the router path to prevent routing
-	if err := c.router.Taint(src); err != nil {
+	if err := c.router.Taint(ctx, src); err != nil {
 		return err
 	}
 
-	// Invoke the rollback manager a final time
-	if err := c.rollback.Rollback(src); err != nil {
-		return err
-	}
+	if !c.IsDRSecondary() {
+		// Invoke the rollback manager a final time
+		rCtx := namespace.ContextWithNamespace(c.activeContext, ns)
+		if err := c.rollback.Rollback(rCtx, src); err != nil {
+			return err
+		}
 
-	// Revoke all the dynamic keys
-	if err := c.expiration.RevokePrefix(c.activeContext, src, true); err != nil {
-		return err
+		entry := c.router.MatchingMountEntry(ctx, src)
+		if entry == nil {
+			return fmt.Errorf("no matching mount at %q", src)
+		}
+
+		// Revoke all the dynamic keys
+		if err := c.expiration.RevokePrefix(rCtx, src, true); err != nil {
+			return err
+		}
 	}
 
 	c.mountsLock.Lock()
@@ -580,18 +740,22 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 		entry.Path = src
 		entry.Tainted = true
 		c.mountsLock.Unlock()
+		if err == logical.ErrReadOnly && c.perfStandby {
+			return err
+		}
+
 		c.logger.Error("failed to update mounts table", "error", err)
 		return logical.CodedError(500, "failed to update mounts table")
 	}
 	c.mountsLock.Unlock()
 
 	// Remount the backend
-	if err := c.router.Remount(src, dst); err != nil {
+	if err := c.router.Remount(ctx, src, dst); err != nil {
 		return err
 	}
 
 	// Un-taint the path
-	if err := c.router.Untaint(dst); err != nil {
+	if err := c.router.Untaint(ctx, dst); err != nil {
 		return err
 	}
 
@@ -603,8 +767,6 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 
 // loadMounts is invoked as part of postUnseal to load the mount table
 func (c *Core) loadMounts(ctx context.Context) error {
-	mountTable := &MountTable{}
-	localMountTable := &MountTable{}
 	// Load the existing mount table
 	raw, err := c.barrier.Get(ctx, coreMountConfigPath)
 	if err != nil {
@@ -624,7 +786,8 @@ func (c *Core) loadMounts(ctx context.Context) error {
 		// Check if the persisted value has canary in the beginning. If
 		// yes, decompress the table and then JSON decode it. If not,
 		// simply JSON decode it.
-		if err := jsonutil.DecodeJSON(raw.Value, mountTable); err != nil {
+		mountTable, err := c.decodeMountTable(ctx, raw.Value)
+		if err != nil {
 			c.logger.Error("failed to decompress and/or decode the mount table", "error", err)
 			return err
 		}
@@ -639,7 +802,8 @@ func (c *Core) loadMounts(ctx context.Context) error {
 	}
 
 	if rawLocal != nil {
-		if err := jsonutil.DecodeJSON(rawLocal.Value, localMountTable); err != nil {
+		localMountTable, err := c.decodeMountTable(ctx, rawLocal.Value)
+		if err != nil {
 			c.logger.Error("failed to decompress and/or decode the local mount table", "error", err)
 			return err
 		}
@@ -681,7 +845,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 
 	// Upgrade to table-scoped entries
 	for _, entry := range c.mounts.Entries {
-		if entry.Type == "cubbyhole" && !entry.Local {
+		if entry.Type == cubbyholeMountType && !entry.Local {
 			entry.Local = true
 			needPersist = true
 		}
@@ -706,6 +870,19 @@ func (c *Core) loadMounts(ctx context.Context) error {
 			needPersist = true
 		}
 
+		if entry.NamespaceID == "" {
+			entry.NamespaceID = namespace.RootNamespaceID
+			needPersist = true
+		}
+		ns, err := NamespaceByID(ctx, entry.NamespaceID, c)
+		if err != nil {
+			return err
+		}
+		if ns == nil {
+			return namespace.ErrNoNamespace
+		}
+		entry.namespace = ns
+
 		// Sync values to the cache
 		entry.SyncCache()
 	}
@@ -716,6 +893,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 		return nil
 	}
 
+	// Persist both mount tables
 	if err := c.persistMounts(ctx, c.mounts, nil); err != nil {
 		c.logger.Error("failed to persist mount table", "error", err)
 		return errLoadMountsFailed
@@ -772,7 +950,6 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 			c.logger.Error("failed to persist mount table", "error", err)
 			return err
 		}
-
 		return nil
 	}
 
@@ -807,36 +984,46 @@ func (c *Core) setupMounts(ctx context.Context) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	var backendType logical.BackendType
-
-	for _, entry := range c.mounts.Entries {
-
+	for _, entry := range c.mounts.sortEntriesByPathDepth().Entries {
 		// Initialize the backend, special casing for system
-		barrierPath := backendBarrierPrefix + entry.UUID + "/"
-		if entry.Type == "system" {
-			barrierPath = systemBarrierPrefix
-		}
+		barrierPath := entry.ViewPath()
 
 		// Create a barrier view using the UUID
 		view := NewBarrierView(c.barrier, barrierPath)
+
+		// Singleton mounts cannot be filtered on a per-secondary basis
+		// from replication
+		if strutil.StrListContains(singletonMounts, entry.Type) {
+			addFilterablePath(c, barrierPath)
+		}
+
+		// Determining the replicated state of the mount
+		nilMount, err := preprocessMount(c, entry, view)
+		if err != nil {
+			return err
+		}
+		origReadOnlyErr := view.getReadOnlyErr()
 
 		// Mark the view as read-only until the mounting is complete and
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 		if strutil.StrListContains(singletonMounts, entry.Type) {
-			defer view.setReadOnlyErr(nil)
+			defer view.setReadOnlyErr(origReadOnlyErr)
 		} else {
 			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-				view.setReadOnlyErr(nil)
+				view.setReadOnlyErr(origReadOnlyErr)
 			})
 		}
 
 		var backend logical.Backend
-		var err error
-		sysView := c.mountEntrySysView(entry)
-
 		// Create the new backend
+		sysView := c.mountEntrySysView(entry)
+		// Set up conf to pass in plugin_name
+		conf := make(map[string]string)
+		if entry.Config.PluginName != "" {
+			conf["plugin_name"] = entry.Config.PluginName
+		}
 		backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create mount entry", "path", entry.Path, "error", err)
@@ -853,13 +1040,25 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			return fmt.Errorf("created mount entry of type %q is nil", entry.Type)
 		}
 
-		// Check for the correct backend type
-		backendType = backend.Type()
-		if entry.Type == "plugin" && backendType != logical.TypeLogical {
-			return fmt.Errorf("cannot mount %q of type %q as a logical backend", entry.Config.PluginName, backendType)
+		{
+			// Check for the correct backend type
+			backendType := backend.Type()
+			if entry.Type == "plugin" && backendType != logical.TypeLogical {
+				return fmt.Errorf("cannot mount %q of type %q as a logical backend", entry.Config.PluginName, backendType)
+			}
+
+			addPathCheckers(c, entry, backend, barrierPath)
+
+			c.setCoreBackend(entry, backend, view)
 		}
 
-		c.setCoreBackend(entry, backend, view)
+		// If the mount is filtered or we are on a DR secondary we don't want to
+		// keep the actual backend running, so we clean it up and set it to nil
+		// so the router does not have a pointer to the object.
+		if nilMount {
+			backend.Cleanup(ctx)
+			backend = nil
+		}
 
 	ROUTER_MOUNT:
 		// Mount the backend
@@ -875,8 +1074,11 @@ func (c *Core) setupMounts(ctx context.Context) error {
 
 		// Ensure the path is tainted if set in the mount table
 		if entry.Tainted {
-			c.router.Taint(entry.Path)
+			c.router.Taint(ctx, entry.Path)
 		}
+
+		// Ensure the cache is populated, don't need the result
+		NamespaceByID(ctx, entry.NamespaceID, c)
 	}
 	return nil
 }
@@ -890,10 +1092,13 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 	if c.mounts != nil {
 		mountTable := c.mounts.shallowClone()
 		for _, e := range mountTable.Entries {
-			backend := c.router.MatchingBackend(e.Path)
+			backend := c.router.MatchingBackend(namespace.ContextWithNamespace(ctx, e.namespace), e.Path)
 			if backend != nil {
 				backend.Cleanup(ctx)
 			}
+
+			viewPath := e.ViewPath()
+			removePathCheckers(c, e, viewPath)
 		}
 	}
 
@@ -1011,8 +1216,8 @@ func (c *Core) requiredMountTable() *MountTable {
 	}
 	cubbyholeMount := &MountEntry{
 		Table:            mountTableType,
-		Path:             "cubbyhole/",
-		Type:             "cubbyhole",
+		Path:             cubbyholeMountPath,
+		Type:             cubbyholeMountType,
 		Description:      "per-token private secret storage",
 		UUID:             cubbyholeUUID,
 		Accessor:         cubbyholeAccessor,
@@ -1035,7 +1240,7 @@ func (c *Core) requiredMountTable() *MountTable {
 	sysMount := &MountEntry{
 		Table:            mountTableType,
 		Path:             "sys/",
-		Type:             "system",
+		Type:             systemMountType,
 		Description:      "system endpoints used for control, policy and debugging",
 		UUID:             sysUUID,
 		Accessor:         sysAccessor,
@@ -1083,7 +1288,7 @@ func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 
 	c.mountsLock.RLock()
 	for _, entry := range c.mounts.Entries {
-		if strutil.StrListContains(singletonMounts, entry.Type) && !entry.Local {
+		if strutil.StrListContains(singletonMounts, entry.Type) && !entry.Local && entry.Namespace().ID == namespace.RootNamespaceID {
 			mounts.Entries = append(mounts.Entries, entry)
 		}
 	}
@@ -1091,7 +1296,7 @@ func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 
 	c.authLock.RLock()
 	for _, entry := range c.auth.Entries {
-		if strutil.StrListContains(singletonMounts, entry.Type) && !entry.Local {
+		if strutil.StrListContains(singletonMounts, entry.Type) && !entry.Local && entry.Namespace().ID == namespace.RootNamespaceID {
 			auth.Entries = append(auth.Entries, entry)
 		}
 	}
@@ -1102,14 +1307,15 @@ func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 
 func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *BarrierView) {
 	switch entry.Type {
-	case "system":
+	case systemMountType:
 		c.systemBackend = backend.(*SystemBackend)
 		c.systemBarrierView = view
-	case "cubbyhole":
+	case cubbyholeMountType:
 		ch := backend.(*CubbyholeBackend)
 		ch.saltUUID = entry.UUID
 		ch.storageView = view
-	case "identity":
+		c.cubbyholeBackend = ch
+	case identityMountType:
 		c.identityStore = backend.(*IdentityStore)
 	}
 }

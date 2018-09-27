@@ -5,7 +5,6 @@ echo "==> Checking that build is using go version >= $1..."
 
 GO_VERSION=$(go version | grep -o 'go[0-9]\+\.[0-9]\+\(\.[0-9]\+\)\?' | tr -d 'go')
 
-
 IFS="." read -r -a GO_VERSION_ARR <<< "$GO_VERSION"
 IFS="." read -r -a GO_VERSION_REQ <<< "$GO_VERSION_MIN"
 
@@ -17,3 +16,5 @@ if [[ ${GO_VERSION_ARR[0]} -lt ${GO_VERSION_REQ[0]} ||
     echo "Vault requires go $GO_VERSION_MIN to build; found $GO_VERSION."
     exit 1
 fi
+
+echo "==> Using go version $GO_VERSION..."

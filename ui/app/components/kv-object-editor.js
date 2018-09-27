@@ -1,7 +1,9 @@
-import Ember from 'ember';
+import { isNone } from '@ember/utils';
+import { assert } from '@ember/debug';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
+import { guidFor } from '@ember/object/internals';
 import KVObject from 'vault/lib/kv-object';
-
-const { assert, Component, computed, guidFor } = Ember;
 
 export default Component.extend({
   'data-test-component': 'kv-object-editor',
@@ -39,7 +41,7 @@ export default Component.extend({
   addRow() {
     let data = this.get('kvData');
     let newObj = { name: '', value: '' };
-    if (!Ember.isNone(data.findBy('name', ''))) {
+    if (!isNone(data.findBy('name', ''))) {
       return;
     }
     guidFor(newObj);

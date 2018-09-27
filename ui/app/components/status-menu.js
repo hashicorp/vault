@@ -1,11 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 
-const { inject, computed } = Ember;
-
-export default Ember.Component.extend({
-  currentCluster: inject.service('current-cluster'),
-  cluster: computed.alias('currentCluster.cluster'),
-  auth: inject.service(),
+export default Component.extend({
+  currentCluster: service('current-cluster'),
+  cluster: alias('currentCluster.cluster'),
+  auth: service(),
   type: 'cluster',
   itemTag: null,
   partialName: computed('type', function() {

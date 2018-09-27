@@ -3,7 +3,7 @@ layout: "docs"
 page_title: "operator seal - Command"
 sidebar_current: "docs-commands-operator-seal"
 description: |-
-  The "operator seal" seals the Vault server. Sealing tells the Vault server to
+  The "operator seal" command seals the Vault server. Sealing tells the Vault server to
   stop responding to any operations until it is unsealed. When sealed, the Vault
   server discards its in-memory master key to unlock the data, so it is
   physically blocked from responding to operations unsealed.

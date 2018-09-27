@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/license"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 )
@@ -46,6 +47,9 @@ type SystemView interface {
 	// ReplicationState indicates the state of cluster replication
 	ReplicationState() consts.ReplicationState
 
+	// HasFeature returns true if the feature is currently enabled
+	HasFeature(feature license.Features) bool
+
 	// ResponseWrapData wraps the given data in a cubbyhole and returns the
 	// token used to unwrap.
 	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
@@ -77,6 +81,7 @@ type StaticSystemView struct {
 	LocalMountVal       bool
 	ReplicationStateVal consts.ReplicationState
 	EntityVal           *Entity
+	Features            license.Features
 	VaultVersion        string
 	PluginEnvironment   *PluginEnvironment
 }
@@ -123,6 +128,10 @@ func (d StaticSystemView) MlockEnabled() bool {
 
 func (d StaticSystemView) EntityInfo(entityID string) (*Entity, error) {
 	return d.EntityVal, nil
+}
+
+func (d StaticSystemView) HasFeature(feature license.Features) bool {
+	return d.Features.HasFeature(feature)
 }
 
 func (d StaticSystemView) PluginEnv(_ context.Context) (*PluginEnvironment, error) {

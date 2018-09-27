@@ -1,12 +1,12 @@
+import { assign } from '@ember/polyfills';
 import ApplicationSerializer from '../application';
-import Ember from 'ember';
 
 export default ApplicationSerializer.extend({
   normalizeItems(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
       return payload.data.keys;
     }
-    Ember.assign(payload, payload.data);
+    assign(payload, payload.data);
     delete payload.data;
     return payload;
   },

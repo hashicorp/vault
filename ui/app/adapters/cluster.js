@@ -1,9 +1,13 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { assign } from '@ember/polyfills';
+import { hash, resolve } from 'rsvp';
+import { assert } from '@ember/debug';
+import { pluralize } from 'ember-inflector';
+
 import ApplicationAdapter from './application';
 import DS from 'ember-data';
 
 const { AdapterError } = DS;
-const { assert, inject } = Ember;
 
 const ENDPOINTS = ['health', 'seal-status', 'tokens', 'token', 'seal', 'unseal', 'init', 'capabilities-self'];
 
@@ -19,8 +23,8 @@ const REPLICATION_ENDPOINTS = {
 
 const REPLICATION_MODES = ['dr', 'performance'];
 export default ApplicationAdapter.extend({
-  version: inject.service(),
-  namespaceService: inject.service('namespace'),
+  version: service(),
+  namespaceService: service('namespace'),
   shouldBackgroundReloadRecord() {
     return true;
   },
@@ -32,24 +36,24 @@ export default ApplicationAdapter.extend({
     if (this.get('version.isEnterprise') && this.get('namespaceService.inRootNamespace')) {
       fetches.replicationStatus = this.replicationStatus().catch(e => e);
     }
-    return Ember.RSVP.hash(fetches).then(({ health, sealStatus, replicationStatus }) => {
+    return hash(fetches).then(({ health, sealStatus, replicationStatus }) => {
       let ret = {
         id,
         name: snapshot.attr('name'),
       };
-      ret = Ember.assign(ret, health);
+      ret = assign(ret, health);
       if (sealStatus instanceof AdapterError === false) {
-        ret = Ember.assign(ret, { nodes: [sealStatus] });
+        ret = assign(ret, { nodes: [sealStatus] });
       }
       if (replicationStatus && replicationStatus instanceof AdapterError === false) {
-        ret = Ember.assign(ret, replicationStatus.data);
+        ret = assign(ret, replicationStatus.data);
       }
-      return Ember.RSVP.resolve(ret);
+      return resolve(ret);
     });
   },
 
   pathForType(type) {
-    return type === 'cluster' ? 'clusters' : Ember.String.pluralize(type);
+    return type === 'cluster' ? 'clusters' : pluralize(type);
   },
 
   health() {
