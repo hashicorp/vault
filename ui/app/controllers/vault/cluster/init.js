@@ -41,14 +41,22 @@ export default Controller.extend(DEFAULTS, {
   actions: {
     initCluster(data) {
       if (data.secret_shares) {
-        data.secret_shares = parseInt(data.secret_shares);
+        let shares = parseInt(data.secret_shares, 10);
+        data.secret_shares = shares;
+        data.stored_shares = shares;
+        data.recovery_shares = shares;
       }
       if (data.secret_threshold) {
-        data.secret_threshold = parseInt(data.secret_threshold);
+        let threshold = parseInt(data.secret_threshold, 10);
+        data.secret_threshold = threshold;
+        data.recovery_threshold = threshold;
       }
       if (!data.use_pgp) {
         delete data.pgp_keys;
+      } else {
+        data.recovery_pgp_keys = data.pgp_keys;
       }
+
       if (!data.use_pgp_for_root) {
         delete data.root_token_pgp_key;
       }
