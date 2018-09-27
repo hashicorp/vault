@@ -185,7 +185,7 @@ func (b *backend) secretAccessKeysCreate(
 		UserName: aws.String(username),
 	})
 	if err != nil {
-		if walErr := framework.DeleteWAL(ctx, s, walId); walErr != nil {
+		if walErr := framework.DeleteWAL(ctx, s, walID); walErr != nil {
 			iamErr := errwrap.Wrapf("error creating IAM user: {{err}}", err)
 			return nil, errwrap.Wrap(errwrap.Wrapf("failed to delete WAL entry: {{err}}", walErr), iamErr)
 		}
