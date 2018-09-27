@@ -6,13 +6,13 @@ description: |-
   Guide to partnership integrations and creating plugins for Vault.
 ---
 
-<h1>Vault Integration Program</h1>
+# Vault Integration Program
 
 <p>
  The Vault Integration Program (VIP) enables vendors to build integrations with HashiCorp Vault that are officially tested and approved by HashiCorp. The program is intended to be largely self-service, with links to code samples, documentation and clearly defined integration steps.
 </p>
 
-<h2>Types of Vault Integrations</h2>
+## Types of Vault Integrations
 
 <p>
 By leveraging Vault's plugin system, vendors are able to build extensible secrets, authentication, and audit plugins to extend Vault's functionality. These integrations can be done with the OSS (open-source) version of Vault. Hardware Security Module (HSM) integrations need to be tested against Vault Enterprise since the HSM functionality is only supported in the Vault Enterprise version.
@@ -58,12 +58,12 @@ Storage Backend</strong>:  A storage backend is a durable storage location where
 <li>Support: Ongoing maintenance and support of the integration by the vendor.</li>
 </ol>
 
-<h3>1. Engage</h3>
+### 1. Engage</h3>
 <p>
 Please begin by completing Vault Integration Program webform to tell us about your company and the Vault integration you’re interested in.
 </p>
 
-<h3>2. Enable</h3>
+### 2. Enable</h3>
 <p>
 Here are links to resources, documentation, examples and best practices to guide you through the Vault integration development and testing process:
 </p>
@@ -101,28 +101,28 @@ Here are links to resources, documentation, examples and best practices to guide
 <p><strong>Community Forum</strong></p>
 <p><a href="https://groups.google.com/forum/#!forum/vault-tool">Vault developer community forum</a></p> 
 
-<h3> 3. Develop and Test </h3>
+### 3. Develop and Test </h3>
 <p>
 The only knowledge necessary to write a plugin is basic command-line skills and knowledge of the <a href="http://www.golang.org">Go programming language</a>.  Use the plugin interface to develop your integration. All integrations should contain unit and acceptance testing.  
 </p>
 
-<h3> 4. Review </h3>
+### 4. Review 
 <p>
 HashiCorp will review and certify your Vault integration. Please send the Vault logs and other relevant logs for verification at: <a href="vault-integration-dev@hashicorp.com">vault-integration-dev@hashicorp.com</a>. For Auth, Secret and Storage plugins, submit a GitHub pull request (PR) against the Vault project (https://github.com/hashicorp/vault). Where applicable, the vendor will need to provide HashiCorp with a test account.
 </p>
 
-<h3> 5. Release </h3>
+### 5. Release 
 <p>
 At this stage, the Vault integration is fully developed, documented, tested and certified. Once released, HashiCorp will officially list the Vault integration.
 </p>
 
-<h3>6. Support</h3>
+### 6. Support
 <p>
 Many vendors view the release step to be the end of the journey, while at HashiCorp we view it to be the start. Getting the Vault integration built is just the first step in enabling users. Once this is done, on-going effort is required to maintain the integration and address any issues in a timely manner.
 The expectation for vendors is to respond to all critical issues within 48 hours and all other issues within 5 business days. HashiCorp Vault has an extremely wide community of users and we encourage everyone to report issues however small, as well as help resolve them when possible.
 </p>
 
-<h2>Checklist</h2>
+## Checklist
 <p>Below is a checklist of steps that should be followed during the Vault integration development process. This reiterates the steps described above.</p>
 <ul>
 <p><li>Complete the <a href="https://docs.google.com/forms/d/e/1FAIpQLSfQL1uj-mL59bd2EyCPI31LT9uvVT-xKyoHAb5FKIwWwwJ1qQ/viewform">Vault Integration webform</a></li></p>
@@ -131,5 +131,5 @@ The expectation for vendors is to respond to all critical issues within 48 hours
 <p><li>Once released, plan to support the integration with additional functionality and responding to customer issues </li></p>
 </ul>
 
-<h2>Contact Us</h2>
+## Contact Us
 <p>For any questions or feedback, please contact us at: <a href="vault-integration-dev@hashicorp.com">vault-integration-dev@hashicorp.com</a></p>
