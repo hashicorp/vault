@@ -121,8 +121,5 @@
     "paths": [
       "lib/css"
     ]
-  },
-  "dependencies": {
-    "parseDuration": "icholy/Duration.js#golang_compatible"
   }
 }

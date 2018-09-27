@@ -386,7 +386,7 @@
   version "4.2.1"
   resolved "https://registry.yarnpkg.com/@xtuc/long/-/long-4.2.1.tgz#5c85d662f76fa1d34575766c5dcd6615abcd30d8"
 
-Duration.js@icholy/Duration.js#golang_compatible, parseDuration@icholy/Duration.js#golang_compatible:
+Duration.js@icholy/Duration.js#golang_compatible:
   version "2.0.0"
   resolved "https://codeload.github.com/icholy/Duration.js/tar.gz/cb1c58efc2772ef0f261da9e2535890734a86417"
   dependencies:
