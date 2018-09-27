@@ -463,13 +463,12 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Check if a migration is in progress. If storage isn't immediately
+	// available, start a goroutine to retry the check.
 	migrationStatus, err := CheckMigration(backend)
 	if err != nil {
-		c.UI.Error("Error checking migration status")
-		return 1
-	}
-
-	if migrationStatus != nil {
+		go c.recheckMigration(backend)
+	} else if migrationStatus != nil {
 		startTime := migrationStatus.Start.Format(time.RFC3339)
 		c.UI.Error(wrapAtLength(fmt.Sprintf("Storage migration in progress (started: %s). "+
 			"Use 'vault operator migrate -reset' to force clear the migration lock.", startTime)))
@@ -1791,6 +1790,23 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 
 type MigrationStatus struct {
 	Start time.Time `json:"start"`
+}
+
+func (c *ServerCommand) recheckMigration(b physical.Backend) {
+	for {
+		migrationStatus, err := CheckMigration(b)
+		if err != nil {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		if migrationStatus != nil {
+			startTime := migrationStatus.Start.Format(time.RFC3339)
+			c.UI.Error(wrapAtLength(fmt.Sprintf("Storage migration in progress (started: %s). "+
+				"Use 'vault operator migrate -reset' to force clear the migration lock.", startTime)))
+			c.ShutdownCh <- struct{}{}
+		}
+		return
+	}
 }
 
 func CheckMigration(b physical.Backend) (*MigrationStatus, error) {
