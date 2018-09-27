@@ -13,6 +13,7 @@ const DEFAULTS = {
 
 export default Controller.extend(DEFAULTS, {
   wizard: service(),
+  model: null,
 
   reset() {
     this.setProperties(DEFAULTS);
@@ -40,20 +41,26 @@ export default Controller.extend(DEFAULTS, {
 
   actions: {
     initCluster(data) {
+      let isCloudSeal = this.model.sealType !== 'shamir';
       if (data.secret_shares) {
         let shares = parseInt(data.secret_shares, 10);
         data.secret_shares = shares;
-        data.stored_shares = shares;
-        data.recovery_shares = shares;
+        if (isCloudSeal) {
+          data.stored_shares = shares;
+          data.recovery_shares = shares;
+        }
       }
       if (data.secret_threshold) {
         let threshold = parseInt(data.secret_threshold, 10);
         data.secret_threshold = threshold;
-        data.recovery_threshold = threshold;
+        if (isCloudSeal) {
+          data.recovery_threshold = threshold;
+        }
       }
       if (!data.use_pgp) {
         delete data.pgp_keys;
-      } else {
+      }
+      if (data.use_pgp && isCloudSeal) {
         data.recovery_pgp_keys = data.pgp_keys;
       }
 
