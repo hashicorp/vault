@@ -99,7 +99,9 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	pluginSet := map[int]plugin.PluginSet{
 		3: plugin.PluginSet{
 			"backend": &BackendPlugin{
-				metadataMode: isMetadataMode,
+				GRPCBackendPlugin: &GRPCBackendPlugin{
+					MetadataMode: isMetadataMode,
+				},
 			},
 		},
 	}

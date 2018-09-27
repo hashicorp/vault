@@ -38,10 +38,20 @@ func Serve(opts *ServeOpts) error {
 	}
 
 	// pluginMap is the map of plugins we can dispense.
-	pluginMap := plugin.PluginSet{
-		"backend": &BackendPlugin{
-			Factory: opts.BackendFactoryFunc,
-			Logger:  logger,
+	pluginSets := map[int]plugin.PluginSet{
+		3: plugin.PluginSet{
+			"backend": &BackendPlugin{
+				GRPCBackendPlugin: &GRPCBackendPlugin{
+					Factory: opts.BackendFactoryFunc,
+					Logger:  logger,
+				},
+			},
+		},
+		4: plugin.PluginSet{
+			"backend": &GRPCBackendPlugin{
+				Factory: opts.BackendFactoryFunc,
+				Logger:  logger,
+			},
 		},
 	}
 
@@ -51,10 +61,10 @@ func Serve(opts *ServeOpts) error {
 	}
 
 	serveOpts := &plugin.ServeConfig{
-		HandshakeConfig: handshakeConfig,
-		Plugins:         pluginMap,
-		TLSProvider:     opts.TLSProviderFunc,
-		Logger:          logger,
+		HandshakeConfig:  handshakeConfig,
+		VersionedPlugins: pluginSets,
+		TLSProvider:      opts.TLSProviderFunc,
+		Logger:           logger,
 
 		// A non-nil value here enables gRPC serving for this plugin...
 		GRPCServer: func(opts []grpc.ServerOption) *grpc.Server {
