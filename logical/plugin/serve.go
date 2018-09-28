@@ -14,7 +14,7 @@ import (
 )
 
 // BackendPluginName is the name of the plugin that can be
-// dispensed rom the plugin server.
+// dispensed from the plugin server.
 const BackendPluginName = "backend"
 
 type TLSProviderFunc func() (*tls.Config, error)
@@ -74,7 +74,13 @@ func Serve(opts *ServeOpts) error {
 		},
 	}
 
-	// If FetchMetadata is true, run without TLSProvider
+	// If we do not have gRPC support fallback to version 3
+	// Remove this block in 0.13
+	if !pluginutil.GRPCSupport() {
+		serveOpts.GRPCServer = nil
+		delete(pluginSets, 4)
+	}
+
 	plugin.Serve(serveOpts)
 
 	return nil

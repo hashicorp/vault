@@ -104,6 +104,11 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 				},
 			},
 		},
+		4: plugin.PluginSet{
+			"backend": &GRPCBackendPlugin{
+				MetadataMode: isMetadataMode,
+			},
+		},
 	}
 
 	namedLogger := logger.Named(pluginRunner.Name)

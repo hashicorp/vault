@@ -35,10 +35,12 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// pluginMap is the map of plugins we can dispense.
 	pluginSet := map[int]plugin.PluginSet{
 		3: plugin.PluginSet{
-			"database": new(DatabasePlugin),
+			"database": &DatabasePlugin{
+				GRPCDatabasePlugin: new(GRPCDatabasePlugin),
+			},
 		},
 		4: plugin.PluginSet{
-			"database": new(DatabasePlugin),
+			"database": new(GRPCDatabasePlugin),
 		},
 	}
 
