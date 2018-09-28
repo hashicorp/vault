@@ -13,7 +13,6 @@ const DEFAULTS = {
 
 export default Controller.extend(DEFAULTS, {
   wizard: service(),
-  model: null,
 
   reset() {
     this.setProperties(DEFAULTS);
