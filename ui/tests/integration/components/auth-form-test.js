@@ -155,7 +155,7 @@ module('Integration | Component | auth form', function(hooks) {
     server.shutdown();
   });
 
-  test('it calls authorize with the correct path', async function(assert) {
+  test('it calls authenticate with the correct path', async function(assert) {
     this.owner.register('service:auth', workingAuthService);
     this.auth = this.owner.lookup('service:auth');
     let authSpy = sinon.spy(this.get('auth'), 'authenticate');

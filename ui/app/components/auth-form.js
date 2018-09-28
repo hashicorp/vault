@@ -145,7 +145,7 @@ export default Component.extend(DEFAULTS, {
           unauthenticated: true,
         },
       });
-      this.set('methods', methods.map(m => m.toJSON()));
+      this.set('methods', methods.map(m => m.serialize({ includeId: true })));
       run.next(() => {
         store.unloadAll('auth-method');
       });
