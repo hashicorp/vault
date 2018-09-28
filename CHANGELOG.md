@@ -10,7 +10,7 @@ FEATURES:
 
  * AWS Secret Engine Root Credential Rotation: The credential used by the AWS
    secret engine can now be rotated, to ensure that only Vault knows the
-   credentials its using. [GH-5140]
+   credentials it is using. [GH-5140]
  * Storage Backend Migrator: A new `operator migrate` command allows offline
    migration of data between two storage backends.
 
@@ -32,7 +32,7 @@ IMPROVEMENTS:
  * identity: Support operating on entities and groups by their names [GH-5355]
  * plugins: Add `env` parameter when registering plugins to the catalog to allow
    operators to include environment variables during plugin execution. [GH-5359]
- * secret/aws: WAL Rollback improvements [GH-5202]
+ * secrets/aws: WAL Rollback improvements [GH-5202]
  
 ## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
