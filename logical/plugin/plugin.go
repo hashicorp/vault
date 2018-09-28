@@ -142,6 +142,7 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// implementation but is in fact over an RPC connection.
 	switch raw.(type) {
 	case *backendPluginClient:
+		logger.Warn("plugin is using deprecated netRPC transport, recompile plugin to upgrade to gRPC", "plugin", pluginRunner.Name)
 		backend = raw.(*backendPluginClient)
 		transport = "netRPC"
 	case *backendGRPCPluginClient:
