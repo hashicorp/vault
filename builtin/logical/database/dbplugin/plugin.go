@@ -129,7 +129,7 @@ type GRPCDatabasePlugin struct {
 	plugin.NetRPCUnsupportedPlugin
 }
 
-func (d *DatabasePlugin) Server(*plugin.MuxBroker) (interface{}, error) {
+func (d DatabasePlugin) Server(*plugin.MuxBroker) (interface{}, error) {
 	impl := &DatabaseErrorSanitizerMiddleware{
 		next: d.Impl,
 	}
@@ -140,7 +140,7 @@ func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, e
 	return &databasePluginRPCClient{client: c}, nil
 }
 
-func (d *GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
+func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
 	impl := &DatabaseErrorSanitizerMiddleware{
 		next: d.Impl,
 	}
