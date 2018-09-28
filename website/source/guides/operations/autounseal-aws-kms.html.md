@@ -50,10 +50,11 @@ many different key holders with many different keys.
 
 ## Solution
 
-Vault Enterprise supports opt-in automatic unsealing via cloud technologies such
-Amazon KMS or Google Cloud KMS. This feature enables operators to delegate the
-unsealing process to trusted cloud providers to ease operations in the event of
-partial failure and to aid in the creation of new or ephemeral clusters.
+Vault Enterprise supports opt-in automatic unsealing via cloud technologies:
+Amazon KMS, Azure Key Vault or GCP Cloud KMS. This feature enables operators to
+delegate the unsealing process to trusted cloud providers to ease operations in
+the event of partial failure and to aid in the creation of new or ephemeral
+clusters.
 
 ![Unseal with AWS KMS](/assets/images/vault-autounseal-2.png)
 
@@ -61,7 +62,7 @@ partial failure and to aid in the creation of new or ephemeral clusters.
 
 This guide assumes the following:   
 
-- Access to **Vault Enterprise 0.9.0 or later** which supports AWS KMS as an unseal mechanism
+- Access to **Vault Enterprise 0.9.0 or later** 
 - A URL to download Vault Enterprise from (an Amazon S3 bucket will suffice)
 - AWS account for provisioning cloud resources
 - [Terraform installed](https://www.terraform.io/intro/getting-started/install.html)
@@ -124,7 +125,7 @@ $ export AWS_SECRET_ACCESS_KEY = "<YOUR_AWS_SECRET_ACCESS_KEY>"
 ```
 
 Create a file named **`terraform.tfvars`** and specify your Vault Enterprise
-binary download URL. 
+binary download URL.
 
 **Example:**
 
