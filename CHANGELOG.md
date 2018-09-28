@@ -3,7 +3,7 @@
 CHANGES:
 
  * `sys/seal-status` now includes an `initialized` boolean in the output. If
-   Vault is not initialized, it will return a `200` with this bool `false`
+   Vault is not initialized, it will return a `200` with this value set `false`
    instead of a `400`.
 
 FEATURES:
@@ -16,6 +16,8 @@ FEATURES:
 
 BUG FIXES:
 
+ * auth/okta: Fix reading deprecated `token` parameter if a token was
+   previously set in the configuration [GH-5409]
  * core: Re-add deprecated capabilities information for now [GH-5360]
  * core: Fix handling of cyclic token relationships [GH-4803]
  * storage/mysql: Fix locking on MariaDB [GH-5343]
