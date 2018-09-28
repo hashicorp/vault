@@ -91,6 +91,7 @@ In this guide, you are going to perform the following steps:
 1. [Setup entities and groups](#step3)
 1. [Test the organization admin user](#step4)
 1. [Test the team admin user](#step5)
+1. [Audit ambient credentials](#step6)
 
 
 ### <a name="step1"></a>Step 1: Create namespaces
@@ -845,6 +846,32 @@ field, and **`password`** in the **Password** field.
 **`team-secret`** in the **Path** field.
 
 1. Click **Enable Engine** to finish.
+
+### <a name="step6"></a>Step 6: Audit ambient credentials
+(**Persona:** operator)
+
+Many auth and secrets providers, such as AWS, Azure, GCP, and AliCloud, use ambient
+credentials to authenticate API calls. For example, AWS may:
+
+1. Check for environment variables such as "AWS_SECRET_ACCESS_KEY" and "AWS_ACCESS_KEY_ID".
+1. If not present, use an access key and secret configured in Vault.
+1. If not present, use instance metadata.
+
+This becomes a problem if these ambient credentials are not intended to be used within
+a particular namespace. 
+
+For example, suppose that your Vault server is running on an 
+AWS EC2 instance. You give the owner of a namespace a particular set of permissions to
+use for AWS. However, that owner _does not_ configure them. So, Vault falls back to using
+the credentials available in instance metadata, leading to a privilege escalation.
+
+To handle this:
+
+- Ensure no environment variables are available that could grant a privilege escalation.
+- Ensure that any privileges granted through instance metadata (in this example) or other 
+ambient identity info represent a _loss_ of privilege.
+- Directly configure the correct credentials in namespaces, and restrict access to that
+endpoint so credentials can't later be edited to use ambient credentials.
 
 <br>
 
