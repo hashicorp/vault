@@ -287,7 +287,7 @@ This endpoint queries the entity by its name.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/identity/entity/id/testentityname
+    http://127.0.0.1:8200/v1/identity/entity/name/testentityname
 ```
 
 ### Sample Response
