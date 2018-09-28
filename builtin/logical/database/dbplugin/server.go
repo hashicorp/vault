@@ -42,7 +42,7 @@ func ServeConfig(db Database, tlsProvider func() (*tls.Config, error)) *plugin.S
 	// Remove this block in 0.13
 	if !pluginutil.GRPCSupport() {
 		conf.GRPCServer = nil
-		delete(pluginSets, 4)
+		delete(conf.VersionedPlugins, 4)
 	}
 
 	return conf
