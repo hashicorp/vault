@@ -1,16 +1,17 @@
-import Ember from 'ember';
+import { set } from '@ember/object';
+import Route from '@ember/routing/route';
 import DS from 'ember-data';
 
 const CONFIGURABLE_BACKEND_TYPES = ['aws', 'ssh', 'pki'];
 
-export default Ember.Route.extend({
+export default Route.extend({
   model() {
     const { backend } = this.paramsFor(this.routeName);
     return this.store.query('secret-engine', { path: backend }).then(modelList => {
       let model = modelList && modelList.get('firstObject');
       if (!model || !CONFIGURABLE_BACKEND_TYPES.includes(model.get('type'))) {
         const error = new DS.AdapterError();
-        Ember.set(error, 'httpStatus', 404);
+        set(error, 'httpStatus', 404);
         throw error;
       }
       return this.store.findRecord('secret-engine', backend).then(

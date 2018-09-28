@@ -1,9 +1,9 @@
-import Ember from 'ember';
+import { gt } from '@ember/object/computed';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 import { range } from 'ember-composable-helpers/helpers/range';
 
-const { computed } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   classNames: ['box', 'is-shadowless', 'list-pagination'],
   page: null,
   lastPage: null,
@@ -18,7 +18,7 @@ export default Ember.Component.extend({
     return this.get('page') > 1;
   }),
 
-  segmentLinks: computed.gt('lastPage', 10),
+  segmentLinks: gt('lastPage', 10),
 
   pageRange: computed('page', 'lastPage', function() {
     const { spread, page, lastPage } = this.getProperties('spread', 'page', 'lastPage');

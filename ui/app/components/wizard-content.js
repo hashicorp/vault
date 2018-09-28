@@ -1,8 +1,7 @@
-import Ember from 'ember';
-
-const { Component, inject } = Ember;
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 export default Component.extend({
-  wizard: inject.service(),
+  wizard: service(),
   classNames: ['ui-wizard'],
   glyph: null,
   headerText: null,

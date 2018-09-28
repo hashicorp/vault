@@ -1,4 +1,6 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 
 const DEFAULTS = {
   keyData: null,
@@ -9,8 +11,8 @@ const DEFAULTS = {
   loading: false,
 };
 
-export default Ember.Controller.extend(DEFAULTS, {
-  wizard: Ember.inject.service(),
+export default Controller.extend(DEFAULTS, {
+  wizard: service(),
 
   reset() {
     this.setProperties(DEFAULTS);
@@ -32,7 +34,7 @@ export default Ember.Controller.extend(DEFAULTS, {
     }
   },
 
-  keyFilename: Ember.computed('model.name', function() {
+  keyFilename: computed('model.name', function() {
     return `vault-cluster-${this.get('model.name')}`;
   }),
 

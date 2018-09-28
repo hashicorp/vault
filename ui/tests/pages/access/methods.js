@@ -2,23 +2,18 @@ import { create, attribute, visitable, collection, hasClass, text } from 'ember-
 
 export default create({
   visit: visitable('/vault/access/'),
-  navLinks: collection({
+  navLinks: collection('[data-test-link]', {
+    isActive: hasClass('is-active'),
+    text: text(),
     scope: '[data-test-sidebar]',
-    itemScope: '[data-test-link]',
-    item: {
-      isActive: hasClass('is-active'),
-      text: text(),
-    },
   }),
 
-  backendLinks: collection({
-    itemScope: '[data-test-auth-backend-link]',
-    item: {
-      path: text('[data-test-path]'),
-      id: attribute('data-test-id', '[data-test-path]'),
-    },
-    findById(id) {
-      return this.toArray().findBy('id', id);
-    },
+  backendLinks: collection('[data-test-auth-backend-link]', {
+    path: text('[data-test-path]'),
+    id: attribute('data-test-id', '[data-test-path]'),
   }),
+
+  findLinkById(id) {
+    return this.backendLinks.filterBy('id', id)[0];
+  },
 });

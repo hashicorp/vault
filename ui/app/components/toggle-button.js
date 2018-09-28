@@ -1,8 +1,7 @@
-import Ember from 'ember';
+import Component from '@ember/component';
+import { set, get, defineProperty, computed } from '@ember/object';
 
-const { get, set } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   tagName: 'button',
   type: 'button',
   toggleTarget: null,
@@ -16,12 +15,12 @@ export default Ember.Component.extend({
   init() {
     this._super(...arguments);
     const toggleAttr = this.get('toggleAttr');
-    Ember.defineProperty(
+    defineProperty(
       this,
       'isOpen',
-      Ember.computed(`toggleTarget.${toggleAttr}`, () => {
+      computed(`toggleTarget.${toggleAttr}`, () => {
         const props = this.getProperties('toggleTarget', 'toggleAttr');
-        return Ember.get(props.toggleTarget, props.toggleAttr);
+        return get(props.toggleTarget, props.toggleAttr);
       })
     );
   },

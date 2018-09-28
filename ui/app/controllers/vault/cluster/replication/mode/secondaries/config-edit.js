@@ -1,14 +1,16 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 
 const CONFIG_DEFAULTS = {
   mode: 'whitelist',
   paths: [],
 };
 
-export default Ember.Controller.extend({
-  flashMessages: Ember.inject.service(),
-  rm: Ember.inject.service('replication-mode'),
-  replicationMode: Ember.computed.alias('rm.mode'),
+export default Controller.extend({
+  flashMessages: service(),
+  rm: service('replication-mode'),
+  replicationMode: alias('rm.mode'),
   actions: {
     resetConfig(config) {
       if (config.get('isNew')) {

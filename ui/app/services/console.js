@@ -1,9 +1,10 @@
 // Low level service that allows users to input paths to make requests to vault
 // this service provides the UI synecdote to the cli commands read, write, delete, and list
-import Ember from 'ember';
-import { shiftCommandIndex } from 'vault/lib/console-helpers';
+import Service from '@ember/service';
 
-const { Service, getOwner, computed } = Ember;
+import { getOwner } from '@ember/application';
+import { computed } from '@ember/object';
+import { shiftCommandIndex } from 'vault/lib/console-helpers';
 
 export function sanitizePath(path) {
   //remove whitespace + remove trailing and leading slashes

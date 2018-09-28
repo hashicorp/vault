@@ -3,9 +3,7 @@ import { create, clickable, collection, text, isPresent } from 'ember-cli-page-o
 
 export default create({
   ...Base,
-  rows: collection({
-    scope: 'data-test-row-label',
-  }),
+  rows: collection('data-test-row-label'),
   certificate: text('[data-test-row-value="Certificate"]'),
   hasCert: isPresent('[data-test-row-value="Certificate"]'),
   edit: clickable('[data-test-edit-link]'),

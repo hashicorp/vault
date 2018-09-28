@@ -1,10 +1,11 @@
-import Ember from 'ember';
-
-const { Component, inject, computed } = Ember;
+import { inject as service } from '@ember/service';
+import { not } from '@ember/object/computed';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 
 export default Component.extend({
-  namespace: inject.service(),
-  showMessage: computed.not('namespace.inRootNamespace'),
+  namespace: service(),
+  showMessage: not('namespace.inRootNamespace'),
   //public API
   noun: null,
   mode: 'edit',

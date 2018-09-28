@@ -56,7 +56,7 @@
                 <NamespaceLink @targetNamespace={{rootLeaf}} @class="namespace-link" @showLastSegment={{true}} />
               {{/each~}}</div>
           {{/if}}
-          {{#each lastMenuLeaves as |leaf index|}}
+          {{#each lastMenuLeaves as |leaf|}}
               <div class="leaf-panel
                 {{if (eq leaf currentLeaf) "leaf-panel-current" "leaf-panel-left"}}
                 {{if (and isAdding (eq leaf changedLeaf)) "leaf-panel-adding"}}

@@ -1,10 +1,8 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
 import ClusterRoute from './cluster-route-base';
 
-const { inject } = Ember;
-
 export default ClusterRoute.extend({
-  wizard: inject.service(),
+  wizard: service(),
 
   activate() {
     this.get('wizard').set('initEvent', 'UNSEAL');

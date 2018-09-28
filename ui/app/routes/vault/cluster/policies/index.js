@@ -1,19 +1,11 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
+import ListRoute from 'vault/mixins/list-route';
 
-const { inject } = Ember;
-
-export default Ember.Route.extend(ClusterRoute, {
-  version: inject.service(),
-  wizard: inject.service(),
-  queryParams: {
-    page: {
-      refreshModel: true,
-    },
-    pageFilter: {
-      refreshModel: true,
-    },
-  },
+export default Route.extend(ClusterRoute, ListRoute, {
+  version: service(),
+  wizard: service(),
 
   activate() {
     if (this.get('wizard.featureState') === 'details') {
@@ -77,6 +69,10 @@ export default Ember.Route.extend(ClusterRoute, {
         this.store.clearAllDatasets();
       }
       return true;
+    },
+    reload() {
+      this.store.clearAllDatasets();
+      this.refresh();
     },
   },
 

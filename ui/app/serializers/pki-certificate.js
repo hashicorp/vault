@@ -1,6 +1,7 @@
+import { isNone, isBlank } from '@ember/utils';
+import { assign } from '@ember/polyfills';
+import { decamelize } from '@ember/string';
 import DS from 'ember-data';
-import Ember from 'ember';
-const { decamelize } = Ember.String;
 
 export default DS.RESTSerializer.extend({
   keyForAttribute: function(attr) {
@@ -32,7 +33,7 @@ export default DS.RESTSerializer.extend({
       });
       return ret;
     }
-    Ember.assign(payload, payload.data);
+    assign(payload, payload.data);
     delete payload.data;
     return payload;
   },
@@ -46,8 +47,8 @@ export default DS.RESTSerializer.extend({
 
   serializeAttribute(snapshot, json, key, attributes) {
     const val = snapshot.attr(key);
-    const valHasNotChanged = Ember.isNone(snapshot.changedAttributes()[key]);
-    const valIsBlank = Ember.isBlank(val);
+    const valHasNotChanged = isNone(snapshot.changedAttributes()[key]);
+    const valIsBlank = isBlank(val);
     if (attributes.options.readOnly) {
       return;
     }

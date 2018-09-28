@@ -1114,6 +1114,19 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, d
 }
 
 func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	identityConfigEntryRaw, err := req.Storage.Get(ctx, "config/identity")
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to retrieve identity config: {{err}}", err)
+	}
+	var identityConfigEntry identityConfig
+	if identityConfigEntryRaw == nil {
+		identityConfigEntry.IAMAlias = identityAliasIAMUniqueID
+	} else {
+		if err = identityConfigEntryRaw.DecodeJSON(&identityConfigEntry); err != nil {
+			return nil, errwrap.Wrapf("failed to parse stored config/identity: {{err}}", err)
+		}
+	}
+
 	method := data.Get("iam_http_request_method").(string)
 	if method == "" {
 		return logical.ErrorResponse("missing iam_http_request_method"), nil
@@ -1181,13 +1194,20 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	// This could either be a "userID:SessionID" (in the case of an assumed role) or just a "userID"
 	// (in the case of an IAM user).
 	callerUniqueId := strings.Split(callerID.UserId, ":")[0]
+	identityAlias := ""
+	switch identityConfigEntry.IAMAlias {
+	case identityAliasIAMUniqueID:
+		identityAlias = callerUniqueId
+	case identityAliasIAMFullArn:
+		identityAlias = callerID.Arn
+	}
 
 	// If we're just looking up for MFA, return the Alias info
 	if req.Operation == logical.AliasLookaheadOperation {
 		return &logical.Response{
 			Auth: &logical.Auth{
 				Alias: &logical.Alias{
-					Name: callerUniqueId,
+					Name: identityAlias,
 				},
 			},
 		}, nil
@@ -1310,7 +1330,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 				MaxTTL:    roleEntry.MaxTTL,
 			},
 			Alias: &logical.Alias{
-				Name: callerUniqueId,
+				Name: identityAlias,
 			},
 		},
 	}
