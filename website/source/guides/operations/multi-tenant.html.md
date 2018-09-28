@@ -853,8 +853,9 @@ field, and **`password`** in the **Password** field.
 Many auth and secrets providers, such as AWS, Azure, GCP, and AliCloud, use ambient
 credentials to authenticate API calls. For example, AWS may:
 
-1. Check for environment variables such as "AWS_SECRET_ACCESS_KEY" and "AWS_ACCESS_KEY_ID".
-1. If not present, use an access key and secret configured in Vault.
+1. Use an access key and secret key configured in Vault.
+1. If not present, check for environment variables such as "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY".
+1. If not present, load credentials configured in "~/.aws/credentials".
 1. If not present, use instance metadata.
 
 This becomes a problem if these ambient credentials are not intended to be used within
