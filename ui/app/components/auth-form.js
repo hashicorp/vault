@@ -1,3 +1,4 @@
+import { run } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
 import { assign } from '@ember/polyfills';
@@ -144,9 +145,10 @@ export default Component.extend(DEFAULTS, {
           unauthenticated: true,
         },
       });
-      this.set('methods', null);
-      store.unloadAll('auth-method');
-      this.set('methods', methods);
+      this.set('methods', methods.map(m => m.toJSON()));
+      run.next(() => {
+        store.unloadAll('auth-method');
+      });
     } catch (e) {
       this.set('error', `There was an error fetching auth methods: ${e.errors[0]}`);
     }
