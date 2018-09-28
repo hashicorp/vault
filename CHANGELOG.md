@@ -32,6 +32,7 @@ IMPROVEMENTS:
  * identity: Support operating on entities and groups by their names [GH-5355]
  * plugins: Add `env` parameter when registering plugins to the catalog to allow
    operators to include environment variables during plugin execution. [GH-5359]
+ * secret/aws: WAL Rollback improvements [GH-5202]
  
 ## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
