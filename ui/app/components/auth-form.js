@@ -138,14 +138,14 @@ export default Component.extend(DEFAULTS, {
 
   fetchMethods: task(function*() {
     let store = this.get('store');
-    this.set('methods', null);
-    store.unloadAll('auth-method');
     try {
       let methods = yield store.findAll('auth-method', {
         adapterOptions: {
           unauthenticated: true,
         },
       });
+      this.set('methods', null);
+      store.unloadAll('auth-method');
       this.set('methods', methods);
     } catch (e) {
       this.set('error', `There was an error fetching auth methods: ${e.errors[0]}`);
