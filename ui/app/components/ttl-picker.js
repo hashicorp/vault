@@ -1,8 +1,10 @@
 import { typeOf } from '@ember/utils';
 import EmberError from '@ember/error';
 import Component from '@ember/component';
-import { set, get, computed } from '@ember/object';
+import { set, computed } from '@ember/object';
 import Duration from 'Duration.js';
+
+const ERROR_MESSAGE = 'TTLs must be specified in whole number increments, please enter a whole number.';
 
 export default Component.extend({
   'data-test-component': 'ttl-picker',
@@ -14,6 +16,7 @@ export default Component.extend({
   time: 30,
   unit: 'm',
   initialValue: null,
+  errorMessage: null,
   unitOptions: computed(function() {
     return [
       { label: 'seconds', value: 's' },
@@ -46,27 +49,32 @@ export default Component.extend({
     return outputSeconds ? this.convertToSeconds(time, unit) : timeString;
   }),
 
-  didRender() {
+  didInsertElement() {
     this._super(...arguments);
-    if (get(this, 'setDefaultValue') === false) {
+    if (this.setDefaultValue === false) {
       return;
     }
-    get(this, 'onChange')(get(this, 'TTL'));
+    this.onChange(this.TTL);
   },
 
   init() {
     this._super(...arguments);
-    if (!get(this, 'onChange')) {
+    if (!this.onChange) {
       throw new EmberError('`onChange` handler is a required attr in `' + this.toString() + '`.');
     }
-    if (get(this, 'initialValue') != undefined) {
+    if (this.initialValue != undefined) {
       this.parseAndSetTime();
     }
   },
 
   parseAndSetTime() {
-    const value = get(this, 'initialValue');
-    const seconds = typeOf(value) === 'number' ? value : Duration.parse(value).seconds();
+    let value = this.initialValue;
+    let seconds = typeOf(value) === 'number' ? value : 30;
+    try {
+      seconds = Duration.parse(value).seconds();
+    } catch (e) {
+      // if parsing fails leave as default 30
+    }
 
     this.set('time', seconds);
     this.set('unit', 's');
@@ -74,10 +82,18 @@ export default Component.extend({
 
   actions: {
     changedValue(key, event) {
-      const { type, value, checked } = event.target;
-      const val = type === 'checkbox' ? checked : value;
+      let { type, value, checked } = event.target;
+      let val = type === 'checkbox' ? checked : value;
+      if (val && key === 'time') {
+        val = parseInt(val, 10);
+        if (Number.isNaN(val)) {
+          this.set('errorMessage', ERROR_MESSAGE);
+          return;
+        }
+      }
+      this.set('errorMessage', null);
       set(this, key, val);
-      get(this, 'onChange')(get(this, 'TTL'));
+      this.onChange(this.TTL);
     },
   },
 });
