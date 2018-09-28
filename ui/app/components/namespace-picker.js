@@ -14,7 +14,10 @@ export default Component.extend({
   tagName: '',
   namespaceService: service('namespace'),
   auth: service(),
+  store: service(),
   namespace: null,
+  listCapability: null,
+  canList: alias('listCapability.canList'),
 
   init() {
     this._super(...arguments);
@@ -28,10 +31,22 @@ export default Component.extend({
     let oldNS = this.get('oldNamespace');
     if (!oldNS || ns !== oldNS) {
       this.get('setForAnimation').perform();
+      this.get('fetchListCapability').perform();
     }
     this.set('oldNamespace', ns);
   },
 
+  fetchListCapability: task(function*() {
+    try {
+      if (this.listCapability) {
+        this.listCapability.unloadRecord();
+      }
+      let capability = yield this.store.findRecord('capabilities', 'sys/namespaces/');
+      this.set('listCapability', capability);
+    } catch (e) {
+      //do nothing here
+    }
+  }),
   setForAnimation: task(function*() {
     let leaves = this.get('menuLeaves');
     let lastLeaves = this.get('lastMenuLeaves');
