@@ -14,7 +14,8 @@ export default Controller.extend({
   redirectTo: null,
 
   updateNamespace: task(function*(value) {
-    yield timeout(400);
+    // debounce
+    yield timeout(500);
     this.get('namespaceService').setNamespace(value, true);
     this.set('namespaceQueryParam', value);
   }).restartable(),
