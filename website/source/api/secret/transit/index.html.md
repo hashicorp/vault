@@ -218,6 +218,10 @@ are returned during a read operation on the named key.)
 - `allow_plaintext_backup` `(bool: false)` - If set, enables taking backup of
   named key in the plaintext format. Once set, this cannot be disabled.
 
+- `trimmed_min_version` `(int: 0)` - If set, all versions before this version
+  will be permanently removed from the key ring. The value can at most be equal
+  to the lesser of `min_encryption_version` and `min_decryption_version`.
+
 ### Sample Payload
 
 ```json
