@@ -21,6 +21,7 @@ export default Controller.extend(DEFAULTS, {
   initSuccess(resp) {
     this.set('loading', false);
     this.set('keyData', resp);
+    this.model.reload();
     this.get('wizard').set('initEvent', 'SAVE');
     this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'TOSAVE');
   },

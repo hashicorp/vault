@@ -14,7 +14,7 @@ export default DS.Model.extend({
   standby: attr('boolean'),
   type: attr('string'),
 
-  needsInit: computed('nodes', 'nodes.[]', function() {
+  needsInit: computed('nodes', 'nodes.@each.initialized', function() {
     // needs init if no nodes are initialized
     return this.get('nodes').isEvery('initialized', false);
   }),
