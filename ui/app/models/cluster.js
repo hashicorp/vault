@@ -12,14 +12,11 @@ export default DS.Model.extend({
   name: attr('string'),
   status: attr('string'),
   standby: attr('boolean'),
+  type: attr('string'),
 
   needsInit: computed('nodes', 'nodes.[]', function() {
     // needs init if no nodes are initialized
     return this.get('nodes').isEvery('initialized', false);
-  }),
-
-  type: computed(function() {
-    return this.constructor.modelName;
   }),
 
   unsealed: computed('nodes', 'nodes.{[],@each.sealed}', function() {
@@ -40,6 +37,7 @@ export default DS.Model.extend({
 
   sealThreshold: alias('leaderNode.sealThreshold'),
   sealProgress: alias('leaderNode.progress'),
+  sealType: alias('leaderNode.type'),
   hasProgress: gte('sealProgress', 1),
 
   //replication mode - will only ever be 'unsupported'
