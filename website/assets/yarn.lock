@@ -13,19 +13,6 @@
     "@babel/types" "7.0.0-beta.40"
     lodash "^4.2.0"
 
-"@babel/polyfill@7.0.0":
-  version "7.0.0"
-  resolved "https://registry.yarnpkg.com/@babel/polyfill/-/polyfill-7.0.0.tgz#c8ff65c9ec3be6a1ba10113ebd40e8750fb90bff"
-  dependencies:
-    core-js "^2.5.7"
-    regenerator-runtime "^0.11.1"
-
-"@babel/runtime@7.0.0":
-  version "7.0.0"
-  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.0.0.tgz#adeb78fedfc855aa05bc041640f3f6f98e85424c"
-  dependencies:
-    regenerator-runtime "^0.12.0"
-
 "@babel/types@7.0.0-beta.40":
   version "7.0.0-beta.40"
   resolved "https://registry.yarnpkg.com/@babel/types/-/types-7.0.0-beta.40.tgz#25c3d7aae14126abe05fcb098c65a66b6d6b8c14"
@@ -80,21 +67,21 @@
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-button/-/hashi-button-1.0.2.tgz#5c5572e313f20793973a3371542b8936ccb03410"
 
-"@hashicorp/hashi-content@^0.0.2":
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-content/-/hashi-content-0.0.2.tgz#fc7411ade7c71f383e6643f691a13350ee93ce0f"
+"@hashicorp/hashi-content@^0.0.3":
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-content/-/hashi-content-0.0.3.tgz#3b662cc5813806c12a9c5b105fa1b78ff1ccbd0d"
 
-"@hashicorp/hashi-footer@1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-footer/-/hashi-footer-1.0.2.tgz#9260d8aeefaf3a34af4a917c103c96265bbd6ac8"
+"@hashicorp/hashi-footer@1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-footer/-/hashi-footer-1.0.3.tgz#eb0e4eb1541f8707a0da1bbaf4b4ca6e348fe94d"
 
 "@hashicorp/hashi-ga-form-fields@1.0.2":
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-ga-form-fields/-/hashi-ga-form-fields-1.0.2.tgz#e9fb3b61a73a9f380bb14b04df600303f80d7042"
 
-"@hashicorp/hashi-global-styles@^1.0.4":
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-global-styles/-/hashi-global-styles-1.0.4.tgz#6bd504c9b69b49a37776b889d001876239b9cfb4"
+"@hashicorp/hashi-global-styles@^1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-global-styles/-/hashi-global-styles-1.0.5.tgz#812f5254131eb4d1971fac3028de81d0b388deb0"
 
 "@hashicorp/hashi-image@1.0.3":
   version "1.0.3"
@@ -104,21 +91,21 @@
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-logo-grid/-/hashi-logo-grid-1.0.3.tgz#75703b8f2ec71a636eda57343627a877c5dbb037"
 
-"@hashicorp/hashi-mega-nav@^0.0.4":
-  version "0.0.4"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-mega-nav/-/hashi-mega-nav-0.0.4.tgz#d1f1be559469ea3926d3f23423a130c92e131ab9"
+"@hashicorp/hashi-mega-nav@^0.0.5":
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-mega-nav/-/hashi-mega-nav-0.0.5.tgz#3dd6a6aaa6339ef97217ea2deb0a1b00f9aa4203"
 
 "@hashicorp/hashi-nav@1.0.5":
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-nav/-/hashi-nav-1.0.5.tgz#876355a2a10b4b22d324e8cc858f24d6895cbcb9"
 
-"@hashicorp/hashi-newsletter-signup-form@1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-newsletter-signup-form/-/hashi-newsletter-signup-form-1.0.2.tgz#b1804190ae3d6482d840a70019a57c314bfe32b4"
+"@hashicorp/hashi-newsletter-signup-form@1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-newsletter-signup-form/-/hashi-newsletter-signup-form-1.0.3.tgz#ad0fb8244b8524c156b0a5b5ea6e021079f4e180"
 
-"@hashicorp/hashi-product-subnav@^0.1.2":
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-subnav/-/hashi-product-subnav-0.1.2.tgz#ea4eedce7ed5deaa645ec33741dfb0da23cfd6a7"
+"@hashicorp/hashi-product-subnav@^0.1.4":
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-subnav/-/hashi-product-subnav-0.1.4.tgz#f8a710657f111f6729102734b95b7a60a40015ca"
 
 "@hashicorp/hashi-section-header@1.0.3":
   version "1.0.3"
@@ -1577,7 +1564,7 @@ core-js@^1.0.0:
   version "1.2.7"
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-1.2.7.tgz#652294c14651db28fa93bd2d5ff2983a4f08c636"
 
-core-js@^2.4.0, core-js@^2.5.0, core-js@^2.5.7:
+core-js@^2.4.0, core-js@^2.5.0:
   version "2.5.7"
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-2.5.7.tgz#f972608ff0cead68b841a16a932d0b183791814e"
 
@@ -2616,10 +2603,6 @@ hoek@4.x.x:
   version "4.2.1"
   resolved "https://registry.yarnpkg.com/hoek/-/hoek-4.2.1.tgz#9634502aa12c445dd5a7c5734b572bb8738aacbb"
 
-hoist-non-react-statics@^2.3.1:
-  version "2.5.5"
-  resolved "https://registry.yarnpkg.com/hoist-non-react-statics/-/hoist-non-react-statics-2.5.5.tgz#c5903cf409c0dfd908f388e619d86b9c1174cb47"
-
 home-or-tmp@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/home-or-tmp/-/home-or-tmp-2.0.0.tgz#e36c3f2d2cae7d746a857e38d18d5f32a7882db8"
@@ -3286,7 +3269,7 @@ lodash.uniq@^4.5.0:
   version "4.5.0"
   resolved "https://registry.yarnpkg.com/lodash.uniq/-/lodash.uniq-4.5.0.tgz#d0225373aeb652adc1bc82e4945339a842754773"
 
-lodash@4.17.10, lodash@^4, lodash@^4.12.0, lodash@^4.17.10, lodash@^4.17.4, lodash@^4.17.5, lodash@^4.2.0, lodash@^4.3.0:
+lodash@^4, lodash@^4.12.0, lodash@^4.17.10, lodash@^4.17.4, lodash@^4.17.5, lodash@^4.2.0, lodash@^4.3.0:
   version "4.17.10"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.10.tgz#1b7793cf7259ea38fb3661d4d38b3260af8ae4e7"
 
@@ -3329,9 +3312,9 @@ map-visit@^1.0.0:
   dependencies:
     object-visit "^1.0.0"
 
-marked@^0.5.0:
-  version "0.5.0"
-  resolved "https://registry.yarnpkg.com/marked/-/marked-0.5.0.tgz#9e590bad31584a48ff405b33ab1c0dd25172288e"
+marked@^0.5.1:
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/marked/-/marked-0.5.1.tgz#062f43b88b02ee80901e8e8d8e6a620ddb3aa752"
 
 math-expression-evaluator@^1.2.14:
   version "1.2.17"
@@ -3487,16 +3470,6 @@ mkdirp@^0.5.0, mkdirp@^0.5.1, mkdirp@~0.5.0, mkdirp@~0.5.1:
   resolved "https://registry.yarnpkg.com/mkdirp/-/mkdirp-0.5.1.tgz#30057438eac6cf7f8c4767f38648d6697d75c903"
   dependencies:
     minimist "0.0.8"
-
-mobx-preact@3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/mobx-preact/-/mobx-preact-3.0.0.tgz#683f1805e4727570c8ece1561a25f34773b7b601"
-  dependencies:
-    hoist-non-react-statics "^2.3.1"
-
-mobx@5.1.0:
-  version "5.1.0"
-  resolved "https://registry.yarnpkg.com/mobx/-/mobx-5.1.0.tgz#ae772ca8eb0c1dd93341ffce375f44a80050014d"
 
 ms@2.0.0:
   version "2.0.0"
@@ -4807,13 +4780,9 @@ regenerate@^1.2.1:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/regenerate/-/regenerate-1.4.0.tgz#4a856ec4b56e4077c557589cae85e7a4c8869a11"
 
-regenerator-runtime@^0.11.0, regenerator-runtime@^0.11.1:
+regenerator-runtime@^0.11.0:
   version "0.11.1"
   resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.11.1.tgz#be05ad7f9bf7d22e056f9726cee5017fbf19e2e9"
-
-regenerator-runtime@^0.12.0:
-  version "0.12.1"
-  resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.12.1.tgz#fa1a71544764c036f8c49b13a08b2594c9f8a0de"
 
 regenerator-transform@^0.10.0:
   version "0.10.1"
@@ -5989,12 +5958,10 @@ watchpack@^1.4.0:
     graceful-fs "^4.1.2"
     neo-async "^2.5.0"
 
-webpack-bundle-analyzer@^3.0.1:
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/webpack-bundle-analyzer/-/webpack-bundle-analyzer-3.0.1.tgz#5d54d5767265fbd862872bc5db2c0499272b3230"
+webpack-bundle-analyzer@^3.0.2:
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/webpack-bundle-analyzer/-/webpack-bundle-analyzer-3.0.2.tgz#22f19ea6d1b5a15fd7a90baae0bc0f39bd1e4d48"
   dependencies:
-    "@babel/polyfill" "7.0.0"
-    "@babel/runtime" "7.0.0"
     acorn "^5.7.3"
     bfj "^6.1.1"
     chalk "^2.4.1"
@@ -6003,10 +5970,8 @@ webpack-bundle-analyzer@^3.0.1:
     express "^4.16.3"
     filesize "^3.6.1"
     gzip-size "^5.0.0"
-    lodash "4.17.10"
+    lodash "^4.17.10"
     mkdirp "^0.5.1"
-    mobx "5.1.0"
-    mobx-preact "3.0.0"
     opener "^1.5.1"
     ws "^6.0.0"
 
