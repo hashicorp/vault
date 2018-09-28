@@ -25,11 +25,12 @@ IMPROVEMENTS:
 
  * auth/aws: The identity alias name can now configured to be either IAM unique
    ID of the IAM Principal, or ARN of the caller identity [GH-5247]
+ * auth/cert: Add allowed_organizational_units support [GH-5252]
  * cli: Format TTLs for non-secret responses [GH-5367] 
  * identity: Support operating on entities and groups by their names [GH-5355]
  * plugins: Add `env` parameter when registering plugins to the catalog to allow
    operators to include environment variables during plugin execution. [GH-5359]
-
+ 
 ## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
 BUG FIXES:
