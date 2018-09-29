@@ -61,6 +61,10 @@ export default Service.extend({
     return ENV.environment;
   },
 
+  now() {
+    return Date.now();
+  },
+
   setCluster(clusterId) {
     this.set('activeCluster', clusterId);
   },
@@ -96,7 +100,7 @@ export default Service.extend({
   },
 
   calculateExpiration(resp) {
-    let now = Date.now();
+    let now = this.now();
     const ttl = resp.ttl || resp.lease_duration;
     const tokenExpirationEpoch = now + ttl * 1e3;
     this.set('expirationCalcTS', now);
@@ -207,7 +211,7 @@ export default Service.extend({
 
   tokenExpired: computed(function() {
     const expiration = this.get('tokenExpirationDate');
-    return expiration ? Date.now() >= expiration : null;
+    return expiration ? this.now() >= expiration : null;
   }).volatile(),
 
   renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function() {
@@ -242,7 +246,7 @@ export default Service.extend({
   },
 
   shouldRenew: computed(function() {
-    const now = Date.now();
+    const now = this.now();
     const lastFetch = this.get('lastFetch');
     const renewTime = this.get('renewAfterEpoch');
     if (this.get('tokenExpired') || this.get('allowExpiration') || !renewTime) {
