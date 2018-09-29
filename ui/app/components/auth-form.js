@@ -152,7 +152,7 @@ export default Component.extend(DEFAULTS, {
     }
   }),
 
-  showLoading: or('fetchMethods.isRunning', 'unwrapToken.isRunning'),
+  showLoading: or('authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
   handleError(e) {
     this.set('loading', false);
@@ -165,14 +165,34 @@ export default Component.extend(DEFAULTS, {
     this.set('error', `Authentication failed: ${errors.join('.')}`);
   },
 
+  authenticate: task(function*(backendType, data) {
+    let clusterId = this.cluster.id;
+    let targetRoute = this.redirectTo || 'vault.cluster';
+    try {
+      let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
+
+      let { isRoot, namespace } = authResponse;
+      let transition = this.router.transitionTo(targetRoute, { queryParams: { namespace } });
+      // returning this w/then because if we keep it
+      // in the task, it will get cancelled when the component in un-rendered
+      return transition.followRedirects().then(() => {
+        if (isRoot) {
+          this.flashMessages.warning(
+            'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
+          );
+        }
+      });
+    } catch (e) {
+      this.handleError(e);
+    }
+  }),
+
   actions: {
     doSubmit() {
       let data = {};
       this.setProperties({
-        loading: true,
         error: null,
       });
-      let targetRoute = this.get('redirectTo') || 'vault.cluster';
       let backend = this.get('selectedAuthBackend') || {};
       let backendMeta = BACKENDS.find(
         b => (get(b, 'type') || '').toLowerCase() === (get(backend, 'type') || '').toLowerCase()
@@ -183,23 +203,7 @@ export default Component.extend(DEFAULTS, {
       if (this.get('customPath') || get(backend, 'id')) {
         data.path = this.get('customPath') || get(backend, 'id');
       }
-      const clusterId = this.get('cluster.id');
-      this.get('auth')
-        .authenticate({ clusterId, backend: get(backend, 'type'), data })
-        .then(
-          ({ isRoot, namespace }) => {
-            this.set('loading', false);
-            const transition = this.get('router').transitionTo(targetRoute, { queryParams: { namespace } });
-            if (isRoot) {
-              transition.followRedirects().then(() => {
-                this.get('flashMessages').warning(
-                  'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
-                );
-              });
-            }
-          },
-          (...errArgs) => this.handleError(...errArgs)
-        );
+      this.authenticate.perform(backend.type, data);
     },
   },
 });
