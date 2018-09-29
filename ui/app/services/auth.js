@@ -95,18 +95,15 @@ export default Service.extend({
     return this.ajax(url, 'POST', { namespace });
   },
 
-  calculateExpiration(resp, creationTime) {
-    const creationTTL = resp.creation_ttl || resp.lease_duration;
-    const leaseMilli = creationTTL ? creationTTL * 1e3 : null;
-    const tokenIssueEpoch = resp.creation_time ? resp.creation_time * 1e3 : creationTime || Date.now();
-    const tokenExpirationEpoch = tokenIssueEpoch + leaseMilli;
-    const expirationData = {
-      tokenIssueEpoch,
+  calculateExpiration(resp) {
+    let now = Date.now();
+    const ttl = resp.ttl || resp.lease_duration;
+    const tokenExpirationEpoch = now + ttl * 1e3;
+    this.set('expirationCalcTS', now);
+    return {
+      ttl,
       tokenExpirationEpoch,
-      leaseMilli,
     };
-    this.set('expirationCalcTS', Date.now());
-    return expirationData;
   },
 
   persistAuthData() {
@@ -215,12 +212,14 @@ export default Service.extend({
 
   renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function() {
     const tokenName = this.get('currentTokenName');
+    let { expirationCalcTS } = this;
     const data = this.getTokenData(tokenName);
     if (!tokenName || !data) {
       return null;
     }
-    const { leaseMilli, tokenIssueEpoch, renewable } = data;
-    return data && renewable ? Math.floor(leaseMilli / 2) + tokenIssueEpoch : null;
+    const { ttl, renewable } = data;
+    // renew after last expirationCalc time + half of the ttl (in ms)
+    return renewable ? Math.floor((ttl * 1e3) / 2) + expirationCalcTS : null;
   }),
 
   renew() {
@@ -264,9 +263,11 @@ export default Service.extend({
   },
 
   getTokensFromStorage(filterFn) {
-    return this.storage().keys().reject(key => {
-      return key.indexOf(TOKEN_PREFIX) !== 0 || (filterFn && filterFn(key));
-    });
+    return this.storage()
+      .keys()
+      .reject(key => {
+        return key.indexOf(TOKEN_PREFIX) !== 0 || (filterFn && filterFn(key));
+      });
   },
 
   checkForRootToken() {
