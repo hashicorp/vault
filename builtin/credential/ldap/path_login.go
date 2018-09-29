@@ -54,7 +54,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
 
-	policies, resp, groupNames, err := b.Login(ctx, req, username, password)
+	policies, resp, canonicalUsername, groupNames, err := b.Login(ctx, req, username, password)
 	// Handle an internal error
 	if err != nil {
 		return nil, err
@@ -73,17 +73,17 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	resp.Auth = &logical.Auth{
 		Policies: policies,
 		Metadata: map[string]string{
-			"username": username,
+			"username": canonicalUsername,
 		},
 		InternalData: map[string]interface{}{
 			"password": password,
 		},
-		DisplayName: username,
+		DisplayName: canonicalUsername,
 		LeaseOptions: logical.LeaseOptions{
 			Renewable: true,
 		},
 		Alias: &logical.Alias{
-			Name: username,
+			Name: canonicalUsername,
 		},
 	}
 
@@ -102,7 +102,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
 
-	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password)
+	loginPolicies, resp, _, groupNames, err := b.Login(ctx, req, username, password)
 	if len(loginPolicies) == 0 {
 		return resp, err
 	}
